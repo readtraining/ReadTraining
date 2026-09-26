@@ -1,0 +1,50 @@
+{
+  "name": "@readtraining/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.90.5",
+    "@trpc/client": "^11.7.0",
+    "@trpc/react-query": "^11.7.0",
+    "next": "16.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "superjson": "^2.2.3",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-regular-svg-icons": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@fullcalendar/core": "^6.1.17",
+    "@fullcalendar/daygrid": "^6.1.17",
+    "@fullcalendar/react": "^6.1.17",
+    "@mui/material": "^7.1.0",
+    "@popperjs/core": "^2.11.8",
+    "@tsparticles/react": "^3.0.0",
+    "@tsparticles/slim": "^3.8.1",
+    "aos": "^2.3.4",
+    "bootstrap": "^5.3.6",
+    "gsap": "^3.13.0",
+    "leaflet": "^1.9.4",
+    "prop-types": "15.8.1",
+    "react-calendar": "^5.1.0",
+    "recharts": "^2.15.3",
+    "sass": "^1.89.0",
+    "swiper": "^11.2.7"
+  },
+  "devDependencies": {
+    "@readtraining/api": "workspace:*",
+    "@trpc/server": "^11.7.0",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.9.3"
+  }
+}

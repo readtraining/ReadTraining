@@ -1,0 +1,31 @@
+{
+  "name": "@readtraining/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/trpc/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "build": "tsc",
+    "start": "tsx --env-file-if-exists=../../.env src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@trpc/server": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "superjson": "^2.2.3",
+    "zod": "^3.25.76",
+    "@readtraining/db": "workspace:*",
+    "@supabase/supabase-js": "^2.117.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

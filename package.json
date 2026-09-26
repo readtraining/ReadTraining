@@ -1,0 +1,20 @@
+{
+  "name": "readtraining",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:api": "pnpm --filter @readtraining/api dev",
+    "dev:web": "pnpm --filter @readtraining/web dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @readtraining/db generate",
+    "db:migrate": "pnpm --filter @readtraining/db migrate",
+    "db:push": "pnpm --filter @readtraining/db push",
+    "db:studio": "pnpm --filter @readtraining/db studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.8",
+    "typescript": "^5.9.3"
+  }
+}

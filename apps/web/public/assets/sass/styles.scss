@@ -1,0 +1,5 @@
+@use "sass:meta";
+// @import "../../../node_modules/bootstrap/scss/bootstrap";
+@import "../css/vendors.css";
+@import "../css/main.css";
+@include meta.load-css("../sass/custom.scss");
