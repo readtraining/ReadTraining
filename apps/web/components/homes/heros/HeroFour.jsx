@@ -73,7 +73,7 @@ export default function HeroFour() {
 
                     <button
                       className="button -purple-1 text-white"
-                      onClick={() => router.push("/courses-list-2")}
+                      onClick={() => router.push("/template/courses-list-2")}
                     >
                       <i className="icon icon-search"></i>
                     </button>
@@ -82,9 +82,9 @@ export default function HeroFour() {
 
                 <div className="masthead-search__searches mt-40">
                   Trending Search:
-                  <Link href={`/courses/${6}`}>Development</Link>,
-                  <Link href="/courses-single-2/3">Business</Link>,
-                  <Link href="/courses-single-6/3">Design</Link>,
+                  <Link href={`/template/courses/${6}`}>Development</Link>,
+                  <Link href="/template/courses-single-2/3">Business</Link>,
+                  <Link href="/template/courses-single-6/3">Design</Link>,
                   <a href="#">Merketing</a>
                 </div>
               </div>

@@ -27,7 +27,7 @@ export default function JoinToday() {
             </p>
             <div className="d-inline-block mt-30">
               <Link
-                href="/instructor-become"
+                href="/template/instructor-become"
                 className="button -md -dark-1 text-white"
               >
                 Join Our Team

@@ -226,7 +226,7 @@ export default function ShopCheckOut() {
                       <div className="py-15 text-grey">
                       <Link
                           className="linkCustom"
-                          href={`/shop/${elm.id}`}
+                          href={`/template/shop/${elm.id}`}
                         >
                           {elm.name}{" "}
                         </Link> x {elm.quantity}

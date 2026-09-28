@@ -35,7 +35,7 @@ export default function RelatedBlogs() {
                     {elm.category.toUpperCase()}
                   </div>
                   <h4 className="blogCard__title text-17 lh-15 mt-5">
-                    <Link className="linkCustom" href={`/blogs/${elm.id}`}>
+                    <Link className="linkCustom" href={`/template/blogs/${elm.id}`}>
                       {elm.title}
                     </Link>
                   </h4>

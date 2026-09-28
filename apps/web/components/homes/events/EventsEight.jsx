@@ -47,7 +47,7 @@ export default function EventsEight() {
                           {" "}
                           <Link
                             className="linkCustom"
-                            href={`/events/${elm.id}`}
+                            href={`/template/events/${elm.id}`}
                           >
                             {elm.desc}
                           </Link>
@@ -69,7 +69,7 @@ export default function EventsEight() {
                       <div className="col-auto">
                         <div className="-button-hover-1__button">
                           <Link
-                            href={`/events/${elm.id}`}
+                            href={`/template/events/${elm.id}`}
                             className="button -icon -orange-1 text-white"
                           >
                             Buy

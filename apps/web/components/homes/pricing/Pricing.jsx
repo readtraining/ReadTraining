@@ -89,7 +89,7 @@ export default function Pricing() {
                 <div className="priceCard__button mt-30">
                   <Link
                     className="button -md -purple-3 text-purple-1"
-                    href="/courses-list-1"
+                    href="/template/courses-list-1"
                   >
                     Get Started Now
                   </Link>
@@ -147,7 +147,7 @@ export default function Pricing() {
                 <div className="priceCard__button mt-30">
                   <Link
                     className="button -md -white text-purple-1"
-                    href="/courses-list-1"
+                    href="/template/courses-list-1"
                   >
                     Get Started Now
                   </Link>
@@ -205,7 +205,7 @@ export default function Pricing() {
                 <div className="priceCard__button mt-30">
                   <Link
                     className="button -md -purple-3 text-purple-1"
-                    href="/courses-list-1"
+                    href="/template/courses-list-1"
                   >
                     Get Started Now
                   </Link>

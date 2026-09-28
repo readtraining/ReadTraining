@@ -42,7 +42,7 @@ export default function CoursesSeven() {
 
             <div className="col-lg-auto">
               <Link
-                href="/courses-list-6"
+                href="/template/courses-list-6"
                 className="button -icon -purple-3 text-purple-1"
               >
                 All Courses

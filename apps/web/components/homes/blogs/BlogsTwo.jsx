@@ -19,7 +19,7 @@ export default function BlogsTwo() {
 
           <div className="col-auto">
             <Link
-              href="/blog-list-1"
+              href="/template/blog-list-1"
               className="button -icon -purple-3 text-purple-1"
             >
               Browse Blog
@@ -52,7 +52,7 @@ export default function BlogsTwo() {
                 <div className="blogCard__content mt-20">
                   <div className="blogCard__category">{elm.category}</div>
                   <h4 className="blogCard__title text-17 lh-15 mt-5">
-                    <Link className="linkCustom" href={`/blogs/${elm.id}`}>
+                    <Link className="linkCustom" href={`/template/blogs/${elm.id}`}>
                       {elm.title}{" "}
                     </Link>
                   </h4>

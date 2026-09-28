@@ -54,7 +54,7 @@ export default function BlogsThree() {
                         <h4 className="blogCard__title text-24 lh-15 text-dark-4 fw-500 mt-15">
                           <Link
                             className="linkCustom"
-                            href={`/blogs/${elm.id}`}
+                            href={`/template/blogs/${elm.id}`}
                           >
                             {" "}
                             {elm.title}
@@ -63,7 +63,7 @@ export default function BlogsThree() {
                         <p className="blogCard__text mt-20">{elm.desc}</p>
                         <div className="blogCard__button d-inline-block mt-20">
                           <Link
-                            href={`/blogs/${elm.id}`}
+                            href={`/template/blogs/${elm.id}`}
                             className="button -sm -purple-3 text-purple-1"
                           >
                             Read More

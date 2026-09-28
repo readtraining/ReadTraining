@@ -1,5 +1,5 @@
 "use client";
-import "../public/assets/sass/styles.scss";
+import "@/public/assets/sass/styles.scss";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import "react-calendar/dist/Calendar.css";

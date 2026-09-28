@@ -61,7 +61,7 @@ export default function Teachers() {
                       <div className="text-17 fw-500 text-dark-1">
                         <Link
                           className="linkCustom"
-                          href={`/instructors/${marketingCoordinator.id}`}
+                          href={`/template/instructors/${marketingCoordinator.id}`}
                         >
                           {marketingCoordinator.name}
                         </Link>

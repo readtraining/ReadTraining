@@ -121,7 +121,7 @@ export default function LearningSelection() {
 
           <div className="col-auto">
             <Link
-              href="/courses-list-1"
+              href="/template/courses-list-1"
               className="button -md -purple-1 text-white"
             >
               Get Started Now

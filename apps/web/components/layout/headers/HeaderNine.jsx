@@ -73,7 +73,7 @@ export default function HeaderNine({ setIsSidebarClosed, setMessageOpen }) {
               </div>
 
               <div className="header__logo ml-30 md:ml-20">
-                <Link href="/">
+                <Link href="/template/home-1">
                   <Image
                     width={140}
                     height={50}

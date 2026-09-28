@@ -226,7 +226,7 @@ export default function CourseCheckOut() {
                       <div className="py-15 text-grey">
                       <Link
                           className="linkCustom"
-                          href={`/courses/${elm.id}`}
+                          href={`/template/courses/${elm.id}`}
                         >
                           {elm.title}{" "}
                         </Link> x {elm.quantity}

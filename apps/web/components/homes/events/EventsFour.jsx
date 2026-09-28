@@ -64,14 +64,14 @@ export default function EventsFour() {
                     </div>
 
                     <h4 className="eventCard__title text-24 lh-15 fw-500">
-                      <Link className="linkCustom" href={`/events/${elm.id}`}>
+                      <Link className="linkCustom" href={`/template/events/${elm.id}`}>
                         {elm.desc}
                       </Link>
                     </h4>
 
                     <div className="eventCard__button">
                       <Link
-                        href={`/events/${elm.id}`}
+                        href={`/template/events/${elm.id}`}
                         className="button -icon -purple-1 text-white"
                       >
                         Buy Ticket

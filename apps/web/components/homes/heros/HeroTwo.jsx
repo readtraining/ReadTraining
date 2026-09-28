@@ -85,7 +85,7 @@ export default function HeroTwo() {
 
                 <button
                   className="button -md -purple-1 text-white"
-                  onClick={() => router.push("/courses-list-1")}
+                  onClick={() => router.push("/template/courses-list-1")}
                 >
                   <i className="icon icon-search mr-15"></i>
                   Search

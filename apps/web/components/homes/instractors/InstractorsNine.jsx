@@ -37,7 +37,7 @@ export default function InstractorsNine() {
           {instractorsNine.map((elm, i) => (
             <div key={i} className="col-xl-2 col-lg-3 col-md-4 col-sm-6">
               <Link
-                href={`/instructors/${elm.id}`}
+                href={`/template/instructors/${elm.id}`}
                 className="d-flex flex-column items-center linkCustom"
               >
                 <div>

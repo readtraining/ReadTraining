@@ -81,7 +81,7 @@ export default function Pricing() {
                 <div className="d-inline-block mt-30">
                   <Link
                     className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/courses-list-1"
+                    href="/template/courses-list-1"
                   >
                     Get Started Now
                   </Link>
@@ -132,7 +132,7 @@ export default function Pricing() {
                 <div className="d-inline-block mt-30">
                   <Link
                     className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/courses-list-1"
+                    href="/template/courses-list-1"
                   >
                     Get Started Now
                   </Link>
@@ -183,7 +183,7 @@ export default function Pricing() {
                 <div className="d-inline-block mt-30">
                   <Link
                     className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/courses-list-1"
+                    href="/template/courses-list-1"
                   >
                     Get Started Now
                   </Link>

@@ -24,7 +24,7 @@ export default function FeaturedCourses() {
 
             <div className="d-inline-block mt-60 lg:mt-25">
               <Link
-                href="/courses-list-2"
+                href="/template/courses-list-2"
                 className="button -icon -purple-1 text-white"
               >
                 Browse All Courses

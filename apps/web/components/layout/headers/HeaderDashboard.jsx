@@ -106,7 +106,7 @@ export default function HeaderDashboard() {
                 </div>
 
                 <div className="header__logo ml-30 md:ml-20">
-                  <Link data-barba href="/">
+                  <Link data-barba href="/template/home-1">
                     <Image
                       width={140}
                       height={50}
@@ -138,7 +138,7 @@ export default function HeaderDashboard() {
                       <div className="text-14 y-gap-15">
                         <div>
                           <Link
-                            href="/dashboard"
+                            href="/template/dashboard"
                             className="d-block text-dark-1"
                           >
                             Dashboard
@@ -146,7 +146,7 @@ export default function HeaderDashboard() {
                         </div>
                         <div>
                           <Link
-                            href="/dshb-courses"
+                            href="/template/dshb-courses"
                             className="d-block text-dark-1"
                           >
                             My Courses
@@ -154,7 +154,7 @@ export default function HeaderDashboard() {
                         </div>
                         <div>
                           <Link
-                            href="/dshb-bookmarks"
+                            href="/template/dshb-bookmarks"
                             className="d-block text-dark-1"
                           >
                             Bookmarks
@@ -162,7 +162,7 @@ export default function HeaderDashboard() {
                         </div>
                         <div>
                           <Link
-                            href="/dshb-listing"
+                            href="/template/dshb-listing"
                             className="d-block text-dark-1"
                           >
                             Add Listing
@@ -170,7 +170,7 @@ export default function HeaderDashboard() {
                         </div>
                         <div>
                           <Link
-                            href="/dshb-reviews"
+                            href="/template/dshb-reviews"
                             className="d-block text-dark-1"
                           >
                             Reviews
@@ -178,7 +178,7 @@ export default function HeaderDashboard() {
                         </div>
                         <div>
                           <Link
-                            href="/dshb-settings"
+                            href="/template/dshb-settings"
                             className="d-block text-dark-1"
                           >
                             Settings

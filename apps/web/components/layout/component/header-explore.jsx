@@ -30,28 +30,28 @@ export const HeaderExplore = ({ allClasses }) => {
               Architecture<div className="icon-chevron-right text-11"></div>
             </Link>
             <div className="explore__subnav rounded-8">
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Web Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Graphic Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Design Tools
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 User Experience Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Game Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 3D & Animation
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Fashion Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Interior Design
               </Link>
             </div>
@@ -65,28 +65,28 @@ export const HeaderExplore = ({ allClasses }) => {
               Business<div className="icon-chevron-right text-11"></div>
             </Link>
             <div className="explore__subnav rounded-8">
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 Web Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 Graphic Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 Design Tools
               </Link>
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 User Experience Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 Game Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 3D & Animation
               </Link>
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 Fashion Design
               </Link>
-              <Link className="text-dark-1" href={`/courses/6}`}>
+              <Link className="text-dark-1" href={`/template/courses/6}`}>
                 Interior Design
               </Link>
             </div>
@@ -112,35 +112,35 @@ export const HeaderExplore = ({ allClasses }) => {
               Design<div className="icon-chevron-right text-11"></div>
             </Link>
             <div className="explore__subnav rounded-8">
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Web Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Graphic Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-3/3">
+              <Link className="text-dark-1" href="/template/courses-single-3/3">
                 Design Tools
               </Link>
-              <Link className="text-dark-1" href="/courses-single-4/3">
+              <Link className="text-dark-1" href="/template/courses-single-4/3">
                 User Experience Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-5/3">
+              <Link className="text-dark-1" href="/template/courses-single-5/3">
                 Game Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-6/3">
+              <Link className="text-dark-1" href="/template/courses-single-6/3">
                 3D & Animation
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Fashion Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Interior Design
               </Link>
             </div>
           </div>
 
           <div className="explore__item">
-            <Link href="/courses-single-6/3" className="text-dark-1">
+            <Link href="/template/courses-single-6/3" className="text-dark-1">
               Education
             </Link>
           </div>
@@ -153,28 +153,28 @@ export const HeaderExplore = ({ allClasses }) => {
               Electronics<div className="icon-chevron-right text-11"></div>
             </Link>
             <div className="explore__subnav rounded-8">
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Web Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Graphic Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-3/3">
+              <Link className="text-dark-1" href="/template/courses-single-3/3">
                 Design Tools
               </Link>
-              <Link className="text-dark-1" href="/courses-single-4/3">
+              <Link className="text-dark-1" href="/template/courses-single-4/3">
                 User Experience Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-5/3">
+              <Link className="text-dark-1" href="/template/courses-single-5/3">
                 Game Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-6/3">
+              <Link className="text-dark-1" href="/template/courses-single-6/3">
                 3D & Animation
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Fashion Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Interior Design
               </Link>
             </div>
@@ -188,28 +188,28 @@ export const HeaderExplore = ({ allClasses }) => {
               Language<div className="icon-chevron-right text-11"></div>
             </Link>
             <div className="explore__subnav rounded-8">
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Web Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Graphic Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-3/3">
+              <Link className="text-dark-1" href="/template/courses-single-3/3">
                 Design Tools
               </Link>
-              <Link className="text-dark-1" href="/courses-single-4/3">
+              <Link className="text-dark-1" href="/template/courses-single-4/3">
                 User Experience Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-5/3">
+              <Link className="text-dark-1" href="/template/courses-single-5/3">
                 Game Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-6/3">
+              <Link className="text-dark-1" href="/template/courses-single-6/3">
                 3D & Animation
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Fashion Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Interior Design
               </Link>
             </div>
@@ -223,28 +223,28 @@ export const HeaderExplore = ({ allClasses }) => {
               Marketing<div className="icon-chevron-right text-11"></div>
             </Link>
             <div className="explore__subnav rounded-8">
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Web Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Graphic Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-3/3">
+              <Link className="text-dark-1" href="/template/courses-single-3/3">
                 Design Tools
               </Link>
-              <Link className="text-dark-1" href="/courses-single-4/3">
+              <Link className="text-dark-1" href="/template/courses-single-4/3">
                 User Experience Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-5/3">
+              <Link className="text-dark-1" href="/template/courses-single-5/3">
                 Game Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-6/3">
+              <Link className="text-dark-1" href="/template/courses-single-6/3">
                 3D & Animation
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Fashion Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Interior Design
               </Link>
             </div>
@@ -271,42 +271,42 @@ export const HeaderExplore = ({ allClasses }) => {
               <div className="icon-chevron-right text-11"></div>
             </Link>
             <div className="explore__subnav rounded-8">
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Web Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Graphic Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-3/3">
+              <Link className="text-dark-1" href="/template/courses-single-3/3">
                 Design Tools
               </Link>
-              <Link className="text-dark-1" href="/courses-single-4/3">
+              <Link className="text-dark-1" href="/template/courses-single-4/3">
                 User Experience Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-5/3">
+              <Link className="text-dark-1" href="/template/courses-single-5/3">
                 Game Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-6/3">
+              <Link className="text-dark-1" href="/template/courses-single-6/3">
                 3D & Animation
               </Link>
-              <Link className="text-dark-1" href={`/courses/6`}>
+              <Link className="text-dark-1" href={`/template/courses/6`}>
                 Fashion Design
               </Link>
-              <Link className="text-dark-1" href="/courses-single-2/3">
+              <Link className="text-dark-1" href="/template/courses-single-2/3">
                 Interior Design
               </Link>
             </div>
           </div>
 
           <div className="explore__item">
-            <Link href={`/courses/6`} className="text-dark-1">
+            <Link href={`/template/courses/6`} className="text-dark-1">
               IT & Software
             </Link>
           </div>
 
           <div className="explore__item">
             <Link
-              href="/courses-single-2/3"
+              href="/template/courses-single-2/3"
               className="text-purple-1 underline"
             >
               View All Courses

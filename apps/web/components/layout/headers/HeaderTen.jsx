@@ -12,7 +12,7 @@ export default function HeaderTen() {
           <div className="col-auto">
             <div className="header-left">
               <div className="header__logo">
-                <Link data-barba href="/">
+                <Link data-barba href="/template/home-1">
                   <Image
                     width={140}
                     height={50}

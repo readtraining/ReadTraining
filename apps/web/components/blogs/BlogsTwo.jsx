@@ -51,7 +51,7 @@ export default function BlogsTwo() {
                         <h4 className="blogCard__title text-18 lh-15 fw-500 mt-5">
                           <Link
                             className="linkCustom"
-                            href={`/blogs/${elm.id}`}
+                            href={`/template/blogs/${elm.id}`}
                           >
                             {elm.title}
                           </Link>
@@ -142,7 +142,7 @@ export default function BlogsTwo() {
                           <h5 className="text-15 lh-15 fw-500">
                             <Link
                               className="linkCustom"
-                              href={`/blogs/${elm.id}`}
+                              href={`/template/blogs/${elm.id}`}
                             >
                               {elm.title}
                             </Link>

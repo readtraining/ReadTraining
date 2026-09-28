@@ -33,7 +33,7 @@ export default function HeroThree() {
               </h1>
               <div className="masthead__button mt-20">
                 <Link
-                  href="/courses-list-1"
+                  href="/template/courses-list-1"
                   className="button -md -white text-dark-1"
                 >
                   Find Courses

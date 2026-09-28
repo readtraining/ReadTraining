@@ -17,7 +17,7 @@ export default function HeaderFour() {
           <div className="col-auto">
             <div className="header-left d-flex items-center">
               <div className="header__logo pr-30 xl:pr-20 md:pr-0">
-                <Link href="/">
+                <Link href="/template/home-1">
                   <Image
                     width={140}
                     height={50}

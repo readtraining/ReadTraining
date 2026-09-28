@@ -99,7 +99,7 @@ export default function Instractors() {
                         <h4 className="teamCard__title mt-10">
                           <Link
                             className="linkCustom"
-                            href={`/instructors/${elm.id}`}
+                            href={`/template/instructors/${elm.id}`}
                           >
                             {elm.name}
                           </Link>

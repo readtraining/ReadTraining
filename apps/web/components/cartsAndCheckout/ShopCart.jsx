@@ -114,7 +114,7 @@ export default function ShopCart() {
                         <div className="fw-500 text-dark-1 ml-30">
                         <Link
                           className="linkCustom"
-                          href={`/shop/${elm.id}`}
+                          href={`/template/shop/${elm.id}`}
                         >
                           {elm.name}{" "}
                         </Link>
@@ -218,7 +218,7 @@ export default function ShopCart() {
                   <div className="row justify-center pt-60 lg:pt-40">
                     <div className="col-auto">
                       <Link
-                        href="/shop-list"
+                        href="/template/shop-list"
                         className="button -md -outline-purple-1 text-purple-1"
                       >
                         Buy Products
@@ -249,7 +249,7 @@ export default function ShopCart() {
               </div>
 
               <Link
-                href="/shop-checkout"
+                href="/template/shop-checkout"
                 className="button -md -purple-1 text-white col-12 mt-30"
               >
                 Proceed to checkout

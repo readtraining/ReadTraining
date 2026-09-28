@@ -33,7 +33,7 @@ export default function FindLearningPath() {
 
           <div className="col-auto">
             <Link
-              href="/courses-list-3"
+              href="/template/courses-list-3"
               className="button -md -outline-white text-white mt-45 md:mt-20"
             >
               Get Started Now

@@ -26,7 +26,7 @@ export default function HeroEight() {
               <div className="row items-center x-gap-20 y-gap-20 pt-20">
                 <div className="col-auto">
                   <Link
-                    href="/signup"
+                    href="/template/signup"
                     className="button -md -orange-1 text-white"
                   >
                     Join For Free
@@ -34,7 +34,7 @@ export default function HeroEight() {
                 </div>
                 <div className="col-auto">
                   <Link
-                    href="/courses-list-6"
+                    href="/template/courses-list-6"
                     className="button -md -outline-light-5 text-dark-1"
                   >
                     Find Courses

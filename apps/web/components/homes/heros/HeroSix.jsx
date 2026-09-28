@@ -65,7 +65,7 @@ export default function HeroSix() {
                 <div className="row items-center x-gap-30 y-gap-20 pt-30">
                   <div className="col-auto">
                     <Link
-                      href="/courses-list-1"
+                      href="/template/courses-list-1"
                       className="button -md -dark-1 -rounded text-white"
                     >
                       Get Started

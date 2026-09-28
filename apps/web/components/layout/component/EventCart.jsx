@@ -30,7 +30,7 @@ const EventCart = () => {
           <div key={i} className="row justify-between x-gap-40 pb-20">
             <Link
               style={{ textDecoration: "none" }}
-              href={`/events/${elm.id}`}
+              href={`/template/events/${elm.id}`}
               className="col"
             >
               <div className="row x-gap-10 y-gap-10">
@@ -83,7 +83,7 @@ const EventCart = () => {
           {cartEvents.length && (
             <>
               <Link
-                href={"/event-cart"}
+                href={"/template/event-cart"}
                 style={{ textDecoration: "none" }}
                 className="col-sm-6"
               >
@@ -92,7 +92,7 @@ const EventCart = () => {
                 </button>
               </Link>
               <Link
-                href={"/event-checkout"}
+                href={"/template/event-checkout"}
                 style={{ textDecoration: "none" }}
                 className="col-sm-6"
               >
@@ -105,7 +105,7 @@ const EventCart = () => {
           {!cartEvents.length && (
             <>
               <Link
-                href={"/event-list-1"}
+                href={"/template/event-list-1"}
                 style={{ textDecoration: "none" }}
                 className="col-12"
               >

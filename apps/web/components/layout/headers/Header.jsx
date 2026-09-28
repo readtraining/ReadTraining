@@ -21,7 +21,7 @@ export default function Header() {
             <div className="col-auto">
               <div className="header-left">
                 <div className="header__logo ">
-                  <Link href="/">
+                  <Link href="/template/home-1">
                     <Image
                       width={140}
                       height={50}
@@ -73,11 +73,11 @@ export default function Header() {
                 </div>
 
                 <div className="header-right__buttons d-flex items-center ml-30 md:d-none">
-                  <Link href="/login" className="button -underline text-white">
+                  <Link href="/template/login" className="button -underline text-white">
                     Log in
                   </Link>
                   <Link
-                    href="/signup"
+                    href="/template/signup"
                     className="button -sm -white text-dark-1 ml-30"
                   >
                     Sign up

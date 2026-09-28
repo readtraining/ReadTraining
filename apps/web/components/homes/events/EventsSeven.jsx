@@ -19,7 +19,7 @@ export default function EventsSeven() {
 
           <div className="col-auto">
             <Link
-              href="/event-list-2"
+              href="/template/event-list-2"
               className="button -icon -purple-3 -rounded text-purple-1"
             >
               Browse Events
@@ -56,7 +56,7 @@ export default function EventsSeven() {
                   </div>
                   <h4 className="text-17 lh-15 fw-500">
                     {" "}
-                    <Link className="linkCustom" href={`/events/${elm.id}`}>
+                    <Link className="linkCustom" href={`/template/events/${elm.id}`}>
                       {elm.desc}
                     </Link>
                   </h4>

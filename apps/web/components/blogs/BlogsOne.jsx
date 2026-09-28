@@ -78,7 +78,7 @@ export default function BlogsOne() {
                           <h4 className="blogCard__title text-20 lh-15 fw-500 mt-5">
                             <Link
                               className="linkCustom"
-                              href={`/blogs/${elm.id}`}
+                              href={`/template/blogs/${elm.id}`}
                             >
                               {elm.title}
                             </Link>

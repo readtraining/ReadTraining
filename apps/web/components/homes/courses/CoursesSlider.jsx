@@ -26,7 +26,7 @@ export default function CoursesSlider() {
           <div className="col-lg-auto">
             <div className="d-inline-block">
               <Link
-                href="/courses-list-1"
+                href="/template/courses-list-1"
                 className="button -icon -light-11 -purple-3 text-purple-1 "
               >
                 All Courses

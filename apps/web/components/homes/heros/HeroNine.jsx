@@ -160,7 +160,7 @@ export default function HeroNine() {
 
                     <div className="masthead-form__button">
                       <button
-                        onClick={() => router.push("/courses-list-2")}
+                        onClick={() => router.push("/template/courses-list-2")}
                         className="button -dark-1 text-white -dark-button-dark-1"
                       >
                         Search

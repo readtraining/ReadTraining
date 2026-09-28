@@ -18,7 +18,7 @@ export default function FindCourse() {
 
           <div className="col-auto">
             <Link
-              href="/courses-list-1"
+              href="/template/courses-list-1"
               className="button -md -white text-dark-1"
             >
               Get Started

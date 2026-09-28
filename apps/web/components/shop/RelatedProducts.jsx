@@ -54,7 +54,7 @@ export default function RelatedProducts() {
                   </div>
                   <h4 className="text-17 fw-500 mt-15 linkCustom">
                     <Link
-                      href={`/shop/${elm.id}`}
+                      href={`/template/shop/${elm.id}`}
                       style={{ textDecoration: "none", color: "inherit" }}
                     >
                       {elm.name}

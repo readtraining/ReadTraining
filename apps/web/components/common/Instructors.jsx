@@ -25,7 +25,7 @@ export default function Instructors({ backgroundColor }) {
 
           <div className="col-auto" data-aos="fade-left">
             <Link
-              href="/instructors-list-1"
+              href="/template/instructors-list-1"
               className="button -icon -purple-3 text-purple-1"
             >
               View All Instructors
@@ -65,7 +65,7 @@ export default function Instructors({ backgroundColor }) {
                   <h4 className="teamCard__title">
                     <Link
                       className="linkCustom"
-                      href={`/instructors/${elm.id}`}
+                      href={`/template/instructors/${elm.id}`}
                     >
                       {elm.name}
                     </Link>
@@ -112,7 +112,7 @@ export default function Instructors({ backgroundColor }) {
               Want to help people learn, grow and achieve more in life?
               <Link
                 className="text-purple-1 underline"
-                href="/instructor-become"
+                href="/template/instructor-become"
               >
                 Become an instructor
               </Link>

@@ -123,7 +123,7 @@ const HomeHero = () => {
                   <div className="col-12 col-sm-auto">
                     <Link
                       data-barba
-                      href="/signup"
+                      href="/template/signup"
                       className="button -md -purple-1 text-white"
                     >
                       Join For Free
@@ -132,7 +132,7 @@ const HomeHero = () => {
                   <div className="col-12 col-sm-auto">
                     <Link
                       data-barba
-                      href="/courses-list-1"
+                      href="/template/courses-list-1"
                       className="button -md -outline-green-1 text-green-1"
                     >
                       Find Courses

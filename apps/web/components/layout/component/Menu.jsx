@@ -15,11 +15,11 @@ export default function Menu({ allClasses, headerPosition }) {
   useEffect(() => {
     menuList.forEach((elm) => {
       elm?.links?.forEach((elm2) => {
-        if (elm2.href?.split('/')[1]  == pathname.split('/')[1] ) {
+        if (elm2.href?.split('/')[2]  == pathname.split('/')[2] ) {
           setMenuItem(elm.title);
         } else {
           elm2?.links?.map((elm3) => {
-            if (elm3.href?.split('/')[1]  == pathname.split('/')[1] ) {
+            if (elm3.href?.split('/')[2]  == pathname.split('/')[2] ) {
               setMenuItem(elm.title);
               setSubmenu(elm2.title);
             }
@@ -39,10 +39,10 @@ export default function Menu({ allClasses, headerPosition }) {
         <div className="mobile-bg js-mobile-bg"></div>
 
         <div className="d-none xl:d-flex items-center px-20 py-20 border-bottom-light">
-          <Link href="/login" className="text-dark-1">
+          <Link href="/template/login" className="text-dark-1">
             Log in
           </Link>
-          <Link href="/signup" className="text-dark-1 ml-30">
+          <Link href="/template/signup" className="text-dark-1 ml-30">
             Sign Up
           </Link>
         </div>
@@ -69,7 +69,7 @@ export default function Menu({ allClasses, headerPosition }) {
                   <li
                     key={i}
                     className={
-                      pathname.split('/')[1] == elm.href.split('/')[1] ? "activeMenu" : "inActiveMenu"
+                      pathname.split('/')[2] == elm.href.split('/')[2] ? "activeMenu" : "inActiveMenu"
                     }
                   >
                     <Link href={elm.href}>{elm.label}</Link>
@@ -100,7 +100,7 @@ export default function Menu({ allClasses, headerPosition }) {
                           <li
                             key={i}
                             className={
-                              pathname.split('/')[1]  == elm.href.split('/')[1] 
+                              pathname.split('/')[2]  == elm.href.split('/')[2] 
                                 ? "activeMenu"
                                 : "inActiveMegaMenu"
                             }
@@ -123,7 +123,7 @@ export default function Menu({ allClasses, headerPosition }) {
                           <li
                             key={i}
                             className={
-                              pathname.split('/')[1]  == elm.href.split('/')[1] 
+                              pathname.split('/')[2]  == elm.href.split('/')[2] 
                                 ? "activeMenu"
                                 : "inActiveMegaMenu"
                             }
@@ -144,7 +144,7 @@ export default function Menu({ allClasses, headerPosition }) {
                           <li
                             key={i}
                             className={
-                              pathname.split('/')[1]  == elm.href.split('/')[1] 
+                              pathname.split('/')[2]  == elm.href.split('/')[2] 
                                 ? "activeMenu"
                                 : "inActiveMegaMenu"
                             }
@@ -165,7 +165,7 @@ export default function Menu({ allClasses, headerPosition }) {
                           <li
                             key={i}
                             className={
-                              pathname.split('/')[1]  == elm.href.split('/')[1] 
+                              pathname.split('/')[2]  == elm.href.split('/')[2] 
                                 ? "activeMenu"
                                 : "inActiveMegaMenu"
                             }
@@ -186,7 +186,7 @@ export default function Menu({ allClasses, headerPosition }) {
                           <li
                             key={i}
                             className={
-                              pathname.split('/')[1]  == elm.href.split('/')[1] 
+                              pathname.split('/')[2]  == elm.href.split('/')[2] 
                                 ? "activeMenu"
                                 : "inActiveMegaMenu"
                             }
@@ -237,7 +237,7 @@ export default function Menu({ allClasses, headerPosition }) {
                   <li
                     key={i}
                     className={
-                      pathname.split('/')[1]  == elm.href.split('/')[1]  ? "activeMenu" : "inActiveMenu"
+                      pathname.split('/')[2]  == elm.href.split('/')[2]  ? "activeMenu" : "inActiveMenu"
                     }
                   >
                     <Link data-barba href={elm.href}>
@@ -267,7 +267,7 @@ export default function Menu({ allClasses, headerPosition }) {
                   <li
                     key={i}
                     className={
-                      pathname.split('/')[1]  == elm.href.split('/')[1]  ? "activeMenu" : "inActiveMenu"
+                      pathname.split('/')[2]  == elm.href.split('/')[2]  ? "activeMenu" : "inActiveMenu"
                     }
                   >
                     <Link data-barba href={elm.href}>
@@ -315,7 +315,7 @@ export default function Menu({ allClasses, headerPosition }) {
                       <li
                         key={i}
                         className={
-                          pathname.split('/')[1]  == elm.href.split('/')[1]  ? "activeMenu" : "inActiveMenu"
+                          pathname.split('/')[2]  == elm.href.split('/')[2]  ? "activeMenu" : "inActiveMenu"
                         }
                       >
                         <Link key={i} data-barba href={elm.href}>
@@ -347,7 +347,7 @@ export default function Menu({ allClasses, headerPosition }) {
                       <li
                         key={i}
                         className={
-                          pathname.split('/')[1]  == elm.href.split('/')[1]  ? "activeMenu" : "inActiveMenu"
+                          pathname.split('/')[2]  == elm.href.split('/')[2]  ? "activeMenu" : "inActiveMenu"
                         }
                       >
                         <Link key={i} data-barba href={elm.href}>
@@ -378,7 +378,7 @@ export default function Menu({ allClasses, headerPosition }) {
                       <li
                         key={i}
                         className={
-                          pathname.split('/')[1]  == elm.href.split('/')[1]  ? "activeMenu" : "inActiveMenu"
+                          pathname.split('/')[2]  == elm.href.split('/')[2]  ? "activeMenu" : "inActiveMenu"
                         }
                       >
                         <Link key={i} data-barba href={elm.href}>
@@ -395,7 +395,7 @@ export default function Menu({ allClasses, headerPosition }) {
                     <li
                       key={i}
                       className={
-                        pathname.split('/')[1]  == elm.href.split('/')[1]  ? "activeMenu" : "inActiveMenu"
+                        pathname.split('/')[2]  == elm.href.split('/')[2]  ? "activeMenu" : "inActiveMenu"
                       }
                     >
                       <Link key={i} data-barba href={elm.href}>
@@ -409,8 +409,8 @@ export default function Menu({ allClasses, headerPosition }) {
             <li
               
             >
-              <Link data-barba href="/contact-1"  className={
-                pathname == "/contact-1" ? "activeMenu" : "inActiveMenuTwo"
+              <Link data-barba href="/template/contact-1"  className={
+                pathname == "/template/contact-1" ? "activeMenu" : "inActiveMenuTwo"
               }>
                 Contact
               </Link>

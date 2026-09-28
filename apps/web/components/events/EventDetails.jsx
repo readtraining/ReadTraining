@@ -164,7 +164,7 @@ export default function EventDetails({ id }) {
                         <h5 className="text-17 fw-500 mt-20">
                           <Link
                             className="linkCustom"
-                            href={`/instructors/${elm.id}`}
+                            href={`/template/instructors/${elm.id}`}
                           >
                             {elm.name}
                           </Link>
@@ -324,7 +324,7 @@ export default function EventDetails({ id }) {
                       rows="8"
                     ></textarea>
                   </div>
-                  <Link href={"/login"} className="col-12">
+                  <Link href={"/template/login"} className="col-12">
                     <button
                       type="submit"
                       name="submit"

@@ -24,7 +24,7 @@ export default function BecomeInstractoeEight() {
             </p>
             <div className="d-inline-block mt-20">
               <Link
-                href="/instructor-become"
+                href="/template/instructor-become"
                 className="button -md -outline-purple-1 text-purple-1"
               >
                 Apply Now

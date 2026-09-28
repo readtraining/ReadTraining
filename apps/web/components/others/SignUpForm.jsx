@@ -16,7 +16,7 @@ export default function SignUpForm() {
               <h3 className="text-30 lh-13">Sign Up</h3>
               <p className="mt-10">
                 Already have an account?
-                <Link href="/login" className="text-purple-1">
+                <Link href="/template/login" className="text-purple-1">
                   Log in
                 </Link>
               </p>

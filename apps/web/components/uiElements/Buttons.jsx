@@ -72,7 +72,7 @@ export default function Buttons() {
       <div className="row y-gap pt-30">
         <div className="col-auto">
           <Link
-            href="/instructors-list-1"
+            href="/template/instructors-list-1"
             className="button -icon -purple-3 text-purple-1"
           >
             View All Instructors
@@ -81,7 +81,7 @@ export default function Buttons() {
         </div>
         <div className="col-auto">
           <Link
-            href="/instructors-list-1"
+            href="/template/instructors-list-1"
             className="button -icon -purple-1 text-white"
           >
             View All Instructors
@@ -90,7 +90,7 @@ export default function Buttons() {
         </div>
         <div className="col-auto">
           <Link
-            href="/instructors-list-1"
+            href="/template/instructors-list-1"
             className="button -icon -outline-purple-1 text-purple-1"
           >
             View All Instructors
@@ -99,7 +99,7 @@ export default function Buttons() {
         </div>
         <div className="col-auto">
           <Link
-            href="/instructors-list-1"
+            href="/template/instructors-list-1"
             className="button -icon -purple-1 text-white"
           >
             View All Instructors

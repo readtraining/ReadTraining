@@ -69,7 +69,7 @@ export default function HeaderTwo() {
           <div className="col-auto">
             <div className="header-left">
               <div className="header__logo ">
-                <Link href="/">
+                <Link href="/template/home-1">
                   <Image
                     width={140}
                     height={40}
@@ -109,11 +109,11 @@ export default function HeaderTwo() {
               </div>
 
               <div className="header-right__buttons d-flex items-center ml-30 xl:ml-20 md:d-none">
-                <Link href="/login" className="button -underline text-white">
+                <Link href="/template/login" className="button -underline text-white">
                   Log in
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/template/signup"
                   className="button px-25 h-50 -white text-dark-1 -rounded ml-30 xl:ml-20"
                 >
                   Sign up

@@ -28,7 +28,7 @@ export default function InstractorsEight() {
 
             <div className="d-inline-block">
               <Link
-                href="/instructors-list-1"
+                href="/template/instructors-list-1"
                 className="button -icon -red-2 text-orange-1 mt-30"
               >
                 View All Instructors
@@ -91,7 +91,7 @@ export default function InstractorsEight() {
                         <h5 className="text-17 fw-500 mt-10">
                           <Link
                             className="linkCustom"
-                            href={`/instructors/${elm.id}`}
+                            href={`/template/instructors/${elm.id}`}
                           >
                             {elm.name}
                           </Link>

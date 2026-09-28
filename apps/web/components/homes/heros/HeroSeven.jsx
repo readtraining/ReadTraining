@@ -64,7 +64,7 @@ export default function HeroSeven() {
                 <div className="row items-center x-gap-20 y-gap-20 pt-20">
                   <div className="col-auto">
                     <Link
-                      href="/signup"
+                      href="/template/signup"
                       className="button -md -gradient-1 -rounded text-white"
                     >
                       Join For Free
@@ -72,7 +72,7 @@ export default function HeroSeven() {
                   </div>
                   <div className="col-auto">
                     <Link
-                      href="/courses-list-1"
+                      href="/template/courses-list-1"
                       className="button -md -outline-light-5 -rounded text-dark-1"
                     >
                       Find Courses

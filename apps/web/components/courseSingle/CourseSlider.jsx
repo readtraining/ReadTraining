@@ -84,7 +84,7 @@ export default function CourseSlider() {
                         <div className="text-17 lh-15 fw-500 text-dark-1 mt-10">
                           <Link
                             className="linkCustom"
-                            href={`/courses/${elm.id}`}
+                            href={`/template/courses/${elm.id}`}
                           >
                             {elm.title}
                           </Link>

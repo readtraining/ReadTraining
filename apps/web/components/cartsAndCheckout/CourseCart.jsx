@@ -114,7 +114,7 @@ export default function CourseCart() {
                         <div className="fw-500 text-dark-1 ml-30">
                         <Link
                           className="linkCustom"
-                          href={`/courses/${elm.id}`}
+                          href={`/template/courses/${elm.id}`}
                         >
                           {elm.title}{" "}
                         </Link>
@@ -220,7 +220,7 @@ export default function CourseCart() {
                   <div className="row justify-center pt-60 lg:pt-40">
                     <div className="col-auto">
                       <Link
-                        href="/courses-list-1"
+                        href="/template/courses-list-1"
                         className="button -md -outline-purple-1 text-purple-1"
                       >
                         Buy Course
@@ -251,7 +251,7 @@ export default function CourseCart() {
               </div>
 
               <Link
-                href="/course-checkout"
+                href="/template/course-checkout"
                 className="button -md -purple-1 text-white col-12 mt-30"
               >
                 Proceed to checkout

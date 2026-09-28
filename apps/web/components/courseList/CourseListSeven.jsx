@@ -803,7 +803,7 @@ export default function CourseListSeven() {
                       <div className="col-xl-7 text-17 lh-15 fw-500 text-dark-1 mt-10">
                         <Link
                           className="linkCustom"
-                          href={`/courses/${elm.id}`}
+                          href={`/template/courses/${elm.id}`}
                         >
                           {elm.title}
                         </Link>

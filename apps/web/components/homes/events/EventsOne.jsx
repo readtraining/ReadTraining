@@ -94,7 +94,7 @@ export default function EventsOne() {
                           <h4 className="eventCard__title text-17 fw-500">
                             <Link
                               className="linkCustom"
-                              href={`/events/${elm.id}`}
+                              href={`/template/events/${elm.id}`}
                             >
                               {elm.title}
                             </Link>
@@ -113,7 +113,7 @@ export default function EventsOne() {
 
                         <div className="eventCard__button">
                           <Link
-                            href={`/events/${elm.id}`}
+                            href={`/template/events/${elm.id}`}
                             className="button -sm -rounded -purple-1 text-white px-25"
                           >
                             Buy
@@ -131,7 +131,7 @@ export default function EventsOne() {
         <div className="row pt-60 lg:pt-40">
           <div className="col-auto">
             <Link
-              href="/event-list-1"
+              href="/template/event-list-1"
               className="button -icon -outline-purple-1 text-purple-1 fw-500"
             >
               View All Events

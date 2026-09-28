@@ -20,7 +20,7 @@ export default function HeaderThree() {
           <div className="col-auto">
             <div className="header-left d-flex items-center">
               <div className="header__logo ">
-                <Link href="/">
+                <Link href="/template/home-1">
                   <Image
                     width={140}
                     height={50}
@@ -77,13 +77,13 @@ export default function HeaderThree() {
 
               <div className="header-right__buttons d-flex items-center ml-30 xl:ml-20 md:d-none">
                 <Link
-                  href="/login"
+                  href="/template/login"
                   className="button px-30 h-50 -outline-dark-1 text-dark-1"
                 >
                   Log in
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/template/signup"
                   className="button px-30 h-50 -dark-1 text-white ml-10"
                 >
                   Sign up

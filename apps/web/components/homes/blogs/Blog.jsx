@@ -28,7 +28,7 @@ export default function News() {
             data-aos-duration={700}
           >
             <Link
-              href="/blog-list-1"
+              href="/template/blog-list-1"
               className="button -icon -purple-3 text-purple-1"
             >
               Browse Blog
@@ -58,7 +58,7 @@ export default function News() {
                 <div className="blogCard__content">
                   <div className="blogCard__category">{elm.category}</div>
                   <h4 className="blogCard__title">
-                    <Link className="linkCustom" href={`/blogs/${elm.id}`}>
+                    <Link className="linkCustom" href={`/template/blogs/${elm.id}`}>
                       {elm.title}
                     </Link>
                   </h4>
@@ -90,7 +90,7 @@ export default function News() {
                       <div className="blogCard__category">{elm.category}</div>
                       <h4 className="blogCard__title">
                         {" "}
-                        <Link className="linkCustom" href={`/events/${elm.id}`}>
+                        <Link className="linkCustom" href={`/template/events/${elm.id}`}>
                           {elm.title}
                         </Link>
                       </h4>

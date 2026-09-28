@@ -89,12 +89,12 @@ export default function Reviews() {
             <div className="d-flex items-center">
               <div className="d-flex items-center flex-wrap x-gap-20">
                 <div>
-                  <Link href="/help-center" className="text-13 lh-1">
+                  <Link href="/template/help-center" className="text-13 lh-1">
                     Help
                   </Link>
                 </div>
                 <div>
-                  <Link href="/terms" className="text-13 lh-1">
+                  <Link href="/template/terms" className="text-13 lh-1">
                     Privacy Policy
                   </Link>
                 </div>
@@ -109,7 +109,7 @@ export default function Reviews() {
                   </a>
                 </div>
                 <div>
-                  <Link href="/terms" className="text-13 lh-1">
+                  <Link href="/template/terms" className="text-13 lh-1">
                     Terms of Use
                   </Link>
                 </div>

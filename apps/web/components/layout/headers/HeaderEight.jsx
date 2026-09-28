@@ -70,7 +70,7 @@ export default function HeaderEight() {
           <div className="col-auto">
             <div className="header-left d-flex items-center">
               <div className="header__logo ">
-                <Link data-barba href="/">
+                <Link data-barba href="/template/home-1">
                   <Image
                     width={140}
                     height={50}
@@ -118,11 +118,11 @@ export default function HeaderEight() {
               </div>
 
               <div className="header-right__buttons d-flex items-center ml-30 xl:ml-20 lg:d-none">
-                <Link href="/login" className="button -underline text-dark-1">
+                <Link href="/template/login" className="button -underline text-dark-1">
                   Log in
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/template/signup"
                   className="button px-25 h-50 -dark-1 text-white ml-20"
                 >
                   Sign up

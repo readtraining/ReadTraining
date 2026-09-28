@@ -88,7 +88,7 @@ export default function CoursesTwo() {
         <div className="row justify-center pt-60 lg:pt-40">
           <div className="col-auto">
             <Link
-              href="/courses-list-1"
+              href="/template/courses-list-1"
               className="button -icon -purple-3 text-purple-1"
             >
               All Courses

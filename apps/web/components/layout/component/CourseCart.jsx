@@ -31,7 +31,7 @@ const CourseCart = () => {
           <div key={i} className="row justify-between x-gap-40 pb-20">
             <Link
               style={{ textDecoration: "none" }}
-              href={`/courses/${elm.id}`}
+              href={`/template/courses/${elm.id}`}
               className="col"
             >
               <div className="row x-gap-10 y-gap-10">
@@ -99,7 +99,7 @@ const CourseCart = () => {
           {cartCourses.length && (
             <>
               <Link
-                href={"/course-cart"}
+                href={"/template/course-cart"}
                 style={{ textDecoration: "none" }}
                 className="col-sm-6"
               >
@@ -108,7 +108,7 @@ const CourseCart = () => {
                 </button>
               </Link>
               <Link
-                href={"/course-checkout"}
+                href={"/template/course-checkout"}
                 style={{ textDecoration: "none" }}
                 className="col-sm-6"
               >
@@ -121,7 +121,7 @@ const CourseCart = () => {
           {!cartCourses.length && (
             <>
               <Link
-                href={"/courses-list-1"}
+                href={"/template/courses-list-1"}
                 style={{ textDecoration: "none" }}
                 className="col-12"
               >

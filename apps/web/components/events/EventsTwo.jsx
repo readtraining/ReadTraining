@@ -140,7 +140,7 @@ export default function EventsTwo() {
                             <h5 className="text-15 lh-15 fw-500">
                               <Link
                                 className="linkCustom"
-                                href={`/events/${elm.id}`}
+                                href={`/template/events/${elm.id}`}
                               >
                                 {elm.desc}
                               </Link>
@@ -256,7 +256,7 @@ export default function EventsTwo() {
                         <h4 className="eventCard__title text-17 lh-15 fw-500 text-dark-4 mt-15">
                           <Link
                             className="linkCustom"
-                            href={`/events/${elm.id}`}
+                            href={`/template/events/${elm.id}`}
                           >
                             {" "}
                             {elm.desc}

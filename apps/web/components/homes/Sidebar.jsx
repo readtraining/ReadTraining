@@ -16,7 +16,7 @@ export default function Sidebar() {
           <div>
             <div className="sidebar__item -is-active">
               <Link
-                href="/about-1"
+                href="/template/about-1"
                 className="-dark-sidebar-white d-flex items-center text-17 lh-1 fw-500"
               >
                 <i className="text-20 icon-discovery mr-15"></i>
@@ -26,7 +26,7 @@ export default function Sidebar() {
 
             <div className="sidebar__item ">
               <Link
-                href="/courses-list-1"
+                href="/template/courses-list-1"
                 className="-dark-sidebar-white d-flex items-center text-17 lh-1 fw-500"
               >
                 <i className="text-20 icon-play-button mr-15"></i>
@@ -46,7 +46,7 @@ export default function Sidebar() {
 
             <div className="sidebar__item ">
               <Link
-                href="/blog-list-1"
+                href="/template/blog-list-1"
                 className="-dark-sidebar-white d-flex items-center text-17 lh-1 fw-500"
               >
                 <i className="text-20 icon-list mr-15"></i>
@@ -108,10 +108,10 @@ export default function Sidebar() {
                     <div className="accordion__content__inner px-30 pt-15 pb-10">
                       <div className="sidebar__links y-gap-5">
                         <div>
-                          <Link href="/about-1">About v1</Link>
+                          <Link href="/template/about-1">About v1</Link>
                         </div>
                         <div>
-                          <Link href="/about-2">About v2</Link>
+                          <Link href="/template/about-2">About v2</Link>
                         </div>
                         <div>
                           <a href="#">About v3</a>
@@ -125,7 +125,7 @@ export default function Sidebar() {
 
             <div className="">
               <Link
-                href="/contact-1"
+                href="/template/contact-1"
                 className="d-flex items-center justify-between py-15 px-20 rounded-16 text-16 lh-1 fw-500 -base-sidebar-menu-hover"
               >
                 Contact
@@ -134,7 +134,7 @@ export default function Sidebar() {
 
             <div className="">
               <Link
-                href="/pricing"
+                href="/template/pricing"
                 className="d-flex items-center justify-between py-15 px-20 rounded-16 text-16 lh-1 fw-500 -base-sidebar-menu-hover"
               >
                 Pricing
@@ -143,7 +143,7 @@ export default function Sidebar() {
 
             <div className="">
               <Link
-                href="/help-center"
+                href="/template/help-center"
                 className="d-flex items-center justify-between py-15 px-20 rounded-16 text-16 lh-1 fw-500 -base-sidebar-menu-hover"
               >
                 Help
@@ -152,7 +152,7 @@ export default function Sidebar() {
 
             <div className="">
               <Link
-                href="/terms"
+                href="/template/terms"
                 className="d-flex items-center justify-between py-15 px-20 rounded-16 text-16 lh-1 fw-500 -base-sidebar-menu-hover"
               >
                 Faq
@@ -161,7 +161,7 @@ export default function Sidebar() {
 
             <div className="">
               <Link
-                href="/terms"
+                href="/template/terms"
                 className="d-flex items-center justify-between py-15 px-20 rounded-16 text-16 lh-1 fw-500 -base-sidebar-menu-hover"
               >
                 Term

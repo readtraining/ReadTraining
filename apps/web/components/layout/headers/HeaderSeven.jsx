@@ -35,7 +35,7 @@ export default function HeaderSeven() {
           <div className="col-auto">
             <div className="header-left d-flex items-center">
               <div className="header__logo pr-30 xl:pr-20 md:pr-0">
-                <Link href="/">
+                <Link href="/template/home-1">
                   <Image
                     width={140}
                     height={50}
@@ -79,11 +79,11 @@ export default function HeaderSeven() {
               </div>
 
               <div className="header-right__buttons d-flex items-center ml-30 xl:ml-20 lg:d-none">
-                <Link href="/login" className="button -underline text-purple-1">
+                <Link href="/template/login" className="button -underline text-purple-1">
                   Log in
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/template/signup"
                   className="button h-50 px-30 -purple-3 -rounded text-purple-1 ml-15"
                 >
                   Sign up

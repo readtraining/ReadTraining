@@ -182,7 +182,7 @@ export default function DashboardOne() {
               <div className="d-flex justify-between items-center py-20 px-30 border-bottom-light">
                 <h2 className="text-17 fw-500">Popular Instructor</h2>
                 <Link
-                  href="/instructors-list-2"
+                  href="/template/instructors-list-2"
                   className="text-14 text-purple-1 underline"
                 >
                   View All
@@ -206,7 +206,7 @@ export default function DashboardOne() {
                         <h4 className="text-15 lh-1 fw-500">
                           <Link
                             className="linkCustom"
-                            href={`/instructors/${elm.id}`}
+                            href={`/template/instructors/${elm.id}`}
                           >
                             {elm.name}
                           </Link>

@@ -73,7 +73,7 @@ export default function About() {
               </p>
               <div className="d-inline-block">
                 <Link
-                  href="/signup"
+                  href="/template/signup"
                   className="button -md -purple-1 text-white mt-30"
                 >
                   Start Learning For Free

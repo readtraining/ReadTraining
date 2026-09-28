@@ -28,7 +28,7 @@ export default function BlogsFive() {
             data-aos-duration={800}
           >
             <Link
-              href="/blog-list-3"
+              href="/template/blog-list-3"
               className="button -icon -purple-3 text-purple-1"
             >
               Browse Blog
@@ -56,7 +56,7 @@ export default function BlogsFive() {
                 <div className="blogCard__content">
                   <div className="blogCard__category">{elm.category}</div>
                   <h4 className="blogCard__title">
-                    <Link className="linkCustom" href={`/blogs/${elm.id}`}>
+                    <Link className="linkCustom" href={`/template/blogs/${elm.id}`}>
                       {elm.title}
                     </Link>
                   </h4>
@@ -89,7 +89,7 @@ export default function BlogsFive() {
                       </div>
                       <h4 className="text-17 lh-15 fw-500 mt-10">
                         {" "}
-                        <Link className="linkCustom" href={`/events/${elm.id}`}>
+                        <Link className="linkCustom" href={`/template/events/${elm.id}`}>
                           {elm.desc}
                         </Link>
                       </h4>

@@ -22,7 +22,7 @@ export default function EventsSix() {
 
           <div className="col-auto">
             <Link
-              href="/event-list-2"
+              href="/template/event-list-2"
               className="button -icon -purple-3 text-purple-1 -rounded"
             >
               Browse Event
@@ -80,7 +80,7 @@ export default function EventsSix() {
                             {elm.date.split(" ")[1].split(",")[0].toUpperCase()}
                           </div>
                         </div>
-                        <Link className="linkCustom" href={`/events/${elm.id}`}>
+                        <Link className="linkCustom" href={`/template/events/${elm.id}`}>
                           {elm.title}
                         </Link>
                       </div>

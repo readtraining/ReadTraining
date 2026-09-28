@@ -30,7 +30,7 @@ const ShopCart = () => {
           <div key={i} className="row justify-between x-gap-40 pb-20">
             <Link
               style={{ textDecoration: "none" }}
-              href={`/shop/${elm.id}`}
+              href={`/template/shop/${elm.id}`}
               className="col"
             >
               <div className="row x-gap-10 y-gap-10">
@@ -83,7 +83,7 @@ const ShopCart = () => {
           {cartProducts.length && (
             <>
               <Link
-                href={"/shop-cart"}
+                href={"/template/shop-cart"}
                 style={{ textDecoration: "none" }}
                 className="col-sm-6"
               >
@@ -92,7 +92,7 @@ const ShopCart = () => {
                 </button>
               </Link>
               <Link
-                href={"/shop-checkout"}
+                href={"/template/shop-checkout"}
                 style={{ textDecoration: "none" }}
                 className="col-sm-6"
               >
@@ -105,7 +105,7 @@ const ShopCart = () => {
           {!cartProducts.length && (
             <>
               <Link
-                href={"/shop-list"}
+                href={"/template/shop-list"}
                 style={{ textDecoration: "none" }}
                 className="col-12"
               >

@@ -77,7 +77,7 @@ export default function CoursesFour() {
         <div className="row justify-center pt-60 lg:pt-50">
           <div className="col-auto">
             <Link
-              href="/courses-list-2"
+              href="/template/courses-list-2"
               className="button -icon -purple-1 text-white"
             >
               Browse All Courses
