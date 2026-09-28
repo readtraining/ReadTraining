@@ -1,8 +1,7 @@
 "use client";
 import React from "react";
-import { HeaderExplore } from "@/components/layout/component/header-explore";
 
-import SearchToggle from "@/components/layout/component/SearchToggle";
+import HomeSearch from "./HomeSearch";
 import CartToggle from "@/components/layout/component/CartToggle";
 import HomeMenu from "./HomeMenu";
 import Link from "next/link";
@@ -34,14 +33,6 @@ export default function HomeHeader() {
                     />
                   </Link>
                 </div>
-
-                {/* header explore start */}
-                <HeaderExplore
-                  allClasses={
-                    "header__explore text-green-1 ml-60 xl:ml-30 xl:d-none"
-                  }
-                />
-                {/* header explore end */}
               </div>
             </div>
 
@@ -55,7 +46,7 @@ export default function HomeHeader() {
               <div className="header-right d-flex items-center">
                 <div className="header-right__icons text-white d-flex items-center">
                   {/* search toggle start */}
-                  <SearchToggle />
+                  <HomeSearch />
                   {/* search toggle end */}
 
                   {/* cart toggle start */}

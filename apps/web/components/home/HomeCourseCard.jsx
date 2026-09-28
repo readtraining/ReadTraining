@@ -3,6 +3,9 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+
+// Template course card (coursesCard -type-1) showing the client's course data:
+// title, study method and a "view dates" footer instead of the template's lessons/price.
 export default function HomeCourseCard({ data, index }) {
   const [rating, setRating] = useState([]);
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function HomeCourseCard({ data, index }) {
                 <div>
                   <div className="px-15 rounded-200 bg-green-1">
                     <span className="text-11 lh-1 uppercase fw-500 text-dark-1">
-                      Best sellers
+                      Most booked
                     </span>
                   </div>
                 </div>
@@ -74,30 +77,6 @@ export default function HomeCourseCard({ data, index }) {
                   <Image
                     width={16}
                     height={17}
-                    src="/assets/img/coursesCards/icons/1.svg"
-                    alt="icon"
-                  />
-                </div>
-                <div className="text-14 lh-1">{data.providers} providers</div>
-              </div>
-
-              <div className="d-flex items-center">
-                <div className="mr-8">
-                  <Image
-                    width={16}
-                    height={17}
-                    src="/assets/img/coursesCards/icons/2.svg"
-                    alt="icon"
-                  />
-                </div>
-                <div className="text-14 lh-1">{data.days}</div>
-              </div>
-
-              <div className="d-flex items-center">
-                <div className="mr-8">
-                  <Image
-                    width={16}
-                    height={17}
                     src="/assets/img/coursesCards/icons/3.svg"
                     alt="icon"
                   />
@@ -109,21 +88,12 @@ export default function HomeCourseCard({ data, index }) {
             <div className="coursesCard-footer">
               <div className="coursesCard-footer__author">
                 <i className="icon-location text-16 mr-10"></i>
-                <div>UK-wide dates</div>
+                <div>UK-wide dates and locations</div>
               </div>
 
               <div className="coursesCard-footer__price">
-                {data.paid ? (
-                  <>
-                    <div>£{data.originalPrice}</div>
-                    <div>£{data.discountedPrice}</div>
-                  </>
-                ) : (
-                  <>
-                    <div></div>
-                    <div>Free</div>
-                  </>
-                )}
+                <div></div>
+                <div className="text-14 fw-500 text-purple-1">View dates</div>
               </div>
             </div>
           </div>

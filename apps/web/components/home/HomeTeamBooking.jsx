@@ -42,7 +42,7 @@ export default function HomeTeamBooking() {
 
                       </span>
                     </div>
-                    <div className="about-content-list__title">{elm.title}</div>
+                    <div><div className="about-content-list__title">{elm.title}</div><div className="text-14 text-light-1">{elm.text}</div></div>
                   </div>
                 ))}
               </div>

@@ -22,6 +22,17 @@ export default function HomeProviders() {
             <p className="mt-20">
               {providers.text}
             </p>
+            <div className="y-gap-15 mt-20">
+              {providers.points.map((pt) => (
+                <div key={pt.title} className="d-flex x-gap-12">
+                  <i className="icon-check text-11 text-purple-1 mt-5"></i>
+                  <div>
+                    <div className="text-15 fw-500 text-dark-1">{pt.title}</div>
+                    <div className="text-14 text-light-1">{pt.text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
             <div className="d-inline-block mt-20">
               <Link
                 href={providers.href}

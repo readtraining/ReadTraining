@@ -1,6 +1,7 @@
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHero from "@/components/home/HomeHero";
+import HomeSearchBand from "@/components/home/HomeSearchBand";
 import HomeBrands from "@/components/home/HomeBrands";
 import HomeCourses from "@/components/home/HomeCourses";
 import HomeBookingOptions from "@/components/home/HomeBookingOptions";
@@ -26,6 +27,7 @@ export default function HomePage() {
       <HomeHeader />
       <div className="content-wrapper js-content-wrapper overflow-hidden">
         <HomeHero />
+        <HomeSearchBand />
         <HomeBrands />
         <HomeCourses />
         <HomeBookingOptions />

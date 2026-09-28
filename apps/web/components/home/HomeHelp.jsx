@@ -16,7 +16,12 @@ export default function HomeHelp() {
             </p>
           </div>
 
-          <div className="col-auto">
+          <div className="col-auto d-flex flex-wrap x-gap-15 y-gap-10">
+            {help.options.slice(0, 2).map((o) => (
+              <a key={o.label} href={o.href} className="button -md -outline-white text-white">
+                {o.label}: {o.value}
+              </a>
+            ))}
             <Link
               href={help.href}
               className="button -md -white text-dark-1"

@@ -4,7 +4,7 @@ import { Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import "swiper/css";
-import { roles as topCategories } from "@/data/home";
+import { roles as topCategories, courseFinder } from "@/data/home";
 
 import "swiper/css/pagination";
 
@@ -18,11 +18,9 @@ const HomeRoles = () => {
           <div className="row justify-center text-center">
             <div className="col-auto">
               <div className="sectionTitle ">
-                <h2 className="sectionTitle__title ">What do you need training for?</h2>
+                <h2 className="sectionTitle__title ">{courseFinder.title}</h2>
 
-                <p className="sectionTitle__text ">
-                  Start with the job you're going for and we'll point you to the qualification employers ask for.
-                </p>
+                <p className="sectionTitle__text ">{courseFinder.text}</p>
               </div>
             </div>
           </div>
@@ -53,10 +51,10 @@ const HomeRoles = () => {
                 },
                 1200: {
                   // when window width is >= 992px
-                  slidesPerView: 6,
+                  slidesPerView: 4,
                 },
               }}
-              loop={true}
+              loop={false}
             >
               {topCategories.map((item, i) => (
                 <SwiperSlide key={i}>
@@ -75,10 +73,7 @@ const HomeRoles = () => {
                           alt="icon"
                         />
                       </div>
-                      <div className="featureCard__title">
-                        {item.title.split(" ")[0]} <br />
-                        {item.title.split(" ")[1] && item.title.split(" ")[1]}
-                      </div>
+                      <div className="featureCard__title">{item.title}</div>
                       <div className="featureCard__text">{item.text}</div>
                     </div>
                   </Link>

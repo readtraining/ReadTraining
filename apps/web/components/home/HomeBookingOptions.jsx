@@ -21,7 +21,6 @@ export default function HomeBookingOptions() {
               <h2 className="sectionTitle__title ">{bookingOptions.title}</h2>
 
               <p className="sectionTitle__text ">{bookingOptions.text}</p>
-              <p className="text-14 text-light-1 mt-10">{bookingOptions.example}</p>
             </div>
 
             <div className="d-flex justify-center items-center pt-60 lg:pt-40">
@@ -43,7 +42,22 @@ export default function HomeBookingOptions() {
           </div>
         </div>
 
-        <div className="row y-gap-30 justify-between pt-60 lg:pt-40">
+        <div className="row y-gap-20 pt-40">
+          {bookingOptions.benefits.map((b) => (
+            <div key={b.title} className="col-lg-3 col-md-6">
+              <div className="d-flex x-gap-12">
+                <i className="icon-check text-12 text-purple-1 mt-5"></i>
+                <div>
+                  <div className="text-16 fw-500 text-dark-1">{b.title}</div>
+                  <div className="text-14 text-light-1 mt-5">{b.text}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="text-center text-14 text-light-1 pt-40">{bookingOptions.example}</div>
+
+        <div className="row y-gap-30 justify-between pt-30">
           <div className="col-lg-4 col-md-6">
             <div className="priceCard -type-1 rounded-16 bg-white shadow-2">
               <div className="priceCard__content py-45 px-60 xl:px-40 text-center">
@@ -192,6 +206,7 @@ export default function HomeBookingOptions() {
             </div>
           </div>
         </div>
+        <p className="text-13 text-light-1 text-center pt-30">{bookingOptions.footnote}</p>
       </div>
     </section>
   );

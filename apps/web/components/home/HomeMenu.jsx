@@ -2,85 +2,127 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  subjects,
-  studyMethods,
-  regions,
-  popularByLocation,
-  licences,
-  resources,
-} from "@/data/home/menu";
+import { subjects, licenceGroups, regions, popularByLocation, resources, menuFooters } from "@/data/home/menu";
 
-// Template navbar menu (markup and classes from components/layout/component/Menu.jsx and the
-// header "Explore" flyout), arranged like Hurak: a browse list on the left that drives a
-// "popular in…" panel, and a summary card on the right.
+// Navbar dropdowns. Layout and proportions follow Hurak's menus (three columns: browse list →
+// related list → featured card, plus a footer strip); colours and type come from the template.
+// Rendered inside the template's `.mega` container so open/close behaviour is unchanged.
 
-const Eyebrow = ({ children }) => (
-  <div className="text-13 fw-500 text-light-1 uppercase mb-15" style={{ letterSpacing: ".06em" }}>
-    {children}
+const Eyebrow = ({ children }) => <h3 className="rt-menu-eyebrow">{children}</h3>;
+
+const ArrowLink = ({ href, children }) => (
+  <Link href={href} className="rt-menu-link">
+    <span>{children}</span>
+    <i className="icon-arrow-right text-11"></i>
+  </Link>
+);
+
+// Column with an eyebrow, scrollable body and an optional pinned bottom link.
+const Column = ({ title, link, children, last }) => (
+  <div className={`rt-menu-col${last ? " -last" : ""}`}>
+    <Eyebrow>{title}</Eyebrow>
+    <div className="rt-menu-col__body">{children}</div>
+    {link && <div className="rt-menu-col__foot">{link}</div>}
   </div>
 );
 
-function BrowseList({ items, active, onHover, allHref, allLabel }) {
-  return (
-    <>
-      <ul className="mega__list" style={{ margin: "0 -15px" }}>
-        {items.map((item, i) => (
-          <li key={item.label} onMouseEnter={() => onHover(i)}>
-            <Link
-              href={item.href || "#"}
-              className={`d-flex items-center justify-between rounded-8 px-15 ${
-                i === active ? "bg-light-3 text-purple-1 fw-500" : "text-dark-1"
-              }`}
-              style={{ padding: "8px 15px" }}
-            >
-              {item.label}
-              <i className="icon-chevron-right text-9 ml-10"></i>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <Link href={allHref} className="d-inline-flex items-center text-purple-1 fw-500 mt-10">
-        {allLabel} <i className="icon-arrow-top-right text-11 ml-8"></i>
+const BrowseList = ({ items, active, onHover }) => (
+  <div className="rt-menu-browse">
+    {items.map((item, i) => (
+      <Link
+        key={item.label}
+        href={item.href}
+        onMouseEnter={() => onHover(i)}
+        className={`rt-menu-browse__item${i === active ? " is-active" : ""}`}
+      >
+        <span>{item.label}</span>
+        <i className="icon-chevron-right text-9"></i>
       </Link>
-    </>
-  );
-}
+    ))}
+  </div>
+);
 
-function SimpleDropdown({ title, items }) {
-  return (
-    <li className="menu-item-has-children">
-      <Link data-barba href="#">
-        {title} <i className="icon-chevron-right text-13 ml-10"></i>
+const ListLinks = ({ items, columns = 2 }) => (
+  <div className="rt-menu-list" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+    {items.map((it) => (
+      <Link key={it.label} href={it.href} className="rt-menu-list__item">
+        <span>{it.label}</span>
+        <i className="icon-chevron-right text-9"></i>
       </Link>
-      <ul className="subnav" style={{ minWidth: 340 }}>
-        <li className="menu__backButton js-nav-list-back">
-          <Link href="#">
-            <i className="icon-chevron-left text-13 mr-10"></i> {title}
-          </Link>
-        </li>
-        {items.map((item) => (
-          <li key={item.label} className="inActiveMenu">
-            <Link href={item.href} className="d-flex items-center" style={{ gap: 14, whiteSpace: "normal" }}>
-              <span className="size-40 d-flex justify-center items-center rounded-8 bg-light-3" style={{ flex: "0 0 auto" }}>
-                <i className={`${item.icon} text-16 text-purple-1`}></i>
-              </span>
-              <span style={{ flex: 1 }}>
-                <span className="d-block fw-500 text-dark-1">{item.label}</span>
-                <span className="d-block text-13 text-light-1" style={{ lineHeight: 1.4 }}>{item.text}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </li>
-  );
-}
+    ))}
+  </div>
+);
+
+const IconRow = ({ href, icon, label, text }) => (
+  <Link href={href} className="rt-menu-iconrow">
+    <span className="rt-menu-iconrow__icon">
+      <i className={`${icon} text-14`}></i>
+    </span>
+    <span className="rt-menu-iconrow__body">
+      <span className="rt-menu-iconrow__title">{label}</span>
+      {text && <span className="rt-menu-iconrow__text">{text}</span>}
+    </span>
+  </Link>
+);
+
+const FeatureCard = ({ img, tag, eyebrow, title, text, link }) => (
+  <div className="rt-menu-card">
+    <div className="rt-menu-card__img">
+      <img src={img} alt="" />
+      {tag && <span className="rt-menu-card__tag">{tag}</span>}
+    </div>
+    {eyebrow && <div className="rt-menu-card__eyebrow">{eyebrow}</div>}
+    <div className="rt-menu-card__title">{title}</div>
+    <div className="rt-menu-card__text">{text}</div>
+    {link && (
+      <div className="rt-menu-card__foot">
+        <ArrowLink href={link.href}>{link.label}</ArrowLink>
+      </div>
+    )}
+  </div>
+);
+
+const Footer = ({ links, action }) => (
+  <div className="rt-menu-footer">
+    <div className="rt-menu-footer__links">
+      {links.map((l, i) => (
+        <React.Fragment key={l.label}>
+          {i > 0 && <span className="rt-menu-footer__dot">·</span>}
+          <Link href={l.href}>{l.label}</Link>
+        </React.Fragment>
+      ))}
+    </div>
+    {action && (
+      <Link href={action.href} className="rt-menu-footer__action">
+        <i className={`${action.icon} text-12`}></i>
+        {action.label}
+      </Link>
+    )}
+  </div>
+);
+
+const Panel = ({ children, footer }) => (
+  <div className="mega xl:d-none rt-menu-panel">
+    <div className="rt-menu-grid">{children}</div>
+    <Footer {...footer} />
+  </div>
+);
+
+const Item = ({ title, children }) => (
+  <li className="menu-item-has-children -has-mega-menu">
+    <Link data-barba href="#">
+      {title} <i className="icon-chevron-right text-13 ml-10"></i>
+    </Link>
+    {children}
+  </li>
+);
 
 export default function HomeMenu({ allClasses, headerPosition }) {
-  const [subjectIdx, setSubjectIdx] = useState(subjects.findIndex((s) => s.label === "Security"));
+  const [subjectIdx, setSubjectIdx] = useState(0);
+  const [licenceIdx, setLicenceIdx] = useState(0);
   const [regionIdx, setRegionIdx] = useState(0);
   const subject = subjects[subjectIdx];
+  const licence = licenceGroups[licenceIdx];
   const region = regions[regionIdx];
 
   return (
@@ -100,155 +142,86 @@ export default function HomeMenu({ allClasses, headerPosition }) {
         <div className="menu js-navList">
           <ul className={`${allClasses ? allClasses : ""}`}>
             {/* ---------- Courses ---------- */}
-            <li className="menu-item-has-children -has-mega-menu">
-              <Link data-barba href="#">
-                Courses <i className="icon-chevron-right text-13 ml-10"></i>
-              </Link>
-
-              <div className="mega xl:d-none" style={{ minHeight: 0 }}>
-                <div className="mega__menu">
-                  <div className="row x-gap-40">
-                    <div className="col-lg-3">
-                      <Eyebrow>Browse by subject</Eyebrow>
-                      <BrowseList
-                        items={subjects}
-                        active={subjectIdx}
-                        onHover={setSubjectIdx}
-                        allHref="/template/courses-list-1"
-                        allLabel="View all subjects"
-                      />
-                    </div>
-
-                    <div className="col-lg-3 pl-40" style={{ borderLeft: "1px solid var(--color-light-5)" }}>
-                      <Eyebrow>Popular in {subject.label}</Eyebrow>
-                      <ul className="mega__list">
-                        {subject.courses.map((course) => (
-                          <li key={course.label} className="inActiveMegaMenu">
-                            <Link data-barba href={course.href}>
-                              {course.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                      <Link href={subject.href} className="d-inline-flex items-center text-purple-1 fw-500 mt-10">
-                        View all {subject.label} courses <i className="icon-arrow-top-right text-11 ml-8"></i>
-                      </Link>
-                    </div>
-
-                    <div className="col-lg-3 pl-40" style={{ borderLeft: "1px solid var(--color-light-5)" }}>
-                      <Eyebrow>Study method</Eyebrow>
-                      <div className="y-gap-10">
-                        {studyMethods.map((m) => (
-                          <div key={m.label}>
-                            <Link href={m.href} className="d-flex items-center rounded-8 bg-light-6 px-15 text-dark-1" style={{ gap: 14, padding: "12px 15px" }}>
-                              <span className="size-40 d-flex justify-center items-center rounded-full bg-white" style={{ flex: "0 0 auto" }}>
-                                <i className={`${m.icon} text-18 text-purple-1`}></i>
-                              </span>
-                              <span>
-                                <span className="d-block fw-500 text-dark-1">{m.label}</span>
-                                <span className="d-block text-13 text-light-1">{m.text}</span>
-                              </span>
-                            </Link>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="col-lg-3">
-                      <div className="rounded-8 bg-purple-1 text-white h-100 px-30 py-30 d-flex flex-column justify-between">
-                        <div>
-                          <Eyebrow>
-                            <span className="text-white" style={{ opacity: 0.7 }}>Exploration</span>
-                          </Eyebrow>
-                          <div className="text-45 lh-1 fw-700 text-green-1">{subject.count}</div>
-                          <div className="text-16 fw-500 mt-5">courses available</div>
-                          <div className="text-14 mt-10" style={{ opacity: 0.85 }}>
-                            {subject.label} training from vetted UK providers. Compare dates, venues and prices in one place.
-                          </div>
-                        </div>
-                        <Link href={subject.href} className="button -md -green-1 text-dark-1 fw-500 mt-20 col-12">
-                          View all {subject.label} courses
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </li>
+            <Item title="Courses">
+              <Panel footer={menuFooters.courses}>
+                <Column title="Browse by subject" link={<ArrowLink href="/template/courses-list-1">View all subjects</ArrowLink>}>
+                  <BrowseList items={subjects} active={subjectIdx} onHover={setSubjectIdx} />
+                </Column>
+                <Column title={`Popular in ${subject.label}`} link={<ArrowLink href={subject.href}>View all {subject.label} courses</ArrowLink>}>
+                  <ListLinks items={subject.courses} columns={1} />
+                </Column>
+                <Column title="Exploration" last>
+                  <FeatureCard
+                    img={subject.img}
+                    eyebrow={`${subject.count} courses available`}
+                    title={subject.label}
+                    text={`Accredited ${subject.label.toLowerCase()} training from vetted UK providers. Compare dates, venues and prices in one place.`}
+                    link={{ label: `View all ${subject.label} courses`, href: subject.href }}
+                  />
+                </Column>
+              </Panel>
+            </Item>
 
             {/* ---------- Licences & Cards ---------- */}
-            <SimpleDropdown title="Licences & Cards" items={licences} />
+            <Item title="Licences & Cards">
+              <Panel footer={menuFooters.licences}>
+                <Column title="Browse licences & cards">
+                  <BrowseList items={licenceGroups} active={licenceIdx} onHover={setLicenceIdx} />
+                </Column>
+                <Column title={`Popular ${licence.label} routes`} link={<ArrowLink href={licence.href}>View all {licence.label} routes</ArrowLink>}>
+                  <ListLinks items={licence.routes} columns={1} />
+                </Column>
+                <Column title="Regulated qualifications" last>
+                  <FeatureCard img={licence.img} title={licence.label} text={licence.text} link={{ label: "Explore routes", href: licence.href }} />
+                </Column>
+              </Panel>
+            </Item>
 
             {/* ---------- Locations ---------- */}
-            <li className="menu-item-has-children -has-mega-menu">
-              <Link data-barba href="#">
-                Locations <i className="icon-chevron-right text-13 ml-10"></i>
-              </Link>
-
-              <div className="mega xl:d-none" style={{ minHeight: 0 }}>
-                <div className="mega__menu">
-                  <div className="row x-gap-40">
-                    <div className="col-lg-3">
-                      <Eyebrow>Browse by region</Eyebrow>
-                      <BrowseList
-                        items={regions.map((r) => ({ ...r, href: "/template/courses-list-3" }))}
-                        active={regionIdx}
-                        onHover={setRegionIdx}
-                        allHref="/template/courses-list-3"
-                        allLabel="View all locations"
-                      />
-                    </div>
-
-                    <div className="col-lg-3 pl-40" style={{ borderLeft: "1px solid var(--color-light-5)" }}>
-                      <Eyebrow>Training in {region.label}</Eyebrow>
-                      <ul className="mega__list">
-                        {region.cities.map((city) => (
-                          <li key={city} className="inActiveMegaMenu">
-                            <Link data-barba href="/template/courses-list-3">
-                              {city}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="col-lg-3 pl-40" style={{ borderLeft: "1px solid var(--color-light-5)" }}>
-                      <Eyebrow>Popular courses by location</Eyebrow>
-                      <ul className="mega__list">
-                        {popularByLocation.slice(0, 9).map((course) => (
-                          <li key={course.label} className="inActiveMegaMenu">
-                            <Link data-barba href={course.href}>
-                              {course.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="col-lg-3">
-                      <div className="rounded-8 bg-purple-1 text-white h-100 px-30 py-30 d-flex flex-column justify-between">
-                        <div>
-                          <Eyebrow>
-                            <span className="text-white" style={{ opacity: 0.7 }}>Near you</span>
-                          </Eyebrow>
-                          <div className="text-45 lh-1 fw-700 text-green-1">100+</div>
-                          <div className="text-16 fw-500 mt-5">towns and cities</div>
-                          <div className="text-14 mt-10" style={{ opacity: 0.85 }}>
-                            Classroom dates across the UK. Enter your postcode to see the venues closest to you.
-                          </div>
-                        </div>
-                        <Link href="/template/courses-list-3" className="button -md -green-1 text-dark-1 fw-500 mt-20 col-12">
-                          Search by postcode
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </li>
+            <Item title="Locations">
+              <Panel footer={menuFooters.locations}>
+                <Column title="Browse by region" link={<ArrowLink href="/template/courses-list-3">View all locations</ArrowLink>}>
+                  <BrowseList items={regions} active={regionIdx} onHover={setRegionIdx} />
+                </Column>
+                <Column title={`Training in ${region.label}`} link={<ArrowLink href={region.href}>All venues in {region.label}</ArrowLink>}>
+                  <ListLinks items={region.cities.map((city) => ({ label: city, href: "/template/courses-list-3" }))} />
+                </Column>
+                <Column title="Popular near you" last>
+                  <FeatureCard
+                    img={region.img}
+                    eyebrow={`${region.cities.length} towns and cities`}
+                    title={`Classroom dates in ${region.label}`}
+                    text={`${popularByLocation.slice(0, 4).map((p) => p.label).join(", ")} and more, at venues across ${region.label}.`}
+                    link={{ label: "Search by postcode", href: "/template/courses-list-3" }}
+                  />
+                </Column>
+              </Panel>
+            </Item>
 
             {/* ---------- Resources ---------- */}
-            <SimpleDropdown title="Resources" items={resources} />
+            <Item title="Resources">
+              <Panel footer={menuFooters.resources}>
+                <Column title="Prepare & learn" link={<ArrowLink href={resources.prepareLink.href}>{resources.prepareLink.label}</ArrowLink>}>
+                  {resources.prepare.map((r) => (
+                    <IconRow key={r.label} {...r} />
+                  ))}
+                </Column>
+                <Column title="Help & information" link={<ArrowLink href={resources.helpLink.href}>{resources.helpLink.label}</ArrowLink>}>
+                  {resources.help.map((r) => (
+                    <IconRow key={r.label} {...r} />
+                  ))}
+                  <div className="rt-menu-sub">
+                    <h4 className="rt-menu-eyebrow">From ReadTraining</h4>
+                    {resources.company.map((r) => (
+                      <IconRow key={r.label} {...r} />
+                    ))}
+                  </div>
+                </Column>
+                <Column title="Featured guide" last>
+                  <FeatureCard {...resources.featured} />
+                </Column>
+              </Panel>
+            </Item>
           </ul>
         </div>
       </div>

@@ -14,7 +14,7 @@ const Brands = ({ backgroundColorComponent, brandsTwo }) => {
         <div className="container">
           <div className="row justify-center">
             <div className="col text-center">
-              <p className="text-lg text-dark-1">Trusted by employers across the UK</p>
+              <p className="text-lg text-dark-1">Trusted by teams across the UK</p>
             </div>
           </div>
           <div

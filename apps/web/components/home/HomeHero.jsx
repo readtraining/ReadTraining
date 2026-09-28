@@ -113,7 +113,7 @@ const HomeHero = () => {
                   data-aos="fade-up"
                   data-aos-duration="200"
                   className="masthead__buttons d-flex flex-wrap items-center"
-                  style={{ gap: "12px 28px" }}
+                  style={{ gap: "12px 14px" }}
                 >
                   <Link
                     data-barba
@@ -126,11 +126,9 @@ const HomeHero = () => {
                   <Link
                     data-barba
                     href={hero.secondaryButton.href}
-                    className="d-flex items-center text-white fw-500"
+                    className="button -md -outline-white text-white"
                   >
-                    <span className="d-flex justify-center items-center rounded-full bg-dark-5 mr-10" style={{ width: 36, height: 36, border: "1px solid rgba(255,255,255,.12)" }}>
-                      <i className="icon-person-3 text-14 text-green-1"></i>
-                    </span>
+                    <i className="icon-person-3 text-14 mr-10"></i>
                     {hero.secondaryButton.label}
                   </Link>
                 </div>
@@ -192,9 +190,9 @@ const HomeHero = () => {
                     </div>
                     <div className="ml-20">
                       <div className="text-orange-1 text-16 fw-500 lh-1">
-                        1,000 +
+                        Next SIA course
                       </div>
-                      <div className="mt-3">Accredited courses</div>
+                      <div className="mt-3">Mon 6 Oct · Manchester</div>
                     </div>
                   </div>
                 </div>
@@ -214,9 +212,9 @@ const HomeHero = () => {
                     <Image src={move_icon_2} alt="icon" />
                     <div className="ml-20">
                       <div className="text-dark-1 text-16 fw-500 lh-1">
-                        Oliver Okonjo
+                        Oliver Desuza
                       </div>
-                      <div className="mt-3">SIA Door Supervisor</div>
+                      <div className="mt-3">SIA Door Supervisor Course</div>
                       <div className="d-flex x-gap-5 mt-3">
                         {starts.map((start, index) => (
                           <div key={index}>
@@ -251,9 +249,9 @@ const HomeHero = () => {
                     </div>
                     <div className="">
                       <div className="text-purple-1 text-16 fw-500 lh-1">
-                        Booked!
+                        Certificate issued
                       </div>
-                      <div className="mt-3">Your place is confirmed</div>
+                      <div className="mt-3">3 days after your course</div>
                     </div>
                   </div>
                 </div>
