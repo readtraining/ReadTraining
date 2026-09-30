@@ -221,28 +221,54 @@ export const stories = {
 
 export const teamBooking = {
   eyebrow: "For employers",
-  title: "Book training for your team, without the admin.",
-  text: "Book training for multiple employees, access group pricing and arrange delivery at a training centre, your workplace or another suitable venue.",
+  title: "Training for teams, arranged in one go.",
+  text: "Book several employees at once, get group pricing and choose a training centre, your workplace or live online.",
   features: [
     { id: 1, title: "Book multiple employees", text: "Book several employees without repeating the booking process." },
     { id: 2, title: "Business and group pricing", text: "Access suitable pricing for eligible group, repeat or larger bookings." },
     { id: 3, title: "Flexible training locations", text: "Arrange training at your workplace, a training centre or another suitable venue for your team." },
   ],
-  note: "Used by organisations arranging workplace and compliance training.",
-  button: "Create a business account",
+  note: "Used by teams at",
+  button: "Book for your team",
   href: "/template/signup",
+  secondary: "Request a quote",
+  next: [
+    { title: "We check availability", text: "Dates, venues and providers near you." },
+    { title: "You get one quote", text: "Group pricing, clearly itemised." },
+    { title: "Book in one go", text: "One invoice, certificates to each learner." },
+  ],
+  secondaryHref: "/template/contact-1",
+  // Illustrative team booking shown in the card (example figures).
+  summary: {
+    course: "Emergency First Aid at Work · 1 day",
+    status: "Ready to confirm",
+    learners: 8,
+    date: "Mon 19 Oct 2026",
+    venue: "Your workplace · Manchester",
+    method: "Classroom",
+    hint: "One booking, one invoice, certificates sent to each learner.",
+    total: 720,
+    saving: 80,
+  },
 };
 
 export const providers = {
-  eyebrow: "For training providers",
-  title: "Reach more learners with ReadTraining.",
-  text: "List your courses, manage bookings and reach learners across the UK.",
-  points: [
-    { title: "Showcase your courses", text: "Present dates, locations and booking options clearly." },
-    { title: "Receive bookings", text: "Keep bookings and learner details organised." },
-    { title: "Grow your learner reach", text: "Connect with more learners looking for suitable training." },
+  eyebrow: "Partner with ReadTraining",
+  title: "Put your courses in front of learners who are already searching.",
+  text: "Thousands of people look for accredited training here every week. Add your dates and prices, and let them book you directly.",
+  steps: [
+    { title: "Apply in minutes", text: "Tell us who you are and which accreditations you hold. We verify and switch you on." },
+    { title: "Publish your dates and prices", text: "Upload your calendar once. Learners see live availability by location and study method." },
+    { title: "Bookings land in your inbox", text: "Learner details, payments and reminders are handled for you. You just run the course." },
   ],
-  button: "Learn more for providers",
+  proof: [
+    { value: "46+", label: "providers on one SIA course" },
+    { value: "103", label: "towns and cities covered" },
+    { value: "12", label: "subject categories" },
+  ],
+  quote: { text: "We filled a Door Supervisor course in four days without spending a penny on ads.", author: "Sentinel Training", role: "SIA provider, London" },
+  button: "Apply to partner",
+  note: "Free to apply · No listing fees",
   href: "/template/instructor-become",
 };
 
