@@ -109,6 +109,9 @@ const HomeHero = () => {
                 >
                   {hero.text} {hero.text2}
                 </p>
+                <p data-aos="fade-up" data-aos-duration="150" className="rt-hero__sub">
+                  {hero.subline}
+                </p>
                 <div
                   data-aos="fade-up"
                   data-aos-duration="200"

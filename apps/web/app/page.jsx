@@ -7,10 +7,9 @@ import HomeCourses from "@/components/home/HomeCourses";
 import HomeBookingOptions from "@/components/home/HomeBookingOptions";
 import HomeRoles from "@/components/home/HomeRoles";
 import HomeSubjects from "@/components/home/HomeSubjects";
-import HomeTestimonials from "@/components/home/HomeTestimonials";
+import HomeStories from "@/components/home/HomeStories";
 import HomeTeamBooking from "@/components/home/HomeTeamBooking";
 import HomeProviders from "@/components/home/HomeProviders";
-import HomeStats from "@/components/home/HomeStats";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 
@@ -32,8 +31,7 @@ export default function HomePage() {
         <HomeBookingOptions />
         <HomeSubjects />
         <HomeRoles />
-        <HomeStats />
-        <HomeTestimonials />
+        <HomeStories />
         <HomeTeamBooking />
         <HomeProviders />
         <HomeBrands />

@@ -29,6 +29,7 @@ export const hero = {
   titleAccent: "sooner.",
   text: "Search vocational and compliance training from trusted UK training providers,",
   text2: "explore available dates and locations, and choose the option that suits you.",
+  subline: "Compare accredited providers, dates and prices in one place. No account needed to search.",
   primaryButton: { label: "Find Courses", href: "/template/courses-list-1" },
   secondaryButton: { label: "Book for your team", href: "#employers" },
   socialProof: { rating: "4.9 out of 5", text: "Based on 12,450+ verified reviews · 250,000+ customers" },
@@ -197,6 +198,26 @@ export const testimonials = [
 ];
 
 export const testimonialAvatars = [1, 2, 3, 4, 5].map((n) => `/assets/img/avatars/small/${n}.png`);
+
+// Customer stories block: featured quote + four written reviews (real Hurak reviews, template avatars).
+export const stories = {
+  eyebrow: "Customer stories",
+  title: "Real experiences from people who booked through ReadTraining",
+  text: "Hear from learners and teams who booked training through ReadTraining.",
+  video: { author: testimonials[0].author, position: testimonials[0].position, quote: "The course was informative, practical and really engaging.", duration: "0:10", src: "/assets/video/story-1.mp4", poster: "/assets/video/story-1-poster.jpg" },
+  stats: [
+    { value: "4.9 / 5", label: "Average rating" },
+    { value: "12,450+", label: "Verified reviews" },
+    { value: "250,000+", label: "Customers" },
+  ],
+  reviews: [2, 3, 4, 5].map((i, k) => ({
+    author: testimonials[i].author,
+    position: testimonials[i].position,
+    text: testimonials[i].text,
+    source: k % 2 ? "Trustpilot" : "Google",
+    avatar: `/assets/img/avatars/small/${k + 2}.png`,
+  })),
+};
 
 export const teamBooking = {
   eyebrow: "For employers",
