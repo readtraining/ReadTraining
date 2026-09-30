@@ -22,21 +22,21 @@ export const metadata = {
 
 export default function HomePage() {
   return (
-    <div className="main-content">
+    <div className="main-content rt-home">
       <Preloader />
       <HomeHeader />
       <div className="content-wrapper js-content-wrapper overflow-hidden">
         <HomeHero />
         <HomeSearchBand />
-        <HomeBrands />
         <HomeCourses />
         <HomeBookingOptions />
-        <HomeRoles />
         <HomeSubjects />
+        <HomeRoles />
+        <HomeStats />
         <HomeTestimonials />
         <HomeTeamBooking />
         <HomeProviders />
-        <HomeStats />
+        <HomeBrands />
         <HomeHelp />
         <HomeFooter />
       </div>

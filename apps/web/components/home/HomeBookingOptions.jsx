@@ -1,212 +1,72 @@
-"use client";
-
-import Image from "next/image";
-
-import React, { useState } from "react";
-import { bookingOptions } from "@/data/home";
-const pricingData = bookingOptions.tiers;
+import React from "react";
 import Link from "next/link";
+import { bookingOptions as d } from "@/data/home";
 
+// Why book through us: header, four benefit cards, then three booking-tier cards.
 export default function HomeBookingOptions() {
-  const [isYearly, setIsYearly] = useState(false);
-  const handleCheckboxChange = (event) => {
-    setIsYearly(event.target.checked);
-  };
   return (
-    <section className="layout-pt-lg layout-pb-md">
+    <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">
         <div className="row justify-center text-center">
-          <div className="col-auto">
-            <div className="sectionTitle ">
-              <h2 className="sectionTitle__title ">{bookingOptions.title}</h2>
-
-              <p className="sectionTitle__text ">{bookingOptions.text}</p>
-            </div>
-
-            <div className="d-flex justify-center items-center pt-60 lg:pt-40">
-              <div className="text-14 text-dark-1">{bookingOptions.toggleLeft}</div>
-              <div className="form-switch px-20">
-                <div className="switch" data-switch=".js-switch-content">
-                  <input
-                    checked={isYearly}
-                    onChange={handleCheckboxChange}
-                    type="checkbox"
-                  />
-                  <span className="switch__slider"></span>
-                </div>
-              </div>
-              <div className="text-14 text-dark-1">
-                {bookingOptions.toggleRight} <span className="text-purple-1">{bookingOptions.toggleNote}</span>
-              </div>
+          <div className="col-xl-7 col-lg-9">
+            <div className="rt-section-head">
+              <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{d.eyebrow}</div>
+              <h2 className="sectionTitle__title">{d.title}</h2>
+              <p className="sectionTitle__text">{d.text}</p>
             </div>
           </div>
         </div>
 
         <div className="row y-gap-20 pt-40">
-          {bookingOptions.benefits.map((b) => (
+          {d.benefits.map((b) => (
             <div key={b.title} className="col-lg-3 col-md-6">
-              <div className="d-flex x-gap-12">
-                <i className="icon-check text-12 text-purple-1 mt-5"></i>
-                <div>
-                  <div className="text-16 fw-500 text-dark-1">{b.title}</div>
-                  <div className="text-14 text-light-1 mt-5">{b.text}</div>
-                </div>
+              <div className="rt-benefit-card">
+                <span className="rt-benefit__icon"><i className={`${b.icon} text-16`}></i></span>
+                <div className="rt-benefit__title mt-15">{b.title}</div>
+                <div className="rt-benefit__text">{b.text}</div>
               </div>
             </div>
           ))}
         </div>
-        <div className="text-center text-14 text-light-1 pt-40">{bookingOptions.example}</div>
 
-        <div className="row y-gap-30 justify-between pt-30">
-          <div className="col-lg-4 col-md-6">
-            <div className="priceCard -type-1 rounded-16 bg-white shadow-2">
-              <div className="priceCard__content py-45 px-60 xl:px-40 text-center">
-                <div className="priceCard__type text-18 lh-11 fw-500 text-dark-1">
-                  {pricingData[0].type}
-                </div>
-                <div className="priceCard__price text-45 lh-11 fw-700 text-dark-1 mt-15">
-                  £{isYearly ? (pricingData[0].price * 0.9).toFixed(0) : pricingData[0].price}
-                </div>
-                <div className="priceCard__period">{pricingData[0].period}</div>
-                <Image
-                  width={90}
-                  height={90}
-                  className="mt-30"
-                  src="/assets/img/pricing/1.svg"
-                  alt="icon"
-                />
-                <div className="priceCard__text text-left pr-15 mt-40">
-                  {pricingData[0].text}
-                </div>
-
-                <div className="text-left y-gap-15 mt-35">
-                  {pricingData[0].features.map((elm, i) => (
-                    <div key={i}>
-                      <i
-                        className="text-purple-1 fa fa-check pr-8"
-                        style={{ strokeWidth: 2 }}
-                        data-feather="check"
-                      ></i>
-                      {elm}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="d-inline-block mt-30">
-                  <Link
-                    className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/template/course-checkout"
-                  >
-                    Book {pricingData[0].type}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="col-lg-4 col-md-6">
-            <div className="priceCard -type-1 rounded-16 bg-white shadow-2">
-              <div className="priceCard__content py-45 px-60 xl:px-40 text-center">
-                <div className="priceCard__type text-18 lh-11 fw-500 text-dark-1">
-                  {pricingData[1].type}
-                </div>
-                <div className="priceCard__price text-45 lh-11 fw-700 text-dark-1 mt-15">
-                  £
-                  {isYearly
-                    ? (pricingData[1].price * 0.9).toFixed(0)
-                    : pricingData[1].price}
-                </div>
-                <div className="priceCard__period">
-                  {pricingData[1].period}
-                </div>
-                <Image
-                  width={90}
-                  height={90}
-                  className="mt-30"
-                  src="/assets/img/pricing/2.svg"
-                  alt="icon"
-                />
-                <div className="priceCard__text text-left pr-15 mt-40">
-                  {pricingData[1].text}
-                </div>
-
-                <div className="text-left y-gap-15 mt-35">
-                  {pricingData[1].features.map((elm, i) => (
-                    <div key={i}>
-                      <i
-                        className="text-purple-1 fa fa-check pr-8"
-                        style={{ strokeWidth: 2 }}
-                        data-feather="check"
-                      ></i>
-                      {elm}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="d-inline-block mt-30">
-                  <Link
-                    className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/template/course-checkout"
-                  >
-                    Book {pricingData[1].type}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="col-lg-4 col-md-6">
-            <div className="priceCard -type-1 rounded-16 bg-white shadow-2">
-              <div className="priceCard__content py-45 px-60 xl:px-40 text-center">
-                <div className="priceCard__type text-18 lh-11 fw-500 text-dark-1">
-                  {pricingData[2].type}
-                </div>
-                <div className="priceCard__price text-45 lh-11 fw-700 text-dark-1 mt-15">
-                  £
-                  {isYearly
-                    ? (pricingData[2].price * 0.9).toFixed(0)
-                    : pricingData[2].price}
-                </div>
-                <div className="priceCard__period">
-                  {pricingData[2].period}
-                </div>
-                <Image
-                  width={90}
-                  height={90}
-                  className="mt-30"
-                  src="/assets/img/pricing/3.svg"
-                  alt="icon"
-                />
-                <div className="priceCard__text text-left pr-15 mt-40">
-                  {pricingData[2].text}
-                </div>
-
-                <div className="text-left y-gap-15 mt-35">
-                  {pricingData[2].features.map((elm, i) => (
-                    <div key={i}>
-                      <i
-                        className="text-purple-1 fa fa-check pr-8"
-                        style={{ strokeWidth: 2 }}
-                        data-feather="check"
-                      ></i>
-                      {elm}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="d-inline-block mt-30">
-                  <Link
-                    className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/template/course-checkout"
-                  >
-                    Book {pricingData[2].type}
-                  </Link>
-                </div>
-              </div>
-            </div>
+        <div className="d-flex justify-center pt-50">
+          <div className="rt-example-tag">
+            <span className="rt-eyebrow text-light-1">{d.example.eyebrow}</span>
+            <span className="rt-example-tag__course">{d.example.course}</span>
+            <span className="rt-example-tag__meta">{d.example.meta}</span>
           </div>
         </div>
-        <p className="text-13 text-light-1 text-center pt-30">{bookingOptions.footnote}</p>
+
+        <div className="row y-gap-24 justify-center pt-25">
+          {d.tiers.map((t, i) => (
+            <div key={t.type} className="col-lg-4 col-md-6">
+              <div className={`rt-tier${t.recommended ? " is-rec" : ""}`}>
+                {t.recommended && <span className="rt-tier__badge">Recommended</span>}
+                <div className="rt-tier__type">{t.type}</div>
+                <div className="rt-tier__text">{t.text}</div>
+                <div className="rt-tier__price"><span>From</span>£{t.price}<small>per learner</small></div>
+                <ul className="rt-tier__list">
+                  {d.features.map((f) => {
+                    const on = f.tiers.includes(i);
+                    return (
+                      <li key={f.label} className={on ? "" : "is-off"}>
+                        <i className={on ? "icon-check" : "icon-close"}></i>
+                        <span>{f.label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="d-flex flex-column items-center pt-40">
+          <Link href={d.cta.href} className="button -md -dark-1 text-white">
+            {d.cta.label} <i className="icon-arrow-right text-13 ml-10"></i>
+          </Link>
+          <p className="text-13 text-light-1 mt-15 text-center">{d.footnote}</p>
+        </div>
       </div>
     </section>
   );

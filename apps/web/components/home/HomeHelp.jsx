@@ -4,7 +4,7 @@ import { help } from "@/data/home";
 
 export default function HomeHelp() {
   return (
-    <section className="pt-80 pb-80 md:pt-60 md:pb-60 bg-purple-1">
+    <section className="layout-pt-lg layout-pb-lg bg-purple-1">
       <div className="container">
         <div className="row y-gap-20 justify-between items-center">
           <div className="col-xl-4 col-lg-5">

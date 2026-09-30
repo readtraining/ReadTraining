@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import HomeTextLink from "./HomeTextLink";
 import { useRouter } from "next/navigation";
 import { hero } from "@/data/home";
 
@@ -100,9 +100,7 @@ export default function HomeSearchBand() {
           </div>
 
           <div className="rt-searchband__below">
-            <Link href="/template/courses-list-1" className="rt-searchband__finder">
-              <i className="icon-message text-13"></i> Not sure which course you need? We can help <i className="icon-arrow-right text-11 ml-5"></i>
-            </Link>
+            <HomeTextLink href="/template/courses-list-1" icon="icon-message">Not sure which course you need? We can help</HomeTextLink>
           </div>
         </div>
       </div>

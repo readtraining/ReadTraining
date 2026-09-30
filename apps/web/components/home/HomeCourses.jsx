@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+import HomeTextLink from "./HomeTextLink";
 import CourceCard from "./HomeCourseCard";
 import { courses as coursesData, courseCategories as catagories } from "@/data/home";
 import { useState, useEffect } from "react";
 export default function HomeCourses() {
   const [filtered, setFiltered] = useState();
-  const [category, setCategory] = useState("All courses");
+  const [category, setCategory] = useState(catagories[0]);
   useEffect(() => {
     if (category == "All courses") {
       setFiltered();
@@ -20,54 +21,34 @@ export default function HomeCourses() {
 
   return (
     <section className="layout-pt-lg layout-pb-lg">
-      <div className="row justify-center text-center">
-        <div className="col-auto">
-          <div className="sectionTitle ">
-            <h2 className="sectionTitle__title sm:text-24">
-              Popular courses and qualifications
-            </h2>
+      <div className="container">
+        <h2 className="sectionTitle__title sm:text-24">Popular courses and qualifications</h2>
+        <p className="sectionTitle__text mt-5">
+          Browse some of the most booked training options across security, first aid, construction and more.
+        </p>
 
-            <p className="sectionTitle__text ">
-              Browse some of the most booked training options across security, first aid, construction and more.
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="tabs__controls flex-wrap  pt-50 d-flex justify-center x-gap-10 js-tabs-controls">
-        {catagories.map((elm, i) => (
-          <div onClick={() => setCategory(elm)} key={i}>
+        <div className="rt-tabs mt-30">
+          {catagories.map((elm, i) => (
             <button
-              className={`tabs__button px-15 py-8 rounded-8 js-tabs-button ${
-                category == elm ? "tabActive" : ""
-              } `}
-              data-tab-target=".-tab-item-2"
+              key={i}
+              onClick={() => setCategory(elm)}
+              className={`rt-tabs__button ${category == elm ? "is-active" : ""}`}
               type="button"
             >
               {elm}
             </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <div
-        className="pt-60 m-auto row y-gap-30 container pl-0 pr-0"
-        data-aos="fade-right"
-        data-aos-offset="80"
-        data-aos-duration={800}
-      >
-        {filtered
-          ? filtered.map((elm, index) => (
-              <CourceCard
-                key={index}
-                data={elm}
-                index={index}
-                data-aos="fade-right"
-                data-aos-duration={(index + 1) * 300}
-              />
-            ))
-          : coursesData
-              .slice(0, 8)
-              .map((elm, index) => <CourceCard key={index} data={elm} />)}
+        <div className="row y-gap-30 pt-30">
+          {(filtered || coursesData.slice(0, 4)).map((elm, index) => (
+            <CourceCard key={index} data={elm} />
+          ))}
+        </div>
+
+        <div className="pt-30" style={{ marginLeft: -10 }}>
+          <HomeTextLink href="/template/courses-list-1">Show all {category} courses</HomeTextLink>
+        </div>
       </div>
     </section>
   );

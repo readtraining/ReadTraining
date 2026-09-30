@@ -85,7 +85,7 @@ export default function HomeFooter() {
           <div className="row justify-between items-center y-gap-20">
             <div className="col-auto">
               <div className="d-flex items-center h-100">
-                © {new Date().getFullYear()} ReadTraining. All rights reserved.
+                © {new Date().getFullYear()} ReadTraining. All rights reserved. Courses are delivered by independent training providers.
               </div>
             </div>
 

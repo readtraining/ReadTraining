@@ -54,30 +54,32 @@ export const counters = [
 export const employers = ["G4S", "Transport for London", "Armani", "North East Autism Society", "Balfour Beatty", "Kier", "Mace", "Skanska", "Berkeley Group", "Coventry College"];
 
 // "Popular courses and qualifications": three groups of four, exactly as on the client's site.
-export const courseCategories = ["All courses", "Security & SIA", "First Aid & Health and Safety", "Construction"];
+export const courseCategories = ["Security & SIA", "First Aid & Health and Safety", "Construction"];
 
-const card = (id, category, title, method, slug, image) => ({
+const card = (id, category, title, method, slug, image, price, duration, providers, validity, wasPrice) => ({
   id, category, title, method, slug,
   imageSrc: image,
+  price, duration, providers, validity, wasPrice,
   rating: 4.9,
   ratingCount: 1991,
   paid: true,
   popular: id === 1 || id === 5 || id === 9,
 });
 
+// Real course facts (price = lowest "all inclusive" price, duration, number of providers, certificate validity)
 export const courses = [
-  card(1, "Security & SIA", "SIA Door Supervisor Training", "Classroom", "/course/sia-door-supervisor-training", img(1)),
-  card(2, "Security & SIA", "SIA CCTV Operator Training", "Classroom", "/course/sia-cctv-operator-training", img(2)),
-  card(3, "Security & SIA", "SIA Door Supervisor Refresher", "Classroom", "/course/sia-top-up-refresher-training-door-supervisor", img(3)),
-  card(4, "Security & SIA", "Security Guard Training", "Classroom", "/course/sia-top-up-refresher-training-security-guard", img(4)),
-  card(5, "First Aid & Health and Safety", "Emergency First Aid at Work", "Classroom", "/course/emergency-first-aid-at-work-training-1-day", img(5)),
-  card(6, "First Aid & Health and Safety", "First Aid at Work (3-Day)", "Classroom", "/course/first-aid-at-work-training-3-days", img(6)),
-  card(7, "First Aid & Health and Safety", "Fire Marshal Training", "Classroom • Live online • Online self-paced", "/course/fire-marshal-fire-warden-online", img(7)),
-  card(8, "First Aid & Health and Safety", "Safety Harness Training", "Classroom • Online self-paced", "/course/safety-harness-training", img(8)),
-  card(9, "Construction", "CSCS Green Card Course", "Classroom • Live online • Online self-paced", "/course/cscs-green-card-labourers-card-course", img(9)),
-  card(10, "Construction", "CITB SMSTS Course", "Classroom • Live online", "/course/citb-site-manager-safety-training-scheme-smsts", img(10)),
-  card(11, "Construction", "CITB SSSTS Refresher Course", "Classroom • Live online", "/course/citb-site-supervisor-safety-training-scheme-sssts-online-refresher", img(11)),
-  card(12, "Construction", "Traffic Marshal Course", "Classroom • Live online • Online self-paced", "/course/traffic-banksman-traffic-marshal-training-course", img(12)),
+  card(1, "Security & SIA", "SIA Door Supervisor Training", "Classroom", "/course/sia-door-supervisor-training", img(1), 198.99, "6 days", 46, "SIA licence-linked"),
+  card(2, "Security & SIA", "SIA CCTV Operator Training", "Classroom", "/course/sia-cctv-operator-training", img(2), 179.99, "3 days", 25, "SIA licence-linked"),
+  card(3, "Security & SIA", "SIA Door Supervisor Refresher", "Classroom", "/course/sia-top-up-refresher-training-door-supervisor", img(3), 99, "2 days", 30, "Renews SIA licence"),
+  card(4, "Security & SIA", "Security Guard Training", "Classroom", "/course/sia-top-up-refresher-training-security-guard", img(4), 89.99, "1 day", 23, "Renews SIA licence"),
+  card(5, "First Aid & Health and Safety", "Emergency First Aid at Work", "Classroom", "/course/emergency-first-aid-at-work-training-1-day", img(5), 63.2, "1 day", 45, "Valid 3 years"),
+  card(6, "First Aid & Health and Safety", "First Aid at Work (3-Day)", "Classroom", "/course/first-aid-at-work-training-3-days", img(6), 159.99, "3 days", 21, "Valid 3 years"),
+  card(7, "First Aid & Health and Safety", "Fire Marshal Training", "Classroom • Live online • Online self-paced", "/course/fire-marshal-fire-warden-online", img(7), 29.99, "2–3 hours", 12, "Valid 3 years"),
+  card(8, "First Aid & Health and Safety", "Safety Harness Training", "Classroom • Online self-paced", "/course/safety-harness-training", img(8), 24.99, "2–4 hours", 3, "Valid 3 years"),
+  card(9, "Construction", "CSCS Green Card Course", "Classroom • Live online • Online self-paced", "/course/cscs-green-card-labourers-card-course", img(9), 89.99, "1 day", 10, "CSCS-approved route", 109.99),
+  card(10, "Construction", "CITB SMSTS Course", "Classroom • Live online", "/course/citb-site-manager-safety-training-scheme-smsts", img(10), 449.99, "5 days", 12, "Valid 5 years"),
+  card(11, "Construction", "CITB SSSTS Refresher Course", "Classroom • Live online", "/course/citb-site-supervisor-safety-training-scheme-sssts-online-refresher", img(11), 192, "1 day", 12, "CITB Site Safety Plus"),
+  card(12, "Construction", "Traffic Marshal Course", "Classroom • Live online • Online self-paced", "/course/traffic-banksman-traffic-marshal-training-course", img(12), 29.99, "2–3 hours", 5, "Valid 3 years"),
 ];
 
 export const bookingOptions = {
@@ -85,21 +87,29 @@ export const bookingOptions = {
   title: "Booking options built for learners and teams",
   text: "Choose the learning method, location and booking route that suits your schedule.",
   benefits: [
-    { title: "More choice in one place", text: "Explore suitable dates, locations and study methods without searching across multiple training websites." },
-    { title: "Payment protection", text: "ReadTraining holds your payment until the required result or certificate is supplied, with refunds handled if issues arise." },
-    { title: "Selected booking benefits", text: "Some booking options include rescheduling, faster results, bonus learning or other useful extras." },
-    { title: "Support throughout your booking", text: "Get help choosing, booking and managing your course from start to finish." },
+    { icon: "icon-search", title: "More choice in one place", text: "Explore suitable dates, locations and study methods without searching across multiple training websites." },
+    { icon: "icon-badge", title: "Payment protection", text: "We hold your payment until the required result or certificate is supplied, with refunds handled if issues arise." },
+    { icon: "icon-star", title: "Selected booking benefits", text: "Some booking options include rescheduling, faster results, bonus learning or other useful extras." },
+    { icon: "icon-message", title: "Support throughout your booking", text: "Get help choosing, booking and managing your course from start to finish." },
   ],
-  example: "Example: SIA Door Supervisor Course · Classroom · London",
-  toggleLeft: "Individual",
-  toggleRight: "Team of 5+",
-  toggleNote: "Group pricing",
+  example: { eyebrow: "Example booking options", course: "SIA Door Supervisor Course", meta: "Classroom · London" },
   tiers: [
-    { type: "Basic", price: 199, period: "from, per learner", text: "Standard course booking.", features: ["Course place in accredited classroom", "Standard official learning materials"] },
-    { type: "Plus", price: 224, period: "from, per learner", text: "Recommended. Added flexibility for date changes.", features: ["Course place in accredited classroom", "Standard official learning materials", "Flexible date rescheduling option", "Faster result option"] },
-    { type: "Pro", price: 244, period: "from, per learner", text: "Extra protection and selected course benefits.", features: ["Everything in Plus", "Extra booking protection", "Selected course benefits"] },
+    { type: "Basic", price: 199, text: "Standard course booking." },
+    { type: "Plus", price: 224, text: "Added flexibility for date changes.", recommended: true },
+    { type: "Pro", price: 244, text: "Extra protection and selected benefits." },
   ],
-  footnote: "Example prices and benefits. Options vary by course, date and location. Courses are delivered by independent training providers.",
+  // which tiers include each feature (index into tiers)
+  features: [
+    { label: "Course place in accredited classroom", tiers: [0, 1, 2] },
+    { label: "Standard official learning materials", tiers: [0, 1, 2] },
+    { label: "Flexible date rescheduling option", tiers: [1, 2] },
+    { label: "Faster result option", tiers: [1, 2] },
+    { label: "Extra booking protection", tiers: [2] },
+    { label: "Bonus online course & study resources", tiers: [2] },
+  ],
+  footnote: "Example prices and benefits. Options vary by course, date and location.",
+  disclaimer: "Courses are delivered by independent training providers. ReadTraining helps you find, book and manage the option that suits you.",
+  cta: { label: "Find course options", href: "/template/courses-list-1" },
 };
 
 // "What do you need training for?" course finder: four goals, each with its own routes.
@@ -172,6 +182,8 @@ export const subjects = [
   { id: 4, title: "Construction & CSCS", slug: "/courses/construction", href: "/template/courses-list-4", items: ["CSCS Green Card", "CITB SMSTS", "CITB SSSTS", "Traffic Marshal", "CITB SEATS"] },
   { id: 5, title: "Food Safety", slug: "/courses/food-hygiene", href: "/template/courses-list-5", items: ["Level 2 Food Hygiene", "Level 3 Food Hygiene", "APLH Personal Licence", "Scottish Personal Licence"] },
   { id: 6, title: "Teaching & Assessing", slug: "/courses/teaching-&-academics", href: "/template/courses-list-6", items: ["Level 3 AET (PTLLS)", "Level 4 IQA", "Lead IQA", "Conflict Management Delivery", "Assessor Training"] },
+  { id: 7, title: "Health & Care", slug: "/courses/health-and-care", href: "/template/courses-list-7", items: ["Care Certificate", "Medication Awareness", "Safeguarding Adults", "Moving and Handling"] },
+  { id: 8, title: "Hospitality", slug: "/courses/hospitality", href: "/template/courses-list-8", items: ["Personal Licence (APLH)", "Barista Skills", "Allergen Awareness", "Customer Service"] },
 ];
 
 export const testimonials = [
@@ -297,3 +309,4 @@ export const footer = {
     { href: "/template/terms", label: "Accessibility" },
   ],
 };
+
