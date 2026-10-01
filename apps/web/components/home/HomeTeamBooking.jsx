@@ -62,7 +62,7 @@ export default function HomeTeamBooking() {
                 <label className="rt-field">
                   <span>Number of learners</span>
                   <select value={form.learners} onChange={set("learners")}>
-                    {["2–4", "5", "6–10", "11–20", "21–50", "50+"].map((n) => <option key={n}>{n}</option>)}
+                    {["2 to 4", "5", "6 to 10", "11 to 20", "21 to 50", "50+"].map((n) => <option key={n}>{n}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">

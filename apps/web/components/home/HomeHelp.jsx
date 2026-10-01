@@ -2,36 +2,34 @@ import Link from "next/link";
 import React from "react";
 import { help } from "@/data/home";
 
-const icons = ["icon-person-3", "icon-message", "icon-book"];
+const icons = ["icon-message", "icon-person-3", "icon-book"];
 
-// Need help: contained dark card with copy on the left and three contact methods on the right.
+// Need help (shadcnblocks Contact 7 pattern, light variant): header, then three tonal cards.
 export default function HomeHelp() {
+  const [call, chat, centre] = help.options;
+  const cards = [
+    { icon: icons[0], label: "Live chat", meta: "Online now", live: true, link: "Start a chat", href: chat.href },
+    { icon: icons[1], label: "Call us", meta: call.meta, link: call.value, href: call.href },
+    { icon: icons[2], label: "Help centre", meta: centre.meta, link: "Browse articles", href: centre.href },
+  ];
   return (
-    <section className="layout-pt-md layout-pb-lg">
+    <section className="rt-helpcta">
       <div className="container">
-        <div className="rt-help">
-          <div className="row y-gap-30 justify-between items-center">
-            <div className="col-lg-5">
-              <div className="rt-eyebrow rt-eyebrow--pill -onDark"><span className="rt-eyebrow__dot"></span>{help.eyebrow}</div>
-              <h2 className="rt-help__title text-white mt-20">{help.title}</h2>
-              <p className="rt-help__text">{help.text}</p>
-            </div>
+        <header className="rt-helpcta__head">
+          <p className="rt-helpcta__eyebrow">{help.eyebrow}</p>
+          <h2 className="rt-helpcta__title">{help.title}</h2>
+          <p className="rt-helpcta__lead">{help.text}</p>
+        </header>
 
-            <div className="col-lg-6">
-              <div className="rt-help__list">
-                {help.options.map((o, i) => (
-                  <Link key={o.label} href={o.href} className="rt-help__item">
-                    <span className="rt-help__icon"><i className={`${icons[i]} text-16`}></i></span>
-                    <span className="rt-help__body">
-                      <span className="rt-help__label">{o.label}</span>
-                      <span className="rt-help__value">{o.value}</span>
-                    </span>
-                    <i className="icon-arrow-right text-12 rt-help__arrow"></i>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="rt-helpcta__grid">
+          {cards.map((c) => (
+            <Link key={c.label} href={c.href} className="rt-helpcard">
+              <span className="rt-helpcard__icon"><i className={`${c.icon} text-16`}></i></span>
+              <span className="rt-helpcard__label">{c.label}</span>
+              <span className="rt-helpcard__meta">{c.live && <span className="rt-helpcard__dot"></span>}{c.meta}</span>
+              <span className="rt-helpcard__link">{c.link} <i className="icon-arrow-right text-12 ml-5"></i></span>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

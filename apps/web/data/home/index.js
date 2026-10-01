@@ -7,7 +7,7 @@ const course = (slug) => ({ slug, href: "/template/courses/1" });
 export const topBar = {
   phone: "0333 344 1293",
   email: "hello@readtraining.co.uk",
-  hours: "Mon–Fri: 9:00am – 5:30pm",
+  hours: "Mon to Fri, 9:00am to 5:30pm",
   audiences: [
     { href: "/", label: "For Individuals" },
     { href: "#employers", label: "For Businesses" },
@@ -75,12 +75,12 @@ export const courses = [
   card(4, "Security & SIA", "Security Guard Training", "Classroom", "/course/sia-top-up-refresher-training-security-guard", img(4), 89.99, "1 day", 23, "Renews SIA licence"),
   card(5, "First Aid & Health and Safety", "Emergency First Aid at Work", "Classroom", "/course/emergency-first-aid-at-work-training-1-day", img(5), 63.2, "1 day", 45, "Valid 3 years"),
   card(6, "First Aid & Health and Safety", "First Aid at Work (3-Day)", "Classroom", "/course/first-aid-at-work-training-3-days", img(6), 159.99, "3 days", 21, "Valid 3 years"),
-  card(7, "First Aid & Health and Safety", "Fire Marshal Training", "Classroom • Live online • Online self-paced", "/course/fire-marshal-fire-warden-online", img(7), 29.99, "2–3 hours", 12, "Valid 3 years"),
-  card(8, "First Aid & Health and Safety", "Safety Harness Training", "Classroom • Online self-paced", "/course/safety-harness-training", img(8), 24.99, "2–4 hours", 3, "Valid 3 years"),
+  card(7, "First Aid & Health and Safety", "Fire Marshal Training", "Classroom • Live online • Online self-paced", "/course/fire-marshal-fire-warden-online", img(7), 29.99, "2 to 3 hours", 12, "Valid 3 years"),
+  card(8, "First Aid & Health and Safety", "Safety Harness Training", "Classroom • Online self-paced", "/course/safety-harness-training", img(8), 24.99, "2 to 4 hours", 3, "Valid 3 years"),
   card(9, "Construction", "CSCS Green Card Course", "Classroom • Live online • Online self-paced", "/course/cscs-green-card-labourers-card-course", img(9), 89.99, "1 day", 10, "CSCS-approved route", 109.99),
   card(10, "Construction", "CITB SMSTS Course", "Classroom • Live online", "/course/citb-site-manager-safety-training-scheme-smsts", img(10), 449.99, "5 days", 12, "Valid 5 years"),
   card(11, "Construction", "CITB SSSTS Refresher Course", "Classroom • Live online", "/course/citb-site-supervisor-safety-training-scheme-sssts-online-refresher", img(11), 192, "1 day", 12, "CITB Site Safety Plus"),
-  card(12, "Construction", "Traffic Marshal Course", "Classroom • Live online • Online self-paced", "/course/traffic-banksman-traffic-marshal-training-course", img(12), 29.99, "2–3 hours", 5, "Valid 3 years"),
+  card(12, "Construction", "Traffic Marshal Course", "Classroom • Live online • Online self-paced", "/course/traffic-banksman-traffic-marshal-training-course", img(12), 29.99, "2 to 3 hours", 5, "Valid 3 years"),
 ];
 
 export const bookingOptions = {
@@ -175,7 +175,7 @@ export const roles = courseFinder.goals.map((g, i) => ({
   href: g.allHref,
 }));
 
-// "Prefer to browse by subject?" — the six subject tiles from the client's site.
+// "Prefer to browse by subject?": the subject tiles from the client's site.
 export const subjects = [
   { id: 1, title: "Security & SIA", slug: "/courses/security", href: "/template/courses-list-1", items: ["SIA Door Supervisor", "SIA Security Guard", "SIA CCTV Operator", "Close Protection", "Door Supervisor Refresher"] },
   { id: 2, title: "First Aid", slug: "/courses/first-aid", href: "/template/courses-list-2", items: ["Emergency First Aid at Work", "First Aid at Work (3 Days)", "First Aid Requalification", "Paediatric First Aid", "Mental Health First Aid"] },
@@ -273,13 +273,13 @@ export const providers = {
 };
 
 export const help = {
-  eyebrow: "We're here to help",
-  title: "Not sure which course you need? Ask us.",
-  text: "Get help with course requirements, dates, locations, booking options or training for multiple employees.",
+  eyebrow: "Need help?",
+  title: "Talk to a real person.",
+  text: "Not sure which course, date or booking option is right? Our UK team helps with requirements, locations and group bookings.",
   options: [
-    { label: "Call us", value: "0333 344 1293", href: "tel:03333441293" },
-    { label: "Live chat", value: "Start a conversation", href: "/template/contact-1" },
-    { label: "Help centre", value: "Guides, FAQs and requirements", href: "/template/help-center" },
+    { label: "Call us", value: "0333 344 1293", meta: "Mon to Fri, 9:00am to 5:30pm", href: "tel:03333441293" },
+    { label: "Live chat", value: "Start a conversation", meta: "Usually replies within minutes", href: "/template/contact-1" },
+    { label: "Help centre", value: "Guides, FAQs and requirements", meta: "Guides, FAQs and requirements", href: "/template/help-center" },
   ],
   button: "Visit Help Centre",
   href: "/template/help-center",
@@ -288,7 +288,7 @@ export const help = {
 export const footer = {
   about: "Browse and book vocational and compliance training across the UK, with classroom, live online and self-paced options available.",
   phone: "0333 344 1293",
-  hours: "Mon–Fri: 9:00am – 5:30pm",
+  hours: "Mon to Fri, 9:00am to 5:30pm",
   address: "London, United Kingdom",
   email: "hello@readtraining.co.uk",
   columns: [
@@ -329,7 +329,6 @@ export const footer = {
       title: "For providers",
       links: [
         { href: "/template/instructor-become", label: "List Your Course" },
-        { href: "/template/pricing", label: "Skill Saver Program" },
         { href: "/template/pricing", label: "Provider Skill Saver" },
         { href: "/template/help-center", label: "Verify Certificate" },
         { href: "/template/instructors-list-1", label: "Listed Training Providers" },
@@ -349,6 +348,7 @@ export const footer = {
       ],
     },
   ],
+  accreditations: ["SIA", "CITB", "CSCS", "Highfield", "Qualsafe", "Ofqual-regulated"],
   legal: [
     { href: "/template/terms", label: "Terms & Conditions" },
     { href: "/template/terms", label: "Privacy Policy" },
@@ -357,3 +357,17 @@ export const footer = {
   ],
 };
 
+
+// Employer logos for the trust strip (files in /public/assets/img/employers). `h` = rendered height in px.
+export const employerLogos = [
+  { name: "G4S", src: "/assets/img/employers/g4s.svg", h: 22 },
+  { name: "Transport for London", src: "/assets/img/employers/tfl.svg", h: 20 },
+  { name: "Armani", src: "/assets/img/employers/armani.svg", h: 20 },
+  { name: "North East Autism Society", src: "/assets/img/employers/neas.svg", h: 20 },
+  { name: "Balfour Beatty", src: "/assets/img/employers/balfour-beatty.svg", h: 20 },
+  { name: "Kier", src: "/assets/img/employers/kier.svg", h: 20 },
+  { name: "Mace", src: "/assets/img/employers/mace.svg", h: 20 },
+  { name: "Skanska", src: "/assets/img/employers/skanska.svg", h: 20 },
+  { name: "Berkeley Group", src: "/assets/img/employers/berkeley.svg", h: 20 },
+  { name: "Coventry College", src: "/assets/img/employers/coventry-college.svg", h: 20 },
+];
