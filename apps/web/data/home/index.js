@@ -253,33 +253,33 @@ export const teamBooking = {
 };
 
 export const providers = {
-  eyebrow: "Partner with ReadTraining",
-  title: "Put your courses in front of learners who are already searching.",
-  text: "Thousands of people look for accredited training here every week. Add your dates and prices, and let them book you directly.",
-  steps: [
-    { title: "Apply in minutes", text: "Tell us who you are and which accreditations you hold. We verify and switch you on." },
-    { title: "Publish your dates and prices", text: "Upload your calendar once. Learners see live availability by location and study method." },
-    { title: "Bookings land in your inbox", text: "Learner details, payments and reminders are handled for you. You just run the course." },
+  eyebrow: "For training providers",
+  title: "List your courses. Take bookings. Grow.",
+  text: "Put your dates, venues and prices in front of learners across the UK and manage every booking from one place.",
+  points: [
+    { title: "List every date, venue and price", text: "Create course pages with live availability, study methods and booking options." },
+    { title: "Bookings and learner details in one place", text: "New bookings, payments and learner records arrive in your provider account." },
+    { title: "Be found by learners across the UK", text: "Appear in searches by course, location and study method, with no upfront cost." },
   ],
+  button: "List your courses",
+  note: "Free to list · Commission only",
+  href: "/template/instructor-become",
   proof: [
     { value: "46+", label: "providers on one SIA course" },
     { value: "103", label: "towns and cities covered" },
     { value: "12", label: "subject categories" },
   ],
   quote: { text: "We filled a Door Supervisor course in four days without spending a penny on ads.", author: "Sentinel Training", role: "SIA provider, London" },
-  button: "Apply to partner",
-  note: "Free to apply · No listing fees",
-  href: "/template/instructor-become",
 };
 
 export const help = {
-  eyebrow: "Need some help?",
-  title: "Need help choosing the right course?",
+  eyebrow: "We're here to help",
+  title: "Not sure which course you need? Ask us.",
   text: "Get help with course requirements, dates, locations, booking options or training for multiple employees.",
   options: [
     { label: "Call us", value: "0333 344 1293", href: "tel:03333441293" },
-    { label: "Message us", value: "Start live chat", href: "/template/contact-1" },
-    { label: "Help Centre", value: "Visit Help Centre", href: "/template/help-center" },
+    { label: "Live chat", value: "Start a conversation", href: "/template/contact-1" },
+    { label: "Help centre", value: "Guides, FAQs and requirements", href: "/template/help-center" },
   ],
   button: "Visit Help Centre",
   href: "/template/help-center",
