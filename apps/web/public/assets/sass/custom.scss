@@ -1531,3 +1531,39 @@
 .rt-helpcard__dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5); animation: rt-pulse-dot 1.8s infinite; }
 .rt-helpcard__arrow { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--color-purple-3); color: var(--color-purple-1); transition: background 0.2s, color 0.2s; }
 .rt-helpcard:hover .rt-helpcard__arrow { background: var(--color-purple-1); color: #fff; }
+
+/* ===== For providers page ===== */
+.pr-followup { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: var(--color-light-4); }
+.pr-followup b { display: block; font-size: 14px; color: var(--color-dark-1); }
+.pr-followup span { display: block; font-size: 12px; color: var(--color-light-1); margin-top: 2px; }
+.pr-email { margin-top: 14px; padding: 16px 18px; border-radius: 12px; background: var(--color-light-4); border: 1px solid var(--color-light-5); }
+.pr-email b { display: block; margin-top: 4px; font-size: 15px; color: var(--color-dark-1); }
+.pr-email p { margin: 4px 0 0; font-size: 13px; color: var(--color-light-1); }
+.pr-email__foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: var(--color-light-1); }
+.pr-module { margin-top: 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-light-1); }
+.pr-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.pr-act { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--color-light-5); }
+.pr-act__n { width: 22px; height: 22px; border-radius: 50%; background: var(--color-light-4); font-size: 11px; font-weight: 700; color: var(--color-dark-1); display: inline-flex; align-items: center; justify-content: center; }
+.pr-act__icon { width: 30px; height: 30px; border-radius: 8px; background: var(--color-purple-3); color: var(--color-purple-1); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+.pr-act b { flex: 1; font-size: 14px; color: var(--color-dark-1); }
+.pr-act__type { font-size: 11px; font-weight: 600; color: var(--color-light-1); padding: 3px 8px; border-radius: 999px; background: var(--color-light-4); }
+.pr-lmsProg { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-light-5); }
+.pr-lmsProg b { display: block; font-size: 15px; color: var(--color-dark-1); }
+.pr-pricing { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 20px; }
+.pr-tier { background: #fff; border: 1px solid var(--color-light-5); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; }
+.pr-tier.-mkt { background: var(--color-dark-1); border-color: var(--color-dark-1); color: #fff; }
+.pr-tier.-mkt .bz-card__label { color: rgba(255, 255, 255, 0.6); }
+.pr-tier__value { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; color: var(--color-dark-1); margin-top: 8px; }
+.pr-tier.-mkt .pr-tier__value { color: var(--color-green-1); }
+.pr-tier__sub { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--color-dark-1); }
+.pr-tier.-mkt .pr-tier__sub { color: #fff; }
+.pr-tier p { margin: 10px 0 0; font-size: 14px; line-height: 1.6; color: var(--color-light-1); }
+.pr-tier.-mkt p { color: rgba(255, 255, 255, 0.7); }
+.pr-calc { background: #fff; border: 1px solid var(--color-light-5); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; }
+.pr-calc__rows { display: flex; flex-direction: column; margin-top: 14px; }
+.pr-calc__rows > div { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--color-light-5); font-size: 13px; color: var(--color-light-1); }
+.pr-calc__rows > div b { color: var(--color-dark-1); }
+.pr-calc__rows > div.-total { border-bottom: 0; padding-top: 12px; font-size: 14px; }
+.pr-calc__rows > div.-total b { font-size: 20px; color: var(--color-purple-1); }
+.pr-calc small { margin-top: 10px; font-size: 11px; color: var(--color-light-1); }
+@media (max-width: 991px) { .pr-pricing { grid-template-columns: 1fr; } }

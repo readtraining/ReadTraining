@@ -11,7 +11,7 @@ export const topBar = {
   audiences: [
     { href: "/", label: "For Individuals" },
     { href: "/for-business", label: "For Businesses" },
-    { href: "#providers", label: "For Training Providers" },
+    { href: "/for-providers", label: "For Training Providers" },
   ],
 };
 
@@ -263,7 +263,7 @@ export const providers = {
   ],
   button: "List your courses",
   note: "Free to list · Commission only",
-  href: "/template/instructor-become",
+  href: "/for-providers",
   proof: [
     { value: "46+", label: "providers on one SIA course" },
     { value: "103", label: "towns and cities covered" },
@@ -328,7 +328,7 @@ export const footer = {
     {
       title: "For providers",
       links: [
-        { href: "/template/instructor-become", label: "List Your Course" },
+        { href: "/for-providers", label: "List Your Course" },
         { href: "/template/pricing", label: "Provider Skill Saver" },
         { href: "/template/help-center", label: "Verify Certificate" },
         { href: "/template/instructors-list-1", label: "Listed Training Providers" },

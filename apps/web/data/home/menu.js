@@ -215,7 +215,7 @@ export const menuFooters = {
 // Flat structure used by the mobile menu (same shape as the template's menuList).
 export const businessMenu = [
   { label: "Book for your team", text: "Group bookings, one invoice, your venue or ours.", href: "/for-business", icon: "icon-person-3" },
-  { label: "List your courses", text: "Reach learners across the UK. Free to list.", href: "/template/instructor-become", icon: "icon-list" },
+  { label: "List your courses", text: "Reach learners across the UK. Free to list.", href: "/for-providers", icon: "icon-list" },
 ];
 
 export const homeMenuList = [
