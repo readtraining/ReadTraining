@@ -10,7 +10,7 @@ export const topBar = {
   hours: "Mon to Fri, 9:00am to 5:30pm",
   audiences: [
     { href: "/", label: "For Individuals" },
-    { href: "#employers", label: "For Businesses" },
+    { href: "/for-business", label: "For Businesses" },
     { href: "#providers", label: "For Training Providers" },
   ],
 };
@@ -31,7 +31,7 @@ export const hero = {
   text2: "explore available dates and locations, and choose the option that suits you.",
   subline: "Compare accredited providers, dates and prices in one place. No account needed to search.",
   primaryButton: { label: "Find Courses", href: "/template/courses-list-1" },
-  secondaryButton: { label: "Book for your team", href: "#employers" },
+  secondaryButton: { label: "Book for your team", href: "/for-business" },
   socialProof: { rating: "4.9 out of 5", text: "Based on 12,450+ verified reviews · 250,000+ customers" },
   methods: ["All methods", "Classroom", "Live online", "Online self-paced"],
   coursePlaceholder: "Search for a course",
@@ -230,7 +230,7 @@ export const teamBooking = {
   ],
   note: "Used by teams at",
   button: "Book for your team",
-  href: "/template/signup",
+  href: "/for-business",
   secondary: "Request a quote",
   next: [
     { title: "We check availability", text: "Dates, venues and providers near you." },

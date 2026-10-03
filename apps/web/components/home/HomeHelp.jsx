@@ -25,9 +25,12 @@ export default function HomeHelp() {
           {cards.map((c) => (
             <Link key={c.label} href={c.href} className="rt-helpcard">
               <span className="rt-helpcard__icon"><i className={`${c.icon} text-16`}></i></span>
-              <span className="rt-helpcard__label">{c.label}</span>
-              <span className="rt-helpcard__meta">{c.live && <span className="rt-helpcard__dot"></span>}{c.meta}</span>
-              <span className="rt-helpcard__link">{c.link} <i className="icon-arrow-right text-12 ml-5"></i></span>
+              <span className="rt-helpcard__body">
+                <span className="rt-helpcard__label">{c.label}</span>
+                <span className="rt-helpcard__meta">{c.live && <span className="rt-helpcard__dot"></span>}{c.meta}</span>
+                <span className="rt-helpcard__link">{c.link}</span>
+              </span>
+              <span className="rt-helpcard__arrow"><i className="icon-arrow-right text-12"></i></span>
             </Link>
           ))}
         </div>

@@ -7,26 +7,23 @@ export default function HomeBookingOptions() {
   return (
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">
-        <div className="row justify-center text-center">
-          <div className="col-xl-7 col-lg-9">
-            <div className="rt-section-head">
-              <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{d.eyebrow}</div>
-              <h2 className="sectionTitle__title">{d.title}</h2>
-              <p className="sectionTitle__text">{d.text}</p>
+        <div className="row y-gap-40 justify-between items-center">
+          <div className="col-lg-5">
+            <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{d.eyebrow}</div>
+            <h2 className="sectionTitle__title mt-20" style={{ maxWidth: "18ch" }}>{d.title}</h2>
+            <p className="sectionTitle__text" style={{ maxWidth: 440 }}>{d.text}</p>
+          </div>
+          <div className="col-lg-7">
+            <div className="rt-benefit-grid">
+              {d.benefits.map((b) => (
+                <div key={b.title} className="rt-benefit-card">
+                  <span className="rt-benefit__icon"><i className={`${b.icon} text-16`}></i></span>
+                  <div className="rt-benefit__title mt-15">{b.title}</div>
+                  <div className="rt-benefit__text">{b.text}</div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-
-        <div className="row y-gap-20 pt-40">
-          {d.benefits.map((b) => (
-            <div key={b.title} className="col-lg-3 col-md-6">
-              <div className="rt-benefit-card">
-                <span className="rt-benefit__icon"><i className={`${b.icon} text-16`}></i></span>
-                <div className="rt-benefit__title mt-15">{b.title}</div>
-                <div className="rt-benefit__text">{b.text}</div>
-              </div>
-            </div>
-          ))}
         </div>
 
         <div className="d-flex justify-center pt-50">
