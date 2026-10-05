@@ -3,3 +3,4 @@
 @import "../css/vendors.css";
 @import "../css/main.css";
 @include meta.load-css("../sass/custom.scss");
+@include meta.load-css("../sass/pages/landing");

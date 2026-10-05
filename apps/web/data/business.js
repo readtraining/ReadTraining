@@ -1,13 +1,21 @@
 // "For business" page content. Same functionality as the client's current site, our own copy and UI.
+const signup = { label: "Create a Business account", href: "/template/signup" };
+const demo = { label: "Book a demo", href: "/template/contact-1" };
+
 export const business = {
   hero: {
     eyebrow: "For teams and business buyers",
-    trust: "Rated 4.9 by 12,450+ learners and teams",
     title: "Train your whole team. Track every certificate.",
     text: "Open a Business account, buy course places for your team, hand them out now or hold them for later, and keep learners, progress, certificates and renewals together in one place.",
-    primary: { label: "Create a Business account", href: "/template/signup" },
-    secondary: { label: "Book a demo", href: "/template/contact-1" },
+    primary: signup,
+    secondary: demo,
     points: ["No contract", "Invoice billing", "Group pricing", "Assign places later"],
+    image: { src: "/assets/img/business/dashboard.png", alt: "Business account dashboard" },
+    floats: [
+      { title: "2 renewals", text: "Due this month", icon: "icon-wall-clock", circle: "bg-light-3", iconColor: "text-dark-1", titleColor: "text-dark-1" },
+      { title: "Certificate issued", text: "Jane S. · Food Hygiene L2", icon: "icon-check", circle: "bg-dark-1", iconColor: "text-green-1", titleColor: "text-purple-1" },
+    ],
+    // account and renewals are read by the /admin dashboard preview
     renewals: [
       { name: "Daniel Khan", course: "Door Supervisor Refresher", date: "03 Oct 2026" },
       { name: "Priya Shah", course: "First Aid at Work", date: "21 Oct 2026" },
@@ -31,69 +39,61 @@ export const business = {
     title: "Four steps. One account.",
     text: "Buy course places, assign them to learners when you are ready, track progress and renew before anything expires.",
     steps: [
-      { title: "Buy places", text: "Purchase course places for your team and keep every booking in one account." },
-      { title: "Assign or hold", text: "Name the learner straight away, or hold the place until you know who needs it." },
-      { title: "Manage learners", text: "Progress, details and admin for every learner sit together in one view." },
-      { title: "Renew on time", text: "Certificate expiry dates are flagged early so nothing lapses unnoticed." },
+      { title: "Buy places", text: "Purchase course places for your team and keep every booking in one account.", icon: "icon-basket" },
+      { title: "Assign or hold", text: "Name the learner straight away, or hold the place until you know who needs it.", icon: "icon-person-2" },
+      { title: "Manage learners", text: "Progress, details and admin for every learner sit together in one view.", icon: "icon-list" },
+      { title: "Renew on time", text: "Certificate expiry dates are flagged early so nothing lapses unnoticed.", icon: "icon-badge" },
     ],
   },
   licences: {
     eyebrow: "Licence flexibility",
     title: "Buy now. Assign when ready.",
     text: "Purchase training while the dates and price are right, then allocate each place immediately or hold it in your account until you know who needs it.",
-    options: [
-      { title: "Assign immediately", text: "When you already know the learner, allocate the purchased place to them straight away." },
-      { title: "Keep it unassigned", text: "Not decided yet? Hold the place in your Business account and assign it whenever you are ready." },
+    points: ["Lock in dates and price today", "Reassign a place whenever plans change", "Share admin with colleagues"],
+    cta: signup,
+    course: "Emergency First Aid at Work",
+    modes: [
+      { id: "assign", label: "Assign now" },
+      { id: "hold", label: "Hold for later" },
     ],
-    example: {
-      course: "Emergency First Aid at Work",
-      available: "5 available",
-      counts: [{ label: "Purchased", value: 12 }, { label: "Assigned", value: 7 }, { label: "Unassigned", value: 5 }],
-      learners: [
-        { name: "Hannah Cooper", email: "h.cooper@harbourfacilities.co.uk", status: "Assigned" },
-        { name: "Daniel Khan", email: "d.khan@harbourfacilities.co.uk", status: "Assigned" },
-        { name: "Priya Shah", email: "p.shah@harbourfacilities.co.uk", status: "Assigned" },
-      ],
-      unassigned: { title: "Unassigned place", text: "Keep it available until you know the learner", action: "Assign learner" },
-    },
+    learners: [
+      { name: "Hannah Cooper", email: "h.cooper@harbourfacilities.co.uk", status: "Assigned" },
+      { name: "Daniel Khan", email: "d.khan@harbourfacilities.co.uk", status: "Assigned" },
+      { name: "Priya Shah", email: "p.shah@harbourfacilities.co.uk", status: "Assigned" },
+    ],
+    assignedMore: "+4 more learners assigned",
+    viewAll: { label: "View all", href: "#" },
+    held: ["Unassigned place 1", "Unassigned place 2", "Unassigned place 3"],
+    heldMore: "+2 more places on hold",
+    heldAction: "Assign learner",
+    counts: { purchased: 12, assigned: 7, unassigned: 5 },
   },
   progress: {
     eyebrow: "Learner monitoring",
     title: "See every learner at a glance.",
     text: "Learner records and training activity sit together, so you can see who is booked, who is part-way through and who has finished.",
-    points: [
-      "Live progress per learner",
-      "Records tied to each booking",
-      "Share admin with colleagues",
+    filters: ["All", "Booked", "In progress", "Complete"],
+    frame: "Learner progress · Harbour Facilities Ltd",
+    stages: ["Booked", "In progress", "Complete"],
+    learners: [
+      { name: "Tom Reilly", course: "Fire Marshal Training", status: "Booked", pct: 0 },
+      { name: "Grace Osei", course: "Health & Safety Awareness", status: "Booked", pct: 0 },
+      { name: "Marcus Reid", course: "Door Supervisor Refresher", status: "In progress", pct: 72 },
+      { name: "Aisha Patel", course: "Fire Marshal Training", status: "In progress", pct: 35 },
+      { name: "Sophie Williams", course: "Health & Safety Awareness", status: "Complete", pct: 100 },
     ],
-    card: {
-      title: "Learner progress",
-      sub: "18 learners across active training",
-      link: "View all learners",
-      learners: [
-        { name: "Sophie Williams", course: "Health & Safety Awareness", pct: 100, status: "Completed" },
-        { name: "Marcus Reid", course: "Door Supervisor Refresher", pct: 72, status: "In progress" },
-        { name: "Aisha Patel", course: "Fire Marshal Training", pct: 35, status: "Learning" },
-      ],
-    },
   },
   certificates: {
     eyebrow: "Certificates and renewals",
     title: "Certificates and renewals, sorted.",
     text: "Download learner certificates when they are issued, and see issue and expiry dates so renewals never catch you out.",
-    points: [
-      "One-click certificate downloads",
-      "Expiry dates on every record",
+    points: ["One-click certificate downloads", "Expiry dates on every record"],
+    cta: signup,
+    rows: [
+      { name: "Hannah Cooper", course: "Emergency First Aid at Work", expires: "18 Sep 2029", sort: "2029-09-18", status: "Valid" },
+      { name: "Daniel Khan", course: "Door Supervisor Refresher", expires: "03 Oct 2026", sort: "2026-10-03", status: "Renewal due" },
+      { name: "Sophie Williams", course: "Fire Marshal Training", expires: "12 Dec 2027", sort: "2027-12-12", status: "Valid" },
     ],
-    card: {
-      title: "Certificate records for your team",
-      due: "2 due soon",
-      rows: [
-        { name: "Hannah Cooper", course: "Emergency First Aid at Work", expires: "18 Sep 2029", status: "Valid" },
-        { name: "Daniel Khan", course: "Door Supervisor Refresher", expires: "03 Oct 2026", status: "Renewal due" },
-        { name: "Sophie Williams", course: "Fire Marshal Training", expires: "12 Dec 2027", status: "Valid" },
-      ],
-    },
   },
   credit: {
     eyebrow: "For eligible regular Business customers",
@@ -104,7 +104,9 @@ export const business = {
       { title: "For regular buyers", text: "Based on your history and training spend with us." },
       { title: "Purchase, then settle", text: "Buy within the limit. Pay on your agreed terms." },
     ],
+    cta: { label: "Ask about credit", href: "/template/contact-1" },
     card: {
+      label: "Business credit",
       company: "Harbour Facilities Ltd",
       status: "Active facility",
       limit: 5000, used: 1840, available: 3160,
@@ -114,8 +116,6 @@ export const business = {
         { label: "Fire Marshal · 6 places", amount: "£420" },
         { label: "H&S Awareness · 4 places", amount: "£300" },
       ],
-      note: "3 purchases made on account",
-      link: "View invoices",
     },
   },
   faq: {
@@ -132,10 +132,9 @@ export const business = {
     ],
   },
   cta: {
-    title: "Ready to train your team?",
+    title: "Ready to train your whole team?",
     text: "Create a Business account in minutes and keep places, learners, certificates and purchases connected from day one.",
-    primary: { label: "Create a Business account", href: "/template/signup" },
-    secondary: { label: "Browse training", href: "/template/courses-list-1" },
-    note: "Want to look first? Browse courses.",
+    primary: signup,
+    secondary: demo,
   },
 };

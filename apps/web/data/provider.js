@@ -2,12 +2,17 @@
 export const provider = {
   hero: {
     eyebrow: "For training providers",
-    trust: "105+ approved providers already listed",
     title: "Run your training business. Grow with ReadTraining.",
     text: "Manage courses, cohorts, learners and digital learning in one provider workspace, then list eligible dates on the marketplace when you want more learner demand.",
     primary: { label: "Become a provider", href: "/template/signup" },
     secondary: { label: "Book a call", href: "/template/contact-1" },
     points: ["No monthly subscription", "Commission on marketplace sales only", "Approval in days", "SCORM-ready LMS"],
+    image: { src: "/assets/img/business/provider-dashboard.png", alt: "Provider workspace dashboard" },
+    floats: [
+      { title: "New booking", text: "2 places · Manchester", icon: "icon-basket", circle: "bg-purple-3", iconColor: "text-purple-1", titleColor: "text-purple-1" },
+      { title: "Payout sent", text: "£3,140 · 28 Sep", icon: "icon-check", circle: "bg-dark-1", iconColor: "text-green-1", titleColor: "text-purple-1" },
+    ],
+    // workspace is read by the /admin provider dashboard preview
     workspace: {
       company: "Northstar Training",
       stats: [
@@ -28,10 +33,10 @@ export const provider = {
     title: "From course setup to delivery and marketplace.",
     text: "Set up the training you deliver, organise dates and learners, build the learning experience, and add marketplace distribution where it makes sense for your business.",
     steps: [
-      { title: "Create your courses", text: "Keep course information, delivery options and provider settings together in one workspace." },
-      { title: "Plan cohorts and dates", text: "Schedule classroom, virtual or online delivery with learner capacity tied to each cohort." },
-      { title: "Manage learners and learning", text: "Keep learner activity together and deliver digital curriculum including SCORM content." },
-      { title: "List on the marketplace", text: "Publish eligible training when you want an extra learner-acquisition channel." },
+      { title: "Create your courses", text: "Keep course information, delivery options and provider settings together in one workspace.", icon: "icon-list" },
+      { title: "Plan cohorts and dates", text: "Schedule classroom, virtual or online delivery with learner capacity tied to each cohort.", icon: "icon-calendar" },
+      { title: "Manage learners and learning", text: "Keep learner activity together and deliver digital curriculum including SCORM content.", icon: "icon-person-2" },
+      { title: "List on the marketplace", text: "Publish eligible training when you want an extra learner-acquisition channel.", icon: "icon-global-search" },
     ],
   },
   cohorts: {
@@ -43,7 +48,8 @@ export const provider = {
       { title: "Capacity stays visible", text: "Learner numbers sit on the delivery date instead of being tracked separately." },
     ],
     card: {
-      month: "This month", stats: [{ label: "Cohorts", value: 8 }, { label: "Seats booked", value: 36 }, { label: "Spaces left", value: 8 }],
+      frame: "Cohorts and dates · This month",
+      cohorts: 8, booked: 36, left: 8,
       rows: [
         { course: "Door Supervisor Refresher", meta: "London · 25 to 26 Sep · Classroom", seats: "11 / 12", status: "Published" },
         { course: "Emergency First Aid at Work", meta: "Birmingham · 28 Sep · Classroom", seats: "0 / 12", status: "Draft" },
@@ -57,7 +63,8 @@ export const provider = {
     text: "Manage learners you bring yourself, review their training context and use follow-up actions without jumping between disconnected records.",
     points: ["Learner identity and training activity together", "Email follow-up actions from the learner record"],
     card: {
-      total: "146 learners",
+      frame: "Learners · 146 learners",
+      stages: ["Booked", "In progress", "Complete"],
       rows: [
         { name: "Sophie Williams", course: "Door Supervisor Refresher", status: "In progress", pct: 74 },
         { name: "Daniel Khan", course: "Emergency First Aid at Work", status: "Booked", note: "25 Sep" },
@@ -72,6 +79,7 @@ export const provider = {
     text: "Build targeted email campaigns around learner history instead of treating every learner as the same audience.",
     points: ["Contact learners whose training is approaching expiry", "Create plan-upgrade and related-training campaigns"],
     card: {
+      frame: "Marketing campaigns",
       rows: [
         { name: "Training renewal", meta: "42 learners · qualifications expiring soon", status: "Ready" },
         { name: "Plan upgrade", meta: "18 learners · eligible upgrade audience", status: "Draft" },
@@ -86,7 +94,7 @@ export const provider = {
     text: "Structure the curriculum and combine activity types for digital learning, including SCORM-compatible content.",
     points: ["Text, video, quizzes, assignments, downloads and SCORM", "Learning content tied to the course and learner journey"],
     card: {
-      title: "Course curriculum", count: "4 activities",
+      frame: "Course curriculum · 4 activities",
       module: "Module 1 · Core learning",
       activities: [
         { title: "Welcome and course guide", type: "Text" },
@@ -103,6 +111,8 @@ export const provider = {
     text: "Keep running your training in your workspace, then use the marketplace channel for eligible courses and dates where additional learner demand is useful.",
     points: ["Prepare availability for the marketplace from the provider workflow", "Publication is approval-gated for eligible training"],
     card: {
+      label: "Course listing",
+      status: "Marketplace",
       course: "Door Supervisor Refresher",
       text: "Add eligible dates to your marketplace listing while keeping delivery in the provider workspace.",
       dates: [

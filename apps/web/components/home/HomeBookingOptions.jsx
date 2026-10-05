@@ -8,12 +8,12 @@ export default function HomeBookingOptions() {
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">
         <div className="row y-gap-40 justify-between items-center">
-          <div className="col-lg-5">
+          <div className="col-lg-5 rt-bo-copy">
             <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{d.eyebrow}</div>
-            <h2 className="sectionTitle__title mt-20" style={{ maxWidth: "18ch" }}>{d.title}</h2>
+            <h2 className="sectionTitle__title mt-20" style={{ maxWidth: "24ch" }}>{d.title}</h2>
             <p className="sectionTitle__text" style={{ maxWidth: 440 }}>{d.text}</p>
           </div>
-          <div className="col-lg-7">
+          <div className="col-lg-7 rt-bo-cards">
             <div className="rt-benefit-grid">
               {d.benefits.map((b) => (
                 <div key={b.title} className="rt-benefit-card">
@@ -26,7 +26,7 @@ export default function HomeBookingOptions() {
           </div>
         </div>
 
-        <div className="d-flex justify-center pt-50">
+        <div className="d-flex justify-center pt-60 lg:pt-50">
           <div className="rt-example-tag">
             <span className="rt-eyebrow text-light-1">{d.example.eyebrow}</span>
             <span className="rt-example-tag__course">{d.example.course}</span>
