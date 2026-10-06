@@ -16,11 +16,11 @@ export const useContextElement = () => {
   
     const [cartCourses, setCartCourses] = useState([])
     const [cartEvents, setCartEvents] = useState([])
-    const addCourseToCart = (id)=>{
+    const addCourseToCart = (id, course)=>{
 
         if (!cartCourses.filter((elm)=>elm.id == id)[0]) {
 
-           const item = {...coursesData.filter(elm=>elm.id == id)[0],quantity:1}
+           const item = {...(course || coursesData.filter(elm=>elm.id == id)[0]),quantity:1}
            setCartCourses(pre=>[...pre,item])
             
         }

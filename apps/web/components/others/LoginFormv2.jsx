@@ -10,8 +10,22 @@ import {
   loginWithPassword,
   loginWithProvider,
 } from "@/lib/auth/authClient";
+import {
+  EyeIcon,
+  EyeOffIcon,
+  FacebookIcon,
+  GoogleIcon,
+  LockIcon,
+  MailIcon,
+} from "./authIcons";
+
+// Version 2 of the login UI: same behaviour as LoginForm.jsx (Version 1) in a
+// single narrow card. Left-aligned header, filled inputs, and plain inline
+// footer rows (no inner panels or boxes).
 
 const PROJECT_NAME = "ReadTraining";
+const BORDER = "1px solid #DDDDDD";
+const MUTED = "#8C8CA1";
 
 const BUTTON_LABELS = {
   idle: "Log in",
@@ -28,76 +42,28 @@ function validate({ email, password }) {
   return errors;
 }
 
-const GoogleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
-    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
-    <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z" />
-    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
-  </svg>
-);
+const css = `
+form.contact-form input.lf2-input[name] { background: var(--color-light-4); border-radius: 8px; padding: 12px 14px 12px 44px; }
+form.contact-form input.lf2-input[name]:focus { background: #fff; }
+form.contact-form input.lf2-input[name].-error { border-color: var(--color-red-3); }
+.lf2-social { display: flex; align-items: center; justify-content: center; gap: 10px; height: 42px; width: 100%; background: #fff; border: ${BORDER}; border-radius: 8px; color: var(--color-dark-1); font-size: 14px; font-weight: 500; cursor: pointer; transition: border-color .15s; }
+.lf2-social:hover:not(:disabled) { border-color: var(--color-dark-1); }
+.lf2-social:disabled { opacity: .6; cursor: default; }
+`;
 
-const FacebookIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      fill="#1877F2"
-      d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z"
-    />
-  </svg>
-);
-
-const iconProps = {
-  width: 18,
-  height: 18,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.8,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": true,
-};
-
-const MailIcon = () => (
-  <svg {...iconProps}>
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="m3 7 9 6 9-6" />
-  </svg>
-);
-
-const LockIcon = () => (
-  <svg {...iconProps}>
-    <rect x="4" y="11" width="16" height="10" rx="2" />
-    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-  </svg>
-);
-
-const EyeIcon = () => (
-  <svg {...iconProps}>
-    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const EyeOffIcon = () => (
-  <svg {...iconProps}>
-    <path d="M9.9 5.2A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6" />
-    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-    <path d="m3 3 18 18" />
-  </svg>
-);
-
-const leadingIconStyle = {
+const iconStyle = {
   position: "absolute",
-  left: 16,
+  left: 14,
   top: "50%",
   transform: "translateY(-50%)",
   display: "flex",
-  color: "#8C8CA1",
+  color: MUTED,
   pointerEvents: "none",
 };
 
-export default function LoginForm() {
+const errorStyle = { color: "var(--color-red-3)" };
+
+export default function LoginFormv2() {
   const router = useRouter();
   const [values, setValues] = useState({ email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState({});
@@ -162,42 +128,36 @@ export default function LoginForm() {
       className="d-flex items-center justify-center px-20 py-20"
       style={{ minHeight: "100vh", background: "var(--color-light-4)" }}
     >
+      <style>{css}</style>
       <div
-        className="bg-white shadow-1 rounded-16"
+        className="bg-white"
         style={{
           width: "100%",
-          maxWidth: 420,
-          padding: "24px 28px",
-          border: "1px solid #DDDDDD",
+          maxWidth: 440,
+          padding: "26px 28px 22px",
+          border: BORDER,
+          borderRadius: 16,
         }}
       >
-        <div className="d-flex justify-center mb-20">
-          <Link href="/" aria-label={`${PROJECT_NAME} home`}>
-            <Image
-              width={150}
-              height={38}
-              src="/assets/img/general/readtraining-logo-dark.svg"
-              alt={PROJECT_NAME}
-              style={{ maxWidth: "100%", height: "auto" }}
-            />
-          </Link>
-        </div>
+        <Link href="/" aria-label={`${PROJECT_NAME} home`} className="d-inline-block">
+          <Image
+            width={132}
+            height={34}
+            src="/assets/img/general/readtraining-logo-dark.svg"
+            alt={PROJECT_NAME}
+            style={{ maxWidth: "100%", height: "auto" }}
+          />
+        </Link>
 
         <h1
-          className="lh-13 fw-700 text-dark-1 text-center"
-          style={{ fontSize: 22 }}
+          className="fw-700 text-dark-1 mt-15"
+          style={{ fontSize: 21, lineHeight: 1.25, letterSpacing: "-0.01em" }}
         >
           Log in to your {PROJECT_NAME} account
         </h1>
-        <p className="text-14 text-center mt-5">
-          Access your courses, bookings, and dashboard
-        </p>
+        <p className="text-14 mt-5">Access your courses, bookings, and dashboard</p>
 
-        <form
-          className="contact-form pt-20"
-          onSubmit={handleSubmit}
-          noValidate
-        >
+        <form className="contact-form pt-20" onSubmit={handleSubmit} noValidate>
           {formError && (
             <div
               role="alert"
@@ -214,61 +174,58 @@ export default function LoginForm() {
 
           <div className="mb-15">
             <label
-              htmlFor="login-email"
-              className="text-15 lh-1 fw-500 text-dark-1 mb-8 d-block"
+              htmlFor="login2-email"
+              className="text-14 lh-1 fw-500 text-dark-1 mb-8 d-block"
             >
-             <b> Email Address </b>
+              Email
             </label>
             <div style={{ position: "relative" }}>
-              <span style={leadingIconStyle}>
+              <span style={iconStyle}>
                 <MailIcon />
               </span>
               <input
-              id="login-email"
-              type="email"
-              name="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={values.email}
-              onChange={handleChange}
-              disabled={busy}
-              aria-invalid={Boolean(fieldErrors.email)}
-              aria-describedby={fieldErrors.email ? "login-email-error" : undefined}
-              style={{ paddingLeft: 44 }}
-            />
+                id="login2-email"
+                className={`lf2-input${fieldErrors.email ? " -error" : ""}`}
+                type="email"
+                name="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={values.email}
+                onChange={handleChange}
+                disabled={busy}
+                aria-invalid={Boolean(fieldErrors.email)}
+                aria-describedby={fieldErrors.email ? "login2-email-error" : undefined}
+              />
             </div>
             {fieldErrors.email && (
-              <div
-                id="login-email-error"
-                className="text-13 mt-5"
-                style={{ color: "var(--color-red-3)" }}
-              >
+              <div id="login2-email-error" className="text-13 mt-5" style={errorStyle}>
                 {fieldErrors.email}
               </div>
             )}
           </div>
 
-          <div className="mb-15">
+          <div className="mb-20">
             <div className="d-flex justify-between items-center mb-8 x-gap-10">
               <label
-                htmlFor="login-password"
-                className="text-15 lh-1 fw-500 text-dark-1"
+                htmlFor="login2-password"
+                className="text-14 lh-1 fw-500 text-dark-1"
               >
-                <b> Password </b>
+                Password
               </label>
               <Link
                 href={AUTH_ROUTES.forgotPassword}
-                className="text-14 text-purple-1"
+                className="text-13 fw-500 text-purple-1"
               >
                 Forgot password?
               </Link>
             </div>
             <div style={{ position: "relative" }}>
-              <span style={leadingIconStyle}>
+              <span style={iconStyle}>
                 <LockIcon />
               </span>
               <input
-                id="login-password"
+                id="login2-password"
+                className={`lf2-input${fieldErrors.password ? " -error" : ""}`}
                 type={showPassword ? "text" : "password"}
                 name="password"
                 autoComplete="current-password"
@@ -278,9 +235,9 @@ export default function LoginForm() {
                 disabled={busy}
                 aria-invalid={Boolean(fieldErrors.password)}
                 aria-describedby={
-                  fieldErrors.password ? "login-password-error" : undefined
+                  fieldErrors.password ? "login2-password-error" : undefined
                 }
-                style={{ paddingLeft: 44, paddingRight: 46 }}
+                style={{ paddingRight: 44 }}
               />
               <button
                 type="button"
@@ -290,14 +247,14 @@ export default function LoginForm() {
                 disabled={busy}
                 style={{
                   position: "absolute",
-                  right: 16,
+                  right: 14,
                   top: "50%",
                   transform: "translateY(-50%)",
                   display: "flex",
                   background: "none",
                   border: 0,
                   padding: 0,
-                  color: "#8C8CA1",
+                  color: MUTED,
                   cursor: "pointer",
                 }}
               >
@@ -306,9 +263,9 @@ export default function LoginForm() {
             </div>
             {fieldErrors.password && (
               <div
-                id="login-password-error"
+                id="login2-password-error"
                 className="text-13 mt-5"
-                style={{ color: "var(--color-red-3)" }}
+                style={errorStyle}
               >
                 {fieldErrors.password}
               </div>
@@ -318,6 +275,7 @@ export default function LoginForm() {
           <button
             type="submit"
             className="button -md -purple-1 text-white fw-500 w-1/1"
+            style={{ borderRadius: 8 }}
             disabled={busy}
             aria-busy={status !== "idle"}
           >
@@ -325,17 +283,20 @@ export default function LoginForm() {
           </button>
         </form>
 
-        <div className="text-14 text-center mt-20 mb-15 d-flex items-center x-gap-15">
-          <span style={{ flex: 1, borderTop: "1px solid #DDDDDD" }} />
+        <div
+          className="text-13 d-flex items-center mt-20 mb-15"
+          style={{ gap: 12 }}
+        >
+          <span style={{ flex: 1, borderTop: BORDER }} />
           <span>Or continue with</span>
-          <span style={{ flex: 1, borderTop: "1px solid #DDDDDD" }} />
+          <span style={{ flex: 1, borderTop: BORDER }} />
         </div>
-        <div className="row y-gap-10">
+
+        <div className="row x-gap-10 y-gap-10">
           <div className="col-sm-6">
             <button
               type="button"
-              className="button -sm -outline-dark-1 text-dark-1 w-1/1 d-flex items-center justify-center"
-              style={{ gap: 10 }}
+              className="lf2-social"
               onClick={() => handleSocial("google")}
               disabled={busy}
             >
@@ -345,8 +306,7 @@ export default function LoginForm() {
           <div className="col-sm-6">
             <button
               type="button"
-              className="button -sm -outline-dark-1 text-dark-1 w-1/1 d-flex items-center justify-center"
-              style={{ gap: 10 }}
+              className="lf2-social"
               onClick={() => handleSocial("facebook")}
               disabled={busy}
             >
@@ -355,28 +315,28 @@ export default function LoginForm() {
           </div>
         </div>
 
-        <p className="text-14 text-center mt-20">
-          Don&apos;t have an account?{" "}
-          <Link href={AUTH_ROUTES.signUp} className="text-purple-1 fw-500">
-            Sign up
-          </Link>
-        </p>
-
-        <div className="text-center mt-20">
-          <div className="text-14 fw-500 text-dark-1">
-            Looking to partner with our ReadTraining?
-          </div>
-          <div className="d-flex justify-center flex-wrap items-center mt-8 text-14">
-            <Link href="/#providers" className="text-purple-1">
-              Course provider
+        <div className="mt-20 pt-15" style={{ borderTop: BORDER }}>
+          <p className="text-13">
+            Don&apos;t have an account?{" "}
+            <Link href={AUTH_ROUTES.signUp} className="text-purple-1 fw-500">
+              Sign up
             </Link>
-            <span style={{ margin: "0 10px" }} aria-hidden="true">
-              |
+          </p>
+          <p
+            className="text-13 d-flex flex-wrap items-center mt-8"
+            style={{ columnGap: 6 }}
+          >
+            <span>Looking to partner with our ReadTraining?</span>
+            <span className="d-flex items-center" style={{ columnGap: 8 }}>
+              <Link href="/#providers" className="text-purple-1 fw-500">
+                Course provider
+              </Link>
+              <span aria-hidden="true">|</span>
+              <Link href="/#employers" className="text-purple-1 fw-500">
+                Business account
+              </Link>
             </span>
-            <Link href="/#employers" className="text-purple-1">
-              Business account
-            </Link>
-          </div>
+          </p>
         </div>
       </div>
     </div>

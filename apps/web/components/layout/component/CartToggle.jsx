@@ -1,5 +1,4 @@
 "use client";
-import { menuList } from "@/data/menu";
 import { usePathname } from "next/navigation";
 import React from "react";
 import { useContextElement } from "@/context/Context";
@@ -11,27 +10,11 @@ import EventCart from "./EventCart";
 const CartToggle = ({ allClasses, parentClassess }) => {
   const { cartProducts, cartCourses, cartEvents } = useContextElement();
   const [activeCart, setActiveCart] = useState(false);
-  const [menuItem, setMenuItem] = useState("");
-  const [submenu, setSubmenu] = useState("");
-
   const pathname = usePathname();
-
-  useEffect(() => {
-    menuList.forEach((elm) => {
-      elm?.links?.forEach((elm2) => {
-        if (elm2.href?.split('/')[1] == pathname?.split('/')[1]) {
-          setMenuItem(elm.title);
-        } else {
-          elm2?.links?.map((elm3) => {
-            if (elm3.href?.split('/')[1] == pathname?.split('/')[1]) {
-              setMenuItem(elm.title);
-              setSubmenu(elm2.title);
-            }
-          });
-        }
-      });
-    });
-  }, []);
+  // Which cart to show comes from the real route. The old menu-title match compared only the first path segment, so every
+  // /template/... page matched "Shop" or "Events" and the course basket count never showed.
+  const isShop = pathname?.startsWith("/template/shop");
+  const isEvents = pathname?.startsWith("/template/event");
 
   return (
     <>
@@ -44,13 +27,13 @@ const CartToggle = ({ allClasses, parentClassess }) => {
         >
           <i className="text-20 icon icon-basket"></i>
           <div className="cartProductCount">
-            {submenu == "Shop" && (
+            {isShop && (
               <>{cartProducts.length > 9 ? "9+" : cartProducts.length} </>
             )}
-            {menuItem == "Events" && (
+            {isEvents && (
               <>{cartEvents.length > 9 ? "9+" : cartEvents.length} </>
             )}
-            {!(submenu == "Shop" || menuItem == "Events") && (
+            {!(isShop || isEvents) && (
               <>{cartCourses.length > 9 ? "9+" : cartCourses.length} </>
             )}
           </div>
@@ -61,9 +44,9 @@ const CartToggle = ({ allClasses, parentClassess }) => {
             activeCart ? "-is-el-visible" : ""
           }`}
         >
-          {submenu == "Shop" && <ShopCart />}
-          {menuItem == "Events" && <EventCart />}
-          {!(submenu == "Shop" || menuItem == "Events") && <CourseCart />}
+          {isShop && <ShopCart />}
+          {isEvents && <EventCart />}
+          {!(isShop || isEvents) && <CourseCart />}
         </div>
       </div>
     </>
