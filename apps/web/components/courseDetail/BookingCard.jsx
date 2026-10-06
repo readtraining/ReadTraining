@@ -7,7 +7,7 @@ import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, useBooking } from "./BookingProv
 import { formatDateRange, formatPrice, savePercent } from "@/lib/courses";
 
 const Check = () => (
-  <svg className="rt-cd__check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg className="rt-cd__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M5 12l5 5L20 7" />
   </svg>
 );
@@ -44,14 +44,15 @@ function Fold({ hidden, children, className = "" }) {
   );
 }
 
-const scrollTo = (id) => (e) => {
+const toLearningOptions = (e) => {
   e.preventDefault();
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.getElementById("learning-options")?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
-// The booking card shows the current choice only (option, price, session, button). The choice itself is made in the
-// Learning options section. FULL: image, choice, button, trust grid. COMPACT (desktop, H1 out of view): the image and the
-// trust grid collapse; the choice, price, session and button always stay. On tablet and mobile the card is always FULL.
+// The booking card: price, a grey summary of the current choice (option, date, place) with one "Change" link, the button,
+// and the trust lines. The choice itself is made in the Learning options section.
+// FULL: image on top, then price, summary, button, all trust lines.
+// COMPACT (desktop, H1 out of view): the image collapses and only the first two trust lines stay. Tablet and mobile: always FULL.
 export default function BookingCard() {
   const { course, mode, isInHouse, session, status, addToBasket, cardButtonRef, barOn, flash } = useBooking();
   const [desktop, setDesktop] = useState(false);
@@ -65,7 +66,7 @@ export default function BookingCard() {
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  // A choice made on the page flashes the choice area for 600ms (the CSS turns this off for reduced motion).
+  // A choice made on the page flashes the summary box for 600ms (the CSS turns this off for reduced motion).
   useEffect(() => {
     if (!flash) return;
     setFlashing(true);
@@ -76,7 +77,7 @@ export default function BookingCard() {
   const compact = barOn && desktop;
   const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
   const save = isInHouse ? 0 : savePercent(session.price, session.wasPrice);
-  const trust = trustItems(course); // all existing trust items, one column
+  const trust = trustItems(course);
   const onDemand = mode === "ondemand";
 
   return (
@@ -90,44 +91,31 @@ export default function BookingCard() {
       )}
 
       <div className="rt-bk__body">
-        <div className={`rt-bk__choice${flashing ? " is-flash" : ""}`} aria-live="polite">
-          <div className="rt-bk__opt">
-            <OptionIcon mode={mode} />
-            <strong>{MODE_LABEL[mode]}</strong>
-            <a href="#learning-options" className="rt-cd__link" onClick={scrollTo("learning-options")}>Change</a>
+        {!isInHouse && (
+          <div className="rt-bk__pb">
+            <div className="rt-bk__price">
+              <span className="rt-bk__now">{formatPrice(session.price)}</span>
+              {session.wasPrice > session.price && <s className="rt-bk__was"><span className="rt-cd__sr">was </span>{formatPrice(session.wasPrice)}</s>}
+              {save > 0 && <span className="rt-bk__off">{save}% off</span>}
+            </div>
+            <p className="rt-bk__vat">All inc</p>
           </div>
+        )}
 
+        <div className={`rt-bk__sum${flashing ? " is-flash" : ""}`} aria-live="polite">
+          <div className="rt-bk__sum-top">
+            <span className="rt-bk__sum-opt"><OptionIcon mode={mode} /><strong>{MODE_LABEL[mode]}</strong></span>
+            <a href="#learning-options" className="rt-cd__link" onClick={toLearningOptions}>Change</a>
+          </div>
           {isInHouse ? (
-            <p className="rt-bk__inhouse">{IN_HOUSE_NOTE}</p>
+            <p className="rt-bk__sum-l2">{IN_HOUSE_NOTE}</p>
           ) : (
             <>
-              <div className="rt-bk__price">
-                <span className="rt-bk__now">{formatPrice(session.price)}</span>
-                {session.wasPrice > session.price && <s className="rt-bk__was"><span className="rt-cd__sr">was </span>{formatPrice(session.wasPrice)}</s>}
-                {save > 0 && <span className="rt-bk__off">{save}% off</span>}
-              </div>
-              <p className="rt-bk__vat">All inc</p>
-
-              <div className="rt-bk__session">
-                <div className="rt-bk__when">
-                  <strong>{onDemand ? session.time : formatDateRange(session.date, session.endDate)}</strong>
-                  <a href="#dates" className="rt-cd__link" onClick={scrollTo("dates")}>Change</a>
-                </div>
-                <div className="rt-bk__where">{session.location}, {session.provider}</div>
-              </div>
+              <p className="rt-bk__sum-l2">{onDemand ? session.time : formatDateRange(session.date, session.endDate)}</p>
+              <p className="rt-bk__sum-l3">{session.location}, {session.provider}</p>
             </>
           )}
         </div>
-
-        {trust.length > 0 && (
-          <Fold hidden={compact} className="rt-bk__fold--trust">
-            <ul className="rt-bk__trust">
-              {trust.map((t) => (
-                <li key={t}><Check /> <span>{t}</span></li>
-              ))}
-            </ul>
-          </Fold>
-        )}
 
         {isInHouse ? (
           <Link ref={cardButtonRef} href={QUOTE_HREF} className="rt-cd__btn">Get a quote</Link>
@@ -143,8 +131,26 @@ export default function BookingCard() {
             {label}
           </button>
         )}
-      </div>
 
+        {trust.length > 0 && (
+          <div className="rt-bk__tl">
+            <ul>
+              {trust.slice(0, 2).map((t) => (
+                <li key={t}><Check /> <span>{t}</span></li>
+              ))}
+            </ul>
+            {trust.length > 2 && (
+              <Fold hidden={compact} className="rt-bk__fold--trust">
+                <ul>
+                  {trust.slice(2).map((t) => (
+                    <li key={t}><Check /> <span>{t}</span></li>
+                  ))}
+                </ul>
+              </Fold>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

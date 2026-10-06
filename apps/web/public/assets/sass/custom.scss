@@ -2964,3 +2964,34 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
   .rt-cd__slim-nav { margin-right: calc(50% - 152px); } /* 50% is measured inside the bar's 24px left padding */
 }
 @media (min-width: 1180px) and (max-width: 1359px) { .rt-cd__slim-rate .rt-cd__stars { display: none; } }
+
+/* ===================================================================================================
+   BOOKING CARD LAYOUT (both states): price, grey summary box with one Change link, button, trust lines
+   =================================================================================================== */
+.rt-bk__body { padding: 22px; }
+.rt-bk__body > * + * { margin-top: 0; }
+.rt-bk__pb { margin: 0 0 16px; }
+.rt-bk__pb .rt-bk__price { display: flex; align-items: baseline; flex-wrap: nowrap; gap: 8px; margin: 0; white-space: nowrap; }
+.rt-bk__pb .rt-bk__now { font-size: 30px; line-height: 36px; font-weight: 700; }
+.rt-bk__pb .rt-bk__was { font-size: 15px; color: var(--cd-muted); }
+.rt-bk__pb .rt-bk__off { padding: 0; border-radius: 0; background: none; color: var(--cd-success); font-size: 14px; line-height: 20px; font-weight: 700; white-space: nowrap; }
+.rt-bk__pb .rt-bk__vat { margin: 0; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
+
+.rt-bk__sum { box-sizing: border-box; margin: 0 0 16px; padding: 12px 14px; border: 0; border-radius: 4px; background: var(--color-light-3); transition: background-color 0.3s ease; }
+.rt-bk__sum.is-flash { background: var(--cd-brand-subtle); }
+.rt-bk__sum-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
+.rt-bk__sum-opt { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--cd-brand); }
+.rt-bk__sum-opt strong { font-size: 14px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
+.rt-bk__sum-top .rt-cd__link { flex: none; min-height: 22px; font-size: 13px; font-weight: 700; }
+.rt-bk__sum-l2 { margin: 8px 0 0; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
+.rt-bk__sum-l3 { margin: 0; overflow: hidden; font-size: 13px; line-height: 18px; color: var(--cd-muted); text-overflow: ellipsis; white-space: nowrap; }
+
+.rt-bk__body .rt-cd__btn { width: 100%; height: 48px; margin: 0; border-radius: 4px; font-size: 16px; font-weight: 700; }
+
+.rt-bk__tl { margin-top: 14px; }
+.rt-bk__tl ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
+.rt-bk__tl li { display: flex; align-items: flex-start; gap: 8px; list-style: none; }
+.rt-bk__tl .rt-cd__check { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--cd-success); }
+.rt-bk__tl .rt-bk__fold-in { padding-top: 6px; }
+.rt-bk__tl .rt-bk__fold.is-hidden .rt-bk__fold-in { padding-top: 0; }
+@media (prefers-reduced-motion: reduce) { .rt-bk__sum { transition: none; } .rt-bk__sum.is-flash { background: var(--color-light-3); } }
