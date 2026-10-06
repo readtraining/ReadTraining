@@ -2124,7 +2124,6 @@ main#rt-cat-main { overflow: clip; }
 .rt-res__btn--secondary:hover { border-color: var(--color-dark-1); }
 @media (max-width: 1024px) { .rt-fp__foot .rt-res__btn { min-height: 44px; } }
 
-
 /* ===================================================================================================
    COURSE DETAIL PAGE (.rt-cd): /template/courses/[id]
    Theme tokens only (--color-* in main.css). Fixed px sizes. Breakpoints ONLY at 1023px and 640px.
@@ -2218,26 +2217,14 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__more { margin-top: 8px; }
 
 /* ---------- Booking card ---------- */
-.rt-cd__card { box-sizing: border-box; padding: 20px; background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: 16px; }
-.rt-cd__price-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; min-height: 40px; }
-.rt-cd__price { font-size: 32px; line-height: 40px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cd-text); }
-.rt-cd__was { font-size: 16px; line-height: 24px; color: var(--cd-muted); font-variant-numeric: tabular-nums; }
-.rt-cd__save { align-self: center; padding: 3px 8px; border-radius: 6px; background: var(--cd-success-bg); color: var(--cd-success); font-size: 13px; line-height: 18px; font-weight: 700; }
-.rt-cd__per { margin: 0 0 16px; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
+
 .rt-cd__field { min-width: 0; margin: 0 0 16px; padding: 0; border: 0; }
-.rt-cd__label { display: block; margin: 0 0 8px; padding: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--cd-text); }
-.rt-cd__seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 10px; background: var(--color-light-3); }
-.rt-cd__seg-opt { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 44px; border-radius: 8px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--cd-muted); cursor: pointer; }
-.rt-cd__seg-opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.rt-cd__seg-opt.is-on { background: var(--cd-surface); color: var(--cd-text); box-shadow: 0 1px 3px color-mix(in srgb, var(--color-dark-1) 18%, transparent); }
-.rt-cd__seg-opt:has(input:focus-visible) { outline: 2px solid var(--cd-brand); outline-offset: 2px; }
+
 .rt-cd__session { box-sizing: border-box; min-height: 80px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--cd-border); border-radius: 10px; background: var(--cd-band); }
-.rt-cd__session-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin: -6px 0 -6px; }
-.rt-cd__session-top strong { font-size: 15px; line-height: 20px; }
-.rt-cd__session-sub { font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+
 .rt-cd__team { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 4px; color: var(--cd-brand) !important; font-size: 14px; line-height: 20px; font-weight: 600; text-decoration: none; }
 .rt-cd__team:hover { text-decoration: underline; text-underline-offset: 3px; }
-.rt-cd__included { display: grid; gap: 10px; margin: 12px 0 0; padding: 16px 0 0; list-style: none; border-top: 1px solid var(--cd-border); font-size: 14px; line-height: 20px; }
+
 .rt-cd__included li, .rt-cd__checks li { display: flex; align-items: flex-start; gap: 10px; }
 .rt-cd__check { flex: none; margin-top: 1px; color: var(--cd-success); }
 
@@ -2362,7 +2349,7 @@ main#rt-cd-main { overflow: clip; }
 
 /* ---------- Selling content: in-house option, trust list, feature chips, assessment, funding, extras ---------- */
 a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /* the template sets `a { color: inherit !important }` */
-.rt-cd__inhouse { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--cd-border); border-radius: 10px; background: var(--cd-band); font-size: 15px; line-height: 22px; font-weight: 600; color: var(--cd-text); }
+
 .rt-cd__chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
 .rt-cd__chips li { padding: 4px 12px; border: 1px solid var(--cd-border-strong); border-radius: 999px; font-size: 13px; line-height: 20px; color: var(--cd-text); }
 .rt-cd__defs { margin: 0; border: 1px solid var(--cd-border); border-radius: 12px; overflow: hidden; }
@@ -2467,7 +2454,6 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 .rt-cd ul.rt-cd__list, .rt-cd ul.rt-cd__mod-topics { list-style: disc; padding-left: 22px; }
 .rt-cd ul.rt-cd__list li, .rt-cd ul.rt-cd__mod-topics li { display: list-item; }
 
-
 /* ===================================================================================================
    COURSE DETAIL RESTYLE (style and layout only; no content changes)
    Hero band in the homepage hero colour (--color-dark-1), booking card starting at the top of the band, slim sticky bar
@@ -2498,33 +2484,6 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 /* ---------- Booking card: starts at the top of the hero band, sticky under the slim bar ---------- */
 .rt-cd__aside { width: 340px; margin-top: 28px; padding-top: 0; position: sticky; top: calc(var(--header-offset, 0px) + 64px + 16px); z-index: 3; }
 @media (max-width: 1023px) { .rt-cd__aside { position: relative; top: auto; width: 100%; max-width: 560px; margin-top: -56px; } }
-.rt-cd__card { padding: 0; border: 0; border-radius: 16px; overflow: hidden; background: var(--cd-surface); box-shadow: 0 8px 28px color-mix(in srgb, var(--color-dark-1) 18%, transparent); }
-.rt-cd__card-img { aspect-ratio: 16 / 9; max-height: 200px; overflow: hidden; background: var(--color-light-3); transition: max-height 0.2s ease, opacity 0.2s ease; }
-.rt-cd__card-img img { display: block; width: 100%; height: 100%; object-fit: cover; }
-@media (min-width: 1024px) { .rt-cd__card.is-compact .rt-cd__card-img { max-height: 0; opacity: 0; } }
-.rt-cd__card-body { padding: 16px; }
-.rt-cd__opts { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; border: 0; }
-.rt-cd__opts .rt-cd__label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-.rt-cd__opt { border: 1px solid var(--cd-border); border-radius: 10px; background: var(--cd-surface); transition: background-color 0.15s ease, border-color 0.15s ease; }
-.rt-cd__opt.is-on { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
-.rt-cd__opt:has(input:focus-visible) { outline: 2px solid var(--cd-brand); outline-offset: 2px; }
-.rt-cd__opt-row { display: flex; align-items: center; gap: 10px; box-sizing: border-box; min-height: 44px; padding: 0 12px; font-size: 14px; line-height: 20px; font-weight: 600; cursor: pointer; }
-.rt-cd__opt-row input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--cd-brand); }
-.rt-cd__opt-name { flex: 1; min-width: 0; }
-.rt-cd__opt-from { font-size: 13px; font-weight: 600; color: var(--cd-muted); font-variant-numeric: tabular-nums; }
-.rt-cd__opt-detail { padding: 0 12px 12px; }
-.rt-cd__opt-detail--solo { padding: 0 0 12px; }
-.rt-cd__card .rt-cd__price-row { flex-wrap: nowrap; gap: 8px; min-height: 34px; }
-.rt-cd__card .rt-cd__price { font-size: 28px; line-height: 34px; }
-.rt-cd__card .rt-cd__was { font-size: 14px; line-height: 20px; }
-.rt-cd__card .rt-cd__per { margin: 0; font-size: 12px; line-height: 18px; color: var(--cd-muted); white-space: nowrap; }
-.rt-cd__session-line { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
-.rt-cd__session-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rt-cd__session-text strong { color: var(--cd-text); }
-.rt-cd__session-line .rt-cd__link { flex: none; min-height: 32px; }
-.rt-cd__opt-detail .rt-cd__inhouse { margin: 0; padding: 0; border: 0; background: none; font-size: 13px; line-height: 20px; }
-.rt-cd__card .rt-cd__btn { margin-top: 4px; }
-.rt-cd__trustline { margin: 10px 0 0; overflow: hidden; font-size: 12px; line-height: 18px; color: var(--cd-muted); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- Slim sticky bar (hero colour), appears when the title scrolls away ---------- */
 .rt-cd__slim { position: fixed; top: var(--header-offset, 0px); left: 0; right: 0; z-index: 90; height: 64px; background: var(--color-dark-1); color: var(--color-white); box-shadow: 0 4px 14px color-mix(in srgb, var(--color-dark-1) 45%, transparent); transform: translateY(-100%); visibility: hidden; transition: transform 0.2s ease, visibility 0s linear 0.2s; }
@@ -2554,7 +2513,7 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 
 /* what used to be inside the booking card, now under the learning options */
 .rt-cd__xtra { display: grid; gap: 14px; margin-top: 20px; }
-.rt-cd__xtra .rt-cd__included { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; margin: 0; padding: 0; border-top: 0; }
+
 .rt-cd__xtra .rt-cd__team { justify-content: flex-start; margin: 0; }
 .rt-cd__xtra-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .rt-cd__xtra .rt-cd__staff, .rt-cd__xtra .rt-cd__extras { margin-top: 0; }
@@ -2576,9 +2535,6 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 .rt-cd__rel-img { aspect-ratio: 16 / 10; }
 .rt-cd__rel-title { min-height: 0; }
 @media (max-width: 640px) { .rt-cd__rel-card { grid-template-columns: 96px minmax(0, 1fr); } .rt-cd__rel-price { grid-column: 2; } }
-.rt-cd__opts { grid-template-columns: minmax(0, 1fr); }
-.rt-cd__opt, .rt-cd__opt-detail, .rt-cd__card-body { min-width: 0; }
-.rt-cd__card .rt-cd__price-row { overflow: hidden; }
 
 /* ===================================================================================================
    BOOKING CARD: two states (full / compact). 360px wide, 18px padding, 16px radius.
@@ -2586,38 +2542,6 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 @media (min-width: 1024px) { .rt-cd__grid { grid-template-columns: minmax(0, 1fr) 360px; } }
 .rt-cd__aside { width: 360px; }
 @media (max-width: 1023px) { .rt-cd__aside { width: 100%; } }
-.rt-cd__card { box-sizing: border-box; padding: 18px; border-radius: 16px; overflow: visible; }
-.rt-cd__card > * + * { margin-top: 12px; }
-.rt-cd__fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.2s ease, opacity 0.2s ease, margin 0.2s ease; }
-.rt-cd__fold-in { min-height: 0; overflow: hidden; }
-.rt-cd__fold--img .rt-cd__card-img { max-height: none; aspect-ratio: 16 / 9; border-radius: 10px; opacity: 1; transition: none; }
-.rt-cd__fold--more .rt-cd__fold-in { display: grid; gap: 14px; padding-top: 2px; }
-.rt-cd__fold.is-hidden { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }
-.rt-cd__card > .rt-cd__fold.is-hidden + * { margin-top: 0; }
-@media (max-width: 1023px) { .rt-cd__fold.is-hidden { grid-template-rows: 1fr; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .rt-cd__fold { transition: none; } }
-
-.rt-cd__card .rt-cd__opts { margin: 0; gap: 6px; }
-.rt-cd__card .rt-cd__opts .rt-cd__label { position: static; width: auto; height: auto; margin: 0 0 6px; overflow: visible; clip: auto; white-space: normal; font-size: 13px; line-height: 18px; }
-.rt-cd__card .rt-cd__opt-row { border: 1px solid var(--cd-border); border-radius: 10px; background: var(--cd-surface); transition: background-color 0.15s ease, border-color 0.15s ease; }
-.rt-cd__card .rt-cd__opt-row.is-on { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
-.rt-cd__card .rt-cd__opt-row:has(input:focus-visible) { outline: 2px solid var(--cd-brand); outline-offset: 2px; }
-.rt-cd__card .rt-cd__opt-detail { padding: 0; }
-.rt-cd__card .rt-cd__price-row { min-height: 32px; overflow: hidden; }
-.rt-cd__card .rt-cd__per { margin: 0; font-size: 13px; line-height: 18px; }
-.rt-cd__card .rt-cd__session { min-height: 0; margin: 8px 0 0; padding: 8px 12px; }
-.rt-cd__card .rt-cd__session-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 0; margin: 0; }
-.rt-cd__session-when { min-width: 0; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
-.rt-cd__session-when strong { color: var(--cd-text); font-size: 13px; }
-.rt-cd__card .rt-cd__session-top .rt-cd__link { flex: none; min-height: 20px; }
-.rt-cd__card .rt-cd__session-sub { font-size: 13px; line-height: 20px; }
-.rt-cd__card .rt-cd__btn { margin-top: 12px; }
-.rt-cd__card .rt-cd__team { min-height: 36px; margin: 0; justify-content: center; }
-.rt-cd__card .rt-cd__included { margin: 0; padding: 0; border-top: 0; gap: 8px; }
-.rt-cd__card .rt-cd__staff, .rt-cd__card .rt-cd__extras { margin-top: 0; }
-.rt-cd__fold--more .rt-cd__fold-in { padding-top: 0; }
-.rt-cd__card .rt-cd__session { margin-top: 6px; }
-
 
 /* ===================================================================================================
    COURSE DETAIL: FINAL SPEC. Hero (content like Hurak, our design), features card, booking card (.rt-bk, two states),
@@ -2660,28 +2584,9 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 @media (max-width: 1023px) { .rt-bk__fold.is-hidden { grid-template-rows: 1fr; opacity: 1; } }
 .rt-bk__img { aspect-ratio: 16 / 9; background: var(--color-light-3); }
 .rt-bk__img img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.rt-bk__body { padding: 16px; }
-.rt-bk__body > * + * { margin-top: 12px; }
-.rt-bk__choice { margin: -4px; padding: 4px; border-radius: 10px; transition: background-color 0.3s ease; }
-.rt-bk__choice.is-flash { background: var(--cd-brand-subtle); }
-.rt-bk__opt { display: flex; align-items: center; gap: 8px; min-height: 24px; color: var(--cd-brand); }
-.rt-bk__opt strong { font-size: 15px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
-.rt-bk__opt .rt-cd__link { min-height: 24px; margin-left: auto; font-size: 13px; }
-.rt-bk__price { display: flex; align-items: baseline; flex-wrap: nowrap; gap: 8px; margin-top: 8px; white-space: nowrap; }
-.rt-bk__now { font-size: 28px; line-height: 32px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cd-text); }
-.rt-bk__was { font-size: 14px; color: var(--cd-muted); font-variant-numeric: tabular-nums; }
-.rt-bk__off { padding: 2px 8px; border-radius: 6px; background: var(--cd-success-bg); color: var(--cd-success); font-size: 13px; line-height: 18px; font-weight: 700; white-space: nowrap; }
-.rt-bk__vat { margin: 0; font-size: 12px; line-height: 16px; color: var(--cd-muted); }
-.rt-bk__session { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--cd-border); border-radius: 10px; background: var(--cd-band); }
-.rt-bk__when { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.rt-bk__when strong { min-width: 0; font-size: 14px; line-height: 20px; font-weight: 700; }
-.rt-bk__when .rt-cd__link { flex: none; min-height: 20px; font-size: 13px; }
-.rt-bk__where { overflow: hidden; font-size: 13px; line-height: 18px; color: var(--cd-muted); text-overflow: ellipsis; white-space: nowrap; }
-.rt-bk__inhouse { margin: 8px 0 0; font-size: 14px; line-height: 20px; font-weight: 600; }
-.rt-bk__trust { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 16px; }
-.rt-bk__trust li { display: flex; align-items: flex-start; gap: 6px; }
+
 .rt-bk .rt-cd__btn { margin: 0; }
-@media (prefers-reduced-motion: reduce) { .rt-bk__fold { transition: none; } .rt-bk__choice { transition: none; } .rt-bk__choice.is-flash { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .rt-bk__fold { transition: none; }   }
 
 /* ---------- Learning options: radio cards, then dates ---------- */
 .rt-lo__cards { display: grid; grid-template-columns: repeat(var(--lo-cols, 2), minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; border: 0; }
@@ -2732,38 +2637,13 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 .rt-cd__rel-meta { font-size: 13px; line-height: 18px; color: var(--cd-muted); }
 .rt-cd__rel-price { text-align: right; }
 /* booking card: tighter inner spacing so the full card stays within its height limit */
-.rt-bk__opt { min-height: 22px; }
-.rt-bk__price { margin-top: 6px; }
-.rt-bk__now { line-height: 30px; }
-.rt-bk__vat { line-height: 14px; }
-.rt-bk__session { margin-top: 6px; padding: 6px 10px; }
-.rt-bk__trust { gap: 4px 12px; line-height: 15px; }
-.rt-bk__session { padding: 5px 10px; }
 
 /* ===================================================================================================
    BOOKING CARD: roomier FULL state. Image, booking section, divider, trust list. Compact keeps the booking section only.
    =================================================================================================== */
 .rt-bk { width: 100%; }
-.rt-bk__body { padding: 20px 24px; }
-.rt-bk__body > * + * { margin-top: 0; }
-.rt-bk__choice { margin: 0; padding: 0; border-radius: 12px; }
-.rt-bk__choice.is-flash { background: var(--cd-brand-subtle); box-shadow: 0 0 0 6px var(--cd-brand-subtle); }
-.rt-bk__opt { min-height: 24px; margin: 0 0 16px; }
-.rt-bk__opt strong { font-size: 15px; line-height: 22px; font-weight: 700; }
-.rt-bk__price { margin: 0; gap: 10px; }
-.rt-bk__now { font-size: 32px; line-height: 38px; font-weight: 800; }
-.rt-bk__was { font-size: 15px; }
-.rt-bk__vat { margin: 0 0 16px; font-size: 13px; line-height: 18px; }
-.rt-bk__session { margin: 0 0 20px; padding: 14px 16px; border-radius: 12px; }
-.rt-bk__when strong { font-size: 15px; line-height: 20px; font-weight: 700; }
-.rt-bk__where { margin-top: 2px; font-size: 13px; line-height: 18px; }
-.rt-bk__inhouse { margin: 0 0 20px; }
-.rt-bk .rt-cd__btn { width: 100%; height: 52px; margin: 0; border-radius: 10px; font-size: 16px; }
-.rt-bk__trusts { padding: 16px 24px 20px; border-top: 1px solid var(--cd-border); }
-.rt-bk__trust { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; }
-.rt-bk__trust li { display: flex; align-items: flex-start; gap: 8px; white-space: nowrap; }
-.rt-bk__trust .rt-cd__check { flex: none; margin-top: 2px; }
 
+.rt-bk .rt-cd__btn { width: 100%; height: 52px; margin: 0; border-radius: 10px; font-size: 16px; }
 
 /* ===================================================================================================
    COURSE DETAIL: UDEMY-STYLE HERO, STATS CARD AND BOOKING CARD (sizes and spacing as specified; our colours via tokens)
@@ -2834,25 +2714,7 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 @media (prefers-reduced-motion: reduce) { .rt-cd__aside { transition: none; } }
 .rt-bk { box-sizing: border-box; border: 1px solid var(--cd-border); border-radius: 0; background: var(--cd-surface); box-shadow: 0 2px 4px color-mix(in srgb, var(--color-black) 8%, transparent), 0 4px 12px color-mix(in srgb, var(--color-black) 8%, transparent); }
 .rt-bk__img { aspect-ratio: 16 / 9; border-radius: 0; }
-.rt-bk__body { padding: 24px; }
-.rt-bk__choice { margin: 0; padding: 0; border-radius: 0; }
-.rt-bk__choice.is-flash { background: var(--cd-brand-subtle); box-shadow: 0 0 0 8px var(--cd-brand-subtle); }
-.rt-bk__opt { gap: 8px; min-height: 24px; margin: 0 0 16px; }
-.rt-bk__opt strong { font-size: 16px; line-height: 24px; font-weight: 700; }
-.rt-bk__opt .rt-cd__link { min-height: 24px; font-size: 14px; font-weight: 700; }
-.rt-bk__price { margin: 0; gap: 8px; align-items: baseline; }
-.rt-bk__now { font-size: 32px; line-height: 1.2; font-weight: 700; }
-.rt-bk__was { font-size: 16px; color: var(--cd-muted); }
-.rt-bk__off { padding: 0; border-radius: 0; background: none; color: var(--cd-muted); font-size: 16px; line-height: 24px; font-weight: 400; white-space: nowrap; }
-.rt-bk__vat { margin: 0 0 16px; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
-.rt-bk__session { margin: 0 0 16px; padding: 12px 0; border: 0; border-top: 1px solid var(--cd-border); border-bottom: 1px solid var(--cd-border); border-radius: 0; background: none; }
-.rt-bk__when strong { font-size: 16px; line-height: 24px; font-weight: 700; }
-.rt-bk__when .rt-cd__link { min-height: 24px; font-size: 14px; font-weight: 700; }
-.rt-bk__where { margin-top: 0; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
-.rt-bk__inhouse { margin: 0 0 16px; font-size: 14px; line-height: 20px; font-weight: 400; color: var(--cd-muted); }
-.rt-bk__trust { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; font-size: 14px; line-height: 20px; }
-.rt-bk__trust li { display: flex; align-items: flex-start; gap: 8px; white-space: normal; }
-.rt-bk__trust .rt-cd__check { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+
 .rt-bk .rt-cd__btn { width: 100%; height: 48px; margin: 0; border-radius: 4px; font-size: 16px; font-weight: 700; }
 
 /* ---------- Slim bar: 72px, two lines on the left ---------- */
@@ -2968,33 +2830,6 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* ===================================================================================================
    BOOKING CARD LAYOUT (both states): price, grey summary box with one Change link, button, trust lines
    =================================================================================================== */
-.rt-bk__body { padding: 22px; }
-.rt-bk__body > * + * { margin-top: 0; }
-.rt-bk__pb { margin: 0 0 16px; }
-.rt-bk__pb .rt-bk__price { display: flex; align-items: baseline; flex-wrap: nowrap; gap: 8px; margin: 0; white-space: nowrap; }
-.rt-bk__pb .rt-bk__now { font-size: 30px; line-height: 36px; font-weight: 700; }
-.rt-bk__pb .rt-bk__was { font-size: 15px; color: var(--cd-muted); }
-.rt-bk__pb .rt-bk__off { padding: 0; border-radius: 0; background: none; color: var(--cd-success); font-size: 14px; line-height: 20px; font-weight: 700; white-space: nowrap; }
-.rt-bk__pb .rt-bk__vat { margin: 0; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
-
-.rt-bk__sum { box-sizing: border-box; margin: 0 0 16px; padding: 12px 14px; border: 0; border-radius: 4px; background: var(--color-light-3); transition: background-color 0.3s ease; }
-.rt-bk__sum.is-flash { background: var(--cd-brand-subtle); }
-.rt-bk__sum-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
-.rt-bk__sum-opt { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--cd-brand); }
-.rt-bk__sum-opt strong { font-size: 14px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
-.rt-bk__sum-top .rt-cd__link { flex: none; min-height: 22px; font-size: 13px; font-weight: 700; }
-.rt-bk__sum-l2 { margin: 8px 0 0; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
-.rt-bk__sum-l3 { margin: 0; overflow: hidden; font-size: 13px; line-height: 18px; color: var(--cd-muted); text-overflow: ellipsis; white-space: nowrap; }
-
-.rt-bk__body .rt-cd__btn { width: 100%; height: 48px; margin: 0; border-radius: 4px; font-size: 16px; font-weight: 700; }
-
-.rt-bk__tl { margin-top: 14px; }
-.rt-bk__tl ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
-.rt-bk__tl li { display: flex; align-items: flex-start; gap: 8px; list-style: none; }
-.rt-bk__tl .rt-cd__check { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--cd-success); }
-.rt-bk__tl .rt-bk__fold-in { padding-top: 6px; }
-.rt-bk__tl .rt-bk__fold.is-hidden .rt-bk__fold-in { padding-top: 0; }
-@media (prefers-reduced-motion: reduce) { .rt-bk__sum { transition: none; } .rt-bk__sum.is-flash { background: var(--color-light-3); } }
 
 /* ===================================================================================================
    BOOKING CARD: selected option on top, the other options as rows, grey footer with Save. 340px, square, Udemy shadow.
@@ -3042,3 +2877,29 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-bf__btn:hover { background: var(--cd-surface); color: var(--cd-text); }
 .rt-bf__btn.is-saved { color: var(--cd-brand); }
 @media (prefers-reduced-motion: reduce) { .rt-bs, .rt-br, .rt-bf__btn { transition: none; } .rt-bs.is-flash { background: transparent; } }
+
+/* ===================================================================================================
+   BOOKING CARD: a little wider (360px), moved a little further right, and a little shorter
+   =================================================================================================== */
+@media (min-width: 1024px) {
+  /* the card is 20px wider and is pushed right into the page's side padding (never past the screen edge) */
+  .rt-cd__aside { width: 360px; justify-self: end; margin-right: calc(-1 * min(48px, max(0px, (100vw - 1184px) / 2 + 12px))); }
+}
+/* tighter inner spacing: fewer pixels of height, same layout */
+.rt-bs { padding: 18px 22px 20px; }
+.rt-bs__price { margin-top: 6px; }
+.rt-bs__info { gap: 8px; margin-top: 12px; }
+.rt-bs__link { margin-top: 8px; }
+.rt-bs .rt-cd__btn { margin-top: 16px; }
+.rt-bs__trust { gap: 4px; margin-top: 10px; }
+.rt-br { padding: 12px 22px; }
+.rt-bf { padding: 8px 14px; }
+
+/* BOOKING CARD: a little shorter again */
+.rt-bk__img { aspect-ratio: 2 / 1; }
+.rt-bs { padding: 14px 22px 16px; }
+.rt-bs__info { gap: 6px; margin-top: 10px; }
+.rt-bs .rt-cd__btn { margin-top: 14px; height: 46px; }
+.rt-bs__trust { gap: 2px; margin-top: 8px; }
+.rt-br { padding: 9px 22px; }
+.rt-bf { padding: 6px 14px; }
