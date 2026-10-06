@@ -5,7 +5,10 @@ import React, { useState } from "react";
 // Course content: one <details> card per module, with Expand all / Collapse all.
 export default function ModulesAccordion({ modules }) {
   const [open, setOpen] = useState(() => modules.map((_, i) => i === 0));
+  const [showAll, setShowAll] = useState(false);
   const allOpen = open.every(Boolean);
+  const LIMIT = 5; // the syllabus lists 5 items, then "Show more"
+  const visible = showAll ? modules : modules.slice(0, LIMIT);
 
   return (
     <>
@@ -16,7 +19,7 @@ export default function ModulesAccordion({ modules }) {
         </button>
       </div>
       <div className="rt-cd__mods rt-cd__mods--box">
-        {modules.map((m, i) => (
+        {visible.map((m, i) => (
           <details
             key={m.title}
             className="rt-cd__mod"
@@ -44,6 +47,11 @@ export default function ModulesAccordion({ modules }) {
           </details>
         ))}
       </div>
+      {modules.length > LIMIT && (
+        <button type="button" className="rt-cd__link rt-cd__more" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? "Show less" : "Show more"}
+        </button>
+      )}
     </>
   );
 }

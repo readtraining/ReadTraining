@@ -696,11 +696,11 @@ export function buildCourseDetail(course) {
     const price = Math.round(course.price * priceSteps[n % priceSteps.length] * 100) / 100;
     const wasPrice = course.wasPrice ? Math.round(price * (course.wasPrice / course.price) * 100) / 100 : null;
     sessions.push({
-      id: `${mode === "classroom" ? "c" : "o"}${n}`,
+      id: `${mode === "classroom" ? "c" : mode === "ondemand" ? "d" : "o"}${n}`,
       mode,
       date: iso(nextWeekday(DETAIL_BASE + offsetDays * DAY)),
-      time: mode === "classroom" ? "09:30 to 17:00" : course.methods.includes("live-online") ? "10:00 to 16:00" : "Start any time",
-      location: venue ? `${venue.city}, ${venue.postcode}` : "Live online",
+      time: mode === "classroom" ? "09:30 to 17:00" : mode === "ondemand" ? "Start any time" : "10:00 to 16:00",
+      location: venue ? `${venue.city}, ${venue.postcode}` : mode === "ondemand" ? "Online" : "Live online",
       city: venue ? venue.city : "",
       venue: venue ? venue.city : "",
       address: venue ? `${venue.city} Training Centre` : "",
@@ -717,9 +717,11 @@ export function buildCourseDetail(course) {
       if (i < 4) makeSession("classroom", 21 + i * 4 + (course.id % 5), v);
     });
   }
-  if (course.methods.includes("live-online") || course.methods.includes("on-demand")) {
+  // Live online has dated sessions; On Demand is its own option with one "start any time" entry.
+  if (course.methods.includes("live-online")) {
     for (let i = 0; i < 5; i++) makeSession("online", i * 7 + (course.id % 6), null);
   }
+  if (course.methods.includes("on-demand")) makeSession("ondemand", course.id % 6, null);
   sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
 
   // rating breakdown that always totals 100
@@ -796,7 +798,7 @@ export function buildCourseDetail(course) {
     rows: examRows,
     outro: [assessment.resits],
   } : undefined;
-  const popularMode = course.methods.includes("classroom") ? "classroom" : "online";
+  const popularMode = course.methods.includes("classroom") ? "classroom" : course.methods.includes("live-online") ? "online" : "ondemand";
   const reviewsWithOrg = reviews.map((r, i) => ({ ...r, org: providerPool[(course.id + i) % providerPool.length].split(" ").map((w) => w[0]).join("").slice(0, 4) }));
 
   const relatedSlugs = catalogueCourses

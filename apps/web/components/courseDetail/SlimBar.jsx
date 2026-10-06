@@ -5,7 +5,7 @@ import { useBooking } from "./BookingProvider";
 import Stars from "./Stars";
 import { formatNumber } from "@/lib/courses";
 
-// The slim bar: fixed under the header and hidden until the page title (#rt-cd-title) scrolls out of view above the screen.
+// The slim bar: fixed under the header, shown only while the page title (#rt-cd-title, the H1) is out of view.
 // It carries the course title, badge, rating and students on the left and the page's section links on the right
 // (scrollspy: the current section is underlined). Links are hidden under 1180px. While it is showing, the booking
 // card collapses its image (BookingCard reads barOn). There is no other sticky bar on the page.
@@ -15,15 +15,11 @@ export default function SlimBar({ sections }) {
   const [active, setActive] = useState(sections[0]?.id);
   const activeRef = useRef(active);
 
-  // Title out of view above the screen => bar on.
+  // The H1 is the only trigger: out of view => bar on (and the booking card goes compact); in view => bar off.
   useEffect(() => {
     const title = document.getElementById("rt-cd-title");
     if (!title || typeof IntersectionObserver === "undefined") return;
-    const header = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-offset")) || 0;
-    const io = new IntersectionObserver(
-      ([entry]) => setOn(!entry.isIntersecting && entry.boundingClientRect.bottom <= header() + 1),
-      { rootMargin: `-${Math.round(header())}px 0px 0px 0px`, threshold: [0, 1] },
-    );
+    const io = new IntersectionObserver(([entry]) => setOn(!entry.isIntersecting), { rootMargin: "-80px 0px 0px 0px" });
     io.observe(title);
     return () => io.disconnect();
   }, []);

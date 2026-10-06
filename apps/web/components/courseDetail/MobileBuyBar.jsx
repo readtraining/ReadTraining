@@ -8,7 +8,7 @@ import { formatPrice, formatShortDate } from "@/lib/courses";
 // Fixed bar at 1023px and under. It appears only once the booking card's button has scrolled out of view above the screen.
 // In-house follows the card: no price, and the button becomes "Get a quote".
 export default function MobileBuyBar() {
-  const { session, isInHouse, status, addToBasket, cardButtonRef } = useBooking();
+  const { session, mode, isInHouse, status, addToBasket, cardButtonRef } = useBooking();
   const [visible, setVisible] = useState(false);
 
   // Visible once the card's button is fully above the top of the screen. A scroll check (rAF-throttled) is used instead of
@@ -50,7 +50,7 @@ export default function MobileBuyBar() {
         <>
           <div className="rt-cd__bar-info">
             <strong>{formatPrice(session.price)}</strong>
-            <span>{formatShortDate(session.date)}, {session.location}</span>
+            <span>{mode === "ondemand" ? session.time : formatShortDate(session.date)}, {session.location}</span>
           </div>
           <button type="button" className={`rt-cd__btn${status === "added" ? " is-added" : ""}`} onClick={addToBasket} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
             {label}

@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import ClampBlock from "./ClampBlock";
 
 const Check = () => (
   <svg className="rt-cd__check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -12,7 +13,11 @@ const Check = () => (
 function Body({ b }) {
   return (
     <>
-      {b.paragraphs?.length > 0 && <div className="rt-cd__prose">{b.paragraphs.map((p) => <p key={p}>{p}</p>)}</div>}
+      {b.paragraphs?.length > 0 && (
+        b.id === "overview"
+          ? <ClampBlock><div className="rt-cd__prose">{b.paragraphs.map((p) => <p key={p}>{p}</p>)}</div></ClampBlock>
+          : <div className="rt-cd__prose">{b.paragraphs.map((p) => <p key={p}>{p}</p>)}</div>
+      )}
       {b.checks?.length > 0 && <ul className="rt-cd__checks is-one">{b.checks.map((c) => <li key={c}><Check /> <span>{c}</span></li>)}</ul>}
       {b.items?.length > 0 && <ul className="rt-cd__list">{b.items.map((i) => <li key={i}>{i}</li>)}</ul>}
       {b.links?.length > 0 && (

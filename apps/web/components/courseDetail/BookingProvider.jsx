@@ -9,7 +9,7 @@ import { formatShortDate } from "@/lib/courses";
 
 const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
-export const MODE_LABEL = { classroom: "Classroom", online: "Live online", inhouse: "In-house" };
+export const MODE_LABEL = { classroom: "Classroom", online: "Live online", ondemand: "On Demand", inhouse: "In-house" };
 export const IN_HOUSE_NOTE = "For groups of 6 or more at your workplace";
 export const QUOTE_HREF = "/template/contact-1";
 
@@ -23,18 +23,26 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
 
   // Only the options this course offers. "inhouse" has no dated sessions: it leads to a quote instead.
-  const modes = useMemo(() => [...["classroom", "online"].filter((m) => course.sessions.some((s) => s.mode === m)), ...(course.inHouse ? ["inhouse"] : [])], [course]);
+  const modes = useMemo(() => [...["classroom", "online", "ondemand"].filter((m) => course.sessions.some((s) => s.mode === m)), ...(course.inHouse ? ["inhouse"] : [])], [course]);
   const firstOf = useCallback((mode) => course.sessions.find((s) => s.mode === mode), [course]);
+  // Default choice: the most popular option (cheapest as the fallback), and its first date.
+  const defaultMode = useMemo(() => {
+    const dated = modes.filter((m) => m !== "inhouse");
+    if (dated.includes(course.popularMode)) return course.popularMode;
+    const cheapest = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
+    return [...dated].sort((a, b) => cheapest(a) - cheapest(b))[0];
+  }, [modes, course]);
 
   // Initial state comes from the URL; invalid values fall back to the first session of the default mode.
-  const [mode, setModeState] = useState(() => (modes.includes(initialMode) ? initialMode : modes[0]));
+  const [mode, setModeState] = useState(() => (modes.includes(initialMode) ? initialMode : defaultMode));
   const [sessionId, setSessionId] = useState(() => {
-    const startMode = modes.includes(initialMode) && initialMode !== "inhouse" ? initialMode : modes.find((m) => m !== "inhouse");
+    const startMode = modes.includes(initialMode) && initialMode !== "inhouse" ? initialMode : defaultMode;
     const wanted = course.sessions.find((s) => s.id === initialSession);
     return (wanted && wanted.mode === startMode ? wanted : firstOf(startMode))?.id;
   });
   const [city, setCity] = useState("");
   const [toast, setToast] = useState(null);
+  const [flash, setFlash] = useState(0); // bumped on every choice made on the page; the card flashes briefly
   const [barOn, setBarOn] = useState(false); // true while the slim bar is showing (the card then collapses its image)
   const notify = useCallback((t) => setToast(typeof t === "string" ? { message: t } : t), []);
 
@@ -57,6 +65,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const setMode = useCallback(
     (next) => {
       if (!modes.includes(next) || next === mode) return;
+      setFlash((f) => f + 1);
       setModeState(next);
       setCity("");
       if (next === "inhouse") {
@@ -75,6 +84,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
     (id, { announce = true } = {}) => {
       const next = course.sessions.find((s) => s.id === id);
       if (!next) return;
+      setFlash((f) => f + 1);
       setModeState(next.mode);
       setSessionId(next.id);
       writeUrl(next.mode, next.id);
@@ -142,7 +152,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
 
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
-    status, inBasket, addToBasket, notify, cardButtonRef, barOn, setBarOn,
+    status, inBasket, addToBasket, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode,
   };
 
   return (

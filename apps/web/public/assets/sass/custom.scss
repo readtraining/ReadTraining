@@ -2579,3 +2579,163 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 .rt-cd__opts { grid-template-columns: minmax(0, 1fr); }
 .rt-cd__opt, .rt-cd__opt-detail, .rt-cd__card-body { min-width: 0; }
 .rt-cd__card .rt-cd__price-row { overflow: hidden; }
+
+/* ===================================================================================================
+   BOOKING CARD: two states (full / compact). 360px wide, 18px padding, 16px radius.
+   =================================================================================================== */
+@media (min-width: 1024px) { .rt-cd__grid { grid-template-columns: minmax(0, 1fr) 360px; } }
+.rt-cd__aside { width: 360px; }
+@media (max-width: 1023px) { .rt-cd__aside { width: 100%; } }
+.rt-cd__card { box-sizing: border-box; padding: 18px; border-radius: 16px; overflow: visible; }
+.rt-cd__card > * + * { margin-top: 12px; }
+.rt-cd__fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.2s ease, opacity 0.2s ease, margin 0.2s ease; }
+.rt-cd__fold-in { min-height: 0; overflow: hidden; }
+.rt-cd__fold--img .rt-cd__card-img { max-height: none; aspect-ratio: 16 / 9; border-radius: 10px; opacity: 1; transition: none; }
+.rt-cd__fold--more .rt-cd__fold-in { display: grid; gap: 14px; padding-top: 2px; }
+.rt-cd__fold.is-hidden { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }
+.rt-cd__card > .rt-cd__fold.is-hidden + * { margin-top: 0; }
+@media (max-width: 1023px) { .rt-cd__fold.is-hidden { grid-template-rows: 1fr; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rt-cd__fold { transition: none; } }
+
+.rt-cd__card .rt-cd__opts { margin: 0; gap: 6px; }
+.rt-cd__card .rt-cd__opts .rt-cd__label { position: static; width: auto; height: auto; margin: 0 0 6px; overflow: visible; clip: auto; white-space: normal; font-size: 13px; line-height: 18px; }
+.rt-cd__card .rt-cd__opt-row { border: 1px solid var(--cd-border); border-radius: 10px; background: var(--cd-surface); transition: background-color 0.15s ease, border-color 0.15s ease; }
+.rt-cd__card .rt-cd__opt-row.is-on { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+.rt-cd__card .rt-cd__opt-row:has(input:focus-visible) { outline: 2px solid var(--cd-brand); outline-offset: 2px; }
+.rt-cd__card .rt-cd__opt-detail { padding: 0; }
+.rt-cd__card .rt-cd__price-row { min-height: 32px; overflow: hidden; }
+.rt-cd__card .rt-cd__per { margin: 0; font-size: 13px; line-height: 18px; }
+.rt-cd__card .rt-cd__session { min-height: 0; margin: 8px 0 0; padding: 8px 12px; }
+.rt-cd__card .rt-cd__session-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 0; margin: 0; }
+.rt-cd__session-when { min-width: 0; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
+.rt-cd__session-when strong { color: var(--cd-text); font-size: 13px; }
+.rt-cd__card .rt-cd__session-top .rt-cd__link { flex: none; min-height: 20px; }
+.rt-cd__card .rt-cd__session-sub { font-size: 13px; line-height: 20px; }
+.rt-cd__card .rt-cd__btn { margin-top: 12px; }
+.rt-cd__card .rt-cd__team { min-height: 36px; margin: 0; justify-content: center; }
+.rt-cd__card .rt-cd__included { margin: 0; padding: 0; border-top: 0; gap: 8px; }
+.rt-cd__card .rt-cd__staff, .rt-cd__card .rt-cd__extras { margin-top: 0; }
+.rt-cd__fold--more .rt-cd__fold-in { padding-top: 0; }
+.rt-cd__card .rt-cd__session { margin-top: 6px; }
+
+
+/* ===================================================================================================
+   COURSE DETAIL: FINAL SPEC. Hero (content like Hurak, our design), features card, booking card (.rt-bk, two states),
+   Learning options (.rt-lo, the only place to choose), section styles. Theme tokens only.
+   =================================================================================================== */
+
+/* ---------- Hero ---------- */
+.rt-cd__hero-text { max-width: 640px; }
+.rt-cd__hero .rt-cd__crumbs ol { margin: 0 0 16px; font-size: 14px; line-height: 20px; }
+.rt-cd__hero .rt-cd__kicker { margin: 0 0 10px; min-height: 0; }
+.rt-cd__hero .rt-cd__title { margin: 0 0 10px; font-size: 36px; line-height: 1.15; font-weight: 800; }
+.rt-cd__hero .rt-cd__summary { margin: 0 0 14px; font-size: 18px; line-height: 28px; }
+.rt-cd__hero .rt-cd__providers { margin: 0 0 12px; font-size: 14px; line-height: 20px; }
+.rt-cd__hprice { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 0 0 14px; color: color-mix(in srgb, var(--color-white) 80%, transparent); }
+.rt-cd__hprice-from { font-size: 14px; }
+.rt-cd__hprice-now { font-size: 28px; line-height: 34px; font-weight: 800; color: var(--color-white); font-variant-numeric: tabular-nums; }
+.rt-cd__hprice-inc { font-size: 12px; }
+.rt-cd__hprice-was { font-size: 14px; }
+.rt-cd__hprice-off { font-size: 14px; font-weight: 700; color: var(--color-green-1); white-space: nowrap; }
+.rt-cd__btn--hero { width: auto; min-width: 160px; height: 44px; margin: 0 0 16px; padding: 0 28px; }
+.rt-cd__hero .rt-cd__proof { margin: 0; }
+.rt-cd__excellent-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; font-size: 13px; line-height: 20px; color: color-mix(in srgb, var(--color-white) 80%, transparent); }
+.rt-cd__excellent-line strong { color: var(--color-green-1); }
+.rt-cd__klarna { margin: 12px 0 0; font-size: 13px; line-height: 20px; color: color-mix(in srgb, var(--color-white) 80%, transparent); }
+@media (max-width: 1023px) { .rt-cd__btn--hero { width: 100%; } }
+@media (max-width: 640px) { .rt-cd__hero .rt-cd__title { font-size: 28px; } }
+
+/* ---------- Course features card: overlaps the hero edge ---------- */
+.rt-cd__fcard { position: relative; z-index: 1; box-sizing: border-box; margin-top: -48px; padding: 18px 20px; background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: 14px; box-shadow: 0 6px 20px color-mix(in srgb, var(--color-dark-1) 10%, transparent); }
+.rt-cd__fcard h2 { margin: 0 0 10px; font-size: 16px; line-height: 22px; font-weight: 700; }
+.rt-cd__fcard .rt-cd__chips { margin: 0; }
+@media (max-width: 1023px) { .rt-cd__fcard { margin-top: 24px; } }
+
+/* ---------- Booking card (.rt-bk): shows the current choice only ---------- */
+.rt-bk { overflow: hidden; background: var(--cd-surface); border-radius: 16px; box-shadow: 0 8px 28px color-mix(in srgb, var(--color-dark-1) 18%, transparent); }
+.rt-bk__fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.2s ease, opacity 0.2s ease, margin 0.2s ease; }
+.rt-bk__fold-in { min-height: 0; overflow: hidden; }
+.rt-bk__fold.is-hidden { grid-template-rows: 0fr; opacity: 0; }
+.rt-bk__fold--trust.is-hidden { margin-top: 0 !important; }
+@media (max-width: 1023px) { .rt-bk__fold.is-hidden { grid-template-rows: 1fr; opacity: 1; } }
+.rt-bk__img { aspect-ratio: 16 / 9; background: var(--color-light-3); }
+.rt-bk__img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rt-bk__body { padding: 16px; }
+.rt-bk__body > * + * { margin-top: 12px; }
+.rt-bk__choice { margin: -4px; padding: 4px; border-radius: 10px; transition: background-color 0.3s ease; }
+.rt-bk__choice.is-flash { background: var(--cd-brand-subtle); }
+.rt-bk__opt { display: flex; align-items: center; gap: 8px; min-height: 24px; color: var(--cd-brand); }
+.rt-bk__opt strong { font-size: 15px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
+.rt-bk__opt .rt-cd__link { min-height: 24px; margin-left: auto; font-size: 13px; }
+.rt-bk__price { display: flex; align-items: baseline; flex-wrap: nowrap; gap: 8px; margin-top: 8px; white-space: nowrap; }
+.rt-bk__now { font-size: 28px; line-height: 32px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cd-text); }
+.rt-bk__was { font-size: 14px; color: var(--cd-muted); font-variant-numeric: tabular-nums; }
+.rt-bk__off { padding: 2px 8px; border-radius: 6px; background: var(--cd-success-bg); color: var(--cd-success); font-size: 13px; line-height: 18px; font-weight: 700; white-space: nowrap; }
+.rt-bk__vat { margin: 0; font-size: 12px; line-height: 16px; color: var(--cd-muted); }
+.rt-bk__session { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--cd-border); border-radius: 10px; background: var(--cd-band); }
+.rt-bk__when { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.rt-bk__when strong { min-width: 0; font-size: 14px; line-height: 20px; font-weight: 700; }
+.rt-bk__when .rt-cd__link { flex: none; min-height: 20px; font-size: 13px; }
+.rt-bk__where { overflow: hidden; font-size: 13px; line-height: 18px; color: var(--cd-muted); text-overflow: ellipsis; white-space: nowrap; }
+.rt-bk__inhouse { margin: 8px 0 0; font-size: 14px; line-height: 20px; font-weight: 600; }
+.rt-bk__trust { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 16px; }
+.rt-bk__trust li { display: flex; align-items: flex-start; gap: 6px; }
+.rt-bk .rt-cd__btn { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .rt-bk__fold { transition: none; } .rt-bk__choice { transition: none; } .rt-bk__choice.is-flash { background: transparent; } }
+
+/* ---------- Learning options: radio cards, then dates ---------- */
+.rt-lo__cards { display: grid; grid-template-columns: repeat(var(--lo-cols, 2), minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; border: 0; }
+@media (max-width: 760px) { .rt-lo__cards { grid-template-columns: minmax(0, 1fr); } }
+.rt-lo__col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rt-lo__card { position: relative; display: flex; flex: 1; flex-direction: column; box-sizing: border-box; padding: 18px; border: 2px solid var(--cd-border); border-radius: 14px; background: var(--cd-surface); cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.rt-lo__card.is-selected { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+.rt-lo__card:hover:not(.is-selected) { border-color: var(--cd-border-strong); }
+.rt-lo__card input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.rt-lo__card:has(input:focus-visible) { outline: 2px solid var(--cd-brand); outline-offset: 2px; }
+.rt-lo__radio { position: absolute; top: 16px; right: 16px; width: 18px; height: 18px; box-sizing: border-box; border: 2px solid var(--cd-border-strong); border-radius: 50%; background: var(--cd-surface); }
+.rt-lo__card.is-selected .rt-lo__radio { border-color: var(--cd-brand); background: var(--cd-brand); box-shadow: inset 0 0 0 3px var(--cd-surface); }
+.rt-lo__card .rt-cd__lo-tag { align-self: flex-start; }
+.rt-cd__sec .rt-lo__card h3 { margin: 0 0 12px; padding-right: 28px; font-size: 18px; line-height: 24px; }
+.rt-lo__card ul { display: grid; gap: 10px; margin: 0 0 16px; padding: 0; list-style: none; font-size: 14px; line-height: 20px; }
+.rt-lo__card li { display: flex; align-items: flex-start; gap: 8px; }
+.rt-lo__from { margin: auto 0 0; padding-top: 4px; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+.rt-lo__from strong { font-size: 20px; line-height: 28px; font-weight: 800; color: var(--cd-text); font-variant-numeric: tabular-nums; }
+.rt-lo__col .rt-cd__team { justify-content: flex-start; margin: 0; }
+.rt-lo__dates { margin-top: 28px; }
+.rt-lo__h { margin: 0 0 12px; font-size: 18px; line-height: 24px; font-weight: 700; }
+.rt-lo__dates .rt-cd__select { display: block; margin-bottom: 12px; }
+.rt-lo__inhouse { display: grid; justify-items: start; gap: 8px; }
+.rt-lo__inhouse p { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
+.rt-lo__inhouse .rt-cd__empty { font-weight: 400; color: var(--cd-muted); }
+.rt-lo__xtra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
+.rt-lo__xtra .rt-cd__staff, .rt-lo__xtra .rt-cd__extras { margin-top: 0; }
+@media (max-width: 640px) { .rt-lo__xtra { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Long text with a fade ---------- */
+.rt-clamp__body.is-clamped { position: relative; overflow: hidden; }
+.rt-clamp__body.is-clamped::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: linear-gradient(to bottom, color-mix(in srgb, var(--cd-surface) 0%, transparent), var(--cd-surface)); pointer-events: none; }
+.rt-clamp__btn { margin-top: 4px; }
+
+/* ---------- Reviews dialog ---------- */
+.rt-cd__dialog--wide { width: 720px; max-height: calc(100dvh - 48px); overflow-y: auto; }
+.rt-cd__bars { margin: 8px 0 12px; }
+.rt-cd__bars li { display: block; }
+.rt-cd__bars button { display: grid; grid-template-columns: 56px minmax(0, 1fr) 40px; align-items: center; gap: 12px; box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; background: none; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.rt-cd__bars button:hover { background: var(--cd-band); }
+.rt-cd__bars button[aria-pressed="true"] { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+.rt-cd__reviews--dlg { grid-template-columns: minmax(0, 1fr); margin-top: 16px; }
+.rt-cd__helpful { margin-top: 8px; }
+
+/* ---------- Related courses rows ---------- */
+.rt-cd__rel-main { display: grid; gap: 2px; min-width: 0; }
+.rt-cd__rel-rating { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
+.rt-cd__rel-meta { font-size: 13px; line-height: 18px; color: var(--cd-muted); }
+.rt-cd__rel-price { text-align: right; }
+/* booking card: tighter inner spacing so the full card stays within its height limit */
+.rt-bk__opt { min-height: 22px; }
+.rt-bk__price { margin-top: 6px; }
+.rt-bk__now { line-height: 30px; }
+.rt-bk__vat { line-height: 14px; }
+.rt-bk__session { margin-top: 6px; padding: 6px 10px; }
+.rt-bk__trust { gap: 4px 12px; line-height: 15px; }
+.rt-bk__session { padding: 5px 10px; }

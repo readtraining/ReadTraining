@@ -8,10 +8,9 @@ import BookingProvider from "@/components/courseDetail/BookingProvider";
 import BookingCard from "@/components/courseDetail/BookingCard";
 import CourseHero from "@/components/courseDetail/CourseHero";
 import SlimBar from "@/components/courseDetail/SlimBar";
-import OptionsExtras from "@/components/courseDetail/OptionsExtras";
-import LearningOptions from "@/components/courseDetail/LearningOptions";
+import LearningSection from "@/components/courseDetail/LearningSection";
+import ClampBlock from "@/components/courseDetail/ClampBlock";
 import ModulesAccordion from "@/components/courseDetail/ModulesAccordion";
-import DatesSection from "@/components/courseDetail/DatesSection";
 import ReviewsSection from "@/components/courseDetail/ReviewsSection";
 import TrustBoxes from "@/components/courseDetail/TrustBoxes";
 import RelatedCourses from "@/components/courseDetail/RelatedCourses";
@@ -51,6 +50,15 @@ export default async function page(props) {
   const path = `/template/courses/${course.id}`;
   const prices = course.sessions.map((s) => s.price);
   const { workAreas, requirements, exams, comparison, apply, article } = course;
+
+  // Assessment and certificate data, as a two-column table. A row with no data is left out.
+  const a = course.assessment || {};
+  const c = course.certificate || {};
+  const defRows = [
+    ["Exam format", a.format], ["Number of questions", a.questions], ["Pass mark", a.passMark], ["Exam duration", a.duration],
+    ["Open or closed book", a.openBook], ["Resit rules", a.resits],
+    ["Certificate", c.name], ["Certificate validity", c.validityText], ["How to renew", c.renewal],
+  ].filter(([, v]) => v !== undefined && v !== null && v !== "");
 
   const navSections = [
     { id: "learning-options", label: "Learning options" },
@@ -103,7 +111,7 @@ export default async function page(props) {
 
                 <div className="rt-cd__content">
                   {course.features?.length > 0 && (
-                    <section className="rt-cd__sec rt-cd__features" aria-labelledby="rt-cd-features-h">
+                    <section className="rt-cd__fcard" aria-labelledby="rt-cd-features-h">
                       <h2 id="rt-cd-features-h">Course features</h2>
                       <ul className="rt-cd__chips">
                         {course.features.slice(0, 8).map((f) => <li key={f}>{f}</li>)}
@@ -111,9 +119,7 @@ export default async function page(props) {
                     </section>
                   )}
 
-                  <LearningOptions />
-                  <OptionsExtras />
-                  <DatesSection />
+                  <LearningSection />
 
                   {article ? (
                     <ArticleBlocks blocks={article} />
@@ -121,9 +127,11 @@ export default async function page(props) {
                     <>
                   <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
                     <h2 id="rt-cd-overview-h">{course.title}</h2>
-                    <div className="rt-cd__prose">
-                      {course.description.map((p) => <p key={p}>{p}</p>)}
-                    </div>
+                    <ClampBlock>
+                      <div className="rt-cd__prose">
+                        {course.description.map((p) => <p key={p}>{p}</p>)}
+                      </div>
+                    </ClampBlock>
                     {workAreas && (
                       <>
                         <h3 className="rt-cd__h3">{workAreas.title}</h3>
@@ -145,6 +153,20 @@ export default async function page(props) {
                       <ul className="rt-cd__list">{requirements.list.map((r) => <li key={r}>{r}</li>)}</ul>
                     )}
                   </section>
+
+                  {!apply && defRows.length > 0 && (
+                    <section className="rt-cd__sec" aria-labelledby="rt-cd-assess-h">
+                      <h2 id="rt-cd-assess-h">Assessment and certificate</h2>
+                      <dl className="rt-cd__defs">
+                        {defRows.map(([label, value]) => (
+                          <div key={label} className="rt-cd__def">
+                            <dt>{label}</dt>
+                            <dd>{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
+                  )}
 
                   {exams && (
                     <section className="rt-cd__sec" aria-labelledby="rt-cd-exams-h">
