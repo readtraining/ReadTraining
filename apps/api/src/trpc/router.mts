@@ -1,5 +1,5 @@
-import { postsRouter } from '../modules/posts/posts.router.js'
-import { createTRPCRouter, publicProcedure } from './trpc.js'
+import { postsRouter } from '../modules/posts/posts.router.mjs'
+import { createTRPCRouter, publicProcedure } from './trpc.mjs'
 
 export const appRouter = createTRPCRouter({
   health: publicProcedure.query(() => ({

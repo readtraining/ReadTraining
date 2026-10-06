@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express'
 
-import { db } from '../lib/db.js'
+import { db } from '../lib/db.mjs'
 
 /**
  * Runs on every request. Put db, session, services, etc. here.

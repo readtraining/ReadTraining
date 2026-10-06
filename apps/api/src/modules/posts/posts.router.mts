@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { desc, eq, posts } from '@readtraining/db'
 
-import { createTRPCRouter, publicProcedure } from '../../trpc/trpc.js'
+import { createTRPCRouter, publicProcedure } from '../../trpc/trpc.mjs'
 
 export const postsRouter = createTRPCRouter({
   list: publicProcedure.query(({ ctx }) =>

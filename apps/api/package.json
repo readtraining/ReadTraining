@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/trpc/index.ts"
+    ".": "./src/trpc/index.mts"
   },
   "scripts": {
-    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.mts",
     "build": "tsc",
-    "start": "tsx --env-file-if-exists=../../.env src/index.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/index.mts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -2,8 +2,8 @@ import * as trpcExpress from '@trpc/server/adapters/express'
 import cors from 'cors'
 import express from 'express'
 
-import { createTRPCContext } from './trpc/context.js'
-import { appRouter } from './trpc/router.js'
+import { createTRPCContext } from './trpc/context.mjs'
+import { appRouter } from './trpc/router.mjs'
 
 const PORT = process.env.PORT || 4000
 const WEB_ORIGIN = process.env.WEB_ORIGIN || 'http://localhost:3000'
