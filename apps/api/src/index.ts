@@ -12,8 +12,9 @@ const app = express()
 
 app.use(cors({ origin: WEB_ORIGIN, credentials: true }))
 
+// Mounted under /api because Vercel Services passes the full /api/... path through to this service.
 app.use(
-  '/trpc',
+  '/api/trpc',
   trpcExpress.createExpressMiddleware({
     router: appRouter,
     createContext: createTRPCContext,
@@ -23,6 +24,11 @@ app.use(
   }),
 )
 
-app.listen(PORT, () => {
-  console.log(`🚀 tRPC endpoint ready at http://localhost:${PORT}/trpc`)
-})
+// On Vercel the exported app runs as a function; listen only when running locally.
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 tRPC endpoint ready at http://localhost:${PORT}/api/trpc`)
+  })
+}
+
+export default app

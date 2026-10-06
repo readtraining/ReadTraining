@@ -8,7 +8,10 @@ import SuperJSON from 'superjson'
 
 import { api } from './react'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+// In production the API is served from the same domain (/api), so the URL is relative.
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000')
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient())
@@ -17,7 +20,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       links: [
         loggerLink({ enabled: () => process.env.NODE_ENV === 'development' }),
         httpBatchLink({
-          url: `${API_URL}/trpc`,
+          url: `${API_URL}/api/trpc`,
           transformer: SuperJSON,
           fetch: (url, options) =>
             fetch(url, { ...options, credentials: 'include' }),

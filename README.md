@@ -3,7 +3,7 @@
 pnpm + Turbo monorepo: Express + tRPC API and Next.js web.
 
 ```
-apps/api   Express server, tRPC at /trpc (port 4000)
+apps/api   Express server, tRPC at /api/trpc (port 4000)
 apps/web   Next.js App Router, tRPC React Query client (port 3000)
 ```
 
@@ -27,3 +27,11 @@ pnpm db:studio     # browse data
 ```
 
 Schema lives in `packages/db/src/schema.ts`. Commit the migration files.
+
+## Deploying (Vercel Services)
+
+One Vercel project deploys both apps from `vercel.json`: `/api/*` goes to the API, everything else to the web app.
+
+- Project Root Directory: the repo root (blank).
+- Environment variables: `DATABASE_URL` (transaction pooler, port 6543), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Do not set `NEXT_PUBLIC_API_URL`.
+- Check the API at `/api/trpc/health`.

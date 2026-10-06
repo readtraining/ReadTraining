@@ -4,7 +4,7 @@
   "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "turbo run dev",
-    "dev:api": "pnpm --filter @readtraining/api dev",
+    "dev:api": "pnpm --filter @readtraining/db build && pnpm --filter @readtraining/api dev",
     "dev:web": "pnpm --filter @readtraining/web dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
