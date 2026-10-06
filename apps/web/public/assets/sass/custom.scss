@@ -2828,7 +2828,7 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 
 /* ---------- Booking card (340px, square, Udemy shadow) ---------- */
 .rt-cd__aside { width: 340px; margin-top: 32px; top: calc(var(--header-offset, 0px) + 16px); transition: top 0.2s ease; }
-@media (min-width: 1024px) { :root:has(.rt-cd__slim.is-on) .rt-cd__aside { top: calc(var(--header-offset, 0px) + 72px + 16px); } }
+/* (the sticky offset while the slim bar shows now comes from body.course-scrolled, see the end of this file) */
 :root:has(.rt-cd) { scroll-padding-top: calc(var(--header-offset, 0px) + 72px + 16px); }
 @media (max-width: 1023px) { .rt-cd__aside { position: relative; top: auto; width: 100%; max-width: none; margin-top: 24px; } }
 @media (prefers-reduced-motion: reduce) { .rt-cd__aside { transition: none; } }
@@ -2924,3 +2924,43 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 .rt-lo__card { overflow: visible; }
 .rt-lo__head .rt-cd__lo-tag, .rt-lo__card > .rt-cd__lo-tag { position: absolute; top: -10px; left: 16px; z-index: 1; margin: 0; padding: 2px 10px; border-radius: 999px; background: var(--cd-brand); color: var(--color-white); font-size: 10.5px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap; }
 .rt-lo__head { padding-right: 32px; }
+
+/* ===================================================================================================
+   COURSE DETAIL: the site header hides while the slim bar shows (page level only; the header component is untouched).
+   <body> gets "course-scrolled" from SlimBar. The header moves with transform only, so its reserved space at the top of
+   the page stays and nothing jumps. Once hidden it is visibility: hidden, so its links cannot be focused.
+   =================================================================================================== */
+:root:has(.rt-cd) header.header { transition: transform 0.2s ease, visibility 0s; }
+body.course-scrolled header.header { transform: translateY(-100%); visibility: hidden; transition: transform 0.2s ease, visibility 0s linear 0.2s; }
+.rt-cd__slim { top: 0; height: 72px; }
+:root:has(.rt-cd) { scroll-padding-top: calc(72px + 16px); }
+.rt-cd__slim-nav ul { gap: 16px; }
+@media (min-width: 1024px) {
+  .rt-cd__aside { top: calc(var(--header-offset, 0px) + 16px); transition: top 0.2s ease; }
+  body.course-scrolled .rt-cd__aside { top: 16px; z-index: 95; }
+  /* the card overlaps the bar on the right, so the bar's content stops before the card's column */
+  .rt-cd__slim-in { padding-right: calc(24px + 340px + 64px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:has(.rt-cd) header.header, body.course-scrolled header.header { transition: none; }
+  .rt-cd__aside { transition: none; }
+}
+
+/* slim bar: the left block can shrink and clip; it never runs under the section links */
+.rt-cd__slim-left { flex: 1 1 0; min-width: 0; overflow: hidden; }
+.rt-cd__slim-meta { min-width: 0; overflow: hidden; }
+.rt-cd__slim-nav { flex: none; }
+/* next to the section links there is room for the rating but not for the student count (it stays in the stats card) */
+@media (min-width: 1180px) { .rt-cd__slim-students { display: none; } }
+/* (stars beside the links are hidden only on narrower desktops, see the end of this file) */
+
+/* ===================================================================================================
+   SLIM BAR: title and rating start at the left end of the bar; the section links stay where they were
+   (their right edge is still the end of the page's left column, so they sit exactly as before)
+   =================================================================================================== */
+@media (min-width: 1024px) { .rt-cd__slim-in { max-width: none; margin: 0; padding: 0 428px 0 24px; } }
+@media (min-width: 1180px) {
+  .rt-cd__slim-in { padding-right: 0; }
+  .rt-cd__slim-nav { margin-right: calc(50% - 152px); } /* 50% is measured inside the bar's 24px left padding */
+}
+@media (min-width: 1180px) and (max-width: 1359px) { .rt-cd__slim-rate .rt-cd__stars { display: none; } }

@@ -25,13 +25,20 @@ export default function SlimBar({ sections }) {
   }, []);
   useEffect(() => setBarOn(on), [on, setBarOn]);
 
+  // Page-level hook: while the slim bar shows, <body> gets "course-scrolled" and the CSS slides the site header away.
+  // The header component is not touched. The class is always removed again, including when the page is left.
+  useEffect(() => {
+    document.body.classList.toggle("course-scrolled", on);
+    return () => document.body.classList.remove("course-scrolled");
+  }, [on]);
+
   // Scrollspy over the section links (one rAF-throttled scroll listener, state changes only when the section changes).
   useEffect(() => {
     let raf = 0;
     const compute = () => {
       raf = 0;
       const offset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-offset")) || 0;
-      const line = offset + 72 + 24;
+      const line = 72 + 24; // the header is hidden while the bar shows, so only the bar is above the content
       let current = sections[0]?.id;
       for (const s of sections) {
         const el = document.getElementById(s.id);
