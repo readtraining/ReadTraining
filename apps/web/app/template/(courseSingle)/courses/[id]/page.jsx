@@ -15,6 +15,7 @@ import ReviewsSection from "@/components/courseDetail/ReviewsSection";
 import TrustBoxes from "@/components/courseDetail/TrustBoxes";
 import RelatedCourses from "@/components/courseDetail/RelatedCourses";
 import MobileBuyBar from "@/components/courseDetail/MobileBuyBar";
+import ArticleBlocks from "@/components/courseDetail/ArticleBlocks";
 import { getCourseBySlug, getRelatedCourses, getSubjectLabel } from "@/lib/courses";
 
 export async function generateMetadata(props) {
@@ -48,7 +49,7 @@ export default async function page(props) {
   const subject = getSubjectLabel(course);
   const path = `/template/courses/${course.id}`;
   const prices = course.sessions.map((s) => s.price);
-  const { workAreas, requirements, exams, comparison, apply } = course;
+  const { workAreas, requirements, exams, comparison, apply, article } = course;
 
   const navSections = [
     { id: "learning-options", label: "Learning options" },
@@ -106,7 +107,7 @@ export default async function page(props) {
                     <section className="rt-cd__sec rt-cd__features" aria-labelledby="rt-cd-features-h">
                       <h2 id="rt-cd-features-h">Course features</h2>
                       <ul className="rt-cd__chips">
-                        {course.features.slice(0, 5).map((f) => <li key={f}>{f}</li>)}
+                        {course.features.slice(0, 8).map((f) => <li key={f}>{f}</li>)}
                       </ul>
                     </section>
                   )}
@@ -114,6 +115,10 @@ export default async function page(props) {
                   <LearningOptions />
                   <DatesSection />
 
+                  {article ? (
+                    <ArticleBlocks blocks={article} />
+                  ) : (
+                    <>
                   <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
                     <h2 id="rt-cd-overview-h">{course.title}</h2>
                     <div className="rt-cd__prose">
@@ -186,7 +191,21 @@ export default async function page(props) {
                       </div>
                     </section>
                   )}
+                    </>
+                  )}
 
+                  {course.showAudience && course.audience?.length > 0 && (
+                    <section className="rt-cd__sec" aria-labelledby="rt-cd-aud-h">
+                      <div className="rt-cd__learn">
+                        <h2 id="rt-cd-aud-h">Who is this course for?</h2>
+                        <ul className="rt-cd__checks is-one">
+                          {course.audience.map((o) => <li key={o}><Check /> <span>{o}</span></li>)}
+                        </ul>
+                      </div>
+                    </section>
+                  )}
+
+                  {course.learningOutcomes.length > 0 && (
                   <section className="rt-cd__sec" id="learn" aria-labelledby="rt-cd-learn-h">
                     <div className="rt-cd__learn">
                       <h2 id="rt-cd-learn-h">What you will learn</h2>
@@ -195,6 +214,7 @@ export default async function page(props) {
                       </ul>
                     </div>
                   </section>
+                  )}
 
                   <section className="rt-cd__sec" id="content" aria-labelledby="rt-cd-content-h">
                     <h2 id="rt-cd-content-h">Course content</h2>

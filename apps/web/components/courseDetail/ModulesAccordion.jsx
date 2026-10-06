@@ -32,11 +32,15 @@ export default function ModulesAccordion({ modules }) {
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </summary>
-            <ul className="rt-cd__mod-topics">
-              {m.topics.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ul>
+            {m.text ? (
+              <p className="rt-cd__faq-a">{m.text}</p>
+            ) : (
+              <ul className="rt-cd__mod-topics">
+                {m.topics.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            )}
           </details>
         ))}
       </div>

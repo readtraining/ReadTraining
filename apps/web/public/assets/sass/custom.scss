@@ -2455,3 +2455,28 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 .rt-cd__extras-main { display: grid; }
 .rt-cd__extras-main small { font-size: 12px; line-height: 16px; color: var(--cd-muted); }
 .rt-cd__extras li { padding: 6px 0; }
+
+/* Article blocks (per-course sections) */
+.rt-cd__checks.is-one { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 12px; }
+.rt-cd__sub { margin-top: 8px; }
+.rt-cd__sub .rt-cd__h3 { margin-top: 20px; }
+.rt-cd__links { display: grid; gap: 10px; margin: 0 0 12px; padding: 0; list-style: none; }
+.rt-cd__links li { display: grid; gap: 2px; }
+.rt-cd__links .rt-cd__link { min-height: 0; font-size: 16px; line-height: 24px; }
+.rt-cd__links span { font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+.rt-cd ul.rt-cd__list, .rt-cd ul.rt-cd__mod-topics { list-style: disc; padding-left: 22px; }
+.rt-cd ul.rt-cd__list li, .rt-cd ul.rt-cd__mod-topics li { display: list-item; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
