@@ -76,7 +76,7 @@ export default function BookingCard() {
   const compact = barOn && desktop;
   const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
   const save = isInHouse ? 0 : savePercent(session.price, session.wasPrice);
-  const trust = trustItems(course).slice(0, 4);
+  const trust = trustItems(course); // all existing trust items, one column
   const onDemand = mode === "ondemand";
 
   return (
@@ -134,16 +134,19 @@ export default function BookingCard() {
           </button>
         )}
 
-        {trust.length > 0 && (
-          <Fold hidden={compact} className="rt-bk__fold--trust">
+      </div>
+
+      {trust.length > 0 && (
+        <Fold hidden={compact} className="rt-bk__fold--trust">
+          <div className="rt-bk__trusts">
             <ul className="rt-bk__trust">
               {trust.map((t) => (
                 <li key={t}><Check /> <span>{t}</span></li>
               ))}
             </ul>
-          </Fold>
-        )}
-      </div>
+          </div>
+        </Fold>
+      )}
     </div>
   );
 }

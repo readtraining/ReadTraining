@@ -2739,3 +2739,27 @@ a.rt-cd__btn { color: var(--color-white) !important; text-decoration: none; } /*
 .rt-bk__session { margin-top: 6px; padding: 6px 10px; }
 .rt-bk__trust { gap: 4px 12px; line-height: 15px; }
 .rt-bk__session { padding: 5px 10px; }
+
+/* ===================================================================================================
+   BOOKING CARD: roomier FULL state. Image, booking section, divider, trust list. Compact keeps the booking section only.
+   =================================================================================================== */
+.rt-bk { width: 100%; }
+.rt-bk__body { padding: 20px 24px; }
+.rt-bk__body > * + * { margin-top: 0; }
+.rt-bk__choice { margin: 0; padding: 0; border-radius: 12px; }
+.rt-bk__choice.is-flash { background: var(--cd-brand-subtle); box-shadow: 0 0 0 6px var(--cd-brand-subtle); }
+.rt-bk__opt { min-height: 24px; margin: 0 0 16px; }
+.rt-bk__opt strong { font-size: 15px; line-height: 22px; font-weight: 700; }
+.rt-bk__price { margin: 0; gap: 10px; }
+.rt-bk__now { font-size: 32px; line-height: 38px; font-weight: 800; }
+.rt-bk__was { font-size: 15px; }
+.rt-bk__vat { margin: 0 0 16px; font-size: 13px; line-height: 18px; }
+.rt-bk__session { margin: 0 0 20px; padding: 14px 16px; border-radius: 12px; }
+.rt-bk__when strong { font-size: 15px; line-height: 20px; font-weight: 700; }
+.rt-bk__where { margin-top: 2px; font-size: 13px; line-height: 18px; }
+.rt-bk__inhouse { margin: 0 0 20px; }
+.rt-bk .rt-cd__btn { width: 100%; height: 52px; margin: 0; border-radius: 10px; font-size: 16px; }
+.rt-bk__trusts { padding: 16px 24px 20px; border-top: 1px solid var(--cd-border); }
+.rt-bk__trust { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; }
+.rt-bk__trust li { display: flex; align-items: flex-start; gap: 8px; white-space: nowrap; }
+.rt-bk__trust .rt-cd__check { flex: none; margin-top: 2px; }
