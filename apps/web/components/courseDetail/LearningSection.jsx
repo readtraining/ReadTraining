@@ -5,9 +5,9 @@ import Link from "next/link";
 import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, useBooking } from "./BookingProvider";
 import { formatDateRange, formatPrice } from "@/lib/courses";
 
-const CardCheck = () => (
-  <svg className="rt-cd__check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.7 2.7L16 9.8" />
+const Check = () => (
+  <svg className="rt-cd__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12l5 5L20 7" />
   </svg>
 );
 
@@ -15,6 +15,7 @@ const CardCheck = () => (
 const BULLETS = {
   classroom: ["Focused study away from the workplace.", "Face-to-face support with experienced tutors.", "Interact with fellow professionals."],
   online: ["Learn from home or at work.", "Live sessions with an experienced tutor.", "Join from any device."],
+  ondemand: ["Start anytime at your own pace."],
   inhouse: [
     "Book more, pay less: bulk discounts available.",
     "Choose from our centres or train on-site.",
@@ -31,9 +32,8 @@ const VISIBLE = 4;
 export default function LearningSection() {
   const { course, modes, mode, setMode, city, setCity, session, selectSession, isInHouse } = useBooking();
   const [expanded, setExpanded] = useState(false);
+  const [full, setFull] = useState(null);
 
-  const dated = modes.filter((m) => m !== "inhouse");
-  const team = modes.includes("inhouse");
   const cities = useMemo(() => [...new Set(course.sessions.filter((s) => s.mode === "classroom").map((s) => s.city))].sort(), [course]);
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const rows = course.sessions.filter((s) => s.mode === mode && (mode !== "classroom" || !city || s.city === city));
@@ -45,49 +45,36 @@ export default function LearningSection() {
     <section className="rt-cd__sec rt-lo" id="learning-options" aria-labelledby="rt-cd-lo-h">
       <h2 id="rt-cd-lo-h">Learning options</h2>
 
-      <fieldset className="rt-lo__cards">
+      <fieldset className="rt-lc__fs">
         <legend className="rt-cd__sr">How do you want to learn?</legend>
-
-        {dated.length > 0 && (
-          <div className="rt-lo__row" style={{ "--lo-cols": dated.length }}>
-            {dated.map((m) => {
-              const on = mode === m;
-              return (
-                <label key={m} className={`rt-lo__card${on ? " is-selected" : ""}`}>
-                  <input type="radio" name="rt-lo-mode" value={m} checked={on} onChange={() => setMode(m)} />
-                  <span className="rt-lo__radio" aria-hidden="true" />
-                  <span className="rt-lo__head">
-                    <h3>{MODE_LABEL[m]}</h3>
-                    {course.popularMode === m && <span className="rt-cd__lo-tag">Most popular</span>}
-                  </span>
-                  <span className="rt-lo__from">From <strong>{formatPrice(fromFor(m))}</strong></span>
-                  {BULLETS[m] && (
-                    <ul>
-                      {BULLETS[m].map((b) => <li key={b}><CardCheck /> {b}</li>)}
-                    </ul>
-                  )}
-                </label>
-              );
-            })}
-          </div>
-        )}
-
-        {team && (
-          <div className="rt-lo__teamwrap">
-            <label className={`rt-lo__card rt-lo__card--team${isInHouse ? " is-selected" : ""}`}>
-              <input type="radio" name="rt-lo-mode" value="inhouse" checked={isInHouse} onChange={() => setMode("inhouse")} />
-              <span className="rt-lo__radio" aria-hidden="true" />
-              <span className="rt-lo__teamhead">
-                <span className="rt-lo__head"><h3>Team training solutions</h3></span>
-                <span className="rt-cd__lo-quote">Contact us for a quote</span>
-              </span>
-              <ul>
-                {BULLETS.inhouse.map((b) => <li key={b}><CardCheck /> {b}</li>)}
-              </ul>
-            </label>
-            <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>
-          </div>
-        )}
+        <div className="rt-lc" role="radiogroup" aria-label="How do you want to learn?" style={{ "--lc-cols": Math.min(modes.length, 3) }}>
+          {modes.map((m) => {
+            const on = mode === m;
+            const list = BULLETS[m] || [];
+            const more = list.length - 2;
+            return (
+              <label key={m} className={`rt-lc__card${on ? " is-selected" : ""}`}>
+                <input type="radio" name="rt-lo-mode" value={m} checked={on} onChange={() => setMode(m)} />
+                <span className="rt-lc__top">
+                  {course.popularMode === m ? <span className="rt-lc__badge">Most popular</span> : <span />}
+                  <span className={`rt-bs__radio${on ? " is-on" : ""}`} aria-hidden="true" />
+                </span>
+                <h3 className="rt-lc__name">{m === "inhouse" ? "Team training solutions" : MODE_LABEL[m]}</h3>
+                {list.length > 0 && (
+                  <ul className="rt-lc__list">
+                    {list.slice(0, 2).map((b) => <li key={b}><Check /> <span>{b}</span></li>)}
+                  </ul>
+                )}
+                {more > 0 && (
+                  <button type="button" className="rt-lc__more" onClick={() => { setMode(m); setFull(m); }}>+ {more} more</button>
+                )}
+                <span className="rt-lc__price">
+                  {m === "inhouse" ? <span className="rt-lc__quote">Contact us for a quote</span> : <><span>From</span> <strong>{formatPrice(fromFor(m))}</strong></>}
+                </span>
+              </label>
+            );
+          })}
+        </div>
       </fieldset>
 
       <div className="rt-lo__dates" id="dates">
@@ -104,11 +91,21 @@ export default function LearningSection() {
           )}
         </div>
 
+        {!isInHouse && full === mode && BULLETS[mode]?.length > 2 && (
+          <ul className="rt-lc__full">
+            {BULLETS[mode].map((b) => <li key={b}><Check /> <span>{b}</span></li>)}
+          </ul>
+        )}
+
         {isInHouse ? (
           <div className="rt-lo__inhouse">
-            <p>{IN_HOUSE_NOTE}</p>
-            <p className="rt-cd__empty">In-house training is arranged on a date and at a place that suit your team. Choose Get a quote and we will confirm availability.</p>
-            <Link href={QUOTE_HREF} className="rt-cd__ghost">Get a quote</Link>
+            <ul className="rt-lc__full rt-lc__full--cols">
+              {BULLETS.inhouse.map((b) => <li key={b}><Check /> <span>{b}</span></li>)}
+            </ul>
+            <div className="rt-lc__cta">
+              <Link href={QUOTE_HREF} className="rt-lc__quote-btn">Get a quote</Link>
+              <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>
+            </div>
           </div>
         ) : (
           <>
