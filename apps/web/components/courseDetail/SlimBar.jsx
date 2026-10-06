@@ -31,7 +31,7 @@ export default function SlimBar({ sections }) {
     const compute = () => {
       raf = 0;
       const offset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-offset")) || 0;
-      const line = offset + 64 + 24;
+      const line = offset + 72 + 24;
       let current = sections[0]?.id;
       for (const s of sections) {
         const el = document.getElementById(s.id);
@@ -61,12 +61,15 @@ export default function SlimBar({ sections }) {
       <div className="rt-cd__slim-in">
         <div className="rt-cd__slim-left">
           <strong className="rt-cd__slim-title">{course.title}</strong>
-          {course.badge && <span className="rt-cd__badge">{course.badge}</span>}
-          <span className="rt-cd__slim-rate">
-            <strong>{course.rating.toFixed(1)}</strong>
-            <Stars rating={course.rating} size={14} />
-          </span>
-          <span className="rt-cd__slim-students">{formatNumber(course.learnerCount)} students enrolled</span>
+          <div className="rt-cd__slim-meta">
+            {course.badge && <span className="rt-cd__badge">{course.badge}</span>}
+            <span className="rt-cd__slim-rate">
+              <strong>{course.rating.toFixed(1)}</strong>
+              <Stars rating={course.rating} size={14} />
+              <a href="#reviews">({formatNumber(course.reviewCount)} ratings)</a>
+            </span>
+            <span className="rt-cd__slim-students">{formatNumber(course.learnerCount)} students enrolled</span>
+          </div>
         </div>
         <nav className="rt-cd__slim-nav" aria-label="On this page">
           <ul>

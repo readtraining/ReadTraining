@@ -25,12 +25,15 @@ const BULLETS = {
 };
 const VISIBLE = 4;
 
-// Learning options: the one place where the choice is made. Radio cards for every option the course offers, then the
-// dates for the selected option, then the staff training and exam prep boxes. Choosing never moves the page.
+// Learning options: the one place where the choice is made. The dated options (Classroom, Live online, On Demand) sit in one
+// row of radio cards; team training (In-house) is a full-width card under them. The dates for the selected option follow,
+// then the staff training and exam prep boxes. Choosing never moves the page.
 export default function LearningSection() {
   const { course, modes, mode, setMode, city, setCity, session, selectSession, isInHouse } = useBooking();
   const [expanded, setExpanded] = useState(false);
 
+  const dated = modes.filter((m) => m !== "inhouse");
+  const team = modes.includes("inhouse");
   const cities = useMemo(() => [...new Set(course.sessions.filter((s) => s.mode === "classroom").map((s) => s.city))].sort(), [course]);
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const rows = course.sessions.filter((s) => s.mode === mode && (mode !== "classroom" || !city || s.city === city));
@@ -42,34 +45,64 @@ export default function LearningSection() {
     <section className="rt-cd__sec rt-lo" id="learning-options" aria-labelledby="rt-cd-lo-h">
       <h2 id="rt-cd-lo-h">Learning options</h2>
 
-      <fieldset className="rt-lo__cards" style={{ "--lo-cols": Math.min(modes.length, 3) }}>
+      <fieldset className="rt-lo__cards">
         <legend className="rt-cd__sr">How do you want to learn?</legend>
-        {modes.map((m) => {
-          const on = mode === m;
-          return (
-            <div key={m} className="rt-lo__col">
-              <label className={`rt-lo__card${on ? " is-selected" : ""}`}>
-                <input type="radio" name="rt-lo-mode" value={m} checked={on} onChange={() => setMode(m)} />
-                <span className="rt-lo__radio" aria-hidden="true" />
-                {course.popularMode === m && <span className="rt-cd__lo-tag">Most popular</span>}
-                <h3>{m === "inhouse" ? "Team training solutions" : MODE_LABEL[m]}</h3>
-                {BULLETS[m] && (
-                  <ul>
-                    {BULLETS[m].map((b) => <li key={b}><CardCheck /> {b}</li>)}
-                  </ul>
-                )}
-                <p className="rt-lo__from">
-                  {m === "inhouse" ? <span className="rt-cd__lo-quote">Contact us for a quote</span> : <>From <strong>{formatPrice(fromFor(m))}</strong></>}
-                </p>
-              </label>
-              {m === "inhouse" && <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>}
-            </div>
-          );
-        })}
+
+        {dated.length > 0 && (
+          <div className="rt-lo__row" style={{ "--lo-cols": dated.length }}>
+            {dated.map((m) => {
+              const on = mode === m;
+              return (
+                <label key={m} className={`rt-lo__card${on ? " is-selected" : ""}`}>
+                  <input type="radio" name="rt-lo-mode" value={m} checked={on} onChange={() => setMode(m)} />
+                  <span className="rt-lo__radio" aria-hidden="true" />
+                  <span className="rt-lo__head">
+                    <h3>{MODE_LABEL[m]}</h3>
+                    {course.popularMode === m && <span className="rt-cd__lo-tag">Most popular</span>}
+                  </span>
+                  <span className="rt-lo__from">From <strong>{formatPrice(fromFor(m))}</strong></span>
+                  {BULLETS[m] && (
+                    <ul>
+                      {BULLETS[m].map((b) => <li key={b}><CardCheck /> {b}</li>)}
+                    </ul>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        {team && (
+          <div className="rt-lo__teamwrap">
+            <label className={`rt-lo__card rt-lo__card--team${isInHouse ? " is-selected" : ""}`}>
+              <input type="radio" name="rt-lo-mode" value="inhouse" checked={isInHouse} onChange={() => setMode("inhouse")} />
+              <span className="rt-lo__radio" aria-hidden="true" />
+              <span className="rt-lo__teamhead">
+                <span className="rt-lo__head"><h3>Team training solutions</h3></span>
+                <span className="rt-cd__lo-quote">Contact us for a quote</span>
+              </span>
+              <ul>
+                {BULLETS.inhouse.map((b) => <li key={b}><CardCheck /> {b}</li>)}
+              </ul>
+            </label>
+            <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>
+          </div>
+        )}
       </fieldset>
 
       <div className="rt-lo__dates" id="dates">
-        <h3 className="rt-lo__h">Study options for the {course.title}</h3>
+        <div className="rt-lo__dates-head">
+          <h3 className="rt-lo__h">Study options for the {course.title}</h3>
+          {!isInHouse && mode === "classroom" && (
+            <label className="rt-cd__select">
+              <span className="rt-cd__sr">Location</span>
+              <select value={city} onChange={(e) => setCity(e.target.value)}>
+                <option value="">All locations</option>
+                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
 
         {isInHouse ? (
           <div className="rt-lo__inhouse">
@@ -79,16 +112,6 @@ export default function LearningSection() {
           </div>
         ) : (
           <>
-            {mode === "classroom" && (
-              <label className="rt-cd__select">
-                <span className="rt-cd__sr">Location</span>
-                <select value={city} onChange={(e) => setCity(e.target.value)}>
-                  <option value="">All locations</option>
-                  {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </label>
-            )}
-
             {rows.length === 0 ? (
               <p className="rt-cd__empty">No dates in this location yet. Try another location.</p>
             ) : (
@@ -103,8 +126,7 @@ export default function LearningSection() {
                       </div>
                       <div className="rt-cd__row-where">
                         <strong>{s.venue || s.location}</strong>
-                        {s.address && <span>{s.address}, {s.postcode}</span>}
-                        <span>Provided by {s.provider}</span>
+                        <span>{s.address ? `${s.address}, ${s.postcode} · ` : ""}Provided by {s.provider}</span>
                       </div>
                       <div className="rt-cd__row-price">{formatPrice(s.price)}</div>
                       <button type="button" className={`rt-cd__select-btn${selected ? " is-on" : ""}`} aria-pressed={selected} onClick={() => selectSession(s.id)}>

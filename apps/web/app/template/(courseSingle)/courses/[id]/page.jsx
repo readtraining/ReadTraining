@@ -7,6 +7,7 @@ import HomeHelp from "@/components/home/HomeHelp";
 import BookingProvider from "@/components/courseDetail/BookingProvider";
 import BookingCard from "@/components/courseDetail/BookingCard";
 import CourseHero from "@/components/courseDetail/CourseHero";
+import StatsCard from "@/components/courseDetail/StatsCard";
 import SlimBar from "@/components/courseDetail/SlimBar";
 import LearningSection from "@/components/courseDetail/LearningSection";
 import ClampBlock from "@/components/courseDetail/ClampBlock";
@@ -110,6 +111,8 @@ export default async function page(props) {
                 </aside>
 
                 <div className="rt-cd__content">
+                  <StatsCard course={course} />
+
                   {course.features?.length > 0 && (
                     <section className="rt-cd__fcard" aria-labelledby="rt-cd-features-h">
                       <h2 id="rt-cd-features-h">Course features</h2>
@@ -239,8 +242,7 @@ export default async function page(props) {
                   )}
 
                   <section className="rt-cd__sec" id="content" aria-labelledby="rt-cd-content-h">
-                    <h2 id="rt-cd-content-h">Course content</h2>
-                    <ModulesAccordion modules={course.modules} />
+                    <ModulesAccordion modules={course.modules} title="Course content" titleId="rt-cd-content-h" />
                   </section>
 
                   <ReviewsSection />

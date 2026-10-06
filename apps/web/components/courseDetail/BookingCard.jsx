@@ -20,7 +20,7 @@ const ICONS = {
   inhouse: <><path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10" /></>,
 };
 const OptionIcon = ({ mode }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICONS[mode]}</svg>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICONS[mode]}</svg>
 );
 
 // Trust points come from course/site data only. An item with no data is not shown, and nothing is invented.
@@ -119,6 +119,16 @@ export default function BookingCard() {
           )}
         </div>
 
+        {trust.length > 0 && (
+          <Fold hidden={compact} className="rt-bk__fold--trust">
+            <ul className="rt-bk__trust">
+              {trust.map((t) => (
+                <li key={t}><Check /> <span>{t}</span></li>
+              ))}
+            </ul>
+          </Fold>
+        )}
+
         {isInHouse ? (
           <Link ref={cardButtonRef} href={QUOTE_HREF} className="rt-cd__btn">Get a quote</Link>
         ) : (
@@ -133,20 +143,8 @@ export default function BookingCard() {
             {label}
           </button>
         )}
-
       </div>
 
-      {trust.length > 0 && (
-        <Fold hidden={compact} className="rt-bk__fold--trust">
-          <div className="rt-bk__trusts">
-            <ul className="rt-bk__trust">
-              {trust.map((t) => (
-                <li key={t}><Check /> <span>{t}</span></li>
-              ))}
-            </ul>
-          </div>
-        </Fold>
-      )}
     </div>
   );
 }
