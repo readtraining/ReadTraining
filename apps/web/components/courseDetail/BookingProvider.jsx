@@ -42,6 +42,8 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   });
   const [city, setCity] = useState("");
   const [toast, setToast] = useState(null);
+  const [datesOpen, setDatesOpen] = useState(false); // the "choose a date" pop-up
+  const openerRef = useRef(null);
   const [flash, setFlash] = useState(0); // bumped on every choice made on the page; the card flashes briefly
   const [barOn, setBarOn] = useState(false); // true while the slim bar is showing (the card then collapses its image)
   const notify = useCallback((t) => setToast(typeof t === "string" ? { message: t } : t), []);
@@ -95,6 +97,44 @@ export default function BookingProvider({ course, initialMode, initialSession, c
     },
     [course, notify, writeUrl],
   );
+
+  // ---- "choose a date" pop-up: opening adds a history entry (?dates=open) so the browser Back button closes it ----
+  const openDates = useCallback(() => {
+    openerRef.current = document.activeElement;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.set("dates", "open");
+      window.history.pushState({ ...(window.history.state || {}), rtDates: true }, "", `${pathname}?${params.toString()}${window.location.hash}`);
+    } catch {}
+    setDatesOpen(true);
+  }, [pathname]);
+
+  const closeDates = useCallback(
+    ({ afterSelect = false } = {}) => {
+      setDatesOpen(false);
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("dates")) {
+          if (!afterSelect && window.history.state?.rtDates) window.history.back();
+          else {
+            params.delete("dates");
+            const qs = params.toString();
+            window.history.replaceState(window.history.state, "", `${pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
+          }
+        }
+      } catch {}
+      setTimeout(() => openerRef.current?.isConnected && openerRef.current.focus?.(), 0);
+    },
+    [pathname],
+  );
+
+  useEffect(() => {
+    const onPop = () => {
+      if (!new URLSearchParams(window.location.search).has("dates")) setDatesOpen(false);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   // ---- add to basket: one shared flow for the card and the mobile bar (no double add) ----
   const [status, setStatus] = useState("idle"); // idle | loading | added | error
@@ -152,7 +192,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
 
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
-    status, inBasket, addToBasket, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode,
+    status, inBasket, addToBasket, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
   };
 
   return (

@@ -26,7 +26,6 @@ export default function CourseHero({ course }) {
 
         <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
-        {course.badge && <p className="rt-cd__kicker"><span className="rt-cd__badge">{course.badge}</span></p>}
 
         <p className="rt-cd__providers"><strong>{course.providerCount}</strong> course providers</p>
 

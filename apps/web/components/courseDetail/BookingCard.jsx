@@ -48,11 +48,6 @@ function Fold({ hidden, children, className = "" }) {
   );
 }
 
-const scrollToId = (id) => (e) => {
-  e.preventDefault();
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-};
-
 // Same storage as the heart on the listing cards, so a course saved there shows as saved here.
 const WISHLIST_KEY = "rt-course-wishlist";
 const readWishlist = () => {
@@ -95,7 +90,7 @@ const IN_HOUSE_LINE = "In-house training is arranged on a date and at a place th
 // FULL (title visible): course image first, trust items under the button. COMPACT (desktop, title out of view): the image and
 // the trust items collapse; everything else stays. Tablet and mobile: always FULL.
 export default function BookingCard() {
-  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash } = useBooking();
+  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates } = useBooking();
   const [desktop, setDesktop] = useState(false);
   const [flashing, setFlashing] = useState(false);
 
@@ -177,7 +172,7 @@ export default function BookingCard() {
           {isInHouse ? (
             <p className="rt-bs__link"><Icon name="info" /><Link href={QUOTE_HREF} className="rt-cd__link">Booking for a team? Get a group quote</Link></p>
           ) : !onDemand ? (
-            <p className="rt-bs__link"><Icon name="info" /><a href="#dates" className="rt-cd__link" onClick={scrollToId("dates")}>Change</a></p>
+            <p className="rt-bs__link"><Icon name="info" /><button type="button" className="rt-cd__link rt-bs__change" onClick={openDates}>Change</button></p>
           ) : null}
 
           {isInHouse ? (

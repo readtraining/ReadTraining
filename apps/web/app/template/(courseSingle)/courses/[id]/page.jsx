@@ -9,6 +9,7 @@ import BookingCard from "@/components/courseDetail/BookingCard";
 import CourseHero from "@/components/courseDetail/CourseHero";
 import StatsCard from "@/components/courseDetail/StatsCard";
 import SlimBar from "@/components/courseDetail/SlimBar";
+import CourseFeatures from "@/components/courseDetail/CourseFeatures";
 import LearningSection from "@/components/courseDetail/LearningSection";
 import ClampBlock from "@/components/courseDetail/ClampBlock";
 import ModulesAccordion from "@/components/courseDetail/ModulesAccordion";
@@ -113,14 +114,7 @@ export default async function page(props) {
                 <div className="rt-cd__content">
                   <StatsCard course={course} />
 
-                  {course.features?.length > 0 && (
-                    <section className="rt-cd__fcard" aria-labelledby="rt-cd-features-h">
-                      <h2 id="rt-cd-features-h">Course features</h2>
-                      <ul className="rt-cd__chips">
-                        {course.features.slice(0, 8).map((f) => <li key={f}>{f}</li>)}
-                      </ul>
-                    </section>
-                  )}
+                  <CourseFeatures features={course.features} />
 
                   <LearningSection />
 
@@ -234,7 +228,7 @@ export default async function page(props) {
                   <section className="rt-cd__sec" id="learn" aria-labelledby="rt-cd-learn-h">
                     <div className="rt-cd__learn">
                       <h2 id="rt-cd-learn-h">What you will learn</h2>
-                      <ul className="rt-cd__checks">
+                      <ul className={`rt-cd__checks${course.learningOutcomes.length <= 5 ? " is-one" : ""}`}>
                         {course.learningOutcomes.map((o) => <li key={o}><Check /> <span>{o}</span></li>)}
                       </ul>
                     </div>

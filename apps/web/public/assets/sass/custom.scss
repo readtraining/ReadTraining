@@ -2130,7 +2130,7 @@ main#rt-cat-main { overflow: clip; }
    Role > token: brand = purple-1, brand-subtle = purple-3, text = dark-1, muted = light-1, border = light-5,
    control border = border-strong, surface = white, band surface = light-4, success = success, star = yellow-3.
    =================================================================================================== */
-.rt-cd {
+.rt-cd, .rt-dd {
   --cd-brand: var(--color-purple-1);
   --cd-brand-hover: var(--color-purple-4);
   --cd-brand-subtle: var(--color-purple-3);
@@ -2965,3 +2965,105 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
   .rt-dt__tile.is-extra { display: flex; }
   .rt-dt__toggle { display: none; }
 }
+
+
+/* SESSION DATES: summary row + "choose a date" pop-up */
+.rt-ds { display: flex; align-items: center; gap: 14px; box-sizing: border-box; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--cd-border-strong); border-radius: 0; background: var(--cd-surface); }
+.rt-ds__icon { flex: none; color: var(--cd-brand); }
+.rt-ds__text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rt-ds__text strong { font-size: 14px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
+.rt-ds__text span { font-size: 13px; line-height: 18px; color: var(--cd-muted); }
+.rt-ds__btn { flex: none; height: 40px; padding: 0 18px; border: 1px solid var(--cd-brand); border-radius: 4px; background: var(--cd-surface); color: var(--cd-brand); font-size: 14px; font-weight: 700; cursor: pointer; transition: background-color 0.15s ease; }
+.rt-ds__btn:hover { background: var(--cd-brand-subtle); }
+.rt-ds__cities { margin: 10px 0 0; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
+.rt-ds__cities a { color: var(--cd-brand) !important; text-decoration: none; }
+.rt-ds__cities a:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 479px) { .rt-ds { flex-wrap: wrap; } .rt-ds__text { flex: 1 1 calc(100% - 40px); } .rt-ds__btn { width: 100%; } }
+.rt-bs__change { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; }
+
+.rt-dd { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0); transition: background-color 0.2s ease; }
+.rt-dd.is-in { background: rgba(0, 0, 0, 0.4); }
+.rt-dd__panel { display: flex; flex-direction: column; box-sizing: border-box; width: 560px; max-width: 92vw; max-height: min(720px, 90dvh); background: var(--cd-surface); border: 1px solid var(--cd-border-strong); border-radius: 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18); opacity: 0; transform: translateY(8px); transition: opacity 0.2s ease, transform 0.2s ease; }
+.rt-dd.is-in .rt-dd__panel { opacity: 1; transform: none; }
+.rt-dd__head { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 18px; border-bottom: 1px solid var(--cd-border); }
+.rt-dd__mode { display: inline-flex; color: var(--cd-brand); }
+.rt-dd__title { flex: 1 1 auto; margin: 0; font-size: 17px; line-height: 24px; font-weight: 700; color: var(--cd-text); outline: 0; }
+.rt-dd__close { flex: none; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: none; color: var(--cd-text); cursor: pointer; }
+.rt-dd__close:hover { background: var(--cd-brand-subtle); }
+.rt-dd button:focus-visible, .rt-dd a:focus-visible, .rt-dd select:focus-visible, .rt-dd input:focus-visible { outline: 2px solid var(--cd-brand); outline-offset: 2px; }
+.rt-dd__filters { flex: none; padding: 12px 18px; background: var(--color-light-3, #F5F6FA); border-bottom: 1px solid var(--cd-border); }
+.rt-dd__controls { display: flex; gap: 8px; }
+.rt-dd__search { position: relative; flex: 1 1 auto; min-width: 0; display: block; }
+.rt-dd__search svg { position: absolute; left: 12px; top: 12px; color: var(--cd-muted); pointer-events: none; }
+.rt-dd .rt-dd__search input { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px 0 36px; border: 1px solid var(--cd-border-strong); border-radius: 4px; background: var(--cd-surface); color: var(--cd-text); font-size: 14px; }
+.rt-dd__sort { flex: none; }
+.rt-dd .rt-dd__sort select { box-sizing: border-box; height: 40px; padding: 0 10px; border: 1px solid var(--cd-border-strong); border-radius: 4px; background: var(--cd-surface); color: var(--cd-text); font-size: 14px; }
+.rt-dd__controls:has(.rt-dd__sort):not(:has(.rt-dd__search)) .rt-dd__sort { flex: 1 1 auto; }
+.rt-dd .rt-dd__controls:not(:has(.rt-dd__search)) select { width: 100%; }
+.rt-dd__meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; min-height: 20px; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
+.rt-dd__meta .rt-cd__link { padding: 0; border: 0; background: none; font-size: 13px; cursor: pointer; }
+.rt-dd__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
+.rt-dd__empty { margin: 0; padding: 28px 0; text-align: center; font-size: 14px; color: var(--cd-muted); }
+.rt-dd__venue { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--cd-border); }
+.rt-dd__venue:last-child { border-bottom: 0; }
+.rt-dd__venue-info h3 { margin: 0 0 2px; font-size: 16px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
+.rt-dd__venue-info p { margin: 0; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
+.rt-dd__venue-info a { color: var(--cd-brand) !important; text-decoration: none; }
+.rt-dd__venue-info a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rt-dd__next strong { font-weight: 700; color: var(--cd-text); }
+.rt-dd__venue-info .rt-dd__from { margin-top: 4px; }
+.rt-dd__from strong { font-size: 16px; font-weight: 700; color: var(--cd-text); }
+.rt-dd__from span { font-size: 12px; margin-left: 4px; }
+.rt-dd__show { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid var(--cd-border-strong); border-radius: 4px; background: var(--cd-surface); color: var(--cd-text); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.rt-dd__show:hover { border-color: var(--cd-brand); }
+.rt-dd__show svg { transition: transform 0.2s ease; }
+.rt-dd__show[aria-expanded="true"] svg { transform: rotate(180deg); }
+.rt-dd__dates { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rt-dd__dates[hidden] { display: none; }
+.rt-dd__dates--flat { padding: 14px 0; }
+.rt-dd__date { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; margin: 0; padding: 10px 12px; border: 1px solid var(--cd-border); border-left: 3px solid var(--cd-border); border-radius: 0; list-style: none; background: var(--cd-surface); }
+.rt-dd__date.is-selected { border-left-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+.rt-dd__date-main { min-width: 0; }
+.rt-dd__date-main strong { display: block; font-size: 13px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
+.rt-dd__date-main span { display: block; font-size: 12px; line-height: 18px; color: var(--cd-muted); }
+.rt-dd__date-price { font-size: 14px; font-weight: 700; color: var(--cd-text); font-variant-numeric: tabular-nums; }
+.rt-dd__select { height: 32px; padding: 0 14px; border: 1px solid var(--cd-brand); border-radius: 4px; background: var(--cd-brand); color: var(--color-white) !important; font-size: 13px; font-weight: 700; cursor: pointer; }
+.rt-dd__select.is-on { background: var(--cd-surface); color: var(--cd-brand) !important; }
+@media (max-width: 640px) {
+  .rt-dd { align-items: flex-end; background: transparent; }
+  .rt-dd.is-in { background: transparent; }
+  .rt-dd__panel { width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; box-shadow: none; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); transform: translateY(100%); opacity: 1; transition: transform 0.25s ease; }
+  .rt-dd.is-in .rt-dd__panel { transform: none; }
+  .rt-dd__date { grid-template-columns: minmax(0, 1fr) auto; }
+  .rt-dd__date-price { text-align: right; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-dd, .rt-dd__panel, .rt-dd__show svg { transition: none; }
+}
+
+/* Radio circles removed from the Learning options cards and the booking card (the real radio inputs stay for keyboard and screen readers) */
+.rt-lc__card .rt-bs__radio, .rt-bk .rt-bs__radio { display: none; }
+
+/* COURSE FEATURES: tidy grid of rounded feature tiles */
+.rt-cd__fcard { border-radius: 16px; }
+.rt-fx { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rt-fx li { display: flex; align-items: center; gap: 10px; box-sizing: border-box; margin: 0; padding: 10px 14px; border: 1px solid var(--cd-border); border-radius: 12px; background: var(--cd-band); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--cd-text); list-style: none; }
+.rt-fx__icon { flex: none; box-sizing: content-box; padding: 4px; border-radius: 50%; background: var(--cd-brand-subtle); color: var(--cd-brand); }
+@media (max-width: 479px) { .rt-fx { grid-template-columns: minmax(0, 1fr); } }
+
+/* COURSE FEATURES v2: one row of rounded icon badges (Hurak style) */
+.rt-cd__fcard { padding: 20px 24px; }
+.rt-cd__fcard h2 { margin: 0 0 14px; font-size: 20px; line-height: 28px; }
+.rt-fx { display: flex; flex-wrap: wrap; gap: 10px; }
+.rt-fx li { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px 8px 12px; border: 1px solid var(--cd-border-strong); border-radius: 999px; background: var(--cd-surface); font-size: 14px; line-height: 20px; font-weight: 600; }
+.rt-fx li > svg { flex: none; color: var(--cd-brand); }
+.rt-fx li:hover { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+
+/* CHECK LISTS: no shared grid rows, so a wrapped item never pushes its neighbour.
+   Short lists (5 or fewer, and lists inside cards) are one column; the long "What you will learn" list uses CSS columns. */
+.rt-cd__checks { display: block; columns: 2; column-gap: 32px; }
+.rt-cd__checks li { break-inside: avoid; margin: 0 0 8px; }
+.rt-cd__checks.is-one { columns: auto; column-gap: normal; }
+.rt-cd__checks.is-one li { margin-bottom: 10px; }
+@media (max-width: 639px) { .rt-cd__checks { columns: auto; } }
+.rt-lc__full--cols { display: flex; flex-direction: column; gap: 8px; }
