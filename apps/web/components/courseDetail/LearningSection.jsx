@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, useBooking } from "./BookingProvider";
-import { formatDateRange, formatPrice } from "@/lib/courses";
+import { formatDate, formatPrice } from "@/lib/courses";
 
 const Check = () => (
   <svg className="rt-cd__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -24,7 +24,73 @@ const BULLETS = {
     "Expert-led, hands-on training delivered at your location.",
   ],
 };
-const VISIBLE = 4;
+const VISIBLE = 5;
+
+const tilePart = (iso, opts) => new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+
+// Session dates as tiles (one radio per date) with a detail line for the chosen one. On Demand has no dates, so it only
+// shows the detail line. Desktop shows 5 tiles and "Show more dates" reveals the rest; under 640px all tiles sit in one
+// row that scrolls sideways.
+function DateTiles({ rows, mode, session, selectSession, expanded, setExpanded }) {
+  const rowRef = useRef(null);
+  const onDemand = mode === "ondemand";
+  const current = rows.find((r) => r.id === session.id) || rows[0];
+  const hidden = rows.length - VISIBLE;
+  const prices = rows.map((r) => r.price);
+  const lowest = Math.min(...prices);
+  const showLowest = Math.max(...prices) !== lowest;
+  const startOf = (t) => String(t || "").split(" to ")[0];
+
+  // Keep the chosen tile in view inside the sideways row only (the page itself never scrolls).
+  useEffect(() => {
+    const row = rowRef.current;
+    const tile = row?.querySelector("label.is-selected");
+    if (!row || !tile || row.scrollWidth <= row.clientWidth) return;
+    row.scrollTo({ left: tile.offsetLeft - (row.clientWidth - tile.offsetWidth) / 2, behavior: "auto" });
+  }, [session.id]);
+
+  return (
+    <>
+      {!onDemand && (
+        <>
+          <div className="rt-dt" id="dates" role="radiogroup" aria-label="Choose a date" ref={rowRef}>
+            {rows.map((s, i) => {
+              const on = current.id === s.id;
+              const sameDay = rows.some((o) => o.id !== s.id && o.date === s.date);
+              return (
+                <label key={s.id} className={`rt-dt__tile${on ? " is-selected" : ""}${i >= VISIBLE && !expanded ? " is-extra" : ""}`}>
+                  <input type="radio" name="rt-dt-session" value={s.id} checked={on} onChange={() => selectSession(s.id)} />
+                  {showLowest && s.price === lowest && <span className="rt-dt__low">Lowest</span>}
+                  <span className="rt-dt__muted">{tilePart(s.date, { weekday: "short" })}</span>
+                  <strong className="rt-dt__day">{tilePart(s.date, { day: "numeric" })}</strong>
+                  <span className="rt-dt__muted">{tilePart(s.date, { month: "short" })}</span>
+                  {mode === "classroom" && s.city && <span className="rt-dt__muted rt-dt__city">{s.city}</span>}
+                  {sameDay && <span className="rt-dt__muted">{startOf(s.time)}</span>}
+                  <span className="rt-dt__price">{formatPrice(s.price)}</span>
+                </label>
+              );
+            })}
+          </div>
+          {hidden > 0 && (
+            <button type="button" className="rt-cd__link rt-cd__more rt-dt__toggle" onClick={() => setExpanded((v) => !v)}>
+              {expanded ? "Show fewer dates" : `Show more dates (${hidden})`}
+            </button>
+          )}
+        </>
+      )}
+
+      <div className="rt-dt__detail" id={onDemand ? "dates" : undefined} aria-live="polite">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" />
+        </svg>
+        <strong>{onDemand ? current.time : formatDate(current.date)}</strong>
+        <span className="rt-dt__muted-14">{onDemand ? "" : `${current.time}, `}provided by {current.provider}</span>
+        {mode === "classroom" && current.venue && <span className="rt-dt__muted-14">{current.venue}{current.address ? `, ${current.address}, ${current.postcode}` : ""}</span>}
+        <strong className="rt-dt__dprice">{formatPrice(current.price)}</strong>
+      </div>
+    </>
+  );
+}
 
 // Learning options: the one place where the choice is made. The dated options (Classroom, Live online, On Demand) sit in one
 // row of radio cards; team training (In-house) is a full-width card under them. The dates for the selected option follow,
@@ -37,8 +103,6 @@ export default function LearningSection() {
   const cities = useMemo(() => [...new Set(course.sessions.filter((s) => s.mode === "classroom").map((s) => s.city))].sort(), [course]);
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const rows = course.sessions.filter((s) => s.mode === mode && (mode !== "classroom" || !city || s.city === city));
-  const shown = expanded ? rows : rows.slice(0, VISIBLE);
-  const hidden = rows.length - VISIBLE;
   const extras = (course.extras || []).slice(0, 2);
 
   return (
@@ -77,7 +141,7 @@ export default function LearningSection() {
         </div>
       </fieldset>
 
-      <div className="rt-lo__dates" id="dates">
+      <div className="rt-lo__dates">
         <div className="rt-lo__dates-head">
           <h3 className="rt-lo__h">Study options for the {course.title}</h3>
           {!isInHouse && mode === "classroom" && (
@@ -107,40 +171,10 @@ export default function LearningSection() {
               <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>
             </div>
           </div>
+        ) : rows.length === 0 ? (
+          <p className="rt-cd__empty">No dates in this location yet. Try another location.</p>
         ) : (
-          <>
-            {rows.length === 0 ? (
-              <p className="rt-cd__empty">No dates in this location yet. Try another location.</p>
-            ) : (
-              <ul className="rt-cd__sessions">
-                {shown.map((s) => {
-                  const selected = session.id === s.id;
-                  return (
-                    <li key={s.id} className={`rt-cd__row${selected ? " is-selected" : ""}`}>
-                      <div className="rt-cd__row-date">
-                        <strong>{mode === "ondemand" ? s.time : formatDateRange(s.date, s.endDate)}</strong>
-                        {mode !== "ondemand" && <span>{s.time}</span>}
-                      </div>
-                      <div className="rt-cd__row-where">
-                        <strong>{s.venue || s.location}</strong>
-                        <span>{s.address ? `${s.address}, ${s.postcode} · ` : ""}Provided by {s.provider}</span>
-                      </div>
-                      <div className="rt-cd__row-price">{formatPrice(s.price)}</div>
-                      <button type="button" className={`rt-cd__select-btn${selected ? " is-on" : ""}`} aria-pressed={selected} onClick={() => selectSession(s.id)}>
-                        {selected ? "Selected" : "Select"}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {hidden > 0 && (
-              <button type="button" className="rt-cd__link rt-cd__more" onClick={() => setExpanded((v) => !v)}>
-                {expanded ? "Show fewer dates" : `Show more dates (${hidden})`}
-              </button>
-            )}
-          </>
+          <DateTiles rows={rows} mode={mode} session={session} selectSession={selectSession} expanded={expanded} setExpanded={setExpanded} />
         )}
       </div>
 
