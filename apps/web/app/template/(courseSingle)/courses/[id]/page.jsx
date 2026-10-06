@@ -7,7 +7,8 @@ import HomeHelp from "@/components/home/HomeHelp";
 import BookingProvider from "@/components/courseDetail/BookingProvider";
 import BookingCard from "@/components/courseDetail/BookingCard";
 import CourseHero from "@/components/courseDetail/CourseHero";
-import SectionNav from "@/components/courseDetail/SectionNav";
+import SlimBar from "@/components/courseDetail/SlimBar";
+import OptionsExtras from "@/components/courseDetail/OptionsExtras";
 import LearningOptions from "@/components/courseDetail/LearningOptions";
 import ModulesAccordion from "@/components/courseDetail/ModulesAccordion";
 import DatesSection from "@/components/courseDetail/DatesSection";
@@ -101,8 +102,6 @@ export default async function page(props) {
                 </aside>
 
                 <div className="rt-cd__content">
-                  <SectionNav sections={navSections} />
-
                   {course.features?.length > 0 && (
                     <section className="rt-cd__sec rt-cd__features" aria-labelledby="rt-cd-features-h">
                       <h2 id="rt-cd-features-h">Course features</h2>
@@ -113,6 +112,7 @@ export default async function page(props) {
                   )}
 
                   <LearningOptions />
+                  <OptionsExtras />
                   <DatesSection />
 
                   {article ? (
@@ -244,6 +244,7 @@ export default async function page(props) {
               </div>
             </div>
 
+            <SlimBar sections={navSections} />
             <MobileBuyBar />
           </BookingProvider>
         </main>

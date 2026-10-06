@@ -1,13 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import Stars from "./Stars";
 import { formatNumber, getSubjectLabel, getSubLabel } from "@/lib/courses";
 
 const CATALOGUE = "/template/courses-list-1";
 
 // Hero (same content as the Hurak course page, in our layout): breadcrumb, title, one-line summary, rating row with
-// students and provider count, and on the right the course image with the "Rated Excellent" proof.
+// students and provider count, and the "Rated Excellent" proof. The course image now lives in the booking card.
 export default function CourseHero({ course }) {
   const subject = getSubjectLabel(course);
   const sub = getSubLabel(course);
@@ -26,7 +25,7 @@ export default function CourseHero({ course }) {
       <div className="rt-cd__hero-top">
         <div className="rt-cd__hero-text">
           {course.badge && <p className="rt-cd__kicker"><span className="rt-cd__badge">{course.badge}</span></p>}
-          <h1 className="rt-cd__title">{course.title}</h1>
+          <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
           <p className="rt-cd__summary">{course.summary}</p>
 
           <p className="rt-cd__providers"><strong>{course.providerCount}</strong> course providers</p>
@@ -41,20 +40,13 @@ export default function CourseHero({ course }) {
           </div>
         </div>
 
-        {(course.imageSrc || excellent) && (
+        {excellent && (
           <div className="rt-cd__hero-side">
-            {course.imageSrc && (
-              <div className="rt-cd__hero-img">
-                <Image src={course.imageSrc} alt="" width={440} height={276} priority />
-              </div>
-            )}
-            {excellent && (
-              <div className="rt-cd__excellent">
-                <p>Rated <strong>Excellent</strong></p>
-                <Stars rating={5} size={20} />
-                <span>Based on {formatNumber(course.reviewCount)} ratings</span>
-              </div>
-            )}
+            <div className="rt-cd__excellent">
+              <p>Rated <strong>Excellent</strong></p>
+              <Stars rating={5} size={20} />
+              <span>Based on {formatNumber(course.reviewCount)} ratings</span>
+            </div>
           </div>
         )}
       </div>

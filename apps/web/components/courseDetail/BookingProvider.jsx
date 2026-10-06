@@ -35,6 +35,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   });
   const [city, setCity] = useState("");
   const [toast, setToast] = useState(null);
+  const [barOn, setBarOn] = useState(false); // true while the slim bar is showing (the card then collapses its image)
   const notify = useCallback((t) => setToast(typeof t === "string" ? { message: t } : t), []);
 
   const isInHouse = mode === "inhouse";
@@ -141,7 +142,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
 
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
-    status, inBasket, addToBasket, notify, cardButtonRef,
+    status, inBasket, addToBasket, notify, cardButtonRef, barOn, setBarOn,
   };
 
   return (

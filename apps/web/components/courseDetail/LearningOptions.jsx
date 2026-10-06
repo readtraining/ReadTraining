@@ -26,7 +26,7 @@ const BULLETS = {
 // Learning options: one card per way to learn this course (only the ones it offers) plus team training.
 // "See dates" switches the booking state to that option and scrolls to the study options.
 export default function LearningOptions() {
-  const { course, modes, setMode } = useBooking();
+  const { course, modes, mode, setMode } = useBooking();
 
   const fromFor = (mode) => {
     const list = course.sessions.filter((s) => s.mode === mode);
@@ -52,7 +52,7 @@ export default function LearningOptions() {
         {cards.map((c) => {
           const pct = savePercent(c.best.price, c.best.wasPrice);
           return (
-            <article key={c.key} className={`rt-cd__lo-card${course.popularMode === c.key ? " is-popular" : ""}`}>
+            <article key={c.key} className={`rt-cd__lo-card${course.popularMode === c.key ? " is-popular" : ""}${mode === c.key ? " is-selected" : ""}`}>
               {course.popularMode === c.key && <span className="rt-cd__lo-tag">Most popular</span>}
               <h3>{c.title}</h3>
               <ul>
@@ -69,7 +69,7 @@ export default function LearningOptions() {
           );
         })}
         {team && (
-          <article className="rt-cd__lo-card">
+          <article className={`rt-cd__lo-card${mode === "inhouse" ? " is-selected" : ""}`}>
             <h3>Team training solutions</h3>
             <ul>
               {BULLETS.inhouse.map((b) => <li key={b}><CardCheck /> {b}</li>)}

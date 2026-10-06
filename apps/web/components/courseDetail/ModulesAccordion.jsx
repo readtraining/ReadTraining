@@ -4,7 +4,7 @@ import React, { useState } from "react";
 
 // Course content: one <details> card per module, with Expand all / Collapse all.
 export default function ModulesAccordion({ modules }) {
-  const [open, setOpen] = useState(() => modules.map(() => false));
+  const [open, setOpen] = useState(() => modules.map((_, i) => i === 0));
   const allOpen = open.every(Boolean);
 
   return (
@@ -15,7 +15,7 @@ export default function ModulesAccordion({ modules }) {
           {allOpen ? "Collapse all sections" : "Expand all sections"}
         </button>
       </div>
-      <div className="rt-cd__mods">
+      <div className="rt-cd__mods rt-cd__mods--box">
         {modules.map((m, i) => (
           <details
             key={m.title}

@@ -2,14 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, useBooking } from "./BookingProvider";
 import { formatDateRange, formatPrice, savePercent } from "@/lib/courses";
-
-const Check = () => (
-  <svg className="rt-cd__check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12l5 5L20 7" />
-  </svg>
-);
 
 // Trust points come from course/site data only. An item with no data is not shown, and nothing is invented.
 export function trustItems(course) {
@@ -23,66 +18,98 @@ export function trustItems(course) {
   ].filter(Boolean).slice(0, 5);
 }
 
-// The booking card. Sticky on desktop (CSS), static under the hero on tablet and mobile.
+// The booking card: course image, the learning option rows (the selected one opens its price and date), one primary
+// button and one muted trust line. Everything else that used to be in the card now sits under the learning options.
+// Sticky on desktop (CSS). While the slim bar is showing, the image collapses so the card stays compact.
 export default function BookingCard() {
-  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef } = useBooking();
-  const save = isInHouse ? 0 : savePercent(session.price, session.wasPrice);
+  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn } = useBooking();
   const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
-  const trust = trustItems(course);
-  const extras = (course.extras || []).slice(0, 2);
+  const trustLine = trustItems(course).slice(0, 2).join(" · ");
 
+  const fromFor = (m) => {
+    const list = course.sessions.filter((s) => s.mode === m);
+    return list.length ? Math.min(...list.map((s) => s.price)) : null;
+  };
   const toDates = (e) => {
     e.preventDefault();
     document.getElementById("dates")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
-    <div className="rt-cd__card">
-      {!isInHouse && (
-        <>
-          <div className="rt-cd__price-row">
-            <span className="rt-cd__price">{formatPrice(session.price)}</span>
-            {session.wasPrice > session.price && (
-              <s className="rt-cd__was">
-                <span className="rt-cd__sr">was </span>
-                {formatPrice(session.wasPrice)}
-              </s>
-            )}
-            {save > 0 && <span className="rt-cd__save">{save}% off</span>}
-          </div>
-          <p className="rt-cd__per">All inc</p>
-        </>
+    <div className={`rt-cd__card${barOn ? " is-compact" : ""}`}>
+      {course.imageSrc && (
+        <div className="rt-cd__card-img">
+          <Image src={course.imageSrc} alt="" width={440} height={248} priority />
+        </div>
       )}
 
-      {modes.length > 1 && (
-        <fieldset className="rt-cd__field">
-          <legend className="rt-cd__label">How do you want to learn?</legend>
-          <div className="rt-cd__seg" style={{ gridTemplateColumns: `repeat(${modes.length}, minmax(0, 1fr))` }}>
-            {modes.map((m) => (
-              <label key={m} className={`rt-cd__seg-opt${mode === m ? " is-on" : ""}`}>
-                <input type="radio" name="rt-cd-mode" value={m} checked={mode === m} onChange={() => setMode(m)} />
-                <span>{MODE_LABEL[m]}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      )}
+      <div className="rt-cd__card-body">
+        {modes.length > 1 && (
+          <fieldset className="rt-cd__opts">
+            <legend className="rt-cd__label">How do you want to learn?</legend>
+            {modes.map((m) => {
+              const on = mode === m;
+              const from = m === "inhouse" ? null : fromFor(m);
+              return (
+                <div key={m} className={`rt-cd__opt${on ? " is-on" : ""}`}>
+                  <label className="rt-cd__opt-row">
+                    <input type="radio" name="rt-cd-mode" value={m} checked={on} onChange={() => setMode(m)} />
+                    <span className="rt-cd__opt-name">{MODE_LABEL[m]}</span>
+                    {from !== null && <span className="rt-cd__opt-from">From {formatPrice(from)}</span>}
+                  </label>
 
-      {isInHouse ? (
-        <>
-          <p className="rt-cd__inhouse" aria-live="polite">{IN_HOUSE_NOTE}</p>
-          <Link ref={cardButtonRef} href={QUOTE_HREF} className="rt-cd__btn">Get a quote</Link>
-        </>
-      ) : (
-        <>
-          <div className="rt-cd__session" aria-live="polite">
-            <div className="rt-cd__session-top">
-              <strong>{formatDateRange(session.date, session.endDate)}</strong>
+                  {on && (
+                    <div className="rt-cd__opt-detail" aria-live="polite">
+                      {isInHouse ? (
+                        <p className="rt-cd__inhouse">{IN_HOUSE_NOTE}</p>
+                      ) : (
+                        <>
+                          <div className="rt-cd__price-row">
+                            <span className="rt-cd__price">{formatPrice(session.price)}</span>
+                            {session.wasPrice > session.price && (
+                              <s className="rt-cd__was"><span className="rt-cd__sr">was </span>{formatPrice(session.wasPrice)}</s>
+                            )}
+                            {savePercent(session.price, session.wasPrice) > 0 && (
+                              <span className="rt-cd__save">{savePercent(session.price, session.wasPrice)}% off</span>
+                            )}
+                            <span className="rt-cd__per">All inc</span>
+                          </div>
+                          <div className="rt-cd__session-line">
+                            <span className="rt-cd__session-text"><strong>{formatDateRange(session.date, session.endDate)}</strong> {session.location}, {session.provider}</span>
+                            <a href="#dates" className="rt-cd__link" onClick={toDates}>Change</a>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </fieldset>
+        )}
+
+        {modes.length <= 1 && !isInHouse && (
+          <div className="rt-cd__opt-detail rt-cd__opt-detail--solo" aria-live="polite">
+            <div className="rt-cd__price-row">
+              <span className="rt-cd__price">{formatPrice(session.price)}</span>
+              {session.wasPrice > session.price && (
+                <s className="rt-cd__was"><span className="rt-cd__sr">was </span>{formatPrice(session.wasPrice)}</s>
+              )}
+              {savePercent(session.price, session.wasPrice) > 0 && (
+                <span className="rt-cd__save">{savePercent(session.price, session.wasPrice)}% off</span>
+              )}
+              <span className="rt-cd__per">All inc</span>
+            </div>
+            <div className="rt-cd__session-line">
+              <span className="rt-cd__session-text"><strong>{formatDateRange(session.date, session.endDate)}</strong> {session.location}, {session.provider}</span>
               <a href="#dates" className="rt-cd__link" onClick={toDates}>Change</a>
             </div>
-            <div className="rt-cd__session-sub">{session.location}, {session.provider}</div>
           </div>
+        )}
 
+        {isInHouse ? (
+          <Link ref={cardButtonRef} href={QUOTE_HREF} className="rt-cd__btn">Get a quote</Link>
+        ) : (
           <button
             ref={cardButtonRef}
             type="button"
@@ -93,41 +120,10 @@ export default function BookingCard() {
           >
             {label}
           </button>
+        )}
 
-          <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>
-        </>
-      )}
-
-      {trust.length > 0 && (
-        <ul className="rt-cd__included">
-          {trust.map((t) => (
-            <li key={t}><Check /> {t}</li>
-          ))}
-        </ul>
-      )}
-
-      <div className="rt-cd__staff">
-        <strong>Interested in staff training?</strong>
-        <p>Create an account to get exclusive discounts on group bookings.</p>
-        <Link href={QUOTE_HREF} className="rt-cd__link">Click for more info</Link>
+        {trustLine && <p className="rt-cd__trustline">{trustLine}</p>}
       </div>
-
-      {extras.length > 0 && (
-        <div className="rt-cd__extras">
-          <p className="rt-cd__extras-title">Prepare for your exams</p>
-          <ul>
-            {extras.map((x) => (
-              <li key={x.title}>
-                <span className="rt-cd__extras-main">
-                  <Link href={x.url} className="rt-cd__extras-link">{x.title}</Link>
-                  {x.note && <small>{x.note}</small>}
-                </span>
-                <span>{x.price > 0 ? formatPrice(x.price) : "Free"}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
