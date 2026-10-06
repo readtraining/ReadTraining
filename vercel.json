@@ -7,7 +7,7 @@
     "api": {
       "root": "apps/api",
       "framework": "express",
-      "entrypoint": "dist/index.mjs",
+      "entrypoint": "index.mjs",
       "buildCommand": "pnpm --filter \"@readtraining/api...\" run build"
     }
   },
