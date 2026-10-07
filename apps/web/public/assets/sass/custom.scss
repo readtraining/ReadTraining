@@ -3311,3 +3311,28 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* Trust icons are the supplied PNG images: same size for all four, their own colours (no mask, no theme colour). */
 .rt-cd img.rt-cd__ticon { display: block; width: 44px; height: 44px; max-width: none; object-fit: contain; background: none; -webkit-mask: none; mask: none; }
 @media (max-width: 1023px) { .rt-cd img.rt-cd__ticon { width: 40px; height: 40px; } }
+
+/* TRUST ROW, CENTRED: four equal columns in one row at every width; icon on top, then title, then description, all centred.
+   Items share three subgrid rows, so icons, titles and descriptions sit at the same heights across the four columns. */
+.rt-cd .rt-cd__trust { padding: 32px 24px; }
+.rt-cd .rt-cd__trust ul { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 24px; text-align: center; justify-items: center; }
+.rt-cd .rt-cd__trust li { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 10px; justify-items: center; align-items: start; width: 100%; padding: 0; text-align: center; }
+.rt-cd img.rt-cd__ticon { display: block; width: 44px; height: 44px; margin: 0 auto; object-fit: contain; }
+.rt-cd .rt-cd__trust h3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; text-align: center; text-wrap: balance; white-space: nowrap; }
+.rt-cd .rt-cd__trust p { width: 100%; max-width: 240px; margin: 0 auto; padding: 0; font-size: 14px; line-height: 20px; color: var(--cd-muted); text-align: center; text-wrap: balance; hyphens: none; overflow-wrap: break-word; }
+@media (max-width: 1023px) {
+  .rt-cd img.rt-cd__ticon { width: 40px; height: 40px; }
+  .rt-cd .rt-cd__trust h3 { font-size: 15px; white-space: normal; }
+  .rt-cd .rt-cd__trust p { font-size: 13px; line-height: 20px; }
+}
+@media (max-width: 640px) { .rt-cd .rt-cd__trust ul { column-gap: 16px; } }
+
+/* The four columns are only ~150px wide inside the content column, so titles like "Approved providers only" cannot stay on one line
+   without spilling over their neighbours (and pushing the icon off-centre). Titles wrap (balanced); the subgrid keeps every row aligned. */
+.rt-cd .rt-cd__trust li, .rt-cd .rt-cd__trust h3, .rt-cd .rt-cd__trust p { min-width: 0; }
+.rt-cd .rt-cd__trust h3 { white-space: normal; overflow-wrap: break-word; }
+
+/* "Get a quote" is a link: an older rule forces `a.rt-cd__btn { color: white !important }`, which left white text on a transparent hover.
+   Same hover as the other course buttons (and home): transparent fill, purple text and border. */
+a.rt-cd__btn:hover, .rt-cd a.rt-cd__btn:hover, .rt-bk a.rt-cd__btn:hover, .rt-cd__bar a.rt-cd__btn:hover { background: transparent !important; background-color: transparent !important; color: var(--color-purple-1) !important; border-color: var(--color-purple-1); }
+a.rt-cd__btn:focus-visible { color: var(--color-white) !important; }
