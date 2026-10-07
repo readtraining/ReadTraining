@@ -23,6 +23,7 @@ const CartToggle = ({ allClasses, parentClassess }) => {
           style={{ position: "relative" }}
           onClick={() => setActiveCart((pre) => !pre)}
           className={`${allClasses ? allClasses : ""}`}
+          aria-label={`Basket, ${isShop ? cartProducts.length : isEvents ? cartEvents.length : cartCourses.length} items`}
           data-el-toggle=".js-cart-toggle"
         >
           <i className="text-20 icon icon-basket"></i>

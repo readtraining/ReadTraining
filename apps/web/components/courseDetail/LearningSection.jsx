@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, useBooking } from "./BookingProvider";
+import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, quoteHref, useBooking } from "./BookingProvider";
 import { formatDateRange, formatPrice } from "@/lib/courses";
 import DatesDialog from "./DatesDialog";
 
@@ -70,13 +70,13 @@ export default function LearningSection() {
 
       <fieldset className="rt-lc__fs">
         <legend className="rt-cd__sr">How do you want to learn?</legend>
-        <div className="rt-lc" role="radiogroup" aria-label="How do you want to learn?" style={{ "--lc-cols": Math.min(modes.length, 3) }}>
+        <div className="rt-lc" role="radiogroup" aria-label="How do you want to learn?" style={{ "--lc-cols": 3 }}>
           {modes.map((m) => {
             const on = mode === m;
             const list = BULLETS[m] || [];
             const more = list.length - 2;
             return (
-              <label key={m} className={`rt-lc__card${on ? " is-selected" : ""}`}>
+              <label key={m} className={`rt-lc__card${on ? " is-selected" : ""}${m === "inhouse" && modes.length > 3 ? " is-team" : ""}`}>
                 <input type="radio" name="rt-lo-mode" value={m} checked={on} onChange={() => setMode(m)} />
                 <span className="rt-lc__top">
                   {course.popularMode === m ? <span className="rt-lc__badge">Most popular</span> : <span />}
@@ -117,8 +117,8 @@ export default function LearningSection() {
               {BULLETS.inhouse.map((b) => <li key={b}><Check /> <span>{b}</span></li>)}
             </ul>
             <div className="rt-lc__cta">
-              <Link href={QUOTE_HREF} className="rt-lc__quote-btn">Get a quote</Link>
-              <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>
+              <Link href={quoteHref(course)} className="rt-lc__quote-btn">Get a quote</Link>
+              <Link href={quoteHref(course)} className="rt-cd__team">Booking for a team? Get a group quote</Link>
             </div>
           </div>
         ) : mode === "ondemand" ? null : rows.length === 0 ? (

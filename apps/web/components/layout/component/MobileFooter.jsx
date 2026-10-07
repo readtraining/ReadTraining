@@ -20,30 +20,34 @@ export default function MobileFooter() {
         <div className="mobile-socials mt-10">
           <Link
             href="#"
+            aria-label="Facebook"
             className="d-flex items-center justify-center rounded-full size-40"
           >
-            <i className="fa fa-facebook"></i>
+            <i className="fa fa-facebook" aria-hidden="true"></i>
           </Link>
 
           <Link
             href="#"
+            aria-label="Twitter"
             className="d-flex items-center justify-center rounded-full size-40"
           >
-            <i className="fa fa-twitter"></i>
+            <i className="fa fa-twitter" aria-hidden="true"></i>
           </Link>
 
           <Link
             href="#"
+            aria-label="Instagram"
             className="d-flex items-center justify-center rounded-full size-40"
           >
-            <i className="fa fa-instagram"></i>
+            <i className="fa fa-instagram" aria-hidden="true"></i>
           </Link>
 
           <Link
             href="#"
+            aria-label="LinkedIn"
             className="d-flex items-center justify-center rounded-full size-40"
           >
-            <i className="fa fa-linkedin"></i>
+            <i className="fa fa-linkedin" aria-hidden="true"></i>
           </Link>
         </div>
       </div>

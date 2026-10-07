@@ -11,7 +11,8 @@ const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
 export const MODE_LABEL = { classroom: "Classroom", online: "Live online", ondemand: "On Demand", inhouse: "In-house" };
 export const IN_HOUSE_NOTE = "For groups of 6 or more at your workplace";
-export const QUOTE_HREF = "/template/contact-1";
+export const QUOTE_HREF = "/template/quote";
+export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.id}`;
 
 const BASKET_HREF = "/template/course-cart";
 
@@ -24,7 +25,8 @@ export default function BookingProvider({ course, initialMode, initialSession, c
 
   // Only the options this course offers. "inhouse" has no dated sessions: it leads to a quote instead.
   const modes = useMemo(() => [...["classroom", "online", "ondemand"].filter((m) => course.sessions.some((s) => s.mode === m)), ...(course.inHouse ? ["inhouse"] : [])], [course]);
-  const firstOf = useCallback((mode) => course.sessions.find((s) => s.mode === mode), [course]);
+  // The session shown first for a mode is its cheapest one (the earliest date wins a tie), so it matches the "From" price on the option cards and hero.
+  const firstOf = useCallback((mode) => course.sessions.filter((s) => s.mode === mode).reduce((best, s) => (!best || s.price < best.price ? s : best), null), [course]);
   // Default choice: the most popular option (cheapest as the fallback), and its first date.
   const defaultMode = useMemo(() => {
     const dated = modes.filter((m) => m !== "inhouse");
@@ -127,6 +129,17 @@ export default function BookingProvider({ course, initialMode, initialSession, c
     },
     [pathname],
   );
+
+  // A reload or shared link can carry ?dates=open while the pop-up is closed; drop it so the URL matches what is on screen.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("dates")) return;
+      params.delete("dates");
+      const qs = params.toString();
+      window.history.replaceState(window.history.state, "", `${pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
+    } catch {}
+  }, [pathname]);
 
   useEffect(() => {
     const onPop = () => {

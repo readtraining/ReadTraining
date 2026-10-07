@@ -18,16 +18,26 @@ import TrustBoxes from "@/components/courseDetail/TrustBoxes";
 import RelatedCourses from "@/components/courseDetail/RelatedCourses";
 import MobileBuyBar from "@/components/courseDetail/MobileBuyBar";
 import ArticleBlocks from "@/components/courseDetail/ArticleBlocks";
+import CourseFaqs from "@/components/courseDetail/CourseFaqs";
 import { getCourseBySlug, getRelatedCourses, getSubjectLabel } from "@/lib/courses";
+
+// Absolute URLs for the canonical link, social cards and structured data. Set NEXT_PUBLIC_SITE_URL in production.
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+const abs = (path) => (/^https?:/.test(path) ? path : `${SITE_URL}${path}`);
 
 export async function generateMetadata(props) {
   const { id } = await props.params;
   const course = getCourseBySlug(id);
   if (!course) return { title: "Course not found | ReadTraining" };
+  const path = `/template/courses/${course.slug || course.id}`;
+  const title = `${course.title} | ReadTraining`;
   return {
-    title: `${course.title} | ReadTraining`,
+    metadataBase: new URL(SITE_URL),
+    title,
     description: course.summary,
-    alternates: { canonical: `/template/courses/${course.id}` },
+    alternates: { canonical: path },
+    openGraph: { type: "website", siteName: "ReadTraining", title, description: course.summary, url: path, images: course.imageSrc ? [{ url: course.imageSrc, width: 440, height: 248, alt: course.title }] : undefined },
+    twitter: { card: "summary_large_image", title, description: course.summary },
   };
 }
 
@@ -49,7 +59,7 @@ export default async function page(props) {
   if (!course) notFound();
   const related = getRelatedCourses(course);
   const subject = getSubjectLabel(course);
-  const path = `/template/courses/${course.id}`;
+  const path = `/template/courses/${course.slug || course.id}`;
   const prices = course.sessions.map((s) => s.price);
   const { workAreas, requirements, exams, comparison, apply, article } = course;
 
@@ -76,17 +86,24 @@ export default async function page(props) {
     name: course.title,
     description: course.summary,
     provider: { "@type": "Organization", name: "ReadTraining" },
-    offers: { "@type": "Offer", priceCurrency: "GBP", price: Math.min(...prices).toFixed(2), availability: "https://schema.org/InStock", url: path },
+    url: abs(path),
+    offers: { "@type": "Offer", priceCurrency: "GBP", price: Math.min(...prices).toFixed(2), availability: "https://schema.org/InStock", url: abs(path) },
+    hasCourseInstance: course.sessions.slice(0, 20).map((x) => ({
+      "@type": "CourseInstance",
+      courseMode: x.mode === "classroom" ? "Onsite" : "Online",
+      ...(x.mode === "ondemand" ? {} : { startDate: x.date, endDate: x.endDate }),
+      ...(x.mode === "classroom" ? { location: { "@type": "Place", name: x.address, address: { "@type": "PostalAddress", addressLocality: x.city, postalCode: x.postcode, addressCountry: "GB" } } } : {}),
+    })),
     aggregateRating: { "@type": "AggregateRating", ratingValue: course.rating, reviewCount: course.reviewCount },
   };
   const crumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "/" },
-      { "@type": "ListItem", position: 2, name: "All courses", item: "/template/courses-list-1" },
-      ...(subject ? [{ "@type": "ListItem", position: 3, name: subject, item: `/template/courses-list-1?subject=${course.subject}` }] : []),
-      { "@type": "ListItem", position: subject ? 4 : 3, name: course.title, item: path },
+      { "@type": "ListItem", position: 1, name: "Home", item: abs("/") },
+      { "@type": "ListItem", position: 2, name: "All courses", item: abs("/template/courses-list-1") },
+      ...(subject ? [{ "@type": "ListItem", position: 3, name: subject, item: abs(`/template/courses-list-1?subject=${course.subject}`) }] : []),
+      { "@type": "ListItem", position: subject ? 4 : 3, name: course.title, item: abs(path) },
     ],
   };
   const faqLd = {
@@ -97,11 +114,12 @@ export default async function page(props) {
 
   return (
     <div className="main-content rt-home">
+      <a href="#rt-cd-main" className="rt-skip">Skip to main content</a>
       <Preloader />
       <HomeHeader />
       {/* No overflow-hidden on any ancestor of the sticky card and nav. */}
       <div className="content-wrapper js-content-wrapper">
-        <main id="rt-cd-main" className="rt-cd">
+        <main id="rt-cd-main" className="rt-cd" tabIndex={-1}>
           <BookingProvider course={course} initialMode={query.mode} initialSession={query.session}>
             <div className="rt-cd__wrap">
               <div className="rt-cd__grid">
@@ -244,17 +262,7 @@ export default async function page(props) {
 
                   <section className="rt-cd__sec" id="faqs" aria-labelledby="rt-cd-faqs-h">
                     <h2 id="rt-cd-faqs-h">Frequently asked questions</h2>
-                    <div className="rt-cd__faqs">
-                      {course.faqs.map((f) => (
-                        <details key={f.question} className="rt-cd__mod">
-                          <summary className="rt-cd__mod-sum">
-                            <span className="rt-cd__mod-title">{f.question}</span>
-                            <svg className="rt-cd__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-                          </summary>
-                          <p className="rt-cd__faq-a">{f.answer}</p>
-                        </details>
-                      ))}
-                    </div>
+                    <CourseFaqs faqs={course.faqs} />
                   </section>
 
                   <RelatedCourses courses={related} />

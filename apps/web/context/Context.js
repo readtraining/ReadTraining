@@ -4,7 +4,7 @@ import { coursesData } from "@/data/courses";
 import { events } from "@/data/events";
 import { productData } from "@/data/products";
 import React from "react";
-import { useContext ,useState } from "react";
+import { useContext ,useEffect ,useRef ,useState } from "react";
 const dataContext = React.createContext();
 export const useContextElement = () => {
 
@@ -16,6 +16,27 @@ export const useContextElement = () => {
   
     const [cartCourses, setCartCourses] = useState([])
     const [cartEvents, setCartEvents] = useState([])
+
+    // The basket survives a refresh: read it once after mount (so the server and first client render match), then save every change.
+    const CART_KEY = "rt-cart"
+    const cartLoaded = useRef(false)
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(window.localStorage.getItem(CART_KEY) || "null")
+            if (saved) {
+                if (Array.isArray(saved.courses)) setCartCourses(saved.courses)
+                if (Array.isArray(saved.products)) setCartProducts(saved.products)
+                if (Array.isArray(saved.events)) setCartEvents(saved.events)
+            }
+        } catch {}
+        cartLoaded.current = true
+    }, [])
+    useEffect(() => {
+        if (!cartLoaded.current) return
+        try {
+            window.localStorage.setItem(CART_KEY, JSON.stringify({ courses: cartCourses, products: cartProducts, events: cartEvents }))
+        } catch {}
+    }, [cartCourses, cartProducts, cartEvents])
     const addCourseToCart = (id, course)=>{
 
         if (!cartCourses.filter((elm)=>elm.id == id)[0]) {

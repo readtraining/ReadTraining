@@ -2132,7 +2132,7 @@ main#rt-cat-main { overflow: clip; }
    =================================================================================================== */
 .rt-cd, .rt-dd {
   --cd-brand: var(--color-purple-1);
-  --cd-brand-hover: var(--color-purple-4);
+  --cd-brand-hover: var(--color-purple-1);
   --cd-brand-subtle: var(--color-purple-3);
   --cd-text: var(--color-dark-1);
   --cd-muted: var(--color-light-1);
@@ -2140,8 +2140,8 @@ main#rt-cat-main { overflow: clip; }
   --cd-border-strong: var(--color-border-strong);
   --cd-surface: var(--color-white);
   --cd-band: var(--color-light-4);
-  --cd-success: var(--color-success);
-  --cd-success-bg: var(--color-green-3);
+  --cd-success: var(--color-green-1);
+  --cd-success-bg: var(--color-green-2);
   --cd-star: var(--color-yellow-3);
   --cd-star-off: var(--color-light-8);
   background: var(--cd-surface);
@@ -2168,6 +2168,8 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__hero { grid-area: hero; min-width: 0; padding: 24px 0 8px; }
 .rt-cd__aside { grid-area: aside; width: 360px; padding-top: 24px; position: sticky; top: calc(var(--header-offset, 0px) + 16px); align-self: start; }
 .rt-cd__content { grid-area: content; min-width: 0; }
+/* Room below the grid so the sticky booking card stops short of the Help section instead of touching it. */
+.rt-cd__grid { padding-bottom: 48px; }
 @media (max-width: 1023px) {
   .rt-cd__grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "aside" "content"; }
   .rt-cd__aside { position: static; width: 100%; max-width: 560px; padding-top: 16px; }
@@ -2951,7 +2953,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dt__city { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rt-dt__day { font-size: 22px; line-height: 1.1; font-weight: 700; color: var(--cd-text); }
 .rt-dt__price { margin-top: 6px; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
-.rt-dt__low { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 4px; background: #F0FDF4; color: var(--color-success); font-size: 11px; line-height: 16px; font-weight: 600; white-space: nowrap; text-transform: none; }
+.rt-dt__low { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 4px; background: var(--color-green-1); color: var(--color-dark-1); font-size: 11px; line-height: 16px; font-weight: 600; white-space: nowrap; text-transform: none; }
 .rt-dt__toggle { display: inline-block; margin-top: 12px; }
 .rt-dt__detail { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; box-sizing: border-box; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--cd-border-strong); border-radius: 0; background: var(--cd-surface); font-size: 14px; line-height: 20px; }
 .rt-dt__detail > svg { flex: none; color: var(--cd-brand); }
@@ -3058,6 +3060,12 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-fx li { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px 8px 12px; border: 1px solid var(--cd-border-strong); border-radius: 999px; background: var(--cd-surface); font-size: 14px; line-height: 20px; font-weight: 600; }
 .rt-fx li > svg { flex: none; color: var(--cd-brand); }
 .rt-fx li:hover { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+/* Four or more badges: keep them on one line, sharing the width equally; long text wraps inside its badge. */
+@media (min-width: 641px) {
+  .rt-fx:has(> li:nth-child(4)) { flex-wrap: nowrap; gap: 8px; }
+  .rt-fx:has(> li:nth-child(4)) li { flex: 1 1 0; min-width: 0; gap: 6px; padding: 8px 12px 8px 10px; border-radius: 14px; font-size: 13px; line-height: 18px; }
+  .rt-fx:has(> li:nth-child(4)) li > svg { width: 16px; height: 16px; }
+}
 
 /* CHECK LISTS: no shared grid rows, so a wrapped item never pushes its neighbour.
    Short lists (5 or fewer, and lists inside cards) are one column; the long "What you will learn" list uses CSS columns. */
@@ -3067,3 +3075,224 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-cd__checks.is-one li { margin-bottom: 10px; }
 @media (max-width: 639px) { .rt-cd__checks { columns: auto; } }
 .rt-lc__full--cols { display: flex; flex-direction: column; gap: 8px; }
+
+/* 2-COLUMN CHECK LISTS v2: side-by-side rows, equal row height, even spacing when an item wraps */
+.rt-cd__checks:not(.is-one) { display: grid; columns: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; column-gap: 32px; row-gap: 10px; align-items: start; list-style: none; margin: 0; padding: 0; }
+.rt-cd__checks:not(.is-one) li { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 14px; line-height: 20px; text-wrap: pretty; break-inside: auto; }
+.rt-cd__checks:not(.is-one) li svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+@media (max-width: 639px) { .rt-cd__checks:not(.is-one) { grid-template-columns: 1fr; grid-auto-rows: auto; } }
+
+/* 2-COLUMN CHECK LISTS v3: rows take their own height (no stretched empty rows), so the gap between rows is always 10px */
+.rt-cd__checks:not(.is-one) { grid-auto-rows: auto; row-gap: 10px; }
+.rt-cd__checks:not(.is-one) li { text-wrap: wrap; }
+
+/* ===================================================================================================
+   QA FIXES (course detail). Later rules, so they win over the earlier overrides above.
+   =================================================================================================== */
+/* Skip link: first tab stop, visible only while focused. */
+.rt-skip { position: absolute; left: -9999px; top: 8px; z-index: 1000; padding: 12px 16px; border-radius: 8px; background: var(--color-white); color: var(--color-dark-1); font-weight: 700; }
+.rt-skip:focus { left: 16px; outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
+#rt-cd-main:focus { outline: none; }
+
+/* Pinned booking card sits under the slim bar (never over it), with a 16px gap below the bar. */
+@media (min-width: 1024px) {
+  body.course-scrolled .rt-cd__aside { top: calc(72px + 16px); z-index: 3; }
+  .rt-cd__slim-in { padding-right: 24px; }
+}
+
+/* Team training card spans the full row when it would otherwise sit alone under three cards. */
+.rt-lc__card.is-team { grid-column: 1 / -1; }
+
+/* Links inside dialog text are underlined (they were told apart by colour only). */
+.rt-dd__addr a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* Header and top bar: readable contrast and a visible keyboard focus on the dark background. */
+.rt-utility__hours { color: rgba(255, 255, 255, 0.72); }
+.header button:focus-visible, .header a:focus-visible, .rt-utility a:focus-visible { outline: 2px solid var(--color-white); outline-offset: 2px; }
+
+/* Reviews dialog: ratings with no written review cannot be filtered; the count line explains how many are written. */
+.rt-cd__bars button:disabled { opacity: 0.5; cursor: not-allowed; }
+.rt-cd__bars button:disabled:hover { background: none; }
+.rt-cd__rcount { margin: 12px 0; color: var(--cd-muted); font-size: 14px; line-height: 20px; }
+
+/* Narrow phones: the buy bar's place line may wrap instead of being cut. */
+@media (max-width: 400px) { .rt-cd__bar-info span { white-space: normal; } }
+
+/* Group quote page (.rt-q) */
+.rt-q__wrap { box-sizing: border-box; width: 100%; max-width: 640px; margin: 0 auto; padding: 48px 24px 64px; }
+.rt-q__wrap h1 { margin: 0 0 12px; font-size: 32px; line-height: 40px; font-weight: 800; }
+.rt-q__lead { margin: 0 0 28px; color: var(--cd-text); }
+.rt-q__form { display: grid; gap: 20px; }
+.rt-q__field { display: grid; gap: 6px; }
+.rt-q__field label { font-weight: 700; font-size: 15px; }
+.rt-q__field input, .rt-q__field textarea { box-sizing: border-box; width: 100%; padding: 12px 14px; border: 1px solid var(--cd-border-strong); border-radius: 8px; background: var(--cd-surface); color: var(--cd-text); font: inherit; }
+.rt-q__field input[aria-invalid="true"], .rt-q__field textarea[aria-invalid="true"] { border-color: var(--color-error, #d92d20); }
+.rt-q__field small { color: var(--cd-muted); font-size: 13px; }
+.rt-q__err { margin: 0; color: var(--color-error, #b42318); font-size: 14px; line-height: 20px; }
+.rt-q__submit { width: 100%; margin-top: 4px; }
+.rt-q__done { padding: 32px 24px; border: 1px solid var(--cd-border); border-radius: 12px; background: var(--cd-band); }
+.rt-q__done h2 { margin: 0 0 8px; font-size: 24px; line-height: 32px; }
+.rt-q__done p { margin: 0 0 16px; }
+
+/* Course FAQs use the site accordion (.bz-acc); here it fills the content column instead of the centred 800px of the Business page. */
+.rt-cd .rt-cd__acc { max-width: none; margin: 0; }
+.rt-cd .rt-cd__acc .bz-acc__btn { font-size: 17px; }
+.rt-cd .rt-cd__acc .bz-acc__btn:focus-visible { outline: 2px solid var(--cd-brand); outline-offset: 4px; }
+
+/* Reviews: one full-width card per review (no two-column grid). Reviewer on the left, the review on the right, so the
+   line length stays readable and the space is used evenly. On phones the card stacks. */
+.rt-cd__reviews { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.rt-cd__review { display: grid; grid-template-columns: 240px minmax(0, 1fr); column-gap: 32px; align-items: start; }
+.rt-cd__review > .rt-cd__review-head { grid-column: 1; grid-row: 1 / span 3; align-items: flex-start; }
+.rt-cd__review > .rt-cd__review-head > div { display: grid; gap: 4px; min-width: 0; }
+.rt-cd__review > .rt-cd__review-head .rt-cd__org { justify-self: start; margin-left: 0; }
+.rt-cd__review > .rt-cd__review-title { grid-column: 2; margin: 0 0 6px; }
+.rt-cd__review > p { grid-column: 2; max-width: 72ch; }
+.rt-cd__review > .rt-cd__helpful { grid-column: 2; justify-self: start; margin-top: 12px; }
+.rt-cd__review > .rt-cd__review-title ~ p, .rt-cd__review > p:first-of-type { margin-top: 0; }
+@media (max-width: 640px) {
+  .rt-cd__review { grid-template-columns: minmax(0, 1fr); }
+  .rt-cd__review > .rt-cd__review-head, .rt-cd__review > .rt-cd__review-title, .rt-cd__review > p, .rt-cd__review > .rt-cd__helpful { grid-column: 1; grid-row: auto; }
+  .rt-cd__review > .rt-cd__review-head { align-items: center; margin-bottom: 12px; }
+  .rt-cd__review > .rt-cd__review-title { margin-top: 0; }
+}
+
+/* Reviews, compact: 16px card padding, reviewer name and tag on one line, "Helpful" on the title row at the right (32px high,
+   above the 24px minimum target size of WCAG 2.2 AA). Cards are about 100px high instead of 168px. */
+.rt-cd__review, .rt-cd__review:last-child { padding: 16px 20px; row-gap: 4px; grid-template-columns: 220px minmax(0, 1fr) auto; column-gap: 24px; align-items: start; }
+.rt-cd__reviews { gap: 8px; }
+.rt-cd__review > .rt-cd__review-head { grid-column: 1; grid-row: 1 / span 2; gap: 10px; }
+.rt-cd__avatar { width: 36px; height: 36px; font-size: 13px; }
+.rt-cd__review > .rt-cd__review-head > div { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.rt-cd__review > .rt-cd__review-head .rt-cd__review-meta { flex-basis: 100%; gap: 0 8px; font-size: 12px; line-height: 18px; }
+.rt-cd__review > .rt-cd__review-title { grid-column: 2; grid-row: 1; margin: 0; font-size: 16px; line-height: 24px; }
+.rt-cd__review > p { grid-column: 2 / span 2; grid-row: 2; font-size: 15px; line-height: 22px; }
+.rt-cd__review > .rt-cd__helpful { grid-column: 3; grid-row: 1; justify-self: end; min-height: 32px; margin: 0; padding: 0 12px; border-radius: 8px; font-size: 13px; line-height: 18px; }
+@media (max-width: 640px) {
+  .rt-cd__review, .rt-cd__review:last-child { grid-template-columns: minmax(0, 1fr) auto; padding: 14px 16px; column-gap: 12px; }
+  .rt-cd__review > .rt-cd__review-head { grid-column: 1 / -1; grid-row: 1; margin-bottom: 8px; }
+  .rt-cd__review > .rt-cd__review-title { grid-column: 1; grid-row: 2; }
+  .rt-cd__review > p { grid-column: 1 / -1; grid-row: 3; }
+  .rt-cd__review > .rt-cd__helpful { grid-column: 2; grid-row: 2; min-height: 36px; }
+}
+
+
+/* ===================================================================================================
+   COURSE DETAIL TYPOGRAPHY = HOME STYLE (DM Sans, weights, letter-spacing, 15px/1.7 body in --color-light-1, 15px buttons at 500).
+   Sizes are scaled for a content column: H1 36px, H2 28px, H3 18px (home's display sizes are 52px and 44px).
+   =================================================================================================== */
+.rt-cd #rt-cd-title, .rt-cd h1 { font-weight: 700; font-size: 36px; line-height: 1.12; letter-spacing: -0.025em; }
+.rt-cd .rt-cd__sec h2, .rt-cd .rt-cd__mod-head h2, .rt-cd__sec > h2 { font-weight: 700; font-size: 28px; line-height: 1.15; letter-spacing: -0.02em; }
+.rt-cd h3, .rt-cd .rt-cd__h3, .rt-cd .rt-lo__h { font-weight: 700; font-size: 18px; line-height: 1.3; letter-spacing: -0.01em; }
+.rt-cd__prose p, .rt-cd__sec > p, .rt-cd .rt-cd__list li, .rt-cd__checks li, .rt-cd .rt-clamp p, .rt-cd__review p, .bz-acc__inner p, .rt-cd__mod-topics li, .rt-cd__defs dd, .rt-cd__table td { font-size: 15px; line-height: 1.7; font-weight: 400; color: var(--color-light-1); }
+.rt-cd__btn, .rt-cd .rt-cd__btn, .rt-lc__quote-btn, .rt-ds__btn { font-size: 15px; font-weight: 500; letter-spacing: 0; }
+.rt-cd .rt-cd__acc .bz-acc__btn { font-size: 17px; font-weight: 600; }
+
+/* Course features: ONE line of badges. Badges that do not fit on the line are clipped away whole (the row is exactly one badge high),
+   so the row never wraps onto a second line. Text uses the same style as the body (15px, 500). */
+.rt-cd .rt-fx, .rt-cd .rt-fx:has(> li:nth-child(4)) { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; height: 42px; overflow: hidden; }
+.rt-cd .rt-fx li, .rt-cd .rt-fx:has(> li:nth-child(4)) li { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: 42px; min-height: 0; padding: 0 16px 0 12px; border: 1px solid var(--cd-border-strong); border-radius: 999px; background: var(--cd-surface); font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-dark-1); white-space: nowrap; }
+.rt-cd .rt-fx li > svg, .rt-cd .rt-fx:has(> li:nth-child(4)) li > svg { flex: none; width: 18px; height: 18px; color: var(--cd-brand); }
+.rt-cd .rt-fx li:hover { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+@media (max-width: 640px) { .rt-cd #rt-cd-title, .rt-cd h1 { font-size: 30px; } .rt-cd .rt-cd__sec h2, .rt-cd__sec > h2 { font-size: 24px; } }
+
+.rt-cd .rt-cd__fcard h2 { font-weight: 700; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 14px; }
+
+/* TRUST ROW: always four in one row. Items share three subgrid rows (icon, title, description), so a wrapped title or description
+   never moves its neighbours. Text is left aligned. At 640px and under the row swipes sideways instead of stacking. */
+.rt-cd .rt-cd__trust { padding: 32px 24px; border-top: 1px solid var(--cd-border); border-bottom: 1px solid var(--cd-border); }
+.rt-cd .rt-cd__trust ul { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto auto 1fr; column-gap: 32px; row-gap: 0; margin: 0; padding: 0; list-style: none; text-align: left; }
+.rt-cd .rt-cd__trust li { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 8px; align-items: start; min-width: 0; margin: 0; padding: 0; }
+.rt-cd__ticon { display: block; width: 44px; height: 44px; background-color: var(--cd-brand); -webkit-mask: var(--ticon) center / contain no-repeat; mask: var(--ticon) center / contain no-repeat; }
+.rt-cd .rt-cd__trust h3 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.3; letter-spacing: 0; text-wrap: balance; overflow-wrap: break-word; }
+.rt-cd .rt-cd__trust p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--cd-muted); text-wrap: pretty; overflow-wrap: break-word; }
+@media (max-width: 1023px) {
+  .rt-cd .rt-cd__trust ul { column-gap: 24px; }
+  .rt-cd__ticon { width: 40px; height: 40px; }
+  .rt-cd .rt-cd__trust h3 { font-size: 15px; }
+  .rt-cd .rt-cd__trust p { font-size: 13px; }
+}
+@media (max-width: 640px) {
+  .rt-cd .rt-cd__trust { padding: 32px 0; }
+  .rt-cd .rt-cd__trust ul { grid-template-columns: repeat(4, minmax(200px, 1fr)); column-gap: 16px; padding: 0 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .rt-cd .rt-cd__trust ul::-webkit-scrollbar { display: none; }
+  .rt-cd .rt-cd__trust li { scroll-snap-align: start; }
+}
+#reviews.rt-cd__sec { padding-bottom: 32px; }
+
+/* ===================================================================================================
+   COURSE BUTTONS = HOME BUTTONS (.button.-md.-purple-1 / .-outline-purple-1 in main.css): purple-1 fill with a 2px purple-1 border, 8px radius,
+   15px/500, 0.3s ease. Hover: the fill goes transparent and the text turns purple-1 (same as home). Outline buttons fill purple on hover.
+   =================================================================================================== */
+.rt-cd .rt-cd__btn, .rt-cd .rt-cd__btn--hero, .rt-cd__bar .rt-cd__btn, .rt-bk .rt-cd__btn, .rt-bs .rt-cd__btn {
+  box-sizing: border-box; border: 2px solid var(--color-purple-1); border-radius: 8px; background-color: var(--color-purple-1); color: var(--color-white);
+  font-size: 15px; font-weight: 500; letter-spacing: 0; text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+.rt-cd .rt-cd__btn:hover:not(:disabled), .rt-cd .rt-cd__btn--hero:hover:not(:disabled), .rt-cd__bar .rt-cd__btn:hover:not(:disabled), .rt-bk .rt-cd__btn:hover:not(:disabled), .rt-bs .rt-cd__btn:hover:not(:disabled) {
+  background: transparent; background-color: transparent; color: var(--color-purple-1);
+}
+.rt-cd .rt-cd__btn.is-added, .rt-cd .rt-cd__btn.is-added:hover { background: var(--cd-success); background-color: var(--cd-success); border-color: var(--cd-success); color: var(--color-dark-1); }
+.rt-cd .rt-cd__btn:focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
+.rt-cd .rt-cd__bar .rt-cd__btn { width: 160px; }
+
+.rt-cd .rt-ds__btn, .rt-cd .rt-lc__quote-btn, .rt-dd .rt-dd__select {
+  box-sizing: border-box; border: 2px solid var(--color-purple-1); border-radius: 8px; background-color: var(--color-white); color: var(--color-purple-1) !important;
+  font-size: 15px; font-weight: 500; transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+.rt-cd .rt-ds__btn:hover, .rt-cd .rt-lc__quote-btn:hover, .rt-dd .rt-dd__select:hover { background-color: var(--color-purple-1); color: var(--color-white) !important; }
+.rt-dd .rt-dd__select.is-on { background-color: var(--color-purple-1); color: var(--color-white) !important; }
+.rt-cd .rt-cd__btn--hero { height: 46px; padding: 0 26px; width: auto; }
+
+/* Colour rule for the course page: purple is always var(--color-purple-1) (#6440FB) and green is always var(--color-green-1) (#00FF84), as on home.
+   Ticks, success text and the "Added" button use that green; text sitting on the green fill is dark for contrast. */
+.rt-cd .rt-cd__btn.is-added, .rt-cd .rt-cd__btn.is-added:hover { background-color: var(--color-green-1); border-color: var(--color-green-1); color: var(--color-dark-1); }
+
+/* Reviews: text is limited to 2 lines; "More" / "Less" is a plain purple text button (no box). */
+.rt-cd__review > .rt-cd__rtext.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.rt-cd__review > .rt-cd__rmore { grid-column: 2 / span 2; grid-row: 3; justify-self: start; padding: 0; border: 0; background: none; color: var(--color-purple-1); font: inherit; font-size: 14px; font-weight: 500; line-height: 22px; cursor: pointer; }
+.rt-cd__review > .rt-cd__rmore:hover { text-decoration: underline; }
+.rt-cd__review > .rt-cd__rmore:focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; border-radius: 4px; }
+@media (max-width: 640px) { .rt-cd__review > .rt-cd__rmore { grid-column: 1 / -1; grid-row: 4; } }
+
+/* REVIEW CARDS, SAME SIZE EVERYWHERE: a long name, organisation, title or text can never change a card's height or width.
+   Name, organisation, title and date stay on one line each and end with "..."; the text is always 2 lines high; the More row is always
+   reserved. Only a card the reader opens with "More" grows. */
+.rt-cd__review > .rt-cd__review-head { min-width: 0; }
+.rt-cd__review > .rt-cd__review-head > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 2px; min-width: 0; width: 100%; }
+.rt-cd__review > .rt-cd__review-head strong { grid-column: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-cd__review > .rt-cd__review-head .rt-cd__org { grid-column: 2; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-cd__review > .rt-cd__review-head .rt-cd__review-meta { grid-column: 1 / -1; flex-wrap: nowrap; min-width: 0; white-space: nowrap; }
+.rt-cd__review-meta time { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-cd__review > .rt-cd__review-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-cd__review > .rt-cd__review-head { grid-row: 1 / span 3; }
+.rt-cd__review > .rt-cd__rtext { grid-row: 2; min-height: 44px; overflow-wrap: anywhere; }
+.rt-cd__review > .rt-cd__rmore { grid-row: 3; height: 22px; }
+.rt-cd__review > .rt-cd__rmore.is-spacer { visibility: hidden; }
+@media (max-width: 640px) {
+  .rt-cd__review > .rt-cd__review-head { grid-row: 1; }
+  .rt-cd__review > .rt-cd__review-title { grid-row: 2; }
+  .rt-cd__review > .rt-cd__helpful { grid-row: 2; }
+  .rt-cd__review > .rt-cd__rtext { grid-row: 3; grid-column: 1 / -1; }
+  .rt-cd__review > .rt-cd__rmore { grid-row: 4; grid-column: 1 / -1; }
+}
+
+/* Review meta: stars on one line, the full date on the next (always, so every card has the same number of lines). */
+.rt-cd__review > .rt-cd__review-head .rt-cd__review-meta { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.rt-cd__review-meta time { display: block; }
+.rt-cd__review, .rt-cd__review:last-child { row-gap: 2px; padding-bottom: 12px; }
+
+/* SLIM BAR: the page links sit at the right, ending exactly under the top bar's right-hand links ("List your courses").
+   The right padding equals the gap between the screen edge and the site container's inner edge (container widths 960 / 1140 / 1320). */
+@media (min-width: 1180px) {
+  .rt-cd .rt-cd__slim .rt-cd__slim-in { padding: 0 calc((100% - 960px) / 2 + 15px) 0 24px; }
+  .rt-cd .rt-cd__slim .rt-cd__slim-nav { margin: 0; }
+}
+@media (min-width: 1200px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-right: calc((100% - 1140px) / 2 + 15px); } }
+@media (min-width: 1400px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-right: calc((100% - 1320px) / 2 + 15px); } }
+
+/* SLIM BAR, left side: the title and rating start at the same inner edge of the site container as the top bar's phone number,
+   mirroring the links on the right, so the bar is symmetrical. */
+@media (min-width: 1180px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-left: calc((100% - 960px) / 2 + 15px); } }
+@media (min-width: 1200px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-left: calc((100% - 1140px) / 2 + 15px); } }
+@media (min-width: 1400px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-left: calc((100% - 1320px) / 2 + 15px); } }

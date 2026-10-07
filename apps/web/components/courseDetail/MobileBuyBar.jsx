@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { IN_HOUSE_NOTE, QUOTE_HREF, useBooking } from "./BookingProvider";
+import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
 import { formatPrice, formatShortDate } from "@/lib/courses";
 
 // Fixed bar at 1023px and under. It appears only once the booking card's button has scrolled out of view above the screen.
 // In-house follows the card: no price, and the button becomes "Get a quote".
 export default function MobileBuyBar() {
-  const { session, mode, isInHouse, status, addToBasket, cardButtonRef } = useBooking();
+  const { course, session, mode, isInHouse, status, addToBasket, cardButtonRef } = useBooking();
   const [visible, setVisible] = useState(false);
 
   // Visible once the card's button is fully above the top of the screen. A scroll check (rAF-throttled) is used instead of
@@ -44,7 +44,7 @@ export default function MobileBuyBar() {
             <strong>In-house training</strong>
             <span>{IN_HOUSE_NOTE}</span>
           </div>
-          <Link href={QUOTE_HREF} className="rt-cd__btn" tabIndex={visible ? 0 : -1}>Get a quote</Link>
+          <Link href={quoteHref(course)} className="rt-cd__btn" tabIndex={visible ? 0 : -1}>Get a quote</Link>
         </>
       ) : (
         <>

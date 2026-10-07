@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, useBooking } from "./BookingProvider";
+import { IN_HOUSE_NOTE, MODE_LABEL, quoteHref, useBooking } from "./BookingProvider";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { formatDateRange, formatPrice, savePercent } from "@/lib/courses";
 
@@ -21,6 +21,7 @@ const I = {
   tag: <><path d="M20 12l-8 8-9-9V3h8z" /><circle cx="7.5" cy="7.5" r="1.2" /></>,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
   team: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><path d="M16 4.7a3.5 3.5 0 0 1 0 6.6M18 14.4c2.2.7 3.5 2.6 3.5 5.6" /></>,
+  share: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></>,
   heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z" />,
 };
 const Icon = ({ name, size = 16, fill = "none" }) => (
@@ -82,6 +83,29 @@ function SaveButton() {
   );
 }
 
+// Share: the phone/OS share sheet where there is one, otherwise the link is copied. The shared link keeps the chosen option.
+function ShareButton() {
+  const { course, notify } = useBooking();
+  const share = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: course.title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      notify("Link copied");
+    } catch (e) {
+      if (e?.name !== "AbortError") notify("We could not share this course. Please copy the link from the address bar.");
+    }
+  };
+  return (
+    <button type="button" className="rt-bf__btn" aria-label="Share this course" title="Share" onClick={share}>
+      <Icon name="share" size={18} />
+    </button>
+  );
+}
+
 const QUOTE_TEXT = "Contact us for a quote";
 const IN_HOUSE_LINE = "In-house training is arranged on a date and at a place that suit your team. Choose Get a quote and we will confirm availability.";
 
@@ -123,7 +147,7 @@ export default function BookingCard() {
       {course.imageSrc && (
         <Fold hidden={compact} className="rt-bk__fold--img">
           <div className="rt-bk__img">
-            <Image src={course.imageSrc} alt="" width={440} height={248} priority />
+            <Image src={course.imageSrc} alt="" width={440} height={248} style={{ width: "100%", height: "100%" }} priority />
           </div>
         </Fold>
       )}
@@ -170,13 +194,13 @@ export default function BookingCard() {
           </ul>
 
           {isInHouse ? (
-            <p className="rt-bs__link"><Icon name="info" /><Link href={QUOTE_HREF} className="rt-cd__link">Booking for a team? Get a group quote</Link></p>
+            <p className="rt-bs__link"><Icon name="info" /><Link href={quoteHref(course)} className="rt-cd__link">Booking for a team? Get a group quote</Link></p>
           ) : !onDemand ? (
             <p className="rt-bs__link"><Icon name="info" /><button type="button" className="rt-cd__link rt-bs__change" onClick={openDates}>Change</button></p>
           ) : null}
 
           {isInHouse ? (
-            <Link ref={cardButtonRef} href={QUOTE_HREF} className="rt-cd__btn">Get a quote</Link>
+            <Link ref={cardButtonRef} href={quoteHref(course)} className="rt-cd__btn">Get a quote</Link>
           ) : (
             <button
               ref={cardButtonRef}
@@ -214,6 +238,7 @@ export default function BookingCard() {
       </fieldset>
 
       <div className="rt-bf">
+        <ShareButton />
         <SaveButton />
       </div>
     </div>

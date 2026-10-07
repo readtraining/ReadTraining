@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useBooking } from "./BookingProvider";
 import Stars from "./Stars";
 import { formatNumber } from "@/lib/courses";
@@ -8,6 +8,36 @@ import { formatNumber } from "@/lib/courses";
 const fmtDate = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "long", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
 const FIRST = 6;
 const keyOf = (r) => `${r.name}-${r.date}`;
+
+// Review text shows 2 lines; longer text gets a "More" text button that opens the whole review ("Less" closes it again).
+function ReviewBody({ text }) {
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  const ref = useRef(null);
+  const id = useId();
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => {
+      if (!open && el.clientHeight > 0) setLong(el.scrollHeight > el.clientHeight + 1);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, text]);
+  return (
+    <>
+      <p ref={ref} id={id} className={`rt-cd__rtext${open ? "" : " is-clamped"}`}>{text}</p>
+      {/* The row is always there (hidden when the text fits) so every card keeps the same height. */}
+      {long || open ? (
+        <button type="button" className="rt-cd__rmore" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>{open ? "Less" : "More"}</button>
+      ) : (
+        <span className="rt-cd__rmore is-spacer" aria-hidden="true">More</span>
+      )}
+    </>
+  );
+}
 
 function ReviewCard({ r, helpful, toggle }) {
   const on = Boolean(helpful[keyOf(r)]);
@@ -26,7 +56,7 @@ function ReviewCard({ r, helpful, toggle }) {
         </div>
       </div>
       {r.title && <h3 className="rt-cd__review-title">{r.title}</h3>}
-      {r.body && <p>{r.body}</p>}
+      {r.body && <ReviewBody text={r.body} />}
       {typeof r.helpfulCount === "number" && (
         <button type="button" className="rt-cd__helpful" aria-pressed={on} onClick={() => toggle(keyOf(r))}>
           Helpful ({r.helpfulCount + (on ? 1 : 0)})
@@ -59,6 +89,9 @@ export default function ReviewsSection() {
     return course.reviews.filter((r) => (!stars || r.rating === stars) && (!q || `${r.name} ${r.title || ""} ${r.body || ""}`.toLowerCase().includes(q)));
   }, [course.reviews, stars, query]);
 
+  // Only ratings that have at least one written review can be filtered on (the bars show every rating, written or not).
+  const written = useMemo(() => course.reviews.reduce((o, r) => ({ ...o, [r.rating]: (o[r.rating] || 0) + 1 }), {}), [course.reviews]);
+
   if (!course.reviews.length) return null;
   const summary = (
     <p className="rt-cd__rline">
@@ -90,7 +123,7 @@ export default function ReviewsSection() {
         <ul className="rt-cd__bars" aria-label="Filter by rating">
           {[5, 4, 3, 2, 1].map((n) => (
             <li key={n}>
-              <button type="button" aria-pressed={stars === n} onClick={() => setStars(stars === n ? 0 : n)}>
+              <button type="button" aria-pressed={stars === n} disabled={!written[n]} title={written[n] ? undefined : "No written reviews for this rating"} onClick={() => setStars(stars === n ? 0 : n)}>
                 <span>{n} star{n > 1 ? "s" : ""}</span>
                 <span className="rt-cd__bar-track"><span className="rt-cd__bar-fill" style={{ width: `${course.ratingBreakdown[n]}%` }} /></span>
                 <span className="rt-cd__bar-pct">{course.ratingBreakdown[n]}%</span>
@@ -100,6 +133,8 @@ export default function ReviewsSection() {
         </ul>
 
         <input type="search" className="rt-cd__input" placeholder="Search reviews" aria-label="Search reviews" value={query} onChange={(e) => setQuery(e.target.value)} />
+
+        <p className="rt-cd__rcount" aria-live="polite">Showing {filtered.length} written {filtered.length === 1 ? "review" : "reviews"} of {formatNumber(course.reviewCount)} ratings</p>
 
         {filtered.length === 0 ? (
           <p className="rt-cd__empty">No reviews match.</p>

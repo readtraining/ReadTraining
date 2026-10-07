@@ -18,7 +18,7 @@ export default function RelatedCourses({ courses }) {
             <li key={c.id}>
               <Link href={c.detailsHref} className="rt-cd__rel-card">
                 <span className="rt-cd__rel-img">
-                  {c.imageSrc ? <Image src={c.imageSrc} alt="" width={440} height={276} /> : null}
+                  {c.imageSrc ? <Image src={c.imageSrc} alt="" width={440} height={276} style={{ width: "100%", height: "100%" }} /> : null}
                 </span>
                 <span className="rt-cd__rel-main">
                   <span className="rt-cd__rel-title">{c.title}</span>
