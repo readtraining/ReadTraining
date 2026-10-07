@@ -3296,3 +3296,18 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 @media (min-width: 1180px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-left: calc((100% - 960px) / 2 + 15px); } }
 @media (min-width: 1200px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-left: calc((100% - 1140px) / 2 + 15px); } }
 @media (min-width: 1400px) { .rt-cd .rt-cd__slim .rt-cd__slim-in { padding-left: calc((100% - 1320px) / 2 + 15px); } }
+
+/* TRUST ROW TEXT: left aligned, same size and line spacing in every column, hyphenated (html lang="en-GB"), no padding or width limits. */
+.rt-cd .rt-cd__trust p { margin: 0; padding: 0; width: 100%; max-width: none; text-align: left; font-size: 14px; line-height: 22px; hyphens: auto; overflow-wrap: break-word; text-wrap: pretty; }
+.rt-cd .rt-cd__trust h3 { margin: 0; padding: 0; line-height: 1.3; text-wrap: pretty; text-align: left; }
+.rt-cd .rt-cd__trust li { padding: 0; row-gap: 8px; }
+@media (max-width: 1023px) {
+  .rt-cd .rt-cd__trust ul { column-gap: 24px; }
+  .rt-cd .rt-cd__trust h3 { font-size: 15px; }
+  .rt-cd .rt-cd__trust p { font-size: 13px; line-height: 20px; }
+}
+@media (max-width: 640px) { .rt-cd .rt-cd__trust ul { column-gap: 16px; } }
+
+/* Trust icons are the supplied PNG images: same size for all four, their own colours (no mask, no theme colour). */
+.rt-cd img.rt-cd__ticon { display: block; width: 44px; height: 44px; max-width: none; object-fit: contain; background: none; -webkit-mask: none; mask: none; }
+@media (max-width: 1023px) { .rt-cd img.rt-cd__ticon { width: 40px; height: 40px; } }

@@ -1,7 +1,7 @@
 import React from "react";
 
 // The four trust points shown on the live Hurak course page (site-wide facts, not course data).
-// Icons live in /public/assets/icons/trust and are painted with CSS masks, so they take the theme colour (currentColor).
+// Icons are PNG files in /public/assets/icons/trust (decorative: alt=""); they keep their own colours.
 const ITEMS = [
   { icon: "no-booking-fee", title: "No booking fee", text: "We provide our services without any additional charges." },
   { icon: "approved-providers", title: "Approved providers only", text: "All courses on our platform undergo thorough manual screening to ensure the utmost quality." },
@@ -15,7 +15,7 @@ export default function TrustBoxes() {
       <ul>
         {ITEMS.map((i) => (
           <li key={i.title}>
-            <span className="rt-cd__ticon" style={{ "--ticon": `url(/assets/icons/trust/${i.icon}.svg)` }} aria-hidden="true" />
+            <img className="rt-cd__ticon" src={`/assets/icons/trust/${i.icon}.png`} alt="" width={44} height={44} aria-hidden="true" />
             <h3>{i.title}</h3>
             <p>{i.text}</p>
           </li>

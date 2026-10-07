@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
     AOS.init({ duration: 700, offset: 120, easing: "ease-out", once: true });
   }, []);
   return (
-    <html lang="en">
+    <html lang="en-GB">
       <head></head>
       <body>
         <TRPCProvider>
