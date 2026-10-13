@@ -51,8 +51,9 @@ function SaveButton() {
     }
   };
   return (
-    <button type="button" className={`rt-icon-btn rt-bf__btn${saved ? " is-saved" : ""}`} aria-pressed={saved} aria-label={saved ? "Saved" : "Save"} title={saved ? "Saved" : "Save"} onClick={toggle}>
+    <button type="button" className={`rt-bf__save${saved ? " is-saved" : ""}`} aria-pressed={saved} onClick={toggle}>
       <Heart filled={saved} />
+      <span>{saved ? "Saved to your list" : "Save for later"}</span>
     </button>
   );
 }

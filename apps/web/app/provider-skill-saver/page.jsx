@@ -7,6 +7,7 @@ import StepsSection from "@/components/marketing/StepsSection";
 import FaqSection from "@/components/marketing/FaqSection";
 import CtaBand from "@/components/marketing/CtaBand";
 import SkillSaverHero from "@/components/skillSaver/SkillSaverHero";
+import SkillSaverListing from "@/components/skillSaver/SkillSaverListing";
 import SkillSaverLevels from "@/components/skillSaver/SkillSaverLevels";
 import SkillSaverFunding from "@/components/skillSaver/SkillSaverFunding";
 import SkillSaverResults from "@/components/skillSaver/SkillSaverResults";
@@ -36,7 +37,12 @@ export default function ProviderSkillSaverPage() {
       <HomeHeader />
       <div className="content-wrapper js-content-wrapper overflow-hidden">
         <main id="rt-ss-main" tabIndex={-1}>
-          <SkillSaverHero hero={skillSaver.hero} discounts={skillSaver.funding.example.discounts} />
+          <SkillSaverHero
+            hero={skillSaver.hero}
+            id="rt-ss-hero"
+            visual={<SkillSaverListing listing={skillSaver.hero.listing} discounts={skillSaver.funding.example.discounts} />}
+            float={{ title: "Discount applied", text: "Funded by ReadTraining" }}
+          />
           <StepsSection workflow={skillSaver.steps} />
           <SkillSaverLevels levels={skillSaver.levels} />
           <SkillSaverFunding funding={skillSaver.funding} />

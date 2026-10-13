@@ -39,7 +39,7 @@ export default function HomeSearchBand() {
                 <i className="icon-search text-16 text-light-1"></i>
                 <span className="rt-searchband__text">
                   <span className="rt-searchband__label">Course</span>
-                  <input id="band-course" value={course} onChange={(e) => setCourse(e.target.value)} placeholder="e.g. SIA Door Supervisor" required />
+                  <input id="band-course" value={course} onChange={(e) => setCourse(e.target.value)} placeholder="e.g. SIA Door Supervisor" />
                 </span>
               </label>
 

@@ -45,7 +45,7 @@ const CourseCart = () => {
 
       <div className="rt-mini__foot">
         {cartCourses.length > 0 && (
-          <div className="rt-mini__total"><span>Total</span><strong>{formatPrice(totals.total)}</strong></div>
+          <div className="rt-mini__total"><span>Subtotal</span><strong>{formatPrice(totals.total)}</strong></div>
         )}
         {cartCourses.length > 0 ? (
           <Link href={BASKET_HREF} className="button -md -purple-1 text-white">View basket<i className="icon-arrow-right text-13 ml-10" aria-hidden="true"></i></Link>

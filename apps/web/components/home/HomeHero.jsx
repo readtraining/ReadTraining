@@ -94,7 +94,7 @@ const HomeHero = () => {
                   <div className="text-13 fw-500 text-white lh-1">{hero.eyebrow}</div>
                 </div>
                 <h1 className="masthead__title">
-                  {title}
+                  {title}{" "}
                   <br />
                   {hero.titleLine2}{" "}
                   <span className="text-green-1 underline">

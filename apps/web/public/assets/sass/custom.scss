@@ -1565,7 +1565,7 @@
 .rt-cat-search > i { flex: none; font-size: 20px; color: #6b7280; }
 .rt-cat-search input { height: 44px; font-size: 15px; font-weight: 500; color: #111827; }
 .rt-cat-search input::placeholder { color: #9ca3af; font-weight: 400; }
-.rt-cat-search__btn { display: inline-flex; align-items: center; gap: 8px; flex: none; height: 44px; padding: 0 20px; border: 0; border-radius: 8px; background: #00d26a; color: #0a0426; font-size: 14.5px; font-weight: 700; cursor: pointer; transition: filter 0.15s ease, transform 0.1s ease; }
+.rt-cat-search__btn { display: inline-flex; align-items: center; gap: 8px; flex: none; height: 44px; padding: 0 20px; border: 0; border-radius: 8px; background: var(--color-purple-1); color: var(--color-white); /* the site's primary button colour, as home's search */ font-size: 14.5px; font-weight: 700; cursor: pointer; transition: filter 0.15s ease, transform 0.1s ease; }
 .rt-cat-search__btn i { font-size: 15px; }
 .rt-cat-search__btn:hover { filter: brightness(1.08); }
 .rt-cat-search__btn:active { transform: scale(0.98); }
@@ -2554,7 +2554,13 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 
 /* footer */
 
-.rt-bf__btn.is-saved { color: var(--cd-brand); }
+/* "Save for later" (the course's place on the account's saved list) at the foot of the booking card */
+.rt-bf__save { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 0; border-radius: 8px; background: none; font-size: 14px; font-weight: 600; color: var(--cd-text); cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease; }
+.rt-bf__save:hover { background: var(--color-light-4); }
+.rt-bf__save:active { transform: scale(0.98); }
+.rt-bf__save:focus-visible { outline: 3px solid var(--color-purple-1); outline-offset: 2px; }
+.rt-bf__save.is-saved { color: var(--cd-brand); }
+.rt-bf__save svg { flex: none; }
 @media (prefers-reduced-motion: reduce) { .rt-bs, .rt-br, .rt-icon-btn { transition: none; } .rt-bs.is-flash { background: transparent; } }
 
 /* ===================================================================================================
@@ -2567,7 +2573,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-bk__img { background: var(--color-light-3); border-radius: 0; aspect-ratio: 2 / 1; }
 .rt-bs__info { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
 .rt-bs__trust { display: grid; gap: 2px; margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
-.rt-bf { display: flex; align-items: center; justify-content: flex-end; gap: 4px; box-sizing: border-box; border-top: 1px solid var(--cd-border); background: var(--color-light-3); padding: 6px 14px; }
+.rt-bf { display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; border-top: 1px solid var(--cd-border); background: var(--color-white); padding: 6px 14px; }
 
 /* LEARNING OPTIONS: equal cards (design B) */
 .rt-lc__fs { margin: 0; padding: 0; border: 0; min-width: 0; }
@@ -3928,7 +3934,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-pcard { padding: 0; overflow: hidden; }
 .rt-pcard__cover { border-radius: 0; aspect-ratio: 16 / 8; }
 .rt-pcard__body { display: flex; flex: 1; flex-direction: column; padding: 0 24px 24px; }
-.rt-pcard .rt-plogo { margin-top: -32px; background: #fff; box-shadow: 0 4px 12px rgba(20, 3, 66, 0.10); }
+.rt-pcard .rt-plogo { position: relative; z-index: 2; margin-top: -32px; background: #fff; box-shadow: 0 4px 12px rgba(20, 3, 66, 0.10); }
 .rt-ucard__title.rt-pcard__name { margin: 16px 0 0; font-size: 18px; }
 .rt-pcard__meta { margin: 4px 0 0; font-size: 14px; }
 .rt-pcard__subjects { margin: 12px 0 0; font-size: 14px; line-height: 1.5; color: var(--color-light-1); }
@@ -5055,3 +5061,75 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-404__img img { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
 @media (max-width: 991px) { .rt-404__img img { max-width: 360px; } }
 /* end PAGE NOT FOUND */
+
+/* =====================================================================
+   SKILL SAVER FOR LEARNERS (/skill-saver, components/skillSaver/Saver*): the level cards, the learner's level frame (also the
+   hero's example) and the sign-in prompt. Builds on the provider page's .rt-ss__level* parts; site tokens only.
+   ===================================================================== */
+.rt-sv__status { width: 100%; max-width: 520px; margin: 0 auto; }
+.rt-sv__status .fb-frame__body { padding: 24px; }
+
+.rt-sv__ladder { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; }
+.rt-sv__ladder li { display: flex; flex-direction: column; gap: 2px; min-width: 0; list-style: none; }
+.rt-sv__stepBar { display: block; height: 6px; margin-bottom: 8px; border-radius: 999px; background: var(--color-light-5); }
+.rt-sv__ladder li.-done .rt-sv__stepBar, .rt-sv__ladder li.-current .rt-sv__stepBar { background: var(--color-purple-1); }
+.rt-sv__ladder b { font-size: 14px; color: var(--color-dark-1); }
+.rt-sv__ladder li.-current b { color: var(--color-purple-1); }
+.rt-sv__ladder span:not(.rt-sv__stepBar) { font-size: 13px; color: var(--color-light-1); }
+
+.rt-sv__next { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--color-light-5); }
+.rt-sv__nextText { margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: var(--color-light-1); }
+.rt-sv__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+
+.rt-sv__checking { margin: 0; padding: 72px 0; text-align: center; font-size: 15px; color: var(--color-light-1); }
+.rt-sv__out { padding: 12px 0 4px; text-align: center; }
+.rt-sv__outIcon { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 14px; background: var(--color-purple-3); color: var(--color-purple-1); }
+.rt-sv__outTitle { margin: 16px 0 0; font-size: 20px; font-weight: 700; color: var(--color-dark-1); }
+.rt-sv__outText { max-width: 380px; margin: 8px auto 0; font-size: 15px; line-height: 1.55; color: var(--color-light-1); }
+.rt-sv__out .rt-sv__actions { justify-content: center; }
+
+.rt-sv__levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 48px 0 0; padding: 0; list-style: none; }
+.rt-sv__card { display: flex; flex-direction: column; padding: 28px; list-style: none; border: 1px solid var(--color-light-5); border-radius: 16px; background: var(--color-white); }
+.rt-sv__card.-top { border-color: var(--color-purple-1); box-shadow: 0 0 0 1px var(--color-purple-1); }
+.rt-sv__cardHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 26px; }
+.rt-sv__cardOff { margin: 18px 0 24px; }
+.rt-sv__cardOff b { display: block; font-size: 48px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; color: var(--color-purple-1); }
+.rt-sv__cardOff span { display: block; font-size: 14px; color: var(--color-light-1); }
+.rt-sv__cardOff .rt-sv__cardUpTo { min-height: 21px; } /* kept on every card so the three discounts line up */
+.rt-sv__cardRule { display: flex; flex-direction: column; gap: 4px; margin-top: auto; padding-top: 18px; border-top: 1px solid var(--color-light-5); font-size: 16px; color: var(--color-dark-1); }
+.rt-sv__cardRuleLabel { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-light-1); }
+
+@media (max-width: 991px) { .rt-sv__levels { grid-template-columns: minmax(0, 1fr); max-width: 520px; margin-left: auto; margin-right: auto; } }
+@media (max-width: 575px) {
+  .rt-sv__status .fb-frame__body { padding: 16px; }
+  .rt-sv__card { padding: 22px; }
+  .rt-sv__cardOff b { font-size: 40px; }
+  .rt-sv__actions > .button { flex: 1 1 100%; }
+}
+/* end SKILL SAVER FOR LEARNERS */
+
+/* =====================================================================
+   SKILL SAVER BADGE AND DISCOUNT (components/skillSaver/SaverBadge.jsx, the basket and checkout sums): the badge on Skill Saver
+   courses (cards, course page, basket lines) and the basket's log-in line. Site tokens only.
+   ===================================================================== */
+.rt-sv-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--color-purple-3); color: var(--color-purple-1); font-size: 12px; font-weight: 600; line-height: 1.3; white-space: nowrap; text-decoration: none; }
+.rt-sv-badge i { font-size: 10px; }
+a.rt-sv-badge:hover { color: var(--color-purple-1); text-decoration: underline; }
+a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-offset: 2px; }
+/* over a course image (catalogue and home cards), top left; the save heart is top right */
+.rt-sv-badge.-onImage { position: absolute; top: 10px; left: 10px; z-index: 1; background: var(--color-white); box-shadow: var(--rt-shadow-heart, 0 2px 8px rgba(20, 3, 66, 0.16)); pointer-events: none; }
+.rt-ucard__image { position: relative; }
+.rt-cd__saver { margin-bottom: 12px; }
+/* on the course page's dark hero: as the pill eyebrow on dark (.rt-eyebrow--pill.-onDark) */
+.rt-cd__hero a.rt-sv-badge.rt-cd__saver { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.rt-cd__hero a.rt-sv-badge.rt-cd__saver i { color: var(--color-green-1); }
+.rt-cd__hero a.rt-sv-badge.rt-cd__saver:focus-visible { outline-color: var(--color-green-1); }
+.rt-bk__saverhint { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--color-light-4); font-size: 14px; line-height: 1.5; color: var(--color-dark-1); }
+.rt-bk__saverhint .rt-sv-badge { flex: none; }
+.rt-bk__saverhint a { font-weight: 600; color: var(--color-purple-1); text-decoration: underline; }
+/* end SKILL SAVER BADGE AND DISCOUNT */
+
+/* Footer newsletter (components/home/FooterNewsletter.jsx): the inline message and the thank-you, on the dark footer */
+.rt-footer__newsErr { margin: 8px 0 0 16px; font-size: 13px; color: #ffb4b4; }
+.rt-footer__newsDone { display: flex; align-items: center; gap: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.85); }
+.rt-footer__newsDone i { color: var(--color-green-1); }

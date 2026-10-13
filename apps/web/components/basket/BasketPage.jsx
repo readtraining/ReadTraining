@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useContextElement } from "@/context/Context";
 import { basket as copy } from "@/data/basket";
 import { basketIssues, basketTotals, isSelected, lineFor, lineKey, mergeLines, promoFor } from "@/lib/basket";
+import { useSkillSaver } from "@/lib/useSkillSaver";
 import { bookableModes, defaultMode, formatShortDate, getCourseBySlug } from "@/lib/courses";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
 import BasketSteps from "./BasketSteps";
@@ -85,7 +86,8 @@ export default function BasketPage({ recommended }) {
   };
 
   const chosen = cartCourses.filter(isSelected);
-  const totals = basketTotals(chosen, promo);
+  const saver = useSkillSaver(); // the signed-in learner's level; null signed out, undefined while checking
+  const totals = basketTotals(chosen, promo, saver || null);
   const issues = chosen.length ? basketIssues(chosen) : [copy.select.none];
   const allOn = chosen.length === cartCourses.length;
   const selectAll = (on) => setCartCourses((list) => list.map((i) => ({ ...i, selected: on })));
@@ -144,7 +146,7 @@ export default function BasketPage({ recommended }) {
                   <BasketLine key={lineKey(item)} item={item} onChange={(patch) => change(lineKey(item), patch)} onRemove={() => remove(item)} onDates={() => openDates(item)} />
                 ))}
               </div>
-              <BasketSummary totals={totals} issues={issues} promo={promo} onPromo={choosePromo} count={{ chosen: chosen.length, total: cartCourses.length }} />
+              <BasketSummary totals={totals} issues={issues} promo={promo} onPromo={choosePromo} count={{ chosen: chosen.length, total: cartCourses.length }} signedOut={saver === null} />
             </div>
           )}
         </div>

@@ -9,6 +9,8 @@ import { bookableModes, defaultMode, firstSession, formatShortDate, getCourseByS
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
+import SaverBadge from "@/components/skillSaver/SaverBadge";
+import { isSkillSaverCourse } from "@/lib/skillSaver";
 
 const gbp = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatPrice = (n) => gbp.format(Number(n) || 0); // always two decimals: £295.00
@@ -101,6 +103,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
             {thumb}
           </div>
         )}
+        {isSkillSaverCourse(course.id) && <SaverBadge className="-onImage" />}
         <button
           type="button"
           className={`rt-card__heart${wished ? " is-saved" : ""}`}

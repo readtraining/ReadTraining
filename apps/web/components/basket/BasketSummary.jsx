@@ -6,12 +6,20 @@ import { basket as copy } from "@/data/basket";
 import { promoFor } from "@/lib/basket";
 import { formatPrice } from "@/lib/format";
 import { IconCheck } from "@/components/marketing/parts";
+import SaverBadge from "@/components/skillSaver/SaverBadge";
+
+// The Skill Saver discount as a line of the sums (the basket and the checkout).
+export const SaverLine = ({ saver }) => (
+  <div className="-save"><dt>{copy.skillSaver.line.replace("{level}", saver.level).replace("{percent}", saver.percent)}</dt><dd>−{formatPrice(saver.amount)}</dd></div>
+);
 
 // The order summary: the sums, the promo code (hidden behind a link, so an empty box does not pull people away from paying),
 // the total, Proceed and what stops it, the instalments line and what the customer can rely on. Sticky beside the lines from
 // 992px. Proceed is a real link when the basket is ready; otherwise a disabled button with the reasons listed under it. The sums
 // are for the ticked courses only; `count` { chosen, total } says how many of the basket's courses this booking includes.
-export function BasketSummary({ totals, issues, promo, onPromo, count }) {
+// A signed-in learner's Skill Saver discount is its own line; signed out (`signedOut`) with a Skill Saver course ticked, a
+// line asks them to log in for it.
+export function BasketSummary({ totals, issues, promo, onPromo, count, signedOut }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -33,11 +41,18 @@ export function BasketSummary({ totals, issues, promo, onPromo, count }) {
       {count && count.chosen < count.total && <p className="rt-bk__sumnote">Booking {count.chosen} of {count.total} courses</p>}
       <dl className="rt-bk__sums">
         <div><dt>Subtotal ({totals.delegates} {totals.delegates === 1 ? "delegate" : "delegates"})</dt><dd>{formatPrice(totals.subtotal)}</dd></div>
+        {totals.skillSaver && <SaverLine saver={totals.skillSaver} />}
         {promo && (
           <div className="-promo"><dt>{promo.code} · {promo.label}<button type="button" onClick={() => onPromo(null)}>Remove<span className="rt-sr"> promo code</span></button></dt><dd>−{formatPrice(totals.discount)}</dd></div>
         )}
         {totals.saving > 0 && <div className="-save"><dt>You are saving</dt><dd>{formatPrice(totals.saving)}</dd></div>}
       </dl>
+      {signedOut && totals.saverEligible && (
+        <p className="rt-bk__saverhint">
+          <SaverBadge />
+          <span><Link href={copy.skillSaver.signIn.href}>{copy.skillSaver.signIn.link}</Link>{copy.skillSaver.signIn.after}</span>
+        </p>
+      )}
 
       {!promo && (
         <div className="rt-bk__promo">

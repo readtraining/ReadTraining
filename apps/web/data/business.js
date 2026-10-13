@@ -1,6 +1,6 @@
 // "For business" page content. Same functionality as the client's current site, our own copy and UI.
 const signup = { label: "Create a Business account", href: "/signup" };
-const demo = { label: "Book a demo", href: "/template/contact-1" };
+const demo = { label: "Book a demo", href: "/contact-us" };
 
 export const business = {
   hero: {
@@ -104,7 +104,7 @@ export const business = {
       { title: "For regular buyers", text: "Based on your history and training spend with us." },
       { title: "Purchase, then settle", text: "Buy within the limit. Pay on your agreed terms." },
     ],
-    cta: { label: "Ask about credit", href: "/template/contact-1" },
+    cta: { label: "Ask about credit", href: "/contact-us" },
     card: {
       label: "Business credit",
       company: "Harbour Facilities Ltd",

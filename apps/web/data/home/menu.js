@@ -97,7 +97,11 @@ export const subjects = [
       course("Level 4 Certificate in Leading the Internal Quality Assurance of Assessment Processes and Practice (Lead IQA Course)", "/course/level-4-award-leading-iqa-qualification"),
     ],
   },
-].map((s) => ({ ...s, href: "/courses", count: s.courses.length }));
+].map((s) => {
+  // the catalogue's own subject value (data/courseCatalogue.js), e.g. "teaching-and-academics"
+  const href = `/courses?subject=${s.label.toLowerCase().replace(/ & /g, "-and-").replace(/\s+/g, "-")}`;
+  return { ...s, href, count: s.courses.length, courses: s.courses.map((c) => ({ ...c, href })) };
+});
 
 // Licences & Cards menu, as the client's (hurak.com): the same four groups, names, order and guides. A group opens its main guide
 // (Security opens the hub filtered to SIA licences).

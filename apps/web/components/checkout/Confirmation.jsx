@@ -7,6 +7,7 @@ import { checkout as copy } from "@/data/checkout";
 import { ORDER_KEY, PAY_FAILED_KEY } from "@/lib/checkout";
 import { formatPrice } from "@/lib/format";
 import BasketSteps from "@/components/basket/BasketSteps";
+import { SaverLine } from "@/components/basket/BasketSummary";
 
 const readJson = (key) => {
   try {
@@ -118,6 +119,7 @@ export default function Confirmation() {
                   </li>
                 ))}
               </ul>
+              {order.skillSaver && <dl className="rt-bk__sums"><SaverLine saver={order.skillSaver} /></dl>}
               <div className="rt-bk__total">
                 <span>{order.method === "wallet" ? "Paid from your wallet" : order.method === "klarna" ? "Paid with Klarna" : "Paid by card"}{order.walletUsed > 0 && order.method !== "wallet" ? ` and ${formatPrice(order.walletUsed)} from your wallet` : ""}</span>
                 <strong>{formatPrice(order.total)}</strong>

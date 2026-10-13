@@ -1,4 +1,5 @@
 import { basket as copy } from "@/data/basket";
+import { isSkillSaverCourse } from "@/lib/skillSaver";
 
 // The basket's rules and sums, in one place: the basket page, the checkout and the header all read these. A line is a course
 // on one date (`sessionId`); `quantity` is its delegates; `selected` false leaves it out of this booking. Every way in adds a date;
@@ -81,13 +82,23 @@ export const promoFor = (code) => {
   return found ? { code: key, ...found } : null;
 };
 
-export function basketTotals(items, promo = null) {
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// The sums for some lines. `saver` is the signed-in learner's Skill Saver level (lib/useSkillSaver.js), or null: its discount
+// comes off each Skill Saver course's line total, then a promo code applies to what is left. `saverEligible` says whether any
+// line is a Skill Saver course (the basket asks signed-out visitors to log in for it). DEMO: once there is a backend the server
+// works out the Skill Saver discount and the price charged; the browser only shows them.
+export function basketTotals(items, promo = null, saver = null) {
   const parts = items.map(lineParts);
   const subtotal = parts.reduce((sum, p) => sum + p.total, 0);
   const saving = parts.reduce((sum, p) => sum + (p.was ? p.was - p.total : 0), 0);
-  const discount = promo ? Math.round(subtotal * promo.percent) / 100 : 0;
+  const saverEligible = items.some((item) => isSkillSaverCourse(item.id));
+  const saverAmount = saver ? round2(items.reduce((sum, item, i) => sum + (isSkillSaverCourse(item.id) ? (parts[i].total * saver.discount) / 100 : 0), 0)) : 0;
+  const skillSaver = saverAmount > 0 ? { level: saver.level, percent: saver.discount, amount: saverAmount } : null;
+  const afterSaver = round2(subtotal - saverAmount);
+  const discount = promo ? Math.round(afterSaver * promo.percent) / 100 : 0;
   const delegates = parts.reduce((sum, p) => sum + p.quantity, 0);
-  return { subtotal, saving, discount, total: subtotal - discount, delegates };
+  return { subtotal, saving, skillSaver, saverEligible, discount, total: round2(afterSaver - discount), delegates };
 }
 
 // Everything that stops the basket going to payment, one sentence each, naming the course.

@@ -1,4 +1,5 @@
 import { AUTH_ROUTES } from "@/lib/routes";
+import { SKILL_SAVER_LEVELS } from "@/lib/skillSaver";
 
 // Provider Skill Saver (/provider-skill-saver). The programme's rules come from the client's current site: the learner levels
 // and thresholds (hurak.com/provider-loyalty-page and /skill-saver), levels kept for life and cancelled courses not counting
@@ -7,6 +8,9 @@ import { AUTH_ROUTES } from "@/lib/routes";
 // gives them without a source) and the opt-out answer (the client's FAQ asks it but publishes no answer).
 
 const JOIN = { label: "Join Skill Saver", href: AUTH_ROUTES.signUp };
+// the levels' numbers come from lib/skillSaver.js, shared with the learner page (/skill-saver)
+const [L1, L2, L3] = SKILL_SAVER_LEVELS;
+const pct = (l) => `${l.discount}%`;
 
 export const skillSaver = {
   title: "Provider Skill Saver | ReadTraining for training providers",
@@ -46,13 +50,13 @@ export const skillSaver = {
     points: ["Only completed courses count towards a level", "Learners keep their level for life", "The discount is set by the level, not by you"],
     frame: "Skill Saver levels",
     items: [
-      { level: 1, discount: "10%", upTo: true, who: "Every learner with a ReadTraining account", note: "The starting level. Learners join it as soon as they sign in.", stats: [] },
+      { level: 1, discount: pct(L1), upTo: true, who: "Every learner with a ReadTraining account", note: "The starting level. Learners join it as soon as they sign in.", stats: [] },
       {
-        level: 2, discount: "15%", who: "Learners who have completed 3 courses in 1 year",
+        level: 2, discount: pct(L2), who: `Learners who have completed ${L2.courses} courses in ${L2.years} year`,
         stats: [{ label: "Less likely to cancel", value: 10 }, { label: "More likely to leave a review", value: 20 }],
       },
       {
-        level: 3, discount: "20%", who: "Learners who have completed 5 courses in 2 years", note: "The most likely to book a Skill Saver course.",
+        level: 3, discount: pct(L3), who: `Learners who have completed ${L3.courses} courses in ${L3.years} years`, note: "The most likely to book a Skill Saver course.",
         stats: [{ label: "Less likely to cancel", value: 25 }, { label: "More likely to leave a review", value: 40 }, { label: "More likely to share a good experience", value: 70 }],
       },
     ],
@@ -67,7 +71,7 @@ export const skillSaver = {
       { title: "Paid as usual", text: "Your payout is worked out on your full listed price and paid on the 28th." },
     ],
     cta: JOIN,
-    example: { label: "One booking, three learners", course: "Door Supervisor Course", price: 240, discounts: [10, 15, 20], note: "Standard marketplace fee and transaction charges apply as on any booking." },
+    example: { label: "One booking, three learners", course: "Door Supervisor Course", price: 240, discounts: SKILL_SAVER_LEVELS.map((l) => l.discount), note: "Standard marketplace fee and transaction charges apply as on any booking." },
   },
   results: {
     eyebrow: "Results",
@@ -85,8 +89,8 @@ export const skillSaver = {
     items: [
       { q: "How do I join Skill Saver?", a: "Select Join Skill Saver, then sign up or log in to your provider account. Once you have joined, your eligible courses carry the Skill Saver badge." },
       { q: "Who pays for the learner's discount?", a: "We do. ReadTraining funds Skill Saver discounts by reducing its own commission, so the price you list counts in full." },
-      { q: "Can I choose the amount my course is discounted by?", a: "No. The discount is set by the learner's level: up to 10% at Level 1, 15% at Level 2 and 20% at Level 3. It is applied automatically at checkout." },
-      { q: "How does a learner reach a higher level?", a: "By completing courses: 3 courses in 1 year for Level 2 and 5 courses in 2 years for Level 3. Cancelled courses do not count, and learners keep a level once they reach it." },
+      { q: "Can I choose the amount my course is discounted by?", a: `No. The discount is set by the learner's level: up to ${pct(L1)} at Level 1, ${pct(L2)} at Level 2 and ${pct(L3)} at Level 3. It is applied automatically at checkout.` },
+      { q: "How does a learner reach a higher level?", a: `By completing courses: ${L2.courses} courses in ${L2.years} year for Level 2 and ${L3.courses} courses in ${L3.years} years for Level 3. Cancelled courses do not count, and learners keep a level once they reach it.` },
       { q: "Can I opt out if I change my mind?", a: "Yes. Contact us and we will take the Skill Saver badge off your courses." },
     ],
   },

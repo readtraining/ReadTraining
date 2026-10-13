@@ -45,4 +45,9 @@ export const basket = {
     invalid: "That code is not valid.",
     codes: { READ10: { percent: 10, label: "10% off" } }, // demo code until there is a backend
   },
+  // Skill Saver (/skill-saver): the signed-in learner's level discount on Skill Saver courses, before any promo code
+  skillSaver: {
+    line: "Skill Saver Level {level} · {percent}% off",
+    signIn: { link: "Log in", after: " to get your Skill Saver discount on courses with the badge.", href: "/login?next=/basket" },
+  },
 };

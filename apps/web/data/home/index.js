@@ -73,15 +73,17 @@ const card = (id, category, title, method, slug, image, price, duration, provide
 });
 
 // Real course facts (price = lowest "all inclusive" price, duration, number of providers, certificate validity)
+// Home's course cards. The first argument is the course's catalogue id: the card opens that course's page and shows its
+// Skill Saver badge. A course not in the catalogue gets its own `href` instead.
 export const courses = [
   card(1, "Security & SIA", "SIA Door Supervisor Training", "Classroom", "/course/sia-door-supervisor-training", img(1), 198.99, "6 days", 46, "SIA licence-linked"),
-  card(2, "Security & SIA", "SIA CCTV Operator Training", "Classroom", "/course/sia-cctv-operator-training", img(2), 179.99, "3 days", 25, "SIA licence-linked"),
-  card(3, "Security & SIA", "SIA Door Supervisor Refresher", "Classroom", "/course/sia-top-up-refresher-training-door-supervisor", img(3), 99, "2 days", 30, "Renews SIA licence"),
-  card(4, "Security & SIA", "Security Guard Training", "Classroom", "/course/sia-top-up-refresher-training-security-guard", img(4), 89.99, "1 day", 23, "Renews SIA licence"),
+  card(3, "Security & SIA", "SIA CCTV Operator Training", "Classroom", "/course/sia-cctv-operator-training", img(2), 179.99, "3 days", 25, "SIA licence-linked"),
+  card(46, "Security & SIA", "SIA Door Supervisor Refresher", "Classroom", "/course/sia-top-up-refresher-training-door-supervisor", img(3), 99, "2 days", 30, "Renews SIA licence"),
+  card(2, "Security & SIA", "Security Guard Training", "Classroom", "/course/sia-top-up-refresher-training-security-guard", img(4), 89.99, "1 day", 23, "Renews SIA licence"),
   card(5, "First Aid & Health and Safety", "Emergency First Aid at Work", "Classroom", "/course/emergency-first-aid-at-work-training-1-day", img(5), 63.2, "1 day", 45, "Valid 3 years"),
   card(6, "First Aid & Health and Safety", "First Aid at Work (3-Day)", "Classroom", "/course/first-aid-at-work-training-3-days", img(6), 159.99, "3 days", 21, "Valid 3 years"),
-  card(7, "First Aid & Health and Safety", "Fire Marshal Training", "Classroom • Live online • Online self-paced", "/course/fire-marshal-fire-warden-online", img(7), 29.99, "2 to 3 hours", 12, "Valid 3 years"),
-  card(8, "First Aid & Health and Safety", "Safety Harness Training", "Classroom • Online self-paced", "/course/safety-harness-training", img(8), 24.99, "2 to 4 hours", 3, "Valid 3 years"),
+  card(16, "First Aid & Health and Safety", "Fire Marshal Training", "Classroom • Live online • Online self-paced", "/course/fire-marshal-fire-warden-online", img(7), 29.99, "2 to 3 hours", 12, "Valid 3 years"),
+  { ...card(108, "First Aid & Health and Safety", "Safety Harness Training", "Classroom • Online self-paced", "/course/safety-harness-training", img(8), 24.99, "2 to 4 hours", 3, "Valid 3 years"), href: "/courses?subject=health-and-safety" }, // not in the catalogue yet
   card(9, "Construction", "CSCS Green Card Course", "Classroom • Live online • Online self-paced", "/course/cscs-green-card-labourers-card-course", img(9), 89.99, "1 day", 10, "CSCS-approved route", 109.99),
   card(10, "Construction", "CITB SMSTS Course", "Classroom • Live online", "/course/citb-site-manager-safety-training-scheme-smsts", img(10), 449.99, "5 days", 12, "Valid 5 years"),
   card(11, "Construction", "CITB SSSTS Refresher Course", "Classroom • Live online", "/course/citb-site-supervisor-safety-training-scheme-sssts-online-refresher", img(11), 192, "1 day", 12, "CITB Site Safety Plus"),
@@ -334,6 +336,7 @@ export const footer = {
       title: "For providers",
       links: [
         { href: "/for-providers", label: "List Your Course" },
+        { href: "/skill-saver", label: "Skill Saver Programme" },
         { href: "/provider-skill-saver", label: "Provider Skill Saver" },
         { href: "/certificate-checker", label: "Verify Certificate" },
         { href: "/providers", label: "Listed Training Providers" },

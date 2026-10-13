@@ -3,6 +3,7 @@ import { checkout as copy } from "@/data/checkout";
 import { lineParts, modeLabel } from "@/lib/basket";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { IconCheck } from "@/components/marketing/parts";
+import { SaverLine } from "@/components/basket/BasketSummary";
 
 // Phones and tablets: the same courses and total in a fold at the top of the form (as the large checkouts do), so what is being
 // paid for is in view before the details are filled in; the full summary card follows the form.
@@ -53,6 +54,7 @@ export default function CheckoutSummary({ lines, totals, promo, walletUse = 0, p
       </ul>
       <dl className="rt-bk__sums">
         <div><dt>Subtotal</dt><dd>{formatPrice(totals.subtotal)}</dd></div>
+        {totals.skillSaver && <SaverLine saver={totals.skillSaver} />}
         {promo && <div className="-promo"><dt>{promo.code} · {promo.label}</dt><dd>−{formatPrice(totals.discount)}</dd></div>}
         {totals.saving > 0 && <div className="-save"><dt>You are saving</dt><dd>{formatPrice(totals.saving)}</dd></div>}
         {walletUse > 0 && <div className="-promo"><dt>Wallet credit</dt><dd>−{formatPrice(walletUse)}</dd></div>}

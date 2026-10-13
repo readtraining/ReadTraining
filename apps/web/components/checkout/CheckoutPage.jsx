@@ -12,6 +12,7 @@ import { ORDER_KEY, PAY_FAILED_KEY, placeOrder, validCardNumber, validExpiry, va
 import { formatDateRange, formatPrice } from "@/lib/format";
 import BasketSteps from "@/components/basket/BasketSteps";
 import CheckoutSummary, { CheckoutMiniSummary } from "./CheckoutSummary";
+import { useSkillSaver } from "@/lib/useSkillSaver";
 import { focusFirstError } from "@/lib/focusFirstError";
 
 const FORM_ID = "rt-ck-form";
@@ -88,7 +89,8 @@ export default function CheckoutPage() {
   }, [errors]);
 
   const lines = useMemo(() => cartCourses.filter(isSelected), [cartCourses]);
-  const totals = basketTotals(lines, promo);
+  const saver = useSkillSaver(); // the signed-in learner's Skill Saver level, for its discount
+  const totals = basketTotals(lines, promo, saver || null);
   // wallet credit (the account's Wallet), if ticked: it pays for all or part of the order; the rest is paid by card or Klarna
   const walletUse = useWallet ? Math.min(walletBalance, totals.total) : 0;
   const payable = Math.round((totals.total - walletUse) * 100) / 100;
@@ -136,6 +138,7 @@ export default function CheckoutPage() {
         company: values.type === "business" ? values.company.trim() : "",
         method,
         walletUsed,
+        skillSaver: totals.skillSaver,
         total: totals.total,
         lines: lines.map((item) => ({
           title: item.title,

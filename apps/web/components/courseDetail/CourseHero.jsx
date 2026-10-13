@@ -1,6 +1,8 @@
 import React from "react";
 import Link from "next/link";
 import BookNow from "./BookNow";
+import SaverBadge from "@/components/skillSaver/SaverBadge";
+import { isSkillSaverCourse } from "@/lib/skillSaver";
 import { formatPrice, getSubjectLabel, getSubLabel, savePercent } from "@/lib/courses";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
@@ -25,6 +27,7 @@ export default function CourseHero({ course }) {
           </ol>
         </nav>
 
+        {isSkillSaverCourse(course.id) && <SaverBadge href="/skill-saver" className="rt-cd__saver" />}
         <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
 

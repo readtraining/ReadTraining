@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 // Runs before the account pages and the log in / sign up pages (Next.js 16 calls this file "proxy", formerly "middleware"). It
 // refreshes the Supabase session cookies, sends signed-out visitors of /account and /business to log in (and back afterwards
 // via ?next=), and sends signed-in visitors of /login and /signup to their account. The pages still check on their own.
+// /skill-saver only needs the fresh session: the page reads it on the server to show the right buttons and level.
 const PROTECTED = ["/account", "/business"];
 const GUEST_ONLY = ["/login", "/signup"];
 
@@ -39,5 +40,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/account/:path*", "/business/:path*", "/login", "/signup"],
+  matcher: ["/account/:path*", "/business/:path*", "/login", "/signup", "/skill-saver"],
 };

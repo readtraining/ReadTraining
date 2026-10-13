@@ -1,6 +1,6 @@
 "use client";
 
-import MobileFooter from "@/components/layout/component/MobileFooter";
+import { footer, topBar } from "@/data/home";
 
 import { homeMenuList as menuList } from "@/data/home/menu";
 
@@ -165,9 +165,18 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
           </div>
         )}
 
-        {/* mobile footer start */}
-        <MobileFooter />
-        {/* mobile footer end */}
+        {/* our contact details (the template's MobileFooter had its demo company's) */}
+        <div className="mobile-footer px-20 py-20 border-top-light">
+          <div className="mobile-footer__number">
+            <div className="text-17 fw-500 text-dark-1">Call us</div>
+            <a href={`tel:${topBar.phone.replace(/\s/g, "")}`} className="text-17 fw-500 text-purple-1">{topBar.phone}</a>
+          </div>
+          <div className="lh-2 mt-10">
+            <div>{topBar.hours}</div>
+            <div>{footer.address}</div>
+            <a href={`mailto:${topBar.email}`}>{topBar.email}</a>
+          </div>
+        </div>
       </div>
 
       <div
