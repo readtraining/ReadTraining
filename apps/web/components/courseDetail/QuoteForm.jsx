@@ -55,14 +55,14 @@ export default function QuoteForm({ courseTitle, backHref }) {
   }
 
   const field = (name, label, props = {}, hint) => (
-    <div className="rt-q__field">
+    <div className="rt-field">
       <label htmlFor={`rt-q-${name}`}>{label}</label>
       {props.as === "textarea" ? (
         <textarea id={`rt-q-${name}`} name={name} rows={5} value={values[name]} onChange={set(name)} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `rt-q-${name}-e` : undefined} />
       ) : (
         <input id={`rt-q-${name}`} name={name} value={values[name]} onChange={set(name)} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `rt-q-${name}-e` : undefined} {...props} />
       )}
-      {hint && !errors[name] && <small>{hint}</small>}
+      {hint && !errors[name] && <small className="rt-field__hint">{hint}</small>}
       {errors[name] && <p className="rt-q__err" id={`rt-q-${name}-e`}>{errors[name]}</p>}
     </div>
   );
@@ -75,7 +75,7 @@ export default function QuoteForm({ courseTitle, backHref }) {
       {field("people", "How many people need training?", { type: "number", min: 1, inputMode: "numeric" }, "Group quotes start at 6 people.")}
       {field("message", "Anything else we should know? (optional)", { as: "textarea" })}
       {status === "error" && <p className="rt-q__err" role="alert">We could not send your request. Please try again.</p>}
-      <button type="submit" className="rt-cd__btn rt-q__submit" disabled={status === "sending"} aria-busy={status === "sending"}>
+      <button type="submit" className="button -md -purple-1 text-white rt-btn-block rt-q__submit" disabled={status === "sending"} aria-busy={status === "sending"}>
         {status === "sending" ? "Sending" : "Get my quote"}
       </button>
     </form>

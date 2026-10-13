@@ -5,6 +5,7 @@ import MobileFooter from "@/components/layout/component/MobileFooter";
 import { homeMenuList as menuList } from "@/data/home/menu";
 
 import Link from "next/link";
+import HeaderAuth from "./HeaderAuth";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -45,22 +46,7 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
         <div className="mobile-bg js-mobile-bg"></div>
 
         <div className="d-none xl:d-flex items-center px-20 py-20 border-bottom-light">
-          <Link
-            href="/template/login"
-            className={`text-dark-1 ${
-              pathname == "/template/login" ? "activeMenu" : "inActiveMenu"
-            } `}
-          >
-            Log in
-          </Link>
-          <Link
-            href="/template/signup"
-            className={`text-dark-1 ml-30 ${
-              pathname == "/template/signup" ? "activeMenu" : "inActiveMenu"
-            } `}
-          >
-            Sign Up
-          </Link>
+          <HeaderAuth mobile pathname={pathname} />
         </div>
 
         {showMenu && activeMobileMenu && (

@@ -160,6 +160,15 @@ export default function SignUpFormv2() {
           Book courses and track your training in one place.
         </p>
 
+        {status === "sent" ? (
+          <div role="status" className="text-center pt-20">
+            <h2 className="text-20 lh-13 fw-700 text-dark-1">Check your email</h2>
+            <p className="text-15 mt-10" style={{ overflowWrap: "anywhere" }}>
+              We&apos;ve sent a link to <span className="fw-500 text-dark-1">{values.email.trim()}</span>. Open it to confirm your email and
+              start using your account. If you don&apos;t see it, check your spam or junk folder.
+            </p>
+          </div>
+        ) : (
         <form className="contact-form pt-15" onSubmit={handleSubmit} noValidate>
           {status === "success" && (
             <div
@@ -167,7 +176,7 @@ export default function SignUpFormv2() {
               className="text-14 rounded-8 px-15 py-10 mb-12"
               style={{ background: "#E6F8EE", color: "#0B7A43" }}
             >
-              Your account has been created. Taking you to the home page…
+              Your account has been created. Taking you to your account…
             </div>
           )}
           {formError && (
@@ -300,6 +309,7 @@ export default function SignUpFormv2() {
             {SIGNUP_BUTTON_LABELS[status]}
           </button>
         </form>
+        )}
 
         <div className="text-14 text-center mt-20 mb-15 d-flex items-center x-gap-15">
           <span style={{ flex: 1, borderTop: "1px solid #DDDDDD" }} />

@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
+import { TEAM } from "@/lib/teamTraining";
 import { formatPrice, formatShortDate } from "@/lib/courses";
 
-// Fixed bar at 1023px and under. It appears only once the booking card's button has scrolled out of view above the screen.
+// Fixed bar at 991px and under. It appears only once the booking card's button has scrolled out of view above the screen.
 // In-house follows the card: no price, and the button becomes "Get a quote".
 export default function MobileBuyBar() {
   const { course, session, mode, isInHouse, status, addToBasket, cardButtonRef } = useBooking();
@@ -41,10 +42,10 @@ export default function MobileBuyBar() {
       {isInHouse ? (
         <>
           <div className="rt-cd__bar-info">
-            <strong>In-house training</strong>
+            <strong>{TEAM.barTitle}</strong>
             <span>{IN_HOUSE_NOTE}</span>
           </div>
-          <Link href={quoteHref(course)} className="rt-cd__btn" tabIndex={visible ? 0 : -1}>Get a quote</Link>
+          <Link href={quoteHref(course)} className="button -md -purple-1 text-white rt-bar__btn" tabIndex={visible ? 0 : -1}>{TEAM.cta}</Link>
         </>
       ) : (
         <>
@@ -52,7 +53,7 @@ export default function MobileBuyBar() {
             <strong>{formatPrice(session.price)}</strong>
             <span>{mode === "ondemand" ? session.time : formatShortDate(session.date)}, {session.location}</span>
           </div>
-          <button type="button" className={`rt-cd__btn${status === "added" ? " is-added" : ""}`} onClick={addToBasket} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
+          <button type="button" className={`button -md -purple-1 text-white rt-bar__btn${status === "added" ? " is-added" : ""}`} onClick={addToBasket} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
             {label}
           </button>
         </>

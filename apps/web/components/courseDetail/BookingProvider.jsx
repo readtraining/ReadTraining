@@ -5,16 +5,16 @@ import { usePathname } from "next/navigation";
 import { useContextElement } from "@/context/Context";
 import Toast from "@/components/courses/Toast";
 import { toItem, trackEvent } from "@/lib/analytics";
-import { formatShortDate } from "@/lib/courses";
+import { bookableModes, defaultMode as defaultModeOf, firstSession, formatShortDate } from "@/lib/courses";
+import { lineFor } from "@/lib/basket";
+import { TEAM } from "@/lib/teamTraining";
+import { BASKET_HREF, QUOTE_HREF } from "@/lib/routes";
 
 const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
 export const MODE_LABEL = { classroom: "Classroom", online: "Live online", ondemand: "On Demand", inhouse: "In-house" };
-export const IN_HOUSE_NOTE = "For groups of 6 or more at your workplace";
-export const QUOTE_HREF = "/template/quote";
+export const IN_HOUSE_NOTE = TEAM.note;
 export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.id}`;
-
-const BASKET_HREF = "/template/course-cart";
 
 // Shared booking state for the whole detail page: delivery mode, location filter and the selected session.
 // BookingCard, DatesSection and MobileBuyBar all read this one source. It is mirrored to the URL (?mode=&session=)
@@ -24,16 +24,10 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
 
   // Only the options this course offers. "inhouse" has no dated sessions: it leads to a quote instead.
-  const modes = useMemo(() => [...["classroom", "online", "ondemand"].filter((m) => course.sessions.some((s) => s.mode === m)), ...(course.inHouse ? ["inhouse"] : [])], [course]);
-  // The session shown first for a mode is its cheapest one (the earliest date wins a tie), so it matches the "From" price on the option cards and hero.
-  const firstOf = useCallback((mode) => course.sessions.filter((s) => s.mode === mode).reduce((best, s) => (!best || s.price < best.price ? s : best), null), [course]);
-  // Default choice: the most popular option (cheapest as the fallback), and its first date.
-  const defaultMode = useMemo(() => {
-    const dated = modes.filter((m) => m !== "inhouse");
-    if (dated.includes(course.popularMode)) return course.popularMode;
-    const cheapest = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
-    return [...dated].sort((a, b) => cheapest(a) - cheapest(b))[0];
-  }, [modes, course]);
+  const modes = useMemo(() => [...bookableModes(course), ...(course.inHouse ? ["inhouse"] : [])], [course]);
+  // The first session of a mode and the default mode follow the shared rules in lib/courses.js (cheapest, most popular).
+  const firstOf = useCallback((mode) => firstSession(course, mode), [course]);
+  const defaultMode = useMemo(() => defaultModeOf(course), [course]);
 
   // Initial state comes from the URL; invalid values fall back to the first session of the default mode.
   const [mode, setModeState] = useState(() => (modes.includes(initialMode) ? initialMode : defaultMode));
@@ -154,20 +148,13 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
-  const inBasket = isAddedToCartCourses(course.id);
+  const inBasket = isAddedToCartCourses(course.id, session?.id || "");
   const addToBasket = useCallback(() => {
     if (status === "loading" || status === "added" || !session || isInHouse) return;
     setStatus("loading");
     later(() => {
       try {
-        addCourseToCart(course.id, {
-          id: course.id,
-          title: course.title,
-          imageSrc: course.imageSrc,
-          discountedPrice: session.price,
-          originalPrice: session.wasPrice ?? session.price,
-          sessionId: session.id,
-        });
+        addCourseToCart(course.id, lineFor(course, session));
         setStatus("added");
         notify({ message: `Added to basket: ${formatShortDate(session.date)}, ${session.location}`, href: BASKET_HREF, label: "View basket" });
         trackEvent("add_to_cart", { currency: "GBP", value: session.price, items: [{ ...toItem(course), item_variant: session.id, price: session.price, quantity: 1 }] });

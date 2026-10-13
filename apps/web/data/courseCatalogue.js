@@ -1,3 +1,6 @@
+import { findMockTest } from "@/data/testPrep";
+import { providers } from "@/data/providers";
+import { coursePath } from "@/lib/routes";
 // Courses catalogue: filter model, sort options, dummy data and the pure filter/sort/URL helpers.
 // Swap `catalogueCourses` for an API response later; everything else only reads this shape:
 // { id, title, description, subject, methods[], level, venues[{ city, postcode }], providers,
@@ -119,6 +122,7 @@ export const catalogueCourses = [
   c(45, "Telecommunication", "Network Infrastructure Design (CCNA Prep)", "Design, configure and troubleshoot enterprise networks.", [L, D], ADV, [], 7, 4.8, 305, 749, 890, "Self-paced", "Valid 3 years"),
   c(46, "Security", "Door Supervisor Refresher", "Renew your SIA door supervisor licence with a short top-up course.", [C], INT, [ldn, man, bir, lds, gla], 30, 4.8, 1240, 99, 119, "2 days", "Renews SIA licence"),
   c(47, "Security", "Conflict Management for Security", "Reduce risk and de-escalate confrontation in front-line roles.", [L, D], BEG, [], 12, 4.6, 438, 25, 39, "3 hours", "Certificate included"),
+  c(52, "Security", "Security Guard Refresher", "Renew your SIA security guard licence with the refresher qualification.", [C], INT, [ldn2, man, bir, gla], 22, 4.7, 860, 89, 109, "1 day", "Renews SIA licence"),
   c(48, "Construction", "Asbestos Awareness (Category A)", "Identify asbestos-containing materials and avoid exposure.", [L, D], BEG, [], 26, 4.7, 1925, 19.99, 29.99, "2 hours", "Valid 1 year"),
   // added for testing: very long title (over 70 characters)
   c(49, "Hospitality", "Level 3 Award in Supervising Food Safety in Catering (RQF) Online Course", "Supervisory food safety knowledge for catering managers and team leaders working in busy kitchens.", [L, D], INT, [], 17, 4.7, 388, 54.5, 79, "6 hours", "Valid 3 years"),
@@ -141,7 +145,7 @@ const subDefs = {
   lifestyle: [["Yoga and Fitness", [35]], ["Nutrition and Wellbeing", [36, 51]]],
   marketing: [["Digital Marketing", [37, 39]], ["Social Media Marketing", [38]]],
   "personal-development": [["Productivity", [40]], ["Communication", [41, 42]]],
-  security: [["SIA Licence Training", [1, 2, 3, 46]], ["Close Protection", [4]], ["Conflict Management", [47, 50]]],
+  security: [["SIA Licence Training", [1, 2, 3, 46, 52]], ["Close Protection", [4]], ["Conflict Management", [47, 50]]],
   "teaching-and-academics": [["Teaching Qualifications", [23, 25]], ["Quality Assurance", [24]]],
   telecommunication: [["Fibre and Cabling", [43, 44]], ["Networking", [45]]],
 };
@@ -154,9 +158,9 @@ catalogueCourses.forEach((course) => {
   course.sub = subByCourseId[course.id] || "";
 });
 
-// Details pages: every course links to the course details page. Swap the pattern when real routes exist.
+// Details pages: every course links to its page, /course/<slug>.
 catalogueCourses.forEach((course) => {
-  course.detailsHref = `/template/courses/${course.id}`;
+  course.detailsHref = coursePath(course.slug);
 });
 
 const methodByValue = Object.fromEntries(methods.map((m) => [m.value, m]));
@@ -262,7 +266,8 @@ export const defaultSort = (location) => (location ? "closest" : "popular");
 // --- URL state -----------------------------------------------------------------
 const valid = (group, value) => (group.options.some((o) => o.value === value) ? value : "");
 
-export function parseCatalogueParams(params) {
+// `base` is a course page's fixed choice ({ subject }: /courses/first-aid). Its sub-subjects are valid without ?subject=.
+export function parseCatalogueParams(params, base = {}) {
   const [subjectG, methodG, levelG] = filterGroups;
   const sort = params.get("sort");
   const page = parseInt(params.get("page") || "1", 10);
@@ -280,7 +285,7 @@ export function parseCatalogueParams(params) {
   const many = (key, allowed, map = (v) => v) =>
     [...new Set((params.get(key) || "").split(",").map((v) => map(v.trim().toLowerCase())).filter((v) => allowed.has(v)))].sort();
   const subject = many("subject", new Set(subjectG.options.map((o) => o.value)));
-  const allowedSubs = new Set(subject.flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
+  const allowedSubs = new Set([...subject, ...(base.subject ? [base.subject] : [])].flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
   return {
     subject,
     sub: many("sub", allowedSubs),
@@ -295,12 +300,12 @@ export function parseCatalogueParams(params) {
   };
 }
 
-// Defaults are omitted so URLs stay clean.
-export function buildCatalogueQuery(state) {
+// Defaults are omitted so URLs stay clean. `base` as for parseCatalogueParams.
+export function buildCatalogueQuery(state, base = {}) {
   const p = new URLSearchParams();
   const list = (key, values) => values && values.length && p.set(key, [...new Set(values)].sort().join(","));
   list("subject", state.subject);
-  if (state.subject && state.subject.length) list("sub", state.sub);
+  if ((state.subject && state.subject.length) || base.subject) list("sub", state.sub);
   list("method", state.method);
   list("level", state.level);
   if (state.q) p.set("q", state.q);
@@ -318,7 +323,11 @@ export function buildCatalogueQuery(state) {
 // ======================================================================================================
 const DETAIL_BASE = Date.UTC(2026, 9, 19); // first session date; fixed so server and client render the same dates
 const DAY = 86400000;
-const providerPool = ["Apex Training", "Northgate Learning", "BrightPath Academy", "Summit Skills", "Harbour Training Group", "ClearView Learning"];
+// the listed providers that teach a course's subject (data/providers.js): their pages list the courses that run with them
+const providerPool = (course) => {
+  const pool = providers.filter((p) => p.specialisms.includes(course.subject));
+  return (pool.length ? pool : providers).map((p) => p.name);
+};
 const priceSteps = [1, 1, 1.05, 0.97, 1.1, 1.02];
 const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
 const nextWeekday = (ms) => { let t = ms; while ([0, 6].includes(new Date(t).getUTCDay())) t += DAY; return t; };
@@ -678,8 +687,7 @@ export function buildCourseDetail(course) {
   const hours = hoursOf(course.duration);
   const perModule = Math.max(20, Math.round((hours * 60) / info.mods.length / 5) * 5);
   const modules = info.mods.map(([title, topics]) => ({ title, duration: fmtMinutes(perModule), topics }));
-  const verbs = ["Understand", "Apply", "Recognise", "Follow", "Explain", "Use", "Complete", "Prepare for"];
-  const outcomes = modules.flatMap((m) => m.topics).slice(0, 8).map((t, i) => `${verbs[i]} ${/^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1)}`);
+  const outcomes = modules.flatMap((m) => m.topics).slice(0, 8).map((t) => `Learn about ${/^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1)}`);
 
   const levelWord = { beginner: "beginner", intermediate: "intermediate", advance: "advanced" }[course.level];
   const entry = {
@@ -690,6 +698,7 @@ export function buildCourseDetail(course) {
 
   // sessions: classroom (one per venue), live online (dates); on demand is shown as online
   const sessions = [];
+  const pool = providerPool(course);
   let n = 0;
   const makeSession = (mode, offsetDays, venue) => {
     n += 1;
@@ -706,7 +715,7 @@ export function buildCourseDetail(course) {
       address: venue ? `${venue.city} Training Centre` : "",
       postcode: venue ? venue.postcode : "",
       endDate: iso(nextWeekday(DETAIL_BASE + offsetDays * DAY) + (Math.max(1, Math.round(parseFloat(course.duration) || 1)) > 1 && /day/i.test(course.duration) ? (Math.round(parseFloat(course.duration)) - 1) * DAY : 0)),
-      provider: providerPool[(course.id + n) % providerPool.length],
+      provider: pool[(course.id + n) % pool.length],
       price,
       wasPrice,
     });
@@ -773,10 +782,7 @@ export function buildCourseDetail(course) {
     validityText: validityYears ? `${validityYears} years` : /lifetime/i.test(course.validity) ? "Lifetime" : undefined,
     renewal: validityYears ? "Retake the course or its refresher before the certificate expires." : undefined,
   };
-  const funding = course.subject === "construction" ? { text: "This course may be eligible for a CITB grant.", href: "/template/help-center" } : undefined;
-  const extras = examSubjects.includes(course.subject)
-    ? [{ title: "Free test prep book", note: "450+ practice questions and answers", price: 0, url: "/template/shop" }, { title: "Free mock tests", note: "15+ mock tests, over 1000 questions", price: 0, url: "/template/shop" }].slice(0, course.id % 3 === 0 ? 1 : 2)
-    : [];
+  const funding = course.subject === "construction" ? { text: "This course may be eligible for a CITB grant.", href: "/help-centre" } : undefined;
   const inHouse = (course.methods.includes("classroom") || course.methods.includes("live-online")) && course.id % 6 !== 0;
   // Only facts the site really supports are true: Klarna instalments are offered on the live site; there is no Trustpilot data, so that stays empty.
   const trust = { noBookingFee: true, approvedProviders: true, invoice: course.subject !== "lifestyle", instalments: true, trustpilot: null };
@@ -799,7 +805,7 @@ export function buildCourseDetail(course) {
     outro: [assessment.resits],
   } : undefined;
   const popularMode = course.methods.includes("classroom") ? "classroom" : course.methods.includes("live-online") ? "online" : "ondemand";
-  const reviewsWithOrg = reviews.map((r, i) => ({ ...r, org: providerPool[(course.id + i) % providerPool.length].split(" ").map((w) => w[0]).join("").slice(0, 4) }));
+  const reviewsWithOrg = reviews.map((r, i) => ({ ...r, org: pool[(course.id + i) % pool.length].split(" ").map((w) => w[0]).join("").slice(0, 4) }));
 
   const relatedSlugs = catalogueCourses
     .filter((x) => x.id !== course.id)
@@ -828,8 +834,10 @@ export function buildCourseDetail(course) {
     reviews: reviewsWithOrg,
     faqs,
     relatedSlugs,
-    features, assessment, certificate, funding, extras, inHouse, trust,
+    features, assessment, certificate, funding, inHouse, trust,
     workAreas, requirements, exams, popularMode,
+    // Only courses that really have a mock test link to it (see mockTestByCourse in data/testPrep.js).
+    mockTest: findMockTest(course.id),
     ...(courseOverrides[course.id] || {}),
   };
 }

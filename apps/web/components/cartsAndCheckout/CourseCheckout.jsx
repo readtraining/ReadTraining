@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { useContextElement } from "@/context/Context";
+import { basketTotals, isSelected, lineParts } from "@/lib/basket";
 import Link from "next/link";
 export default function CourseCheckOut() {
-  const { cartCourses } = useContextElement();
+  const { cartCourses: basketLines } = useContextElement();
+  const cartCourses = basketLines.filter(isSelected); // only the courses ticked in the basket are in this booking
   const [totalPrice, setTotalPrice] = useState(0);
   const [shiping, setShiping] = useState(0);
   useEffect(() => {
-    const sum = cartCourses.reduce((accumulator, currentValue) => {
-      return accumulator + currentValue.discountedPrice * currentValue.quantity;
-    }, 0);
+    const sum = basketTotals(cartCourses).subtotal;
     const sumQuantity = cartCourses.reduce((accumulator, currentValue) => {
       return accumulator + currentValue.quantity;
     }, 0);
@@ -232,29 +232,27 @@ export default function CourseCheckOut() {
                         </Link> x {elm.quantity}
                       </div>
                       <div className="py-15 text-grey">
-                        $
-                        {(elm.discountedPrice * elm.quantity).toFixed(2) ||
-                          "Free"}
+                        £{lineParts(elm).total.toFixed(2)}
                       </div>
                     </div>
                   ))}
 
                   <div className="d-flex justify-between border-top-dark px-30">
                     <div className="py-15 fw-500">Subtotal</div>
-                    <div className="py-15 fw-500">${totalPrice.toFixed(2)}</div>
+                    <div className="py-15 fw-500">£{totalPrice.toFixed(2)}</div>
                   </div>
 
                   <div className="d-flex justify-between border-top-dark px-30">
                     <div className="py-15 fw-500 text-dark-1">Shipping</div>
                     <div className="py-15 fw-500 text-dark-1">
-                      ${shiping.toFixed(2)}
+                      £{shiping.toFixed(2)}
                     </div>
                   </div>
 
                   <div className="d-flex justify-between border-top-dark px-30">
                     <div className="py-15 fw-500 text-dark-1">Total</div>
                     <div className="py-15 fw-500 text-dark-1">
-                      ${(totalPrice + shiping).toFixed(2)}
+                      £{(totalPrice + shiping).toFixed(2)}
                     </div>
                   </div>
                 </div>

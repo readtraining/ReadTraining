@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { subjects, licenceGroups, regions, popularByLocation, resources, menuFooters } from "@/data/home/menu";
+import { subjects, licenceGroups, locationCourses, locationFeature, locationHref, resources, menuFooters } from "@/data/home/menu";
+import { CATALOGUE_HREF } from "@/lib/routes";
 
 // Navbar dropdowns. Layout and proportions follow Hurak's menus (three columns: browse list →
 // related list → featured card, plus a footer strip); colours and type come from the template.
@@ -120,10 +121,10 @@ const Item = ({ title, children }) => (
 export default function HomeMenu({ allClasses, headerPosition }) {
   const [subjectIdx, setSubjectIdx] = useState(0);
   const [licenceIdx, setLicenceIdx] = useState(0);
-  const [regionIdx, setRegionIdx] = useState(0);
+  const [placeIdx, setPlaceIdx] = useState(0);
   const subject = subjects[subjectIdx];
   const licence = licenceGroups[licenceIdx];
-  const region = regions[regionIdx];
+  const place = locationCourses[placeIdx];
 
   return (
     <div className={`header-menu js-mobile-menu-toggle ${headerPosition ? headerPosition : ""}`}>
@@ -131,10 +132,10 @@ export default function HomeMenu({ allClasses, headerPosition }) {
         <div className="mobile-bg js-mobile-bg"></div>
 
         <div className="d-none xl:d-flex items-center px-20 py-20 border-bottom-light">
-          <Link href="/template/login" className="text-dark-1">
+          <Link href="/login" className="text-dark-1">
             Log in
           </Link>
-          <Link href="/template/signup" className="text-dark-1 ml-30">
+          <Link href="/signup" className="text-dark-1 ml-30">
             Sign Up
           </Link>
         </div>
@@ -144,7 +145,7 @@ export default function HomeMenu({ allClasses, headerPosition }) {
             {/* ---------- Courses ---------- */}
             <Item title="Courses">
               <Panel footer={menuFooters.courses}>
-                <Column title="Browse by subject" link={<ArrowLink href="/template/courses-list-1">View all subjects</ArrowLink>}>
+                <Column title="Browse by subject" link={<ArrowLink href={CATALOGUE_HREF}>View all subjects</ArrowLink>}>
                   <BrowseList items={subjects} active={subjectIdx} onHover={setSubjectIdx} />
                 </Column>
                 <Column title={`Popular in ${subject.label}`} link={<ArrowLink href={subject.href}>View all {subject.label} courses</ArrowLink>}>
@@ -180,20 +181,15 @@ export default function HomeMenu({ allClasses, headerPosition }) {
             {/* ---------- Locations ---------- */}
             <Item title="Locations">
               <Panel footer={menuFooters.locations}>
-                <Column title="Browse by region" link={<ArrowLink href="/template/courses-list-3">View all locations</ArrowLink>}>
-                  <BrowseList items={regions} active={regionIdx} onHover={setRegionIdx} />
+                <Column title="Popular training" link={<ArrowLink href={CATALOGUE_HREF}>Browse all courses</ArrowLink>}>
+                  <BrowseList items={locationCourses} active={placeIdx} onHover={setPlaceIdx} />
                 </Column>
-                <Column title={`Training in ${region.label}`} link={<ArrowLink href={region.href}>All venues in {region.label}</ArrowLink>}>
-                  <ListLinks items={region.cities.map((city) => ({ label: city, href: "/template/courses-list-3" }))} />
+                {/* pointing at a course shows where it runs (each course has its own towns), or its related courses */}
+                <Column key={place.label} title={place.places ? "Choose a town or city" : "Related courses"} link={<ArrowLink href={place.results}>{place.places ? "All dates for this course" : "View all courses"}</ArrowLink>}>
+                  <ListLinks items={place.places ? place.places.map((city) => ({ label: city, href: locationHref(place, city) })) : place.related} columns={place.places ? 2 : 1} />
                 </Column>
-                <Column title="Popular near you" last>
-                  <FeatureCard
-                    img={region.img}
-                    eyebrow={`${region.cities.length} towns and cities`}
-                    title={`Classroom dates in ${region.label}`}
-                    text={`${popularByLocation.slice(0, 4).map((p) => p.label).join(", ")} and more, at venues across ${region.label}.`}
-                    link={{ label: "Search by postcode", href: "/template/courses-list-3" }}
-                  />
+                <Column title="Not listed?" last>
+                  <FeatureCard {...locationFeature} />
                 </Column>
               </Panel>
             </Item>

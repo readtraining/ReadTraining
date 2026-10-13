@@ -1,16 +1,10 @@
-"use client";
-
 import React from "react";
 
-// Hero "Book now": smooth scroll to the Learning options section, where the choice is made.
+// Hero "Book now": a link to the Learning options section, where the choice is made (smooth scrolling is set on the page).
 export default function BookNow() {
   return (
-    <button
-      type="button"
-      className="rt-cd__btn rt-cd__btn--hero"
-      onClick={() => document.getElementById("learning-options")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-    >
+    <a href="#learning-options" className="button -md -purple-1 text-white">
       Book now
-    </button>
+    </a>
   );
 }

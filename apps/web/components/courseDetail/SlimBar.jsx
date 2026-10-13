@@ -2,12 +2,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useBooking } from "./BookingProvider";
-import Stars from "./Stars";
+import Stars from "@/components/home/HomeStars";
 import { formatNumber } from "@/lib/courses";
 
 // The slim bar: fixed under the header, shown only while the page title (#rt-cd-title, the H1) is out of view.
 // It carries the course title, badge, rating and students on the left and the page's section links on the right
-// (scrollspy: the current section is underlined). Links are hidden under 1180px. While it is showing, the booking
+// (scrollspy: the current section is underlined). Links are hidden under 1200px. While it is showing, the booking
 // card collapses its image (BookingCard reads barOn). There is no other sticky bar on the page.
 export default function SlimBar({ sections }) {
   const { course, setBarOn } = useBooking();
@@ -65,14 +65,14 @@ export default function SlimBar({ sections }) {
 
   return (
     <div className={`rt-cd__slim${on ? " is-on" : ""}`} aria-hidden={!on} inert={!on}>
-      <div className="rt-cd__slim-in">
+      <div className="container rt-cd__slim-in">
         <div className="rt-cd__slim-left">
           <strong className="rt-cd__slim-title">{course.title}</strong>
           <div className="rt-cd__slim-meta">
-            {course.badge && <span className="rt-cd__badge">{course.badge}</span>}
+            {course.badge && <span className="rt-pill -accent">{course.badge}</span>}
             <span className="rt-cd__slim-rate">
               <strong>{course.rating.toFixed(1)}</strong>
-              <Stars rating={course.rating} size={14} />
+              <Stars rating={course.rating} size="md" />
               <a href="#reviews">({formatNumber(course.reviewCount)} ratings)</a>
             </span>
             <span className="rt-cd__slim-students">{formatNumber(course.learnerCount)} students enrolled</span>

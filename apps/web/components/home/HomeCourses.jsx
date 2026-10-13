@@ -4,6 +4,7 @@ import React from "react";
 import HomeTextLink from "./HomeTextLink";
 import CourceCard from "./HomeCourseCard";
 import { courses as coursesData, courseCategories as catagories } from "@/data/home";
+import { CATALOGUE_HREF } from "@/lib/routes";
 import { useState, useEffect } from "react";
 export default function HomeCourses() {
   const [filtered, setFiltered] = useState();
@@ -47,7 +48,7 @@ export default function HomeCourses() {
         </div>
 
         <div className="pt-30" style={{ marginLeft: -10 }}>
-          <HomeTextLink href="/template/courses-list-1">Show all {category} courses</HomeTextLink>
+          <HomeTextLink href={CATALOGUE_HREF}>Show all {category} courses</HomeTextLink>
         </div>
       </div>
     </section>

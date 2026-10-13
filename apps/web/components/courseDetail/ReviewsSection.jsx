@@ -2,14 +2,16 @@
 
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useBooking } from "./BookingProvider";
-import Stars from "./Stars";
+import Stars from "@/components/home/HomeStars";
 import { formatNumber } from "@/lib/courses";
+import { Icon } from "./Icon";
+import { initials } from "@/components/marketing/parts";
 
 const fmtDate = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "long", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
 const FIRST = 6;
 const keyOf = (r) => `${r.name}-${r.date}`;
 
-// Review text shows 2 lines; longer text gets a "More" text button that opens the whole review ("Less" closes it again).
+// Review text shows 4 lines (as on home); longer text gets a "More" text button that opens the whole review ("Less" closes it).
 function ReviewBody({ text }) {
   const [open, setOpen] = useState(false);
   const [long, setLong] = useState(false);
@@ -28,45 +30,47 @@ function ReviewBody({ text }) {
   }, [open, text]);
   return (
     <>
-      <p ref={ref} id={id} className={`rt-cd__rtext${open ? "" : " is-clamped"}`}>{text}</p>
-      {/* The row is always there (hidden when the text fits) so every card keeps the same height. */}
-      {long || open ? (
-        <button type="button" className="rt-cd__rmore" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>{open ? "Less" : "More"}</button>
-      ) : (
-        <span className="rt-cd__rmore is-spacer" aria-hidden="true">More</span>
+      <p ref={ref} id={id} className={`rt-review__quote${open ? " is-open" : ""}`}>{text}</p>
+      {(long || open) && (
+        <button type="button" className="rt-cd__link rt-review__more" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>{open ? "Less" : "More"}</button>
       )}
     </>
   );
 }
 
-function ReviewCard({ r, helpful, toggle }) {
+// Home's review card (.rt-review): stars and date on top, the review, then who wrote it, with the Helpful button on that row.
+function ReviewCard({ r, helpful, toggle, wide }) {
   const on = Boolean(helpful[keyOf(r)]);
   return (
-    <li className="rt-cd__review">
-      <div className="rt-cd__review-head">
-        <span className="rt-cd__avatar" aria-hidden="true">{r.name[0]}</span>
-        <div>
-          <strong>{r.name}</strong>
-          {r.org && <span className="rt-cd__org">{r.org}</span>}
-          <div className="rt-cd__review-meta">
-            <Stars rating={r.rating} size={14} />
-            <span className="rt-cd__sr">{r.rating} out of 5 stars</span>
-            <time dateTime={r.date}>{fmtDate(r.date)}</time>
-          </div>
+    <li className={wide ? "col-12" : "col-md-6"}>
+      <article className="rt-review">
+        <div className="rt-review__top">
+          <Stars rating={r.rating} size="md" />
+          <span className="rt-cd__sr">{r.rating} out of 5 stars</span>
+          <time className="rt-review__source" dateTime={r.date}>{fmtDate(r.date)}</time>
         </div>
-      </div>
-      {r.title && <h3 className="rt-cd__review-title">{r.title}</h3>}
-      {r.body && <ReviewBody text={r.body} />}
-      {typeof r.helpfulCount === "number" && (
-        <button type="button" className="rt-cd__helpful" aria-pressed={on} onClick={() => toggle(keyOf(r))}>
-          Helpful ({r.helpfulCount + (on ? 1 : 0)})
-        </button>
-      )}
+        <div className="rt-review__body">
+          {r.title && <h3 className="rt-review__title">{r.title}</h3>}
+          {r.body && <ReviewBody text={r.body} />}
+        </div>
+        <div className="rt-review__who">
+          <span className="rt-review__avatar" aria-hidden="true">{initials(r.name).slice(0, 2)}</span>
+          <div>
+            <div className="rt-review__name">{r.name}</div>
+            {r.org && <div className="rt-review__course">{r.org}</div>}
+          </div>
+          {typeof r.helpfulCount === "number" && (
+            <button type="button" className={`button -sm ${on ? "-purple-1 text-white" : "-outline-purple-1 text-purple-1"} rt-review__helpful`} aria-pressed={on} onClick={() => toggle(keyOf(r))}>
+              Helpful ({r.helpfulCount + (on ? 1 : 0)})
+            </button>
+          )}
+        </div>
+      </article>
     </li>
   );
 }
 
-// Reviews: two-column cards, helpful buttons (only where a review has a helpful count), and "See all reviews", which opens a
+// Reviews: two-column cards (home's review card), helpful buttons (only where a review has a helpful count), and "See all reviews", which opens a
 // dialog with a star filter and a search box.
 export default function ReviewsSection() {
   const { course } = useBooking();
@@ -95,7 +99,7 @@ export default function ReviewsSection() {
   if (!course.reviews.length) return null;
   const summary = (
     <p className="rt-cd__rline">
-      <Stars rating={course.rating} size={18} />
+      <Stars rating={course.rating} size="lg" />
       <strong>{course.rating.toFixed(1)}</strong> Course rating · {formatNumber(course.reviewCount)} ratings
     </p>
   );
@@ -105,18 +109,16 @@ export default function ReviewsSection() {
       <h2 id="rt-cd-reviews-h">Hear from our past customers</h2>
       {summary}
 
-      <ul className="rt-cd__reviews">
+      <ul className="row y-gap-20 rt-cd__rlist">
         {course.reviews.slice(0, FIRST).map((r) => <ReviewCard key={keyOf(r)} r={r} helpful={helpful} toggle={toggle} />)}
       </ul>
 
-      <button type="button" className="rt-cd__ghost rt-cd__more" onClick={() => setOpen(true)}>See all reviews</button>
+      <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-cd__more" onClick={() => setOpen(true)}>See all reviews</button>
 
       <dialog ref={dialogRef} className="rt-cd__dialog rt-cd__dialog--wide" aria-labelledby="rt-cd-allrev-h" onClose={() => setOpen(false)}>
         <div className="rt-cd__dialog-head">
           <h2 id="rt-cd-allrev-h">Hear from our past customers</h2>
-          <button type="button" className="rt-cd__x" aria-label="Close" onClick={() => setOpen(false)}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>
+          <button type="button" className="rt-icon-btn rt-cd__x" aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" /></button>
         </div>
         {summary}
 
@@ -132,15 +134,17 @@ export default function ReviewsSection() {
           ))}
         </ul>
 
-        <input type="search" className="rt-cd__input" placeholder="Search reviews" aria-label="Search reviews" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <label className="rt-field rt-cd__rsearch">
+          <input type="search" placeholder="Search reviews" aria-label="Search reviews" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </label>
 
         <p className="rt-cd__rcount" aria-live="polite">Showing {filtered.length} written {filtered.length === 1 ? "review" : "reviews"} of {formatNumber(course.reviewCount)} ratings</p>
 
         {filtered.length === 0 ? (
           <p className="rt-cd__empty">No reviews match.</p>
         ) : (
-          <ul className="rt-cd__reviews rt-cd__reviews--dlg">
-            {filtered.map((r) => <ReviewCard key={keyOf(r)} r={r} helpful={helpful} toggle={toggle} />)}
+          <ul className="row y-gap-20 rt-cd__rlist">
+            {filtered.map((r) => <ReviewCard key={keyOf(r)} r={r} helpful={helpful} toggle={toggle} wide />)}
           </ul>
         )}
       </dialog>

@@ -1,8 +1,10 @@
 // Home page content mirrored from the client's current site (hurak.com), September 2026.
 // Headline and brand are ours; categories, courses, options and lists match the existing site.
 
+import { courseLink } from "@/data/courseSlugs";
+
 const img = (n) => `/assets/img/coursesCards/${n}.png`;
-const course = (slug) => ({ slug, href: "/template/courses/1" });
+const course = (slug) => ({ slug, href: courseLink(1) });
 
 export const topBar = {
   phone: "0333 344 1293",
@@ -16,30 +18,33 @@ export const topBar = {
 };
 
 export const menu = [
-  { href: "/template/courses-list-1", label: "Courses" },
-  { href: "/template/courses-list-2", label: "Licences & Cards" },
+  { href: "/courses", label: "Courses" },
+  { href: "/licences", label: "Licences & Cards" },
   { href: "/template/courses-list-3", label: "Locations" },
   { href: "/template/blog-list-1", label: "Resources" },
 ];
 
+// The year ReadTraining was established (the home hero and the About page read it from here)
+export const founded = 2011;
+
 export const hero = {
-  eyebrow: "Established in 2011 · Vocational training across the UK",
+  eyebrow: `Established in ${founded} · Vocational training across the UK`,
   title: "Book accredited training.",
   titleLine2: "Get certified",
   titleAccent: "sooner.",
   text: "Search vocational and compliance training from trusted UK training providers,",
   text2: "explore available dates and locations, and choose the option that suits you.",
   subline: "Compare accredited providers, dates and prices in one place. No account needed to search.",
-  primaryButton: { label: "Find Courses", href: "/template/courses-list-1" },
+  primaryButton: { label: "Find Courses", href: "/courses" },
   secondaryButton: { label: "Book for your team", href: "/for-business" },
   socialProof: { rating: "4.9 out of 5", text: "Based on 12,450+ verified reviews · 250,000+ customers" },
   methods: ["All methods", "Classroom", "Live online", "Online self-paced"],
   coursePlaceholder: "Search for a course",
   locationPlaceholder: "Town or postcode",
   popular: [
-    { href: "/template/courses/1", label: "Door Supervisor", slug: "/course/sia-door-supervisor-training" },
-    { href: "/template/courses/1", label: "Emergency First Aid", slug: "/course/emergency-first-aid-at-work-training-1-day" },
-    { href: "/template/courses/1", label: "CSCS Green Card", slug: "/course/cscs-green-card-labourers-card-course" },
+    { href: courseLink(1), label: "Door Supervisor", slug: "/course/sia-door-supervisor-training" },
+    { href: courseLink(1), label: "Emergency First Aid", slug: "/course/emergency-first-aid-at-work-training-1-day" },
+    { href: courseLink(1), label: "CSCS Green Card", slug: "/course/cscs-green-card-labourers-card-course" },
   ],
   rating: "4.9 out of 5 · Based on 12,450+ verified reviews",
   highlights: ["1,000+ courses", "UK-wide dates and locations", "Price-match guarantee", "Flexible booking options", "End-to-end support", "250,000+ customers"],
@@ -110,7 +115,7 @@ export const bookingOptions = {
   ],
   footnote: "Example prices and benefits. Options vary by course, date and location.",
   disclaimer: "Courses are delivered by independent training providers. ReadTraining helps you find, book and manage the option that suits you.",
-  cta: { label: "Find course options", href: "/template/courses-list-1" },
+  cta: { label: "Find course options", href: "/courses" },
 };
 
 // "What do you need training for?" course finder: four goals, each with its own routes.
@@ -128,7 +133,7 @@ export const courseFinder = {
         { title: "CCTV Operator", text: "Monitor public space surveillance systems.", ...course("/course/sia-cctv-operator-training") },
         { title: "Close Protection", text: "Train for specialist personal-protection work.", ...course("/course/close-protection") },
       ],
-      allLabel: "Browse all SIA courses", allHref: "/template/courses-list-1",
+      allLabel: "Browse all SIA courses", allHref: "/courses",
     },
     {
       label: "Renew my SIA licence", text: "Find the correct refresher training.",
@@ -138,7 +143,7 @@ export const courseFinder = {
         { title: "Security Guard Refresher", text: "1 day · Updated search procedures, vulnerability awareness, supporting vulnerable people and current terror threat response.", ...course("/course/sia-top-up-refresher-training-security-guard") },
         { title: "Close Protection Refresher", text: "3 days · Incident analysis, threat management, protective cordons and ethical physical intervention techniques.", ...course("/course/sia-close-protection-top-up-course") },
       ],
-      allLabel: "Browse all SIA refresher courses", allHref: "/template/courses-list-1",
+      allLabel: "Browse all SIA refresher courses", allHref: "/courses",
     },
     {
       label: "Get a CSCS card", text: "Find the qualification route for the card you need.",
@@ -149,7 +154,7 @@ export const courseFinder = {
         { title: "Supervisor Card", text: "For site supervisors managing day-to-day operations on site.", ...course("/courses/cscs") },
         { title: "Manager Card", text: "For site managers leading construction projects and teams.", ...course("/courses/cscs") },
       ],
-      allLabel: "Browse all construction courses", allHref: "/template/courses-list-1",
+      allLabel: "Browse all construction courses", allHref: "/courses",
     },
     {
       label: "Need an NVQ", text: "Search NVQs by occupation, trade or level.",
@@ -160,7 +165,7 @@ export const courseFinder = {
         { title: "Plant Operations", text: "Level 2 Diploma (Construction)", ...course("/course/level-2-diploma-in-plant-operations-construction") },
         { title: "Senior Construction Management", text: "Level 7 NVQ Diploma", ...course("/course/level-7-nvq-diploma-in-construction-senior-management") },
       ],
-      allLabel: "Browse all NVQs", allHref: "/template/courses-list-1",
+      allLabel: "Browse all NVQs", allHref: "/courses",
     },
   ],
   help: "Need personal guidance? Call 0333 344 1293",
@@ -177,14 +182,14 @@ export const roles = courseFinder.goals.map((g, i) => ({
 
 // "Prefer to browse by subject?": the subject tiles from the client's site.
 export const subjects = [
-  { id: 1, title: "Security & SIA", slug: "/courses/security", href: "/template/courses-list-1", items: ["SIA Door Supervisor", "SIA Security Guard", "SIA CCTV Operator", "Close Protection", "Door Supervisor Refresher"] },
-  { id: 2, title: "First Aid", slug: "/courses/first-aid", href: "/template/courses-list-2", items: ["Emergency First Aid at Work", "First Aid at Work (3 Days)", "First Aid Requalification", "Paediatric First Aid", "Mental Health First Aid"] },
-  { id: 3, title: "Health & Safety", slug: "/courses/health-and-safety", href: "/template/courses-list-3", items: ["IOSH Managing Safely", "NEBOSH General Certificate", "Fire Marshal", "Manual Handling", "Asbestos Awareness"] },
-  { id: 4, title: "Construction & CSCS", slug: "/courses/construction", href: "/template/courses-list-4", items: ["CSCS Green Card", "CITB SMSTS", "CITB SSSTS", "Traffic Marshal", "CITB SEATS"] },
-  { id: 5, title: "Food Safety", slug: "/courses/food-hygiene", href: "/template/courses-list-5", items: ["Level 2 Food Hygiene", "Level 3 Food Hygiene", "APLH Personal Licence", "Scottish Personal Licence"] },
-  { id: 6, title: "Teaching & Assessing", slug: "/courses/teaching-&-academics", href: "/template/courses-list-6", items: ["Level 3 AET (PTLLS)", "Level 4 IQA", "Lead IQA", "Conflict Management Delivery", "Assessor Training"] },
-  { id: 7, title: "Health & Care", slug: "/courses/health-and-care", href: "/template/courses-list-7", items: ["Care Certificate", "Medication Awareness", "Safeguarding Adults", "Moving and Handling"] },
-  { id: 8, title: "Hospitality", slug: "/courses/hospitality", href: "/template/courses-list-8", items: ["Personal Licence (APLH)", "Barista Skills", "Allergen Awareness", "Customer Service"] },
+  { id: 1, title: "Security & SIA", slug: "/courses/security", href: "/courses/security", items: ["SIA Door Supervisor", "SIA Security Guard", "SIA CCTV Operator", "Close Protection", "Door Supervisor Refresher"] },
+  { id: 2, title: "First Aid", slug: "/courses/first-aid", href: "/courses/first-aid", items: ["Emergency First Aid at Work", "First Aid at Work (3 Days)", "First Aid Requalification", "Paediatric First Aid", "Mental Health First Aid"] },
+  { id: 3, title: "Health & Safety", slug: "/courses/health-and-safety", href: "/courses/health-and-safety", items: ["IOSH Managing Safely", "NEBOSH General Certificate", "Fire Marshal", "Manual Handling", "Asbestos Awareness"] },
+  { id: 4, title: "Construction & CSCS", slug: "/courses/construction", href: "/courses?subject=construction", items: ["CSCS Green Card", "CITB SMSTS", "CITB SSSTS", "Traffic Marshal", "CITB SEATS"] },
+  { id: 5, title: "Food Safety", slug: "/courses/food-hygiene", href: "/courses?q=food", items: ["Level 2 Food Hygiene", "Level 3 Food Hygiene", "APLH Personal Licence", "Scottish Personal Licence"] },
+  { id: 6, title: "Teaching & Assessing", slug: "/courses/teaching-&-academics", href: "/courses?subject=teaching-and-academics", items: ["Level 3 AET (PTLLS)", "Level 4 IQA", "Lead IQA", "Conflict Management Delivery", "Assessor Training"] },
+  { id: 7, title: "Health & Care", slug: "/courses/health-and-care", href: "/courses?subject=health-and-care", items: ["Care Certificate", "Medication Awareness", "Safeguarding Adults", "Moving and Handling"] },
+  { id: 8, title: "Hospitality", slug: "/courses/hospitality", href: "/courses?subject=hospitality", items: ["Personal Licence (APLH)", "Barista Skills", "Allergen Awareness", "Customer Service"] },
 ];
 
 export const testimonials = [
@@ -237,7 +242,7 @@ export const teamBooking = {
     { title: "You get one quote", text: "Group pricing, clearly itemised." },
     { title: "Book in one go", text: "One invoice, certificates to each learner." },
   ],
-  secondaryHref: "/template/contact-1",
+  secondaryHref: "/quote",
   // Illustrative team booking shown in the card (example figures).
   summary: {
     course: "Emergency First Aid at Work · 1 day",
@@ -278,11 +283,11 @@ export const help = {
   text: "Not sure which course, date or booking option is right? Our UK team helps with requirements, locations and group bookings.",
   options: [
     { label: "Call us", value: "0333 344 1293", meta: "Mon to Fri, 9:00am to 5:30pm", href: "tel:03333441293" },
-    { label: "Live chat", value: "Start a conversation", meta: "Usually replies within minutes", href: "/template/contact-1" },
-    { label: "Help centre", value: "Guides, FAQs and requirements", meta: "Guides, FAQs and requirements", href: "/template/help-center" },
+    { label: "Live chat", value: "Start a conversation", meta: "Usually replies within minutes", href: "/contact-us" },
+    { label: "Help centre", value: "Guides, FAQs and requirements", meta: "Guides, FAQs and requirements", href: "/help-centre" },
   ],
   button: "Visit Help Centre",
-  href: "/template/help-center",
+  href: "/help-centre",
 };
 
 export const footer = {
@@ -295,68 +300,67 @@ export const footer = {
     {
       title: "Find a course",
       links: [
-        { href: "/template/courses-list-2", label: "Classroom courses" },
-        { href: "/template/courses-list-3", label: "Live online courses" },
-        { href: "/template/courses-list-4", label: "Online self-paced courses" },
-        { href: "/template/courses-list-1", label: "CITB Site Safety Plus" },
-        { href: "/template/courses-list-1", label: "Personal Licence" },
-        { href: "/template/courses-list-1", label: "First Aid" },
-        { href: "/template/courses-list-1", label: "Health & Safety" },
-        { href: "/template/courses-list-1", label: "Security" },
+        { href: "/courses/classroom", label: "Classroom courses" },
+        { href: "/courses/virtual", label: "Live online courses" },
+        { href: "/courses/online", label: "Online self-paced courses" },
+        { href: "/courses/citb-site-safety-plus", label: "CITB Site Safety Plus" },
+        { href: "/courses/personal-licence", label: "Personal Licence" },
+        { href: "/courses/first-aid", label: "First Aid" },
+        { href: "/courses/health-and-safety", label: "Health & Safety" },
+        { href: "/courses/security", label: "Security" },
       ],
     },
     {
       title: "Popular courses",
       links: [
-        { href: "/template/courses/1", label: "Door Supervisor Course" },
-        { href: "/template/courses/1", label: "Door Supervisor Refresher" },
-        { href: "/template/courses/1", label: "Security Guard Refresher" },
-        { href: "/template/courses/1", label: "Emergency First Aid" },
-        { href: "/template/courses/1", label: "First Aid at Work" },
-        { href: "/template/courses/1", label: "CSCS Green Card Course" },
-        { href: "/template/courses/1", label: "Traffic Marshal" },
-        { href: "/template/courses/1", label: "SIA CCTV Operator" },
-        { href: "/template/courses-list-1", label: "CSCS NVQs" },
-        { href: "/template/courses/1", label: "AET" },
-        { href: "/template/courses/1", label: "SSSTS" },
-        { href: "/template/courses/1", label: "SMSTS" },
-        { href: "/template/courses/1", label: "Personal Licence" },
-        { href: "/template/courses-list-1", label: "IQA Training" },
-        { href: "/template/courses-list-1", label: "Assessor Training" },
+        { href: courseLink(1), label: "Door Supervisor Course" },
+        { href: courseLink(46), label: "Door Supervisor Refresher" },
+        { href: courseLink(52), label: "Security Guard Refresher" },
+        { href: courseLink(5), label: "Emergency First Aid" },
+        { href: courseLink(6), label: "First Aid at Work" },
+        { href: courseLink(9), label: "CSCS Green Card Course" },
+        { href: courseLink(12), label: "Traffic Marshal" },
+        { href: courseLink(3), label: "SIA CCTV Operator" },
+        { href: "/courses", label: "CSCS NVQs" },
+        { href: courseLink(23), label: "AET" },
+        { href: courseLink(11), label: "SSSTS" },
+        { href: courseLink(10), label: "SMSTS" },
+        { href: courseLink(21), label: "Personal Licence" },
+        { href: "/courses", label: "IQA Training" },
+        { href: "/courses", label: "Assessor Training" },
       ],
     },
     {
       title: "For providers",
       links: [
         { href: "/for-providers", label: "List Your Course" },
-        { href: "/template/pricing", label: "Provider Skill Saver" },
-        { href: "/template/help-center", label: "Verify Certificate" },
-        { href: "/template/instructors-list-1", label: "Listed Training Providers" },
-        { href: "/template/blog-list-1", label: "Security Jobs" },
+        { href: "/provider-skill-saver", label: "Provider Skill Saver" },
+        { href: "/certificate-checker", label: "Verify Certificate" },
+        { href: "/providers", label: "Listed Training Providers" },
+        { href: "/security-jobs", label: "Security Jobs" },
       ],
     },
     {
       title: "Resources & company",
       links: [
-        { href: "/template/help-center", label: "Help Centre" },
-        { href: "/template/blog-list-1", label: "Blog" },
-        { href: "/template/blog-list-2", label: "Test Prep" },
-        { href: "/template/help-center", label: "Verify Certificate" },
-        { href: "/template/about-1", label: "Customer reviews" },
-        { href: "/template/about-1", label: "About ReadTraining" },
-        { href: "/template/contact-1", label: "Contact us" },
+        { href: "/help-centre", label: "Help Centre" },
+        { href: "/blog", label: "Blog" },
+        { href: "/test-prep", label: "Test Prep" },
+        { href: "/certificate-checker", label: "Verify Certificate" },
+        { href: "/customer-reviews", label: "Customer reviews" },
+        { href: "/about-us", label: "About ReadTraining" },
+        { href: "/contact-us", label: "Contact us" },
       ],
     },
   ],
   accreditations: ["SIA", "CITB", "CSCS", "Highfield", "Qualsafe", "Ofqual-regulated"],
   legal: [
-    { href: "/template/terms", label: "Terms & Conditions" },
-    { href: "/template/terms", label: "Privacy Policy" },
-    { href: "/template/terms", label: "Cookie Policy" },
-    { href: "/template/terms", label: "Accessibility" },
+    { href: "/terms-and-conditions", label: "Terms & Conditions" },
+    { href: "/privacy-policy", label: "Privacy Policy" },
+    { href: "/cookie-policy", label: "Cookie Policy" },
+    { href: "/accessibility-statement", label: "Accessibility" },
   ],
 };
-
 
 // Employer logos for the trust strip (files in /public/assets/img/employers). `h` = rendered height in px.
 export const employerLogos = [

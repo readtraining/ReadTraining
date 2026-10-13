@@ -1,12 +1,16 @@
+import React from "react";
+import AdminShell from "@/components/admin/AdminShell";
 import AdminDashboard from "@/components/admin/AdminDashboard";
+import { admin as A } from "@/data/admin";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Admin | Business account dashboard" };
+// Platform admin: dashboard (components/admin; copy: data/admin.js; reads and writes: lib/admin.js). Private, so kept out of search.
+export const metadata = pageMetadata({ title: `${A.dashboard.title} | ${A.title}`, description: A.dashboard.lead, path: "/admin", noindex: true });
 
-// Admin side: business account dashboard. Standalone page (no site header/footer).
-export default function AdminPage() {
+export default function Page() {
   return (
-    <div className="rt-home ad-page">
+    <AdminShell current="dashboard" title={A.dashboard.title} lead={A.dashboard.lead}>
       <AdminDashboard />
-    </div>
+    </AdminShell>
   );
 }

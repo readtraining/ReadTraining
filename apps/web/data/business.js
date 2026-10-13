@@ -1,5 +1,5 @@
 // "For business" page content. Same functionality as the client's current site, our own copy and UI.
-const signup = { label: "Create a Business account", href: "/template/signup" };
+const signup = { label: "Create a Business account", href: "/signup" };
 const demo = { label: "Book a demo", href: "/template/contact-1" };
 
 export const business = {

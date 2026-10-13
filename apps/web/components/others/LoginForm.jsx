@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   AUTH_ROUTES,
   EMAIL_PATTERN,
   loginWithPassword,
   loginWithProvider,
+  resendConfirmation,
 } from "@/lib/auth/authClient";
 
 const PROJECT_NAME = "ReadTraining";
@@ -105,6 +106,17 @@ export default function LoginForm() {
   const [status, setStatus] = useState("idle"); // idle | validating | submitting
   const [showPassword, setShowPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState("");
+  const [unconfirmed, setUnconfirmed] = useState(false); // the email has no confirmed account yet: offer the link again
+  const [resent, setResent] = useState("");
+  const [next, setNext] = useState(AUTH_ROUTES.afterLogin);
+
+  // ?next= (where to go after logging in, set by the account pages) and ?error=link (an email link that expired or was used)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const n = q.get("next");
+    if (n && n.startsWith("/") && !n.startsWith("//")) setNext(n);
+    if (q.get("error") === "link") setFormError("That link has expired or was already used. Log in, or ask for a new link.");
+  }, []);
 
   const busy = status !== "idle" || Boolean(socialLoading);
 
@@ -131,15 +143,30 @@ export default function LoginForm() {
     }
 
     setStatus("submitting");
+    setUnconfirmed(false);
+    setResent("");
     try {
       await loginWithPassword({
         email: values.email.trim(),
         password: values.password,
       });
-      router.push(AUTH_ROUTES.afterLogin);
+      router.replace(next);
+      router.refresh();
     } catch (err) {
       setFormError(err?.message || "We couldn't log you in. Please try again.");
+      setUnconfirmed(err?.code === "email_not_confirmed");
       setStatus("idle");
+    }
+  };
+
+  const handleResend = async () => {
+    setResent("sending");
+    try {
+      await resendConfirmation({ email: values.email.trim() });
+      setResent("sent");
+    } catch (err) {
+      setFormError(err?.message || "We couldn't send the link. Please try again.");
+      setResent("");
     }
   };
 
@@ -149,7 +176,7 @@ export default function LoginForm() {
     setSocialLoading(provider);
     try {
       await loginWithProvider(provider);
-      router.push(AUTH_ROUTES.afterLogin);
+      router.replace(next);
     } catch (err) {
       setFormError(err?.message || "Social sign-in failed. Please try again.");
     } finally {
@@ -209,6 +236,17 @@ export default function LoginForm() {
               }}
             >
               {formError}
+              {unconfirmed && (
+                <div className="mt-8">
+                  {resent === "sent" ? (
+                    <span className="fw-500">A new link is on its way to {values.email.trim()}.</span>
+                  ) : (
+                    <button type="button" className="fw-600 text-purple-1" style={{ background: "none", border: 0, padding: 0, textDecoration: "underline" }} onClick={handleResend} disabled={resent === "sending"}>
+                      {resent === "sending" ? "Sending" : "Send the link again"}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

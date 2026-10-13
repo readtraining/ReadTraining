@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { catalogueCourses, filterGroups, subSubjects } from "@/data/courseCatalogue";
+import { CATALOGUE_HREF } from "@/lib/routes";
 
 // Breadcrumb for a course details page: Subject / Sub-subject / Course title (current, not a link).
 // Subject and sub-subject link back to the catalogue with that filter applied.
@@ -10,7 +11,7 @@ export default function CourseDetailsCrumbs({ id }) {
 
   const subject = filterGroups[0].options.find((o) => o.value === course.subject);
   const sub = (subSubjects[course.subject] || []).find((x) => x.value === course.sub);
-  const catalogue = "/template/courses-list-1";
+  const catalogue = CATALOGUE_HREF;
 
   return (
     <section className="breadcrumbs">

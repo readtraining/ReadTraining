@@ -2,8 +2,9 @@ import React from "react";
 import Link from "next/link";
 import BookNow from "./BookNow";
 import { formatPrice, getSubjectLabel, getSubLabel, savePercent } from "@/lib/courses";
+import { CATALOGUE_HREF } from "@/lib/routes";
 
-const CATALOGUE = "/template/courses-list-1";
+const CATALOGUE = CATALOGUE_HREF;
 
 // Hero, in this order: breadcrumb, title, summary, badge, provider count, price row with Book now, instalments line (only when
 // supported). The rating, students and "Rated Excellent" proof now live in the stats card on the hero edge (StatsCard).

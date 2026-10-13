@@ -4,18 +4,14 @@ import Link from "next/link";
 import { useContextElement } from "@/context/Context";
 import { filterGroups, getMethodLabel, levels } from "@/data/courseCatalogue";
 import { toItem, trackEvent } from "@/lib/analytics";
+import { useWishlist } from "@/lib/wishlist";
+import { bookableModes, defaultMode, firstSession, formatShortDate, getCourseBySlug } from "@/lib/courses";
+import { lineFor } from "@/lib/basket";
+import { BASKET_HREF } from "@/lib/routes";
+import { DatesPicker } from "@/components/courseDetail/DatesDialog";
 
 const gbp = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatPrice = (n) => gbp.format(Number(n) || 0); // always two decimals: £295.00
-const WISHLIST_KEY = "rt-course-wishlist";
-const BASKET_HREF = "/template/course-cart";
-const readWishlist = () => {
-  try {
-    return JSON.parse(window.localStorage.getItem(WISHLIST_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
 
 const subjectLabel = (value) => filterGroups[0].options.find((o) => o.value === value)?.label;
 const levelLabel = (value) => levels.find((l) => l.value === value)?.label;
@@ -30,49 +26,54 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
   const discount = hasDiscount ? Math.round((1 - course.price / course.wasPrice) * 100) : 0;
 
   // ---- save heart: optimistic, remembered per browser (localStorage) until a real account list exists ----
-  const [wished, setWished] = useState(false);
-  useEffect(() => setWished(readWishlist().includes(course.id)), [course.id]);
+  const [wished, toggleSaved] = useWishlist(course.id);
   const toggleWish = () => {
-    const list = readWishlist();
-    const saving = !list.includes(course.id);
-    const next = saving ? [...list, course.id] : list.filter((id) => id !== course.id);
-    setWished(saving);
     try {
-      window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(next));
+      const saving = toggleSaved();
       onNotify?.({ message: saving ? "Saved to your list" : "Removed from your list" });
       if (saving) trackEvent("add_to_wishlist", { items: [toItem(course, index)] });
     } catch {
-      setWished(!saving);
       onNotify?.({ message: "We could not update your list. Please try again." });
     }
   };
 
-  // ---- add to basket: idle > loading > added (2s) > in basket, with a "Try again" error state ----
+  // ---- add to basket: a course always goes in with a date. The button opens the date pop-up with the course page's first choice
+  // already marked (the cheapest date, matching the "From" price), so one more click adds it; another date or study method can be
+  // picked first. A course that runs only on demand has no date to choose and goes straight in.
+  // States: idle > loading > added (2s) > in basket, with a "Try again" error state.
   const [status, setStatus] = useState("idle");
+  const [dates, setDates] = useState(null); // { detail, mode } while the pop-up is in use
+  const [datesOpen, setDatesOpen] = useState(false);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
-  const addToBasket = () => {
-    if (status === "loading" || status === "added" || inBasket) return; // no double add
+  const add = (detail, session) => {
     setStatus("loading");
     later(() => {
       try {
-        addCourseToCart(course.id, {
-          id: course.id,
-          title: course.title,
-          imageSrc: course.imageSrc,
-          discountedPrice: course.price,
-          originalPrice: course.wasPrice ?? course.price,
-        });
+        addCourseToCart(detail.id, lineFor(detail, session));
         setStatus("added");
-        onNotify?.({ message: `${course.title} added to basket`, href: BASKET_HREF, label: "View basket" });
-        trackEvent("add_to_cart", { currency: "GBP", value: course.price, items: [{ ...toItem(course, index), quantity: 1 }] });
+        onNotify?.({ message: `Added to basket: ${session.mode === "ondemand" ? "on demand" : `${formatShortDate(session.date)}, ${session.location}`}`, href: BASKET_HREF, label: "View basket" });
+        trackEvent("add_to_cart", { currency: "GBP", value: session.price, items: [{ ...toItem(course, index), item_variant: session.id, price: session.price, quantity: 1 }] });
         later(() => setStatus("idle"), 2000);
       } catch {
         setStatus("error");
         onNotify?.({ message: "We could not add that course. Please try again." });
       }
     }, 350);
+  };
+  const addToBasket = () => {
+    if (status === "loading" || status === "added" || inBasket) return; // no double add
+    const detail = getCourseBySlug(course.id);
+    const modes = detail ? bookableModes(detail) : [];
+    if (!modes.length) return onNotify?.({ message: "We could not load the dates for this course. Please try again." });
+    if (modes.length === 1 && modes[0] === "ondemand") return add(detail, firstSession(detail, "ondemand"));
+    setDates({ detail, mode: defaultMode(detail) });
+    setDatesOpen(true);
+  };
+  const confirmDate = (id) => {
+    setDatesOpen(false);
+    add(dates.detail, dates.detail.sessions.find((s) => s.id === id));
   };
   const showInBasket = inBasket && status !== "added" && status !== "loading";
 
@@ -163,7 +164,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
               In basket
             </Link>
           ) : (
-            <button type="button" className={`rt-card__btn rt-card__btn--primary is-${status}`} onClick={addToBasket} disabled={status === "loading"} aria-live="polite">
+            <button type="button" className={`rt-card__btn rt-card__btn--primary is-${status}`} onClick={addToBasket} aria-disabled={status === "loading" || undefined} aria-haspopup="dialog" aria-live="polite">
               {status === "loading" && <span className="rt-card__spinner" aria-hidden="true"></span>}
               {status === "added" && (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
@@ -182,6 +183,17 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
           )}
         </div>
       </div>
+
+      <DatesPicker
+        open={datesOpen}
+        onClose={() => setDatesOpen(false)}
+        course={dates?.detail}
+        mode={dates?.mode}
+        modes={dates ? bookableModes(dates.detail) : undefined}
+        onMode={(m) => setDates((d) => ({ ...d, mode: m }))}
+        selectedId={dates ? firstSession(dates.detail, dates.mode)?.id : undefined}
+        confirm={{ label: "Add to basket", onConfirm: confirmDate }}
+      />
     </article>
   );
 }

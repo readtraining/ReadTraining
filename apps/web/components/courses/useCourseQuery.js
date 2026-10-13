@@ -19,10 +19,12 @@ const TICK_DEBOUNCE = 250;
 //   boxes quickly makes ONE update. `afterCommit` runs once, after that single write.
 // - URL changes use the History API (Next.js keeps useSearchParams in sync), so there is no server request and no
 //   scroll jump. Filter changes replace the entry; page changes push one so Back / Forward restore the page.
-export function useCourseQuery() {
+// `baseSubject` is a course page's own subject (/courses/first-aid): its sub-subjects work without a ticked subject.
+export function useCourseQuery(baseSubject = "") {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const urlState = useMemo(() => parseCatalogueParams(searchParams), [searchParams]);
+  const base = useMemo(() => (baseSubject ? { subject: baseSubject } : {}), [baseSubject]);
+  const urlState = useMemo(() => parseCatalogueParams(searchParams, base), [searchParams, base]);
 
   const [pending, setPending] = useState(null); // optimistic state while a debounced write is waiting
   const state = pending ?? urlState;
@@ -51,12 +53,12 @@ export function useCourseQuery() {
   // Tidy the address bar: unknown values, duplicates, unsorted lists and legacy names are rewritten to the clean form.
   useEffect(() => {
     if (pending) return;
-    const clean = buildCatalogueQuery(urlState);
+    const clean = buildCatalogueQuery(urlState, base);
     const current = searchParams.toString().replace(/%2C/g, ",");
     if (current && clean !== current) {
-      if (parseCatalogueParams(new URLSearchParams(current)).page === urlState.page) writeUrl(clean, "replace");
+      if (parseCatalogueParams(new URLSearchParams(current), base).page === urlState.page) writeUrl(clean, "replace");
     }
-  }, [searchParams, urlState, pending, writeUrl]);
+  }, [searchParams, urlState, pending, writeUrl, base]);
 
   // Small history of filter changes so the latest single change can be undone ("Remove last filter").
   const history = useRef([]);
@@ -70,7 +72,7 @@ export function useCourseQuery() {
       if ("location" in patch && patch.location !== base.location) next.sort = defaultSort(next.location);
       // Sub-subjects only make sense under a ticked subject.
       if ("subject" in patch && !("sub" in patch)) {
-        const allowed = new Set(next.subject.flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
+        const allowed = new Set([...next.subject, ...(baseSubject ? [baseSubject] : [])].flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
         next.sub = next.sub.filter((v) => allowed.has(v));
       }
       if (record && !sameFilters(base, next)) {
@@ -80,7 +82,7 @@ export function useCourseQuery() {
       setPending(next);
       stateRef.current = next;
       clearTimeout(timer.current);
-      commit.current = { query: buildCatalogueQuery(next), mode: push ? "push" : "replace", after: afterCommit };
+      commit.current = { query: buildCatalogueQuery(next, base), mode: push ? "push" : "replace", after: afterCommit };
       timer.current = setTimeout(() => {
         timer.current = null;
         const { query, mode, after } = commit.current;
@@ -88,7 +90,7 @@ export function useCourseQuery() {
         after?.();
       }, debounce);
     },
-    [writeUrl],
+    [writeUrl, base, baseSubject],
   );
 
   // Checkbox groups: add or remove ONE value (debounced). Unticking a subject also drops its sub-subjects.

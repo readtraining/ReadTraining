@@ -4,6 +4,7 @@ import { coursesData } from "@/data/courses";
 import { events } from "@/data/events";
 import { productData } from "@/data/products";
 import React from "react";
+import { lineKey, mergeLines } from "@/lib/basket";
 import { useContext ,useEffect ,useRef ,useState } from "react";
 const dataContext = React.createContext();
 export const useContextElement = () => {
@@ -24,7 +25,7 @@ export const useContextElement = () => {
         try {
             const saved = JSON.parse(window.localStorage.getItem(CART_KEY) || "null")
             if (saved) {
-                if (Array.isArray(saved.courses)) setCartCourses(saved.courses)
+                if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses))
                 if (Array.isArray(saved.products)) setCartProducts(saved.products)
                 if (Array.isArray(saved.events)) setCartEvents(saved.events)
             }
@@ -37,22 +38,15 @@ export const useContextElement = () => {
             window.localStorage.setItem(CART_KEY, JSON.stringify({ courses: cartCourses, products: cartProducts, events: cartEvents }))
         } catch {}
     }, [cartCourses, cartProducts, cartEvents])
+    // A basket line is a course on one date (lib/basket.js lineKey): the same course can be added on two dates, never twice on one,
+    // and a dated line replaces the course's undated one (mergeLines).
     const addCourseToCart = (id, course)=>{
-
-        if (!cartCourses.filter((elm)=>elm.id == id)[0]) {
-
-           const item = {...(course || coursesData.filter(elm=>elm.id == id)[0]),quantity:1}
-           setCartCourses(pre=>[...pre,item])
-            
-        }
-
+        const item = {...(course || coursesData.filter(elm=>elm.id == id)[0]),quantity:1}
+        setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre : mergeLines([...pre,item]))
     }
-    const isAddedToCartCourses = (id)=>{
-        if (cartCourses.filter((elm)=>elm.id == id)[0]) {
-            return true
-         }
-         return false
-
+    // With a session id: is that date in the basket. Without: is the course in it on any date.
+    const isAddedToCartCourses = (id, sessionId)=>{
+        return cartCourses.some((elm)=>elm.id == id && (sessionId === undefined || (elm.sessionId || "") === sessionId))
     }
     const addProductToCart = (id)=>{
 
