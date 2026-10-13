@@ -4,9 +4,11 @@
 
 import { placesByCourse } from "./locationPlaces";
 import { courseLink } from "@/data/courseSlugs";
+import { CATALOGUE_HREF, HSE_TEST_HREF, TEST_CENTRES_HREF, testCentreHref } from "@/lib/routes";
+import { testCentres } from "@/data/testCentres";
 
 const course = (label, slug) => ({ label, slug, href: courseLink(1) });
-const cat = (label, slug) => ({ label, slug, href: "/courses" });
+const cat = (label, slug) => ({ label, slug, href: CATALOGUE_HREF });
 const img = (n) => `/assets/img/coursesCards/${n}.png`;
 
 export const studyMethods = [
@@ -136,12 +138,17 @@ export const licenceGroups = [
 // (`page`), where the location filter works the same. `slug` keeps the original path for when real pages exist.
 const FINDER = "/courses";
 export const slugify = (text) => text.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-const locationCourse = (label, slug, { id, q, page, related }) => ({
+const testCentreCity = (city) => {
+  const c = testCentres.find((x) => x.town.toLowerCase() === city.toLowerCase() || x.slug === slugify(city));
+  return c ? testCentreHref(c.slug) : `${TEST_CENTRES_HREF}?q=${encodeURIComponent(city)}`;
+};
+const locationCourse = (label, slug, { id, q, page, related, cityHref }) => ({
   label,
   slug,
   id,
   places: placesByCourse[label], // the towns it runs in (data/home/locationPlaces.js); a course with none shows `related` courses instead
   related,
+  cityHref,
   locationSlug: id ? slugify(label) : undefined, // "door-supervisor-course": the course's pages are /course-locations/<this>-in-<city>
   href: id ? courseLink(id) : page,
   results: id ? `${FINDER}?q=${encodeURIComponent(q)}` : page,
@@ -149,7 +156,8 @@ const locationCourse = (label, slug, { id, q, page, related }) => ({
 export const locationCourses = [
   locationCourse("Abrasive Wheel Course", "/course/abrasive-wheels", { page: "/courses/health-and-safety" }),
   locationCourse("CCTV Operator Course", "/courses/cctv-operator", { id: 3, q: "CCTV Operator" }),
-  locationCourse("CITB HS&E Test", "/tests/citb-health-safety-and-environment-test", { page: "/courses/citb-site-safety-plus" }),
+  // a town with a test centre opens its page; any other town opens the directory searched for it (nearest centres first)
+  locationCourse("CITB HS&E Test", HSE_TEST_HREF, { page: HSE_TEST_HREF, cityHref: testCentreCity }),
   locationCourse("CITB Site Safety Plus", "/courses/citb-site-safety-plus", {
     page: "/courses/citb-site-safety-plus",
     related: [
@@ -183,7 +191,7 @@ export const locationCourses = [
 // site); one that is not in the catalogue yet opens the nearest course page filtered to the town. The course-in-a-city page
 // sends a town with no venue for the course to the course finder (locationFinderHref), so no link is a dead end.
 export const locationFinderHref = (course, city) => `${course.results}${course.results.includes("?") ? "&" : "?"}location=${encodeURIComponent(city)}`;
-export const locationHref = (course, city) => (course.id ? `/course-locations/${course.locationSlug}-in-${slugify(city)}` : locationFinderHref(course, city));
+export const locationHref = (course, city) => course.cityHref ? course.cityHref(city) : (course.id ? `/course-locations/${course.locationSlug}-in-${slugify(city)}` : locationFinderHref(course, city));
 export const cityHref = (city) => `${FINDER}?location=${encodeURIComponent(city)}`;
 
 export const cities = [
@@ -234,12 +242,12 @@ export const resources = {
 export const menuFooters = {
   courses: {
     links: [
-      { label: "All courses", href: "/courses" },
+      { label: "All courses", href: CATALOGUE_HREF },
       { label: "Classroom", href: "/courses/classroom" },
       { label: "Live online", href: "/courses/virtual" },
       { label: "Online self-paced", href: "/courses/online" },
     ],
-    action: { label: "Course Finder", icon: "icon-search", href: "/courses" },
+    action: { label: "Course Finder", icon: "icon-search", href: CATALOGUE_HREF },
   },
   licences: {
     links: [
@@ -275,7 +283,7 @@ export const homeMenuList = [
     links: [
       { title: "Browse by subject", links: subjects.map((s) => ({ label: s.label, href: s.href })) },
       { title: "Study method", links: studyMethods.map((m) => ({ label: m.label, href: m.href })) },
-      { href: "/courses", label: "View all courses" },
+      { href: CATALOGUE_HREF, label: "View all courses" },
     ],
   },
   { title: "Licences & Cards", links: licenceGroups.map((g) => ({ label: g.label, href: g.href })) },

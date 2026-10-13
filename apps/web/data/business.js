@@ -1,5 +1,6 @@
+import { AUTH_ROUTES } from "@/lib/routes";
 // "For business" page content. Same functionality as the client's current site, our own copy and UI.
-const signup = { label: "Create a Business account", href: "/signup" };
+const signup = { label: "Create a Business account", href: AUTH_ROUTES.signUp };
 const demo = { label: "Book a demo", href: "/contact-us" };
 
 export const business = {

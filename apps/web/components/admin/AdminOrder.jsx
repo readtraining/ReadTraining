@@ -4,7 +4,7 @@ import React, { useRef, useState } from "react";
 import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { addOrderNote, resendConfirmation, useAdmin } from "@/lib/admin";
-import { courseHref } from "@/lib/courses";
+import { courseHref } from "@/data/courseSlugs";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { Pill, formatWhen } from "./adminParts";

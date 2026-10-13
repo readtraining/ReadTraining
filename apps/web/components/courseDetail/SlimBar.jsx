@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useBooking } from "./BookingProvider";
 import Stars from "@/components/home/HomeStars";
-import { formatNumber } from "@/lib/courses";
+import { formatNumber } from "@/lib/format";
 
 // The slim bar: fixed under the header, shown only while the page title (#rt-cd-title, the H1) is out of view.
 // It carries the course title, badge, rating and students on the left and the page's section links on the right

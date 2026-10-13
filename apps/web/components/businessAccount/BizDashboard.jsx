@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
 import { getBusiness } from "@/lib/businessAccount";
-import { courseHref } from "@/lib/courses";
+import { courseHref } from "@/data/courseSlugs";
 import { formatDate, formatPrice } from "@/lib/format";
 import BookingRow from "@/components/account/BookingRow";
 import { CertPill, PlacesBar, asBooking, certLine } from "./bizParts";

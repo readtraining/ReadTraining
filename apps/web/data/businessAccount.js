@@ -1,3 +1,4 @@
+import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 // The Business account (/business): dashboard, learners, team training assignments, bookings, and billing and invoices. Built on
 // what Hurak's Business account offers (its "For Businesses" page: a training overview with learners, unassigned places,
 // certificates and renewals due; places per course you assign now or hold; learner progress; certificates and expiry; billing on a
@@ -12,6 +13,7 @@ export const businessAccount = {
     { key: "assignments", label: "Assign places", href: "/business/assignments", icon: "icon-list" },
     { key: "bookings", label: "Bookings", href: "/business/bookings", icon: "icon-calendar" },
     { key: "billing", label: "Billing and invoices", href: "/business/billing", icon: "icon-badge" },
+    { key: "team", label: "Team", href: "/business/team", icon: "icon-friend" },
   ],
   switchTo: { label: "Switch to my personal account", href: "/account" },
 
@@ -25,11 +27,30 @@ export const businessAccount = {
     actions: {
       title: "Quick actions",
       items: [
-        { label: "Book training for your team", href: "/courses", primary: true },
+        { label: "Book training for your team", href: CATALOGUE_HREF, primary: true },
         { label: "Add a learner", href: "/business/learners?add=1" },
-        { label: "Get a group quote", href: "/quote" },
+        { label: "Get a group quote", href: QUOTE_HREF },
       ],
     },
+  },
+
+  // Team (/business/team): colleagues who can manage the account, as on Hurak's Business account ("Add member": name, email,
+  // role; Hurak has one role, Member). Learners are the people being trained; team members run the account.
+  team: {
+    title: "Team",
+    lead: "Colleagues who can manage this Business account: book training, assign places and see invoices.",
+    add: "Add member",
+    columns: ["Team member", "Role", "Status", "Actions"],
+    roles: { owner: "Account owner", member: "Member" },
+    status: { active: "Active", invited: "Invitation sent" },
+    ownerNote: "That's you. Only the account owner can change billing details or close the account.",
+    roleHint: "Members can book training, assign places and see invoices.",
+    resend: "Resend invitation",
+    remove: "Remove",
+    removeTitle: "Remove {name}?",
+    removeText: "They will no longer be able to manage this Business account. Their own training and certificates are not affected.",
+    removeConfirm: "Remove from team",
+    form: { title: "Add a team member", first: "First name", last: "Last name", email: "Work email", role: "Role", submit: "Send invitation", note: "We email them an invitation to join your Business account." },
   },
 
   learners: {
@@ -55,7 +76,7 @@ export const businessAccount = {
     assign: "Assign",
     unassign: "Remove",
     none: "Every learner on your account already has a place on this course.",
-    empty: { title: "No upcoming places", text: "Places you buy for your team show here until the course starts.", cta: { label: "Book training for your team", href: "/courses" } },
+    empty: { title: "No upcoming places", text: "Places you buy for your team show here until the course starts.", cta: { label: "Book training for your team", href: CATALOGUE_HREF } },
     addLearner: "Add a learner",
   },
 
@@ -83,6 +104,11 @@ export const businessAccount = {
 
   // ---- demo data (until accounts exist) ----
   company: { name: "Harbour Facilities Ltd", account: "BA-20418", email: "accounts@harbourfacilities.co.uk", address: "Unit 4, Quayside Park, Bristol BS1 6XN", vat: "GB 284 1937 22", terms: "30 days", limit: 5000 },
+  // team members besides the signed-in account owner (DEMO)
+  teamMembers: [
+    { id: "t1", first: "Priya", last: "Shah", email: "p.shah@harbourfacilities.co.uk", role: "member", status: "active" },
+    { id: "t2", first: "James", last: "Holt", email: "j.holt@harbourfacilities.co.uk", role: "member", status: "invited" },
+  ],
   people: [
     { id: "l1", name: "Hannah Cooper", email: "h.cooper@harbourfacilities.co.uk", job: "Facilities supervisor", status: "active" },
     { id: "l2", name: "Daniel Khan", email: "d.khan@harbourfacilities.co.uk", job: "Security officer", status: "active" },

@@ -7,7 +7,7 @@ import { IN_HOUSE_NOTE, MODE_LABEL, quoteHref, useBooking } from "./BookingProvi
 import { TEAM } from "@/lib/teamTraining";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
-import { formatDateRange, formatPrice, savePercent } from "@/lib/courses";
+import { formatDateRange, formatPrice, savePercent } from "@/lib/format";
 import { Check, Icon } from "./Icon";
 
 

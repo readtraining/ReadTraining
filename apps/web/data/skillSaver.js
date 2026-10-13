@@ -1,4 +1,3 @@
-import { AUTH_ROUTES } from "@/lib/routes";
 import { SKILL_SAVER_LEVELS } from "@/lib/skillSaver";
 
 // Provider Skill Saver (/provider-skill-saver). The programme's rules come from the client's current site: the learner levels
@@ -7,7 +6,7 @@ import { SKILL_SAVER_LEVELS } from "@/lib/skillSaver";
 // The layout and wording are ours. Draft until confirmed: the expected averages and the learner behaviour figures (the client
 // gives them without a source) and the opt-out answer (the client's FAQ asks it but publishes no answer).
 
-const JOIN = { label: "Join Skill Saver", href: AUTH_ROUTES.signUp };
+const JOIN = { label: "Join Skill Saver", href: "/for-providers#become-provider" }; // the provider sign-up pop-up
 // the levels' numbers come from lib/skillSaver.js, shared with the learner page (/skill-saver)
 const [L1, L2, L3] = SKILL_SAVER_LEVELS;
 const pct = (l) => `${l.discount}%`;

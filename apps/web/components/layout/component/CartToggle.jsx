@@ -2,10 +2,14 @@
 import { usePathname } from "next/navigation";
 import React from "react";
 import { useContextElement } from "@/context/Context";
-import { useState, useEffect } from "react";
-import ShopCart from "./ShopCart";
+import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import CourseCart from "./CourseCart";
-import EventCart from "./EventCart";
+
+// The template's shop and event carts only show on its demo /template/shop and /template/event pages: loaded on demand, so they
+// are not part of every page's download.
+const ShopCart = dynamic(() => import("./ShopCart"));
+const EventCart = dynamic(() => import("./EventCart"));
 
 const CartToggle = ({ allClasses, parentClassess }) => {
   const { cartProducts, cartCourses, cartEvents } = useContextElement();
@@ -15,12 +19,33 @@ const CartToggle = ({ allClasses, parentClassess }) => {
   // /template/... page matched "Shop" or "Events" and the course basket count never showed.
   const isShop = pathname?.startsWith("/template/shop");
   const isEvents = pathname?.startsWith("/template/event");
+  // the mini basket is a drop-down panel: Esc or a click outside closes it, and Esc puts focus back on the basket button
+  const boxRef = useRef(null);
+  const btnRef = useRef(null);
+  useEffect(() => {
+    if (!activeCart) return;
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      setActiveCart(false);
+      btnRef.current?.focus();
+    };
+    const onDown = (e) => !boxRef.current?.contains(e.target) && setActiveCart(false);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [activeCart]);
 
   return (
     <>
-      <div className={parentClassess ? parentClassess : ""}>
+      <div className={parentClassess ? parentClassess : ""} ref={boxRef}>
         <button
+          ref={btnRef}
           style={{ position: "relative" }}
+          aria-expanded={activeCart}
+          aria-controls="rt-minibasket"
           onClick={() => setActiveCart((pre) => !pre)}
           className={`${allClasses ? allClasses : ""}`}
           aria-label={`Basket, ${isShop ? cartProducts.length : isEvents ? cartEvents.length : cartCourses.length} items`}
@@ -41,6 +66,7 @@ const CartToggle = ({ allClasses, parentClassess }) => {
         </button>
 
         <div
+          id="rt-minibasket"
           className={`toggle-element js-cart-toggle ${
             activeCart ? "-is-el-visible" : ""
           }`}

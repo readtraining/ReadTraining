@@ -2,6 +2,7 @@
 export const CATALOGUE_HREF = "/courses";
 export const BASKET_HREF = "/basket";
 export const QUOTE_HREF = "/quote";
+export const CHECKOUT_HREF = "/checkout";
 
 // A course details page. Pass the course's slug; lib/courses.js `courseHref` also accepts a catalogue id.
 export const coursePath = (slug) => `/course/${slug}`;
@@ -16,3 +17,8 @@ export const AUTH_ROUTES = {
   terms: "/terms-and-conditions",
   privacy: "/privacy-policy",
 };
+
+// The CITB HS&E test (the "CSCS test"): the test page, the test centre directory and a centre's page (the client's URLs).
+export const HSE_TEST_HREF = "/tests/citb-health-safety-and-environment-test";
+export const TEST_CENTRES_HREF = "/cscs-test-centres";
+export const testCentreHref = (slug) => `/tests-locations/cscs-citb-tests-${slug}`;

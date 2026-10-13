@@ -1,5 +1,6 @@
 import React from "react";
 import CheckoutHeader from "@/components/checkout/CheckoutHeader";
+import CheckoutFooter from "@/components/checkout/CheckoutFooter";
 import Confirmation from "@/components/checkout/Confirmation";
 import { pageMetadata } from "@/lib/seo";
 
@@ -16,6 +17,7 @@ export default function CheckoutConfirmation() {
       <main id="rt-ck-main" tabIndex={-1}>
         <Confirmation />
       </main>
+      <CheckoutFooter />
     </div>
   );
 }

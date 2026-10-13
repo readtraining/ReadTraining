@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { setOfferingStatus, setPreCourse, useAdmin } from "@/lib/admin";
-import { courseHref } from "@/lib/courses";
+import { courseHref } from "@/data/courseSlugs";
 import { formatPrice } from "@/lib/format";
 import { Pill } from "./adminParts";
 

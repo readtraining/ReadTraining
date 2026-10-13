@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/courseDetail/Icon";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 // A pop-up in the site's dialog shell (.rt-dd, as the course page's "choose a date" pop-up): centred on desktop, a bottom
 // sheet on phones. Locks page scroll, traps Tab, closes on Esc and on the backdrop, and puts focus on the title.
@@ -62,35 +63,12 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
     };
   }, [mounted]);
 
+  // keyboard: Tab stays inside, Esc closes (the shared focus trap); focus starts on the title
+  useFocusTrap(open && mounted, panelRef, () => onCloseRef.current());
   useEffect(() => {
     if (!open || !mounted) return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    const t = setTimeout(() => panel.querySelector("h2")?.focus({ preventScroll: true }), 30);
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      const items = [...panel.querySelectorAll('a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])')].filter((el) => el.offsetParent !== null);
-      if (!items.length) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (e.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("keydown", onKey);
-    };
+    const t = setTimeout(() => panelRef.current?.querySelector("h2")?.focus({ preventScroll: true }), 30);
+    return () => clearTimeout(t);
   }, [open, mounted]);
 
   if (!mounted) return null;

@@ -271,7 +271,9 @@ export function parseCatalogueParams(params, base = {}) {
   const [subjectG, methodG, levelG] = filterGroups;
   const sort = params.get("sort");
   const page = parseInt(params.get("page") || "1", 10);
-  const location = (params.get("location") || params.get("where") || "").trim().slice(0, 80);
+  // a town page (/courses/<page>/<town>) sets the town as `base.location`; ?location= (even empty) overrides it
+  const raw = params.has("location") ? params.get("location") : params.get("where") || base.location || "";
+  const location = raw.trim().slice(0, 80);
   const num = (key, fallback) => {
     const n = parseFloat(params.get(key));
     return Number.isFinite(n) ? Math.min(Math.max(n, PRICE_BOUNDS.min), PRICE_BOUNDS.max) : fallback;
@@ -309,7 +311,7 @@ export function buildCatalogueQuery(state, base = {}) {
   list("method", state.method);
   list("level", state.level);
   if (state.q) p.set("q", state.q);
-  if (state.location) p.set("location", state.location);
+  if ((state.location || "") !== (base.location || "")) p.set("location", state.location || "");
   if (state.min > PRICE_BOUNDS.min) p.set("min", String(state.min));
   if (state.max < PRICE_BOUNDS.max) p.set("max", String(state.max));
   if (state.sort && state.sort !== defaultSort(state.location)) p.set("sort", state.sort);

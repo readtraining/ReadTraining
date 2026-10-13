@@ -1,4 +1,5 @@
 import { topBar } from "@/data/home";
+import { BASKET_HREF, CATALOGUE_HREF, CHECKOUT_HREF } from "@/lib/routes";
 
 // The checkout (/checkout) and the booking confirmation (/checkout/confirmation). One page, as the client's current site
 // (hurak.com) and the large booking sites do it: your details (individual or business), the billing address, the delegates for
@@ -6,7 +7,7 @@ import { topBar } from "@/data/home";
 
 export const checkout = {
   title: "Checkout",
-  back: { label: "Back to basket", href: "/basket" },
+  back: { label: "Back to basket", href: BASKET_HREF },
   secure: "Secure checkout",
   help: { label: "Need help?", phone: topBar.phone },
 
@@ -42,8 +43,8 @@ export const checkout = {
   trust: ["No booking fee", "Approved providers only", "Move to another date free of charge up to 7 days before"],
 
   // nothing ready to pay for: arrived without a basket, or with something still to finish there
-  empty: { title: "There is nothing to pay for yet", text: "Choose your courses and dates in your basket first.", cta: { label: "Go to your basket", href: "/basket" } },
-  unfinished: { title: "Finish your basket first", text: "Some of the courses you ticked still need a date or a choice. Your basket shows what is left.", cta: { label: "Back to basket", href: "/basket" } },
+  empty: { title: "There is nothing to pay for yet", text: "Choose your courses and dates in your basket first.", cta: { label: "Go to your basket", href: BASKET_HREF } },
+  unfinished: { title: "Finish your basket first", text: "Some of the courses you ticked still need a date or a choice. Your basket shows what is left.", cta: { label: "Back to basket", href: BASKET_HREF } },
 
   confirmation: {
     title: "Booking confirmed",
@@ -59,7 +60,7 @@ export const checkout = {
     },
     actions: [
       { label: "View in my account", href: "/account/bookings/{ref}", primary: true },
-      { label: "Find more courses", href: "/courses" },
+      { label: "Find more courses", href: CATALOGUE_HREF },
       { label: "Visit the Help Centre", href: "/help-centre" },
     ],
     // the same return page when the payment did not go through (a declined card, Klarna not approved, the bank's check failed)
@@ -67,11 +68,11 @@ export const checkout = {
       title: "Payment not completed",
       text: "Nothing has been charged and your booking has not been made. Your basket is saved, so you can try again or pay another way.",
       actions: [
-        { label: "Try again", href: "/checkout", primary: true },
-        { label: "Back to basket", href: "/basket" },
+        { label: "Try again", href: CHECKOUT_HREF, primary: true },
+        { label: "Back to basket", href: BASKET_HREF },
         { label: "Contact us", href: "/contact-us" },
       ],
     },
-    none: { title: "No recent booking to show", text: "Your confirmation email has the details of your booking.", cta: { label: "Find courses", href: "/courses" } },
+    none: { title: "No recent booking to show", text: "Your confirmation email has the details of your booking.", cta: { label: "Find courses", href: CATALOGUE_HREF } },
   },
 };

@@ -9,14 +9,15 @@ import FaqSection from "@/components/marketing/FaqSection";
 import CourseCatalogue from "@/components/courses/CourseCatalogue";
 import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import PostCard from "@/components/blog/PostCard";
-import { getCoursePage, getCoursePageSlugs } from "@/lib/coursePages";
+import CourseTowns from "@/components/courses/CourseTowns";
+import { getCoursePage, getCoursePageSlugs, getCourseTowns } from "@/lib/coursePages";
 import { BLOG_HREF } from "@/lib/blog";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
 // A course page (/courses/<slug>: a study method, a subject or a set of courses, from the footer's "Find a course"): the course
 // catalogue scoped to the page (its title and intro in the hero, links to the other course pages, the same search, filters,
-// sorting and cards as All courses), then the blog's guides on the topic, the page's FAQs, need help and the footer.
+// sorting and cards as All courses), then the towns with a venue (each with its own town page), the blog's guides on the topic, the page's FAQs, need help and the footer.
 // Copy: data/coursePages.js; reads: lib/coursePages.js.
 
 export function generateStaticParams() {
@@ -42,7 +43,7 @@ export default async function CoursePage(props) {
   };
 
   return (
-    <div className="main-content rt-home">
+    <div className="main-content rt-home rt-cat-page">
       <a className="rt-skip" href="#rt-res-list">Skip to courses</a>
       <Preloader />
       <HomeHeader />
@@ -52,6 +53,7 @@ export default async function CoursePage(props) {
           <Suspense fallback={<CourseListSkeleton />}>
             <CourseCatalogue courses={page.courses} scope={page.scope} />
           </Suspense>
+          <CourseTowns title={`Find ${page.label.replace(/ courses$/i, "").toLowerCase()} courses near you`} towns={getCourseTowns(page.slug)} />
           {page.guides.length > 0 && (
             <section className="rt-cpage__guides layout-pt-lg" aria-labelledby="rt-cpage-guides-h">
               <div className="container">

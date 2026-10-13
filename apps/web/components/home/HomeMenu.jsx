@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { subjects, licenceGroups, locationCourses, locationFeature, locationHref, resources, menuFooters } from "@/data/home/menu";
-import { CATALOGUE_HREF } from "@/lib/routes";
+import { AUTH_ROUTES, CATALOGUE_HREF } from "@/lib/routes";
 
 // Navbar dropdowns. Layout and proportions follow Hurak's menus (three columns: browse list →
 // related list → featured card, plus a footer strip); colours and type come from the template.
@@ -132,10 +132,10 @@ export default function HomeMenu({ allClasses, headerPosition }) {
         <div className="mobile-bg js-mobile-bg"></div>
 
         <div className="d-none xl:d-flex items-center px-20 py-20 border-bottom-light">
-          <Link href="/login" className="text-dark-1">
+          <Link href={AUTH_ROUTES.login} className="text-dark-1">
             Log in
           </Link>
-          <Link href="/signup" className="text-dark-1 ml-30">
+          <Link href={AUTH_ROUTES.signUp} className="text-dark-1 ml-30">
             Sign Up
           </Link>
         </div>

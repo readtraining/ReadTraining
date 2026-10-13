@@ -7,6 +7,7 @@ import { addLearner, getBusiness } from "@/lib/businessAccount";
 import { formatDate } from "@/lib/format";
 import { Avatar } from "@/components/marketing/parts";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { focusFirstError } from "@/lib/focusFirstError";
 import { CertPill, certLine } from "./bizParts";
 
 const copy = biz.learners;
@@ -57,7 +58,7 @@ export default function BizLearners() {
     else if (!EMAIL_RE.test(form.email.trim())) found.email = "Enter an email address in the correct format, like name@example.com.";
     else if (data.learners.some((l) => l.email.toLowerCase() === form.email.trim().toLowerCase())) found.email = "This person is already on your account.";
     setErrors(found);
-    if (Object.keys(found).length) return;
+    if (Object.keys(found).length) return focusFirstError(e.currentTarget);
     setSaving(true);
     const added = await addLearner(form);
     setSaving(false);

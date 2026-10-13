@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { MODE_LABEL, quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
-import { formatDateRange, formatPrice } from "@/lib/courses";
+import { formatDateRange, formatPrice } from "@/lib/format";
 import DatesDialog from "./DatesDialog";
 import { Check, Icon } from "./Icon";
 

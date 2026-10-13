@@ -16,6 +16,7 @@ import {
   subSubjects,
 } from "@/data/courseCatalogue";
 import { trackEvent, toItem } from "@/lib/analytics";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import ActiveFilters from "./ActiveFilters";
 import CatalogueCourseCard from "./CatalogueCourseCard";
 import CatalogueDropdown from "./CatalogueDropdown";
@@ -39,11 +40,11 @@ const countLabel = (n) => `${n} ${n === 1 ? "course" : "courses"}`;
 // One reusable catalogue. The URL query string is the single source of truth for filters, search, sort and page
 // (see useCourseQuery). Everything below the hero scrolls with the page; only the filter panel is sticky.
 // `scope` makes it a course page for one category (/courses/[slug]; `courses` is then that category's list):
-// { title, lead, crumb, allHref, links: [{ label, href }], subject?, hide: ["method" | "subject"], filters: false for a short list, about: { title, text } }.
+// { title, lead, crumb, parent?: { label, href } (a town page's course page), location? (a town page's town), allHref, links: [{ label, href }], subject?, hide: ["method" | "subject"], filters: false for a short list, about: { title, text } }.
 // A subject page's `subject` replaces the Subject filter with its sub-subjects ("Course type").
 // The hero then shows the page's title and intro, and links to the other course pages instead of the popular searches.
 export default function CourseCatalogue({ courses = catalogueCourses, scope = null }) {
-  const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject);
+  const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject, scope?.location);
   const [toast, setToast] = useState(null);
 
   const [locationDraft, setLocationDraft] = useState(state.location);
@@ -79,12 +80,15 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+  // Esc closes the panel; as a bottom sheet, Tab also stays inside it (the shared focus trap)
+  const panelRef = useRef(null);
+  useFocusTrap(filtersOpen && isSheet, panelRef, () => setFiltersOpen(false));
   useEffect(() => {
-    if (!filtersOpen) return;
+    if (!filtersOpen || isSheet) return;
     const onKey = (e) => e.key === "Escape" && setFiltersOpen(false);
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [filtersOpen]);
+  }, [filtersOpen, isSheet]);
   // Sheet only: lock page scroll, move focus to the close button, give focus back to the Filters button on close.
   useEffect(() => {
     if (!isSheet || !filtersOpen) return;
@@ -152,7 +156,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
   }, [page, state.subject, state.sub, state.method, state.level, state.min, state.max, state.location, state.q, state.sort]);
 
   const pageHref = (p) => {
-    const query = buildCatalogueQuery({ ...state, page: p }, scope?.subject ? { subject: scope.subject } : {});
+    const query = buildCatalogueQuery({ ...state, page: p }, { ...(scope?.subject ? { subject: scope.subject } : {}), ...(scope?.location ? { location: scope.location } : {}) });
     return query ? `${pathname}?${query}` : pathname;
   };
   // After a filter, sort, chip or clear action: if the user is scrolled below the top of the results, smoothly bring the
@@ -365,6 +369,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
             <>
               <Link href={scope.allHref}>All courses</Link>
               <span aria-hidden="true">/</span>
+              {scope.parent && <><Link href={scope.parent.href}>{scope.parent.label}</Link><span aria-hidden="true">/</span></>}
               <span aria-current="page">{scope.crumb}</span>
             </>
           ) : (
@@ -376,7 +381,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
           {showFilters && (
           <div className={`rt-fp${filtersOpen ? " is-open" : ""}`}>
             <div className="rt-fp__backdrop" onClick={() => setFiltersOpen(false)}></div>
-            <aside className="rt-fp__panel" aria-label="Filters" role={isSheet ? "dialog" : undefined} aria-modal={isSheet ? "true" : undefined}>
+            <aside className="rt-fp__panel" ref={panelRef} aria-label="Filters" role={isSheet ? "dialog" : undefined} aria-modal={isSheet ? "true" : undefined}>
               <span className="rt-fp__handle" aria-hidden="true"></span>
               <div className="rt-fp__head">
                 <h2 className="rt-fp__heading">Filters</h2>

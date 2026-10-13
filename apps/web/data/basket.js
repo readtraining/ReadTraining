@@ -1,3 +1,4 @@
+import { CATALOGUE_HREF, CHECKOUT_HREF } from "@/lib/routes";
 // The course basket (/basket). The flow and the rules follow the client's current site (hurak.com: Select bundle >
 // Review basket > Pay securely, a package per course, the first-aid rule for security courses, the delegates counter and the
 // promo code). Our own wording and layout. Draft until confirmed: the package prices and terms, the first-aid add-on price and
@@ -6,12 +7,12 @@
 export const basket = {
   title: "Your basket",
   steps: ["Choose a date", "Review basket", "Pay securely"], // the basket is the second
-  continueLink: { label: "Continue browsing", href: "/courses" },
-  checkout: { label: "Proceed to payment", href: "/checkout" },
+  continueLink: { label: "Continue browsing", href: CATALOGUE_HREF },
+  checkout: { label: "Proceed to payment", href: CHECKOUT_HREF },
   instalments: "Pay in 3 interest-free instalments with Klarna",
   // what the customer can rely on, taken from the course page's booking card and FAQs
   trust: ["No booking fee", "Approved providers only", "Move to another date free of charge up to 7 days before"],
-  empty: { title: "Your basket is empty", text: "Find a course, choose a date and add it to your basket.", cta: { label: "Find courses", href: "/courses" } },
+  empty: { title: "Your basket is empty", text: "Find a course, choose a date and add it to your basket.", cta: { label: "Find courses", href: CATALOGUE_HREF } },
   recommended: { eyebrow: "More to consider", title: "You might also like" },
   noDate: "No date chosen yet.",
   chooseDate: "Choose a date",

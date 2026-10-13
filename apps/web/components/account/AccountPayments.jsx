@@ -5,6 +5,7 @@ import { account } from "@/data/account";
 import { addCard, cardExpired, getCards, removeCard, setDefaultCard } from "@/lib/account";
 import { validCardNumber, validExpiry } from "@/lib/checkout";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { focusFirstError } from "@/lib/focusFirstError";
 
 const copy = account.payments;
 const digits = (v) => v.replace(/\D/g, "");
@@ -36,7 +37,7 @@ export default function AccountPayments() {
     else if (!validExpiry(form.expiry)) found.expiry = "Enter an expiry date in the future, like 08 / 28.";
     if (!form.name.trim()) found.name = "Enter the name on the card.";
     setErrors(found);
-    if (Object.keys(found).length) return;
+    if (Object.keys(found).length) return focusFirstError(e.currentTarget);
     setSaving(true);
     const card = await addCard(form);
     setSaving(false);

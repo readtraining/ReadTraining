@@ -28,6 +28,8 @@ const nextConfig: NextConfig = {
       // the account's pages renamed to the client's menu (My learning, Purchase history, Account settings)
       { source: '/account/bookings', destination: '/account/purchases', permanent: true },
       { source: '/account/profile', destination: '/account/settings', permanent: true },
+      // the old provider workspace prototype
+      { source: '/admin/provider', destination: '/provider', permanent: true },
     ]
   },
 }

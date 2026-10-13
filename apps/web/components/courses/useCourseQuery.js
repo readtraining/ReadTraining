@@ -20,10 +20,11 @@ const TICK_DEBOUNCE = 250;
 // - URL changes use the History API (Next.js keeps useSearchParams in sync), so there is no server request and no
 //   scroll jump. Filter changes replace the entry; page changes push one so Back / Forward restore the page.
 // `baseSubject` is a course page's own subject (/courses/first-aid): its sub-subjects work without a ticked subject.
-export function useCourseQuery(baseSubject = "") {
+// `baseLocation` is a town page's town (/courses/first-aid/leeds): the location until the visitor changes it.
+export function useCourseQuery(baseSubject = "", baseLocation = "") {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const base = useMemo(() => (baseSubject ? { subject: baseSubject } : {}), [baseSubject]);
+  const base = useMemo(() => ({ ...(baseSubject ? { subject: baseSubject } : {}), ...(baseLocation ? { location: baseLocation } : {}) }), [baseSubject, baseLocation]);
   const urlState = useMemo(() => parseCatalogueParams(searchParams, base), [searchParams, base]);
 
   const [pending, setPending] = useState(null); // optimistic state while a debounced write is waiting

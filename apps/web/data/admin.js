@@ -22,9 +22,12 @@ export const admin = {
     { group: "Sales", items: [
       { key: "orders", label: "Orders and bookings", icon: "icon-basket", href: "/admin/orders" },
       { key: "changes", label: "Changes and refunds", icon: "icon-wall-clock", href: "/admin/changes", badge: "changes" },
+      { key: "requests", label: "Requests", icon: "icon-message", href: "/admin/requests", badge: "requests" },
     ] },
     { group: "Customers", items: [
       { key: "learners", label: "Learners and certificates", icon: "icon-person", href: "/admin/learners" },
+      { key: "businesses", label: "Business accounts", icon: "icon-save-money", href: "/admin/businesses", badge: "credit" },
+      { key: "jobs", label: "Security Jobs", icon: "icon-badge", href: "/admin/jobs", badge: "candidates" },
     ] },
     { group: "System", items: [
       { key: "settings", label: "Settings and audit", icon: "icon-setting", href: "/admin/settings" },
@@ -45,6 +48,10 @@ export const admin = {
       applications: { label: "Provider applications", href: "/admin/providers?tab=applied" },
       changes: { label: "Changes and refunds open", href: "/admin/changes" },
       documents: { label: "Accreditation expiring or expired", href: "/admin/providers?tab=active" },
+      requests: { label: "Requests open", href: "/admin/requests" },
+      credit: { label: "Businesses eligible for credit", href: "/admin/businesses?tab=credit" },
+      debt: { label: "Business accounts with overdue invoices", href: "/admin/businesses?tab=overdue" },
+      candidates: { label: "New Security Jobs candidates", href: "/admin/jobs" },
     },
     overdueNote: "{n} overdue",
     recent: "Latest orders",

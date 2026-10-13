@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
-import { formatPrice, formatShortDate } from "@/lib/courses";
+import { formatPrice, formatShortDate } from "@/lib/format";
 
 // Fixed bar at 991px and under. It appears only once the booking card's button has scrolled out of view above the screen.
 // In-house follows the card: no price, and the button becomes "Get a quote".

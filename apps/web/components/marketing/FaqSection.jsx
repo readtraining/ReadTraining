@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 
-/* FAQ section: the site's FAQ (pill, centred title, divider accordion with plus/minus and animated height), as on
-   /for-business (BizFaq) and the course catalogue (CourseFaq), taking its content as props. One answer is open at a time;
+/* FAQ section: the site's one FAQ (pill, centred title, divider accordion with plus/minus and animated height), used on
+   every marketing page, the course catalogue and For Business / For Providers, taking its content as props. One answer is open at a time;
    a closed answer is inert, so it cannot be tabbed into. */
 export default function FaqSection({ eyebrow, title, text, items, idPrefix = "faq", className = "layout-pt-lg layout-pb-lg", id, compact = false }) {
   const [open, setOpen] = useState(0);

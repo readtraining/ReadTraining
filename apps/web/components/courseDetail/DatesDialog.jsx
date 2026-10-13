@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MODE_LABEL, useBooking } from "./BookingProvider";
-import { formatDateRange, formatPrice } from "@/lib/courses";
+import { formatDateRange, formatPrice } from "@/lib/format";
 import { Icon } from "./Icon";
 
 const SORTS = { classroom: [["cheapest", "Cheapest"], ["soonest", "Soonest"], ["name", "Name (A to Z)"]], online: [["cheapest", "Cheapest"], ["soonest", "Soonest"]] };

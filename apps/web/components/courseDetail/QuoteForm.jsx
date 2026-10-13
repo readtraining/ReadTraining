@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import Link from "next/link";
 import { submitQuote } from "@/lib/quote";
+import { focusFirstError } from "@/lib/focusFirstError";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -30,11 +31,7 @@ export default function QuoteForm({ courseTitle, backHref }) {
     e.preventDefault();
     const found = validate(values);
     setErrors(found);
-    const first = Object.keys(found)[0];
-    if (first) {
-      formRef.current?.querySelector(`[name="${first}"]`)?.focus();
-      return;
-    }
+    if (Object.keys(found).length) return focusFirstError(formRef.current);
     setStatus("sending");
     try {
       await submitQuote({ ...values, course: courseTitle || null });
@@ -57,13 +54,13 @@ export default function QuoteForm({ courseTitle, backHref }) {
   const field = (name, label, props = {}, hint) => (
     <div className="rt-field">
       <label htmlFor={`rt-q-${name}`}>{label}</label>
+      {hint && <small className="rt-field__hint" id={`rt-q-${name}-h`}>{hint}</small>}
+      {errors[name] && <p className="rt-q__err" id={`rt-q-${name}-e`}><span className="rt-sr">Error: </span>{errors[name]}</p>}
       {props.as === "textarea" ? (
-        <textarea id={`rt-q-${name}`} name={name} rows={5} value={values[name]} onChange={set(name)} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `rt-q-${name}-e` : undefined} />
+        <textarea id={`rt-q-${name}`} name={name} rows={5} value={values[name]} onChange={set(name)} aria-invalid={errors[name] ? true : undefined} aria-describedby={[errors[name] && `rt-q-${name}-e`, hint && `rt-q-${name}-h`].filter(Boolean).join(" ") || undefined} />
       ) : (
-        <input id={`rt-q-${name}`} name={name} value={values[name]} onChange={set(name)} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `rt-q-${name}-e` : undefined} {...props} />
+        <input id={`rt-q-${name}`} name={name} value={values[name]} onChange={set(name)} aria-invalid={errors[name] ? true : undefined} aria-describedby={[errors[name] && `rt-q-${name}-e`, hint && `rt-q-${name}-h`].filter(Boolean).join(" ") || undefined} {...props} />
       )}
-      {hint && !errors[name] && <small className="rt-field__hint">{hint}</small>}
-      {errors[name] && <p className="rt-q__err" id={`rt-q-${name}-e`}>{errors[name]}</p>}
     </div>
   );
 

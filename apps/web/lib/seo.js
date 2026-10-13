@@ -1,4 +1,4 @@
-// Shared page metadata and JSON-LD for server pages (app/layout.jsx is a client component, so every page sets its own
+// Shared page metadata and JSON-LD for server pages (app/layout.jsx sets the site-wide defaults; each page still sets its own
 // metadataBase). Same shape as the test prep subject page builds by hand.
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -13,7 +13,7 @@ export function pageMetadata({ title, description, path, noindex = false }) {
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { type: "website", siteName: "ReadTraining", title, description, url: path },
+    openGraph: { type: "website", siteName: "ReadTraining", locale: "en_GB", title, description, url: path },
     twitter: { card: "summary", title, description },
     ...(noindex ? { robots: { index: false, follow: true } } : {}),
   };

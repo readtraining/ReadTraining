@@ -1,3 +1,4 @@
+import { CATALOGUE_HREF } from "@/lib/routes";
 // The customer account (/account): dashboard, bookings (history, details, cancellation request), saved courses and profile.
 // Structured as the large booking sites do it and as Baymard's account research recommends: a short menu of a few clear pages,
 // the next booking first, and every booking task (details, receipt, change of date, cancellation) one step from the booking.
@@ -23,7 +24,7 @@ export const account = {
   dashboard: {
     greeting: "Hello, {name}",
     lead: "Your courses, bookings and certificates in one place.",
-    next: { title: "Your next course", none: "You have no upcoming courses.", cta: { label: "Find a course", href: "/courses" } },
+    next: { title: "Your next course", none: "You have no upcoming courses.", cta: { label: "Find a course", href: CATALOGUE_HREF } },
     stats: { upcoming: "Upcoming courses", completed: "Completed courses", certificates: "Certificates", saved: "Saved courses" },
     upcoming: { title: "Upcoming courses", all: "View my learning" },
     certificates: { title: "Certificates and renewals", text: "Your training provider issues certificates after the course. Renew before the expiry date to stay qualified.", renew: "Renew", none: "Certificates from completed courses show here." },
@@ -160,7 +161,7 @@ export const account = {
   saved: {
     title: "Saved courses",
     lead: "Courses you saved with the heart. Choose a date to add one to your basket.",
-    empty: { title: "No saved courses yet", text: "Tap the heart on any course to save it here.", cta: { label: "Browse courses", href: "/courses" } },
+    empty: { title: "No saved courses yet", text: "Tap the heart on any course to save it here.", cta: { label: "Browse courses", href: CATALOGUE_HREF } },
   },
 
   // ---- demo data (until accounts exist) ----

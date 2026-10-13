@@ -3,45 +3,24 @@ import { admin as A } from "@/data/admin";
 import { catalogueCourses, subjects } from "@/data/courseCatalogue";
 import { certificates as seedCertificates } from "@/data/certificates";
 import { getCourseBySlug } from "@/lib/courses";
+import { readProviderApplications, toAdminApplication } from "@/lib/providerApplication";
 import { getProviders } from "@/lib/providers";
+import { ADMIN_EVENT, DAY, HOUR, addWorkingDays, audit, read, update } from "@/lib/adminStore";
+import { buildWork } from "@/lib/adminWork";
 
 // The admin's reads and writes. There is no admin API yet (front end only, see the admin plan's Scope), so the records come from
 // data/admin.js and the live catalogue, and every decision made on the admin pages (an approval, a suspension, a refund, a note)
 // is kept in this browser (localStorage) with an audit entry. Swap the bodies for API calls later; the pages only depend on the
 // shapes getAdmin() returns. Browser-only: call from effects.
 
-const KEY = "rt-admin";
-// every write tells the open admin pages (the sidebar counts, the page's own list) to read again
-export const ADMIN_EVENT = "rt-admin-change";
-const DAY = 86400000;
-const HOUR = 3600000;
-const read = () => {
-  try {
-    return JSON.parse(window.localStorage.getItem(KEY) || "null") || {};
-  } catch {
-    return {};
-  }
-};
-const write = (next) => {
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {}
-};
+// reading, saving and the audit entry live in lib/adminStore.js (shared with lib/adminWork.js)
+export { ADMIN_EVENT } from "@/lib/adminStore";
 const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 const round = (n) => Math.round(n * 100) / 100;
 const pad = (n, w) => String(n).padStart(w, "0");
 
-// n working days after `ms` (Saturdays and Sundays skipped; bank holidays come with the backend)
-export function addWorkingDays(ms, n) {
-  let t = ms;
-  let left = n;
-  while (left > 0) {
-    t += DAY;
-    const d = new Date(t).getUTCDay();
-    if (d !== 0 && d !== 6) left -= 1;
-  }
-  return t;
-}
+// working days (Saturdays and Sundays skipped) live in lib/adminStore.js
+export { addWorkingDays } from "@/lib/adminStore";
 
 // A deadline as words and a tone: "Due in 2 days" (ok), "Due today" (warn), "Overdue by 1 day" (late).
 export function dueState(due, now = Date.now()) {
@@ -63,11 +42,11 @@ export function ago(ms, now = Date.now()) {
   return `${d} ${d === 1 ? "day" : "days"} ago`;
 }
 
-const audit = (saved, action, target) => {
-  saved.audit = [{ at: Date.now(), who: A.staff.name, action, target }, ...(saved.audit || [])].slice(0, 200);
-};
 
 // ---- the records ------------------------------------------------------------------------------------------------------------
+
+// the seeded applications plus any sent from the provider onboarding in this browser (lib/providerApplication.js)
+const allApplications = (now) => [...readProviderApplications().map((a) => toAdminApplication(a, now)), ...A.applications];
 
 function buildProviders(saved, now, defaultRate) {
   const listed = getProviders().map((p, i) => {
@@ -95,7 +74,7 @@ function buildProviders(saved, now, defaultRate) {
       listed: true,
     };
   });
-  const applied = A.applications.map((a) => {
+  const applied = allApplications(now).map((a) => {
     const s = saved.providers?.[a.slug] || {};
     return {
       slug: a.slug,
@@ -132,7 +111,7 @@ export const approvalBlockers = (provider, now = Date.now()) =>
 function buildApprovals(saved, providers, now) {
   const bySlug = Object.fromEntries(providers.map((p) => [p.slug, p]));
   const items = [
-    ...A.applications.map((a) => ({
+    ...allApplications(now).map((a) => ({
       id: `app-${a.slug}`,
       type: "application",
       title: a.name,
@@ -415,8 +394,10 @@ export function getAdmin() {
   const catalogue = buildCatalogue(saved, isoDay(now));
   const sessions = buildSessions(saved, catalogue, now);
   const { learners, certificates } = buildLearners(saved, orders, catalogue, now);
+  const work = buildWork(saved, now); // Phase 2: requests, Security Jobs, business accounts (lib/adminWork.js)
   return {
     now,
+    ...work,
     providers,
     approvals,
     orders,
@@ -433,21 +414,14 @@ export function getAdmin() {
       approvals: pending.length,
       applications: providers.filter((p) => ["applied", "review"].includes(p.status)).length,
       changes: openChanges.length,
-      overdue: pending.filter((a) => a.due < now).length + openChanges.filter((c) => c.due < now).length,
+      overdue: pending.filter((a) => a.due < now).length + openChanges.filter((c) => c.due < now).length + work.workCounts.requestsOverdue,
+      ...work.workCounts,
     },
   };
 }
 
 // ---- the writes (each one also writes an audit entry) ------------------------------------------------------------------------
 
-const update = (fn) => {
-  const saved = read();
-  fn(saved);
-  write(saved);
-  try {
-    window.dispatchEvent(new Event(ADMIN_EVENT));
-  } catch {}
-};
 
 export function decideApproval(item, status, reason = "") {
   update((s) => {

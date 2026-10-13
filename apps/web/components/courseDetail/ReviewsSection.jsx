@@ -3,7 +3,7 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useBooking } from "./BookingProvider";
 import Stars from "@/components/home/HomeStars";
-import { formatNumber } from "@/lib/courses";
+import { formatNumber } from "@/lib/format";
 import { Icon } from "./Icon";
 import { initials } from "@/components/marketing/parts";
 

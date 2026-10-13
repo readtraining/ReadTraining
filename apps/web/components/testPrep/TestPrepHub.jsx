@@ -177,6 +177,9 @@ export default function TestPrepHub({ tests, initialCategory = "", initialQuery 
       <section className="rt-cat__hero rt-tp__hero">
         <div className="rt-cat__hero-bg" aria-hidden="true" style={{ backgroundImage: "url(/assets/img/home-1/hero/bg.png)" }}></div>
         <div className="container">
+          <div className="text-center">
+            <div className="rt-eyebrow rt-eyebrow--pill -onDark"><span className="rt-eyebrow__dot"></span>{hero.eyebrow}</div>
+          </div>
           <h1 className="rt-cat__title">{hero.title.map((line, i) => <Fragment key={line}>{i > 0 && <br />}{line}</Fragment>)}</h1>
           <p className="rt-tp__lede">{hero.text}</p>
 

@@ -33,6 +33,11 @@ export default function AdminDashboard() {
     { key: "applications", n: data.counts.applications, overdue: 0 },
     { key: "changes", n: open.length, overdue: open.filter((c) => c.due < now).length },
     { key: "documents", n: docs.length, overdue: 0 },
+    // Phase 2 queues (lib/adminWork.js)
+    { key: "requests", n: data.counts.requests, overdue: data.counts.requestsOverdue },
+    { key: "credit", n: data.counts.credit, overdue: 0 },
+    { key: "debt", n: data.counts.debt, overdue: 0 },
+    { key: "candidates", n: data.counts.candidates, overdue: 0 },
   ];
   // the same sessions as Sessions and venues > Next 7 days
   const soon = data.sessions.filter((s) => !s.cancelled && s.daysAway <= 7 && !s.joiningSent);

@@ -9,6 +9,7 @@
 // `optional` are shown but left out of the estimated total (lib/licences.js works the sums out).
 
 import { courseLink } from "@/data/courseSlugs";
+import { CATALOGUE_HREF } from "@/lib/routes";
 
 const CHECKED = "12 October 2026";
 const SIA = { name: "Security Industry Authority (SIA)", url: "https://www.gov.uk/guidance/apply-for-an-sia-licence" };
@@ -397,6 +398,7 @@ export const licences = [
       applications: ["New card", "Renewal", "Lost or stolen card"],
       formNote: "Tell us which card you need. We check you have what CSCS asks for, then email you a secure payment link and a list of documents to upload.",
     },
+    testBooking: { label: "Book your CITB HS&E test", href: "/tests/citb-health-safety-and-environment-test" },
     route: {
       title: "How to get a CSCS Labourer card",
       text: "The most common first card, in three steps. Other cards follow the same pattern with the qualification for that card.",
@@ -835,7 +837,7 @@ export const licencesHub = {
     title: "Not sure which licence you need?",
     text: "Tell us about the job and we will point you to the right licence and training.",
     primary: { label: "Contact us", href: "/contact-us" },
-    secondary: { label: "Browse all courses", href: "/courses" },
+    secondary: { label: "Browse all courses", href: CATALOGUE_HREF },
   },
   // shared licence page copy
   page: {

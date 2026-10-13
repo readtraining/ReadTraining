@@ -7,7 +7,8 @@ import { homeMenuList as menuList } from "@/data/home/menu";
 import Link from "next/link";
 import HeaderAuth from "./HeaderAuth";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { usePathname } from "next/navigation";
 
 export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }) {
@@ -36,11 +37,33 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
     setShowMenu(true);
   }, []);
   const pathname = usePathname();
+
+  // a dialog while open: the keyboard stays inside (shared focus trap), Esc closes, focus starts on Close and goes back to the
+  // Menu button afterwards
+  const rootRef = useRef(null);
+  const closeRef = useRef(null);
+  const close = () => setActiveMobileMenu(false);
+  useFocusTrap(activeMobileMenu, rootRef, close);
+  useEffect(() => {
+    if (!activeMobileMenu) return;
+    const opener = document.activeElement;
+    const t = setTimeout(() => closeRef.current?.focus(), 50);
+    return () => {
+      clearTimeout(t);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [activeMobileMenu]);
+
   return (
     <div
+      ref={rootRef}
       className={`header-menu js-mobile-menu-toggle ${
         activeMobileMenu ? "-is-el-visible" : ""
       }`}
+      role={activeMobileMenu ? "dialog" : undefined}
+      aria-modal={activeMobileMenu ? "true" : undefined}
+      aria-label="Menu"
+      inert={activeMobileMenu ? undefined : true}
     >
       <div className="header-menu__content">
         <div className="mobile-bg js-mobile-bg"></div>
@@ -179,17 +202,18 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
         </div>
       </div>
 
-      <div
+      <button
+        type="button"
+        ref={closeRef}
         className="header-menu-close"
-        onClick={() => {
-          setActiveMobileMenu(false);
-        }}
+        onClick={close}
+        aria-label="Close menu"
         data-el-toggle=".js-mobile-menu-toggle"
       >
-        <div className="size-40 d-flex items-center justify-center rounded-full bg-white">
-          <div className="icon-close text-dark-1 text-16"></div>
-        </div>
-      </div>
+        <span className="size-40 d-flex items-center justify-center rounded-full bg-white">
+          <span className="icon-close text-dark-1 text-16" aria-hidden="true"></span>
+        </span>
+      </button>
 
       <div
         className="header-menu-bg"

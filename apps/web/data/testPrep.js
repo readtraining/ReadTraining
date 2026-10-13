@@ -1,3 +1,4 @@
+import { CATALOGUE_HREF } from "@/lib/routes";
 // Test prep hub content: one list for the hub page and (later) the individual test pages.
 // Titles and slugs follow the reference Hurak test prep hub; the brand name is ours. A card's description and facts come from
 // the subject page data (data/testPrepSubjects.js, read through lib/testPrep.js), so the hub and the subject page agree.
@@ -7,20 +8,21 @@ export const testPrepPage = {
   title: "ReadTraining Online Test Prep: Free Practice Tests & Academic Resources",
   description: "ReadTraining Test Prep offers test preparation, practice tests and academic resources, all free of cost.",
   hero: {
-    title: ["Master Your", "Professional Test Prep"], // one line each, with a break between
-    text: "Free premium resources, mock exams, regulatory question simulators, and study handbooks to guide you confidently toward passing your certification exams.",
+    eyebrow: "Free test prep",
+    title: ["Practise for your", "professional test"], // one line each, with a break between
+    text: "Free mock exams, question practice and study guides for CSCS, SIA, CITB and more, built like the real tests.",
     searchPlaceholder: "Search tests, e.g. CSCS or SIA",
     popularLabel: "Popular tests:",
     popular: ["CSCS", "CITB", "SIA", "SMSTS", "IOSH"],
   },
   gridEyebrow: "Free mock tests",
-  gridTitle: "Explore Popular Tests on ReadTraining",
+  gridTitle: "Explore popular tests",
   resources: {
     eyebrow: "Free mock exams, handbooks and more",
-    title: "Revise with our free Test Prep Resources",
-    text: "ReadTraining helps tens of thousands of trade operatives, supervisors, and security personnel pass their official UK tests on the first try. Unlock success with premium, clean layouts and fully functional simulators.",
+    title: "Revise with our free test prep resources",
+    text: "Mock exams that follow the real format, study guides in plain English and practice for every question type, so you walk into your test ready.",
   },
-  resourcesCta: { label: "Browse courses", href: "/courses" },
+  resourcesCta: { label: "Browse courses", href: CATALOGUE_HREF },
   steps: {
     eyebrow: "How it works",
     title: ["Practise, check,", "then book with confidence"], // one line each, with a break between
@@ -37,7 +39,7 @@ export const testPrepPage = {
     title: "Book the course behind the test",
     text: "These courses each have a free mock test on this page, so you can practise before and after you book.",
     ids: [9, 1, 10, 11],
-    more: { label: "Browse all courses", href: "/courses" },
+    more: { label: "Browse all courses", href: CATALOGUE_HREF },
   },
   faq: {
     eyebrow: "FAQs",
@@ -87,7 +89,7 @@ export const testPrepPage = {
     }, // the list's heading on a subject with one test, when its own heading only repeats the title
     status: { progress: "In progress", done: "Completed" }, // the reader's own progress on a test (this device)
     tocTitle: "Table of contents",
-    coursesLink: { label: "Browse all courses", href: "/courses" },
+    coursesLink: { label: "Browse all courses", href: CATALOGUE_HREF },
     faqTitle: "Frequently asked questions",
   },
   comingSoon: {

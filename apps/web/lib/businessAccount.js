@@ -6,7 +6,7 @@ import { getCourseBySlug } from "@/lib/courses";
 // the balance paid) is kept in this browser (localStorage). Swap the bodies for API calls later; the pages only depend on the
 // shape getBusiness() returns. Browser-only: call from effects.
 
-const KEY = "rt-business"; // { learners: [added], assigned: { [purchaseId]: [learnerId] }, paid: [invoiceNumber] }
+const KEY = "rt-business"; // { learners: [added], assigned: { [purchaseId]: [learnerId] }, paid: [invoiceNumber], team: [added], removed: [id] }
 const DAY = 86400000;
 const read = () => {
   try {
@@ -114,4 +114,24 @@ export async function payBalance(numbers) {
   await new Promise((r) => setTimeout(r, 900));
   const saved = read();
   write({ ...saved, paid: [...new Set([...(saved.paid || []), ...numbers])] });
+}
+
+// ---- team (/business/team) --------------------------------------------------------------------------------------------------
+// The colleagues who manage the account besides the owner: the demo team plus any added here, minus any removed.
+export function getTeam() {
+  const saved = read();
+  const removed = new Set(saved.removed || []);
+  return [...biz.teamMembers, ...(saved.team || [])].filter((m) => !removed.has(m.id));
+}
+// A member added on the Team page: invited until they accept (simulated).
+export async function addTeamMember({ first, last, email }) {
+  await new Promise((r) => setTimeout(r, 500));
+  const saved = read();
+  const member = { id: `t${Date.now()}`, first: first.trim(), last: last.trim(), email: email.trim(), role: "member", status: "invited" };
+  write({ ...saved, team: [...(saved.team || []), member] });
+  return member;
+}
+export function removeTeamMember(id) {
+  const saved = read();
+  write({ ...saved, removed: [...new Set([...(saved.removed || []), id])] });
 }

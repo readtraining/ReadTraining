@@ -2,6 +2,7 @@
 // Headline and brand are ours; categories, courses, options and lists match the existing site.
 
 import { courseLink } from "@/data/courseSlugs";
+import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 
 const img = (n) => `/assets/img/coursesCards/${n}.png`;
 const course = (slug) => ({ slug, href: courseLink(1) });
@@ -18,7 +19,7 @@ export const topBar = {
 };
 
 export const menu = [
-  { href: "/courses", label: "Courses" },
+  { href: CATALOGUE_HREF, label: "Courses" },
   { href: "/licences", label: "Licences & Cards" },
   { href: "/template/courses-list-3", label: "Locations" },
   { href: "/template/blog-list-1", label: "Resources" },
@@ -35,7 +36,7 @@ export const hero = {
   text: "Search vocational and compliance training from trusted UK training providers,",
   text2: "explore available dates and locations, and choose the option that suits you.",
   subline: "Compare accredited providers, dates and prices in one place. No account needed to search.",
-  primaryButton: { label: "Find Courses", href: "/courses" },
+  primaryButton: { label: "Find Courses", href: CATALOGUE_HREF },
   secondaryButton: { label: "Book for your team", href: "/for-business" },
   socialProof: { rating: "4.9 out of 5", text: "Based on 12,450+ verified reviews · 250,000+ customers" },
   methods: ["All methods", "Classroom", "Live online", "Online self-paced"],
@@ -117,7 +118,7 @@ export const bookingOptions = {
   ],
   footnote: "Example prices and benefits. Options vary by course, date and location.",
   disclaimer: "Courses are delivered by independent training providers. ReadTraining helps you find, book and manage the option that suits you.",
-  cta: { label: "Find course options", href: "/courses" },
+  cta: { label: "Find course options", href: CATALOGUE_HREF },
 };
 
 // "What do you need training for?" course finder: four goals, each with its own routes.
@@ -135,7 +136,7 @@ export const courseFinder = {
         { title: "CCTV Operator", text: "Monitor public space surveillance systems.", ...course("/course/sia-cctv-operator-training") },
         { title: "Close Protection", text: "Train for specialist personal-protection work.", ...course("/course/close-protection") },
       ],
-      allLabel: "Browse all SIA courses", allHref: "/courses",
+      allLabel: "Browse all SIA courses", allHref: CATALOGUE_HREF,
     },
     {
       label: "Renew my SIA licence", text: "Find the correct refresher training.",
@@ -145,7 +146,7 @@ export const courseFinder = {
         { title: "Security Guard Refresher", text: "1 day · Updated search procedures, vulnerability awareness, supporting vulnerable people and current terror threat response.", ...course("/course/sia-top-up-refresher-training-security-guard") },
         { title: "Close Protection Refresher", text: "3 days · Incident analysis, threat management, protective cordons and ethical physical intervention techniques.", ...course("/course/sia-close-protection-top-up-course") },
       ],
-      allLabel: "Browse all SIA refresher courses", allHref: "/courses",
+      allLabel: "Browse all SIA refresher courses", allHref: CATALOGUE_HREF,
     },
     {
       label: "Get a CSCS card", text: "Find the qualification route for the card you need.",
@@ -156,7 +157,7 @@ export const courseFinder = {
         { title: "Supervisor Card", text: "For site supervisors managing day-to-day operations on site.", ...course("/courses/cscs") },
         { title: "Manager Card", text: "For site managers leading construction projects and teams.", ...course("/courses/cscs") },
       ],
-      allLabel: "Browse all construction courses", allHref: "/courses",
+      allLabel: "Browse all construction courses", allHref: CATALOGUE_HREF,
     },
     {
       label: "Need an NVQ", text: "Search NVQs by occupation, trade or level.",
@@ -167,7 +168,7 @@ export const courseFinder = {
         { title: "Plant Operations", text: "Level 2 Diploma (Construction)", ...course("/course/level-2-diploma-in-plant-operations-construction") },
         { title: "Senior Construction Management", text: "Level 7 NVQ Diploma", ...course("/course/level-7-nvq-diploma-in-construction-senior-management") },
       ],
-      allLabel: "Browse all NVQs", allHref: "/courses",
+      allLabel: "Browse all NVQs", allHref: CATALOGUE_HREF,
     },
   ],
   help: "Need personal guidance? Call 0333 344 1293",
@@ -244,7 +245,7 @@ export const teamBooking = {
     { title: "You get one quote", text: "Group pricing, clearly itemised." },
     { title: "Book in one go", text: "One invoice, certificates to each learner." },
   ],
-  secondaryHref: "/quote",
+  secondaryHref: QUOTE_HREF,
   // Illustrative team booking shown in the card (example figures).
   summary: {
     course: "Emergency First Aid at Work · 1 day",
@@ -323,13 +324,13 @@ export const footer = {
         { href: courseLink(9), label: "CSCS Green Card Course" },
         { href: courseLink(12), label: "Traffic Marshal" },
         { href: courseLink(3), label: "SIA CCTV Operator" },
-        { href: "/courses", label: "CSCS NVQs" },
+        { href: CATALOGUE_HREF, label: "CSCS NVQs" },
         { href: courseLink(23), label: "AET" },
         { href: courseLink(11), label: "SSSTS" },
         { href: courseLink(10), label: "SMSTS" },
         { href: courseLink(21), label: "Personal Licence" },
-        { href: "/courses", label: "IQA Training" },
-        { href: "/courses", label: "Assessor Training" },
+        { href: CATALOGUE_HREF, label: "IQA Training" },
+        { href: CATALOGUE_HREF, label: "Assessor Training" },
       ],
     },
     {

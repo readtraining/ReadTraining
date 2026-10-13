@@ -62,6 +62,7 @@ export default function HomeHeader() {
                       onClick={() => setActiveMobileMenu(true)}
                       className="text-white items-center"
                       aria-label="Open menu"
+                      aria-expanded={activeMobileMenu}
                       data-el-toggle=".js-mobile-menu-toggle"
                     >
                       <i className="text-11 icon icon-mobile-menu"></i>

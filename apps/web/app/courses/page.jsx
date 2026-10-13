@@ -3,7 +3,8 @@ import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
 import HomeHelp from "@/components/home/HomeHelp";
-import CourseFaq from "@/components/courses/CourseFaq";
+import FaqSection from "@/components/marketing/FaqSection";
+import { courseFaq, courseFaqEyebrow, courseFaqTitle } from "@/data/courseFaq";
 import CourseCatalogue from "@/components/courses/CourseCatalogue";
 import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import { CATALOGUE_HREF } from "@/lib/routes";
@@ -27,7 +28,7 @@ const breadcrumbLd = {
 
 export default function page() {
   return (
-    <div className="main-content rt-home">
+    <div className="main-content rt-home rt-cat-page">
       <a className="rt-skip" href="#rt-res-list">Skip to courses</a>
       <Preloader />
       <HomeHeader />
@@ -38,7 +39,7 @@ export default function page() {
             <CourseCatalogue />
           </Suspense>
         </main>
-        <CourseFaq />
+        <FaqSection eyebrow={courseFaqEyebrow} title={courseFaqTitle} items={courseFaq} idPrefix="cfaq" />
         <HomeHelp />
         <HomeFooter />
       </div>

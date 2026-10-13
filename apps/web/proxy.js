@@ -5,7 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 // refreshes the Supabase session cookies, sends signed-out visitors of /account and /business to log in (and back afterwards
 // via ?next=), and sends signed-in visitors of /login and /signup to their account. The pages still check on their own.
 // /skill-saver only needs the fresh session: the page reads it on the server to show the right buttons and level.
-const PROTECTED = ["/account", "/business"];
+const PROTECTED = ["/account", "/business", "/provider"];
 const GUEST_ONLY = ["/login", "/signup"];
 
 export async function proxy(request) {
@@ -40,5 +40,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/account/:path*", "/business/:path*", "/login", "/signup", "/skill-saver"],
+  matcher: ["/account/:path*", "/business/:path*", "/provider/:path*", "/login", "/signup", "/skill-saver"],
 };

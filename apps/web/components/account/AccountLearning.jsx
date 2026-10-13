@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { account } from "@/data/account";
 import { calendarFile, getBookings, getLearning } from "@/lib/account";
-import { courseHref } from "@/lib/courses";
+import { courseHref } from "@/data/courseSlugs";
 import { formatDate } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
 

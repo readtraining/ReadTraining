@@ -5,7 +5,7 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { topBar } from "@/data/home";
 import { bookingState, calendarFile, cancellableLines, getBooking } from "@/lib/account";
-import { courseHref } from "@/lib/courses";
+import { courseHref } from "@/data/courseSlugs";
 import { formatDate, formatPrice } from "@/lib/format";
 import { StatusPill, placeOf, whenOf } from "./BookingRow";
 

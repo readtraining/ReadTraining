@@ -1,8 +1,5 @@
 'use client'
 
-import { coursesData } from "@/data/courses";
-import { events } from "@/data/events";
-import { productData } from "@/data/products";
 import React from "react";
 import { lineKey, mergeLines } from "@/lib/basket";
 import { useContext ,useEffect ,useRef ,useState } from "react";
@@ -40,8 +37,11 @@ export const useContextElement = () => {
     }, [cartCourses, cartProducts, cartEvents])
     // A basket line is a course on one date (lib/basket.js lineKey): the same course can be added on two dates, never twice on one,
     // and a dated line replaces the course's undated one (mergeLines).
-    const addCourseToCart = (id, course)=>{
-        const item = {...(course || coursesData.filter(elm=>elm.id == id)[0]),quantity:1}
+    // Our pages always pass the course. Only the template's demo pages pass an id alone: their data loads on demand, so it is not
+    // part of every page's download (the same for the template's shop products and events below).
+    const addCourseToCart = async (id, course)=>{
+        const found = course || (await import("@/data/courses")).coursesData.filter(elm=>elm.id == id)[0]
+        const item = {...found,quantity:1}
         setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre : mergeLines([...pre,item]))
     }
     // With a session id: is that date in the basket. Without: is the course in it on any date.
@@ -52,8 +52,10 @@ export const useContextElement = () => {
 
         if (!cartProducts.filter((elm)=>elm.id == id)[0]) {
 
-           const item = {...productData.filter(elm=>elm.id == id)[0],quantity:1}
-           setCartProducts(pre=>[...pre,item])
+           import("@/data/products").then(({ productData })=>{
+             const item = {...productData.filter(elm=>elm.id == id)[0],quantity:1}
+             setCartProducts(pre=>pre.some((elm)=>elm.id == id) ? pre : [...pre,item])
+           })
             
         }
 
@@ -69,8 +71,10 @@ export const useContextElement = () => {
 
         if (!cartEvents.filter((elm)=>elm.id == id)[0]) {
 
-           const item = {...events.filter(elm=>elm.id == id)[0],quantity:1}
-           setCartEvents(pre=>[...pre,item])
+           import("@/data/events").then(({ events })=>{
+             const item = {...events.filter(elm=>elm.id == id)[0],quantity:1}
+             setCartEvents(pre=>pre.some((elm)=>elm.id == id) ? pre : [...pre,item])
+           })
             
         }
 
