@@ -15,7 +15,6 @@ import move_img_1 from "@/public/assets/img/masthead/1.png";
 
 import move_img_2 from "@/public/assets/img/masthead/2.png";
 import move_img_3 from "@/public/assets/img/masthead/3.png";
-import move_icon_1 from "@/public/assets/img/masthead/1.svg";
 import move_icon_2 from "@/public/assets/img/masthead/4.png";
 import move_icon_3 from "@/public/assets/img/masthead/2.svg";
 
@@ -72,7 +71,7 @@ const HomeHero = () => {
     <>
       <section className="masthead -type-1 js-mouse-move-container" style={{ paddingTop: 70 }}>
         <div className="masthead__bg">
-          <Image src={hero_bg} alt="image" />
+          <Image src={hero_bg} alt="" />
         </div>
 
         <div className="container">
@@ -94,7 +93,7 @@ const HomeHero = () => {
                   <div className="text-13 fw-500 text-white lh-1">{hero.eyebrow}</div>
                 </div>
                 <h1 className="masthead__title">
-                  {title}
+                  {title}{" "}
                   <br />
                   {hero.titleLine2}{" "}
                   <span className="text-green-1 underline">
@@ -182,17 +181,17 @@ const HomeHero = () => {
                     data-move="40"
                     style={{ objectFit: "cover" }}
                     src={move_img_1}
-                    alt="image"
+                    alt=""
                   />
                   <div
                     data-move="30"
                     className="lg:d-none img-el -w-250 px-20 py-20 d-flex items-center bg-white rounded-8 js-mouse-move"
                   >
-                    <div className="size-50 d-flex justify-center items-center bg-red-2 rounded-full">
-                      <Image src={move_icon_1} alt="icon" />
+                    <div className="size-50 d-flex justify-center items-center bg-purple-3 rounded-full">
+                      <i className="icon-calendar text-20 text-purple-1" aria-hidden="true"></i>
                     </div>
                     <div className="ml-20">
-                      <div className="text-orange-1 text-16 fw-500 lh-1">
+                      <div className="text-dark-1 text-16 fw-500 lh-1">
                         Next SIA course
                       </div>
                       <div className="mt-3">Mon 6 Oct · Manchester</div>
@@ -206,13 +205,13 @@ const HomeHero = () => {
                     data-move="70"
                     src={move_img_2}
                     style={{ objectFit: "cover" }}
-                    alt="image"
+                    alt=""
                   />
                   <div
                     data-move="60"
                     className="lg:d-none img-el -w-260 px-20 py-20 d-flex items-center bg-white rounded-8 js-mouse-move"
                   >
-                    <Image src={move_icon_2} alt="icon" />
+                    <Image src={move_icon_2} alt="" />
                     <div className="ml-20">
                       <div className="text-dark-1 text-16 fw-500 lh-1">
                         Oliver Desuza
@@ -235,7 +234,7 @@ const HomeHero = () => {
                     data-move="40"
                     src={move_img_3}
                     style={{ objectFit: "cover" }}
-                    alt="image"
+                    alt=""
                   />
                   <div
                     data-move="30"
@@ -246,7 +245,7 @@ const HomeHero = () => {
                         <Image
                           style={{ objectFit: "cover" }}
                           src={move_icon_3}
-                          alt="icon"
+                          alt=""
                         />
                       </div>
                     </div>

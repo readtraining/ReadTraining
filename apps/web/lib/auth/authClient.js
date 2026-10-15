@@ -1,66 +1,115 @@
-// Frontend-only auth stubs. Replace the body of each function with the real
-// backend call (tRPC / REST) later; the UI only depends on these signatures.
-// Each function resolves on success and throws an Error with a user-facing
-// message on failure.
+"use client";
 
-export const AUTH_ROUTES = {
-  afterLogin: "/",
-  forgotPassword: "/forget-password",
-  signUp: "/template/signup",
-  login: "/template/login",
-  terms: "/template/terms",
-  // No privacy policy page exists yet; point this at the real route once added.
-  privacy: "/privacy-policy",
-};
+import { useEffect, useState } from "react";
+import { getSupabase } from "@/lib/supabase/client";
+import { AUTH_ROUTES } from "@/lib/routes";
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Auth through Supabase Auth (email and password; the project requires email confirmation). The log in, sign up, forgot and reset
+// password screens only depend on these functions: each resolves on success and throws an Error with a message people can act on.
+// Supabase's own messages are mapped to the site's wording. Email links come back through /auth/callback.
+
+// The auth pages' addresses live in lib/routes.js (server pages read them too); re-exported for the auth screens.
+export { AUTH_ROUTES };
 
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-// TODO(auth): POST credentials to the API, store the session, return the user.
-// Mock: email "error@example.com" fails so the error state can be previewed.
+const callbackUrl = (next) => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
+// Supabase error codes and messages, as the site says them
+function friendly(error, fallback) {
+  const code = error?.code || "";
+  const text = (error?.message || "").toLowerCase();
+  if (code === "invalid_credentials" || text.includes("invalid login credentials")) return "Incorrect email or password. Please try again.";
+  if (code === "email_not_confirmed" || text.includes("email not confirmed")) return "Confirm your email first. Open the link we sent you, or ask for a new one below.";
+  if (code === "over_email_send_rate_limit" || code === "over_request_rate_limit" || text.includes("rate limit")) return "Too many attempts. Please wait a few minutes and try again.";
+  if (code === "weak_password" || text.includes("password should")) return "Choose a stronger password: at least 8 characters, with letters and numbers.";
+  if (code === "same_password") return "Choose a new password that is different from your current one.";
+  if (code === "user_already_exists" || text.includes("already registered")) return "An account with this email already exists. Try logging in instead.";
+  if (text.includes("failed to fetch") || text.includes("network")) return "We couldn't reach the server. Check your connection and try again.";
+  return fallback;
+}
+const fail = (error, fallback) => {
+  const e = new Error(friendly(error, fallback));
+  e.code = error?.code || (String(error?.message || "").toLowerCase().includes("email not confirmed") ? "email_not_confirmed" : undefined);
+  return e;
+};
+
 export async function loginWithPassword({ email, password }) {
-  await wait(900);
-  if (email.trim().toLowerCase() === "error@example.com") {
-    throw new Error("Incorrect email or password. Please try again.");
-  }
-  return { email, password: undefined };
+  const { data, error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
+  if (error) throw fail(error, "We couldn't log you in. Please try again.");
+  return data.user;
 }
 
-// TODO(auth): start the OAuth flow for the provider ("google" | "facebook").
+// Email confirmation link sent again (log in shows this when the email is not confirmed yet)
+export async function resendConfirmation({ email }) {
+  const { error } = await getSupabase().auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: callbackUrl(AUTH_ROUTES.afterLogin) } });
+  if (error) throw fail(error, "We couldn't send the link. Please try again.");
+}
+
+// Google and Facebook are not switched on in the Supabase project yet (Authentication > Sign In / Providers).
 export async function loginWithProvider(provider) {
-  await wait(300);
   const name = provider === "facebook" ? "Facebook" : "Google";
   throw new Error(`${name} sign-in isn't available yet. Please log in with your email.`);
 }
 
-// TODO(auth): request a password-reset email (token generated server-side).
+// Sends the reset email; its link opens /reset-password signed in for that one change. Says nothing about whether the
+// email has an account, so the form cannot be used to find out who is registered.
 export async function requestPasswordReset({ email }) {
-  await wait(900);
+  const { error } = await getSupabase().auth.resetPasswordForEmail(email.trim(), { redirectTo: callbackUrl(AUTH_ROUTES.resetPassword) });
+  if (error) throw fail(error, "We couldn't send the reset email. Please try again.");
   return { email };
 }
 
-// TODO(auth): verify the reset token from the email link, then call this with
-// the new password on a future /reset-password route.
-export async function resetPassword({ token, password }) {
-  await wait(900);
-  return { token, password: undefined };
+// The new password, on /reset-password (the email link has signed the person in).
+export async function resetPassword({ password }) {
+  const supabase = getSupabase();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) throw new Error("This reset link has expired or was already used. Ask for a new one.");
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw fail(error, "We couldn't change your password. Please try again.");
 }
 
-// TODO(auth): create the account (POST to the API) and trigger the email
-// verification message. Mock: email "error@example.com" fails so the error
-// state can be previewed.
-export async function registerAccount({ firstName, lastName, email, password, marketingOptIn }) {
-  await wait(1100);
-  if (email.trim().toLowerCase() === "error@example.com") {
-    throw new Error("An account with this email already exists. Try logging in instead.");
-  }
-  return { firstName, lastName, email, marketingOptIn, password: undefined };
+// Creates the account with the name and marketing choice, and sends the confirmation email. `needsConfirmation` is true until
+// the link is opened (always, while the project requires confirmation). For an email that already has an account Supabase
+// returns no error and sends nothing, so the screen says the same either way. `next` is where the email link continues to
+// (the account by default; provider onboarding from "Become a provider"), and `intent` records why the account was made.
+export async function registerAccount({ firstName, lastName, email, password, marketingOptIn, next, intent }) {
+  const { data, error } = await getSupabase().auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      emailRedirectTo: callbackUrl(next || AUTH_ROUTES.afterLogin),
+      data: { first_name: firstName.trim(), last_name: lastName.trim(), marketing_opt_in: Boolean(marketingOptIn), ...(intent ? { signup_intent: intent } : {}) },
+    },
+  });
+  if (error) throw fail(error, "We couldn't create your account. Please try again.");
+  return { email: email.trim(), needsConfirmation: !data.session };
 }
 
-// TODO(auth): start the OAuth sign-up flow for the provider ("google" | "facebook").
 export async function signUpWithProvider(provider) {
-  await wait(300);
   const name = provider === "facebook" ? "Facebook" : "Google";
   throw new Error(`${name} sign-up isn't available yet. Please sign up with your email.`);
+}
+
+export async function signOut() {
+  await getSupabase().auth.signOut();
+}
+
+// The signed-in person as the site shows them: { id, email, firstName, lastName, name } or null; undefined while loading.
+export const toPerson = (user) => {
+  if (!user) return null;
+  const m = user.user_metadata || {};
+  const firstName = m.first_name || "";
+  const lastName = m.last_name || "";
+  return { id: user.id, email: user.email, firstName, lastName, name: [firstName, lastName].filter(Boolean).join(" ") || user.email };
+};
+export function useAuthUser() {
+  const [person, setPerson] = useState(undefined);
+  useEffect(() => {
+    const supabase = getSupabase();
+    supabase.auth.getUser().then(({ data }) => setPerson(toPerson(data.user)));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => setPerson(toPerson(session?.user)));
+    return () => data.subscription.unsubscribe();
+  }, []);
+  return person;
 }

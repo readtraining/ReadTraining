@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { subjects, popularByLocation } from "@/data/home/menu";
+import { CATALOGUE_HREF } from "@/lib/routes";
 
 // Navbar search: the icon toggles an inline input (click again to close). A panel under the
 // input shows popular courses when empty and live matches as you type, like Hurak's search.
@@ -100,7 +101,7 @@ export default function HomeSearch() {
   const submit = (e) => {
     e.preventDefault();
     setOpen(false);
-    router.push(`/template/courses-list-1?q=${encodeURIComponent(query)}`);
+    router.push(`${CATALOGUE_HREF}?q=${encodeURIComponent(query)}`);
   };
 
   const Row = ({ href, title, subject, provider, img, kind }) => (

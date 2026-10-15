@@ -1,6 +1,8 @@
+import { AUTH_ROUTES, CATALOGUE_HREF } from "@/lib/routes";
 // "For business" page content. Same functionality as the client's current site, our own copy and UI.
-const signup = { label: "Create a Business account", href: "/template/signup" };
-const demo = { label: "Book a demo", href: "/template/contact-1" };
+const signup = { label: "Create a Business account", href: AUTH_ROUTES.signUp };
+// the hero's and closing banner's second button, as Hurak Business: straight to the courses
+const browse = { label: "Browse training", href: CATALOGUE_HREF };
 
 export const business = {
   hero: {
@@ -8,7 +10,7 @@ export const business = {
     title: "Train your whole team. Track every certificate.",
     text: "Open a Business account, buy course places for your team, hand them out now or hold them for later, and keep learners, progress, certificates and renewals together in one place.",
     primary: signup,
-    secondary: demo,
+    secondary: browse,
     points: ["No contract", "Invoice billing", "Group pricing", "Assign places later"],
     image: { src: "/assets/img/business/dashboard.png", alt: "Business account dashboard" },
     floats: [
@@ -104,7 +106,7 @@ export const business = {
       { title: "For regular buyers", text: "Based on your history and training spend with us." },
       { title: "Purchase, then settle", text: "Buy within the limit. Pay on your agreed terms." },
     ],
-    cta: { label: "Ask about credit", href: "/template/contact-1" },
+    cta: { label: "Ask about credit", href: "/contact-us" },
     card: {
       label: "Business credit",
       company: "Harbour Facilities Ltd",
@@ -135,6 +137,6 @@ export const business = {
     title: "Ready to train your whole team?",
     text: "Create a Business account in minutes and keep places, learners, certificates and purchases connected from day one.",
     primary: signup,
-    secondary: demo,
+    secondary: browse,
   },
 };

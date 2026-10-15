@@ -11,8 +11,10 @@ import ProCampaigns from "@/components/provider/ProCampaigns";
 import ProLms from "@/components/provider/ProLms";
 import ProMarketplace from "@/components/provider/ProMarketplace";
 import ProPricing from "@/components/provider/ProPricing";
-import ProFaq from "@/components/provider/ProFaq";
+import FaqSection from "@/components/marketing/FaqSection";
+import { provider } from "@/data/provider";
 import ProCta from "@/components/provider/ProCta";
+import BecomeProvider from "@/components/providerSignup/BecomeProvider";
 
 export const metadata = {
   title: "ReadTraining for Training Providers | List courses, manage cohorts and learners",
@@ -33,12 +35,13 @@ export default function ForProvidersPage() {
         <ProLms />
         <ProMarketplace />
         <ProPricing />
-        <ProFaq />
+        <FaqSection eyebrow={provider.faq.eyebrow} title={provider.faq.title} text={provider.faq.text} items={provider.faq.items} idPrefix="pro-faq" />
         <ProCta />
         <HomeBrands />
         <HomeHelp />
         <HomeFooter />
       </div>
+      <BecomeProvider />
     </div>
   );
 }

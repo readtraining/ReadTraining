@@ -16,6 +16,7 @@ import {
   subSubjects,
 } from "@/data/courseCatalogue";
 import { trackEvent, toItem } from "@/lib/analytics";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import ActiveFilters from "./ActiveFilters";
 import CatalogueCourseCard from "./CatalogueCourseCard";
 import CatalogueDropdown from "./CatalogueDropdown";
@@ -38,8 +39,12 @@ const countLabel = (n) => `${n} ${n === 1 ? "course" : "courses"}`;
 
 // One reusable catalogue. The URL query string is the single source of truth for filters, search, sort and page
 // (see useCourseQuery). Everything below the hero scrolls with the page; only the filter panel is sticky.
-export default function CourseCatalogue({ courses = catalogueCourses }) {
-  const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery();
+// `scope` makes it a course page for one category (/courses/[slug]; `courses` is then that category's list):
+// { title, lead, crumb, parent?: { label, href } (a town page's course page), location? (a town page's town), allHref, links: [{ label, href }], subject?, hide: ["method" | "subject"], filters: false for a short list, about: { title, text } }.
+// A subject page's `subject` replaces the Subject filter with its sub-subjects ("Course type").
+// The hero then shows the page's title and intro, and links to the other course pages instead of the popular searches.
+export default function CourseCatalogue({ courses = catalogueCourses, scope = null }) {
+  const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject, scope?.location);
   const [toast, setToast] = useState(null);
 
   const [locationDraft, setLocationDraft] = useState(state.location);
@@ -75,12 +80,15 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+  // Esc closes the panel; as a bottom sheet, Tab also stays inside it (the shared focus trap)
+  const panelRef = useRef(null);
+  useFocusTrap(filtersOpen && isSheet, panelRef, () => setFiltersOpen(false));
   useEffect(() => {
-    if (!filtersOpen) return;
+    if (!filtersOpen || isSheet) return;
     const onKey = (e) => e.key === "Escape" && setFiltersOpen(false);
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [filtersOpen]);
+  }, [filtersOpen, isSheet]);
   // Sheet only: lock page scroll, move focus to the close button, give focus back to the Filters button on close.
   useEffect(() => {
     if (!isSheet || !filtersOpen) return;
@@ -143,12 +151,12 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
 
   // Analytics: the list on screen (one event per page of results).
   useEffect(() => {
-    trackEvent("view_item_list", { item_list_name: "All courses", items: pageItems.map((c, i) => toItem(c, i)) });
+    trackEvent("view_item_list", { item_list_name: scope?.title || "All courses", items: pageItems.map((c, i) => toItem(c, i)) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, state.subject, state.sub, state.method, state.level, state.min, state.max, state.location, state.q, state.sort]);
 
   const pageHref = (p) => {
-    const query = buildCatalogueQuery({ ...state, page: p });
+    const query = buildCatalogueQuery({ ...state, page: p }, { ...(scope?.subject ? { subject: scope.subject } : {}), ...(scope?.location ? { location: scope.location } : {}) });
     return query ? `${pathname}?${query}` : pathname;
   };
   // After a filter, sort, chip or clear action: if the user is scrolled below the top of the results, smoothly bring the
@@ -231,8 +239,10 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
     trackEvent("search", { search_term: pushedQ.current, location: pushedLocation.current });
     requestAnimationFrame(() => document.getElementById("rt-res-count")?.focus());
   };
-  // One ticked subject names the page; none or several keep the general heading.
+  // A course page keeps its own heading; otherwise one ticked subject names the page and none or several keep the general one.
   const subjectTitle = state.subject.length === 1 ? optionLabel(subjectGroup, state.subject[0]) : "";
+  const heading = scope ? scope.title : subjectTitle ? `${subjectTitle.replace(/ and /g, " & ")} Training Courses - ${PROJECT_NAME}` : "Find the right course for you";
+  const showFilters = !scope || scope.filters !== false;
 
   // "Remove last filter": undo the latest change; with no history (e.g. a shared URL) drop the last active chip.
   const removeLast = () => {
@@ -251,7 +261,7 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
       });
     });
     out.sub = {};
-    state.subject.forEach((sv) =>
+    [...new Set([...state.subject, ...(scope?.subject ? [scope.subject] : [])])].forEach((sv) =>
       (subSubjects[sv] || []).forEach((o) => {
         out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }).length;
       }),
@@ -268,11 +278,10 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
         {/* Header band: Home hero artwork + the same animated waves */}
         <div className="rt-cat__hero-bg" aria-hidden="true" style={{ backgroundImage: "url(/assets/img/home-1/hero/bg.png)" }}></div>
         <div className="container">
-          <h1 className="rt-cat__title">
-            {subjectTitle ? `${subjectTitle.replace(/ and /g, " & ")} Training Courses - ${PROJECT_NAME}` : "Find the right course for you"}
-          </h1>
+          <h1 className="rt-cat__title">{heading}</h1>
+          {scope?.lead && <p className="rt-cat__lede">{scope.lead}</p>}
 
-          <form className="rt-cat-search" onSubmit={submitSearch} role="search">
+          <form className="rt-cat-search" onSubmit={submitSearch} role="search" noValidate>
             <div className="rt-cat-search__field">
               <i className="icon-search text-16 text-light-1"></i>
               <input type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Course or skill" aria-label="Course or skill" autoComplete="off" />
@@ -316,16 +325,27 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
             </button>
           </form>
 
-          <div className="rt-cat-popular">
-            <span className="rt-cat-popular__label">Popular searches:</span>
-            <div className="rt-cat-popular__list">
-              {popularSearches.map((item) => (
-                <button key={item.label} type="button" className="rt-cat-popular__tag" onClick={() => applyPatch({ subject: [item.subject], sub: [] })}>
-                  {item.label}
-                </button>
-              ))}
+          {scope ? (
+            <nav className="rt-cat-popular" aria-label="Other course pages">
+              <span className="rt-cat-popular__label">Also browse:</span>
+              <ul className="rt-cat-popular__list">
+                {scope.links.map((l) => (
+                  <li key={l.href}><Link href={l.href} className="rt-cat-popular__tag">{l.label}</Link></li>
+                ))}
+              </ul>
+            </nav>
+          ) : (
+            <div className="rt-cat-popular">
+              <span className="rt-cat-popular__label">Popular searches:</span>
+              <div className="rt-cat-popular__list">
+                {popularSearches.map((item) => (
+                  <button key={item.label} type="button" className="rt-cat-popular__tag" onClick={() => applyPatch({ subject: [item.subject], sub: [] })}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <svg className="svg-waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 24 150 28" preserveAspectRatio="none" aria-hidden="true">
@@ -345,13 +365,23 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
         <nav className="rt-res__crumbs" aria-label="Breadcrumb">
           <Link href="/">Home</Link>
           <span aria-hidden="true">/</span>
-          <span aria-current="page">All courses</span>
+          {scope ? (
+            <>
+              <Link href={scope.allHref}>All courses</Link>
+              <span aria-hidden="true">/</span>
+              {scope.parent && <><Link href={scope.parent.href}>{scope.parent.label}</Link><span aria-hidden="true">/</span></>}
+              <span aria-current="page">{scope.crumb}</span>
+            </>
+          ) : (
+            <span aria-current="page">All courses</span>
+          )}
         </nav>
 
-        <div className="rt-cat__layout">
+        <div className={`rt-cat__layout${showFilters ? "" : " -nofilters"}`}>
+          {showFilters && (
           <div className={`rt-fp${filtersOpen ? " is-open" : ""}`}>
             <div className="rt-fp__backdrop" onClick={() => setFiltersOpen(false)}></div>
-            <aside className="rt-fp__panel" aria-label="Filters" role={isSheet ? "dialog" : undefined} aria-modal={isSheet ? "true" : undefined}>
+            <aside className="rt-fp__panel" ref={panelRef} aria-label="Filters" role={isSheet ? "dialog" : undefined} aria-modal={isSheet ? "true" : undefined}>
               <span className="rt-fp__handle" aria-hidden="true"></span>
               <div className="rt-fp__head">
                 <h2 className="rt-fp__heading">Filters</h2>
@@ -364,6 +394,8 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
                   <CatalogueFilters
                     state={state}
                     counts={counts}
+                    hide={scope?.hide}
+                    baseSubject={scope?.subject}
                     onToggle={toggle}
                     onPriceChange={(min, max) => applyPatch({ min, max })}
                   />
@@ -377,8 +409,11 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
               </div>
             </aside>
           </div>
+          )}
 
           <div className="rt-res" aria-busy="false">
+            {/* names the results for screen readers, so the course titles (h3) never follow the page title directly */}
+            <h2 className="rt-sr">Courses</h2>
             <div className="rt-res__toolbar">
               <div className="rt-res__counts">
                 <p className="rt-res__count" id="rt-res-count" tabIndex={-1} aria-live="polite">
@@ -386,9 +421,11 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
                 </p>
                 <p className="rt-res__showing">{results.length > 0 ? `Showing ${showingFrom} to ${showingTo} of ${results.length}` : ""}</p>
               </div>
-              <button ref={filterBtnRef} type="button" className="rt-res__filterbtn" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog" aria-expanded={filtersOpen}>
-                Filters{activeGroups > 0 && <span className="rt-res__filterbtn-count">{activeGroups}</span>}
-              </button>
+              {showFilters && (
+                <button ref={filterBtnRef} type="button" className="rt-res__filterbtn" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog" aria-expanded={filtersOpen}>
+                  Filters{activeGroups > 0 && <span className="rt-res__filterbtn-count">{activeGroups}</span>}
+                </button>
+              )}
               <CatalogueDropdown
                 className="rt-cat-dd--sort"
                 label="Sort by"
@@ -423,15 +460,16 @@ export default function CourseCatalogue({ courses = catalogueCourses }) {
               ))}
             </div>
 
-            <CataloguePagination page={page} totalPages={totalPages} hrefFor={pageHref} onNavigate={goToPage} />
+            {totalPages > 1 && <CataloguePagination page={page} totalPages={totalPages} hrefFor={pageHref} onNavigate={goToPage} />}
           </div>
         </div>
 
         <hr className="rt-cat__rule" />
         <section className="rt-cat__about-wrap" aria-labelledby="rt-about-title">
-        <h2 className="rt-cat__about-title" id="rt-about-title">About our training courses</h2>
+        <h2 className="rt-cat__about-title" id="rt-about-title">{scope?.about.title || "About our training courses"}</h2>
         <p className="rt-cat__about">
-          Our affordable courses give you high-quality skills training, from essential compliance topics such as safeguarding, health &amp; safety and food safety to personal development and wellbeing. Learn at the time, place and pace that suit you. Most of our courses are certified.
+          {scope?.about.text ||
+            "Our affordable courses give you high-quality skills training, from essential compliance topics such as safeguarding, health & safety and food safety to personal development and wellbeing. Learn at the time, place and pace that suit you. Most of our courses are certified."}
         </p>
         </section>
       </div>

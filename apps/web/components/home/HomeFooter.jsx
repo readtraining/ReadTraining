@@ -3,6 +3,8 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Socials from "@/components/common/Socials";
+import FooterNewsletter from "./FooterNewsletter";
+import { socialMediaLinks } from "@/data/socialLinks";
 import { footer, topBar } from "@/data/home";
 
 // Footer built on the template's FooterEight (type-5) layout: brand + contact left, link columns right,
@@ -29,13 +31,7 @@ export default function HomeFooter() {
               </a>
             </div>
 
-            <form className="rt-footer__news" onSubmit={(e) => e.preventDefault()}>
-              <label htmlFor="footer-email" className="rt-footer__newsLabel">Course alerts and offers</label>
-              <div className="rt-footer__newsRow">
-                <input id="footer-email" type="email" placeholder="Your email" required />
-                <button type="submit" aria-label="Subscribe"><i className="icon-arrow-right text-14"></i></button>
-              </div>
-            </form>
+            <FooterNewsletter />
           </div>
 
           {footer.columns.map((col) => (
@@ -55,9 +51,12 @@ export default function HomeFooter() {
           <div className="rt-footer__marksList">
             {footer.accreditations.map((a) => <span key={a}>{a}</span>)}
           </div>
-          <div className="rt-footer__social">
-            <Socials componentsClass="rt-footer__socialLink" textSize="text-14" />
-          </div>
+          {/* shown once data/socialLinks.js has the real profile links (all "#" for now) */}
+          {socialMediaLinks.some((l) => l.href !== "#") && (
+            <div className="rt-footer__social">
+              <Socials componentsClass="rt-footer__socialLink" textSize="text-14" />
+            </div>
+          )}
         </div>
 
         <div className="rt-footer__legal">

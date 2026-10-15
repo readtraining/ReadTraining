@@ -4,8 +4,8 @@ export const provider = {
     eyebrow: "For training providers",
     title: "Run your training business. Grow with ReadTraining.",
     text: "Manage courses, cohorts, learners and digital learning in one provider workspace, then list eligible dates on the marketplace when you want more learner demand.",
-    primary: { label: "Become a provider", href: "/template/signup" },
-    secondary: { label: "Book a call", href: "/template/contact-1" },
+    primary: { label: "Become a provider", href: "#become-provider" },
+    secondary: { label: "Book a call", href: "/contact-us" },
     points: ["No monthly subscription", "Commission on marketplace sales only", "Approval in days", "SCORM-ready LMS"],
     image: { src: "/assets/img/business/provider-dashboard.png", alt: "Provider workspace dashboard" },
     floats: [
@@ -156,7 +156,7 @@ export const provider = {
   cta: {
     title: "Put your training operation and marketplace reach in one place.",
     text: "Create your provider account to start setting up the courses, cohorts and learners you manage.",
-    primary: { label: "Become a provider", href: "/template/signup" },
-    secondary: { label: "Book a call", href: "/template/contact-1" },
+    primary: { label: "Become a provider", href: "#become-provider" },
+    secondary: { label: "Book a call", href: "/contact-us" },
   },
 };

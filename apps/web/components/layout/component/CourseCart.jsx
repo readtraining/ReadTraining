@@ -1,137 +1,62 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { useContextElement } from "@/context/Context";
 import Link from "next/link";
+import { useContextElement } from "@/context/Context";
+import { basketTotals, hasDate, lineKey, lineParts } from "@/lib/basket";
+import { formatPrice, formatShortDate } from "@/lib/format";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
+import { BASKET_HREF, CATALOGUE_HREF, coursePath } from "@/lib/routes";
 
+// The basket icon's dropdown (the header's mini basket): each course with its date and place, the delegates and the price, a
+// remove button, the total, and a way to the full basket. The basket page is where dates, packages and the first aid choice are
+// settled, so this only leads there. Empty: a way to find courses.
 const CourseCart = () => {
   const { cartCourses, setCartCourses } = useContextElement();
-  const [totalPrice, setTotalPrice] = useState(0);
+  const totals = basketTotals(cartCourses);
+  const listRef = useRef(null);
+  const remove = (item) => setCartCourses((list) => list.filter((i) => i !== item));
 
-  const handleRemoveCart = (index) => {
-    const item = cartCourses[index];
-
-    setCartCourses((pre) => [...pre.filter((elm) => elm !== item)]);
-  };
-  useEffect(() => {
-    const sum = cartCourses.reduce((accumulator, currentValue) => {
-      return accumulator + currentValue.discountedPrice * currentValue.quantity;
-    }, 0);
-    setTotalPrice(sum);
-  }, [cartCourses]);
   return (
-    <div className="header-cart bg-white -dark-bg-dark-1 rounded-8">
-      <div
-        className="px-30 pt-30 pb-10"
-        style={{ maxHeight: "300px", overflowY: "scroll" }}
-      >
-        {cartCourses.map((elm, i) => (
-          <div key={i} className="row justify-between x-gap-40 pb-20">
-            <Link
-              style={{ textDecoration: "none" }}
-              href={`/template/courses/${elm.id}`}
-              className="col"
-            >
-              <div className="row x-gap-10 y-gap-10">
-                <div className="col-auto">
-                  <Image
-                    width={80}
-                    height={80}
-                    src={elm.imageSrc}
-                    alt="image"
-                  />
-                </div>
-
-                <div className="col">
-                  <div className="text-dark-1 lh-15">{elm.title}</div>
-
-                  <div className="d-flex items-center mt-10">
-                    {elm.paid ? (
-                      <>
-                        <div className="lh-12 fw-500 line-through text-light-1 mr-10">
-                          ${elm.originalPrice}
-                        </div>
-                        <div className="text-18 lh-12 fw-500 text-dark-1">
-                          ${elm.discountedPrice}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div></div>
-                        <div className="text-18 lh-12 fw-500 text-dark-1">
-                          Free
-                        </div>
-                      </>
-                    )}
+    <div className="header-cart bg-white -dark-bg-dark-1 rounded-8 rt-mini">
+      {cartCourses.length > 0 ? (
+        <div className="rt-mini__scroll">
+          <ul className="rt-mini__list rt-pill-scroll" ref={listRef}>
+            {cartCourses.map((item) => {
+              const { total, quantity } = lineParts(item);
+              return (
+                <li key={lineKey(item)} className="rt-mini__item">
+                  <Link href={coursePath(item.slug || item.id)} className="rt-mini__thumb" tabIndex={-1} aria-hidden="true">
+                    {item.imageSrc && <Image width={96} height={64} src={item.imageSrc} alt="" />}
+                  </Link>
+                  <div className="rt-mini__body">
+                    <Link href={coursePath(item.slug || item.id)} className="rt-mini__title">{item.title}</Link>
+                    <span className="rt-mini__meta">{hasDate(item) ? `${formatShortDate(item.date)} · ${item.city || "Online"}` : "No date chosen"}</span>
+                    <span className="rt-mini__price">{quantity > 1 ? `${quantity} × ` : ""}<b>{formatPrice(total)}</b></span>
                   </div>
-                </div>
-              </div>
-            </Link>
+                  <button type="button" className="rt-mini__remove" onClick={() => remove(item)} aria-label={`Remove ${item.title}`}>
+                    <i className="icon-close text-9" aria-hidden="true"></i>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <FilterScrollPill scrollRef={listRef} />
+        </div>
+      ) : (
+        <p className="rt-mini__empty">Your basket is empty.</p>
+      )}
 
-            <div className="col-auto" onClick={() => handleRemoveCart(i)}>
-              <button>
-                <Image
-                  width={12}
-                  height={12}
-                  src="/assets/img/menus/close.svg"
-                  alt="icon"
-                />
-              </button>
-            </div>
-          </div>
-        ))}
-        {!cartCourses.length && (
-          <div className="p-20 pb-30 text-18 text-dark-1">
-            Your Course Cart Is Empty
-          </div>
+      <div className="rt-mini__foot">
+        {cartCourses.length > 0 && (
+          <div className="rt-mini__total"><span>Subtotal</span><strong>{formatPrice(totals.total)}</strong></div>
         )}
-      </div>
-
-      <div className="px-30 pt-20 pb-30 border-top-light">
-        <div className="d-flex justify-between">
-          <div className="text-18 lh-12 text-dark-1 fw-500">Total:</div>
-          <div className="text-18 lh-12 text-dark-1 fw-500">${totalPrice}</div>
-        </div>
-
-        <div className="row x-gap-20 y-gap-10 pt-30">
-          {cartCourses.length && (
-            <>
-              <Link
-                href={"/template/course-cart"}
-                style={{ textDecoration: "none" }}
-                className="col-sm-6"
-              >
-                <button className="button py-20 -dark-1 text-white -dark-button-white col-12">
-                  View Cart
-                </button>
-              </Link>
-              <Link
-                href={"/template/course-checkout"}
-                style={{ textDecoration: "none" }}
-                className="col-sm-6"
-              >
-                <button className="button py-20 -purple-1 text-white col-12">
-                  Checkout
-                </button>
-              </Link>
-            </>
-          )}
-          {!cartCourses.length && (
-            <>
-              <Link
-                href={"/template/courses-list-1"}
-                style={{ textDecoration: "none" }}
-                className="col-12"
-              >
-                <button className="button py-20 -purple-1 text-white col-12">
-                  Continue Buying
-                </button>
-              </Link>
-            </>
-          )}
-        </div>
+        {cartCourses.length > 0 ? (
+          <Link href={BASKET_HREF} className="button -md -purple-1 text-white">View basket<i className="icon-arrow-right text-13 ml-10" aria-hidden="true"></i></Link>
+        ) : (
+          <Link href={CATALOGUE_HREF} className="button -md -purple-1 text-white">Find courses</Link>
+        )}
       </div>
     </div>
   );

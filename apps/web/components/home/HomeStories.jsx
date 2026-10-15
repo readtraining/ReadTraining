@@ -3,10 +3,8 @@ import Image from "next/image";
 import { stories } from "@/data/home";
 import HomeTextLink from "./HomeTextLink";
 import HomeVideoStory from "./HomeVideoStory";
+import Stars from "./HomeStars";
 
-const Stars = ({ light }) => (
-  <span className={`rt-stars${light ? " -light" : ""}`}>{[0, 1, 2, 3, 4].map((i) => <i key={i} className="icon-star"></i>)}</span>
-);
 
 // Customer stories: centered header, featured quote card + 2x2 review grid.
 export default function HomeStories() {
@@ -20,7 +18,7 @@ export default function HomeStories() {
             <p className="sectionTitle__text mt-14">{stories.text}</p>
           </div>
           <div className="col-auto">
-            <HomeTextLink href="/template/about-1">Read all reviews</HomeTextLink>
+            <HomeTextLink href="/customer-reviews">Read all reviews</HomeTextLink>
           </div>
         </div>
 

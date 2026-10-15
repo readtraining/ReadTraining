@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import HomeTextLink from "./HomeTextLink";
 import { useRouter } from "next/navigation";
 import { hero } from "@/data/home";
+import { CATALOGUE_HREF } from "@/lib/routes";
 
 // Course search directly under the hero, built on the template's segmented search pill
 // (home-9 `masthead-form`): one white pill with three fields and a search button.
@@ -25,7 +26,7 @@ export default function HomeSearchBand() {
   const submit = (e) => {
     e.preventDefault();
     const q = new URLSearchParams({ q: course.trim(), where: where.trim(), method }).toString();
-    router.push(`/template/courses-list-1?${q}`);
+    router.push(`${CATALOGUE_HREF}?${q}`);
   };
 
   return (
@@ -38,7 +39,7 @@ export default function HomeSearchBand() {
                 <i className="icon-search text-16 text-light-1"></i>
                 <span className="rt-searchband__text">
                   <span className="rt-searchband__label">Course</span>
-                  <input id="band-course" value={course} onChange={(e) => setCourse(e.target.value)} placeholder="e.g. SIA Door Supervisor" required />
+                  <input id="band-course" value={course} onChange={(e) => setCourse(e.target.value)} placeholder="e.g. SIA Door Supervisor" />
                 </span>
               </label>
 
@@ -100,7 +101,7 @@ export default function HomeSearchBand() {
           </div>
 
           <div className="rt-searchband__below">
-            <HomeTextLink href="/template/courses-list-1" icon="icon-message">Not sure which course you need? We can help</HomeTextLink>
+            <HomeTextLink href={CATALOGUE_HREF} icon="icon-message">Not sure which course you need? We can help</HomeTextLink>
           </div>
         </div>
       </div>

@@ -1,40 +1,28 @@
+import React from "react";
+import Preloader from "@/components/common/Preloader";
+import HomeHeader from "@/components/home/HomeHeader";
+import HomeFooter from "@/components/home/HomeFooter";
+import PageNotFound from "@/components/notFound/PageNotFound";
 
-
-
-
-
-
-
-
-
-
-
-import NotFound from '@/components/not-found/NotFound'
-import PageLinks from '@/components/common/PageLinks'
-import Preloader from '@/components/common/Preloader'
-
-import FooterOne from '@/components/layout/footers/FooterOne'
-import Header from '@/components/layout/headers/Header'
-import React from 'react'
+// Page not found (any unknown address, and notFound() from a page): our header and footer around components/notFound.
+// Next adds noindex to this page itself.
 export const metadata = {
-  title: 'Page not found || Educrat - Professional LMS Online Education Course NextJS Template',
-  description:
-    'Elevate your e-learning content with Educrat, the most impressive LMS template for online courses, education and LMS platforms.',
-  
-}
-export default function page() {
+  title: "Page not found | ReadTraining",
+  description: "The page you were looking for could not be found.",
+};
+
+export default function NotFound() {
   return (
-    <div className="main-content  ">
-
-      <Preloader/>
-
-        <Header/>
-        <div className="content-wrapper js-content-wrapper overflow-hidden">
-            <PageLinks/>
-            <NotFound/>
-            <FooterOne/>
-        </div>
-
+    <div className="main-content rt-home fb-page">
+      <a href="#rt-404-main" className="rt-skip">Skip to main content</a>
+      <Preloader />
+      <HomeHeader />
+      <div className="content-wrapper js-content-wrapper">
+        <main id="rt-404-main" tabIndex={-1}>
+          <PageNotFound />
+        </main>
+        <HomeFooter />
+      </div>
     </div>
-  )
+  );
 }

@@ -20,7 +20,9 @@ export const SIGNUP_BUTTON_LABELS = {
   success: "Account created",
 };
 
-const PASSWORD_ERROR = "Use at least 8 characters, with a letter and a number.";
+export const PASSWORD_ERROR = "Use at least 8 characters, with a letter and a number.";
+// the password rule, shared with the new-password page
+export const weakPassword = (password) => password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password);
 
 export function validateSignUp({ firstName, lastName, email, password, confirmPassword }) {
   const errors = {};
@@ -30,7 +32,7 @@ export function validateSignUp({ firstName, lastName, email, password, confirmPa
   else if (!EMAIL_PATTERN.test(email.trim()))
     errors.email = "Enter a valid email address.";
   if (!password) errors.password = "Enter a password.";
-  else if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))
+  else if (weakPassword(password))
     errors.password = PASSWORD_ERROR;
   if (!confirmPassword) errors.confirmPassword = "Confirm your password.";
   else if (password && confirmPassword !== password)
@@ -50,7 +52,7 @@ export function useSignUpForm() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
-  const [status, setStatus] = useState("idle"); // idle | validating | submitting | success
+  const [status, setStatus] = useState("idle"); // idle | validating | submitting | success | sent (check your email)
   const [socialLoading, setSocialLoading] = useState("");
   const redirectTimer = useRef(null);
 
@@ -82,13 +84,15 @@ export function useSignUpForm() {
 
     setStatus("submitting");
     try {
-      await registerAccount({
+      const result = await registerAccount({
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         email: values.email.trim(),
         password: values.password,
         marketingOptIn: values.marketingOptIn,
       });
+      // the project requires email confirmation: the account opens from the link in the email
+      if (result.needsConfirmation) return setStatus("sent");
       setStatus("success");
       redirectTimer.current = setTimeout(
         () => router.push(AUTH_ROUTES.afterLogin),

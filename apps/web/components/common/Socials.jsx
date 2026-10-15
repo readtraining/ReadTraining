@@ -11,8 +11,9 @@ export default function Socials({ componentsClass, textSize }) {
           key={index}
           className={componentsClass ? componentsClass : ""}
           href={link.href}
+          aria-label={link.label}
         >
-          <i className={`${link.iconClassName} ${textSize}`}></i>
+          <i className={`${link.iconClassName} ${textSize}`} aria-hidden="true"></i>
         </a>
       ))}
     </>

@@ -2,6 +2,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { subjects } from "@/data/home";
+import { CATALOGUE_HREF } from "@/lib/routes";
 import HomeTextLink from "./HomeTextLink";
 
 // Browse by subject: six image tiles (photo, subject, course count, arrow).
@@ -15,7 +16,7 @@ export default function HomeSubjects() {
             <p className="sectionTitle__text mt-5">Every accredited subject, with courses from providers across the UK.</p>
           </div>
           <div className="col-auto">
-            <HomeTextLink href="/template/courses-list-1">Browse all subjects</HomeTextLink>
+            <HomeTextLink href={CATALOGUE_HREF}>Browse all subjects</HomeTextLink>
           </div>
         </div>
 

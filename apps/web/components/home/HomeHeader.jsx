@@ -10,6 +10,7 @@ import { useState } from "react";
 import HomeMobileMenu from "./HomeMobileMenu";
 import { topBar } from "@/data/home";
 import HomeTopBar from "./HomeTopBar";
+import HeaderAuth from "./HeaderAuth";
 
 export default function HomeHeader() {
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
@@ -60,6 +61,8 @@ export default function HomeHeader() {
                     <button
                       onClick={() => setActiveMobileMenu(true)}
                       className="text-white items-center"
+                      aria-label="Open menu"
+                      aria-expanded={activeMobileMenu}
                       data-el-toggle=".js-mobile-menu-toggle"
                     >
                       <i className="text-11 icon icon-mobile-menu"></i>
@@ -68,15 +71,7 @@ export default function HomeHeader() {
                 </div>
 
                 <div className="header-right__buttons d-flex items-center ml-30 md:d-none">
-                  <Link href="/template/login" className="button -underline text-white">
-                    Log in
-                  </Link>
-                  <Link
-                    href="/template/signup"
-                    className="button -sm -white text-dark-1 ml-30"
-                  >
-                    Sign up
-                  </Link>
+                  <HeaderAuth />
                 </div>
               </div>
             </div>

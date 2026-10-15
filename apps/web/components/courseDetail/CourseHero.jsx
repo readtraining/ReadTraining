@@ -1,62 +1,50 @@
 import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import Stars from "./Stars";
-import { formatNumber, getSubjectLabel, getSubLabel } from "@/lib/courses";
+import BookNow from "./BookNow";
+import Crumbs from "./Crumbs";
+import SaverBadge from "@/components/skillSaver/SaverBadge";
+import { isSkillSaverCourse } from "@/lib/skillSaver";
+import { formatPrice, getSubjectLabel, getSubLabel, savePercent } from "@/lib/courses";
+import { CATALOGUE_HREF } from "@/lib/routes";
 
-const CATALOGUE = "/template/courses-list-1";
+const CATALOGUE = CATALOGUE_HREF;
 
-// Hero (same content as the Hurak course page, in our layout): breadcrumb, title, one-line summary, rating row with
-// students and provider count, and on the right the course image with the "Rated Excellent" proof.
+// Hero, in this order: breadcrumb, title, summary, badge, provider count, price row with Book now, instalments line (only when
+// supported). The rating, students and "Rated Excellent" proof now live in the stats card on the hero edge (StatsCard).
 export default function CourseHero({ course }) {
   const subject = getSubjectLabel(course);
   const sub = getSubLabel(course);
-  const excellent = course.rating >= 4.5;
+  const lowest = course.sessions.reduce((best, s) => (s.price < best.price ? s : best), course.sessions[0]);
+  const pct = savePercent(lowest.price, lowest.wasPrice);
 
   return (
     <div className="rt-cd__hero">
-      <nav className="rt-cd__crumbs" aria-label="Breadcrumb">
-        <ol>
-          {subject && <li><Link href={`${CATALOGUE}?subject=${course.subject}`}>{subject}</Link></li>}
-          {subject && sub && <li><Link href={`${CATALOGUE}?subject=${course.subject}&sub=${course.sub}`}>{sub}</Link></li>}
-          <li aria-current="page">{course.title}</li>
-        </ol>
-      </nav>
+      <div className="rt-cd__hero-text">
+        <Crumbs
+          crumbs={[
+            subject && { label: subject, href: `${CATALOGUE}?subject=${course.subject}` },
+            subject && sub && { label: sub, href: `${CATALOGUE}?subject=${course.subject}&sub=${course.sub}` },
+            { label: course.title },
+          ].filter(Boolean)}
+        />
 
-      <div className="rt-cd__hero-top">
-        <div className="rt-cd__hero-text">
-          {course.badge && <p className="rt-cd__kicker"><span className="rt-cd__badge">{course.badge}</span></p>}
-          <h1 className="rt-cd__title">{course.title}</h1>
-          <p className="rt-cd__summary">{course.summary}</p>
+        {isSkillSaverCourse(course.id) && <SaverBadge href="/skill-saver" className="rt-cd__saver" />}
+        <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
+        <p className="rt-cd__summary">{course.summary}</p>
 
-          <p className="rt-cd__providers"><strong>{course.providerCount}</strong> course providers</p>
+        <p className="rt-cd__providers"><strong>{course.providerCount}</strong> course providers</p>
 
-          <div className="rt-cd__proof">
-            <span className="rt-cd__rating">
-              <strong>{course.rating.toFixed(1)}</strong>
-              <Stars rating={course.rating} />
-              <a href="#reviews" className="rt-cd__link">({formatNumber(course.reviewCount)} ratings)</a>
-            </span>
-            <span>{formatNumber(course.learnerCount)} students enrolled</span>
-          </div>
+        <div className="rt-cd__hrow">
+          <p className="rt-cd__hprice">
+            <span className="rt-cd__hprice-from">From</span>
+            <strong className="rt-cd__hprice-now">{formatPrice(lowest.price)}</strong>
+            <span className="rt-cd__hprice-inc">All inc</span>
+            {lowest.wasPrice > lowest.price && <s className="rt-cd__hprice-was"><span className="rt-cd__sr">was </span>{formatPrice(lowest.wasPrice)}</s>}
+            {pct > 0 && <span className="rt-cd__hprice-off">{pct}% off</span>}
+          </p>
+          <BookNow />
         </div>
 
-        {(course.imageSrc || excellent) && (
-          <div className="rt-cd__hero-side">
-            {course.imageSrc && (
-              <div className="rt-cd__hero-img">
-                <Image src={course.imageSrc} alt="" width={440} height={276} priority />
-              </div>
-            )}
-            {excellent && (
-              <div className="rt-cd__excellent">
-                <p>Rated <strong>Excellent</strong></p>
-                <Stars rating={5} size={20} />
-                <span>Based on {formatNumber(course.reviewCount)} ratings</span>
-              </div>
-            )}
-          </div>
-        )}
+        {course.trust?.instalments && <p className="rt-cd__klarna">Pay in 3 interest-free instalments with Klarna</p>}
       </div>
     </div>
   );

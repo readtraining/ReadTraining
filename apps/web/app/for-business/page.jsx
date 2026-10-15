@@ -9,7 +9,8 @@ import AssignDemo from "@/components/business/AssignDemo";
 import LearnerTable from "@/components/business/LearnerTable";
 import RenewalTimeline from "@/components/business/RenewalTimeline";
 import CreditPanel from "@/components/business/CreditPanel";
-import BizFaq from "@/components/business/BizFaq";
+import FaqSection from "@/components/marketing/FaqSection";
+import { business } from "@/data/business";
 import FinalCta from "@/components/business/FinalCta";
 
 export const metadata = {
@@ -29,7 +30,7 @@ export default function ForBusinessPage() {
         <LearnerTable />
         <RenewalTimeline />
         <CreditPanel />
-        <BizFaq />
+        <FaqSection eyebrow={business.faq.eyebrow} title={business.faq.title} text={business.faq.text} items={business.faq.items} idPrefix="biz-faq" />
         <FinalCta />
         <HomeBrands />
         <HomeHelp />

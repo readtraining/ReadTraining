@@ -1,12 +1,14 @@
 "use client";
 
-import MobileFooter from "@/components/layout/component/MobileFooter";
+import { footer, topBar } from "@/data/home";
 
 import { homeMenuList as menuList } from "@/data/home/menu";
 
 import Link from "next/link";
+import HeaderAuth from "./HeaderAuth";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { usePathname } from "next/navigation";
 
 export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }) {
@@ -35,32 +37,39 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
     setShowMenu(true);
   }, []);
   const pathname = usePathname();
+
+  // a dialog while open: the keyboard stays inside (shared focus trap), Esc closes, focus starts on Close and goes back to the
+  // Menu button afterwards
+  const rootRef = useRef(null);
+  const closeRef = useRef(null);
+  const close = () => setActiveMobileMenu(false);
+  useFocusTrap(activeMobileMenu, rootRef, close);
+  useEffect(() => {
+    if (!activeMobileMenu) return;
+    const opener = document.activeElement;
+    const t = setTimeout(() => closeRef.current?.focus(), 50);
+    return () => {
+      clearTimeout(t);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [activeMobileMenu]);
+
   return (
     <div
+      ref={rootRef}
       className={`header-menu js-mobile-menu-toggle ${
         activeMobileMenu ? "-is-el-visible" : ""
       }`}
+      role={activeMobileMenu ? "dialog" : undefined}
+      aria-modal={activeMobileMenu ? "true" : undefined}
+      aria-label="Menu"
+      inert={activeMobileMenu ? undefined : true}
     >
       <div className="header-menu__content">
         <div className="mobile-bg js-mobile-bg"></div>
 
         <div className="d-none xl:d-flex items-center px-20 py-20 border-bottom-light">
-          <Link
-            href="/template/login"
-            className={`text-dark-1 ${
-              pathname == "/template/login" ? "activeMenu" : "inActiveMenu"
-            } `}
-          >
-            Log in
-          </Link>
-          <Link
-            href="/template/signup"
-            className={`text-dark-1 ml-30 ${
-              pathname == "/template/signup" ? "activeMenu" : "inActiveMenu"
-            } `}
-          >
-            Sign Up
-          </Link>
+          <HeaderAuth mobile pathname={pathname} />
         </div>
 
         {showMenu && activeMobileMenu && (
@@ -179,22 +188,32 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
           </div>
         )}
 
-        {/* mobile footer start */}
-        <MobileFooter />
-        {/* mobile footer end */}
-      </div>
-
-      <div
-        className="header-menu-close"
-        onClick={() => {
-          setActiveMobileMenu(false);
-        }}
-        data-el-toggle=".js-mobile-menu-toggle"
-      >
-        <div className="size-40 d-flex items-center justify-center rounded-full bg-white">
-          <div className="icon-close text-dark-1 text-16"></div>
+        {/* our contact details (the template's MobileFooter had its demo company's) */}
+        <div className="mobile-footer px-20 py-20 border-top-light">
+          <div className="mobile-footer__number">
+            <div className="text-17 fw-500 text-dark-1">Call us</div>
+            <a href={`tel:${topBar.phone.replace(/\s/g, "")}`} className="text-17 fw-500 text-purple-1">{topBar.phone}</a>
+          </div>
+          <div className="lh-2 mt-10">
+            <div>{topBar.hours}</div>
+            <div>{footer.address}</div>
+            <a href={`mailto:${topBar.email}`}>{topBar.email}</a>
+          </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        ref={closeRef}
+        className="header-menu-close"
+        onClick={close}
+        aria-label="Close menu"
+        data-el-toggle=".js-mobile-menu-toggle"
+      >
+        <span className="size-40 d-flex items-center justify-center rounded-full bg-white">
+          <span className="icon-close text-dark-1 text-16" aria-hidden="true"></span>
+        </span>
+      </button>
 
       <div
         className="header-menu-bg"

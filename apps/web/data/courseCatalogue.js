@@ -1,3 +1,6 @@
+import { findMockTest } from "@/data/testPrep";
+import { providers } from "@/data/providers";
+import { coursePath } from "@/lib/routes";
 // Courses catalogue: filter model, sort options, dummy data and the pure filter/sort/URL helpers.
 // Swap `catalogueCourses` for an API response later; everything else only reads this shape:
 // { id, title, description, subject, methods[], level, venues[{ city, postcode }], providers,
@@ -77,7 +80,7 @@ export const catalogueCourses = [
   c(3, "Security", "SIA CCTV Operator Training", "Learn to operate public-space surveillance equipment within the law.", [C, L], INT, [man, liv], 25, 4.7, 612, 169.99, 199.99, "3 days", "SIA licence-linked"),
   c(4, "Security", "Close Protection Training", "Advanced operational training for close protection officers, with scenario-based assessment.", [C], ADV, [ldn, bir], 9, 4.9, 318, 1295, 1495, "14 days", "SIA licence-linked"),
   c(5, "First Aid", "Emergency First Aid at Work", "A one-day course covering the essentials of workplace emergency first aid.", [C, L], BEG, [ldn, man, bir, lds, gla, bri, car, not], 45, 4.9, 2310, 63.2, 79, "1 day", "Valid 3 years"),
-  c(6, "First Aid", "First Aid at Work (3 Days)", "Full HSE-approved first aider qualification for medium and high-risk workplaces.", [C], INT, [ldn, man, liv, nwc], 21, 4.8, 980, 159.99, null, "3 days", "Valid 3 years"),
+  c(6, "First Aid", "First Aid at Work (3 Days)", "Full HSE-approved first aider qualification for medium and high-risk workplaces.", [C], INT, [ldn, man, liv, nwc], 21, 4.8, 980, 159.99, 219.99, "3 days", "Valid 3 years"),
   c(7, "First Aid", "Paediatric First Aid (2 Days)", "Ofsted-compliant paediatric first aid for nurseries, childminders and schools.", [C, L], INT, [ldn2, bir, lds], 18, 4.9, 744, 94.5, 110, "2 days", "Valid 3 years"),
   c(8, "First Aid", "Mental Health First Aid Awareness", "Spot the signs of poor mental health and start supportive conversations.", [L, D], BEG, [], 12, 4.6, 405, 39.99, 55, "4 hours", "Valid 3 years"),
   c(9, "Construction", "CSCS Green Card Course", "Health and safety awareness for labourers, leading to the CSCS Green Card.", [C, L, D], BEG, [ldn, man, bir, bri, car], 10, 4.7, 1650, 89.99, 109.99, "1 day", "CSCS-approved route"),
@@ -119,6 +122,7 @@ export const catalogueCourses = [
   c(45, "Telecommunication", "Network Infrastructure Design (CCNA Prep)", "Design, configure and troubleshoot enterprise networks.", [L, D], ADV, [], 7, 4.8, 305, 749, 890, "Self-paced", "Valid 3 years"),
   c(46, "Security", "Door Supervisor Refresher", "Renew your SIA door supervisor licence with a short top-up course.", [C], INT, [ldn, man, bir, lds, gla], 30, 4.8, 1240, 99, 119, "2 days", "Renews SIA licence"),
   c(47, "Security", "Conflict Management for Security", "Reduce risk and de-escalate confrontation in front-line roles.", [L, D], BEG, [], 12, 4.6, 438, 25, 39, "3 hours", "Certificate included"),
+  c(52, "Security", "Security Guard Refresher", "Renew your SIA security guard licence with the refresher qualification.", [C], INT, [ldn2, man, bir, gla], 22, 4.7, 860, 89, 109, "1 day", "Renews SIA licence"),
   c(48, "Construction", "Asbestos Awareness (Category A)", "Identify asbestos-containing materials and avoid exposure.", [L, D], BEG, [], 26, 4.7, 1925, 19.99, 29.99, "2 hours", "Valid 1 year"),
   // added for testing: very long title (over 70 characters)
   c(49, "Hospitality", "Level 3 Award in Supervising Food Safety in Catering (RQF) Online Course", "Supervisory food safety knowledge for catering managers and team leaders working in busy kitchens.", [L, D], INT, [], 17, 4.7, 388, 54.5, 79, "6 hours", "Valid 3 years"),
@@ -141,7 +145,7 @@ const subDefs = {
   lifestyle: [["Yoga and Fitness", [35]], ["Nutrition and Wellbeing", [36, 51]]],
   marketing: [["Digital Marketing", [37, 39]], ["Social Media Marketing", [38]]],
   "personal-development": [["Productivity", [40]], ["Communication", [41, 42]]],
-  security: [["SIA Licence Training", [1, 2, 3, 46]], ["Close Protection", [4]], ["Conflict Management", [47, 50]]],
+  security: [["SIA Licence Training", [1, 2, 3, 46, 52]], ["Close Protection", [4]], ["Conflict Management", [47, 50]]],
   "teaching-and-academics": [["Teaching Qualifications", [23, 25]], ["Quality Assurance", [24]]],
   telecommunication: [["Fibre and Cabling", [43, 44]], ["Networking", [45]]],
 };
@@ -154,9 +158,9 @@ catalogueCourses.forEach((course) => {
   course.sub = subByCourseId[course.id] || "";
 });
 
-// Details pages: every course links to the course details page. Swap the pattern when real routes exist.
+// Details pages: every course links to its page, /course/<slug>.
 catalogueCourses.forEach((course) => {
-  course.detailsHref = `/template/courses/${course.id}`;
+  course.detailsHref = coursePath(course.slug);
 });
 
 const methodByValue = Object.fromEntries(methods.map((m) => [m.value, m]));
@@ -262,11 +266,14 @@ export const defaultSort = (location) => (location ? "closest" : "popular");
 // --- URL state -----------------------------------------------------------------
 const valid = (group, value) => (group.options.some((o) => o.value === value) ? value : "");
 
-export function parseCatalogueParams(params) {
+// `base` is a course page's fixed choice ({ subject }: /courses/first-aid). Its sub-subjects are valid without ?subject=.
+export function parseCatalogueParams(params, base = {}) {
   const [subjectG, methodG, levelG] = filterGroups;
   const sort = params.get("sort");
   const page = parseInt(params.get("page") || "1", 10);
-  const location = (params.get("location") || params.get("where") || "").trim().slice(0, 80);
+  // a town page (/courses/<page>/<town>) sets the town as `base.location`; ?location= (even empty) overrides it
+  const raw = params.has("location") ? params.get("location") : params.get("where") || base.location || "";
+  const location = raw.trim().slice(0, 80);
   const num = (key, fallback) => {
     const n = parseFloat(params.get(key));
     return Number.isFinite(n) ? Math.min(Math.max(n, PRICE_BOUNDS.min), PRICE_BOUNDS.max) : fallback;
@@ -280,7 +287,7 @@ export function parseCatalogueParams(params) {
   const many = (key, allowed, map = (v) => v) =>
     [...new Set((params.get(key) || "").split(",").map((v) => map(v.trim().toLowerCase())).filter((v) => allowed.has(v)))].sort();
   const subject = many("subject", new Set(subjectG.options.map((o) => o.value)));
-  const allowedSubs = new Set(subject.flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
+  const allowedSubs = new Set([...subject, ...(base.subject ? [base.subject] : [])].flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
   return {
     subject,
     sub: many("sub", allowedSubs),
@@ -295,16 +302,16 @@ export function parseCatalogueParams(params) {
   };
 }
 
-// Defaults are omitted so URLs stay clean.
-export function buildCatalogueQuery(state) {
+// Defaults are omitted so URLs stay clean. `base` as for parseCatalogueParams.
+export function buildCatalogueQuery(state, base = {}) {
   const p = new URLSearchParams();
   const list = (key, values) => values && values.length && p.set(key, [...new Set(values)].sort().join(","));
   list("subject", state.subject);
-  if (state.subject && state.subject.length) list("sub", state.sub);
+  if ((state.subject && state.subject.length) || base.subject) list("sub", state.sub);
   list("method", state.method);
   list("level", state.level);
   if (state.q) p.set("q", state.q);
-  if (state.location) p.set("location", state.location);
+  if ((state.location || "") !== (base.location || "")) p.set("location", state.location || "");
   if (state.min > PRICE_BOUNDS.min) p.set("min", String(state.min));
   if (state.max < PRICE_BOUNDS.max) p.set("max", String(state.max));
   if (state.sort && state.sort !== defaultSort(state.location)) p.set("sort", state.sort);
@@ -318,7 +325,11 @@ export function buildCatalogueQuery(state) {
 // ======================================================================================================
 const DETAIL_BASE = Date.UTC(2026, 9, 19); // first session date; fixed so server and client render the same dates
 const DAY = 86400000;
-const providerPool = ["Apex Training", "Northgate Learning", "BrightPath Academy", "Summit Skills", "Harbour Training Group", "ClearView Learning"];
+// the listed providers that teach a course's subject (data/providers.js): their pages list the courses that run with them
+const providerPool = (course) => {
+  const pool = providers.filter((p) => p.specialisms.includes(course.subject));
+  return (pool.length ? pool : providers).map((p) => p.name);
+};
 const priceSteps = [1, 1, 1.05, 0.97, 1.1, 1.02];
 const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
 const nextWeekday = (ms) => { let t = ms; while ([0, 6].includes(new Date(t).getUTCDay())) t += DAY; return t; };
@@ -535,6 +546,142 @@ const courseOverrides = {
       { name: "Fazlul Hoque", org: "EDU", date: "2026-04-16", rating: 5 },
     ],
   },
+  // Course 6: First Aid at Work (3 Days). Copy from the live Hurak page for this course. Its article is a list of
+  // blocks (see `article`), because this page has different sections from the SIA Door Supervisor page.
+  6: {
+    summary: "Complete the First Aid at Work course covering CPR, injuries, illnesses, and emergency response, and gain the practical skills and knowledge to carry out first aider duties in most workplaces.",
+    providerCount: 21,
+    reviewCount: 1288,
+    learnerCount: 71748,
+    inHouse: true,
+    features: ["Free same-day results", "Fast-track certification", "Delivered by experienced trainers", "1000+ 5 star reviews", "HSE-compliant and accredited training", "UK-wide course locations", "Nationally recognised certificate"],
+    workAreas: undefined,
+    exams: undefined,
+    requirements: undefined,
+    comparison: undefined,
+    apply: undefined,
+    learningOutcomes: [],
+    showAudience: true,
+    audience: [
+      "Individuals working in high-risk environments",
+      "Individuals looking to apply or renew their SIA licence",
+      "Individuals who want to be able to handle emergency first aid situations",
+    ],
+    article: [
+      {
+        id: "overview",
+        title: "3-day first aid course overview",
+        paragraphs: [
+          "This First Aid at Work course supports workplace compliance with the Health and Safety (First Aid) Regulations 1981 and follows an HSE-compliant curriculum suitable for medium to high-risk environments. It is ideal for workplaces such as construction sites, warehouses, factories, and larger office settings where first aid cover is essential. Delivered at multiple locations across the UK, the course is available as a traditional 3-day classroom programme or a blended route, with one day online and two days in class to minimise time away from work.",
+          "During the course, learners cover key first aid topics, including CPR, use of an AED, choking, bleeding, burns, fractures, shock, and how to respond to a range of workplace incidents and medical emergencies.",
+        ],
+        subs: [
+          { title: "Benefits of First Aid at Work training", paragraphs: ["By completing the course, learners gain the practical skills, confidence, and recognised qualification needed to carry out first aider duties and respond effectively in most workplace emergency situations."] },
+        ],
+      },
+      {
+        title: "Who should take the First Aid at Work course?",
+        paragraphs: [
+          "This course is best suited to staff who need to act as designated workplace first aiders, particularly in medium to high-risk environments. This includes businesses where the nature of the work, machinery, tools, or site layout increases the likelihood of more serious incidents.",
+          "This course is commonly suitable for:",
+        ],
+        checks: ["Construction sites", "Warehouses and distribution centres", "Factories and manufacturing plants", "Engineering and assembly workplaces", "Food production environments", "Larger office sites with higher staff numbers or multiple floors"],
+        note: "HSE guidance suggests that higher-hazard workplaces with more than 50 employees should typically have at least one FAW-trained first aider for every 50 employees.",
+      },
+      {
+        title: "What's covered in the First Aid at Work training?",
+        paragraphs: ["This First Aid at Work course blends theory-based learning with practical training to help learners build the knowledge, skills, and confidence to respond to workplace emergencies. It covers how to assess a situation, take control calmly, and provide appropriate first aid until further medical help arrives."],
+        subs: [
+          { title: "Emergency response and first aider responsibilities", items: ["The role and responsibilities of a workplace first aider", "First aid priorities and how to assess an emergency situation", "Keeping yourself, others, and the casualty safe", "Communicating with and caring for a casualty", "Understanding when and how to call emergency services"] },
+          { title: "CPR and life-threatening incidents", items: ["Adult CPR (resuscitation)", "How to respond to an unresponsive adult", "Choking (adult)", "AED awareness, including defibrillator prompts and pad placement", "Managing severe bleeding", "Shock and how to treat it in an emergency"] },
+          { title: "Injuries and trauma", items: ["Burns and scalds", "Bone, muscle, and joint injuries (including fractures, sprains, and strains)", "Head injuries", "Spinal injuries", "Eye injuries"] },
+          { title: "Medical conditions and sudden illness", items: ["Chest pain", "Stroke", "Seizures", "Asthma", "Severe allergic reactions", "Low blood sugar", "Fainting", "Poisoning and what to do if someone has been exposed to a harmful substance"] },
+        ],
+        outro: ["This combination of practical and theory-based learning helps learners prepare for a wide range of incidents that can happen in medium to high-risk workplaces."],
+      },
+      {
+        id: "requirements",
+        title: "Entry requirements for the First Aid at Work course",
+        paragraphs: ["There are no strict academic entry requirements for this course, but learners should be able to participate in practical training and assessment. This includes being physically able to perform activities such as CPR and casualty response tasks, and having sufficient English to understand the course content and complete the assessment. Learners must complete blended learning before attending the classroom session."],
+        note: "The course is suitable for learners with no previous first aid qualifications, as well as those who need recognised first aid training for their workplace role.",
+      },
+      {
+        title: "First Aid at Work assessment",
+        paragraphs: ["Assessment is carried out throughout the course and includes both practical and theory-based elements. Learners are assessed on key first aid skills, such as CPR, choking response, recovery position, and managing common workplace injuries and emergencies, as well as their understanding of the course content. The trainer observes practical assessments, and learners must complete a theory-based assessment or knowledge check."],
+        note: "Worried about passing? There's no need to stress. The First Aid at Work course is mostly practical, and your trainer will support you throughout. With a 97% pass rate across all our courses, you're in good hands.",
+      },
+      {
+        title: "First Aid at Work certificate",
+        paragraphs: ["After successfully completing the course, learners receive an HSE-compliant First Aid at Work certificate confirming they have completed the required training and assessment and are qualified to act as a workplace first aider."],
+        subs: [
+          { title: "How long is the First Aid at Work certificate valid for?", paragraphs: ["The certificate is valid for 3 years, after which learners should book a First Aid at Work requalification (refresher) course before it expires to renew their qualification and maintain workplace first aider competence."] },
+          { title: "Can I take the First Aid at Work course online?", paragraphs: ["The FAW course is not available as a fully online qualification. To meet Health and Safety Executive (HSE) requirements, learners must complete the practical training and assessments in person.", "We offer a blended option that allows students to complete part of the theory online and attend two classroom-based training days, providing added flexibility. This helps reduce time away from work while still meeting the legal and practical requirements for workplace first aiders."] },
+          { title: "How much does the First Aid at Work course cost?", paragraphs: ["The First Aid at Work course costs between £159.99 and £279.99, depending on the training location. We keep our prices competitive across our UK venues, and group booking discounts are available.", "Whether you are booking for yourself or arranging training for a team, you will get strong value from a fully HSE-compliant course that leads to a recognised certificate."] },
+        ],
+      },
+      {
+        title: "On-site First Aid at Work training",
+        paragraphs: [
+          "If you are booking for multiple staff, we can arrange on-site First Aid at Work training at your workplace for added convenience. This is a practical option for companies that want to train teams together, reduce travel time, and minimise disruption to day-to-day operations.",
+          "On-site training covers the same HSE-compliant First Aid at Work curriculum as venue-based courses and leads to the same recognised certificate upon successful completion. It is ideal for businesses in sectors such as construction, warehousing, manufacturing, logistics, and larger office environments where having trained first aiders on site is essential.",
+          "Why companies choose on-site training:",
+        ],
+        checks: ["Train your team at your own workplace", "Reduce staff travel time and downtime", "Keep teams together for consistent training", "Choose dates that suit your operations", "Same HSE-compliant course content and certificate", "Group booking rates may be available"],
+        outro: ["We can also discuss your team size, preferred dates, and whether a full classroom-based format or a blended option is the best fit for your staff."],
+        subs: [
+          {
+            title: "Looking for more first aid and workplace safety training?",
+            paragraphs: ["Explore other popular courses:"],
+            links: [
+              { slug: "emergency-first-aid-at-work", title: "Emergency First Aid at Work (1-day)", text: "Ideal for lower-risk workplaces and basic first aider duties" },
+              { slug: "paediatric-first-aid-2-days", title: "Paediatric First Aid (2-day)", text: "Suitable for early years settings and childcare professionals" },
+              { slug: "mental-health-first-aid-awareness", title: "Mental Health First Aid", text: "Learn how to support colleagues with stress, anxiety, and workplace mental health concerns" },
+              { slug: "fire-marshal-training", title: "Fire Marshal / Fire Warden", text: "Understand fire safety responsibilities and how to lead a safe evacuation" },
+            ],
+          },
+        ],
+      },
+    ],
+    modules: [
+      { title: "Roles and responsibilities of a first aider", text: "This topic will cover the roles and responsibilities of a first aider that you need to carry out in order to minimise the risk of infection to yourself and to others while providing first aid. You will also learn when the casualty's consent is required and when it can be assumed." },
+      { title: "Assessing an incident", text: "You will learn how to conduct a scene survey, as well as a primary survey of a casualty, and summon appropriate assistance based on the outcome of that survey." },
+      { title: "Unresponsive casualty", text: "In this topic, you will learn when and how to deliver CPR and place a casualty in the recovery position. You will also learn how to administer first aid to a casualty who is experiencing a seizure." },
+      { title: "Choking", text: "You will learn how to identify when a casualty is experiencing mild or severe choking and how to deliver first aid to them." },
+      { title: "External bleeding and shock", text: "You will learn to identify the severity of external bleeding and control it. You will also learn to recognise a casualty who is suffering from shock and administer first aid to them." },
+      { title: "Minor injuries", text: "In this topic, you will learn how to administer first aid to a casualty with small cuts, grazes, bruises, small splinters, minor burns and scalds." },
+      { title: "Conducting a secondary survey", text: "You will learn which information to ask for when gathering a casualty history and how to conduct a head to toe survey." },
+      { title: "Injuries to bones, muscles and joints", text: "You will learn to recognise suspected fractures and dislocations, sprains and strains and to administer first aid (including the application of a support sling or an elevated sling) to a casualty who has sustained these injuries." },
+      { title: "Head and spinal injuries", text: "You will learn to recognise and administer first aid to a casualty who has sustained a head or spinal injury." },
+      { title: "Chest injuries", text: "You will learn to recognise and administer first aid to a casualty who has a flailed chest or has sustained a penetrating chest injury." },
+      { title: "Burns and scalds", text: "You will learn to recognise the severity of burns and administer first aid to a casualty who has sustained burns involving dry or wet heat, electricity or chemicals." },
+      { title: "Eye injury", text: "You will learn how to administer first aid for eye injuries involving dust, chemicals and embedded objects." },
+      { title: "Sudden poisoning", text: "You will learn to identify the routes that poison can take to enter the body, how to administer first aid to a casualty who is affected by sudden poisoning, and how to identify sources of information for treating those affected by sudden poisoning." },
+      { title: "Anaphylaxis", text: "You will learn to identify and recognise common triggers for anaphylaxis, as well as administering first aid to a casualty suffering from anaphylaxis." },
+      { title: "Major illness", text: "You will learn how to recognise the signs of and administer first aid to a casualty suffering from heart attack, stroke, epileptic seizure, asthma attack and diabetic emergency." },
+    ],
+    faqs: [
+      { question: "What is the First Aid at Work course?", answer: "The First Aid at Work (FAW) course is a workplace first aid qualification designed for people who need to act as trained first aiders at work. It covers a wider range of emergencies, injuries, and illnesses than a basic 1-day first aid course." },
+      { question: "Who should take the First Aid at Work course?", answer: "This course is usually suitable for staff in medium to high-risk workplaces or businesses that need more comprehensive first aid cover. Employers should decide this based on a first aid needs assessment." },
+      { question: "Is this course HSE-compliant?", answer: "Yes, the course is designed to meet workplace first aid requirements and follows an HSE-compliant curriculum for First Aid at Work training. Employers are responsible for ensuring their first aid provision is adequate and appropriate for their workplace." },
+      { question: "Can I do the First Aid at Work course fully online?", answer: "No, the course is not usually completed fully online because practical training and assessment must be conducted in person. Some providers offer a blended option, where part of the theory is completed online before classroom training." },
+      { question: "What does the course cover?", answer: "It covers both theory and practical first aid training, including CPR, choking, unresponsive casualty response, bleeding, shock, burns, injuries, and common medical emergencies such as asthma, stroke, and seizures." },
+      { question: "Is there an exam?", answer: "Assessment is usually carried out throughout the course and includes practical observations plus a theory-based assessment or knowledge check. Your trainer will assess your skills during the practical parts." },
+      { question: "Is the course hard to pass?", answer: "Most learners find the course manageable because it is heavily practical and trainers guide you through each stage. As long as you attend, take part, and follow the training, you should be well prepared for the assessments." },
+      { question: "Do I need any previous first aid qualification?", answer: "No, you do not usually need previous first aid training to join the First Aid at Work course. It is suitable for beginners as well as staff taking on a workplace first aider role." },
+      { question: "Are there any entry requirements?", answer: "There are no strict academic entry requirements, but learners should be able to take part in practical activities (such as CPR), understand the training, and complete the assessment." },
+      { question: "How long is the certificate valid for?", answer: "First Aid at Work certificates are valid for 3 years. Before the certificate expires, learners need to complete a requalification course to remain a competent workplace first aider." },
+      { question: "Can employers choose a different level of first aid training?", answer: "Yes. HSE states employers should use a first aid needs assessment to decide the right level of training (for example, EFAW or FAW) based on their workplace risks, size, and circumstances." },
+    ],
+    reviews: [
+      { name: "James Butler", org: "ReadTraining Learning", date: "2026-07-05", rating: 5 },
+      { name: "David Cadey", org: "ReadTraining Learning", date: "2026-06-28", rating: 5, body: "The course was excellent as the lecturer kept everyone engaged and attentive. We all learned so much from the course and would recommend this course to anyone who wants to renew or retake their first aid at work certification. The course was packed with essential information without too much jargon so all concepts and information was fully absorbed by all. I will definitely book with ReadTraining for future training and will return again. Congratulations to all participants on the course and good luck in your future endeavours." },
+      { name: "Chijioke Iwuchukwu", org: "ReadTraining Learning", date: "2026-06-24", rating: 5 },
+      { name: "Tomas Moncys", org: "ReadTraining Learning", date: "2025-11-11", rating: 5 },
+      { name: "Mohammed Farooq Uddin", org: "ReadTraining Learning", date: "2025-10-19", rating: 5 },
+      { name: "Emmanuel Chibike Madu", org: "ReadTraining Learning", date: "2025-08-25", rating: 5, body: "Great learning. Very practicable, and highly recommended." },
+    ],
+    relatedSlugs: ["emergency-first-aid-at-work", "cscs-green-card-course", "citb-smsts-course", "citb-sssts-course", "fire-marshal-training", "paediatric-first-aid-2-days"],
+  },
 };
 
 export function buildCourseDetail(course) {
@@ -542,8 +689,7 @@ export function buildCourseDetail(course) {
   const hours = hoursOf(course.duration);
   const perModule = Math.max(20, Math.round((hours * 60) / info.mods.length / 5) * 5);
   const modules = info.mods.map(([title, topics]) => ({ title, duration: fmtMinutes(perModule), topics }));
-  const verbs = ["Understand", "Apply", "Recognise", "Follow", "Explain", "Use", "Complete", "Prepare for"];
-  const outcomes = modules.flatMap((m) => m.topics).slice(0, 8).map((t, i) => `${verbs[i]} ${/^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1)}`);
+  const outcomes = modules.flatMap((m) => m.topics).slice(0, 8).map((t) => `Learn about ${/^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1)}`);
 
   const levelWord = { beginner: "beginner", intermediate: "intermediate", advance: "advanced" }[course.level];
   const entry = {
@@ -554,23 +700,24 @@ export function buildCourseDetail(course) {
 
   // sessions: classroom (one per venue), live online (dates); on demand is shown as online
   const sessions = [];
+  const pool = providerPool(course);
   let n = 0;
   const makeSession = (mode, offsetDays, venue) => {
     n += 1;
     const price = Math.round(course.price * priceSteps[n % priceSteps.length] * 100) / 100;
     const wasPrice = course.wasPrice ? Math.round(price * (course.wasPrice / course.price) * 100) / 100 : null;
     sessions.push({
-      id: `${mode === "classroom" ? "c" : "o"}${n}`,
+      id: `${mode === "classroom" ? "c" : mode === "ondemand" ? "d" : "o"}${n}`,
       mode,
       date: iso(nextWeekday(DETAIL_BASE + offsetDays * DAY)),
-      time: mode === "classroom" ? "09:30 to 17:00" : course.methods.includes("live-online") ? "10:00 to 16:00" : "Start any time",
-      location: venue ? `${venue.city}, ${venue.postcode}` : "Live online",
+      time: mode === "classroom" ? "09:30 to 17:00" : mode === "ondemand" ? "Start any time" : "10:00 to 16:00",
+      location: venue ? `${venue.city}, ${venue.postcode}` : mode === "ondemand" ? "Online" : "Live online",
       city: venue ? venue.city : "",
       venue: venue ? venue.city : "",
       address: venue ? `${venue.city} Training Centre` : "",
       postcode: venue ? venue.postcode : "",
       endDate: iso(nextWeekday(DETAIL_BASE + offsetDays * DAY) + (Math.max(1, Math.round(parseFloat(course.duration) || 1)) > 1 && /day/i.test(course.duration) ? (Math.round(parseFloat(course.duration)) - 1) * DAY : 0)),
-      provider: providerPool[(course.id + n) % providerPool.length],
+      provider: pool[(course.id + n) % pool.length],
       price,
       wasPrice,
     });
@@ -581,9 +728,11 @@ export function buildCourseDetail(course) {
       if (i < 4) makeSession("classroom", 21 + i * 4 + (course.id % 5), v);
     });
   }
-  if (course.methods.includes("live-online") || course.methods.includes("on-demand")) {
+  // Live online has dated sessions; On Demand is its own option with one "start any time" entry.
+  if (course.methods.includes("live-online")) {
     for (let i = 0; i < 5; i++) makeSession("online", i * 7 + (course.id % 6), null);
   }
+  if (course.methods.includes("on-demand")) makeSession("ondemand", course.id % 6, null);
   sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
 
   // rating breakdown that always totals 100
@@ -635,10 +784,7 @@ export function buildCourseDetail(course) {
     validityText: validityYears ? `${validityYears} years` : /lifetime/i.test(course.validity) ? "Lifetime" : undefined,
     renewal: validityYears ? "Retake the course or its refresher before the certificate expires." : undefined,
   };
-  const funding = course.subject === "construction" ? { text: "This course may be eligible for a CITB grant.", href: "/template/help-center" } : undefined;
-  const extras = examSubjects.includes(course.subject)
-    ? [{ title: "Free test prep book", note: "450+ practice questions and answers", price: 0, url: "/template/shop" }, { title: "Free mock tests", note: "15+ mock tests, over 1000 questions", price: 0, url: "/template/shop" }].slice(0, course.id % 3 === 0 ? 1 : 2)
-    : [];
+  const funding = course.subject === "construction" ? { text: "This course may be eligible for a CITB grant.", href: "/help-centre" } : undefined;
   const inHouse = (course.methods.includes("classroom") || course.methods.includes("live-online")) && course.id % 6 !== 0;
   // Only facts the site really supports are true: Klarna instalments are offered on the live site; there is no Trustpilot data, so that stays empty.
   const trust = { noBookingFee: true, approvedProviders: true, invoice: course.subject !== "lifestyle", instalments: true, trustpilot: null };
@@ -660,8 +806,8 @@ export function buildCourseDetail(course) {
     rows: examRows,
     outro: [assessment.resits],
   } : undefined;
-  const popularMode = course.methods.includes("classroom") ? "classroom" : "online";
-  const reviewsWithOrg = reviews.map((r, i) => ({ ...r, org: providerPool[(course.id + i) % providerPool.length].split(" ").map((w) => w[0]).join("").slice(0, 4) }));
+  const popularMode = course.methods.includes("classroom") ? "classroom" : course.methods.includes("live-online") ? "online" : "ondemand";
+  const reviewsWithOrg = reviews.map((r, i) => ({ ...r, org: pool[(course.id + i) % pool.length].split(" ").map((w) => w[0]).join("").slice(0, 4) }));
 
   const relatedSlugs = catalogueCourses
     .filter((x) => x.id !== course.id)
@@ -690,8 +836,10 @@ export function buildCourseDetail(course) {
     reviews: reviewsWithOrg,
     faqs,
     relatedSlugs,
-    features, assessment, certificate, funding, extras, inHouse, trust,
+    features, assessment, certificate, funding, inHouse, trust,
     workAreas, requirements, exams, popularMode,
+    // Only courses that really have a mock test link to it (see mockTestByCourse in data/testPrep.js).
+    mockTest: findMockTest(course.id),
     ...(courseOverrides[course.id] || {}),
   };
 }

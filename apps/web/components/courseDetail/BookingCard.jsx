@@ -1,14 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { IN_HOUSE_NOTE, MODE_LABEL, QUOTE_HREF, useBooking } from "./BookingProvider";
-import { formatDateRange, formatPrice, savePercent } from "@/lib/courses";
+import Image from "next/image";
+import { IN_HOUSE_NOTE, MODE_LABEL, quoteHref, useBooking } from "./BookingProvider";
+import { TEAM } from "@/lib/teamTraining";
+import { toItem, trackEvent } from "@/lib/analytics";
+import { useWishlist } from "@/lib/wishlist";
+import { formatDateRange, formatPrice, savePercent } from "@/lib/format";
+import { Check, Icon } from "./Icon";
 
-const Check = () => (
-  <svg className="rt-cd__check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12l5 5L20 7" />
-  </svg>
+
+// The heart has no icon-font glyph, so it stays a line SVG (the same one as the listing card).
+const Heart = ({ filled }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z" /></svg>
 );
 
 // Trust points come from course/site data only. An item with no data is not shown, and nothing is invented.
@@ -23,111 +28,168 @@ export function trustItems(course) {
   ].filter(Boolean).slice(0, 5);
 }
 
-// The booking card. Sticky on desktop (CSS), static under the hero on tablet and mobile.
-export default function BookingCard() {
-  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef } = useBooking();
-  const save = isInHouse ? 0 : savePercent(session.price, session.wasPrice);
-  const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
-  const trust = trustItems(course);
-  const extras = (course.extras || []).slice(0, 2);
+// Collapses to nothing in 200ms. While collapsed it is inert: nothing inside it can be focused. It stays in the DOM.
+function Fold({ hidden, children, className = "" }) {
+  return (
+    <div className={`rt-bk__fold${hidden ? " is-hidden" : ""} ${className}`} inert={hidden}>
+      <div className="rt-bk__fold-in">{children}</div>
+    </div>
+  );
+}
 
-  const toDates = (e) => {
-    e.preventDefault();
-    document.getElementById("dates")?.scrollIntoView({ behavior: "smooth", block: "start" });
+function SaveButton() {
+  const { course, notify } = useBooking();
+  // Same list as the heart on the listing cards, so a course saved there shows as saved here.
+  const [saved, toggleSaved] = useWishlist(course.id);
+  const toggle = () => {
+    try {
+      const saving = toggleSaved();
+      notify(saving ? "Saved to your list" : "Removed from your list");
+      if (saving) trackEvent("add_to_wishlist", { items: [toItem(course)] });
+    } catch {
+      notify("We could not update your list. Please try again.");
+    }
   };
+  return (
+    <button type="button" className={`rt-bf__save${saved ? " is-saved" : ""}`} aria-pressed={saved} onClick={toggle}>
+      <Heart filled={saved} />
+      <span>{saved ? "Saved to your list" : "Save for later"}</span>
+    </button>
+  );
+}
+
+const QUOTE_TEXT = TEAM.quoteText;
+const IN_HOUSE_LINE = TEAM.line;
+
+// The booking card. SELECTED option on top (radio, price, info lines, link, button, trust items), then one row for every other
+// option the course offers (choosing a row selects it everywhere), then a grey footer with Save.
+// FULL (title visible): course image first, trust items under the button. COMPACT (desktop, title out of view): the image and
+// the trust items collapse; everything else stays. Tablet and mobile: always FULL.
+export default function BookingCard() {
+  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates } = useBooking();
+  const [desktop, setDesktop] = useState(false);
+  const [flashing, setFlashing] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 992px)");
+    const sync = () => setDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  // A choice made on the page flashes the selected section for 600ms (the CSS turns this off for reduced motion).
+  useEffect(() => {
+    if (!flash) return;
+    setFlashing(true);
+    const t = setTimeout(() => setFlashing(false), 600);
+    return () => clearTimeout(t);
+  }, [flash]);
+
+  const compact = barOn && desktop;
+  const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
+  const save = isInHouse ? 0 : savePercent(session.price, session.wasPrice);
+  const trust = trustItems(course);
+  const onDemand = mode === "ondemand";
+  const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
+  const others = modes.filter((m) => m !== mode);
 
   return (
-    <div className="rt-cd__card">
-      {!isInHouse && (
-        <>
-          <div className="rt-cd__price-row">
-            <span className="rt-cd__price">{formatPrice(session.price)}</span>
-            {session.wasPrice > session.price && (
-              <s className="rt-cd__was">
-                <span className="rt-cd__sr">was </span>
-                {formatPrice(session.wasPrice)}
-              </s>
-            )}
-            {save > 0 && <span className="rt-cd__save">{save}% off</span>}
+    <div className={`rt-bk${compact ? " is-compact" : ""}`}>
+      {course.imageSrc && (
+        <Fold hidden={compact} className="rt-bk__fold--img">
+          <div className="rt-bk__img">
+            <Image src={course.imageSrc} alt="" width={440} height={248} style={{ width: "100%", height: "100%" }} priority />
           </div>
-          <p className="rt-cd__per">All inc</p>
-        </>
+        </Fold>
       )}
 
-      {modes.length > 1 && (
-        <fieldset className="rt-cd__field">
-          <legend className="rt-cd__label">How do you want to learn?</legend>
-          <div className="rt-cd__seg" style={{ gridTemplateColumns: `repeat(${modes.length}, minmax(0, 1fr))` }}>
-            {modes.map((m) => (
-              <label key={m} className={`rt-cd__seg-opt${mode === m ? " is-on" : ""}`}>
-                <input type="radio" name="rt-cd-mode" value={m} checked={mode === m} onChange={() => setMode(m)} />
-                <span>{MODE_LABEL[m]}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      )}
+      <fieldset className="rt-bs__group">
+        <legend className="rt-cd__sr">How do you want to learn?</legend>
 
-      {isInHouse ? (
-        <>
-          <p className="rt-cd__inhouse" aria-live="polite">{IN_HOUSE_NOTE}</p>
-          <Link ref={cardButtonRef} href={QUOTE_HREF} className="rt-cd__btn">Get a quote</Link>
-        </>
-      ) : (
-        <>
-          <div className="rt-cd__session" aria-live="polite">
-            <div className="rt-cd__session-top">
-              <strong>{formatDateRange(session.date, session.endDate)}</strong>
-              <a href="#dates" className="rt-cd__link" onClick={toDates}>Change</a>
+        <div className={`rt-bs${flashing ? " is-flash" : ""}`} aria-live="polite">
+          <label className="rt-bs__head">
+            <input type="radio" name="rt-bk-mode" value={mode} checked onChange={() => {}} />
+            <span className="rt-bs__radio is-on" aria-hidden="true" />
+            <span className="rt-bs__name">{MODE_LABEL[mode]}</span>
+          </label>
+
+          {isInHouse ? (
+            <p className="rt-bs__quote">{QUOTE_TEXT}</p>
+          ) : (
+            <div className="rt-bs__price">
+              <strong>{formatPrice(session.price)}</strong>
+              {session.wasPrice > session.price && <s><span className="rt-cd__sr">was </span>{formatPrice(session.wasPrice)}</s>}
+              {save > 0 && <span className="rt-bs__off">{save}% off</span>}
             </div>
-            <div className="rt-cd__session-sub">{session.location}, {session.provider}</div>
-          </div>
+          )}
 
-          <button
-            ref={cardButtonRef}
-            type="button"
-            className={`rt-cd__btn${status === "added" ? " is-added" : ""}`}
-            onClick={addToBasket}
-            disabled={status === "loading"}
-            aria-busy={status === "loading"}
-          >
-            {label}
-          </button>
-
-          <Link href={QUOTE_HREF} className="rt-cd__team">Booking for a team? Get a group quote</Link>
-        </>
-      )}
-
-      {trust.length > 0 && (
-        <ul className="rt-cd__included">
-          {trust.map((t) => (
-            <li key={t}><Check /> {t}</li>
-          ))}
-        </ul>
-      )}
-
-      <div className="rt-cd__staff">
-        <strong>Interested in staff training?</strong>
-        <p>Create an account to get exclusive discounts on group bookings.</p>
-        <Link href={QUOTE_HREF} className="rt-cd__link">Click for more info</Link>
-      </div>
-
-      {extras.length > 0 && (
-        <div className="rt-cd__extras">
-          <p className="rt-cd__extras-title">Prepare for your exams</p>
-          <ul>
-            {extras.map((x) => (
-              <li key={x.title}>
-                <span className="rt-cd__extras-main">
-                  <Link href={x.url} className="rt-cd__extras-link">{x.title}</Link>
-                  {x.note && <small>{x.note}</small>}
-                </span>
-                <span>{x.price > 0 ? formatPrice(x.price) : "Free"}</span>
-              </li>
-            ))}
+          <ul className="rt-bs__info">
+            {isInHouse ? (
+              <>
+                <li><Icon name="friend" /><span>{IN_HOUSE_NOTE}</span></li>
+                <li><Icon name="calendar" /><span>{IN_HOUSE_LINE}</span></li>
+              </>
+            ) : onDemand ? (
+              <>
+                <li><Icon name="calendar" /><span>{session.time}</span></li>
+                <li><Icon name="person-3" /><span>{session.provider}</span></li>
+                <li><Icon name="coupon" /><span>All inc</span></li>
+              </>
+            ) : (
+              <>
+                <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}</span></li>
+                <li><Icon name="location" /><span>{session.location}, {session.provider}</span></li>
+                <li><Icon name="coupon" /><span>All inc</span></li>
+              </>
+            )}
           </ul>
+
+          {!isInHouse && !onDemand ? (
+            <p className="rt-bs__link"><Icon name="edit" /><button type="button" className="rt-cd__link rt-bs__change" onClick={openDates}>Change</button></p>
+          ) : null}
+
+          {isInHouse ? (
+            <Link ref={cardButtonRef} href={quoteHref(course)} className="button -md -purple-1 text-white rt-btn-block">{TEAM.cta}</Link>
+          ) : (
+            <button
+              ref={cardButtonRef}
+              type="button"
+              className={`button -md -purple-1 text-white rt-btn-block${status === "added" ? " is-added" : ""}`}
+              onClick={addToBasket}
+              disabled={status === "loading"}
+              aria-busy={status === "loading"}
+            >
+              {label}
+            </button>
+          )}
+
+          {trust.length > 0 && (
+            <Fold hidden={compact} className="rt-bk__fold--trust">
+              <ul className="rt-bs__trust">
+                {trust.map((t) => (
+                  <li key={t}><Check /> <span>{t}</span></li>
+                ))}
+              </ul>
+            </Fold>
+          )}
         </div>
-      )}
+
+        {others.map((m) => (
+          <label key={m} className="rt-br">
+            <input type="radio" name="rt-bk-mode" value={m} checked={false} onChange={() => setMode(m)} />
+            <span className="rt-bs__radio" aria-hidden="true" />
+            <span className="rt-br__text">
+              <span className="rt-br__name">{MODE_LABEL[m]}</span>
+              <strong className="rt-br__from">{m === "inhouse" ? QUOTE_TEXT : `From ${formatPrice(fromFor(m))}`}</strong>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <div className="rt-bf">
+        <SaveButton />
+      </div>
     </div>
   );
 }

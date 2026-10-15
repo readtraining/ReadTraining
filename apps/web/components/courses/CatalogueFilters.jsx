@@ -13,7 +13,9 @@ const SUBJECTS_COLLAPSED = 5;
 // Price stays a single choice (radios, "Any price" first, plus a custom range).
 // Subject: 5 options + "Show N more"; every ticked subject lists its sub-subjects (also checkboxes) right under it.
 // counts[key][value] is the live number of courses each option would return with all OTHER groups applied.
-export default function CatalogueFilters({ state, counts, onToggle, onPriceChange }) {
+// `hide` lists the groups a course page leaves out ("method" on a study-method page, "subject" on a subject page).
+// `baseSubject` (a subject page) shows that subject's sub-subjects as their own group, "Course type", in place of Subject.
+export default function CatalogueFilters({ state, counts, onToggle, onPriceChange, hide = [], baseSubject = "" }) {
   const [showAll, setShowAll] = useState(false);
   const [subjectGroup, methodGroup, levelGroup] = filterGroups;
 
@@ -25,6 +27,7 @@ export default function CatalogueFilters({ state, counts, onToggle, onPriceChang
 
   return (
     <div className="rt-fp__groups">
+      {!hide.includes("method") && (
       <FilterGroup id="rt-fp-method" title="Delivery method">
         <div className="rt-fp__options">
           {methodGroup.options.map((opt) => (
@@ -32,7 +35,19 @@ export default function CatalogueFilters({ state, counts, onToggle, onPriceChang
           ))}
         </div>
       </FilterGroup>
+      )}
 
+      {baseSubject && subSubjects[baseSubject]?.length > 1 && (
+        <FilterGroup id="rt-fp-sub" title="Course type">
+          <div className="rt-fp__options">
+            {subSubjects[baseSubject].map((sub) => (
+              <CheckRow key={sub.value} name="sub" opt={sub} checked={state.sub.includes(sub.value)} count={counts?.sub?.[sub.value]} onChange={() => onToggle("sub", sub.value)} />
+            ))}
+          </div>
+        </FilterGroup>
+      )}
+
+      {!hide.includes("subject") && (
       <FilterGroup id="rt-fp-subject" title="Subject">
         <div className="rt-fp__options">
           {subjectOptions.map((opt) => {
@@ -55,6 +70,7 @@ export default function CatalogueFilters({ state, counts, onToggle, onPriceChang
           {expanded ? "Show less" : `Show ${hiddenCount} more`}
         </button>
       </FilterGroup>
+      )}
 
       <FilterGroup id="rt-fp-level" title="Course level">
         <div className="rt-fp__options">

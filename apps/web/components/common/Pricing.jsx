@@ -4,6 +4,7 @@ import Image from "next/image";
 
 import React, { useState } from "react";
 import { pricingData } from "../../data/pricing";
+import { CATALOGUE_HREF } from "@/lib/routes";
 import Link from "next/link";
 
 export default function Pricing() {
@@ -81,7 +82,7 @@ export default function Pricing() {
                 <div className="d-inline-block mt-30">
                   <Link
                     className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/template/courses-list-1"
+                    href={CATALOGUE_HREF}
                   >
                     Get Started Now
                   </Link>
@@ -132,7 +133,7 @@ export default function Pricing() {
                 <div className="d-inline-block mt-30">
                   <Link
                     className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/template/courses-list-1"
+                    href={CATALOGUE_HREF}
                   >
                     Get Started Now
                   </Link>
@@ -183,7 +184,7 @@ export default function Pricing() {
                 <div className="d-inline-block mt-30">
                   <Link
                     className="button px-40 py-20 fw-500 -purple-3 text-purple-1"
-                    href="/template/courses-list-1"
+                    href={CATALOGUE_HREF}
                   >
                     Get Started Now
                   </Link>

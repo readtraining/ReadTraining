@@ -2,15 +2,19 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import SaverBadge from "@/components/skillSaver/SaverBadge";
+import { isSkillSaverCourse } from "@/lib/skillSaver";
+import { courseLink } from "@/data/courseSlugs";
 
 // Marketplace-style course card: bordered card, image, title, provider line,
-// badge + rating pills and a "from" price.
-export default function HomeCourseCard({ data }) {
+// badge + rating pills and a "from" price. `href` and `className` (the grid column) can be changed where the card is reused.
+export default function HomeCourseCard({ data, href = data.href ?? courseLink(data.id), className = "col-lg-3 col-md-6" }) {
   return (
-    <div className="col-lg-3 col-md-6">
-      <Link href={`/template/courses/${data.id}`} className="rt-ucard">
+    <div className={className}>
+      <Link href={href} className="rt-ucard">
         <div className="rt-ucard__image">
           <Image width={500} height={300} src={data.imageSrc} alt={data.title} />
+          {isSkillSaverCourse(data.id) && <SaverBadge className="-onImage" />}
         </div>
 
         <div className="rt-ucard__title">{data.title}</div>

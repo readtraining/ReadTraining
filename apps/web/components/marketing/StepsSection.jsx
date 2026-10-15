@@ -10,7 +10,8 @@ export default function StepsSection({ workflow: w, tone = "white" }) {
       <div className="container">
         <div className="fb-head -center">
           <Eyebrow>{w.eyebrow}</Eyebrow>
-          <h2 className="fb-title">{w.title}</h2>
+          {/* a title given as a list of lines gets a break between them */}
+          <h2 className="fb-title">{Array.isArray(w.title) ? w.title.map((line, i) => <Fragment key={line}>{i > 0 && <br />}{line}</Fragment>) : w.title}</h2>
           <p className="fb-lede">{w.text}</p>
         </div>
         <ol className="bz-stepsRow fb-steps">
