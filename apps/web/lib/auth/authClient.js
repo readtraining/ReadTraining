@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabase } from "@/lib/supabase/client";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { AUTH_ROUTES } from "@/lib/routes";
 
 // Auth through Supabase Auth (email and password; the project requires email confirmation). The log in, sign up, forgot and reset
@@ -92,6 +92,7 @@ export async function signUpWithProvider(provider) {
 }
 
 export async function signOut() {
+  if (!isSupabaseConfigured) return;
   await getSupabase().auth.signOut();
 }
 
@@ -106,6 +107,11 @@ export const toPerson = (user) => {
 export function useAuthUser() {
   const [person, setPerson] = useState(undefined);
   useEffect(() => {
+    // no Supabase settings (a deployment without them): nobody is signed in, and nothing throws
+    if (!isSupabaseConfigured) {
+      setPerson(null);
+      return undefined;
+    }
     const supabase = getSupabase();
     supabase.auth.getUser().then(({ data }) => setPerson(toPerson(data.user)));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => setPerson(toPerson(session?.user)));

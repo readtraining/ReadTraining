@@ -10,6 +10,17 @@ const GUEST_ONLY = ["/login", "/signup"];
 
 export async function proxy(request) {
   let response = NextResponse.next({ request });
+  // without the Supabase settings nobody can be signed in: account pages go to log in, everything else opens as normal
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+    const path = request.nextUrl.pathname;
+    if (PROTECTED.some((p) => path === p || path.startsWith(`${p}/`))) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
+      return NextResponse.redirect(url);
+    }
+    return response;
+  }
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
       getAll: () => request.cookies.getAll(),
