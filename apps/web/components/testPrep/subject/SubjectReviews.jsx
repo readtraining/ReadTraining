@@ -5,6 +5,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import HomeStars from "@/components/home/HomeStars";
 import { testPrepPage } from "@/data/testPrep";
 import { getReviews, submitReview } from "@/lib/reviews";
+import { focusFirstError } from "@/lib/focusFirstError";
 
 // "Mock exam reviews" at the end of a subject page (as on the reference, hurak.com): the home section head (eyebrow + title),
 // then the reviews, or an empty state with "Give a review". The button opens the test runner's pop-up (Sheet: centred on
@@ -28,10 +29,7 @@ function ReviewForm({ subject, onDone }) {
     if (!rating) next.rating = r.errors.rating;
     if (text.trim().length < MIN_TEXT) next.text = r.errors.text;
     setErrors(next);
-    if (Object.keys(next).length) {
-      document.getElementById(next.rating ? "rt-rv-star-1" : "rt-rv-text")?.focus();
-      return;
-    }
+    if (Object.keys(next).length) return focusFirstError(e.currentTarget);
     setStatus("sending");
     try {
       await submitReview({ subject, rating, name: name.trim(), text: text.trim() });
@@ -46,6 +44,7 @@ function ReviewForm({ subject, onDone }) {
     <form className="rt-tps__rvform" onSubmit={submit} noValidate>
       <fieldset className="rt-tps__rate" aria-describedby={errors.rating ? "rt-rv-rating-err" : undefined}>
         <legend className="rt-tps__rvlabel">{r.ratingLabel}</legend>
+        {errors.rating && <p className="rt-q__err" id="rt-rv-rating-err"><span className="rt-sr">Error: </span>{errors.rating}</p>}
         <div className="rt-tps__rate-stars" onMouseLeave={() => setHover(0)}>
           {[1, 2, 3, 4, 5].map((n) => (
             <label key={n} className={`rt-tps__rate-star${n <= shown ? " is-on" : ""}`} onMouseEnter={() => setHover(n)}>
@@ -56,7 +55,6 @@ function ReviewForm({ subject, onDone }) {
           ))}
           <span className="rt-tps__rate-name" aria-hidden="true">{shown ? r.ratingNames[shown - 1] : ""}</span>
         </div>
-        {errors.rating && <p className="rt-tps__rverr" id="rt-rv-rating-err">{errors.rating}</p>}
       </fieldset>
 
       <label className="rt-field">
@@ -66,11 +64,11 @@ function ReviewForm({ subject, onDone }) {
 
       <div className="rt-field">
         <label htmlFor="rt-rv-text">{r.textLabel}</label>
+        {errors.text && <p className="rt-q__err" id="rt-rv-text-err"><span className="rt-sr">Error: </span>{errors.text}</p>}
         <textarea id="rt-rv-text" value={text} onChange={(e) => { setText(e.target.value); if (errors.text && e.target.value.trim().length >= MIN_TEXT) setErrors((x) => ({ ...x, text: undefined })); }} placeholder={r.textPlaceholder} maxLength={1000} aria-invalid={errors.text ? "true" : undefined} aria-describedby={errors.text ? "rt-rv-text-err" : undefined}></textarea>
-        {errors.text && <p className="rt-tps__rverr" id="rt-rv-text-err">{errors.text}</p>}
       </div>
 
-      {status === "failed" && <p className="rt-tps__rverr" role="alert">{r.failed}</p>}
+      {status === "failed" && <p className="rt-q__err" role="alert">{r.failed}</p>}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={status === "sending"}>
         {status === "sending" ? r.sending : r.submit}
       </button>

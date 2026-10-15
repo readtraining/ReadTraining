@@ -4,7 +4,7 @@ import React from "react";
 import { pw } from "@/data/providerWorkspace";
 import { DAY } from "@/lib/providerWorkspace";
 
-// Shared by the dashboard and Performance: star ratings and the date ranges (pw.ranges).
+// Performance: star ratings, the date ranges (pw.ranges) and the chart buckets.
 
 // "4 out of 5 stars" as five stars; the number is read out, the icons are hidden.
 export function Stars({ rating, large = false }) {
@@ -16,16 +16,12 @@ export function Stars({ rating, large = false }) {
   );
 }
 
-export const RANGE_OPTIONS = pw.ranges.map((r) => ({ value: r.key, label: r.label }));
 export const isRange = (k) => pw.ranges.some((r) => r.key === k);
 
 // The first moment of a range, in ms. "All time" starts at the earliest record given.
 export function rangeStart(key, now = Date.now(), earliest = now) {
   const r = pw.ranges.find((x) => x.key === key);
-  const d = new Date(now);
   if (r?.days) return now - r.days * DAY;
-  if (key === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
-  if (key === "year") return Date.UTC(d.getUTCFullYear(), 0, 1);
   return Math.min(earliest, now);
 }
 

@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/format";
 const KEY = "rt-provider";
 export const PROVIDER_EVENT = "rt-provider-change";
 export const DAY = 86400000;
-const VERSION = 1;
+const VERSION = 3; // 3: refund requests keep their booking reference (2: Hurak course setup fields, no payouts)
 
 const readRaw = () => {
   try {
@@ -86,9 +86,11 @@ export function orderMoney(o) {
 
 // ---- derived view ----------------------------------------------------------------------------------------------------------
 
+// A cohort's status: worked out from its dates and certificates, unless the provider set one by hand (Hurak's "Cohort status").
 export function cohortStatus(k, enrolments, today = todayIso()) {
   if (k.cancelled) return "cancelled";
-  const mine = enrolments.filter((e) => e.cohortId === k.id);
+  if (k.statusOverride) return k.statusOverride;
+  const mine = enrolments.filter((e) => e.cohortId === k.id && e.status !== "cancelled");
   const passed = mine.filter((e) => e.result === "pass");
   const certs = passed.filter((e) => e.certificate);
   if (certs.length && certs.length === passed.length && mine.every((e) => e.result)) return "certificated";
@@ -101,7 +103,6 @@ export function cohortStatus(k, enrolments, today = todayIso()) {
 
 export const canDeleteCourse = (s, id) => !s.orders.some((o) => o.lines.some((l) => l.courseId === id)) && !s.enrolments.some((e) => e.courseId === id);
 export const canChangeFormat = (s, id) => !s.orders.some((o) => o.lines.some((l) => l.courseId === id));
-export const venueInUse = (s, id) => s.cohorts.some((k) => k.venueId === id && !k.cancelled && cohortSpan(k).last >= todayIso());
 export const packageCourses = (s, id) => s.courses.filter((c) => c.pricing.type === "tiered" && c.pricing.packageId === id);
 
 // Everything the pages read, worked out once per change.
@@ -113,61 +114,28 @@ function derive(s) {
   const member = Object.fromEntries(s.team.map((t) => [t.id, t]));
   const pack = Object.fromEntries(s.packages.map((p) => [p.id, p]));
 
+  // places: everyone on the cohort except cancelled bookings; `places` breaks them down as Hurak's students tooltip does
   const cohorts = s.cohorts.map((k) => {
-    const booked = s.enrolments.filter((e) => e.cohortId === k.id);
+    const mine = s.enrolments.filter((e) => e.cohortId === k.id);
+    const places = { enrolled: 0, rescheduled: 0, cancelled: 0 };
+    mine.forEach((e) => { places[e.status || "enrolled"] += 1; });
+    const booked = places.enrolled + places.rescheduled;
     const span = cohortSpan(k);
-    return { ...k, ...span, status: cohortStatus(k, s.enrolments, today), booked: booked.length, left: Math.max(0, k.max - booked.length), course: course[k.courseId], venue: venue[k.venueId], tutor: member[k.tutorId] };
+    return { ...k, ...span, status: cohortStatus(k, s.enrolments, today), booked, places, left: Math.max(0, k.max - booked), course: course[k.courseId], venue: venue[k.venueId], tutor: member[k.tutorId] };
   });
   const cohort = Object.fromEntries(cohorts.map((k) => [k.id, k]));
 
   const orders = s.orders.map((o) => ({ ...o, money: orderMoney(o) }));
 
-  // payouts: each settled order goes in the first payout dated on or after it
-  const payoutsSorted = [...s.payouts].sort((a, b) => a.date.localeCompare(b.date));
-  const inPayout = {};
-  orders.forEach((o) => {
-    if (!o.money.net) return;
-    const p = payoutsSorted.find((x) => x.date >= isoDay(o.at));
-    if (p) (inPayout[p.id] ||= []).push(o.ref);
-  });
-  const payouts = payoutsSorted.map((p) => ({ ...p, orders: inPayout[p.id] || [], amount: round2((inPayout[p.id] || []).reduce((t, ref) => t + orders.find((o) => o.ref === ref).money.net, 0)) })).reverse();
-
-  // transactions: sale, card fee and commission, refunds, disputes, cancellations and payouts
-  const tx = [];
-  orders.forEach((o) => {
-    const m = o.money;
-    if (o.status === "cancelled") tx.push({ at: o.at, type: "cancel", ref: o.ref, amount: 0, text: "Order cancelled before payment" });
-    if (o.status === "dispute") tx.push({ at: o.at + 2 * DAY, type: "dispute", ref: o.ref, amount: -o.total, text: "Held while the card dispute is open" });
-    if (!m.gross) return;
-    tx.push({ at: o.at, type: "purchase", ref: o.ref, amount: o.total, text: `${course[o.lines[0].courseId]?.title || "Course"} × ${o.lines[0].qty}` });
-    if (m.fee) tx.push({ at: o.at, type: "fee", ref: o.ref, amount: -m.fee, text: `Card fee ${pw.fee.card}%` });
-    if (m.commission) tx.push({ at: o.at, type: "fee", ref: o.ref, amount: -m.commission, text: `Commission ${pw.fee.commission}%` });
-    if (o.refunded) {
-      const r = s.refunds.find((x) => x.orderRef === o.ref && x.status === "approved");
-      tx.push({ at: r?.decided || o.at + DAY, type: "refund", ref: o.ref, amount: -o.refunded, text: "Refund to the customer" });
-    }
-  });
-  payouts.forEach((p) => p.amount && p.status === "paid" && tx.push({ at: Date.parse(`${p.date}T09:00:00Z`), type: "payout", ref: p.id, amount: -p.amount, text: "Paid to your bank account" }));
-  tx.sort((a, b) => b.at - a.at);
-  const transactions = tx.map((t, i) => ({ ...t, id: `TX-${String(tx.length - i).padStart(4, "0")}` }));
-
   const enrolments = s.enrolments.map((e) => ({ ...e, learner: learner[e.learnerId], course: course[e.courseId], cohort: cohort[e.cohortId] }));
-
-  const checklist = {
-    profile: Boolean(s.org.headline && s.org.bio && s.org.policy),
-    course: s.courses.some((c) => c.status === "approved" || c.status === "pending"),
-    cohort: cohorts.some((k) => k.status === "upcoming"),
-    payouts: s.org.payout.connected,
-  };
 
   return {
     ...s,
     today,
     byId: { course, learner, venue, member, pack, cohort },
-    cohorts, orders, payouts, transactions, enrolments, checklist,
+    cohorts, orders, enrolments,
     counts: {
       reviews: s.reviews.filter((r) => !r.reply).length,
-      refunds: s.refunds.filter((r) => r.status === "open").length,
       unread: s.notifications.filter((n) => !n.read).length,
       leads: s.leads.filter((l) => l.status === "new").length,
       questions: s.qa.filter((q) => !q.answer).length,
@@ -194,12 +162,14 @@ export function useProvider() {
 
 // ---- courses ---------------------------------------------------------------------------------------------------------------
 
-export const createCourse = (format) => updateProvider((s) => {
+// Hurak's 5-step wizard: working title, category / sub-category / topic, compliance (and the shared landing page), performance
+// model and Skill Saver. The course starts as a classroom draft; Mode of study changes that.
+export const createCourse = ({ title, category, subcategory, topic, type, sharedLanding, model, skillSaver }) => updateProvider((s) => {
   const id = nextId("C", s.courses);
   s.courses.unshift({
-    id, title: "", subtitle: "", details: "", format, level: "beginner", category: "", features: [], objectives: [], topics: [], faqs: [], venues: [], media: [],
+    id, title, subtitle: "", details: "", format: "classroom", level: "beginner", category, subcategory, topic, type, sharedLanding, model, skillSaver, features: [], objectives: [], topics: [], faqs: [], venues: [], media: [],
     status: "draft", enrolment: "public", pricing: { type: "flat", price: 0 }, curriculum: [],
-    settings: { modes: [], clr: { enabled: false, fields: ["name", "result"], custom: [] }, reschedule: { enabled: false, paid: false, fee: 0 }, resit: { exam: false, allowed: false, paid: false, title: "", price: 0 }, confirmation: "", seo: { title: "", description: "", keywords: [] }, marketplace: true },
+    settings: { modes: [], clr: { enabled: false, fields: ["name", "result"], custom: [] }, reschedule: { enabled: false, paid: false, fee: 0 }, resit: { exam: false, allowed: false, paid: false, title: "", price: 0 }, confirmation: "", seo: { title: "", description: "", keywords: [] }, marketplace: true, assignmentEmail: "" },
     updated: Date.now(), rating: 0,
   });
   return id;
@@ -223,18 +193,6 @@ export const submitCourse = (id) => updateProvider((s) => {
   c.updated = Date.now();
   notify(s, `${c.title || "Your course"} was sent for review`, `/provider/courses/${id}`);
 });
-export const duplicateCourse = (id) => updateProvider((s) => {
-  const c = s.courses.find((x) => x.id === id);
-  if (!c) return null;
-  const copy = JSON.parse(JSON.stringify(c));
-  copy.id = nextId("C", s.courses);
-  copy.title = `Copy of ${c.title || "untitled course"}`.slice(0, 80);
-  copy.status = "draft";
-  copy.updated = Date.now();
-  copy.rating = 0;
-  s.courses.unshift(copy);
-  return copy.id;
-});
 export const deleteCourse = (id) => updateProvider((s) => {
   if (!canDeleteCourse(s, id)) return false;
   s.courses = s.courses.filter((c) => c.id !== id);
@@ -253,7 +211,7 @@ export const saveCohort = (k) => updateProvider((s) => {
     return k.id;
   }
   const id = nextId("K", s.cohorts);
-  s.cohorts.push({ cancelled: false, details: "", tutorId: "", venueId: "", packageId: "", ...k, id });
+  s.cohorts.push({ cancelled: false, details: "", tutorId: "", venueId: "", packageId: "", colour: "purple", lmsFrom: "course", ...k, id });
   return id;
 });
 export const cancelCohort = (id) => updateProvider((s) => {
@@ -281,11 +239,144 @@ export const saveRecord = (enrolmentId, clr) => updateProvider((s) => {
 // certificates for everyone in the cohort who passed and has none yet; returns how many were issued
 export const issueCertificates = (cohortId) => updateProvider((s) => {
   let n = 0;
-  s.enrolments.filter((e) => e.cohortId === cohortId && e.result === "pass" && !e.certificate).forEach((e) => {
+  s.enrolments.filter((e) => e.cohortId === cohortId && e.status !== "cancelled" && e.result === "pass" && !e.certificate).forEach((e) => {
     n += 1;
     e.certificate = { no: `NF-${cohortId}-${e.id.replace(/\D/g, "")}`, issued: Date.now() };
   });
   return n;
+});
+
+// ---- cohort operations (as Hurak's cohort list and Manage cohort page) -------------------------------------------------------
+
+// a dated entry on a booking's timeline; `who` is the signed-in team member
+const logOn = (s, e, text) => {
+  (e.timeline ||= []).push({ at: Date.now(), who: s.me.name, text });
+};
+const cohortLabel = (s, id) => {
+  const k = s.cohorts.find((x) => x.id === id);
+  const c = k && s.courses.find((x) => x.id === k.courseId);
+  return k ? `${c?.title || "Course"}, ${cohortSpan(k).first}` : "another cohort";
+};
+
+// the status set by hand from the list or the cohort page; "cancelled" goes through cancelCohort (learners are told)
+export const setCohortStatus = (id, status) => updateProvider((s) => {
+  const k = s.cohorts.find((x) => x.id === id);
+  if (k) k.statusOverride = status;
+});
+export const setCohortTutor = (id, tutorId) => updateProvider((s) => {
+  const k = s.cohorts.find((x) => x.id === id);
+  if (k) k.tutorId = tutorId;
+});
+// a disabled cohort stays on the list but takes no new bookings
+export const setCohortEnabled = (id, enabled) => updateProvider((s) => {
+  const k = s.cohorts.find((x) => x.id === id);
+  if (k) k.disabled = !enabled;
+});
+export const toggleFavourite = (id) => updateProvider((s) => {
+  const k = s.cohorts.find((x) => x.id === id);
+  if (k) k.favourite = !k.favourite;
+});
+// "Move cohort": the run (and everyone booked on it) moves to another course of the same format
+export const moveCohort = (id, courseId) => updateProvider((s) => {
+  const k = s.cohorts.find((x) => x.id === id);
+  if (!k) return;
+  k.courseId = courseId;
+  s.enrolments.filter((e) => e.cohortId === id).forEach((e) => { e.courseId = courseId; });
+});
+// only a cohort nobody is booked on can be deleted; a booked one is cancelled instead (learners are told)
+export const canDeleteCohort = (s, id) => !s.enrolments.some((e) => e.cohortId === id && e.status !== "cancelled");
+export const deleteCohort = (id) => updateProvider((s) => {
+  if (!canDeleteCohort(s, id)) return false;
+  s.cohorts = s.cohorts.filter((k) => k.id !== id);
+  s.enrolments = s.enrolments.filter((e) => e.cohortId !== id);
+  return true;
+});
+// session notes: the team's own notes on a cohort, never shown to learners
+export const addCohortNote = (id, text) => updateProvider((s) => {
+  const k = s.cohorts.find((x) => x.id === id);
+  if (k) (k.notes ||= []).push({ at: Date.now(), who: s.me.name, text });
+});
+
+// a learner's place: Enrolled / Rescheduled / Cancelled (cancelling asks for the reason)
+export const setStudentStatus = (enrolmentId, status, reason = "") => updateProvider((s) => {
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  if (!e) return;
+  e.status = status;
+  if (status === "cancelled") e.cancelReason = reason;
+  logOn(s, e, status === "cancelled" ? `Booking cancelled. Reason: ${reason}` : `Status changed to ${pw.studentStatuses[status]}`);
+});
+// move a learner to another date of the same course; their result and attendance start again
+export const rescheduleEnrolment = (enrolmentId, toCohortId, note = "") => updateProvider((s) => {
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  if (!e) return;
+  const from = cohortLabel(s, e.cohortId);
+  e.cohortId = toCohortId;
+  e.status = "rescheduled";
+  e.attended = null;
+  e.result = null;
+  logOn(s, e, `Rescheduled from ${from} to ${cohortLabel(s, toCohortId)}${note ? `. ${note}` : ""}`);
+});
+// a resit: a new place on another date of the same course for a learner who did not pass; `fee` 0 is a free resit, otherwise a
+// payment link for it goes to the learner (DEMO: no payment is taken)
+export const bookResit = (enrolmentId, toCohortId, fee = 0) => updateProvider((s) => {
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  if (!e) return null;
+  const id = nextId("E", s.enrolments);
+  s.enrolments.push({ id, orderRef: e.orderRef, cohortId: toCohortId, courseId: e.courseId, learnerId: e.learnerId, status: "enrolled", resitOf: e.id, attended: null, result: null, certificate: null, progress: null, clr: { ...e.clr }, timeline: [{ at: Date.now(), who: s.me.name, text: `Resit booked from ${cohortLabel(s, e.cohortId)}` }] });
+  const learner = s.learners.find((l) => l.id === e.learnerId);
+  logOn(s, e, `Resit booked on ${cohortLabel(s, toCohortId)}${fee ? `. Payment link for ${formatPrice(fee)} sent to ${learner?.email}` : " (free)"}`);
+  return id;
+});
+export const addEnrolmentNote = (enrolmentId, text) => updateProvider((s) => {
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  if (e) (e.notes ||= []).push({ at: Date.now(), who: s.me.name, text });
+});
+// "Edit Details": the learner's own name and contact details (every booking of theirs shows the change)
+export const updateLearner = (learnerId, patch, enrolmentId) => updateProvider((s) => {
+  const l = s.learners.find((x) => x.id === learnerId);
+  if (!l) return;
+  Object.assign(l, patch);
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  if (e) logOn(s, e, "Learner details updated");
+});
+// "Replace Student": someone else takes this place (an existing learner with that email, or a new one)
+export const replaceLearner = (enrolmentId, p) => updateProvider((s) => {
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  if (!e) return;
+  const was = s.learners.find((l) => l.id === e.learnerId);
+  let l = findLearner(s, p.email);
+  if (!l) {
+    l = { id: nextId("L", s.learners), first: p.first, last: p.last, email: p.email, phone: p.phone || "", company: was?.company || "", added: Date.now() };
+    s.learners.push(l);
+  }
+  e.learnerId = l.id;
+  e.clr = {};
+  e.attended = null;
+  e.result = null;
+  logOn(s, e, `Place given to ${learnerName(l)} (was ${learnerName(was)})`);
+});
+// an email sent from the cohort page, kept on each learner's timeline
+export const logEmail = (enrolmentIds, subject, to = "") => updateProvider((s) => {
+  s.enrolments.filter((e) => enrolmentIds.includes(e.id)).forEach((e) => logOn(s, e, `Email sent: "${subject}"${to ? ` to ${to}` : ""}`));
+});
+// "Bulk Students Enrollment": people booked outside ReadTraining, added from a file. Each becomes a paid manual order (offline
+// payment) with one place on the cohort. rows: [{ first, last, email, phone }]
+export const bulkEnrol = (cohortId, rows) => updateProvider((s) => {
+  const k = s.cohorts.find((x) => x.id === cohortId);
+  if (!k) return 0;
+  let next = s.orders.reduce((m, o) => Math.max(m, Number(o.ref.replace(/\D/g, ""))), 24800);
+  rows.forEach((p) => {
+    let l = findLearner(s, p.email);
+    if (!l) {
+      l = { id: nextId("L", s.learners), first: p.first, last: p.last, email: p.email, phone: p.phone || "", company: "", added: Date.now() };
+      s.learners.push(l);
+    }
+    next += 1;
+    const ref = `NF-${next}`;
+    s.orders.unshift({ ref, at: Date.now(), channel: "manual", status: "paid", payment: "offline", customer: { first: l.first, last: l.last, email: l.email, phone: l.phone, company: "", address: "", city: "", postcode: "" }, lines: [{ courseId: k.courseId, cohortId, plan: "", price: 0, qty: 1, learnerIds: [l.id] }], total: 0, refunded: 0, notes: [{ at: Date.now(), who: s.me.name, text: "Added by bulk enrolment (booked outside ReadTraining)." }] });
+    s.enrolments.push({ id: nextId("E", s.enrolments), orderRef: ref, cohortId, courseId: k.courseId, learnerId: l.id, status: "enrolled", attended: null, result: null, certificate: null, progress: null, clr: {}, timeline: [{ at: Date.now(), who: s.me.name, text: "Added by bulk enrolment" }] });
+  });
+  return rows.length;
 });
 
 // ---- learners and orders ---------------------------------------------------------------------------------------------------
@@ -310,7 +401,7 @@ export const createOrder = ({ customer, lines, payment, receipt, joining }) => u
   if (receipt) notes.push({ at: Date.now(), who: s.me.name, text: "Receipt emailed to the customer." });
   if (joining) notes.push({ at: Date.now(), who: s.me.name, text: "Joining instructions emailed to each learner." });
   if (payment === "link") notes.push({ at: Date.now(), who: s.me.name, text: `Payment link sent to ${customer.email}.` });
-  s.orders.unshift({ ref, at: Date.now(), channel: "manual", status, payment, customer, lines: builtLines, total: builtLines.reduce((t, l) => t + l.price * l.qty, 0), refunded: 0, notes });
+  s.orders.unshift({ ref, at: Date.now(), channel: "manual", bookedBy: s.me.name, card: payment === "card" ? cardEnding(ref) : "", status, payment, customer, lines: builtLines, total: builtLines.reduce((t, l) => t + l.price * l.qty, 0), refunded: 0, notes });
   builtLines.forEach((l) => l.learnerIds.forEach((learnerId) => {
     s.enrolments.push({ id: nextId("E", s.enrolments), orderRef: ref, cohortId: l.cohortId, courseId: l.courseId, learnerId, attended: null, result: null, certificate: null, progress: l.cohortId ? null : 0, clr: {} });
   }));
@@ -343,6 +434,56 @@ export const refundOrder = (ref, amount, reason, learnerId) => updateProvider((s
 export const addOrderNote = (ref, text) => updateProvider((s) => {
   const o = s.orders.find((x) => x.ref === ref);
   if (o) o.notes.unshift({ at: Date.now(), who: s.me.name, text });
+});
+
+// ---- order operations (as Hurak's order page) -----------------------------------------------------------------------------
+
+// DEMO: the last four digits of the card an order was paid with (the payment partner gives these)
+export const cardEnding = (ref) => String(1000 + (Number(String(ref).replace(/\D/g, "")) * 7919) % 9000);
+// who placed an order: your team member for one added by hand, otherwise the customer on ReadTraining or your website
+export const bookedBy = (o) => (o.channel === "manual" ? o.bookedBy || "Your team" : customerName(o.customer));
+const noteOn = (s, o, text) => o.notes.unshift({ at: Date.now(), who: s.me.name, text });
+// "Upload invoice": the invoice file kept with the order (DEMO: only its name)
+export const uploadInvoice = (ref, file) => updateProvider((s) => {
+  const o = s.orders.find((x) => x.ref === ref);
+  if (!o) return;
+  o.invoice = { file, at: Date.now() };
+  noteOn(s, o, `Invoice uploaded: ${file}`);
+});
+// "Pay invoice detail": the date an invoice (offline) order was paid; an unpaid order becomes Paid
+export const payInvoice = (ref, date) => updateProvider((s) => {
+  const o = s.orders.find((x) => x.ref === ref);
+  if (!o) return;
+  o.invoice = { ...(o.invoice || {}), paidOn: date };
+  if (o.status === "incomplete") o.status = "paid";
+  noteOn(s, o, `Invoice paid on ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`))}`);
+});
+// "Send confirmation mail": the order confirmation to any address (the customer's by default)
+export const sendConfirmation = (ref, email) => updateProvider((s) => {
+  const o = s.orders.find((x) => x.ref === ref);
+  if (o) noteOn(s, o, `Order confirmation sent to ${email}`);
+});
+// "Upsell": a learner's booking moves to a higher pricing plan; the difference is sent as a payment link (DEMO: not taken)
+export const upsellBooking = (enrolmentId, plan, difference) => updateProvider((s) => {
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  const o = e && s.orders.find((x) => x.ref === e.orderRef);
+  if (!e || !o) return;
+  e.plan = plan;
+  const l = s.learners.find((x) => x.id === e.learnerId);
+  const label = pw.tiers.find((t) => t.key === plan)?.label;
+  noteOn(s, o, `${learnerName(l)} upgraded to the ${label} plan. Payment link for ${formatPrice(difference)} sent to ${o.customer.email}`);
+  logOn(s, e, `Upgraded to the ${label} plan`);
+});
+// "Addon": another course added to a learner's booking; a payment link for it goes to the customer (DEMO: not taken)
+export const addonBooking = (enrolmentId, courseId, price) => updateProvider((s) => {
+  const e = s.enrolments.find((x) => x.id === enrolmentId);
+  const o = e && s.orders.find((x) => x.ref === e.orderRef);
+  const c = s.courses.find((x) => x.id === courseId);
+  if (!e || !o || !c) return;
+  (e.addons ||= []).push({ courseId, price, at: Date.now() });
+  const l = s.learners.find((x) => x.id === e.learnerId);
+  noteOn(s, o, `Add-on for ${learnerName(l)}: ${c.title}. Payment link for ${formatPrice(price)} sent to ${o.customer.email}`);
+  logOn(s, e, `Add-on: ${c.title}`);
 });
 export const decideRefund = (id, approve, note) => {
   let req;
@@ -382,13 +523,6 @@ export const deleteQuestion = (id) => updateProvider((s) => {
 export const saveOrg = (patch) => updateProvider((s) => {
   Object.assign(s.org, patch);
 });
-// DEMO: only the last 4 digits are kept; the real bank details go to the payment provider, never to us
-export const connectPayout = ({ holder, sort, account }) => updateProvider((s) => {
-  s.org.payout = { connected: true, holder, sort: sort.replace(/\D/g, "").replace(/(\d{2})(\d{2})(\d{2})/, "$1-$2-$3"), last4: account.slice(-4) };
-});
-export const disconnectPayout = () => updateProvider((s) => {
-  s.org.payout = { connected: false, holder: "", sort: "", last4: "" };
-});
 
 export const saveVenue = (v) => updateProvider((s) => {
   if (v.id) {
@@ -400,17 +534,6 @@ export const saveVenue = (v) => updateProvider((s) => {
   s.venues.push({ active: true, ...v, id });
   return id;
 });
-export const setVenueActive = (id, active) => updateProvider((s) => {
-  const v = s.venues.find((x) => x.id === id);
-  if (v) v.active = active;
-});
-export const deleteVenue = (id) => updateProvider((s) => {
-  if (venueInUse(s, id)) return false;
-  s.venues = s.venues.filter((v) => v.id !== id);
-  s.courses.forEach((c) => (c.venues = c.venues.filter((x) => x !== id)));
-  return true;
-});
-
 export const saveFaq = (f) => updateProvider((s) => {
   if (f.id) {
     const i = s.faqs.findIndex((x) => x.id === f.id);
@@ -436,6 +559,14 @@ export const savePackage = (p) => updateProvider((s) => {
   const id = nextId("P", s.packages);
   s.packages.push({ name: "", active: true, features: [], tiers: { saver: emptyTier(), flexi: emptyTier(), premium: emptyTier() }, ...p, id, created: Date.now() });
   return id;
+});
+// "Clone package": a copy with the same prices and perks, named "Copy of …"
+export const clonePackage = (id) => updateProvider((s) => {
+  const p = s.packages.find((x) => x.id === id);
+  if (!p) return null;
+  const copy = { ...JSON.parse(JSON.stringify(p)), id: nextId("P", s.packages), name: `Copy of ${p.name || "untitled plan"}`.slice(0, 80), active: true, created: Date.now() };
+  s.packages.push(copy);
+  return copy.id;
 });
 export const setPackageActive = (id, active) => updateProvider((s) => {
   const p = s.packages.find((x) => x.id === id);

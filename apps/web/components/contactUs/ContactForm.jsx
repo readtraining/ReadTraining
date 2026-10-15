@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { submitContact } from "@/lib/contact";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_MESSAGE = 1500;
@@ -96,10 +97,7 @@ export default function ContactForm({ form }) {
         {hint && <small className="rt-field__hint" id={`rt-c-${name}-hint`}>{hint}</small>}
         {errors[name] && <p className="rt-q__err" id={`rt-c-${name}-e`}><span className="rt-sr">Error: </span>{errors[name]}</p>}
         {props.as === "textarea" ? <textarea rows={4} maxLength={MAX_MESSAGE} {...common} /> : props.as === "select" ? (
-          <select {...common}>
-            <option value="">Select a topic</option>
-            {form.topics.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+          <FieldSelect id={common.id} label={label} placeholder="Select a topic" value={common.value} onChange={(value) => set(name)({ target: { value } })} options={form.topics} invalid={Boolean(errors[name])} describedBy={describedBy} />
         ) : <input {...common} {...props} />}
       </div>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { setQuery } from "./providerParts";
@@ -29,11 +29,6 @@ export const aria = (id, error, hint) => ({
 export const Counter = ({ value, max }) => <span className="rt-field__hint rt-pws-set__count" aria-hidden="true">{value.length} / {max}</span>;
 
 export const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
-export const isPostcode = (v) => /^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$/i.test(v.trim());
-export const tidyPostcode = (v) => {
-  const s = v.replace(/\s+/g, "").toUpperCase();
-  return s.length > 3 ? `${s.slice(0, -3)} ${s.slice(-3)}` : s;
-};
 // a https address on one of `hosts` (any host when none are given)
 export function isUrlOn(v, hosts = []) {
   try {
@@ -63,10 +58,15 @@ export function Confirm({ open, onClose, title, text, confirmLabel, onConfirm, b
   );
 }
 
-// A filter or tab kept in the address. Reading useSearchParams keeps it right when a link changes the address while the page is
-// open; writing goes through history.replaceState (setQuery), which Next.js keeps in step with useSearchParams.
+// A filter or tab kept in the address. The value lives in state, so a choice shows (and filters) at once; it is also written to
+// the address (setQuery, history.replaceState), and a link that changes the address while the page is open (useSearchParams)
+// sets it again. Reading the address alone missed choices made on the page: replaceState does not re-render the component.
 export function useParam(key, fallback = "") {
-  const sp = useSearchParams();
-  const value = sp.get(key) ?? fallback;
-  return [value, (v) => setQuery(key, v && v !== fallback ? v : "")];
+  const fromUrl = useSearchParams().get(key) ?? fallback;
+  const [value, setValue] = useState(fromUrl);
+  useEffect(() => setValue(fromUrl), [fromUrl]);
+  return [value, (v) => {
+    setValue(v || fallback);
+    setQuery(key, v && v !== fallback ? v : "");
+  }];
 }

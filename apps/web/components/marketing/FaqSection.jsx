@@ -13,8 +13,8 @@ export default function FaqSection({ eyebrow, title, text, items, idPrefix = "fa
           <div className="col-xl-7 col-lg-9">
             <div className="rt-section-head">
               {eyebrow && <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{eyebrow}</div>}
-              <h2 className="sectionTitle__title mt-20" style={{ maxWidth: "26ch" }}>{title}</h2>
-              {text && <p className="sectionTitle__text" style={{ maxWidth: 640 }}>{text}</p>}
+              <h2 className="sectionTitle__title mt-20 rt-faqsec__title">{title}</h2>
+              {text && <p className="sectionTitle__text rt-faqsec__text">{text}</p>}
             </div>
           </div>
         </div>

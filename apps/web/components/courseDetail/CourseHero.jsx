@@ -1,6 +1,6 @@
 import React from "react";
-import Link from "next/link";
 import BookNow from "./BookNow";
+import Crumbs from "./Crumbs";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { isSkillSaverCourse } from "@/lib/skillSaver";
 import { formatPrice, getSubjectLabel, getSubLabel, savePercent } from "@/lib/courses";
@@ -19,13 +19,13 @@ export default function CourseHero({ course }) {
   return (
     <div className="rt-cd__hero">
       <div className="rt-cd__hero-text">
-        <nav className="rt-cd__crumbs" aria-label="Breadcrumb">
-          <ol>
-            {subject && <li><Link href={`${CATALOGUE}?subject=${course.subject}`}>{subject}</Link></li>}
-            {subject && sub && <li><Link href={`${CATALOGUE}?subject=${course.subject}&sub=${course.sub}`}>{sub}</Link></li>}
-            <li aria-current="page">{course.title}</li>
-          </ol>
-        </nav>
+        <Crumbs
+          crumbs={[
+            subject && { label: subject, href: `${CATALOGUE}?subject=${course.subject}` },
+            subject && sub && { label: sub, href: `${CATALOGUE}?subject=${course.subject}&sub=${course.sub}` },
+            { label: course.title },
+          ].filter(Boolean)}
+        />
 
         {isSkillSaverCourse(course.id) && <SaverBadge href="/skill-saver" className="rt-cd__saver" />}
         <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>

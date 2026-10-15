@@ -7,6 +7,7 @@ import { basket } from "@/data/basket";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
 import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = A.catalogue;
 const TABS = ["courses", "categories", "packages"];
@@ -57,10 +58,7 @@ export default function AdminCatalogue() {
           <div className="rt-adm-toolbar">
             <div className="rt-field rt-adm-select">
               <label htmlFor="rt-adm-cat" className="rt-sr">Category</label>
-              <select id="rt-adm-cat" value={cat} onChange={(e) => pickCat(e.target.value)}>
-                <option value="all">All categories</option>
-                {categories.map((c) => <option key={c.key} value={c.key}>{c.label} ({c.courses})</option>)}
-              </select>
+              <FieldSelect id="rt-adm-cat" label="Category" value={cat} onChange={pickCat} options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c.key, label: `${c.label} (${c.courses})` }))]} compact />
             </div>
             <Search value={q} onChange={(v) => { setQ(v); setShown(PAGE); }} label={copy.search} />
           </div>

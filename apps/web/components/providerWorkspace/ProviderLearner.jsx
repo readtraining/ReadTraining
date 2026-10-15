@@ -3,73 +3,89 @@
 import React from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { learnerName, useProvider } from "@/lib/providerWorkspace";
-import { COHORT_TONE, Loading, Pill, shortDay } from "./providerParts";
-import { formatOrderDay } from "./moneyParts";
+import { learnerName, timeRange, useProvider } from "@/lib/providerWorkspace";
+import { ORDER_TONE, Loading, Pill, RowMenu } from "./providerParts";
+import { dayRange } from "./ProviderCohorts";
+import { money } from "./charts";
 
-// One learner: contact details, and every booking with you (the dates or their progress on an on-demand course, the order,
-// attendance, result and certificate). "Book onto another course" starts a new order with them as the customer.
-const RESULT = { pass: "Passed", fail: "Not yet passed" };
-
+// Student profile: Hurak's details (name, phone, town, email) and its booking cards (course, dates and times, venue's full address,
+// booking reference, order number and status, View cohort / Order details), in our layout: a header with the learner's numbers,
+// then the bookings as a timeline, newest first.
 export default function ProviderLearner({ learnerId }) {
   const data = useProvider();
   if (!data) return <Loading rows={2} />;
   const l = data.byId.learner[learnerId];
   if (!l) return <p className="rt-acc__card rt-acc__empty">This learner was not found. <Link href="/provider/learners">Back to learners</Link></p>;
 
-  const mine = data.enrolments.filter((e) => e.learnerId === l.id);
-  const orderAt = (ref) => data.orders.find((o) => o.ref === ref)?.at || 0;
-  const list = [...mine].sort((a, b) => orderAt(b.orderRef) - orderAt(a.orderRef));
-  const certs = mine.filter((e) => e.certificate).length;
+  const orderOf = (ref) => data.orders.find((o) => o.ref === ref);
+  const list = data.enrolments.filter((e) => e.learnerId === l.id).sort((a, b) => (orderOf(b.orderRef)?.at || 0) - (orderOf(a.orderRef)?.at || 0));
+  const lineOf = (e) => orderOf(e.orderRef)?.lines.find((x) => x.courseId === e.courseId && x.learnerIds.includes(e.learnerId));
+  const spent = list.filter((e) => e.status !== "cancelled").reduce((t, e) => t + (lineOf(e)?.price || 0), 0);
+  const stats = [
+    { label: "Bookings", value: list.length },
+    { label: "Courses", value: new Set(list.map((e) => e.courseId)).size },
+    { label: "Certificates", value: list.filter((e) => e.certificate).length },
+    { label: "Booked value", value: money(spent) },
+  ];
+  const initials = `${l.first[0] || ""}${l.last[0] || ""}`.toUpperCase();
 
   return (
     <div className="rt-acc__stack">
-      <section className="rt-acc__card rt-adm-hero" aria-label="Learner">
-        <div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{learnerName(l)}</h2>
-          <p className="rt-acc__note">
-            <a href={`mailto:${l.email}`}>{l.email}</a>
-            {l.phone && <> · <a href={`tel:${l.phone.replace(/\s/g, "")}`}>{l.phone}</a></>}
-            {l.company && ` · ${l.company}`}
-          </p>
-          <p className="rt-acc__note">{mine.length} {mine.length === 1 ? "booking" : "bookings"} · {certs} {certs === 1 ? "certificate" : "certificates"}</p>
+      <section className="rt-acc__card rt-lr-head" aria-label="Student">
+        <div className="rt-lr-head__top">
+          <span className="rt-lr-avatar -lg" aria-hidden="true">{initials}</span>
+          <div className="rt-lr-head__who">
+            <h2 className="rt-lr-head__name">{learnerName(l)}</h2>
+            <ul className="rt-lr-head__contact">
+              <li><span>Phone</span>{l.phone ? <a href={`tel:${l.phone.replace(/\s/g, "")}`}>{l.phone}</a> : "—"}</li>
+              <li><span>Town</span>{l.town || "—"}</li>
+              <li><span>Email</span><a href={`mailto:${l.email}`}>{l.email}</a></li>
+            </ul>
+          </div>
+          <Link href={`/provider/orders/new?learner=${l.id}`} className="button -sm -purple-1 text-white">Create order</Link>
         </div>
-        <div className="rt-adm-hero__actions">
-          <Link href={`/provider/orders/new?learner=${l.id}`} className="button -sm -purple-1 text-white">Book onto another course</Link>
-        </div>
+        <dl className="rt-lr-head__stats">
+          {stats.map((s) => <div key={s.label}><dt>{s.label}</dt><dd>{s.value}</dd></div>)}
+        </dl>
       </section>
 
-      <section className="rt-acc__card rt-biz__tablecard" aria-labelledby="rt-pws-lrn-bk">
-        <h2 className="rt-acc__h2 rt-adm-tabletitle" id="rt-pws-lrn-bk">Bookings</h2>
+      <section aria-labelledby="rt-pws-lrn-bk">
+        <h2 className="rt-lr-h" id="rt-pws-lrn-bk">Bookings</h2>
         {list.length ? (
-          <table className="rt-biz__table rt-adm-table">
-            <thead>
-              <tr><th scope="col">Course</th><th scope="col">Dates</th><th scope="col">Order</th><th scope="col">Attended</th><th scope="col">Result</th><th scope="col">Certificate</th></tr>
-            </thead>
-            <tbody>
-              {list.map((e) => {
-                const k = e.cohort;
-                return (
-                  <tr key={e.id}>
-                    <td data-label="Course">{e.course ? <Link href={`/provider/courses/${e.course.id}`} className="rt-adm-strong">{e.course.title}</Link> : "Course removed"}</td>
-                    <td data-label="Dates">
-                      {k ? (
-                        <><Link href={`/provider/cohorts/${k.id}`}>{shortDay(k.first)}{k.last !== k.first ? ` to ${shortDay(k.last)}` : ""}</Link><small><Pill tone={COHORT_TONE[k.status]}>{pw.cohortStatuses[k.status]}</Pill></small></>
-                      ) : (
-                        <>On demand<small>{e.progress ?? 0}% done</small></>
-                      )}
-                    </td>
-                    <td data-label="Order"><Link href={`/provider/orders/${e.orderRef}`}>{e.orderRef}</Link><small>{formatOrderDay(orderAt(e.orderRef))}</small></td>
-                    <td data-label="Attended">{e.attended === true ? "Yes" : e.attended === false ? "No" : "Not yet"}</td>
-                    <td data-label="Result">{RESULT[e.result] || (k ? "Not recorded" : (e.progress ?? 0) >= 100 ? "Completed" : "In progress")}</td>
-                    <td data-label="Certificate">{e.certificate ? <>{e.certificate.no}<small>Issued {formatOrderDay(e.certificate.issued)}</small></> : "None yet"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ol className="rt-lr-timeline">
+            {list.map((e) => {
+              const k = e.cohort;
+              const o = orderOf(e.orderRef);
+              return (
+                <li key={e.id} className={e.status === "cancelled" ? "is-cancelled" : undefined}>
+                  <span className="rt-lr-timeline__dot" aria-hidden="true"></span>
+                  <article className="rt-acc__card rt-lr-booking">
+                    <div className="rt-lr-booking__head">
+                      <div>
+                        <p className="rt-lr-booking__when">{k ? `${dayRange(k.first, k.last)} · ${[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}` : "On demand: starts when booked"}</p>
+                        <h3 className="rt-lr-booking__course">{e.course ? <Link href={`/provider/courses/${e.course.id}`}>{e.course.title}</Link> : "Course removed"}</h3>
+                      </div>
+                      <div className="rt-lr-booking__side">
+                        {o && <Pill tone={ORDER_TONE[o.status]}>{pw.orderStatuses[o.status]}</Pill>}
+                        <RowMenu label={`Actions for ${e.course?.title || "this booking"}`} items={[
+                          ...(k ? [{ label: "View cohort", href: `/provider/cohorts/${k.id}` }] : []),
+                          { label: "Order details", href: `/provider/orders/${e.orderRef}` },
+                        ]} />
+                      </div>
+                    </div>
+                    <dl className="rt-lr-booking__facts">
+                      {k && <div className="-wide"><dt>Venue</dt><dd>{k.venue ? `${k.venue.name}, ${k.venue.street}, ${k.venue.city} ${k.venue.postcode}` : "Online"}</dd></div>}
+                      <div><dt>Booking reference</dt><dd>{e.id.replace(/^E/, "B-")}</dd></div>
+                      <div><dt>Order number</dt><dd><Link href={`/provider/orders/${e.orderRef}`}>{e.orderRef}</Link></dd></div>
+                      {e.status === "cancelled" && <div><dt>Place</dt><dd>Cancelled</dd></div>}
+                    </dl>
+                  </article>
+                </li>
+              );
+            })}
+          </ol>
         ) : (
-          <p className="rt-acc__note">No bookings at the moment. Their past places may have been refunded or cancelled.</p>
+          <p className="rt-acc__card rt-acc__note">No bookings at the moment. Their past places may have been refunded or cancelled.</p>
         )}
       </section>
     </div>

@@ -7,7 +7,8 @@ const INSET = 8; // space kept above and below the pill's track
 
 // A short scroll indicator for the filter panel body (the native scrollbar is hidden by CSS).
 // It follows the body's scroll position, is always visible while the body can scroll, and can be dragged. It is decoration only: aria-hidden, and wheel / touch / keyboard scrolling are untouched.
-// Rendered inside the panel, after the scrolling body. Nothing is rendered when the body does not need to scroll.
+// Rendered after the scrolling body inside a positioned parent, or inside the body itself when the body is positioned (a
+// sticky sidebar, a <dialog>). Nothing is rendered when the body does not need to scroll.
 export default function FilterScrollPill({ scrollRef }) {
   const pillRef = useRef(null);
   const [scrollable, setScrollable] = useState(false);
@@ -39,7 +40,8 @@ export default function FilterScrollPill({ scrollRef }) {
       raf = 0;
       const parent = pill.offsetParent;
       if (!parent) return;
-      const bodyTop = body.getBoundingClientRect().top - parent.getBoundingClientRect().top + parent.clientTop;
+      // inside the body, the pill scrolls with the content, so it is placed from the body's scrolled top
+      const bodyTop = parent === body ? body.scrollTop : body.getBoundingClientRect().top - parent.getBoundingClientRect().top + parent.clientTop;
       const range = body.scrollHeight - body.clientHeight;
       const ratio = range > 0 ? body.scrollTop / range : 0;
       pill.style.top = `${bodyTop + INSET + ratio * (body.clientHeight - PILL - INSET * 2)}px`;

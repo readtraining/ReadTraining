@@ -59,7 +59,7 @@ export default function HelpSearch({ items, placeholder = "Search help articles"
 
   return (
     <div className="rt-help__search">
-      <form className="rt-cat-search" role="search" onSubmit={onSubmit}>
+      <form className="rt-cat-search" role="search" onSubmit={onSubmit} noValidate>
         <div className="rt-cat-search__field">
           <i className="icon-search text-16 text-light-1" aria-hidden="true"></i>
           <input

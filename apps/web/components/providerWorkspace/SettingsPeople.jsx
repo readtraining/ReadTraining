@@ -7,9 +7,10 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { addQuestion, answerQuestion, changeRole, deleteQuestion, inviteMember, removeMember } from "@/lib/providerWorkspace";
 import { Empty, Pill, Tabs, ToolSelect, formatDay } from "./providerParts";
 import { Confirm, Field, aria, isEmail, useParam } from "./settingsForm";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
-// Settings › Questions (learners' questions about a course, answered here and shown on the course page, plus questions the
-// provider answers up front) and Team (who can use the workspace, with a role each; the account owner can't be changed or removed).
+// Settings › QA (learners' questions about a course, answered here and shown on the course page, plus questions the provider
+// answers up front) and the Team page (who can use the workspace, with a role each; the account owner can't be changed or removed).
 
 const ROLE = Object.fromEntries(pw.roles.map((r) => [r.key, r]));
 
@@ -121,10 +122,7 @@ export function QaTab({ data, say }) {
         <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
           <p className="rt-acc__note">Answer a question learners often ask before they book. It shows on the course page.</p>
           <Field id="rt-qa-c" label="Course" error={errors.course}>
-            <select {...aria("rt-qa-c", errors.course)} value={f.course} onChange={(e) => setF((x) => ({ ...x, course: e.target.value }))}>
-              <option value="">Choose a course</option>
-              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </select>
+            <FieldSelect id="rt-qa-c" label="Course" placeholder="Choose a course" value={f.course} onChange={(value) => setF((x) => ({ ...x, course: value }))} options={courses.map((c) => ({ value: c.id, label: c.title }))} invalid={Boolean(errors.course)} describedBy={aria("rt-qa-c", errors.course)["aria-describedby"]} />
           </Field>
           <Field id="rt-qa-q" label="Question" error={errors.question}>
             <input {...aria("rt-qa-q", errors.question)} type="text" maxLength={200} autoComplete="off" value={f.question} onChange={(e) => setF((x) => ({ ...x, question: e.target.value }))} />
@@ -182,9 +180,9 @@ export function TeamTab({ data, say }) {
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
         <Tabs tabs={tabs} value={show} onChange={setShow} label="Show team members" />
-        <button type="button" className="button -md -purple-1 text-white" onClick={openAdd}>Add member</button>
+        <button type="button" className="button -md -purple-1 text-white" onClick={openAdd}>Add team member</button>
       </div>
-      <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "person" : "people"}`}</p>
+      <p className="rt-acc__note" aria-live="polite">{`${list.length} linked team ${list.length === 1 ? "member" : "members"} found.`}</p>
       {list.length === 0 ? (
         <p className="rt-acc__card rt-acc__empty">{show === "pending" ? "No invites waiting." : "No one here yet."}</p>
       ) : (
@@ -201,9 +199,7 @@ export function TeamTab({ data, say }) {
                     ) : (
                       <div className="rt-field rt-adm-select -inline">
                         <label htmlFor={`rt-team-role-${t.id}`} className="rt-sr">Role for {t.name || t.email}</label>
-                        <select id={`rt-team-role-${t.id}`} value={t.role} onChange={(e) => { changeRole(t.id, e.target.value); say(`${t.name || t.email} is now ${ROLE[e.target.value].label}`); }}>
-                          {pw.roles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
-                        </select>
+                        <FieldSelect id={`rt-team-role-${t.id}`} label={`Role for ${t.name || t.email}`} value={t.role} onChange={(value) => { changeRole(t.id, value); say(`${t.name || t.email} is now ${ROLE[value].label}`); }} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} compact />
                       </div>
                     )}
                   </td>
@@ -231,17 +227,14 @@ export function TeamTab({ data, say }) {
         <p className="rt-acc__note">The account owner can do everything, including closing the account. Only ReadTraining support can change the owner.</p>
       </details>
 
-      <Sheet open={adding} onClose={() => setAdding(false)} title="Add a team member" closeLabel="Close" className="rt-pws-set__sheet">
+      <Sheet open={adding} onClose={() => setAdding(false)} title="Add team member" closeLabel="Close" className="rt-pws-set__sheet">
         <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
           <p className="rt-acc__note">We email them an invite. They sign in with this email address to join your workspace.</p>
           <Field id="rt-team-email" label="Email address" error={errors.email}>
             <input {...aria("rt-team-email", errors.email)} type="email" autoComplete="email" spellCheck={false} value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value }))} />
           </Field>
           <Field id="rt-team-role" label="Role" error={errors.role} hint={f.role ? ROLE[f.role].can : "Choose a role to see what they can do."}>
-            <select {...aria("rt-team-role", errors.role, true)} value={f.role} onChange={(e) => setF((x) => ({ ...x, role: e.target.value }))}>
-              <option value="">Choose a role</option>
-              {pw.roles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
-            </select>
+            <FieldSelect id="rt-team-role" label="Role" placeholder="Choose a role" value={f.role} onChange={(value) => setF((x) => ({ ...x, role: value }))} options={pw.roles.filter((r) => r.key !== "admin").map((r) => ({ value: r.key, label: r.label }))} invalid={Boolean(errors.role)} describedBy={aria("rt-team-role", errors.role, true)["aria-describedby"]} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Send invite</button>
         </form>

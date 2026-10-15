@@ -9,6 +9,7 @@ import { trackEvent } from "@/lib/analytics";
 import { validPostcode } from "@/lib/checkout";
 import { submitApplication, validLicenceNumber } from "@/lib/securityJobs";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = securityJobs.application;
 const q = copy.check;
@@ -133,10 +134,7 @@ export default function JobsApplication() {
         {hint && <small className="rt-field__hint" id={`${id}-hint`}>{hint}</small>}
         {err(k)}
         {props.options ? (
-          <select id={id} value={v[k]} onChange={set(k)} aria-invalid={errors[k] ? true : undefined} aria-describedby={by}>
-            <option value="">Select</option>
-            {props.options.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
+          <FieldSelect id={id} label={label} value={v[k]} onChange={(value) => set(k)({ target: { value } })} options={props.options} invalid={Boolean(errors[k])} describedBy={by} />
         ) : (
           <input id={id} value={v[k]} onChange={set(k)} aria-invalid={errors[k] ? true : undefined} aria-describedby={by} {...props} />
         )}

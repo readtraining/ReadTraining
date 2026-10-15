@@ -9,6 +9,7 @@ import { getApplicationFor, submitProviderApplication } from "@/lib/providerAppl
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const o = providerSignup.onboarding;
 const EMPTY = { name: "", company: "", vat: "", city: "", website: "", phone: "", subjects: [], methods: [], courses: "", body: "", centre: "", accExpiry: "", cover: "", insExpiry: "", files: [] };
@@ -118,10 +119,7 @@ export default function ProviderOnboarding() {
       {hint && <small className="rt-field__hint" id={`rt-po-${k}-hint`}>{hint}</small>}
       {err(k)}
       {props.options ? (
-        <select id={`rt-po-${k}`} value={v[k]} onChange={set(k)} {...aria(k, hint)}>
-          <option value="">Select</option>
-          {props.options.map((x) => <option key={x} value={x}>{x}</option>)}
-        </select>
+        <FieldSelect id={`rt-po-${k}`} label={label} value={v[k]} onChange={(value) => set(k)({ target: { value } })} options={props.options} invalid={Boolean(errors[k])} describedBy={aria(k, hint)["aria-describedby"]} />
       ) : (
         <input id={`rt-po-${k}`} value={v[k]} onChange={set(k)} {...aria(k, hint)} {...props} />
       )}

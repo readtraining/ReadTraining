@@ -79,21 +79,23 @@ const siaCosts = (courseId, firstAid) => ({
   source: { label: "GOV.UK: apply for an SIA licence", url: SIA.url },
 });
 
-// the CSCS cards (April 2026 list): the card finder's results, the card tiles and the "apply for me" form's choices
+// the CSCS cards (April 2026 list): the card finder's results, the card tiles and the "apply for me" form's choices.
+// For the tiles: `term` is the validity pill (the full `validity` stays in Details), `price` the CSCS card fee, `renewable: false`
+// shows "Not renewable", `reapply` "Re-apply when it ends", and `popular` the "Most popular" badge.
 const cscsCards = [
-  { key: "labourer", colour: "green", band: "Labourer", name: "Labourer card (green)", who: "Unskilled workers doing labouring jobs.", need: "The Level 1 Award in Health and Safety in a Construction Environment, or an approved alternative.", test: "CITB HS&E test: Operatives", validity: "2 years at first, then 5 years on renewal" },
-  { key: "apprentice", colour: "red", band: "Apprentice", name: "Apprentice card", who: "People on a recognised construction apprenticeship.", need: "Proof of your apprenticeship. The card is free.", test: "None", validity: "4.5 years" },
-  { key: "trainee", colour: "red", band: "Trainee", name: "Trainee card", who: "People registered for an NVQ or SVQ, HNC, HND or degree.", need: "Proof of registration, or a recent approved Level 2 or higher qualification.", test: "CITB HS&E test: Operatives", validity: "5 years (2 years on the qualification route)" },
-  { key: "experienced", colour: "red", band: "Experienced worker", name: "Experienced Worker card", who: "Workers with at least 1 year of experience in the last 3 years, not yet qualified.", need: "Registration for an NVQ or SVQ Level 2.", test: "CITB HS&E test: Operatives", validity: "1 year, not renewable" },
-  { key: "etsm", colour: "red", band: "Experienced TSM", name: "Experienced Technical, Supervisor or Manager card", who: "Experienced supervisors, managers and technical staff, not yet qualified.", need: "At least 1 year of experience in the last 3 years and registration for an NVQ Level 3.", test: "CITB HS&E test", validity: "3 years, not renewable" },
-  { key: "skilled", colour: "blue", band: "Skilled worker", name: "Skilled Worker card (blue)", who: "Skilled workers in a construction trade.", need: "An NVQ or SVQ Level 2, or a completed apprenticeship.", test: "CITB HS&E test: Operatives", validity: "5 years" },
-  { key: "gold-skilled", colour: "gold", band: "Advanced craft", name: "Gold Skilled card (advanced craft)", who: "Advanced craft workers.", need: "An NVQ or SVQ Level 3, or an approved apprenticeship.", test: "CITB HS&E test: Operatives", validity: "5 years" },
-  { key: "supervisor", colour: "gold", band: "Supervisor", name: "Supervisor card (gold)", who: "Site supervisors.", need: "A supervisory NVQ or SVQ at Level 3 or 4.", test: "CITB HS&E test: Specialist Supervisory", validity: "5 years" },
-  { key: "manager", colour: "black", band: "Manager", name: "Manager card (black)", who: "Managers in construction.", need: "A management NVQ or SVQ at Level 4 to 7.", test: "CITB HS&E test: Managers and Professionals", validity: "5 years" },
-  { key: "aqp", colour: "white", band: "Academically qualified", name: "Academically Qualified Person card (white)", who: "People with a construction-related degree or similar.", need: "A construction degree, HNC or HND, CIOB qualification or certain NEBOSH qualifications.", test: "CITB HS&E test: Managers and Professionals", validity: "5 years" },
-  { key: "pqp", colour: "white", band: "Professionally qualified", name: "Professionally Qualified Person card (white)", who: "Members of a CSCS-approved professional body.", need: "Membership of an approved professional body.", test: "CITB HS&E test: Managers and Professionals", validity: "5 years. Apply for a new card when it ends" },
-  { key: "placement", colour: "red", band: "Industry placement", name: "Industry Placement card", who: "Students on a course with a placement of 3 weeks or more, such as a T Level.", need: "Proof of your course and placement.", test: "CITB HS&E test: Operatives, or a 1-day course", validity: "2 years, not renewable" },
-  { key: "provisional", colour: "red", band: "Provisional", name: "Provisional card", who: "People on probation or a placement of under 3 weeks who have never held a CSCS card.", need: "Your employer's support. You can only apply once.", test: "CITB HS&E test", validity: "6 months, not renewable" },
+  { key: "labourer", colour: "green", band: "Labourer", popular: true, term: "2 yrs, then 5 yrs", price: "£36", name: "Labourer card (green)", who: "Unskilled workers doing labouring jobs.", need: "The Level 1 Award in Health and Safety in a Construction Environment, or an approved alternative.", test: "CITB HS&E test: Operatives", validity: "2 years at first, then 5 years on renewal" },
+  { key: "apprentice", colour: "red", band: "Apprentice", term: "4.5 years", price: "Free", name: "Apprentice card", who: "People on a recognised construction apprenticeship.", need: "Proof of your apprenticeship. The card is free.", test: "None", validity: "4.5 years" },
+  { key: "trainee", colour: "red", band: "Trainee", term: "Up to 5 years", price: "£36", name: "Trainee card", who: "People registered for an NVQ or SVQ, HNC, HND or degree.", need: "Proof of registration, or a recent approved Level 2 or higher qualification.", test: "CITB HS&E test: Operatives", validity: "5 years (2 years on the qualification route)" },
+  { key: "experienced", colour: "red", band: "Experienced worker", term: "1 year", renewable: false, price: "£36", name: "Experienced Worker card", who: "Workers with at least 1 year of experience in the last 3 years, not yet qualified.", need: "Registration for an NVQ or SVQ Level 2.", test: "CITB HS&E test: Operatives", validity: "1 year, not renewable" },
+  { key: "etsm", colour: "red", band: "Experienced TSM", term: "3 years", renewable: false, price: "£36", name: "Experienced Technical, Supervisor or Manager card", who: "Experienced supervisors, managers and technical staff, not yet qualified.", need: "At least 1 year of experience in the last 3 years and registration for an NVQ Level 3.", test: "CITB HS&E test", validity: "3 years, not renewable" },
+  { key: "skilled", colour: "blue", band: "Skilled worker", term: "5 years", price: "£36", name: "Skilled Worker card (blue)", who: "Skilled workers in a construction trade.", need: "An NVQ or SVQ Level 2, or a completed apprenticeship.", test: "CITB HS&E test: Operatives", validity: "5 years" },
+  { key: "gold-skilled", colour: "gold", band: "Advanced craft", term: "5 years", price: "£36", name: "Gold Skilled card (advanced craft)", who: "Advanced craft workers.", need: "An NVQ or SVQ Level 3, or an approved apprenticeship.", test: "CITB HS&E test: Operatives", validity: "5 years" },
+  { key: "supervisor", colour: "gold", band: "Supervisor", term: "5 years", price: "£36", name: "Supervisor card (gold)", who: "Site supervisors.", need: "A supervisory NVQ or SVQ at Level 3 or 4.", test: "CITB HS&E test: Specialist Supervisory", validity: "5 years" },
+  { key: "manager", colour: "black", band: "Manager", term: "5 years", price: "£36", name: "Manager card (black)", who: "Managers in construction.", need: "A management NVQ or SVQ at Level 4 to 7.", test: "CITB HS&E test: Managers and Professionals", validity: "5 years" },
+  { key: "aqp", colour: "white", band: "Academically qualified", term: "5 years", price: "£36", name: "Academically Qualified Person card (white)", who: "People with a construction-related degree or similar.", need: "A construction degree, HNC or HND, CIOB qualification or certain NEBOSH qualifications.", test: "CITB HS&E test: Managers and Professionals", validity: "5 years" },
+  { key: "pqp", colour: "white", band: "Professionally qualified", term: "5 years", reapply: true, price: "£36", name: "Professionally Qualified Person card (white)", who: "Members of a CSCS-approved professional body.", need: "Membership of an approved professional body.", test: "CITB HS&E test: Managers and Professionals", validity: "5 years. Apply for a new card when it ends" },
+  { key: "placement", colour: "red", band: "Industry placement", term: "2 years", renewable: false, price: "£36", name: "Industry Placement card", who: "Students on a course with a placement of 3 weeks or more, such as a T Level.", need: "Proof of your course and placement.", test: "CITB HS&E test: Operatives, or a 1-day course", validity: "2 years, not renewable" },
+  { key: "provisional", colour: "red", band: "Provisional", term: "6 months", renewable: false, price: "£36", name: "Provisional card", who: "People on probation or a placement of under 3 weeks who have never held a CSCS card.", need: "Your employer's support. You can only apply once.", test: "CITB HS&E test", validity: "6 months, not renewable" },
 ];
 
 export const licences = [
@@ -374,7 +376,7 @@ export const licences = [
       eyebrow: "All CSCS cards",
       title: "Every card, at a glance",
       text: "13 cards, from the green Labourer card to the black Manager card. Filter by colour, then open a card for what you need.",
-      all: "All",
+      all: "All cards",
       filterLabel: "Filter cards by colour",
       colours: [
         { key: "green", label: "Green" },
@@ -385,6 +387,10 @@ export const licences = [
         { key: "white", label: "White" },
       ],
       details: "Details",
+      apply: "Apply",
+      popular: "Most popular",
+      notRenewable: "Not renewable",
+      reapply: "Re-apply when it ends",
       note: "Source: CSCS card list, April 2026. The Apprentice card is free; every other card is £36.",
     },
     // the cards fanned out beside the hero's text

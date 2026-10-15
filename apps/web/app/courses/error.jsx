@@ -4,7 +4,7 @@
 export default function Error({ reset }) {
   return (
     <section className="rt-cat" role="alert">
-      <div className="container rt-cat__body" style={{ padding: "64px 0" }}>
+      <div className="container rt-cat__body rt-cat__body--message">
         <div className="rt-cat__empty">
           <p className="rt-cat__empty-title">We couldn&apos;t load courses. Check your connection and try again.</p>
           <div className="rt-cat__empty-actions">

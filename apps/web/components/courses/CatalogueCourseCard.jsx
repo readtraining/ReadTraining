@@ -170,7 +170,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
             <button type="button" className={`rt-card__btn rt-card__btn--primary is-${status}`} onClick={addToBasket} aria-disabled={status === "loading" || undefined} aria-haspopup="dialog" aria-live="polite">
               {status === "loading" && <span className="rt-card__spinner" aria-hidden="true"></span>}
               {status === "added" && (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
+                <svg className="rt-card__tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
               )}
               {{ idle: "Add to basket", loading: "Adding", added: "Added", error: "Try again" }[status]}
             </button>

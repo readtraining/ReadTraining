@@ -7,12 +7,13 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { savePackage, useProvider } from "@/lib/providerWorkspace";
 import { Field, aria, isMoney } from "./settingsForm";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 // A price package: one name and three options (Saver, Flexi, Premium) that learners choose between on the course page and in the
 // basket. Each option has a price, an optional saving ("You save £x") and perks: a heading with lines that are included (✓) or
 // not included (✗), or another of the provider's courses that is or isn't part of it. "Features for every option" are perks
 // shown on all three. Adding or changing a perk opens a panel inside the same dialog (no second dialog), then returns to the
-// package. Used by Settings › Price packages and the course editor's Pricing tab.
+// package. Used by the Pricing plans page and the course editor's Course pricing section.
 
 const TIERS = pw.tiers;
 const INCLUDED = new Set(["included", "course"]);
@@ -36,12 +37,14 @@ function toDraft(p) {
 }
 
 // one perk as the learner will see it
-function PerkView({ perk, courses, onEdit, onRemove }) {
+function PerkView({ perk, courses, onEdit, onRemove, onMove, first, last }) {
   return (
     <li className="rt-pws-pkg__perk">
       <div className="rt-pws-pkg__perkhead">
         <b>{perk.heading}</b>
         <span className="rt-pws-pkg__perkbtns">
+          <button type="button" className="rt-pws-pkg__move" onClick={() => onMove(-1)} disabled={first} aria-label={`Move ${perk.heading} up`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
+          <button type="button" className="rt-pws-pkg__move" onClick={() => onMove(1)} disabled={last} aria-label={`Move ${perk.heading} down`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
           <button type="button" className="rt-pws-set__textbtn" onClick={onEdit}>Edit<span className="rt-sr"> {perk.heading}</span></button>
           <button type="button" className="rt-pws-set__textbtn" onClick={onRemove}>Remove<span className="rt-sr"> {perk.heading}</span></button>
         </span>
@@ -95,6 +98,13 @@ export default function PackageEditor({ open, onClose, packageId, onSaved }) {
   const setTier = (key, patch) => setDraft((d) => ({ ...d, tiers: { ...d.tiers, [key]: { ...d.tiers[key], ...patch } } }));
   const perksOf = (scope) => (scope === "features" ? draft.features : draft.tiers[scope].perks);
   const setPerks = (scope, perks) => (scope === "features" ? setDraft((d) => ({ ...d, features: perks })) : setTier(scope, { perks }));
+  // Hurak's perk reordering: move a perk up or down within its list
+  const movePerk = (scope, i, by) => {
+    const list = [...perksOf(scope)];
+    const [x] = list.splice(i, 1);
+    list.splice(i + by, 0, x);
+    setPerks(scope, list);
+  };
   const scopeLabel = (scope) => (scope === "features" ? "every option" : TIERS.find((t) => t.key === scope).label);
 
   const openPerk = (scope, index, openerId) => {
@@ -185,17 +195,12 @@ export default function PackageEditor({ open, onClose, packageId, onSaved }) {
                     <div className="rt-pws-pkg__itemfields">
                       <div className="rt-field">
                         <label htmlFor={`rt-pkg-type-${i}`}>Line {i + 1}</label>
-                        <select id={`rt-pkg-type-${i}`} value={it.type} onChange={(e) => editItem(i, { type: e.target.value })}>
-                          {Object.entries(pw.perkTypes).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
+                        <FieldSelect id={`rt-pkg-type-${i}`} label={`Line ${i + 1}`} value={it.type} onChange={(value) => editItem(i, { type: value })} options={Object.entries(pw.perkTypes).map(([k, v]) => ({ value: k, label: v }))} />
                       </div>
                       {isCourse ? (
                         <div className="rt-field">
                           <label htmlFor={`rt-pkg-val-${i}`}>Course</label>
-                          <select id={`rt-pkg-val-${i}`} value={it.courseId} onChange={(e) => editItem(i, { courseId: e.target.value })} aria-invalid={err ? true : undefined} aria-describedby={err ? `rt-pkg-item-${i}-e` : undefined}>
-                            <option value="">Choose a course</option>
-                            {courseList.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-                          </select>
+                          <FieldSelect id={`rt-pkg-val-${i}`} label="Course" placeholder="Choose a course" value={it.courseId} onChange={(value) => editItem(i, { courseId: value })} options={courseList.map((c) => ({ value: c.id, label: c.title }))} invalid={Boolean(err)} describedBy={err ? `rt-pkg-item-${i}-e` : undefined} />
                         </div>
                       ) : (
                         <div className="rt-field">
@@ -231,7 +236,7 @@ export default function PackageEditor({ open, onClose, packageId, onSaved }) {
             <p className="rt-acc__note">Shown on Saver, Flexi and Premium, like the certificate or the course book.</p>
             {draft.features.length > 0 && (
               <ul className="rt-pws-pkg__perks">
-                {draft.features.map((p, i) => <PerkView key={i} perk={p} courses={courses} onEdit={() => openPerk("features", i, "rt-pkg-add-features")} onRemove={() => setPerks("features", draft.features.filter((_, j) => j !== i))} />)}
+                {draft.features.map((p, i) => <PerkView key={i} perk={p} courses={courses} onEdit={() => openPerk("features", i, "rt-pkg-add-features")} onRemove={() => setPerks("features", draft.features.filter((_, j) => j !== i))} onMove={(by) => movePerk("features", i, by)} first={i === 0} last={i === draft.features.length - 1} />)}
               </ul>
             )}
             {draft.features.length < MAX_PERKS && <button type="button" id="rt-pkg-add-features" className="button -sm -outline-purple-1 text-purple-1" onClick={() => openPerk("features", null, "rt-pkg-add-features")}>Add feature</button>}
@@ -257,10 +262,10 @@ export default function PackageEditor({ open, onClose, packageId, onSaved }) {
                       <input {...aria(`rt-pkg-${t.key}-disc`, de)} type="text" inputMode="decimal" autoComplete="off" placeholder="Optional" value={x.discount} onChange={(e) => setTier(t.key, { discount: e.target.value })} />
                     </Field>
                   </div>
-                  <p className="rt-pws-pkg__save" aria-live="polite">{saving > 0 ? `You save ${formatPrice(saving)}` : " "}</p>
+                  <p className="rt-pws-pkg__save" aria-live="polite"><span className="rt-pws-pkg__incl">All inclusive</span>{saving > 0 ? ` · You save ${formatPrice(saving)}` : ""}</p>
                   {x.perks.length > 0 && (
                     <ul className="rt-pws-pkg__perks">
-                      {x.perks.map((p, i) => <PerkView key={i} perk={p} courses={courses} onEdit={() => openPerk(t.key, i, `rt-pkg-add-${t.key}`)} onRemove={() => setTier(t.key, { perks: x.perks.filter((_, j) => j !== i) })} />)}
+                      {x.perks.map((p, i) => <PerkView key={i} perk={p} courses={courses} onEdit={() => openPerk(t.key, i, `rt-pkg-add-${t.key}`)} onRemove={() => setTier(t.key, { perks: x.perks.filter((_, j) => j !== i) })} onMove={(by) => movePerk(t.key, i, by)} first={i === 0} last={i === x.perks.length - 1} />)}
                     </ul>
                   )}
                   {x.perks.length < MAX_PERKS && <button type="button" id={`rt-pkg-add-${t.key}`} className="button -sm -outline-purple-1 text-purple-1" onClick={() => openPerk(t.key, null, `rt-pkg-add-${t.key}`)}>Add perk<span className="rt-sr"> to {t.label}</span></button>}

@@ -13,48 +13,57 @@ export const pw = {
   backToSite: { label: "View site", href: "/" },
   help: { label: "Help centre", href: "/help-centre" },
 
+  // the sidebar: our dashboard, then Hurak's sections in its order. Courses and Cohorts open to show their pages (the group heading
+  // is a button, not a link); Orders and Performance are plain links because their pages already offer Create order and the
+  // Overview / Reviews / Leads tabs. Settings and team are in the account menu
   nav: [
-    { group: "Overview", items: [
-      { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/provider" },
-      { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews" },
+    { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/provider" },
+    { key: "courses", label: "Courses", icon: "icon-book", items: [
+      { label: "All courses", href: "/provider/courses" },
+      { label: "Pricing plans", href: "/provider/packages" },
     ] },
-    { group: "Training", items: [
-      { key: "courses", label: "Courses", icon: "icon-book", href: "/provider/courses" },
-      { key: "cohorts", label: "Cohorts", icon: "icon-online-learning-4", href: "/provider/cohorts" },
-      { key: "calendar", label: "Calendar", icon: "icon-calendar", href: "/provider/calendar" },
-      { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners" },
+    { key: "cohorts", label: "Cohorts", icon: "icon-online-learning-4", items: [
+      { label: "Cohort list", href: "/provider/cohorts" },
+      { label: "Calendar", href: "/provider/calendar" },
+      { label: "On demand", href: "/provider/cohorts?mode=on-demand" },
     ] },
-    { group: "Sales", items: [
-      { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders" },
-      { key: "refunds", label: "Refund requests", icon: "icon-wall-clock", href: "/provider/refunds", badge: "refunds" },
-      { key: "transactions", label: "Transactions", icon: "icon-list", href: "/provider/transactions" },
-      { key: "payouts", label: "Payouts", icon: "icon-save-money", href: "/provider/payouts" },
-    ] },
-    { group: "Account", items: [
-      { key: "notifications", label: "Notifications", icon: "icon-notification", href: "/provider/notifications", badge: "unread" },
-      { key: "settings", label: "Settings", icon: "icon-setting", href: "/provider/settings" },
-    ] },
+    { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners" },
+    { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders" },
+    { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews" },
+    { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
+  ],
+  // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team, switch account, log out
+  accountMenu: [
+    { label: "Account settings", href: "/account/settings" },
+    { label: "Requests", href: "/provider/requests" },
+    { label: "Public profile", href: "/provider/profile" },
+    { label: "Team", href: "/provider/team" },
+    { group: "Switch account" },
+    { label: "Learner account", href: "/account" },
+    { label: "Business account", href: "/business" },
   ],
 
   pages: {
-    dashboard: { title: "Dashboard", lead: "How your training is selling, what needs you today, and the steps left to start selling." },
+    dashboard: { title: "Dashboard", lead: "What needs you today, how sales are going and what is coming up." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
     courses: { title: "Courses", lead: "Every course you run. New courses and changes are checked by our team before they go live." },
-    newCourse: { title: "New course", lead: "Choose how the course is delivered. You can add more ways to take it later in the course settings." },
+    packages: { title: "Pricing plans", lead: "Saver, Flexi and Premium options you create once and use on any tiered course." },
+    newCourse: { title: "New course", lead: "Five quick questions. You fill in the rest of the course in the editor." },
     course: { title: "Edit course" },
     cohorts: { title: "Cohorts", lead: "Each run of a course: its dates, venue, tutor and places. Open one to take the register and record results." },
     cohort: { title: "Cohort" },
-    calendar: { title: "Calendar", lead: "All your sessions by month, week, day or as a list." },
+    calendar: { title: "Calendar", lead: "All your sessions by month, week or day, in each cohort's colour." },
     learners: { title: "Learners", lead: "Everyone booked on your courses, with their bookings, results and certificates." },
     learner: { title: "Learner" },
     orders: { title: "Orders", lead: "Bookings from ReadTraining, your website and the orders you add yourself." },
-    newOrder: { title: "New order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
-    order: { title: "Order" },
-    refunds: { title: "Refund requests", lead: "Learners asking for their money back. Reply within 3 working days." },
-    transactions: { title: "Transactions", lead: "Every money movement on your account: sales, fees, refunds and payouts." },
-    payouts: { title: "Payouts", lead: "What we have paid into your bank account, and what is on its way." },
+    newOrder: { title: "Create order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
+    order: { title: "Order details" },
     notifications: { title: "Notifications", lead: "Updates on your courses, orders and reviews." },
-    settings: { title: "Settings", lead: "Your public profile, terms, VAT, emails, libraries and team." },
+    settings: { title: "Provider settings", lead: "Your provider information, logo, terms, VAT, emails, FAQs, questions and integrations." },
+    profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
+    requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
+    team: { title: "Manage team members", lead: "People who can use this workspace, and what each of them can do." },
+    help: { title: "Help", lead: "Videos, guides and a person to talk to when you need one." },
   },
 
   // the choice lists (shared with the public catalogue so a provider's course lands in the right filters)
@@ -66,26 +75,72 @@ export const pw = {
   methods,
   levels,
   categories: subjects,
-  courseStatuses: { draft: "Draft", pending: "In review", approved: "Live", changes: "Changes asked" },
-  enrolment: { public: "Public", private: "Private" },
-  cohortStatuses: { upcoming: "Upcoming", progress: "In progress", completed: "Completed", partial: "Partly certificated", certificated: "Certificated", cancelled: "Cancelled" },
-  orderStatuses: { paid: "Paid", incomplete: "Incomplete", cancelled: "Cancelled", refunded: "Refunded", partial: "Partly refunded", dispute: "In dispute", lost: "Dispute lost" },
-  channels: { marketplace: "ReadTraining", website: "Your website", manual: "Added by you" },
-  payments: {
-    card: { label: "Pay by card now", hint: "Take the card details on the phone." },
-    link: { label: "Send a payment link", hint: "The customer pays by email. Places are held for 48 hours." },
-    offline: { label: "Paid another way", hint: "Bank transfer, invoice or cash. Mark the order paid when the money arrives." },
-    free: { label: "Book for free", hint: "No payment. For staff, resits or goodwill." },
+  courseStatuses: { draft: "Draft", pending: "Waiting for approval", approved: "Approved", changes: "Changes requested" },
+  // the sub-categories and topics under each category (Hurak's course category > sub-category > topic)
+  subcategories: {
+    "accounting-and-finance": [["Bookkeeping", ["Sage", "Xero", "Payroll"]], ["Accounting qualifications", ["AAT", "ACCA"]]],
+    "building-services": [["Electrical", ["18th Edition", "Inspection and testing"]], ["Gas", ["ACS", "Gas safety"]], ["Plumbing", []]],
+    business: [["Leadership and management", ["ILM", "CMI"]], ["Project management", ["PRINCE2", "APM"]], ["Customer service", []]],
+    construction: [["Site safety", ["CITB SMSTS", "CITB SSSTS", "Site safety plus"]], ["Plant and access", ["Working at height", "PASMA", "IPAF"]], ["CSCS cards", ["Labourer", "Health and safety test"]]],
+    "first-aid": [["Workplace first aid", ["Emergency First Aid at Work", "First Aid at Work", "Requalification"]], ["Paediatric first aid", ["Paediatric", "Emergency paediatric"]], ["Mental health first aid", []]],
+    "health-and-care": [["Care Certificate", []], ["Medication", ["Safe handling of medicines"]], ["Safeguarding", ["Adults", "Children"]]],
+    "health-and-safety": [["Fire safety", ["Fire marshal", "Fire risk assessment"]], ["Manual handling", []], ["Hazardous substances", ["COSHH", "Asbestos awareness"]], ["IOSH and NEBOSH", ["IOSH Managing Safely", "NEBOSH General Certificate"]]],
+    hospitality: [["Food safety", ["Level 2 food hygiene", "Level 3 food hygiene"]], ["Licensing", ["APLH", "Personal licence"]], ["Allergens", []]],
+    lifestyle: [["Wellbeing", []], ["Hobbies", ["Photography", "Cooking"]]],
+    marketing: [["Digital marketing", ["Social media", "SEO"]], ["Sales", []]],
+    "personal-development": [["Communication", ["Public speaking", "Writing"]], ["Productivity", ["Time management"]]],
+    security: [["SIA licence training", ["Door Supervisor", "Security Officer", "CCTV Operator", "Close Protection"]], ["SIA top-up", ["Door Supervisor top-up", "Security Officer top-up"]], ["Conflict management", []]],
+    "teaching-and-academics": [["Teaching qualifications", ["Level 3 Award in Education and Training", "Assessor (CAVA)", "IQA"]], ["Functional skills", ["English", "Maths"]]],
+    telecommunication: [["Fibre optics", []], ["Network cabling", []]],
   },
-  transactionTypes: { purchase: "Sale", fee: "Commission", refund: "Refund", payout: "Payout", adjust: "Adjustment", cancel: "Cancellation", dispute: "Dispute" },
-  refundStatuses: { open: "Waiting for you", approved: "Approved", declined: "Declined" },
-  payoutStatuses: { paid: "Paid", transit: "On its way" },
+  // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
+  models: {
+    bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
+    enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
+  },
+  courseTypes: {
+    compliance: { label: "Compliance", text: "Required by law, regulation or an employer's policy. For example First Aid at Work, Food Hygiene or Door Supervisor." },
+    other: { label: "Non compliance", text: "Learned by choice. For example personal development, photography or sales." },
+  },
+  enrolment: { public: "Public", private: "Private" },
+  // the colour a cohort shows in on the calendar (Hurak's cohort colour picker)
+  cohortColours: [
+    { key: "purple", label: "Purple" },
+    { key: "blue", label: "Blue" },
+    { key: "green", label: "Green" },
+    { key: "orange", label: "Orange" },
+    { key: "red", label: "Red" },
+  ],
+  cohortStatuses: { upcoming: "Upcoming", progress: "In progress", completed: "Completed", partial: "Partly certificated", certificated: "Certificated", cancelled: "Cancelled" },
+  orderStatuses: { paid: "Paid", incomplete: "Incomplete", cancelled: "Cancelled", refunded: "Refunded", partial: "Partially refunded", dispute: "In dispute", lost: "Disputed" },
+  channels: { marketplace: "ReadTraining", website: "Website", manual: "Manual" },
+  // how an order was paid, as the orders list and order page show it
+  paymentMethods: { card: "Card", link: "Payment link", offline: "Offline payment", free: "Free enrolment" },
+  // a learner's place on a cohort (Hurak's student status): booked, moved here from another date, or cancelled
+  studentStatuses: { enrolled: "Enrolled", rescheduled: "Rescheduled", cancelled: "Cancelled" },
+  // the email templates a provider can send a learner from a cohort ("Select email template"), or write a new one; `body` is
+  // paragraphs (joined with a blank line); {name} {course} {date} {where} {order} are filled in for each learner
+  emailTemplates: [
+    { key: "joining", label: "Joining instructions", subject: "Joining instructions for {course}", body: ["Hello {name},", "Your {course} course starts on {date} at {where}. Please arrive 15 minutes early with photo ID.", "See you there."] },
+    { key: "confirmation", label: "Order confirmation", subject: "Your booking for {course} is confirmed", body: ["Hello {name},", "This confirms your place on {course}, {date}, at {where}. Your order number is {order}."] },
+    { key: "reminder", label: "Course reminder", subject: "Reminder: {course} starts soon", body: ["Hello {name},", "A reminder that {course} starts on {date} at {where}."] },
+    { key: "certificate", label: "Certificate ready", subject: "Your {course} certificate", body: ["Hello {name},", "Well done on completing {course}. Your certificate is ready."] },
+  ],
+  payments: {
+    card: { label: "Payment via card", hint: "Take the card details on the phone." },
+    link: { label: "Payment via link", hint: "The customer pays by email. Places are held for 48 hours." },
+    offline: { label: "Offline payment", hint: "Bank transfer, invoice or cash. Mark the order paid when the money arrives." },
+    free: { label: "Enroll for free", hint: "No payment. For staff, resits or goodwill." },
+  },
+  // Hurak's course activity types, in its order
   lessonTypes: {
     text: { label: "Text", icon: "icon-document" },
-    video: { label: "Video", icon: "icon-play-button" },
-    quiz: { label: "Quiz", icon: "icon-check" },
-    download: { label: "Download", icon: "icon-cloud" },
+    download: { label: "Download / Resource", icon: "icon-cloud" },
     assignment: { label: "Assignment", icon: "icon-edit" },
+    quiz: { label: "Quiz", icon: "icon-check" },
+    video: { label: "Video", icon: "icon-play-button" },
+    certificate: { label: "Certificate", icon: "icon-badge" },
+    scorm: { label: "Scorm", icon: "icon-play" },
   },
   perkTypes: { included: "Included", excluded: "Not included", course: "Course included", noCourse: "Course not included" },
   tiers: [
@@ -102,40 +157,36 @@ export const pw = {
   ],
   roles: [
     { key: "admin", label: "Admin", can: "Everything except removing the account owner" },
-    { key: "tutor", label: "Tutor", can: "Their cohorts: registers, results and learner records" },
-    { key: "editor", label: "Course editor", can: "Courses, curriculum, FAQs and venues" },
+    { key: "tutor", label: "Tutor", can: "Their cohorts: students, learning records and results" },
+    { key: "editor", label: "Course editor", can: "Courses, course activities and FAQs" },
     { key: "support", label: "Customer support", can: "Learners, orders and refund requests" },
-    { key: "sales", label: "Sales", can: "Orders, new orders and enquiries" },
-    { key: "accounts", label: "Accounts", can: "Transactions, payouts and VAT" },
-    { key: "marketing", label: "Marketing", can: "Course pages, SEO and reviews" },
-    { key: "assistant", label: "Assistant", can: "View everything, change nothing" },
+    { key: "sales", label: "Sales executive", can: "Orders, new orders and leads" },
+    { key: "accounts", label: "Accounts analyst", can: "Orders, earnings and VAT" },
+    { key: "marketing", label: "Marketing executive", can: "Course pages, SEO and reviews" },
+    { key: "assistant", label: "Account assistant", can: "View everything, change nothing" },
   ],
+
   settingsTabs: [
-    { key: "profile", label: "Public profile" },
-    { key: "terms", label: "Terms and policy" },
+    { key: "info", label: "Provider information" },
+    { key: "logo", label: "Company logo" },
+    { key: "terms", label: "Terms" },
     { key: "vat", label: "VAT" },
+    { key: "affiliate", label: "Affiliate" },
     { key: "emails", label: "Emails" },
-    { key: "payouts", label: "Payout account" },
     { key: "faqs", label: "FAQs" },
-    { key: "venues", label: "Venues" },
-    { key: "pricing", label: "Price packages" },
-    { key: "qa", label: "Questions" },
-    { key: "team", label: "Team" },
+    { key: "qa", label: "QA" },
+    { key: "integrations", label: "Integrations" },
   ],
-  checklist: [
-    { key: "profile", title: "Build your public profile", text: "Add your headline, bio and terms so learners know who they are booking with.", href: "/provider/settings?tab=profile", cta: "Set up profile" },
-    { key: "course", title: "Create your first course", text: "Describe the course, set the price and send it to us to check.", href: "/provider/courses/new", cta: "Create a course" },
-    { key: "cohort", title: "Publish your first dates", text: "Add a run of the course with dates, a venue and places.", href: "/provider/cohorts", cta: "Add dates" },
-    { key: "payouts", title: "Set up your payout account", text: "Add your bank details so we can pay you for every booking.", href: "/provider/settings?tab=payouts", cta: "Add bank details" },
-  ],
+
+
+  // Hurak's Performance date ranges
   ranges: [
     { key: "7", label: "Last 7 days", days: 7 },
     { key: "30", label: "Last 30 days", days: 30 },
-    { key: "month", label: "This month" },
-    { key: "year", label: "This year" },
+    { key: "12m", label: "Last 12 months", days: 365 },
     { key: "all", label: "All time" },
   ],
-  fee: { commission: 30, card: 3, payoutDay: 28 },
+  fee: { commission: 30, card: 3 },
 };
 
 // ---- demo records ----------------------------------------------------------------------------------------------------------
@@ -160,7 +211,7 @@ export function seedProvider(now = Date.now()) {
     ["Kwame", "Mensah", "kwame.mensah@example.co.uk", "07700 900183", "Northline Facilities"],
     ["Ellie", "Brooks", "ellie.brooks@example.co.uk", "07700 900292", ""],
     ["Ravi", "Patel", "ravi.patel@example.co.uk", "07700 900361", "Brightcare Homes"],
-  ].map(([first, last, email, phone, company], i) => ({ id: `L${101 + i}`, first, last, email, phone, company, added: at(-120 + i * 7) }));
+  ].map(([first, last, email, phone, company], i) => ({ id: `L${101 + i}`, first, last, email, phone, company, town: ["Leeds", "Bradford", "Wakefield", "Huddersfield", "Halifax"][i % 5], added: at(-120 + i * 7) }));
 
   const venues = [
     { id: "V1", name: "Northfield Training Centre", street: "14 Wellington Street", city: "Leeds", postcode: "LS1 4DL", active: true },
@@ -280,6 +331,22 @@ export function seedProvider(now = Date.now()) {
     },
   ];
 
+  // what Hurak's new-course wizard asks: sub-category, topic, compliance or not, performance model, Skill Saver
+  const setup = {
+    C1: ["Workplace first aid", "Emergency First Aid at Work", "compliance", true],
+    C2: ["Workplace first aid", "First Aid at Work", "compliance", true],
+    C3: ["SIA licence training", "Door Supervisor", "compliance", true],
+    C4: ["Fire safety", "Fire marshal", "compliance", false],
+    C5: ["Manual handling", "", "compliance", false],
+    C6: ["Plant and access", "Working at height", "compliance", false],
+    C7: ["Hazardous substances", "COSHH", "compliance", false],
+  };
+  courses.forEach((c) => {
+    const [subcategory, topic, type, skillSaver] = setup[c.id];
+    Object.assign(c, { subcategory, topic, type, sharedLanding: type === "compliance", model: "bookings", skillSaver });
+    c.settings.assignmentEmail = "";
+  });
+
   const team = [
     { id: "T1", name: "Joanne Fielding", email: "joanne@northfieldsafety.co.uk", role: "admin", status: "active", owner: true },
     { id: "T2", name: "Mark Ellison", email: "mark@northfieldsafety.co.uk", role: "tutor", status: "active" },
@@ -299,6 +366,8 @@ export function seedProvider(now = Date.now()) {
     { id: "K8", courseId: "C4", sessions: [s(13, "13:30", "17:00")], venueId: "", tutorId: "T3", price: 65, max: 20, details: "", cancelled: true },
     { id: "K9", courseId: "C1", sessions: [s(27)], venueId: "V2", tutorId: "", price: 95, max: 12, details: "", cancelled: false },
   ];
+  const palette = ["purple", "blue", "green", "orange", "red"];
+  cohorts.forEach((k, i) => (k.colour = palette[i % palette.length]));
 
   // orders: [ref, days ago, channel, status, payment, customer index, [courseId, cohortId, plan, price, learner indexes], refunded]
   const rows = [
@@ -367,28 +436,33 @@ export function seedProvider(now = Date.now()) {
     { id: "RR2", orderRef: "NF-24870", learnerId: "L112", at: at(-10), amount: 235, reason: "Staff member has left the company.", status: "approved", note: "One of three places refunded.", decided: at(-9) },
     { id: "RR3", orderRef: "NF-24892", learnerId: "L103", at: at(-1, 15), amount: 95, reason: "My manager booked me on the wrong date. Can I have a refund or a different date?", status: "open", note: "" },
   ];
+  // each request keeps the learner's booking reference, which stays after the refund frees the place
+  refunds.forEach((r, i) => {
+    const e = enrolments.find((x) => x.orderRef === r.orderRef && x.learnerId === r.learnerId);
+    r.bookingRef = e ? e.id.replace(/^E/, "B-") : `B-${90 + i}`;
+  });
 
   const qa = [
     { id: "QA1", courseId: "C3", question: "Do I need a first aid certificate before I start?", answer: "No. Emergency First Aid at Work is part of this course.", from: "provider", at: at(-60) },
     { id: "QA2", courseId: "C1", question: "Is the course suitable if I have a bad knee?", answer: "", from: "learner", name: "Sophie T.", at: at(-2) },
   ];
 
-  const payouts = [
-    { id: "PO-0091", date: d(-30), status: "paid" },
-    { id: "PO-0104", date: d(-9), status: "paid" },
-    { id: "PO-0117", date: d(12), status: "transit" },
-  ];
-
   const notifications = [
-    { id: "N1", at: at(-1, 15), text: "New refund request on order NF-24892", href: "/provider/refunds", read: false },
+    { id: "N1", at: at(-1, 15), text: "Priya Nair submitted a refund request for Emergency First Aid at Work", href: "/provider/orders/NF-24892", read: false },
     { id: "N2", at: at(-1, 9), text: "Ellie B. left a 5 star review on Fire Marshal", href: "/provider/performance?tab=reviews", read: false },
     { id: "N3", at: at(-2), text: "Working at Height was sent for review", href: "/provider/courses/C6", read: true },
     { id: "N4", at: at(-6), text: "Order NF-24883 is in dispute. Send your evidence within 7 days.", href: "/provider/orders/NF-24883", read: false },
-    { id: "N5", at: at(-9), text: "Payout PO-0104 has been paid", href: "/provider/payouts", read: true },
+    { id: "N5", at: at(-9), text: "New order NF-24879 from Marek Nowak for SIA Door Supervisor", href: "/provider/orders/NF-24879", read: true },
   ];
+  // older ones, as Hurak's list keeps them: a note for each website or ReadTraining order and each review
+  const titleOf = (id) => courses.find((c) => c.id === id)?.title || "a course";
+  notifications.push(
+    ...orders.filter((o) => o.channel !== "manual" && o.at < at(-10)).map((o, i) => ({ id: `N${20 + i}`, at: o.at, text: `New order ${o.ref} from ${o.customer.first} ${o.customer.last} for ${titleOf(o.lines[0].courseId)}`, href: `/provider/orders/${o.ref}`, read: true })),
+    ...reviews.filter((r) => r.at < at(-10)).map((r, i) => ({ id: `N${60 + i}`, at: r.at + 3600000, text: `You got a ${r.rating} star review on ${titleOf(r.courseId)} by ${r.name}`, href: "/provider/performance?tab=reviews", read: true })),
+  );
 
   return {
-    version: 1,
+    version: 3,
     seededAt: now,
     org: {
       name: "Northfield Safety Training", slug: "northfield-safety-training", city: "Leeds",
@@ -396,12 +470,11 @@ export function seedProvider(now = Date.now()) {
       bio: "Family-run training centre in Leeds since 2009. Small groups, practical courses and tutors who still work in the field.",
       facebook: "", linkedin: "https://www.linkedin.com/company/northfield-safety-training", youtube: "",
       policy: "Cancel more than 10 working days before the course for a full refund. Between 5 and 10 working days, we refund 50%. Within 5 working days we can move you to another date for a £20 fee.",
-      terms: "",
+      terms: "Bookings are confirmed when paid. Learners must bring photo ID. Certificates are issued once every assessment is passed. We may move a course to another date or venue if numbers are too low, and offer a full refund if the new date does not suit.",
       vat: { registered: true, number: "GB 284 7193 62" },
       emails: { refund: "accounts@northfieldsafety.co.uk", dispute: "accounts@northfieldsafety.co.uk", order: "bookings@northfieldsafety.co.uk" },
-      payout: { connected: false, holder: "", sort: "", last4: "" },
     },
     me: { id: "T1", name: "Joanne Fielding", email: "joanne@northfieldsafety.co.uk", role: "Account owner" },
-    courses, cohorts, venues, faqs, packages, team, learners, orders, enrolments, reviews, leads, refunds, qa, payouts, notifications,
+    courses, cohorts, venues, faqs, packages, team, learners, orders, enrolments, reviews, leads, refunds, qa, notifications,
   };
 }

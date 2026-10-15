@@ -7,6 +7,7 @@ import { useAuthUser } from "@/lib/auth/authClient";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Avatar } from "@/components/marketing/parts";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = biz.team;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -126,9 +127,7 @@ export default function BizTeam() {
           <div className="rt-field">
             <label htmlFor="rt-bt-role">{copy.form.role}</label>
             <p className="rt-field__hint" id="rt-bt-role-h">{copy.roleHint}</p>
-            <select id="rt-bt-role" value="member" onChange={() => {}} aria-describedby="rt-bt-role-h" autoComplete="off">
-              <option value="member">{copy.roles.member}</option>
-            </select>
+            <FieldSelect id="rt-bt-role" label={copy.form.role} value="member" onChange={() => {}} options={[{ value: "member", label: copy.roles.member }]} describedBy="rt-bt-role-h" />
           </div>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={saving} aria-busy={saving}>{saving ? "Sending" : copy.form.submit}</button>
         </form>

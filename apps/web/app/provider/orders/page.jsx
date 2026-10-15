@@ -12,7 +12,7 @@ export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, descri
 
 export default function Page() {
   return (
-    <ProviderShell current="orders" title={p.title} lead={p.lead} actions={<Link href="/provider/orders/new" className="button -md -purple-1 text-white">New order</Link>}>
+    <ProviderShell current="orders" title={p.title} lead={p.lead} actions={<Link href="/provider/orders/new" className="button -md -purple-1 text-white">Create order</Link>}>
       <ProviderOrders />
     </ProviderShell>
   );

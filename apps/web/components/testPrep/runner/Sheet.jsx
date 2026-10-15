@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/courseDetail/Icon";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
 
 // A pop-up in the site's dialog shell (.rt-dd, as the course page's "choose a date" pop-up): centred on desktop, a bottom
 // sheet on phones. Locks page scroll, traps Tab, closes on Esc and on the backdrop, and puts focus on the title.
@@ -12,6 +13,7 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const panelRef = useRef(null);
+  const bodyRef = useRef(null);
   const returnTo = useRef(null);
   // the latest onClose, so a parent re-render (a new inline function) does not re-run the focus effect and pull focus back to
   // the title while someone is typing or fixing an error
@@ -79,7 +81,8 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
           <h2 id="rt-tq-sheet-title" className="rt-dd__title" tabIndex={-1}>{title}</h2>
           <button type="button" className="rt-icon-btn" aria-label={closeLabel} onClick={onClose}><Icon name="close" /></button>
         </div>
-        <div className="rt-tq-sheet__body">{children}</div>
+        <div className="rt-tq-sheet__body rt-pill-scroll" ref={bodyRef}>{children}</div>
+        <FilterScrollPill scrollRef={bodyRef} />
       </div>
     </div>,
     document.body,

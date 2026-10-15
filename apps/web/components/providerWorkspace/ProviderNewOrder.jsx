@@ -7,6 +7,7 @@ import { createOrder, customerName, learnerName, useProvider } from "@/lib/provi
 import { formatPrice } from "@/lib/format";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Choice, Loading, Toggle, getQuery, shortDay } from "./providerParts";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 // A manual order, one page: 1 the customer (find one we already know by email or name, or add a new one), 2 the courses and the
 // learners on each (same as the customer, someone already booked with you, or someone new), 3 how it is paid. A summary stays
@@ -44,13 +45,13 @@ function Field({ id, label, hint, error, wide = false, ...input }) {
     </div>
   );
 }
-function Select({ id, label, error, hint, children, ...rest }) {
+function Select({ id, label, error, hint, value, onChange, options, placeholder }) {
   return (
     <div className="rt-field">
       <label htmlFor={id}>{label}</label>
       {hint && <p className="rt-acc__note" id={`${id}-h`}>{hint}</p>}
       {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
-      <select id={id} aria-invalid={error ? true : undefined} aria-describedby={[hint && `${id}-h`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} {...rest}>{children}</select>
+      <FieldSelect id={id} label={label} placeholder={placeholder} value={value} onChange={onChange} options={options} invalid={Boolean(error)} describedBy={[hint && `${id}-h`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} />
     </div>
   );
 }
@@ -75,6 +76,12 @@ export default function ProviderNewOrder() {
   useEffect(() => {
     if (!data || prefilled.current) return;
     prefilled.current = true;
+    // ?cohort=ID ("Enroll student" on a cohort): the first line is that course and those dates
+    const k = data.byId.cohort[getQuery("cohort")];
+    if (k) {
+      const tiered = data.byId.course[k.courseId]?.pricing.type === "tiered";
+      setLines((ls) => [{ ...ls[0], courseId: k.courseId, cohortId: k.id, price: tiered ? "" : String(k.price) }, ...ls.slice(1)]);
+    }
     const l = data.byId.learner[getQuery("learner")];
     if (!l) return;
     const past = data.orders.find((o) => o.customer.email.toLowerCase() === l.email.toLowerCase());
@@ -86,7 +93,7 @@ export default function ProviderNewOrder() {
 
   const courses = data.courses.filter((c) => c.status === "approved");
   const isOnline = (c) => c?.format === "on-demand";
-  const cohortsFor = (courseId) => data.cohorts.filter((k) => k.courseId === courseId && k.status === "upcoming" && k.left > 0).sort((a, b) => a.first.localeCompare(b.first));
+  const cohortsFor = (courseId) => data.cohorts.filter((k) => k.courseId === courseId && k.status === "upcoming" && !k.disabled && k.left > 0).sort((a, b) => a.first.localeCompare(b.first));
   const packFor = (c) => (c?.pricing.type === "tiered" ? data.byId.pack[c.pricing.packageId] : null);
   const listPrice = (line) => {
     const c = data.byId.course[line.courseId];
@@ -212,6 +219,7 @@ export default function ProviderNewOrder() {
   const places = lines.reduce((t, l) => t + l.people.length, 0);
   const subtotal = lines.reduce((t, l) => t + (Number(l.price) || 0) * l.people.length, 0);
   const total = payment === "free" ? 0 : subtotal;
+  const fee = ["card", "link"].includes(payment) ? Math.round(total * pw.fee.card) / 100 : 0;
   const personLabel = (x) => (x.mode === "same" ? `${customerName(cust) || "The customer"} (customer)` : x.mode === "existing" ? learnerName(data.byId.learner[x.id]) : `${x.first} ${x.last}`.trim());
   const lineLabel = (l) => {
     const c = data.byId.course[l.courseId];
@@ -237,9 +245,11 @@ export default function ProviderNewOrder() {
         <div><dt>Places</dt><dd>{places}</dd></div>
         <div><dt>Subtotal</dt><dd className="rt-pws-money__num">{formatPrice(subtotal)}</dd></div>
         {payment === "free" && <div><dt>Booked for free</dt><dd className="rt-pws-money__num">−{formatPrice(subtotal)}</dd></div>}
-        <div className="-total"><dt>Total</dt><dd className="rt-pws-money__num">{formatPrice(total)}</dd></div>
+        <div><dt>Transaction fee ({["card", "link"].includes(payment) ? pw.fee.card : 0}%)</dt><dd className="rt-pws-money__num">{formatPrice(fee)}</dd></div>
+        <div><dt>Platform fee</dt><dd className="rt-pws-money__num">{formatPrice(0)}</dd></div>
+        <div className="-total"><dt>Total (GBP)</dt><dd className="rt-pws-money__num">{formatPrice(total)}</dd></div>
       </dl>
-      <p className="rt-acc__note">Prices include VAT where you charge it.</p>
+      <p className="rt-acc__note">Prices include VAT where you charge it. The transaction fee comes out of your earning; the customer pays the total.</p>
     </aside>
   );
 
@@ -352,21 +362,12 @@ export default function ProviderNewOrder() {
                     </div>
                   </div>
                   <div className="rt-pws-ord__grid">
-                    <Select id={`${p}-course`} label="Course" error={err(`${p}-course`)} value={l.courseId} onChange={(e) => setLine(l.key, { courseId: e.target.value, cohortId: "", plan: "", priceTouched: false })} hint={fmt ? `${fmt.short}` : undefined}>
-                      <option value="">Choose a course</option>
-                      {courses.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
-                    </Select>
+                    <Select id={`${p}-course`} label="Course" error={err(`${p}-course`)} value={l.courseId} onChange={(value) => setLine(l.key, { courseId: value, cohortId: "", plan: "", priceTouched: false })} hint={fmt ? `${fmt.short}` : undefined} placeholder="Choose a course" options={courses.map((x) => ({ value: x.id, label: x.title }))} />
                     {c && !isOnline(c) && (
-                      <Select id={`${p}-cohort`} label="Dates" error={err(`${p}-cohort`)} value={l.cohortId} onChange={(e) => setLine(l.key, { cohortId: e.target.value })}>
-                        <option value="">{ks.length ? "Choose the dates" : "No dates with places left"}</option>
-                        {ks.map((k) => <option key={k.id} value={k.id}>{shortDay(k.first)}{k.last !== k.first ? ` to ${shortDay(k.last)}` : ""} · {k.venue ? k.venue.city : "Online"} · {k.left} left</option>)}
-                      </Select>
+                      <Select id={`${p}-cohort`} label="Dates" error={err(`${p}-cohort`)} value={l.cohortId} onChange={(value) => setLine(l.key, { cohortId: value })} placeholder={ks.length ? "Choose the dates" : "No dates with places left"} options={ks.map((k) => ({ value: k.id, label: `${shortDay(k.first)}${k.last !== k.first ? ` to ${shortDay(k.last)}` : ""} · ${k.venue ? k.venue.city : "Online"} · ${k.left} left` }))} />
                     )}
                     {pack && (
-                      <Select id={`${p}-plan`} label="Plan" error={err(`${p}-plan`)} value={l.plan} onChange={(e) => setLine(l.key, { plan: e.target.value })}>
-                        <option value="">Choose a plan</option>
-                        {pw.tiers.map((t) => <option key={t.key} value={t.key}>{t.label}: {formatPrice(pack.tiers[t.key].price)}</option>)}
-                      </Select>
+                      <Select id={`${p}-plan`} label="Plan" error={err(`${p}-plan`)} value={l.plan} onChange={(value) => setLine(l.key, { plan: value })} placeholder="Choose a plan" options={pw.tiers.map((t) => ({ value: t.key, label: `${t.label}: ${formatPrice(pack.tiers[t.key].price)}` }))} />
                     )}
                     {c && payment !== "free" && (
                       <Field id={`${p}-price`} label="Price per place (£)" hint={l.priceTouched ? `List price ${formatPrice(Number(listPrice(l)) || 0)}.` : "Filled in from the course. Change it for a discount."} type="number" inputMode="decimal" min="0" step="0.01" autoComplete="off" value={l.price} onChange={(e) => setLine(l.key, { price: e.target.value, priceTouched: true })} error={err(`${p}-price`)} />

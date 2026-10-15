@@ -104,8 +104,9 @@ Set metadata with `pageMetadata({ title, description, path, noindex })` from `li
 - **Admin:** `AdminShell` (`components/admin`).
 - **Provider workspace:** `ProviderShell` (`components/providerWorkspace`), the admin's layout with the provider's organisation in the sidebar. Its extra parts (`Loading`, `Empty`, `Toggle`, `ToolSelect`, `Choice`, `Stats`) are in `providerParts.jsx`; records and actions in `lib/providerWorkspace.js`.
 - **Cards and titles:** cards are `.rt-acc__card` and card titles `.rt-acc__h2`.
-- **Status and controls:** status pills use `Pill`; tabs, search and due dates use `Tabs`, `Search` and `Due`
-  (`components/admin/adminParts.jsx`).
+- **Status and controls:** status pills use `Pill`; tabs, search and due dates use `Tabs`, `Search` and `Due`; dashboard
+  number strips use `Stats` (`components/admin/adminParts.jsx`).
+- **Breadcrumbs** on the course and test prep heroes use `Crumbs` (`components/courseDetail/Crumbs.jsx`).
 - **Tables:** use the `.rt-biz__table` pattern, which stacks into labelled rows on phones via `data-label`.
 
 **Sidebars:** use one pattern: the account and admin nav (a white card list with a `--rt-c-brand-soft` active item),

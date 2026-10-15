@@ -9,6 +9,7 @@ import { courseHref } from "@/data/courseSlugs";
 import { formatDate, formatPrice } from "@/lib/format";
 import { savedCourseIds } from "@/lib/wishlist";
 import BookingRow, { placeOf, whenOf } from "./BookingRow";
+import { Stats } from "@/components/admin/adminParts";
 
 const copy = account.dashboard;
 const CERT_LABEL = { valid: "Valid", renew: "Renew soon", expired: "Expired" };
@@ -74,14 +75,7 @@ export default function AccountDashboard() {
         )}
       </section>
 
-      <ul className="rt-tps__keyfacts rt-acc__stats">
-        {stats.map(([label, n, icon]) => (
-          <li key={label} className="rt-tps__keyfact">
-            <span className="rt-benefit__icon" aria-hidden="true"><i className={`${icon} text-18`}></i></span>
-            <span className="rt-tps__keyfact-text"><strong>{n}</strong><span className="rt-sr">, </span><span>{label}</span></span>
-          </li>
-        ))}
-      </ul>
+      <Stats items={stats.map(([label, value, icon]) => ({ label, value, icon }))} iconSize={18} />
 
       <section className="rt-acc__card" aria-labelledby="rt-acc-up-h">
         <div className="rt-acc__cardhead">

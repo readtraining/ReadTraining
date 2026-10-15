@@ -6,26 +6,27 @@ import { saveCourse } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { Empty, Pill, Toggle } from "./providerParts";
+import { Choice, Empty, Pill, Toggle } from "./providerParts";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = {
-  intro: "Build the course from sections and lessons: text, video, quizzes, downloads and assignments. Learners see it in their account after booking.",
+  intro: "Build the course from units and activities: text, downloads, assignments, quizzes, video, a certificate and Scorm packages. Learners see them in their account after booking.",
   liveNote: "For a course on set dates or live online, this is optional: pre-course reading and follow-up material learners open after booking.",
-  emptyTitle: "Add your first section",
-  emptyText: "Sections group lessons, like “Getting started” or “Assessment”.",
+  emptyTitle: "Add your first unit",
+  emptyText: "Units group activities, like “Getting started” or “Assessment”.",
   unsaved: "You have changes that are not saved yet.",
-  save: "Save curriculum",
-  saved: "Curriculum saved",
+  save: "Save activities",
+  saved: "Course activities saved",
 };
 const VIDEO_RE = /^https?:\/\/((www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|vimeo\.com\/\d+)|\S+\.mp4(\?\S*)?$)/i;
 const newId = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const clone = (x) => JSON.parse(JSON.stringify(x || []));
 const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const blankQuestion = () => ({ text: "", options: ["", ""], correct: null });
-const blankLesson = () => ({ id: "", type: "text", title: "", minutes: "", body: "", url: "", file: null, pass: 80, questions: [blankQuestion()], instructions: "", preview: false });
+const blankLesson = () => ({ id: "", type: "text", title: "", minutes: "", body: "", url: "", file: null, pass: 80, questions: [blankQuestion()], instructions: "", preview: false, issueOn: "complete" });
 
-// The course's lessons (our own builder; Hurak's is not built yet). Sections hold lessons; each lesson has a type with its own
-// fields. Changes stay on this page until "Save curriculum" stores them with the course.
+// Course activities (Hurak's LMS types: Text, Download / Resource, Assignment, Quiz, Video, Certificate, Scorm). Units hold the
+// activities; each type has its own fields. Changes stay on this page until "Save activities" stores them with the course.
 export default function CourseCurriculum({ course }) {
   const [sections, setSections] = useState(() => clone(course.curriculum));
   const [dirty, setDirty] = useState(false);
@@ -62,7 +63,7 @@ export default function CourseCurriculum({ course }) {
   const addSection = (e) => {
     e.preventDefault();
     if (!newTitle.trim()) {
-      setAddErr("Enter a section title.");
+      setAddErr("Enter a unit title.");
       return focusFirstError(addRef.current);
     }
     change([...sections, { id: newId("S"), title: newTitle.trim().slice(0, 80), lessons: [] }]);
@@ -72,7 +73,7 @@ export default function CourseCurriculum({ course }) {
   const saveRename = (e) => {
     e.preventDefault();
     if (!renaming.title.trim()) {
-      setRenaming({ ...renaming, error: "Enter a section title." });
+      setRenaming({ ...renaming, error: "Enter a unit title." });
       return focusFirstError(e.currentTarget);
     }
     change(sections.map((s) => (s.id === renaming.id ? { ...s, title: renaming.title.trim().slice(0, 80) } : s)));
@@ -102,10 +103,10 @@ export default function CourseCurriculum({ course }) {
     <div className="rt-acc__stack rt-pws-cur">
       <section className="rt-acc__card rt-pws-cur__head" aria-labelledby="rt-pws-cur-h">
         <div>
-          <h2 className="rt-acc__h2" id="rt-pws-cur-h">Curriculum</h2>
+          <h2 className="rt-acc__h2" id="rt-pws-cur-h">Course activities</h2>
           <p className="rt-acc__note">{live ? copy.liveNote : copy.intro}</p>
           <p className="rt-pws-cur__totals" aria-live="polite">
-            {sections.length} {sections.length === 1 ? "section" : "sections"} · {lessons} {lessons === 1 ? "lesson" : "lessons"} · {minutes} minutes
+            {sections.length} {sections.length === 1 ? "unit" : "units"} · {lessons} {lessons === 1 ? "activity" : "activities"} · {minutes} minutes
           </p>
         </div>
         <div className="rt-pws-cur__save">
@@ -117,12 +118,12 @@ export default function CourseCurriculum({ course }) {
       {sections.length === 0 && <Empty title={copy.emptyTitle} text={copy.emptyText} />}
 
       {sections.map((s, si) => (
-        <section key={s.id} className="rt-acc__card rt-pws-cur__section" aria-label={`Section ${si + 1}: ${s.title}`}>
+        <section key={s.id} className="rt-acc__card rt-pws-cur__section" aria-label={`Unit ${si + 1}: ${s.title}`}>
           <div className="rt-pws-cur__sechead">
             {renaming?.id === s.id ? (
               <form className="rt-pws-cur__rename" onSubmit={saveRename} noValidate>
                 <div className="rt-field">
-                  <label htmlFor={`rt-pws-cur-rn-${s.id}`}>Section title</label>
+                  <label htmlFor={`rt-pws-cur-rn-${s.id}`}>Unit title</label>
                   {renaming.error && <p className="rt-q__err" id={`rt-pws-cur-rn-${s.id}-e`}><span className="rt-sr">Error: </span>{renaming.error}</p>}
                   <input id={`rt-pws-cur-rn-${s.id}`} type="text" maxLength={80} autoComplete="off" value={renaming.title} onChange={(e) => setRenaming({ ...renaming, title: e.target.value })} aria-invalid={renaming.error ? true : undefined} aria-describedby={renaming.error ? `rt-pws-cur-rn-${s.id}-e` : undefined} autoFocus />
                 </div>
@@ -132,11 +133,11 @@ export default function CourseCurriculum({ course }) {
                 </div>
               </form>
             ) : (
-              <h3 className="rt-pws-cur__title"><span className="rt-pws-cur__num">Section {si + 1}</span>{s.title}</h3>
+              <h3 className="rt-pws-cur__title"><span className="rt-pws-cur__num">Unit {si + 1}</span>{s.title}</h3>
             )}
             {renaming?.id !== s.id && (
               <div className="rt-pws-cur__tools">
-                <button type="button" className="rt-pws-cur__icon" onClick={() => setRenaming({ id: s.id, title: s.title, error: "" })} aria-label={`Rename section ${s.title}`}><i className="icon-edit text-14" aria-hidden="true"></i></button>
+                <button type="button" className="rt-pws-cur__icon" onClick={() => setRenaming({ id: s.id, title: s.title, error: "" })} aria-label={`Rename unit ${s.title}`}><i className="icon-edit text-14" aria-hidden="true"></i></button>
                 <button type="button" className="rt-pws-cur__icon" onClick={() => change(move(sections, si, -1))} disabled={si === 0} aria-label={`Move section ${s.title} up`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
                 <button type="button" className="rt-pws-cur__icon" onClick={() => change(move(sections, si, 1))} disabled={si === sections.length - 1} aria-label={`Move section ${s.title} down`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
                 <button type="button" className="rt-pws-cur__icon -danger" onClick={() => setConfirm({ kind: "section", sectionId: s.id, name: s.title, count: s.lessons.length })} aria-label={`Delete section ${s.title}`}><i className="icon-bin text-14" aria-hidden="true"></i></button>
@@ -161,9 +162,9 @@ export default function CourseCurriculum({ course }) {
                     </div>
                     {l.preview && <Pill tone="info">Free preview</Pill>}
                     <div className="rt-pws-cur__tools">
-                      <button type="button" className="rt-pws-cur__icon" onClick={() => setLessonFor({ sectionId: s.id, lesson: l })} aria-label={`Edit lesson ${l.title}`}><i className="icon-edit text-14" aria-hidden="true"></i></button>
-                      <button type="button" className="rt-pws-cur__icon" onClick={() => moveLesson(s.id, li, -1)} disabled={li === 0} aria-label={`Move lesson ${l.title} up`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
-                      <button type="button" className="rt-pws-cur__icon" onClick={() => moveLesson(s.id, li, 1)} disabled={li === s.lessons.length - 1} aria-label={`Move lesson ${l.title} down`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
+                      <button type="button" className="rt-pws-cur__icon" onClick={() => setLessonFor({ sectionId: s.id, lesson: l })} aria-label={`Edit activity ${l.title}`}><i className="icon-edit text-14" aria-hidden="true"></i></button>
+                      <button type="button" className="rt-pws-cur__icon" onClick={() => moveLesson(s.id, li, -1)} disabled={li === 0} aria-label={`Move activity ${l.title} up`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
+                      <button type="button" className="rt-pws-cur__icon" onClick={() => moveLesson(s.id, li, 1)} disabled={li === s.lessons.length - 1} aria-label={`Move activity ${l.title} down`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
                       <button type="button" className="rt-pws-cur__icon -danger" onClick={() => setConfirm({ kind: "lesson", sectionId: s.id, lessonId: l.id, name: l.title })} aria-label={`Delete lesson ${l.title}`}><i className="icon-bin text-14" aria-hidden="true"></i></button>
                     </div>
                   </li>
@@ -171,27 +172,27 @@ export default function CourseCurriculum({ course }) {
               })}
             </ol>
           ) : (
-            <p className="rt-acc__note rt-pws-cur__none">No lessons in this section yet.</p>
+            <p className="rt-acc__note rt-pws-cur__none">No activities in this unit yet.</p>
           )}
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-pws-cur__add" onClick={() => setLessonFor({ sectionId: s.id, lesson: null })}>Add a lesson<span className="rt-sr"> to {s.title}</span></button>
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-pws-cur__add" onClick={() => setLessonFor({ sectionId: s.id, lesson: null })}>Add an activity<span className="rt-sr"> to {s.title}</span></button>
         </section>
       ))}
 
       <form className="rt-acc__card rt-pws-cur__newsec" onSubmit={addSection} noValidate ref={addRef}>
         <div className="rt-field">
-          <label htmlFor="rt-pws-cur-new">Add a section</label>
+          <label htmlFor="rt-pws-cur-new">Add a unit</label>
           {addErr && <p className="rt-q__err" id="rt-pws-cur-new-e"><span className="rt-sr">Error: </span>{addErr}</p>}
           <input id="rt-pws-cur-new" type="text" maxLength={80} autoComplete="off" placeholder="For example: Getting started" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} aria-invalid={addErr ? true : undefined} aria-describedby={addErr ? "rt-pws-cur-new-e" : undefined} />
         </div>
-        <button type="submit" className="button -sm -outline-purple-1 text-purple-1">Add section</button>
+        <button type="submit" className="button -sm -outline-purple-1 text-purple-1">Add unit</button>
       </form>
 
-      <Sheet open={Boolean(confirm)} onClose={() => setConfirm(null)} title={confirm?.kind === "section" ? "Delete this section?" : "Delete this lesson?"} closeLabel="Close">
+      <Sheet open={Boolean(confirm)} onClose={() => setConfirm(null)} title={confirm?.kind === "section" ? "Delete this unit?" : "Delete this activity?"} closeLabel="Close">
         {confirm && (
           <div className="rt-q__form">
             <p className="rt-acc__note">
               {confirm.kind === "section"
-                ? `“${confirm.name}” and its ${confirm.count} ${confirm.count === 1 ? "lesson" : "lessons"} will be removed when you save the curriculum.`
+                ? `“${confirm.name}” and its ${confirm.count} ${confirm.count === 1 ? "activity" : "activities"} will be removed when you save.`
                 : `“${confirm.name}” will be removed when you save the curriculum.`}
             </p>
             <div className="rt-adm-cellrow">
@@ -228,12 +229,13 @@ function LessonSheet({ value, onClose, onSave }) {
   const submit = (e) => {
     e.preventDefault();
     const er = {};
-    if (!l.title.trim()) er.title = "Enter a lesson title.";
+    if (!l.title.trim()) er.title = "Enter an activity title.";
     if (l.minutes !== "" && (!Number.isInteger(Number(l.minutes)) || Number(l.minutes) < 1 || Number(l.minutes) > 600)) er.minutes = "Enter whole minutes between 1 and 600, or leave it empty.";
     if (l.type === "text" && !l.body.trim()) er.body = "Write the lesson text.";
     if (l.type === "video" && !VIDEO_RE.test(l.url.trim())) er.url = "Enter a YouTube, Vimeo or .mp4 link, like https://vimeo.com/123456.";
     if (l.type === "download" && !l.file) er.file = "Choose the file learners will download.";
     if (l.type === "assignment" && !l.instructions.trim()) er.instructions = "Write what learners need to do.";
+    if (l.type === "scorm" && !l.file) er.file = "Choose the Scorm package (.zip).";
     if (l.type === "quiz") {
       const pass = Number(l.pass);
       if (!Number.isInteger(pass) || pass < 1 || pass > 100) er.pass = "Enter a pass mark between 1 and 100.";
@@ -248,23 +250,22 @@ function LessonSheet({ value, onClose, onSave }) {
     const keep = { id: l.id || newId("LS"), type: l.type, title: l.title.trim().slice(0, 120), minutes: l.minutes === "" ? 0 : Number(l.minutes), preview: l.preview };
     if (l.type === "text") keep.body = l.body.trim();
     if (l.type === "video") keep.url = l.url.trim();
-    if (l.type === "download") keep.file = l.file;
+    if (l.type === "download" || l.type === "scorm") keep.file = l.file;
+    if (l.type === "certificate") keep.issueOn = l.issueOn;
     if (l.type === "assignment") keep.instructions = l.instructions.trim();
     if (l.type === "quiz") Object.assign(keep, { pass: Number(l.pass), questions: l.questions.map((q) => ({ text: q.text.trim(), options: q.options.map((o) => o.trim()), correct: q.correct })) });
     onSave(value.sectionId, keep);
   };
 
   return (
-    <Sheet open={Boolean(value)} onClose={onClose} title={value?.lesson ? "Edit lesson" : "Add a lesson"} closeLabel="Close" className="rt-pws-cur__sheet">
+    <Sheet open={Boolean(value)} onClose={onClose} title={value?.lesson ? "Edit activity" : "Add an activity"} closeLabel="Close" className="rt-pws-cur__sheet">
       <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
         <div className="rt-field">
-          <label htmlFor="rt-pws-cur-type">Lesson type</label>
-          <select id="rt-pws-cur-type" value={l.type} onChange={(e) => set("type", e.target.value)}>
-            {Object.entries(pw.lessonTypes).map(([k, t]) => <option key={k} value={k}>{t.label}</option>)}
-          </select>
+          <label htmlFor="rt-pws-cur-type">Activity type</label>
+          <FieldSelect id="rt-pws-cur-type" label="Activity type" value={l.type} onChange={(value) => set("type", value)} options={Object.entries(pw.lessonTypes).map(([k, t]) => ({ value: k, label: t.label }))} />
         </div>
         <div className="rt-field">
-          <label htmlFor="rt-pws-cur-title">Lesson title</label>
+          <label htmlFor="rt-pws-cur-title">Activity title</label>
           {err("title")}
           <input id="rt-pws-cur-title" type="text" maxLength={120} autoComplete="off" value={l.title} onChange={(e) => set("title", e.target.value)} {...aria("title")} />
         </div>
@@ -303,6 +304,25 @@ function LessonSheet({ value, onClose, onSave }) {
               set("file", { name: f.name, size: f.size });
             }} {...aria("file")} />
           </div>
+        )}
+        {l.type === "scorm" && (
+          <div className="rt-field">
+            <label htmlFor="rt-pws-cur-scorm">Scorm package</label>
+            <small className="rt-field__hint">A SCORM 1.2 or 2004 package (.zip), up to 200 MB.</small>
+            {err("file")}
+            {l.file && <p className="rt-pws-cur__file"><i className="icon-document text-14" aria-hidden="true"></i>{l.file.name} · {kb(l.file.size)}</p>}
+            <input id="rt-pws-cur-scorm" type="file" accept=".zip" onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              if (!/\.zip$/i.test(f.name)) return setErrors((x) => ({ ...x, file: "Choose a .zip file." }));
+              if (f.size > 200 * 1048576) return setErrors((x) => ({ ...x, file: "This file is larger than 200 MB. Choose a smaller one." }));
+              setErrors((x) => ({ ...x, file: undefined }));
+              set("file", { name: f.name, size: f.size });
+            }} {...aria("file")} />
+          </div>
+        )}
+        {l.type === "certificate" && (
+          <Choice name="rt-pws-cur-issue" legend="When do learners get the certificate?" value={l.issueOn} onChange={(v) => set("issueOn", v)} options={[{ value: "complete", label: "When they finish every activity" }, { value: "pass", label: "When they pass the quiz" }]} />
         )}
         {l.type === "assignment" && (
           <div className="rt-field">
@@ -356,8 +376,8 @@ function LessonSheet({ value, onClose, onSave }) {
           </>
         )}
 
-        <Toggle id="rt-pws-cur-preview" checked={l.preview} onChange={(v) => set("preview", v)} label="Free preview" hint="Anyone can open this lesson from the course page before booking." />
-        <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{value?.lesson ? "Save lesson" : "Add lesson"}</button>
+        <Toggle id="rt-pws-cur-preview" checked={l.preview} onChange={(v) => set("preview", v)} label="Free preview" hint="Anyone can open this activity from the course page before booking." />
+        <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{value?.lesson ? "Save activity" : "Add activity"}</button>
       </form>
     </Sheet>
   );

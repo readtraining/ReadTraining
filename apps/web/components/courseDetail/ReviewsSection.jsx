@@ -6,6 +6,7 @@ import Stars from "@/components/home/HomeStars";
 import { formatNumber } from "@/lib/format";
 import { Icon } from "./Icon";
 import { initials } from "@/components/marketing/parts";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
 
 const fmtDate = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "long", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
 const FIRST = 6;
@@ -115,7 +116,7 @@ export default function ReviewsSection() {
 
       <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-cd__more" onClick={() => setOpen(true)}>See all reviews</button>
 
-      <dialog ref={dialogRef} className="rt-cd__dialog rt-cd__dialog--wide" aria-labelledby="rt-cd-allrev-h" onClose={() => setOpen(false)}>
+      <dialog ref={dialogRef} className="rt-cd__dialog rt-cd__dialog--wide rt-pill-scroll" aria-labelledby="rt-cd-allrev-h" onClose={() => setOpen(false)}>
         <div className="rt-cd__dialog-head">
           <h2 id="rt-cd-allrev-h">Hear from our past customers</h2>
           <button type="button" className="rt-icon-btn rt-cd__x" aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" /></button>
@@ -147,6 +148,7 @@ export default function ReviewsSection() {
             {filtered.map((r) => <ReviewCard key={keyOf(r)} r={r} helpful={helpful} toggle={toggle} wide />)}
           </ul>
         )}
+        <FilterScrollPill scrollRef={dialogRef} />
       </dialog>
     </section>
   );

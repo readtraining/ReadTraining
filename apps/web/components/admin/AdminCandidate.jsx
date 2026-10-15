@@ -10,6 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Pill, formatWhen } from "./adminParts";
 import { CANDIDATE_TONE } from "./AdminJobs";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = W.jobs;
 const d = copy.detail;
@@ -149,10 +150,7 @@ export default function AdminCandidate({ reference }) {
             <div className="rt-field">
               <label htmlFor="rt-adm-role">{d.offer}</label>
               {errors.role && <p className="rt-q__err" id="rt-adm-role-e"><span className="rt-sr">Error: </span>{errors.role}</p>}
-              <select id="rt-adm-role" value={role} onChange={(e) => setRole(e.target.value)} aria-invalid={errors.role ? true : undefined} aria-describedby={errors.role ? "rt-adm-role-e" : undefined}>
-                <option value="">Choose a role</option>
-                {roleOptions.map((r) => <option key={r.id} value={r.id}>{r.title}, {r.employerName} ({r.city})</option>)}
-              </select>
+              <FieldSelect id="rt-adm-role" label={d.offer} placeholder="Choose a role" value={role} onChange={setRole} options={roleOptions.map((r) => ({ value: r.id, label: `${r.title}, ${r.employerName} (${r.city})` }))} invalid={Boolean(errors.role)} describedBy={errors.role ? "rt-adm-role-e" : undefined} />
             </div>
             <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{d.offerSave}</button>
           </form>
@@ -182,10 +180,7 @@ export default function AdminCandidate({ reference }) {
           <div className="rt-field">
             <label htmlFor="rt-adm-how">{d.consentHow}</label>
             {errors.how && <p className="rt-q__err" id="rt-adm-how-e"><span className="rt-sr">Error: </span>{errors.how}</p>}
-            <select id="rt-adm-how" value={how} onChange={(e) => setHow(e.target.value)} aria-invalid={errors.how ? true : undefined} aria-describedby={errors.how ? "rt-adm-how-e" : undefined}>
-              <option value="">Select</option>
-              {d.consentWays.map((w) => <option key={w} value={w}>{w}</option>)}
-            </select>
+            <FieldSelect id="rt-adm-how" label={d.consentHow} value={how} onChange={setHow} options={d.consentWays} invalid={Boolean(errors.how)} describedBy={errors.how ? "rt-adm-how-e" : undefined} />
           </div>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{d.consentSave}</button>
         </form>

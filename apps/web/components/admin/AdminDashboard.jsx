@@ -5,7 +5,7 @@ import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { docState, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Pill } from "./adminParts";
+import { Pill, Stats } from "./adminParts";
 import { MONEY_TONE } from "./AdminOrders";
 
 const copy = A.dashboard;
@@ -45,14 +45,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="rt-acc__stack">
-      <ul className="rt-tps__keyfacts rt-acc__stats" aria-label="Today">
-        {stats.map((s) => (
-          <li key={s.label} className="rt-tps__keyfact">
-            <span className="rt-benefit__icon" aria-hidden="true"><i className={`${s.icon} text-16`}></i></span>
-            <span className="rt-tps__keyfact-text"><strong>{s.value}</strong><span className="rt-sr">, </span><span>{s.label}</span></span>
-          </li>
-        ))}
-      </ul>
+      <Stats items={stats} label="Today" />
 
       <div className="rt-adm-grid2">
         <section className="rt-acc__card" aria-labelledby="rt-adm-queues-h">

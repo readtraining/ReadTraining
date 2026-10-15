@@ -5,6 +5,7 @@ import Link from "next/link";
 import { basket as copy } from "@/data/basket";
 import { promoFor } from "@/lib/basket";
 import { formatPrice } from "@/lib/format";
+import { focusFirstError } from "@/lib/focusFirstError";
 import { IconCheck } from "@/components/marketing/parts";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 
@@ -28,7 +29,10 @@ export function BasketSummary({ totals, issues, promo, onPromo, count, signedOut
   const apply = (e) => {
     e.preventDefault();
     const found = promoFor(code);
-    if (!found) return setError(copy.promo.invalid);
+    if (!found) {
+      setError(copy.promo.invalid);
+      return focusFirstError(e.currentTarget);
+    }
     setError("");
     setCode("");
     setOpen(false);
@@ -61,11 +65,11 @@ export function BasketSummary({ totals, issues, promo, onPromo, count, signedOut
           ) : (
             <form onSubmit={apply} noValidate>
               <label htmlFor="rt-bk-code" className="rt-sr">Promo code</label>
+              {error && <p id="rt-bk-code-err" className="rt-q__err rt-bk__promoerr" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
               <div className="rt-bk__promorow">
                 <input id="rt-bk-code" type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Promo code" autoComplete="off" aria-invalid={error ? "true" : undefined} aria-describedby={error ? "rt-bk-code-err" : undefined} autoFocus />
                 <button type="submit" className="button -md -outline-dark-1 text-dark-1">{copy.promo.apply}</button>
               </div>
-              {error && <p id="rt-bk-code-err" className="rt-bk__promoerr" role="alert">{error}</p>}
             </form>
           )}
         </div>

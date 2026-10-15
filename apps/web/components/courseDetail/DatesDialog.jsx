@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { MODE_LABEL, useBooking } from "./BookingProvider";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { Icon } from "./Icon";
+import CatalogueDropdown from "@/components/courses/CatalogueDropdown";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
 
 const SORTS = { classroom: [["cheapest", "Cheapest"], ["soonest", "Soonest"], ["name", "Name (A to Z)"]], online: [["cheapest", "Cheapest"], ["soonest", "Soonest"]] };
 const DEFAULT_SORT = "cheapest";
@@ -47,7 +49,8 @@ function DateRow({ s, selected, onSelect, classroom }) {
 // was remembered (sessionStorage). Without `confirm` a choice is applied at once (course page, basket); with it a choice is only
 // marked, and the footer shows it with the confirm button (the catalogue card's "Add to basket").
 function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClose, isDesktop }) {
-  const [chosen, setChosen] = useState(selectedId);
+  const listRef = useRef(null);
+  const [chosen, setChosen] = useState(null); // nothing chosen until the visitor picks a date (no default date in the footer)
   const classroom = mode === "classroom";
   const key = storeKey(course, mode);
   const sorts = SORTS[classroom ? "classroom" : "online"];
@@ -71,7 +74,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   const [input, setInput] = useState(saved?.q || "");
   const [q, setQ] = useState(saved?.q || "");
   const [sort, setSort] = useState(sorts.some(([v]) => v === saved?.sort) ? saved.sort : DEFAULT_SORT);
-  const [open, setOpen] = useState(() => saved?.open || venues.filter((v) => v.sessions.some((s) => s.id === selectedId)).map((v) => v.key));
+  const [open, setOpen] = useState([]); // every venue starts closed: no preselected date is shown when the pop-up opens
 
   useEffect(() => {
     const t = setTimeout(() => setQ(input.trim()), 150);
@@ -132,12 +135,10 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
               <input type="search" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Address or postcode" aria-label="Address or postcode" data-initial={isDesktop ? "" : undefined} autoComplete="off" />
             </label>
           )}
-          <label className="rt-field rt-dd__sort">
-            <span className="rt-cd__sr">Sort by</span>
-            <select value={sort} onChange={(e) => setSort(e.target.value)} data-initial={!classroom && isDesktop ? "" : undefined}>
-              {sorts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </label>
+          {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}
+          <div className="rt-dd__sort">
+            <CatalogueDropdown label="Sort by" options={sorts.map(([v, l]) => ({ value: v, label: l }))} value={sort} onChange={setSort} clearable={false} />
+          </div>
         </div>
         <div className="rt-dd__meta">
           <span aria-live="polite">{count}</span>
@@ -145,7 +146,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
         </div>
       </div>
 
-      <div className="rt-dd__list">
+      <div className="rt-dd__list rt-pill-scroll" ref={listRef}>
         {list.length === 0 ? (
           <p className="rt-dd__empty">No venues match. Try another town or postcode.</p>
         ) : classroom ? (
@@ -175,6 +176,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
           </ul>
         )}
       </div>
+      <FilterScrollPill scrollRef={listRef} />
 
       {confirm && (
         <div className="rt-dd__foot">

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
 import { subjects, licenceGroups, locationCourses, locationFeature, locationHref, resources, menuFooters } from "@/data/home/menu";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { AUTH_ROUTES, CATALOGUE_HREF } from "@/lib/routes";
 
 // Navbar dropdowns. Layout and proportions follow Hurak's menus (three columns: browse list →
@@ -18,14 +19,18 @@ const ArrowLink = ({ href, children }) => (
   </Link>
 );
 
-// Column with an eyebrow, scrollable body and an optional pinned bottom link.
-const Column = ({ title, link, children, last }) => (
-  <div className={`rt-menu-col${last ? " -last" : ""}`}>
-    <Eyebrow>{title}</Eyebrow>
-    <div className="rt-menu-col__body">{children}</div>
-    {link && <div className="rt-menu-col__foot">{link}</div>}
-  </div>
-);
+// Column with an eyebrow, scrollable body (with the site's scroll pill) and an optional pinned bottom link.
+const Column = ({ title, link, children, last }) => {
+  const bodyRef = useRef(null);
+  return (
+    <div className={`rt-menu-col${last ? " -last" : ""}`}>
+      <Eyebrow>{title}</Eyebrow>
+      <div className="rt-menu-col__body rt-pill-scroll" ref={bodyRef}>{children}</div>
+      {!last && <FilterScrollPill scrollRef={bodyRef} />}
+      {link && <div className="rt-menu-col__foot">{link}</div>}
+    </div>
+  );
+};
 
 const BrowseList = ({ items, active, onHover }) => (
   <div className="rt-menu-browse">

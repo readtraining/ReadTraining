@@ -3,22 +3,28 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { cancelCohort, saveCohort, todayIso, useProvider } from "@/lib/providerWorkspace";
+import { canDeleteCohort, cancelCohort, deleteCohort, moveCohort, saveCohort, setCohortEnabled, setCohortStatus, setCohortTutor, todayIso, toggleFavourite, useProvider } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, Choice, Empty, Loading, Pill, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, CardChoice, Choice, Empty, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import CataloguePagination from "@/components/courses/CataloguePagination";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
-// Cohorts: every run of a course (its dates, venue, tutor, places, price and status), filtered by delivery, course, status, venue,
-// tutor and when, with a search. Rows can be picked for bulk actions (email joining instructions, cancel upcoming runs). Used on
-// /provider/cohorts (filters kept in the address) and inside the course editor's Cohorts tab (`courseId`, filters not kept).
-// CohortForm (named export) is the create and edit panel: dates picked on a two-month calendar become session slots.
+// Cohorts: every run of a course, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status (set here by
+// hand), its instructor (assigned here), students (booked of places, with enrolled / rescheduled / cancelled), whether it takes
+// bookings (Enabled / Disabled), a favourite star and a row menu (View, Move to another course, Edit, Delete). Filtered by delivery,
+// course, date, status, venue, tutor and when, with a search; 10 a page. Rows can be picked for bulk actions (email joining
+// instructions, cancel upcoming runs). Filters are kept in the address. The On demand tab lists the on-demand courses (they have
+// no dates: learners start when they book). CohortForm (named export) is the create and edit panel: dates picked on a two-month
+// calendar become session slots.
 
 const MODES = [
   { key: "all", label: "All" },
   { key: "classroom", label: "Classroom" },
   { key: "live-online", label: "Live online" },
+  { key: "on-demand", label: "On demand" },
 ];
 const WHEN = [
   { value: "upcoming", label: "Upcoming and in progress" },
@@ -26,6 +32,9 @@ const WHEN = [
   { value: "all", label: "Any date" },
 ];
 const ONLINE = "Online";
+const PER_PAGE = 10;
+const monthShortFmt = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
+const monthShort = (iso) => monthShortFmt.format(new Date(`${iso}T00:00:00Z`));
 
 // ---- dates (ISO days, worked out in UTC so they never shift with the clock) ---------------------------------------------------
 
@@ -60,9 +69,8 @@ const DEFAULT_SLOT = { from: "10:00", to: "18:30" };
 
 // ---- the list --------------------------------------------------------------------------------------------------------------
 
-export default function ProviderCohorts({ courseId = "" }) {
+export default function ProviderCohorts() {
   const data = useProvider();
-  const embedded = Boolean(courseId);
   const [mode, setMode] = useState("all");
   const [course, setCourse] = useState("");
   const [status, setStatus] = useState("");
@@ -70,13 +78,19 @@ export default function ProviderCohorts({ courseId = "" }) {
   const [tutor, setTutor] = useState("");
   const [when, setWhen] = useState("upcoming");
   const [q, setQ] = useState("");
+  const [date, setDate] = useState("");
+  const [page, setPage] = useState(1);
+  const [moving, setMoving] = useState(null);
+  const [moveTo, setMoveTo] = useState("");
+  const [editingK, setEditingK] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [cancelOne, setCancelOne] = useState(null);
   const [picked, setPicked] = useState([]);
   const [formOpen, setFormOpen] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    if (embedded) return;
     const m = getQuery("mode");
     if (MODES.some((x) => x.key === m)) setMode(m);
     const c = getQuery("course");
@@ -94,38 +108,44 @@ export default function ProviderCohorts({ courseId = "" }) {
     if (t) setTutor(t);
     const s2 = getQuery("q");
     if (s2) setQ(s2);
-  }, [embedded]);
+    if (getQuery("new") === "1") setFormOpen(true); // "Create cohort" from the dashboard
+    const d = getQuery("date");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d || "")) { setDate(d); setWhen("all"); }
+  }, []);
 
-  const keep = (key, value, fallback = "") => !embedded && setQuery(key, value === fallback ? "" : value);
+  // any filter change starts again at page 1
+  useEffect(() => setPage(1), [mode, course, status, venue, tutor, when, q, date]);
+
+  const keep = (key, value, fallback = "") => setQuery(key, value === fallback ? "" : value);
 
   if (!data) return <Loading rows={2} />;
   const { byId, today } = data;
-  const scoped = data.cohorts.filter((k) => !embedded || k.courseId === courseId);
+  const scoped = data.cohorts;
   const datedCourses = data.courses.filter((c) => c.format !== "on-demand");
-  const thisCourse = embedded ? byId.course[courseId] : null;
-
-  if (embedded && thisCourse?.format === "on-demand") {
-    return <p className="rt-acc__card rt-acc__empty">On-demand courses have no dates. Learners start as soon as they book.</p>;
-  }
+  const onDemand = data.courses.filter((c) => c.format === "on-demand");
 
   const needle = q.trim().toLowerCase();
   const list = scoped
-    .filter((k) => mode === "all" || k.course?.format === mode)
-    .filter((k) => embedded || !course || k.courseId === course)
+    .filter((k) => mode === "all" || mode === "on-demand" || k.course?.format === mode)
+    .filter((k) => !course || k.courseId === course)
     .filter((k) => !status || k.status === status)
     .filter((k) => !venue || (venue === "online" ? !k.venueId : k.venueId === venue))
     .filter((k) => !tutor || (tutor === "none" ? !k.tutorId : k.tutorId === tutor))
     .filter((k) => when === "all" || (when === "upcoming" ? k.last >= today : k.last < today))
+    .filter((k) => !date || (k.first <= date && k.last >= date))
     .filter((k) => !needle || `${k.course?.title} ${k.venue?.name || ONLINE} ${k.venue?.city || ""} ${k.tutor?.name || ""}`.toLowerCase().includes(needle))
     .sort((a, b) => (when === "past" ? b.first.localeCompare(a.first) : a.first.localeCompare(b.first)));
 
-  const visibleIds = list.map((k) => k.id);
+  const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
+  const at = Math.min(page, pages);
+  const pageRows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
+  const visibleIds = pageRows.map((k) => k.id);
   const pickedHere = picked.filter((id) => visibleIds.includes(id));
   const allPicked = list.length > 0 && pickedHere.length === list.length;
   const pickedRows = pickedHere.map((id) => byId.cohort[id]);
   const cancellable = pickedRows.filter((k) => k.status === "upcoming");
   const learnersIn = (rows) => rows.filter((k) => !k.cancelled).reduce((n, k) => n + k.booked, 0);
-  const filtered = Boolean(status || venue || tutor || needle || (!embedded && course) || mode !== "all" || when !== "upcoming");
+  const filtered = Boolean(status || venue || tutor || needle || date || course || mode !== "all" || when !== "upcoming");
 
   const clear = () => {
     setMode("all");
@@ -135,13 +155,33 @@ export default function ProviderCohorts({ courseId = "" }) {
     setTutor("");
     setWhen("upcoming");
     setQ("");
-    ["mode", "course", "status", "venue", "tutor", "when", "q"].forEach((k) => keep(k, ""));
+    setDate("");
+    setPage(1);
+    ["mode", "course", "status", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
   const togglePick = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const sendJoining = () => {
     const n = learnersIn(pickedRows);
     setToast({ message: n ? `Joining instructions sent to ${n} ${n === 1 ? "learner" : "learners"}` : "No learners booked on the cohorts you picked" });
     setPicked([]);
+  };
+  // the cohort status set by hand; Cancelled asks first (learners are told)
+  const changeStatus = (k, v) => {
+    if (v === k.status) return;
+    if (v === "cancelled") return setCancelOne(k);
+    setCohortStatus(k.id, v);
+    setToast({ message: `Cohort status changed to ${pw.cohortStatuses[v]}` });
+  };
+  const sameFormat = (k) => data.courses.filter((c) => c.id !== k.courseId && c.format === k.course?.format);
+  const doMove = () => {
+    moveCohort(moving.id, moveTo);
+    setToast({ message: `Cohort moved to ${byId.course[moveTo]?.title || "the other course"}` });
+    setMoving(null);
+  };
+  const doDelete = () => {
+    deleteCohort(deleting.id);
+    setDeleting(null);
+    setToast({ message: "Cohort deleted" });
   };
   const doCancel = () => {
     cancellable.forEach((k) => cancelCohort(k.id));
@@ -158,25 +198,31 @@ export default function ProviderCohorts({ courseId = "" }) {
       {scoped.length === 0 ? (
         <Empty
           title="No cohorts yet"
-          text={embedded ? "Add the first run of this course: pick its dates, venue and number of places." : "A cohort is one run of a course on set dates. Add one to start taking bookings."}
+          text="A cohort is one run of a course on set dates. Add one to start taking bookings."
           action={datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", href: "/provider/courses/new" }}
         />
       ) : (
         <>
           <div className="rt-adm-toolbar">
-            {!embedded ? <Tabs tabs={MODES.map((m) => ({ ...m, count: scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); }} label="Delivery" /> : <span />}
+            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "on-demand" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); }} label="Delivery" />
             {create}
           </div>
-          <div className="rt-adm-toolbar rt-pws-coh__filters">
-            <div className="rt-adm-toolbar__end">
-              {!embedded && <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))]} />}
-              <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); }} options={WHEN} />
-              <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
-              <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />
-              <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email })), { value: "none", label: "Not assigned" }]} />
+          {mode !== "on-demand" && (
+            <div className="rt-adm-toolbar rt-pws-coh__filters">
+              <div className="rt-adm-toolbar__end">
+                <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))]} />
+                <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setPage(1); }} options={WHEN} />
+                <div className="rt-field rt-adm-select -inline rt-pws-coh__datefilter">
+                  <label htmlFor="rt-coh-date" className="rt-sr">Cohorts running on this date</label>
+                  <input id="rt-coh-date" type="date" value={date} onChange={(e) => { const v = e.target.value; setDate(v); keep("date", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } setPage(1); }} aria-label="Cohorts running on this date" />
+                </div>
+                <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
+                <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />
+                <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email })), { value: "none", label: "Not assigned" }]} />
+              </div>
+              <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
             </div>
-            <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
-          </div>
+          )}
 
           {pickedHere.length > 0 && (
             <div className="rt-acc__card rt-pws-coh__bulk" role="region" aria-label="Picked cohorts">
@@ -187,8 +233,31 @@ export default function ProviderCohorts({ courseId = "" }) {
             </div>
           )}
 
-          <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "cohort" : "cohorts"}`}</p>
-          {list.length ? (
+          <p className="rt-sr" aria-live="polite">{mode === "on-demand" ? `${onDemand.length} on-demand ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}`}</p>
+          {mode === "on-demand" ? (
+            onDemand.length ? (
+              <div className="rt-acc__card rt-biz__tablecard">
+                <p className="rt-acc__note">On-demand courses have no dates: learners start as soon as they book.</p>
+                <table className="rt-biz__table rt-adm-table">
+                  <thead><tr><th scope="col">Course</th><th scope="col">Students</th><th scope="col">Price</th><th scope="col">Course status</th><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
+                  <tbody>
+                    {onDemand.map((c) => {
+                      const students = new Set(data.enrolments.filter((e) => e.courseId === c.id && e.status !== "cancelled").map((e) => e.learnerId)).size;
+                      return (
+                        <tr key={c.id}>
+                          <td data-label="Course"><Link href={`/provider/courses/${c.id}`} className="rt-adm-strong">{c.title || "Untitled course"}</Link></td>
+                          <td data-label="Students">{students}</td>
+                          <td data-label="Price">{c.pricing.type === "free" ? "Free" : c.pricing.type === "tiered" ? `From ${formatPrice(byId.pack[c.pricing.packageId]?.tiers.saver.price || 0)}` : formatPrice(c.pricing.price || 0)}</td>
+                          <td data-label="Course status"><Pill tone={c.status === "approved" ? "ok" : c.status === "draft" ? "muted" : "warn"}>{pw.courseStatuses[c.status]}</Pill></td>
+                          <td data-label="Actions"><RowMenu label={`Actions for ${c.title || "untitled course"}`} items={[{ label: "Course activities", href: `/provider/courses/${c.id}?tab=activities` }, { label: "Course pricing", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : <p className="rt-acc__card rt-acc__empty">No on-demand courses yet.</p>
+          ) : list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
                 <thead>
@@ -199,39 +268,75 @@ export default function ProviderCohorts({ courseId = "" }) {
                         <span className="rt-sr">Pick all cohorts shown</span>
                       </label>
                     </th>
-                    <th scope="col">Course</th>
-                    <th scope="col">Dates</th>
-                    <th scope="col">Where</th>
-                    <th scope="col">Tutor</th>
-                    <th scope="col">Places</th>
-                    <th scope="col">Price</th>
+                    <th scope="col">Cohorts</th>
+                    <th scope="col">Cohort status</th>
+                    <th scope="col">Instructor</th>
+                    <th scope="col">Students</th>
                     <th scope="col">Status</th>
+                    <th scope="col"><span className="rt-sr">Favourite</span></th>
+                    <th scope="col"><span className="rt-sr">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((k) => {
+                  {pageRows.map((k) => {
                     const s0 = k.sessions[0];
-                    const pack = k.packageId ? byId.pack[k.packageId] : null;
+                    const title = k.course?.title || "Untitled course";
+                    const name = `${title}, ${dayRange(k.first, k.last)}`;
                     return (
                       <tr key={k.id} className={picked.includes(k.id) ? "is-picked" : undefined}>
                         <td data-label="Pick" className="rt-pws-coh__pick">
                           <label className="rt-pws-coh__check">
                             <input type="checkbox" className="rt-fp__check" checked={picked.includes(k.id)} onChange={() => togglePick(k.id)} />
-                            <span className="rt-sr">Pick {k.course?.title}, {dayRange(k.first, k.last)}</span>
+                            <span className="rt-sr">Pick {name}</span>
                           </label>
                         </td>
-                        <td data-label="Course"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.course?.title || "Untitled course"}</Link><small>{pw.formats.find((f) => f.key === k.course?.format)?.short}</small></td>
-                        <td data-label="Dates">{dayRange(k.first, k.last)}<small>{s0 ? `${s0.from} to ${s0.to}` : ""}{k.sessions.length > 1 ? ` · ${k.sessions.length} sessions` : ""}</small></td>
-                        <td data-label="Where">{k.venue ? k.venue.name : ONLINE}{k.venue && <small>{k.venue.city}</small>}</td>
-                        <td data-label="Tutor">{k.tutor ? k.tutor.name || k.tutor.email : <span className="rt-adm-muted">Not assigned</span>}</td>
-                        <td data-label="Places"><Seats booked={k.booked} max={k.max} /></td>
-                        <td data-label="Price">{pack ? <>From {formatPrice(pack.tiers.saver.price)}<small>{pack.name}</small></> : formatPrice(k.price)}</td>
-                        <td data-label="Status"><Pill tone={COHORT_TONE[k.status]}>{pw.cohortStatuses[k.status]}</Pill></td>
+                        <td data-label="Cohort">
+                          <div className="rt-pws-coh__cohort">
+                            <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.first)}</small><b>{k.first.slice(8)}</b></span>
+                            <div>
+                              <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{title}</Link>
+                              <small>{k.venue ? k.venue.name : ONLINE}</small>
+                              <small>{dayRange(k.first, k.last)}{s0 ? ` from ${s0.from} to ${s0.to}` : ""}{k.sessions.length > 1 ? ` · ${k.sessions.length} sessions` : ""}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td data-label="Cohort status">
+                          {k.cancelled ? <Pill tone={COHORT_TONE.cancelled}>{pw.cohortStatuses.cancelled}</Pill> : (
+                            <div className="rt-field rt-adm-select -inline">
+                              <label htmlFor={`rt-coh-st-${k.id}`} className="rt-sr">Cohort status for {name}</label>
+                              <FieldSelect id={`rt-coh-st-${k.id}`} label={`Cohort status for ${name}`} value={k.status} onChange={(v) => changeStatus(k, v)} options={Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))} compact />
+                            </div>
+                          )}
+                        </td>
+                        <td data-label="Instructor">
+                          <div className="rt-field rt-adm-select -inline">
+                            <label htmlFor={`rt-coh-tu-${k.id}`} className="rt-sr">Instructor for {name}</label>
+                            <FieldSelect id={`rt-coh-tu-${k.id}`} label={`Instructor for ${name}`} value={k.tutorId || ""} onChange={(v) => { setCohortTutor(k.id, v); setToast({ message: v ? `${byId.member[v]?.name || "Instructor"} assigned` : "Instructor removed" }); }} options={[{ value: "", label: "Unassigned" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email }))]} disabled={k.cancelled} compact />
+                          </div>
+                        </td>
+                        <td data-label="Students">
+                          <Seats booked={k.booked} max={k.max} />
+                          <small className="rt-pws-coh__places">{`${k.places.enrolled} enrolled · ${k.places.rescheduled} rescheduled · ${k.places.cancelled} cancelled`}</small>
+                        </td>
+                        <td data-label="Status"><Pill tone={k.disabled ? "muted" : "ok"}>{k.disabled ? "Disabled" : "Enabled"}</Pill></td>
+                        <td data-label="Favourite">
+                          <button type="button" className={`rt-pws-coh__fav${k.favourite ? " is-on" : ""}`} aria-pressed={Boolean(k.favourite)} onClick={() => toggleFavourite(k.id)}>
+                            <i className="icon-star" aria-hidden="true"></i><span className="rt-sr">Favourite: {name}</span>
+                          </button>
+                        </td>
+                        <td data-label="Actions">
+                          <RowMenu label={`Actions for ${name}`} items={[
+                            { label: "View", href: `/provider/cohorts/${k.id}` },
+                            ...(k.cancelled ? [] : [{ label: "Move", onClick: () => setMoving(k) }, { label: "Edit", onClick: () => setEditingK(k) }, { label: k.disabled ? "Enable bookings" : "Disable bookings", onClick: () => { setCohortEnabled(k.id, k.disabled); setToast({ message: k.disabled ? "Bookings enabled" : "Bookings disabled" }); } }]),
+                            { label: "Delete", onClick: () => setDeleting(k), danger: true },
+                          ]} />
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+              {pages > 1 && <div className="rt-pws-coh__pages"><CataloguePagination page={at} totalPages={pages} hrefFor={(p) => `?page=${p}`} onNavigate={setPage} /></div>}
             </div>
           ) : (
             <div className="rt-acc__card rt-acc__empty rt-pws-coh__none">
@@ -242,7 +347,61 @@ export default function ProviderCohorts({ courseId = "" }) {
         </>
       )}
 
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} courseId={courseId} suggestCourseId={embedded ? "" : course} onSaved={(id) => { setFormOpen(false); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} />
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => setToast({ message: "Cohort saved. Pick the dates for the next one." })} />
+      <CohortForm open={Boolean(editingK)} onClose={() => setEditingK(null)} cohort={editingK} onSaved={() => { setEditingK(null); setToast({ message: "Cohort saved" }); }} />
+
+      <Sheet open={Boolean(moving)} onClose={() => setMoving(null)} title="Move cohort" closeLabel="Close">
+        {moving && (
+          <div className="rt-q__form">
+            <p className="rt-acc__note">Move {moving.course?.title || "this cohort"}, {dayRange(moving.first, moving.last)}, and the {moving.booked} {moving.booked === 1 ? "learner" : "learners"} booked on it to another {pw.formats.find((f) => f.key === moving.course?.format)?.short.toLowerCase()} course.</p>
+            {sameFormat(moving).length ? (
+              <>
+                <div className="rt-field">
+                  <label htmlFor="rt-coh-moveto">Select course</label>
+                  <FieldSelect id="rt-coh-moveto" label="Select course" placeholder="Select course" value={moveTo} onChange={setMoveTo} options={sameFormat(moving).map((c) => ({ value: c.id, label: c.title || "Untitled course" }))} />
+                </div>
+                <div className="rt-pws-coh__actions">
+                  <button type="button" className="button -md -purple-1 text-white" onClick={doMove} disabled={!moveTo}>Save changes</button>
+                  <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setMoving(null)}>Cancel</button>
+                </div>
+              </>
+            ) : <p className="rt-acc__note">You have no other course of this type to move it to.</p>}
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={Boolean(deleting)} onClose={() => setDeleting(null)} title="Delete this cohort?" closeLabel="Close">
+        {deleting && (
+          <div className="rt-q__form">
+            {canDeleteCohort(data, deleting.id) ? (
+              <>
+                <p className="rt-acc__note">{deleting.course?.title}, {dayRange(deleting.first, deleting.last)}, is removed for good. Nobody is booked on it.</p>
+                <div className="rt-pws-coh__actions">
+                  <button type="button" className="button -md -purple-1 text-white" onClick={doDelete}>Delete cohort</button>
+                  <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setDeleting(null)}>Keep it</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="rt-acc__note">{deleting.booked} {deleting.booked === 1 ? "learner is" : "learners are"} booked on this cohort, so it can't be deleted. Set its status to Cancelled instead: they are told and offered another date or a refund.</p>
+                <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setDeleting(null)}>Close</button>
+              </>
+            )}
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={Boolean(cancelOne)} onClose={() => setCancelOne(null)} title="Cancel this cohort?" closeLabel="Close">
+        {cancelOne && (
+          <div className="rt-q__form">
+            <p className="rt-acc__note">{cancelOne.booked ? `The ${cancelOne.booked} booked ${cancelOne.booked === 1 ? "learner is" : "learners are"} told straight away and offered another date or a full refund.` : "Nobody is booked yet, so nobody needs to be told."} This can't be undone.</p>
+            <div className="rt-pws-coh__actions">
+              <button type="button" className="button -md -purple-1 text-white" onClick={() => { cancelCohort(cancelOne.id); setCancelOne(null); setToast({ message: "Cohort cancelled" }); }}>Cancel cohort</button>
+              <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setCancelOne(null)}>Keep it</button>
+            </div>
+          </div>
+        )}
+      </Sheet>
 
       <Sheet open={confirm} onClose={() => setConfirm(false)} title={`Cancel ${cancellable.length} ${cancellable.length === 1 ? "cohort" : "cohorts"}?`} closeLabel="Close">
         <div className="rt-q__form">
@@ -274,25 +433,28 @@ export function Seats({ booked, max }) {
 
 // ---- create and edit -------------------------------------------------------------------------------------------------------
 
-// The panel for one cohort. `cohort` (a derived cohort) edits it; otherwise it creates one for `courseId`, or asks which course.
-export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "", cohort = null, onSaved }) {
+// The panel for one cohort. `cohort` (a derived cohort) edits it; otherwise it creates one, asking which course.
+// `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on, as Hurak has a form for each.
+export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
   const data = useProvider();
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
   const [view, setView] = useState(() => monthStart(todayIso()));
+  const [studyMode, setStudyMode] = useState("classroom");
 
   // fill the form each time the panel opens
   useEffect(() => {
     if (!open || !data) return;
-    const cid = cohort?.courseId || courseId || suggestCourseId || "";
+    const cid = cohort?.courseId || suggestCourseId || "";
     const c = data.byId.course[cid];
     if (cohort) {
-      setF({ courseId: cid, sessions: cohort.sessions.map((s) => ({ ...s })), tutorId: cohort.tutorId || "", venueId: cohort.venueId || "", pricing: cohort.packageId ? "package" : "flat", price: String(cohort.price ?? ""), packageId: cohort.packageId || "", max: String(cohort.max), details: cohort.details || "" });
+      setF({ courseId: cid, sessions: cohort.sessions.map((s) => ({ ...s })), tutorId: cohort.tutorId || "", venueId: cohort.venueId || "", pricing: cohort.packageId ? "package" : "flat", price: String(cohort.price ?? ""), packageId: cohort.packageId || "", max: String(cohort.max), details: cohort.details || "", colour: cohort.colour || "purple", lmsFrom: cohort.lmsFrom || "course" });
       setView(monthStart(cohort.first || todayIso()));
     } else {
       setF(blankFor(c));
       setView(monthStart(todayIso()));
+      setStudyMode(c?.format || (mode === "live-online" ? "live-online" : "classroom"));
     }
     setErrors({});
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- fill once per opening
@@ -307,6 +469,8 @@ export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "",
     packageId: c?.pricing.type === "tiered" ? c.pricing.packageId : "",
     max: "12",
     details: "",
+    colour: "purple",
+    lmsFrom: "course",
   });
 
   const ready = Boolean(open && data && f);
@@ -329,7 +493,8 @@ export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "",
   };
   const setSlot = (i, patch) => setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
 
-  const save = (e) => {
+  // "Save and create another" (Hurak's "Create another cohort"): the form stays open for the same course and settings
+  const save = (e, another = false) => {
     e.preventDefault();
     const err = {};
     if (!f.courseId) err.courseId = "Choose the course this cohort is for.";
@@ -362,32 +527,43 @@ export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "",
       packageId: pack ? pack.id : "",
       max: m,
       details: f.details.trim(),
+      colour: f.colour,
+      lmsFrom: f.lmsFrom,
     });
+    if (another) {
+      setF((x) => ({ ...x, sessions: [] }));
+      setErrors({});
+      onAnother?.(id);
+      requestAnimationFrame(() => formRef.current?.querySelector("h3")?.scrollIntoView({ block: "start" }));
+      return;
+    }
     onSaved?.(id);
   };
 
   const err = (key) => errors[key] && <p className="rt-q__err" id={`rt-cf-${key}-e`}><span className="rt-sr">Error: </span>{errors[key]}</p>;
   const aria = (key) => ({ "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `rt-cf-${key}-e` : undefined });
 
-  const datedCourses = data ? data.courses.filter((c) => c.format !== "on-demand") : [];
+  const datedCourses = data ? data.courses.filter((c) => c.format === studyMode) : [];
   const packages = data ? data.packages.filter((p) => p.active || p.id === f?.packageId) : [];
   const canPackage = course?.pricing.type === "tiered" || packages.length > 0;
   const tutors = data ? data.team.filter((t) => t.status === "active") : [];
   const venues = data ? data.venues.filter((v) => v.active || v.id === f?.venueId) : [];
   const ordered = ready ? f.sessions.map((s, i) => ({ s, i })).sort((a, b) => a.s.date.localeCompare(b.s.date)) : [];
+  const lmsCohorts = ready ? data.cohorts.filter((k) => k.courseId === f.courseId && k.id !== cohort?.id && !k.cancelled) : [];
 
   return (
     <Sheet open={open} onClose={onClose} title={cohort ? "Edit cohort" : "Create cohort"} closeLabel="Close" className="rt-pws-coh__sheet">
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
-          {!courseId && !cohort ? (
+          {!cohort && (
+            <Choice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
+              options={pw.formats.filter((x) => x.key !== "on-demand").map((x) => ({ value: x.key, label: x.short }))} />
+          )}
+          {!cohort ? (
             <div className="rt-field">
               <label htmlFor="rt-cf-course">Course</label>
               {err("courseId")}
-              <select id="rt-cf-course" value={f.courseId} onChange={(e) => { const c = data.byId.course[e.target.value]; setF((x) => ({ ...blankFor(c), sessions: x.sessions })); }} autoComplete="off" {...aria("courseId")}>
-                <option value="">Choose a course</option>
-                {datedCourses.map((c) => <option key={c.id} value={c.id}>{c.title || "Untitled course"} ({pw.formats.find((x) => x.key === c.format)?.short})</option>)}
-              </select>
+              <FieldSelect id="rt-cf-course" label="Course" value={f.courseId} onChange={(value) => { const c = data.byId.course[value]; setF((x) => ({ ...blankFor(c), sessions: x.sessions })); }} options={datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))} placeholder={datedCourses.length ? "Choose a course" : `No ${pw.formats.find((x) => x.key === studyMode)?.short.toLowerCase()} courses yet`} invalid={Boolean(errors.courseId)} describedBy={aria("courseId")["aria-describedby"]} />
             </div>
           ) : (
             <p className="rt-acc__note rt-pws-coh__for">For <b>{course?.title || "Untitled course"}</b> · {pw.formats.find((x) => x.key === course?.format)?.short}</p>
@@ -420,11 +596,11 @@ export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "",
                         </div>
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-f${i}`}>From</label>
-                          <select id={`rt-cf-f${i}`} value={s.from} onChange={(e) => setSlot(i, { from: e.target.value })} autoComplete="off">{TIMES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                          <FieldSelect id={`rt-cf-f${i}`} label="From" value={s.from} onChange={(value) => setSlot(i, { from: value })} options={TIMES} />
                         </div>
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-t${i}`}>To</label>
-                          <select id={`rt-cf-t${i}`} value={s.to} onChange={(e) => setSlot(i, { to: e.target.value })} autoComplete="off">{TIMES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                          <FieldSelect id={`rt-cf-t${i}`} label="To" value={s.to} onChange={(value) => setSlot(i, { to: value })} options={TIMES} />
                         </div>
                       </div>
                     </li>
@@ -440,25 +616,19 @@ export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "",
             <div className="rt-pws-coh__setgrid">
               <div className="rt-field">
                 <label htmlFor="rt-cf-tutor">Tutor</label>
-                <select id="rt-cf-tutor" value={f.tutorId} onChange={(e) => set({ tutorId: e.target.value })} autoComplete="off">
-                  <option value="">Not assigned</option>
-                  {tutors.map((t) => <option key={t.id} value={t.id}>{t.name || t.email}</option>)}
-                </select>
+                <FieldSelect id="rt-cf-tutor" label="Tutor" value={f.tutorId} onChange={(value) => set({ tutorId: value })} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email }))]} />
               </div>
               {course?.format === "classroom" && (
                 <div className="rt-field">
                   <label htmlFor="rt-cf-venueId">Venue</label>
                   {err("venueId")}
-                  <select id="rt-cf-venueId" value={f.venueId} onChange={(e) => set({ venueId: e.target.value })} autoComplete="off" {...aria("venueId")}>
-                    <option value="">Choose a venue</option>
-                    {venues.map((v) => <option key={v.id} value={v.id}>{v.name}, {v.city}</option>)}
-                  </select>
-                  <Link href="/provider/settings?tab=venues" className="rt-pws-coh__hintlink">Add a venue</Link>
+                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder="Choose a venue" value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
+                  <Link href={`/provider/courses/${f.courseId}?tab=mode`} className="rt-pws-coh__hintlink">Add a venue to this course</Link>
                 </div>
               )}
             </div>
             {canPackage && (
-              <Choice name="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => set({ pricing: v })} options={[{ value: "flat", label: "One price" }, { value: "package", label: "Price package (Saver, Flexi, Premium)" }]} />
+              <CardChoice name="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => set({ pricing: v })} options={[{ value: "flat", label: "One price", text: "Every learner pays the same price." }, { value: "package", label: "Price package", text: "Saver, Flexi and Premium options from one of your pricing plans." }]} />
             )}
             <div className="rt-pws-coh__setgrid">
               {f.pricing === "flat" || !canPackage ? (
@@ -471,10 +641,7 @@ export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "",
                 <div className="rt-field">
                   <label htmlFor="rt-cf-packageId">Price package</label>
                   {err("packageId")}
-                  <select id="rt-cf-packageId" value={f.packageId} onChange={(e) => set({ packageId: e.target.value })} autoComplete="off" {...aria("packageId")}>
-                    <option value="">Choose a package</option>
-                    {packages.map((p) => <option key={p.id} value={p.id}>{p.name || "Untitled package"} (from {formatPrice(p.tiers.saver.price)})</option>)}
-                  </select>
+                  <FieldSelect id="rt-cf-packageId" label="Price package" placeholder="Choose a package" value={f.packageId} onChange={(value) => set({ packageId: value })} options={packages.map((p) => ({ value: p.id, label: `${p.name || "Untitled package"} (from ${formatPrice(p.tiers.saver.price)})` }))} invalid={Boolean(errors.packageId)} describedBy={aria("packageId")["aria-describedby"]} />
                 </div>
               )}
               <div className="rt-field">
@@ -484,13 +651,35 @@ export function CohortForm({ open, onClose, courseId = "", suggestCourseId = "",
                 {booked > 0 && <p className="rt-acc__note">{booked} already booked.</p>}
               </div>
             </div>
+            <div className="rt-pws-coh__setgrid">
+              <div className="rt-field">
+                <label htmlFor="rt-cf-lms">LMS clone</label>
+                <p className="rt-acc__note" id="rt-cf-lms-h">Which course activities learners on this cohort get.</p>
+                <FieldSelect id="rt-cf-lms" label="LMS clone" value={f.lmsFrom} onChange={(value) => set({ lmsFrom: value })} options={[{ value: "course", label: "The course's activities" }, ...lmsCohorts.map((k) => ({ value: k.id, label: `Copy from the cohort on ${dayRange(k.first, k.last)}` })), { value: "none", label: "No activities" }]} describedBy="rt-cf-lms-h" />
+              </div>
+              <fieldset className="rt-field rt-pws-coh__colours">
+                <legend>Cohort colour</legend>
+                <p className="rt-acc__note">How it shows on the calendar.</p>
+                <div className="rt-pws-coh__swatches">
+                  {pw.cohortColours.map((c) => (
+                    <label key={c.key} className={`rt-pws-coh__swatch -c-${c.key}${f.colour === c.key ? " is-on" : ""}`}>
+                      <input type="radio" name="rt-cf-colour" className="rt-sr" value={c.key} checked={f.colour === c.key} onChange={() => set({ colour: c.key })} />
+                      <span aria-hidden="true"></span><span className="rt-sr">{c.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
             <div className="rt-field">
-              <label htmlFor="rt-cf-details">Additional details (optional)</label>
-              <p className="rt-acc__note" id="rt-cf-details-h">Shown to learners under the course dates, for example what to bring or where to park.</p>
+              <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
+              <p className="rt-acc__note" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
               <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-describedby="rt-cf-details-h" autoComplete="off" />
             </div>
           </section>
-          <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{cohort ? "Save changes" : "Save cohort"}</button>
+          <div className="rt-pws-coh__formfoot">
+            <button type="submit" className="button -md -purple-1 text-white">{cohort ? "Save changes" : "Save cohort"}</button>
+            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={(e) => save(e, true)}>Save and create another</button>}
+          </div>
         </form>
       )}
     </Sheet>

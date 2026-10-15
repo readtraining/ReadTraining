@@ -8,6 +8,7 @@ import { courseHref } from "@/data/courseSlugs";
 import { formatDate, formatPrice } from "@/lib/format";
 import BookingRow from "@/components/account/BookingRow";
 import { CertPill, PlacesBar, asBooking, certLine } from "./bizParts";
+import { Stats } from "@/components/admin/adminParts";
 
 const copy = biz.dashboard;
 
@@ -32,14 +33,7 @@ export default function BizDashboard() {
 
   return (
     <div className="rt-acc__stack">
-      <ul className="rt-tps__keyfacts rt-acc__stats">
-        {stats.map(([label, n, icon]) => (
-          <li key={label} className="rt-tps__keyfact">
-            <span className="rt-benefit__icon" aria-hidden="true"><i className={`${icon} text-18`}></i></span>
-            <span className="rt-tps__keyfact-text"><strong>{n}</strong><span className="rt-sr">, </span><span>{label}</span></span>
-          </li>
-        ))}
-      </ul>
+      <Stats items={stats.map(([label, value, icon]) => ({ label, value, icon }))} iconSize={18} />
 
       <section className="rt-acc__card" aria-labelledby="rt-biz-assign-h">
         <div className="rt-acc__cardhead">

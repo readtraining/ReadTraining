@@ -10,6 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import { keepSubmission } from "@/lib/inbox";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = hseTest.request;
 const Ctx = createContext({ open: () => {} });
@@ -89,10 +90,7 @@ export default function TestBooking({ children }) {
         <label htmlFor={id}>{label}</label>
         {errors[k] && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p>}
         {props.options ? (
-          <select id={id} value={v[k]} onChange={set(k)} aria-invalid={errors[k] ? true : undefined} aria-describedby={errors[k] ? `${id}-e` : undefined}>
-            <option value="">{props.empty || "Select"}</option>
-            {props.options.map((o) => (typeof o === "string" ? <option key={o} value={o}>{o}</option> : <option key={o.value} value={o.value}>{o.label}</option>))}
-          </select>
+          <FieldSelect id={id} label={label} placeholder={props.empty || "Select"} value={v[k]} onChange={(value) => set(k)({ target: { value } })} options={props.options} invalid={Boolean(errors[k])} describedBy={errors[k] ? `${id}-e` : undefined} />
         ) : (
           <input id={id} value={v[k]} onChange={set(k)} aria-invalid={errors[k] ? true : undefined} aria-describedby={errors[k] ? `${id}-e` : undefined} {...props} />
         )}

@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 
@@ -13,6 +14,7 @@ const initials = (name) => name.split(" ").map((w) => w[0]).join("").slice(0, 2)
 // something waits); then the page head (title, intro, the page's actions) and the page. Below 992px the
 // sidebar becomes the account's chip row that scrolls sideways. `current` marks the page.
 export default function AdminShell({ current, title, lead, actions = null, children }) {
+  const sideRef = useRef(null);
   const data = useAdmin();
   const counts = data?.counts || {};
   const items = A.nav.flatMap((g) => g.items);
@@ -37,7 +39,7 @@ export default function AdminShell({ current, title, lead, actions = null, child
       </header>
 
       <div className="rt-adm__body">
-        <nav className="rt-adm__side" aria-label="Admin">
+        <nav className="rt-adm__side rt-pill-scroll" aria-label="Admin" ref={sideRef}>
           {A.nav.map((g) => (
             <div key={g.group} className="rt-adm__group">
               <p className="rt-adm__grouplabel">{g.group}</p>
@@ -54,6 +56,7 @@ export default function AdminShell({ current, title, lead, actions = null, child
               </ul>
             </div>
           ))}
+          <FilterScrollPill scrollRef={sideRef} />
         </nav>
         <ul className="rt-acc__chips rt-adm__chips">
           {items.map((x) => (

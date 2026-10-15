@@ -281,7 +281,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
           <h1 className="rt-cat__title">{heading}</h1>
           {scope?.lead && <p className="rt-cat__lede">{scope.lead}</p>}
 
-          <form className="rt-cat-search" onSubmit={submitSearch} role="search">
+          <form className="rt-cat-search" onSubmit={submitSearch} role="search" noValidate>
             <div className="rt-cat-search__field">
               <i className="icon-search text-16 text-light-1"></i>
               <input type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Course or skill" aria-label="Course or skill" autoComplete="off" />

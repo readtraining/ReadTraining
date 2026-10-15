@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Due, Pill, formatWhen } from "./adminParts";
 import { REQUEST_TONE } from "./AdminRequests";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = W.requests;
 const d = copy.detail;
@@ -137,13 +138,10 @@ export default function AdminRequest({ reference }) {
             {r.phone && <div><dt>Phone</dt><dd><a href={`tel:${r.phone.replace(/\s/g, "")}`}>{r.phone}</a></dd></div>}
           </dl>
           {r.open && (
-            <form className="rt-adm-inline" onSubmit={(e) => { e.preventDefault(); assignRequest(r, assignee ?? r.assignee); setSaid("Assigned"); }}>
+            <form className="rt-adm-inline" noValidate onSubmit={(e) => { e.preventDefault(); assignRequest(r, assignee ?? r.assignee); setSaid("Assigned"); }}>
               <div className="rt-field">
                 <label htmlFor="rt-adm-assign">{d.assign}</label>
-                <select id="rt-adm-assign" value={assignee ?? r.assignee} onChange={(e) => setAssignee(e.target.value)}>
-                  <option value="">{copy.unassigned}</option>
-                  {staff.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
+                <FieldSelect id="rt-adm-assign" label={d.assign} value={assignee ?? r.assignee} onChange={setAssignee} options={[{ value: "", label: copy.unassigned }, ...staff]} compact />
               </div>
               <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{d.assignSave}</button>
             </form>

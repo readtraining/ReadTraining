@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
 import { assignPlace, getBusiness, unassignPlace } from "@/lib/businessAccount";
 import { formatDateRange } from "@/lib/format";
 import { Avatar } from "@/components/marketing/parts";
 import { PlacesBar } from "./bizParts";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = biz.assignments;
 
@@ -14,6 +15,7 @@ const copy = biz.assignments;
 // (the /for-business page's "Assign now / Hold for later" list, working).
 function PlaceCard({ p, learners, highlight, onChange }) {
   const [pick, setPick] = useState({});
+  const uid = useId();
   const free = learners.filter((l) => !p.assigned.includes(l.id));
   const byId = Object.fromEntries(learners.map((l) => [l.id, l]));
   const assign = (slot) => {
@@ -51,13 +53,10 @@ function PlaceCard({ p, learners, highlight, onChange }) {
             <div className="fb-list__main"><b>{copy.unassigned} {i + 1}</b><span>{p.title}</span></div>
             {free.length ? (
               <div className="rt-biz__assign">
-                <label className="rt-field">
-                  <span className="rt-sr">{copy.choose} for {copy.unassigned.toLowerCase()} {i + 1}</span>
-                  <select value={pick[i] || ""} onChange={(e) => setPick((x) => ({ ...x, [i]: e.target.value }))}>
-                    <option value="">{copy.choose}</option>
-                    {free.map((l) => <option key={l.id} value={l.id}>{l.name}{l.status === "invited" ? " (invited)" : ""}</option>)}
-                  </select>
-                </label>
+                <div className="rt-field">
+                  <label className="rt-sr" htmlFor={`rt-biz-pick-${uid}-${i}`}>{copy.choose} for {copy.unassigned.toLowerCase()} {i + 1}</label>
+                  <FieldSelect id={`rt-biz-pick-${uid}-${i}`} label={copy.choose} placeholder={copy.choose} value={pick[i] || ""} onChange={(value) => setPick((x) => ({ ...x, [i]: value }))} options={free.map((l) => ({ value: l.id, label: `${l.name}${l.status === "invited" ? " (invited)" : ""}` }))} compact />
+                </div>
                 <button type="button" className="button -md -purple-1 text-white" disabled={!pick[i]} onClick={() => assign(i)}>{copy.assign}</button>
               </div>
             ) : (

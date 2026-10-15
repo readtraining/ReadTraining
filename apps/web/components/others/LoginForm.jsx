@@ -125,7 +125,7 @@ export default function LoginForm() {
           <p>Don&apos;t have an account? <Link href={AUTH_ROUTES.signUp}>Sign up</Link></p>
           <p className="rt-auth__partner">
             Looking to partner with ReadTraining?
-            <span><Link href="/for-providers">Course provider</Link><span aria-hidden="true"> · </span><Link href="/for-business">Business account</Link></span>
+            <span><Link href="/for-providers">Course provider</Link><span aria-hidden="true"> | </span><Link href="/for-business">Business account</Link></span>
           </p>
         </>
       }

@@ -7,6 +7,7 @@ import { cancellableLines, getBooking, getProfile, requestCancellation } from "@
 import { formatPrice } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = account.cancel;
 
@@ -119,10 +120,7 @@ export default function CancelRequest({ reference }) {
         <div className="rt-field">
           <label htmlFor="rt-cx-reason">{copy.reasons.label}</label>
           {errors.reason && <p className="rt-q__err" id="rt-cx-reason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
-          <select id="rt-cx-reason" value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-cx-reason-e" : undefined}>
-            <option value="">Select a reason</option>
-            {copy.reasons.options.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
+          <FieldSelect id="rt-cx-reason" label={copy.reasons.label} placeholder="Select a reason" value={reason} onChange={setReason} options={copy.reasons.options} invalid={Boolean(errors.reason)} describedBy={errors.reason ? "rt-cx-reason-e" : undefined} />
         </div>
         <div className="rt-field">
           <label htmlFor="rt-cx-details">{copy.details}</label>

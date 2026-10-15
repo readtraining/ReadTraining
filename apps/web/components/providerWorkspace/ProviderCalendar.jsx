@@ -6,19 +6,17 @@ import { todayIso, useProvider } from "@/lib/providerWorkspace";
 import { Empty, Loading, Tabs, getQuery, setQuery, shortDay } from "./providerParts";
 import { addDays, longDay, monthLabel, weekday } from "./ProviderCohorts";
 
-// The calendar: every session of every cohort by month, week, day or as a list (view and date kept in the address, ?view= and
-// ?date=). Each session is a link to its cohort; cancelled cohorts stay visible, struck through. On phones the month becomes a
+// The calendar: every session of every cohort by month, week or day (view and date kept in the address, ?view= and ?date=); the
+// List / Calendar switch above it goes back to the cohort list. Sessions show in their cohort's colour, past ones grey. Each session is a link to its cohort; cancelled cohorts stay visible, struck through. On phones the month becomes a
 // list of the days that have sessions.
 
 const VIEWS = [
   { key: "month", label: "Month" },
   { key: "week", label: "Week" },
   { key: "day", label: "Day" },
-  { key: "list", label: "List" },
 ];
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const MAX_CHIPS = 3;
-const LIST_DAYS = 60;
 const isIso = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "") && !Number.isNaN(Date.parse(s));
 const monthStart = (iso) => `${iso.slice(0, 7)}-01`;
 const shiftMonth = (iso, n) => {
@@ -69,14 +67,13 @@ export default function ProviderCalendar() {
   const byDay = sessionsByDay(data.cohorts);
   const today = data.today;
   const weekStart = addDays(date, -weekday(date));
-  const step = { month: (n) => shiftMonth(date, n), week: (n) => addDays(date, 7 * n), day: (n) => addDays(date, n), list: (n) => addDays(date, LIST_DAYS * n) }[view];
+  const step = { month: (n) => shiftMonth(date, n), week: (n) => addDays(date, 7 * n), day: (n) => addDays(date, n) }[view];
   const title = {
     month: monthLabel(date),
     week: `${fmt(weekStart)} to ${fmt(addDays(weekStart, 6))}`,
     day: longDay(date),
-    list: `From ${fmt(date)}`,
   }[view];
-  const unit = { month: "month", week: "week", day: "day", list: `${LIST_DAYS} days` }[view];
+  const unit = { month: "month", week: "week", day: "day" }[view];
 
   return (
     <div className="rt-acc__stack">
@@ -93,7 +90,6 @@ export default function ProviderCalendar() {
       {view === "month" && <MonthView date={date} today={today} byDay={byDay} onDay={(d) => { go(d); pickView("day"); }} />}
       {view === "week" && <WeekView start={weekStart} today={today} byDay={byDay} />}
       {view === "day" && <DayList days={[date]} today={today} byDay={byDay} showEmpty />}
-      {view === "list" && <DayList days={Array.from({ length: LIST_DAYS }, (_, i) => addDays(date, i))} today={today} byDay={byDay} emptyText={`No sessions in the ${LIST_DAYS} days from ${fmt(date)}.`} />}
     </div>
   );
 }
@@ -101,7 +97,7 @@ export default function ProviderCalendar() {
 function Chip({ e, short = false }) {
   const label = `${e.title}, ${e.from} to ${e.to}, ${e.where}${e.cancelled ? ", cancelled" : ""}`;
   return (
-    <Link href={`/provider/cohorts/${e.cohort.id}`} className={`rt-pws-cal__chip${e.cancelled ? " -cancelled" : ""}`} title={label}>
+    <Link href={`/provider/cohorts/${e.cohort.id}`} className={`rt-pws-cal__chip -c-${e.cohort.colour || "purple"}${e.cancelled ? " -cancelled" : e.cohort.last < todayIso() ? " -past" : ""}`} title={label}>
       <span aria-hidden="true"><b>{e.from}</b> {e.title}</span>
       {!short && <span className="rt-pws-cal__chipwhere" aria-hidden="true">{e.where}{e.cancelled ? " · Cancelled" : ""}</span>}
       <span className="rt-sr">{label}</span>

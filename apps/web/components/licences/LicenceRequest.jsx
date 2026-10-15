@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import CatalogueDropdown from "@/components/courses/CatalogueDropdown";
 import { licencesHub } from "@/data/licences";
 import { trackEvent } from "@/lib/analytics";
 import { validPostcode } from "@/lib/checkout";
@@ -103,10 +104,8 @@ export default function LicenceRequest({ licence, children }) {
         {hint && <small className="rt-field__hint" id={`${id}-hint`}>{hint}</small>}
         {err(k)}
         {props.options ? (
-          <select id={id} value={v[k]} onChange={set(k)} aria-invalid={errors[k] ? true : undefined} aria-describedby={by}>
-            <option value="">Select</option>
-            {props.options.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
+          // the site's own dropdown (as the catalogue's), not the browser's native list
+          <CatalogueDropdown className="rt-field-dd" id={id} label={label} placeholder="Select" options={props.options.map((o) => ({ value: o, label: o }))} value={v[k]} onChange={(value) => setV((x) => ({ ...x, [k]: value }))} clearable={false} invalid={Boolean(errors[k])} describedBy={by} openOnHover={false} />
         ) : (
           <input id={id} value={v[k]} onChange={set(k)} aria-invalid={errors[k] ? true : undefined} aria-describedby={by} {...props} />
         )}

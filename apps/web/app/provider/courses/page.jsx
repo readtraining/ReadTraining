@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import ProviderShell from "@/components/providerWorkspace/ProviderShell";
-import ProviderCourses from "@/components/providerWorkspace/ProviderCourses";
+import ProviderCourses, { CoursesProfile } from "@/components/providerWorkspace/ProviderCourses";
 import { pw } from "@/data/providerWorkspace";
 import { pageMetadata } from "@/lib/seo";
 
@@ -12,7 +12,7 @@ export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, descri
 
 export default function Page() {
   return (
-    <ProviderShell current="courses" title={p.title} lead={p.lead} actions={<Link href="/provider/courses/new" className="button -md -purple-1 text-white">New course</Link>}>
+    <ProviderShell current="courses" title={p.title} lead={p.lead} actions={<div className="rt-cx-head"><CoursesProfile /><Link href="/provider/courses/new" className="button -md -purple-1 text-white">New course</Link></div>}>
       <ProviderCourses />
     </ProviderShell>
   );

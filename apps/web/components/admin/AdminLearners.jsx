@@ -8,6 +8,7 @@ import { certState, issueCertificate, reinstateCertificate, revokeCertificate, u
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = A.learners;
 const CERT_TONE = { valid: "ok", none: "ok", expiring: "warn", expired: "muted", revoked: "late" };
@@ -161,10 +162,7 @@ export default function AdminLearners() {
           <div className="rt-field">
             <label htmlFor="rt-adm-courseId">Course</label>
             {err("courseId")}
-            <select id="rt-adm-courseId" value={form.courseId} onChange={(e) => setForm((f) => ({ ...f, courseId: e.target.value }))} aria-invalid={errors.courseId ? true : undefined} aria-describedby={errors.courseId ? "rt-adm-courseId-e" : undefined}>
-              <option value="">Select</option>
-              {catalogue.map((c) => <option key={c.id} value={String(c.id)}>{c.title}</option>)}
-            </select>
+            <FieldSelect id="rt-adm-courseId" label="Course" value={form.courseId} onChange={(value) => setForm((f) => ({ ...f, courseId: value }))} options={catalogue.map((c) => ({ value: c.id, label: c.title }))} invalid={Boolean(errors.courseId)} describedBy={errors.courseId ? "rt-adm-courseId-e" : undefined} />
           </div>
           <div className="rt-field">
             <label htmlFor="rt-adm-issued">Issue date</label>

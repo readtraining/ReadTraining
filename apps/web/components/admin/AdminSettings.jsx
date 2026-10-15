@@ -6,6 +6,7 @@ import { admin as A } from "@/data/admin";
 import { inviteStaff, saveFees, setStaffRole, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = A.settings;
 const TABS = ["staff", "fees", "audit"];
@@ -110,9 +111,7 @@ export default function AdminSettings() {
                         {me ? roleLabel(s.role) : (
                           <span className="rt-field rt-adm-select -inline">
                             <label htmlFor={`rt-adm-role-${s.email}`} className="rt-sr">Role for {s.name}</label>
-                            <select id={`rt-adm-role-${s.email}`} value={s.role} onChange={(e) => { setStaffRole(s, e.target.value); setSaid(`${s.name} is now ${roleLabel(e.target.value)}`); }}>
-                              {copy.roles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
-                            </select>
+                            <FieldSelect id={`rt-adm-role-${s.email}`} label={`Role for ${s.name}`} value={s.role} onChange={(value) => { setStaffRole(s, value); setSaid(`${s.name} is now ${roleLabel(value)}`); }} options={copy.roles.map((r) => ({ value: r.key, label: r.label }))} compact />
                           </span>
                         )}
                       </td>
@@ -178,9 +177,7 @@ export default function AdminSettings() {
           </div>
           <div className="rt-field">
             <label htmlFor="rt-adm-irole">Role</label>
-            <select id="rt-adm-irole" value={invite.role} onChange={(e) => setInvite((x) => ({ ...x, role: e.target.value }))}>
-              {copy.roles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
-            </select>
+            <FieldSelect id="rt-adm-irole" label="Role" value={invite.role} onChange={(value) => setInvite((x) => ({ ...x, role: value }))} options={copy.roles.map((r) => ({ value: r.key, label: r.label }))} />
           </div>
           <p className="rt-acc__note">They get an email to set a password and turn on two-factor sign-in.</p>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{copy.invite}</button>

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Sheet from "./Sheet";
 import { testPrepPage } from "@/data/testPrep";
 import { submitComment } from "@/lib/comments";
+import { focusFirstError } from "@/lib/focusFirstError";
 
 // "Leave a comment" (as on the reference, hurak.com): a button that opens the runner's pop-up (Sheet) with name, email (optional,
 // for a reply) and the comment. It checks the comment, sends through lib/comments.js (simulated until the endpoint exists) and
@@ -22,8 +23,7 @@ function CommentForm({ subject, test, onDone }) {
     e.preventDefault();
     if (text.trim().length < MIN_TEXT) {
       setError(c.errors.text);
-      document.getElementById("rt-cm-text")?.focus();
-      return;
+      return focusFirstError(e.currentTarget);
     }
     setStatus("sending");
     try {
@@ -47,10 +47,10 @@ function CommentForm({ subject, test, onDone }) {
       </label>
       <div className="rt-field">
         <label htmlFor="rt-cm-text">{c.textLabel}</label>
+        {error && <p className="rt-q__err" id="rt-cm-text-err"><span className="rt-sr">Error: </span>{error}</p>}
         <textarea id="rt-cm-text" value={text} onChange={(e) => { setText(e.target.value); if (error && e.target.value.trim().length >= MIN_TEXT) setError(""); }} placeholder={c.textPlaceholder} maxLength={1000} aria-invalid={error ? "true" : undefined} aria-describedby={error ? "rt-cm-text-err" : undefined}></textarea>
-        {error && <p className="rt-tps__rverr" id="rt-cm-text-err">{error}</p>}
       </div>
-      {status === "failed" && <p className="rt-tps__rverr" role="alert">{c.failed}</p>}
+      {status === "failed" && <p className="rt-q__err" role="alert">{c.failed}</p>}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={status === "sending"}>
         {status === "sending" ? c.sending : c.submit}
       </button>

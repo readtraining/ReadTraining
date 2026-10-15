@@ -183,7 +183,7 @@ export default function TestPrepHub({ tests, initialCategory = "", initialQuery 
           <h1 className="rt-cat__title">{hero.title.map((line, i) => <Fragment key={line}>{i > 0 && <br />}{line}</Fragment>)}</h1>
           <p className="rt-tp__lede">{hero.text}</p>
 
-          <form className="rt-cat-search" role="search" onSubmit={(e) => { e.preventDefault(); toList(); }}>
+          <form className="rt-cat-search" role="search" noValidate onSubmit={(e) => { e.preventDefault(); toList(); }}>
             <div className="rt-cat-search__field">
               <i className="icon-search text-16 text-light-1" aria-hidden="true"></i>
               <input type="search" value={query} onChange={(e) => searchFor(e.target.value)} placeholder={hero.searchPlaceholder} aria-label="Search tests" autoComplete="off" />
