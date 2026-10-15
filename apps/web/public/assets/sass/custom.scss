@@ -4257,6 +4257,9 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* assign places */
 .rt-biz__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 .rt-biz__place { scroll-margin-top: calc(var(--header-offset, 0px) + 24px); }
+/* the page column is a grid: let the cards and the toolbar be narrower than their one-line content (long emails), so on phones
+   the emails shorten with … instead of widening the page */
+.rt-biz__place, .rt-biz__bar { min-width: 0; }
 .rt-biz__place.is-highlight { border-color: var(--color-purple-1); box-shadow: inset 0 0 0 1px var(--color-purple-1); }
 .rt-biz__meta { margin-top: 4px; }
 .fb-page .fb-list.rt-biz__places { margin-top: 6px; }
@@ -4269,8 +4272,10 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 @media (max-width: 767px) {
   .fb-page .rt-biz__freeslot { flex-wrap: wrap; }
   .rt-biz__assign { width: 100%; }
-  .rt-biz__assign .rt-field { flex: 1 1 auto; }
-  .rt-biz__assign .rt-field-dd, .rt-biz__assign .rt-cat-dd__trigger { width: 100%; }
+  .rt-biz__assign .rt-field { flex: 1 1 auto; min-width: 0; }
+  .rt-biz__assign .rt-field-dd, .rt-biz__assign .rt-cat-dd__trigger { width: 100%; min-width: 0; }
+  .rt-biz__assign .rt-cat-dd__trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rt-biz__assign .button { flex: none; }
 }
 /* billing: the credit account */
 .rt-biz__creditnums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }

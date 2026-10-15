@@ -42,7 +42,7 @@ function PlaceCard({ p, learners, highlight, onChange }) {
         {p.assigned.map((id) => (
           <li key={id} className="fb-list__row">
             <Avatar name={byId[id].name} />
-            <div className="fb-list__main"><b>{byId[id].name}</b><span>{byId[id].email}</span></div>
+            <div className="fb-list__main"><b>{byId[id].name}</b><span title={byId[id].email}>{byId[id].email}</span></div>
             <span className="rt-pill rt-acc__status -completed">{copy.assigned}</span>
             <button type="button" className="rt-biz__remove" onClick={() => remove(id)}>{copy.unassign}<span className="rt-sr"> {byId[id].name} from {p.title}</span></button>
           </li>
