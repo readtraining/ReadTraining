@@ -184,7 +184,7 @@ export const account = {
     save: "Save changes",
     saving: "Saving…",
     saved: "Your changes have been saved.",
-    failed: { title: "We couldn't load your settings", text: "Check your connection, then try again.", retry: "Try again" },
+    failed: { title: "We couldn't load your settings", text: "Check your connection, then try again." },
     basic: { title: "Basic information", lead: "Used for your account and on your bookings.", verified: "Verified" },
     photo: { title: "Profile photo", hint: "A square JPG, PNG or WebP works best.", add: "Add a photo", change: "Change photo", remove: "Remove photo", saved: "Your photo has been updated.", removed: "Your photo has been removed." },
     address: { title: "Address", lead: "Your billing address." },

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { docState, useAdmin } from "@/lib/admin";
 import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.providers;
 const TABS = ["all", "applied", "active", "suspended"];
@@ -64,7 +65,7 @@ export default function AdminProviders() {
           </table>
         </div>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">No providers match.</p>
+        <EmptyState title="No providers match." />
       )}
     </div>
   );

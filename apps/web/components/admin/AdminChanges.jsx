@@ -6,6 +6,7 @@ import { admin as A } from "@/data/admin";
 import { actOnChange, ago, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Due, Pill, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.changes;
 const TYPE_TONE = { cancel: "warn", date: "info", dispute: "late" };
@@ -76,7 +77,7 @@ export default function AdminChanges() {
           })}
         </ul>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">{copy.empty}</p>
+        <EmptyState title={copy.empty} />
       )}
     </div>
   );

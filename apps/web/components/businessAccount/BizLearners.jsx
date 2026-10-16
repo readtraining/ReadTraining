@@ -9,6 +9,7 @@ import { Avatar } from "@/components/marketing/parts";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { CertPill, certLine } from "./bizParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = biz.learners;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -125,7 +126,7 @@ export default function BizLearners() {
             </tbody>
           </table>
         ) : (
-          <p className="rt-acc__empty">{copy.empty}</p>
+          <EmptyState inCard title={copy.empty} />
         )}
       </div>
 
@@ -150,13 +151,13 @@ export default function BizLearners() {
                   <li key={p.id}><div><b>{p.title}</b><span>{formatDate(p.date)} · {p.venue ? p.city : "Live online"}</span></div><span className={`rt-pill rt-acc__status -${p.state === "upcoming" ? "confirmed" : "completed"}`}>{p.state === "upcoming" ? "Booked" : "Completed"}</span></li>
                 ))}
               </ul>
-            ) : <p className="rt-acc__empty">{copy.detail.none}</p>}
+            ) : <EmptyState inCard title={copy.detail.none} />}
             <h3 className="rt-acc__h3">{copy.detail.certificates}</h3>
             {learner.certificates.length ? (
               <ul className="rt-acc__certs">
                 {learner.certificates.map((c) => <li key={c.number}><div><b>{c.title}</b><span>{certLine(c)}</span></div><CertPill state={c.state} /></li>)}
               </ul>
-            ) : <p className="rt-acc__empty">{copy.detail.noCerts}</p>}
+            ) : <EmptyState inCard title={copy.detail.noCerts} />}
             <Link href="/business/assignments" className="fb-textlink">{copy.detail.assign}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
           </div>
         )}

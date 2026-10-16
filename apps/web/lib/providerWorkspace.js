@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/format";
 const KEY = "rt-provider";
 export const PROVIDER_EVENT = "rt-provider-change";
 export const DAY = 86400000;
-const VERSION = 3; // 3: refund requests keep their booking reference (2: Hurak course setup fields, no payouts)
+const VERSION = 4; // 4: categories, sub-categories, topics and methods as catalogue slugs (3: refund booking reference; 2: Hurak setup fields)
 
 const readRaw = () => {
   try {

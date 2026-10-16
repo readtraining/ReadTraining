@@ -23,19 +23,6 @@ export function Loading({ rows = 3, stats = false }) {
   );
 }
 
-// No records yet: a short title, one line, and one action (DESIGN-SYSTEM.md, section 7).
-export function Empty({ title, text, action }) {
-  return (
-    <div className="rt-acc__card rt-pws-empty">
-      <p className="rt-pws-empty__title">{title}</p>
-      {text && <p className="rt-acc__note">{text}</p>}
-      {action && (action.href
-        ? <Link href={action.href} className="button -sm -purple-1 text-white">{action.label}</Link>
-        : <button type="button" className="button -sm -purple-1 text-white" onClick={action.onClick}>{action.label}</button>)}
-    </div>
-  );
-}
-
 // Hurak's List / Calendar switch above the cohorts and the calendar.
 export function CohortViews({ current }) {
   return (

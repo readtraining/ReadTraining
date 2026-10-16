@@ -8,15 +8,17 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, CardChoice, Choice, Empty, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, CardChoice, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
+import { EmptyState } from "@/components/states/States";
 
 // Cohorts: every run of a course, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status (set here by
 // hand), its instructor (assigned here), students (booked of places, with enrolled / rescheduled / cancelled), whether it takes
 // bookings (Enabled / Disabled), a favourite star and a row menu (View, Move to another course, Edit, Delete). Filtered by delivery,
 // course, date, status, venue, tutor and when, with a search; 10 a page. Rows can be picked for bulk actions (email joining
-// instructions, cancel upcoming runs). Filters are kept in the address. The On demand tab lists the on-demand courses (they have
+// instructions, cancel upcoming runs). Filters are kept in the address. The Self-paced tab lists the self-paced courses (they have
 // no dates: learners start when they book). CohortForm (named export) is the create and edit panel: dates picked on a two-month
 // calendar become session slots.
 
@@ -24,7 +26,7 @@ const MODES = [
   { key: "all", label: "All" },
   { key: "classroom", label: "Classroom" },
   { key: "live-online", label: "Live online" },
-  { key: "on-demand", label: "On demand" },
+  { key: "self-paced", label: "Self-paced" },
 ];
 const WHEN = [
   { value: "upcoming", label: "Upcoming and in progress" },
@@ -91,7 +93,7 @@ export default function ProviderCohorts() {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    const m = getQuery("mode");
+    const m = METHOD_ALIASES[getQuery("mode")] || getQuery("mode"); // old ?mode=on-demand links
     if (MODES.some((x) => x.key === m)) setMode(m);
     const c = getQuery("course");
     if (c) setCourse(c);
@@ -121,12 +123,12 @@ export default function ProviderCohorts() {
   if (!data) return <Loading rows={2} />;
   const { byId, today } = data;
   const scoped = data.cohorts;
-  const datedCourses = data.courses.filter((c) => c.format !== "on-demand");
-  const onDemand = data.courses.filter((c) => c.format === "on-demand");
+  const datedCourses = data.courses.filter((c) => c.format !== "self-paced");
+  const onDemand = data.courses.filter((c) => c.format === "self-paced");
 
   const needle = q.trim().toLowerCase();
   const list = scoped
-    .filter((k) => mode === "all" || mode === "on-demand" || k.course?.format === mode)
+    .filter((k) => mode === "all" || mode === "self-paced" || k.course?.format === mode)
     .filter((k) => !course || k.courseId === course)
     .filter((k) => !status || k.status === status)
     .filter((k) => !venue || (venue === "online" ? !k.venueId : k.venueId === venue))
@@ -196,7 +198,7 @@ export default function ProviderCohorts() {
   return (
     <div className="rt-acc__stack">
       {scoped.length === 0 ? (
-        <Empty
+        <EmptyState
           title="No cohorts yet"
           text="A cohort is one run of a course on set dates. Add one to start taking bookings."
           action={datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", href: "/provider/courses/new" }}
@@ -204,10 +206,10 @@ export default function ProviderCohorts() {
       ) : (
         <>
           <div className="rt-adm-toolbar">
-            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "on-demand" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); }} label="Delivery" />
+            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); }} label="Delivery" />
             {create}
           </div>
-          {mode !== "on-demand" && (
+          {mode !== "self-paced" && (
             <div className="rt-adm-toolbar rt-pws-coh__filters">
               <div className="rt-adm-toolbar__end">
                 <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))]} />
@@ -233,8 +235,8 @@ export default function ProviderCohorts() {
             </div>
           )}
 
-          <p className="rt-sr" aria-live="polite">{mode === "on-demand" ? `${onDemand.length} on-demand ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}`}</p>
-          {mode === "on-demand" ? (
+          <p className="rt-sr" aria-live="polite">{mode === "self-paced" ? `${onDemand.length} self-paced ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}`}</p>
+          {mode === "self-paced" ? (
             onDemand.length ? (
               <div className="rt-acc__card rt-biz__tablecard">
                 <p className="rt-acc__note">On-demand courses have no dates: learners start as soon as they book.</p>
@@ -256,7 +258,7 @@ export default function ProviderCohorts() {
                   </tbody>
                 </table>
               </div>
-            ) : <p className="rt-acc__card rt-acc__empty">No on-demand courses yet.</p>
+            ) : <EmptyState title="No self-paced courses yet." />
           ) : list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
@@ -339,10 +341,7 @@ export default function ProviderCohorts() {
               {pages > 1 && <div className="rt-pws-coh__pages"><CataloguePagination page={at} totalPages={pages} hrefFor={(p) => `?page=${p}`} onNavigate={setPage} /></div>}
             </div>
           ) : (
-            <div className="rt-acc__card rt-acc__empty rt-pws-coh__none">
-              <p>No cohorts match these filters.</p>
-              {filtered && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={clear}>Clear filters</button>}
-            </div>
+            <EmptyState title="No cohorts match these filters." action={filtered ? { label: "Clear filters", onClick: clear } : null} />
           )}
         </>
       )}
@@ -353,7 +352,7 @@ export default function ProviderCohorts() {
       <Sheet open={Boolean(moving)} onClose={() => setMoving(null)} title="Move cohort" closeLabel="Close">
         {moving && (
           <div className="rt-q__form">
-            <p className="rt-acc__note">Move {moving.course?.title || "this cohort"}, {dayRange(moving.first, moving.last)}, and the {moving.booked} {moving.booked === 1 ? "learner" : "learners"} booked on it to another {pw.formats.find((f) => f.key === moving.course?.format)?.short.toLowerCase()} course.</p>
+            <p className="rt-acc__note">Move {moving.course?.title || "this cohort"}, {dayRange(moving.first, moving.last)}, and the {moving.booked} {moving.booked === 1 ? "learner" : "learners"} booked on it to another {methodName(moving.course?.format).toLowerCase()} course.</p>
             {sameFormat(moving).length ? (
               <>
                 <div className="rt-field">
@@ -557,16 +556,16 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
           {!cohort && (
             <Choice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
-              options={pw.formats.filter((x) => x.key !== "on-demand").map((x) => ({ value: x.key, label: x.short }))} />
+              options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key) }))} />
           )}
           {!cohort ? (
             <div className="rt-field">
               <label htmlFor="rt-cf-course">Course</label>
               {err("courseId")}
-              <FieldSelect id="rt-cf-course" label="Course" value={f.courseId} onChange={(value) => { const c = data.byId.course[value]; setF((x) => ({ ...blankFor(c), sessions: x.sessions })); }} options={datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))} placeholder={datedCourses.length ? "Choose a course" : `No ${pw.formats.find((x) => x.key === studyMode)?.short.toLowerCase()} courses yet`} invalid={Boolean(errors.courseId)} describedBy={aria("courseId")["aria-describedby"]} />
+              <FieldSelect id="rt-cf-course" label="Course" value={f.courseId} onChange={(value) => { const c = data.byId.course[value]; setF((x) => ({ ...blankFor(c), sessions: x.sessions })); }} options={datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))} placeholder={datedCourses.length ? "Choose a course" : `No ${methodName(studyMode).toLowerCase()} courses yet`} invalid={Boolean(errors.courseId)} describedBy={aria("courseId")["aria-describedby"]} />
             </div>
           ) : (
-            <p className="rt-acc__note rt-pws-coh__for">For <b>{course?.title || "Untitled course"}</b> · {pw.formats.find((x) => x.key === course?.format)?.short}</p>
+            <p className="rt-acc__note rt-pws-coh__for">For <b>{course?.title || "Untitled course"}</b> · {methodName(course?.format)}</p>
           )}
 
           <div className="rt-pws-coh__dates">

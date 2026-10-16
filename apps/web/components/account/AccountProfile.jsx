@@ -9,6 +9,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { ErrorState } from "@/components/states/States";
 
 const copy = account.profile;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -25,11 +26,7 @@ export default function AccountProfile() {
   if (me.isLoading || me.person === undefined || me.error?.data?.code === "UNAUTHORIZED") return <ProfileSkeleton />;
   if (me.error || !me.data) {
     return (
-      <section className="rt-acc__card rt-acc__state" role="alert">
-        <h2 className="rt-acc__h2">{copy.failed.title}</h2>
-        <p className="rt-acc__note">{copy.failed.text}</p>
-        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => me.refetch()}>{copy.failed.retry}</button>
-      </section>
+      <ErrorState title={copy.failed.title} text={copy.failed.text} onRetry={() => me.refetch()} />
     );
   }
   return (

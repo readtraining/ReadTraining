@@ -11,6 +11,8 @@ import Toast from "@/components/courses/Toast";
 import { COHORT_TONE, Choice, Loading, ORDER_TONE, Pill, RowMenu, formatWhen } from "./providerParts";
 import { CohortForm, Seats, dayRange } from "./ProviderCohorts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { methodName } from "@/lib/taxonomy";
+import { EmptyState } from "@/components/states/States";
 
 // Manage cohort, as Hurak's: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
 // whether it takes bookings, tutor), with Edit cohort details, Enroll student (a new order on these dates), Bulk enrolment (a
@@ -63,10 +65,7 @@ export default function ProviderCohort({ cohortId }) {
   const k = data.byId.cohort[cohortId];
   if (!k) {
     return (
-      <div className="rt-acc__card rt-acc__empty">
-        <p>This cohort was not found. It may have been removed.</p>
-        <Link href="/provider/cohorts" className="fb-textlink">All cohorts<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
-      </div>
+      <EmptyState title="This cohort was not found." text="It may have been removed." action={{ href: "/provider/cohorts", label: "All cohorts" }} />
     );
   }
 
@@ -125,7 +124,7 @@ export default function ProviderCohort({ cohortId }) {
           {course && <Link href={`/provider/courses/${course.id}?tab=curriculum`} className="button -sm -outline-purple-1 text-purple-1">Manage curriculum</Link>}
         </div>
         <dl className="rt-pws-coh__details">
-          <div><dt>Course</dt><dd>{course ? <Link href={`/provider/courses/${course.id}`} className="rt-adm-strong">{course.title || "Untitled course"}</Link> : "Course removed"}<small>{pw.formats.find((f) => f.key === course?.format)?.short}</small></dd></div>
+          <div><dt>Course</dt><dd>{course ? <Link href={`/provider/courses/${course.id}`} className="rt-adm-strong">{course.title || "Untitled course"}</Link> : "Course removed"}<small>{methodName(course?.format)}</small></dd></div>
           <div><dt>Dates</dt><dd>{dayRange(k.first, k.last)}{k.sessions.length > 1 && <small>{k.sessions.length} sessions</small>}</dd></div>
           <div><dt>Venue</dt><dd>{where}</dd></div>
           <div><dt>Timings</dt><dd>{[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}</dd></div>
@@ -279,7 +278,7 @@ export default function ProviderCohort({ cohortId }) {
               </tbody>
             </table>
         ) : (
-          <p className="rt-acc__empty rt-pws-coh__tablenote">No students yet. Bookings from ReadTraining, your website and your own orders appear here.</p>
+          <EmptyState inCard title="No students yet." text="Bookings from ReadTraining, your website and your own orders appear here." />
         )}
       </section>
 

@@ -9,11 +9,13 @@ import FaqSection from "@/components/marketing/FaqSection";
 import SubjectFacts from "@/components/testPrep/subject/SubjectFacts";
 import ProviderAbout from "@/components/providers/ProviderAbout";
 import ProviderCourses from "@/components/providers/ProviderCourses";
-import { Empty } from "@/components/providerWorkspace/providerParts";
+
 import { providerPages } from "@/data/providers";
 import { PROVIDERS_HREF, fillName, getProvider, getProviderSlugs, joinList } from "@/lib/providers";
 import { getPublicProvider } from "@/lib/publicProvider";
 import { abs, breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { EmptyState } from "@/components/states/States";
 
 // A listed provider (/providers/<slug>), in the marketing-page language of /about-us: centred dark hero with the provider's key
 // facts on its edge > about (with the details card) > its courses as cards (lavender) > its terms and policies > need help >
@@ -26,6 +28,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const p = getProvider(slug);
   if (!p) {
@@ -41,6 +44,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function ProviderPage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const p = getProvider(slug);
   if (!p) {
@@ -120,8 +124,8 @@ function NewProviderPage({ provider }) {
         <main id="rt-prov-main" tabIndex={-1}>
           <MarketingHero hero={hero} />
           <div className="container rt-prov-new">
-            <Empty title={fillName(n.about.title, provider.name)} text={fillName(n.about.text, provider.name)} />
-            <Empty title={n.courses.title} text={fillName(n.courses.text, provider.name)} action={n.courses.action} />
+            <EmptyState title={fillName(n.about.title, provider.name)} text={fillName(n.about.text, provider.name)} />
+            <EmptyState title={n.courses.title} text={fillName(n.courses.text, provider.name)} action={n.courses.action} />
           </div>
           <FaqSection compact eyebrow={d.policies.eyebrow} title={d.policies.title} text={fillName(d.policies.text, provider.name)} items={d.policies.items} idPrefix="prov-policy" />
         </main>

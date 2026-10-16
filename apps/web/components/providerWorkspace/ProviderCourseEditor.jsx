@@ -11,8 +11,10 @@ import { formatPrice } from "@/lib/format";
 import CourseCurriculum from "./CourseCurriculum";
 import { CourseGear, RecordsPanel, ResitPanel, SeoPanel } from "./CourseSettings";
 import PackageEditor from "./PackageEditor";
-import { COURSE_TONE, CardChoice, Choice, Empty, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, CardChoice, Choice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { categoryName, categoryOptions, levelOptions, methodName, subcategoryName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
+import { EmptyState } from "@/components/states/States";
 
 // Hurak's seven course sections, in its order, each ticked in the "Publish your course" list when it is complete
 const SECTIONS = [
@@ -51,7 +53,7 @@ function sectionOk(c, key) {
   if (key === "records") return !c.settings.clr.enabled || c.settings.clr.fields.length + c.settings.clr.custom.length > 0;
   if (key === "mode") return c.format !== "classroom" || c.venues.length > 0;
   if (key === "seo") return Boolean(c.settings.seo.title && c.settings.seo.description);
-  return c.format !== "on-demand" || c.curriculum.some((s) => s.lessons.length);
+  return c.format !== "self-paced" || c.curriculum.some((s) => s.lessons.length);
 }
 const NEEDS = {
   landing: "a title, subtitle, category, sub-category, course details and a course image",
@@ -60,7 +62,7 @@ const NEEDS = {
   records: "at least one heading, or No",
   mode: "a venue for classroom courses",
   seo: "an SEO title and description",
-  activities: "at least one activity for on-demand courses",
+  activities: "at least one activity for self-paced courses",
 };
 
 // One course, as Hurak's editor: the "Publish your course" list on the left (one item per section, ticked when complete, kept in
@@ -109,7 +111,7 @@ export default function ProviderCourseEditor({ courseId }) {
   }, [dirty]);
 
   if (!data || (course && (!desc || !price))) return <Loading rows={3} />;
-  if (!course) return <Empty title="This course was not found" text="It may have been deleted." action={{ label: "Back to courses", href: "/provider/courses" }} />;
+  if (!course) return <EmptyState title="This course was not found" text="It may have been deleted." action={{ label: "Back to courses", href: "/provider/courses" }} />;
 
   const canSubmit = course.status === "draft" || course.status === "changes";
   const ticks = SECTIONS.map((x) => ({ ...x, ok: sectionOk(course, x.key) }));
@@ -235,8 +237,8 @@ function PreviewSheet({ open, onClose, data, desc, price }) {
   return (
     <Sheet open={open} onClose={onClose} title="Preview" closeLabel="Close">
       <article className="rt-pws-ce__preview">
-        {cover ? <img src={cover.src} alt={cover.alt || ""} /> : <p className="rt-acc__empty">No course image yet.</p>}
-        <p className="rt-pws-ce__pcat">{[pw.categories.find((c) => c.value === desc.category)?.label, desc.subcategory].filter(Boolean).join(" › ")}</p>
+        {cover ? <img src={cover.src} alt={cover.alt || ""} /> : <EmptyState inCard title="No course image yet." />}
+        <p className="rt-pws-ce__pcat">{[categoryName(desc.category), subcategoryName(desc.category, desc.subcategory)].filter(Boolean).join(" › ")}</p>
         <h3>{desc.title || "Untitled course"}</h3>
         {desc.subtitle && <p>{desc.subtitle}</p>}
         {cost && <p className="rt-adm-price">{cost}</p>}
@@ -270,8 +272,8 @@ function LandingSection({ data, desc, setDesc }) {
 
   const images = desc.media.filter((m) => m.type === "image");
   const videos = desc.media.filter((m) => m.type === "video");
-  const subs = (pw.subcategories[desc.category] || []).map(([label, topics]) => ({ value: label, label, topics }));
-  const topics = subs.find((x) => x.value === desc.subcategory)?.topics || [];
+  const subs = subcategoryOptions(desc.category);
+  const topics = topicOptions(desc.category, desc.subcategory);
   const withImage = (img) => setDesc((d) => ({ ...d, media: [...d.media.filter((m) => m.type === "image"), img, ...d.media.filter((m) => m.type === "video")] }));
 
   const onFile = (e) => {
@@ -329,11 +331,11 @@ function LandingSection({ data, desc, setDesc }) {
         <div className="rt-pws-course-grid3">
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-level">Course level</label>
-            <FieldSelect id="rt-pws-ce-level" label="Course level" value={desc.level} onChange={set("level")} options={pw.levels} />
+            <FieldSelect id="rt-pws-ce-level" label="Course level" value={desc.level} onChange={set("level")} options={levelOptions()} />
           </div>
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-cat">Course category</label>
-            <FieldSelect id="rt-pws-ce-cat" label="Course category" placeholder="Choose a category" value={desc.category} onChange={(v) => setDesc((d) => ({ ...d, category: v, subcategory: "", topic: "" }))} options={pw.categories} />
+            <FieldSelect id="rt-pws-ce-cat" label="Course category" placeholder="Choose a category" value={desc.category} onChange={(v) => setDesc((d) => ({ ...d, category: v, subcategory: "", topic: "" }))} options={categoryOptions()} />
           </div>
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-subcat">Course subcategory</label>
@@ -384,7 +386,7 @@ function LandingSection({ data, desc, setDesc }) {
                   </li>
                 ))}
               </ul>
-            ) : <p className="rt-acc__empty">No images yet. Upload one or choose from your library.</p>}
+            ) : <EmptyState inCard title="No images yet. Upload one or choose from your library." />}
           </>
         ) : (
           <>
@@ -406,7 +408,7 @@ function LandingSection({ data, desc, setDesc }) {
                   </li>
                 ))}
               </ul>
-            ) : <p className="rt-acc__empty">No videos yet.</p>}
+            ) : <EmptyState inCard title="No videos yet." />}
           </>
         )}
       </section>
@@ -507,7 +509,7 @@ function InfoSection({ data, desc, setDesc }) {
               </li>
             ))}
           </ul>
-        ) : <p className="rt-acc__empty">No topics yet.</p>}
+        ) : <EmptyState inCard title="No topics yet." />}
       </section>
 
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-faqs-h">
@@ -525,7 +527,7 @@ function InfoSection({ data, desc, setDesc }) {
               </li>
             ))}
           </ul>
-        ) : <p className="rt-acc__empty">No FAQs on this course yet.</p>}
+        ) : <EmptyState inCard title="No FAQs on this course yet." />}
       </section>
 
       <TopicSheet open={sheet === "topic"} onClose={() => setSheet(null)} topic={editTopic === null ? null : desc.topics[editTopic]} onSave={(rows) => {
@@ -553,7 +555,7 @@ function ModeSection({ course, data, desc, setDesc, locked, onSaved }) {
         <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">Mode of study</h2>
         {locked && <p className="rt-adm-item__block">This course has orders, so how it is delivered can&apos;t change. Create a new course for another mode of study.</p>}
         <CardChoice name="rt-pws-ce-format" legend="How is the course content delivered to students?" value={desc.format} onChange={set("format")}
-          options={pw.formats.map((f) => ({ value: f.key, label: f.short, text: f.text, disabled: locked && f.key !== course.format }))} />
+          options={pw.formats.map((f) => ({ value: f.key, label: methodName(f.key), text: f.text, disabled: locked && f.key !== course.format }))} />
       </form>
 
       {desc.format === "classroom" && (
@@ -581,7 +583,7 @@ function ModeSection({ course, data, desc, setDesc, locked, onSaved }) {
                 </li>
               ))}
             </ul>
-          ) : <p className="rt-acc__empty">No venues on this course yet.</p>}
+          ) : <EmptyState inCard title="No venues on this course yet." />}
         </section>
       )}
 
@@ -619,7 +621,7 @@ function MediaLibrary({ open, onClose, data, current, onPick }) {
             </li>
           ))}
         </ul>
-      ) : <p className="rt-acc__empty">No other pictures yet. Pictures you upload to any course appear here.</p>}
+      ) : <EmptyState inCard title="No other pictures yet. Pictures you upload to any course appear here." />}
     </Sheet>
   );
 }

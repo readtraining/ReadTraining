@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.cancel;
 
@@ -47,12 +48,7 @@ export default function CancelRequest({ reference }) {
     return (
       <div className="rt-acc__stack">
         {back}
-        <div className="rt-bk__empty rt-acc__emptybox">
-          <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-calendar text-24"></i></span>
-          <h2>{msg.title}</h2>
-          <p>{msg.text}</p>
-          <Link href="/contact-us?topic=booking#contact-form" className="button -md -purple-1 text-white">Contact us</Link>
-        </div>
+        <EmptyState large icon="icon-calendar" headingLevel={2} title={msg.title} text={msg.text} action={{ href: "/contact-us?topic=booking#contact-form", label: "Contact us" }} />
       </div>
     );
   }

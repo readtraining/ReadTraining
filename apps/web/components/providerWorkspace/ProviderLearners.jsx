@@ -4,8 +4,9 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { useProvider } from "@/lib/providerWorkspace";
-import { Empty, Loading, getQuery, setQuery } from "./providerParts";
+import { Loading, getQuery, setQuery } from "./providerParts";
 import { formatOrderDay } from "./moneyParts";
+import { EmptyState } from "@/components/states/States";
 
 const PER_PAGE = 10;
 const FIELDS = [
@@ -28,7 +29,7 @@ export default function ProviderLearners() {
   useEffect(() => setPage(1), [f]);
   if (!data) return <Loading rows={2} />;
   if (!data.learners.length) {
-    return <Empty title="No learners yet" text="Once people book your courses, you can see their bookings here." action={{ href: "/provider/orders/new", label: "Create order" }} />;
+    return <EmptyState title="No learners yet" text="Once people book your courses, you can see their bookings here." action={{ href: "/provider/orders/new", label: "Create order" }} />;
   }
 
   const has = (v, needle) => !needle.trim() || String(v || "").toLowerCase().replace(/\s/g, "").includes(needle.trim().toLowerCase().replace(/\s/g, ""));
@@ -92,10 +93,7 @@ export default function ProviderLearners() {
           {pages > 1 && <div className="rt-pws-coh__pages"><CataloguePagination page={at} totalPages={pages} hrefFor={(p) => `?page=${p}`} onNavigate={setPage} /></div>}
         </div>
       ) : (
-        <div className="rt-acc__card rt-acc__empty">
-          <p>No learners match these details.</p>
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={clear}>Clear filters</button>
-        </div>
+        <EmptyState title="No learners match these details." action={{ label: "Clear filters", onClick: clear }} />
       )}
     </div>
   );

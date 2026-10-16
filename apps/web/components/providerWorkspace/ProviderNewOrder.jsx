@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/format";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Choice, Loading, Toggle, getQuery, shortDay } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { methodName } from "@/lib/taxonomy";
 
 // A manual order, one page: 1 the customer (find one we already know by email or name, or add a new one), 2 the courses and the
 // learners on each (same as the customer, someone already booked with you, or someone new), 3 how it is paid. A summary stays
@@ -92,7 +93,7 @@ export default function ProviderNewOrder() {
   if (!data) return <Loading rows={3} />;
 
   const courses = data.courses.filter((c) => c.status === "approved");
-  const isOnline = (c) => c?.format === "on-demand";
+  const isOnline = (c) => c?.format === "self-paced";
   const cohortsFor = (courseId) => data.cohorts.filter((k) => k.courseId === courseId && k.status === "upcoming" && !k.disabled && k.left > 0).sort((a, b) => a.first.localeCompare(b.first));
   const packFor = (c) => (c?.pricing.type === "tiered" ? data.byId.pack[c.pricing.packageId] : null);
   const listPrice = (line) => {
@@ -224,7 +225,7 @@ export default function ProviderNewOrder() {
   const lineLabel = (l) => {
     const c = data.byId.course[l.courseId];
     const k = data.byId.cohort[l.cohortId];
-    return { title: c?.title || "Choose a course", when: isOnline(c) ? "On demand" : k ? `${shortDay(k.first)}${k.last !== k.first ? ` to ${shortDay(k.last)}` : ""}` : "", plan: l.plan ? pw.tiers.find((t) => t.key === l.plan)?.label : "" };
+    return { title: c?.title || "Choose a course", when: isOnline(c) ? methodName("self-paced") : k ? `${shortDay(k.first)}${k.last !== k.first ? ` to ${shortDay(k.last)}` : ""}` : "", plan: l.plan ? pw.tiers.find((t) => t.key === l.plan)?.label : "" };
   };
 
   const summary = (
@@ -362,7 +363,7 @@ export default function ProviderNewOrder() {
                     </div>
                   </div>
                   <div className="rt-pws-ord__grid">
-                    <Select id={`${p}-course`} label="Course" error={err(`${p}-course`)} value={l.courseId} onChange={(value) => setLine(l.key, { courseId: value, cohortId: "", plan: "", priceTouched: false })} hint={fmt ? `${fmt.short}` : undefined} placeholder="Choose a course" options={courses.map((x) => ({ value: x.id, label: x.title }))} />
+                    <Select id={`${p}-course`} label="Course" error={err(`${p}-course`)} value={l.courseId} onChange={(value) => setLine(l.key, { courseId: value, cohortId: "", plan: "", priceTouched: false })} hint={fmt ? methodName(fmt.key) : undefined} placeholder="Choose a course" options={courses.map((x) => ({ value: x.id, label: x.title }))} />
                     {c && !isOnline(c) && (
                       <Select id={`${p}-cohort`} label="Dates" error={err(`${p}-cohort`)} value={l.cohortId} onChange={(value) => setLine(l.key, { cohortId: value })} placeholder={ks.length ? "Choose the dates" : "No dates with places left"} options={ks.map((k) => ({ value: k.id, label: `${shortDay(k.first)}${k.last !== k.first ? ` to ${shortDay(k.last)}` : ""} · ${k.venue ? k.venue.city : "Online"} · ${k.left} left` }))} />
                     )}

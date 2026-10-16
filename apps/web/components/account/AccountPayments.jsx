@@ -6,6 +6,7 @@ import { addCard, cardExpired, getCards, removeCard, setDefaultCard } from "@/li
 import { validCardNumber, validExpiry } from "@/lib/checkout";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.payments;
 const digits = (v) => v.replace(/\D/g, "");
@@ -82,7 +83,7 @@ export default function AccountPayments() {
             })}
           </ul>
         ) : (
-          <div className="rt-acc__none"><p>{copy.none.text}</p></div>
+          <EmptyState inCard title={copy.none.text} />
         )}
       </section>
 

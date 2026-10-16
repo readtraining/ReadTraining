@@ -13,6 +13,8 @@ import { formatOrderDay } from "./moneyParts";
 import { dayRange } from "./ProviderCohorts";
 import { MoveSheet, ResitSheet, bookingPlan, cohortChoices } from "./ProviderCohort";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { methodName } from "@/lib/taxonomy";
+import { EmptyState } from "@/components/states/States";
 
 // Order details, as Hurak's: the order (amount, number, status, sales channel, payment method, purchase date, card), billing
 // details, the timeline with notes, the invoice (upload it, record when it was paid), the enrolled students (one card per
@@ -21,7 +23,6 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 // be marked paid, its link sent again or cancelled; a disputed one answered with evidence.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const DELIVERY = { classroom: "Classroom", "live-online": "Live online", "on-demand": "On demand" };
 
 export default function ProviderOrder({ reference }) {
   const data = useProvider();
@@ -41,7 +42,7 @@ export default function ProviderOrder({ reference }) {
   if (!data) return <Loading rows={3} />;
   const o = data.orders.find((x) => x.ref === reference);
   if (!o) {
-    return <p className="rt-acc__card rt-acc__empty">Order {reference} was not found. <Link href="/provider/orders">Back to orders</Link></p>;
+    return <EmptyState title={`Order ${reference} was not found.`} action={{ href: "/provider/orders", label: "Back to orders" }} />;
   }
 
   const m = o.money;
@@ -253,7 +254,7 @@ export default function ProviderOrder({ reference }) {
                 </div>
                 <dl className="rt-pws-ord__bookdl">
                   <div><dt>Course title</dt><dd>{c ? <Link href={`/provider/courses/${c.id}`}>{c.title}</Link> : "Course removed"}</dd></div>
-                  <div><dt>Delivery method</dt><dd>{DELIVERY[c?.format] || "—"}</dd></div>
+                  <div><dt>Delivery method</dt><dd>{methodName(c?.format) || "—"}</dd></div>
                   {k && <div><dt>Venue</dt><dd>{k.venue ? `${k.venue.name}, ${k.venue.street}, ${k.venue.city} ${k.venue.postcode}` : "Online"}</dd></div>}
                   {k && <div><dt>Course date</dt><dd>{dayRange(k.first, k.last)}</dd></div>}
                   {k && <div><dt>Course timings</dt><dd>{[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}</dd></div>}

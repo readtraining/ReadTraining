@@ -42,8 +42,7 @@ export function mergeLines(list) {
   }
   return out;
 }
-const MODE_LABEL = { classroom: "Classroom", online: "Live online", ondemand: "On demand" };
-export const modeLabel = (mode) => MODE_LABEL[mode] || "";
+export { modeLabel } from "@/lib/courseModes";
 export const hasDate = (item) => Boolean(item.sessionId && item.date);
 
 const basePrice = (item) => Number(item.price ?? item.discountedPrice) || 0;

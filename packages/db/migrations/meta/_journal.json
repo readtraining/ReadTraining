@@ -50,6 +50,20 @@
       "when": 1792131593544,
       "tag": "0006_member_job_title",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792152509334,
+      "tag": "0007_catalogue_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792152538419,
+      "tag": "0008_catalogue_starting_list",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { admin as A } from "@/data/admin";
-import { catalogueCourses, subjects } from "@/data/courseCatalogue";
+import { catalogueCourses } from "@/data/courseCatalogue";
+import { categoryName } from "@/lib/taxonomy";
 import { certificates as seedCertificates } from "@/data/certificates";
 import { getCourseBySlug } from "@/lib/courses";
 import { getProviders } from "@/lib/providers";
@@ -229,7 +230,6 @@ function buildChanges(saved, orders, now) {
 // ---- part 2: catalogue, sessions and venues, learners and certificates, staff and fees ---------------------------------------
 
 const hash = (...n) => n.reduce((h, x) => (h * 31 + x) % 9973, 7);
-const SUBJECT_LABEL = Object.fromEntries(subjects.map((x) => [x.value, x.label]));
 
 function buildCatalogue(saved, today) {
   return catalogueCourses.map((c) => {
@@ -248,7 +248,7 @@ function buildCatalogue(saved, today) {
       title: c.title,
       slug: course.slug,
       subject: c.subject,
-      category: SUBJECT_LABEL[c.subject] || c.subject,
+      category: categoryName(c.subject) || c.subject,
       duration: c.duration,
       validity: c.validity,
       level: c.level,

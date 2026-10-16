@@ -11,6 +11,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Pill, formatWhen } from "./adminParts";
 import { CREDIT_TONE } from "./AdminBusinesses";
+import { EmptyState } from "@/components/states/States";
 
 const copy = W.businesses;
 const d = copy.detail;
@@ -30,7 +31,7 @@ export default function AdminBusiness({ slug }) {
   const noteRef = useRef(null);
   if (!data) return null;
   const b = data.businesses.find((x) => x.slug === slug);
-  if (!b) return <p className="rt-acc__card rt-acc__empty">This business account was not found. <Link href="/admin/businesses">{d.back}</Link></p>;
+  if (!b) return <EmptyState title="This business account was not found." action={{ href: "/admin/businesses", label: d.back }} />;
 
   const used = b.limit > 0 ? Math.min(100, Math.round((b.used / b.limit) * 100)) : 0;
   const openLimit = () => {

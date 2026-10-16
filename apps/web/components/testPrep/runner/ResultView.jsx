@@ -6,6 +6,7 @@ import { testPrepPage } from "@/data/testPrep";
 import { markTest } from "@/app/mock-exams-test/actions";
 import { fill, readFinished, settleProgress } from "./attemptStore";
 import { useHeaderOffset } from "@/components/testPrep/subject/useHeaderOffset";
+import { EmptyState } from "@/components/states/States";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -165,7 +166,7 @@ export default function ResultView({ subject, test, links }) {
           ))}
         </div>
         {list.length === 0 ? (
-          <p className="rt-tr__none">{r.noneInFilter}</p>
+          <EmptyState inCard title={r.noneInFilter} />
         ) : (
           <ol className="rt-tr__list">
             {list.map((x) => (

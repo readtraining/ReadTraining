@@ -17,6 +17,7 @@ import { blogPage } from "@/data/blogPosts";
 import { BLOG_HREF, getMorePosts, getPost, getPostSlugs } from "@/lib/blog";
 import { toCourseCard } from "@/lib/courses";
 import { abs, breadcrumbLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A blog article (/blog/<slug>), in the legal pages' reading layout (components/doc): the contents pinned beside the text from
 // 992px (a collapsible list above it on smaller screens), the header (breadcrumb, title, intro, author, dates, reading time),
@@ -28,6 +29,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const post = getPost(slug);
   if (!post) return { title: "Article not found | ReadTraining" };
@@ -35,6 +37,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function BlogArticlePage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const post = getPost(slug);
   if (!post) notFound();

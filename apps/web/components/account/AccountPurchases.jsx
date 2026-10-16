@@ -5,6 +5,7 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { getBookings } from "@/lib/account";
 import { formatDate, formatPrice } from "@/lib/format";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.purchases;
 const TONE = { paid: "completed", refunded: "cancelled", requested: "requested" };
@@ -18,12 +19,7 @@ export default function AccountPurchases() {
   if (!orders) return null;
   if (!orders.length) {
     return (
-      <div className="rt-bk__empty rt-acc__emptybox">
-        <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-document text-24"></i></span>
-        <h2>{copy.empty.title}</h2>
-        <p>{copy.empty.text}</p>
-        <Link href={account.dashboard.next.cta.href} className="button -md -purple-1 text-white">{account.dashboard.next.cta.label}</Link>
-      </div>
+      <EmptyState large icon="icon-document" headingLevel={2} title={copy.empty.title} text={copy.empty.text} action={{ href: account.dashboard.next.cta.href, label: account.dashboard.next.cta.label }} />
     );
   }
   const statusOf = (o) => (o.status === "cancelled" ? "refunded" : o.cancellation ? "requested" : "paid");

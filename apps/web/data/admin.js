@@ -290,7 +290,7 @@ export const admin = {
   submissions: [
     { id: "ap-o1", type: "offering", provider: "apex-training", courseId: 46, hoursAgo: 5, detail: "Classroom, London, £99 per delegate" },
     { id: "ap-o2", type: "offering", provider: "kestrel-safety-training", courseId: 16, hoursAgo: 30, detail: "Classroom and live online, from £79" },
-    { id: "ap-o3", type: "offering", provider: "beacon-training-services", courseId: 20, hoursAgo: 52, detail: "Online self-paced, £24.99" },
+    { id: "ap-o3", type: "offering", provider: "beacon-training-services", courseId: 20, hoursAgo: 52, detail: "Self-paced, £24.99" },
     { id: "ap-d1", type: "dates", provider: "northstar-training", courseId: 1, hoursAgo: 2, detail: "4 new dates in Liverpool, Nov to Dec" },
     { id: "ap-d2", type: "dates", provider: "clearview-learning", courseId: 5, hoursAgo: 20, detail: "6 new dates in Glasgow, Nov" },
     { id: "ap-d3", type: "dates", provider: "harbour-training-group", courseId: 9, hoursAgo: 44, detail: "2 new dates in Bristol, Nov" },

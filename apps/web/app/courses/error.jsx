@@ -1,18 +1,13 @@
 "use client";
 
-// Error boundary for the courses page. The message and button follow the agreed wording.
+import { ErrorState } from "@/components/states/States";
+
+// Error boundary for the courses pages: the site's error state, with "Try again" (reset renders the page again).
 export default function Error({ reset }) {
   return (
-    <section className="rt-cat" role="alert">
+    <section className="rt-cat">
       <div className="container rt-cat__body rt-cat__body--message">
-        <div className="rt-cat__empty">
-          <p className="rt-cat__empty-title">We couldn&apos;t load courses. Check your connection and try again.</p>
-          <div className="rt-cat__empty-actions">
-            <button type="button" className="button -sm -purple-1 text-white" onClick={() => reset()}>
-              Try again
-            </button>
-          </div>
-        </div>
+        <ErrorState title="We couldn't load courses." text="Check your connection, then try again." onRetry={() => reset()} />
       </div>
     </section>
   );

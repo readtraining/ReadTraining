@@ -6,6 +6,7 @@ import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.orders;
 const TABS = ["all", "upcoming", "completed", "cancelled"];
@@ -64,7 +65,7 @@ export default function AdminOrders() {
           </table>
         </div>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">No orders match.</p>
+        <EmptyState title="No orders match." />
       )}
     </div>
   );

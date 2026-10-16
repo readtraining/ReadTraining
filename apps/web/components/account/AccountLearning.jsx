@@ -7,6 +7,7 @@ import { calendarFile, getBookings, getLearning } from "@/lib/account";
 import { courseHref } from "@/data/courseSlugs";
 import { formatDate } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.learning;
 const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
@@ -78,12 +79,7 @@ export default function AccountLearning() {
           })}
         </div>
       ) : (
-        <div className="rt-bk__empty rt-acc__emptybox">
-          <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-online-learning text-24"></i></span>
-          <h2>{copy.empty[tab].title}</h2>
-          <p>{copy.empty[tab].text}</p>
-          <Link href={account.dashboard.next.cta.href} className="button -md -purple-1 text-white">{account.dashboard.next.cta.label}</Link>
-        </div>
+        <EmptyState large icon="icon-online-learning" headingLevel={2} title={copy.empty[tab].title} text={copy.empty[tab].text} action={{ href: account.dashboard.next.cta.href, label: account.dashboard.next.cta.label }} />
       )}
     </div>
   );

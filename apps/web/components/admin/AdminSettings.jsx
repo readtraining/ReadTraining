@@ -8,6 +8,7 @@ import { currentAdmin } from "@/lib/adminStore";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.settings;
 const TABS = ["staff", "fees", "audit"];
@@ -161,7 +162,7 @@ export default function AdminSettings() {
               </tbody>
             </table>
           </div>
-        ) : <p className="rt-acc__card rt-acc__empty">{data.audit.length ? "No changes match." : copy.auditEmpty}</p>
+        ) : <EmptyState title={data.audit.length ? "No changes match." : copy.auditEmpty} />
       )}
 
       <Sheet open={inviting} onClose={() => setInviting(false)} title={copy.inviteTitle} closeLabel="Close">

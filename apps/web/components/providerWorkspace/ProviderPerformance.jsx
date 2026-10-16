@@ -6,10 +6,11 @@ import { pw } from "@/data/providerWorkspace";
 import { isoDay, replyReview, setLeadStatus, useProvider } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Toast from "@/components/courses/Toast";
-import { Empty, Loading, Pill, RowMenu, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import { Loading, Pill, RowMenu, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
 import { Stars, buckets, isRange, rangeStart } from "./insightParts";
 import { AreaChart, BarList, Delta, Sparkline, money } from "./charts";
 import { downloadCsv } from "./moneyParts";
+import { EmptyState } from "@/components/states/States";
 
 const VIEWS = [
   { key: "overview", label: "Overview" },
@@ -188,7 +189,7 @@ function Reviews({ data, onSaved }) {
   }, []);
 
   const all = data.reviews;
-  if (!all.length) return <Empty title="No reviews yet" text="Learners can review a course after they finish it. Their reviews appear here." />;
+  if (!all.length) return <EmptyState title="No reviews yet" text="Learners can review a course after they finish it. Their reviews appear here." />;
 
   const avg = all.reduce((t, r) => t + r.rating, 0) / all.length;
   const tests = { all: () => true, open: (r) => !r.reply, comment: (r) => Boolean(r.text) };
@@ -229,7 +230,7 @@ function Reviews({ data, onSaved }) {
           {list.map((r) => <ReviewCard key={r.id} r={r} course={data.byId.course[r.courseId]} onSaved={onSaved} />)}
         </ul>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">No reviews match.</p>
+        <EmptyState title="No reviews match." />
       )}
     </>
   );
@@ -298,7 +299,7 @@ function Leads({ data, start, now, onSaved }) {
   const list = inRange.filter((l) => status === "all" || l.status === status).sort((a, b) => b.at - a.at);
   const tabs = [{ key: "all", label: "All", count: inRange.length }, ...Object.entries(LEAD_STATUSES).map(([key, label]) => ({ key, label, count: inRange.filter((l) => l.status === key).length }))];
 
-  if (!data.leads.length) return <Empty title="No leads yet" text="Enquiries from your Enquiries courses appear here." />;
+  if (!data.leads.length) return <EmptyState title="No leads yet" text="Enquiries from your Enquiries courses appear here." />;
 
   return (
     <>
@@ -333,7 +334,7 @@ function Leads({ data, start, now, onSaved }) {
           })}
         </ul>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">No leads match.</p>
+        <EmptyState title="No leads match." />
       )}
     </>
   );

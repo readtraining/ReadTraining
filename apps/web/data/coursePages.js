@@ -1,7 +1,8 @@
 // The course pages (/courses/[slug]) linked from the footer's "Find a course" column. Each one is the course catalogue
 // (components/courses/CourseCatalogue) scoped to one study method, subject or set of courses, with its own heading, intro,
-// "about" text and FAQs. Read through lib/coursePages.js. The paths follow the client's current site (hurak.com/courses/...),
-// as the `slug`s in data/home/menu.js do: /courses/virtual is live online and /courses/online is self-paced.
+// "about" text and FAQs. Read through lib/coursePages.js. A study method's page is at its method's slug, the same word as its
+// name (brief §4): /courses/classroom, /courses/live-online, /courses/self-paced (the old /courses/virtual and /courses/online
+// redirect there, next.config.ts).
 //
 // `select` picks the courses: { method } (a study method), { subject } or { ids } (catalogue course ids).
 // `hide` lists the filter groups the page leaves out. `filters: false` drops the filter panel: only for a page with a
@@ -29,7 +30,7 @@ export const coursePages = [
     ],
   },
   {
-    slug: "virtual",
+    slug: "live-online",
     label: "Live online courses",
     title: "Live online training courses",
     description: "Compare live online training courses, taught by a tutor over video: health and safety, first aid awareness, hospitality, business and more.",
@@ -48,12 +49,12 @@ export const coursePages = [
     ],
   },
   {
-    slug: "online",
-    label: "Online self-paced courses",
-    title: "Online self-paced courses",
+    slug: "self-paced",
+    label: "Self-paced courses",
+    title: "Self-paced online courses",
     description: "Compare online self-paced courses you can start today: food hygiene, health and safety, care, business and more, at your own pace.",
     lead: "Start today and learn at your own pace, on any device. Ideal for awareness training and fitting study around work.",
-    select: { method: "on-demand" },
+    select: { method: "self-paced" },
     hide: ["method"],
     about: {
       title: "About self-paced online courses",

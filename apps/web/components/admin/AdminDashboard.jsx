@@ -7,6 +7,7 @@ import { docState, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Pill, Stats } from "./adminParts";
 import { MONEY_TONE } from "./AdminOrders";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.dashboard;
 const DAY = 86400000;
@@ -80,7 +81,7 @@ export default function AdminDashboard() {
               ))}
             </ul>
           ) : (
-            <p className="rt-acc__empty">{copy.atRiskNone}</p>
+            <EmptyState inCard title={copy.atRiskNone} />
           )}
           {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
         </section>

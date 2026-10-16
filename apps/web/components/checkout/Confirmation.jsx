@@ -8,6 +8,7 @@ import { ORDER_KEY, PAY_FAILED_KEY } from "@/lib/checkout";
 import { formatPrice } from "@/lib/format";
 import BasketSteps from "@/components/basket/BasketSteps";
 import { SaverLine } from "@/components/basket/BasketSummary";
+import { EmptyState } from "@/components/states/States";
 
 const readJson = (key) => {
   try {
@@ -77,12 +78,7 @@ export default function Confirmation() {
       <section className="rt-bk layout-pt-lg layout-pb-lg">
         <title>{`${c.none.title} | ReadTraining`}</title>
         <div className="container">
-          <div className="rt-bk__empty">
-            <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-calendar text-24"></i></span>
-            <h1 className="rt-ck__nonetitle">{c.none.title}</h1>
-            <p>{c.none.text}</p>
-            <Link href={c.none.cta.href} className="button -md -purple-1 text-white">{c.none.cta.label}</Link>
-          </div>
+          <EmptyState large icon="icon-calendar" headingLevel={1} title={c.none.title} text={c.none.text} action={{ href: c.none.cta.href, label: c.none.cta.label }} />
         </div>
       </section>
     );

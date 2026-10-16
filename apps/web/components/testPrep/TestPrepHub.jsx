@@ -10,6 +10,7 @@ import ActiveFilters from "@/components/courses/ActiveFilters";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { useHeaderOffset } from "@/components/testPrep/subject/useHeaderOffset";
 import { useResultsScroll } from "@/components/courses/useResultsScroll";
+import { EmptyState } from "@/components/states/States";
 
 // Test prep hub, built only from the site's own parts:
 // hero = the course catalogue's hero (dark band, search box, popular tags, waves); the list = the catalogue's layout
@@ -271,13 +272,7 @@ export default function TestPrepHub({ tests, initialCategory = "", initialQuery 
               <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clear} />
 
               {list.length === 0 ? (
-                <div className="rt-res__empty" role="status">
-                  <p className="rt-res__empty-title">No tests match your search</p>
-                  <p>Try another name, or see all tests.</p>
-                  <div className="rt-res__empty-actions">
-                    <button type="button" className="button -md -purple-1 text-white" onClick={clear}>Show all tests</button>
-                  </div>
-                </div>
+                <EmptyState live title="No tests match your search" text="Try another name, or see all tests." action={{ label: "Show all tests", onClick: clear }} />
               ) : (
                 <>
                   <ul className="row x-gap-20 y-gap-20 rt-tp__list">

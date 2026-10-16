@@ -13,6 +13,7 @@ import BasketLine from "./BasketLine";
 import { BasketBar, BasketSummary } from "./BasketSummary";
 import HomeCourseCard from "@/components/home/HomeCourseCard";
 import { useHeaderOffset } from "@/components/testPrep/subject/useHeaderOffset";
+import { EmptyState } from "@/components/states/States";
 
 const PROMO_KEY = "rt-promo";
 const UNDO_MS = 9000;
@@ -122,12 +123,7 @@ export default function BasketPage({ recommended }) {
           )}
 
           {empty && (
-            <div className="rt-bk__empty">
-              <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-basket text-24"></i></span>
-              <h2>{copy.empty.title}</h2>
-              <p>{copy.empty.text}</p>
-              <Link href={copy.empty.cta.href} className="button -md -purple-1 text-white">{copy.empty.cta.label}<i className="icon-arrow-right text-13 ml-10" aria-hidden="true"></i></Link>
-            </div>
+            <EmptyState large icon="icon-basket" headingLevel={2} title={copy.empty.title} text={copy.empty.text} action={{ href: copy.empty.cta.href, label: copy.empty.cta.label }} />
           )}
 
           {ready && cartCourses.length > 0 && (

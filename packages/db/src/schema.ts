@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
+  check,
   date,
   index,
   integer,
@@ -170,11 +171,84 @@ export const posts = pgTable('posts', {
   createdAt: createdAt(),
 }).enableRLS()
 
+// ---- the course catalogue's one list (brief §4) ---------------------------------------------------------------------------
+// Categories > sub-categories > topics, delivery methods and course levels, stored once. The public filters, the provider's
+// course form and the admin all read this list through the API, so they can never drift apart. Public reference data: read by
+// the API only (RLS on, no policy), changed only by admins (Part B: Catalogue settings). `position` orders each level;
+// `active` = false retires an entry without breaking courses that use it.
+// A method's and a level's web address is always its name in lower case with hyphens ("Live online" -> live-online), so the
+// name a person sees and the word in the address are the same word; the database refuses anything else.
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    position: integer('position').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+  },
+  (t) => [uniqueIndex('categories_slug_key').on(t.slug), check('categories_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+).enableRLS()
+
+export const subcategories = pgTable(
+  'subcategories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'restrict' }),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    position: integer('position').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+  },
+  (t) => [uniqueIndex('subcategories_category_slug_key').on(t.categoryId, t.slug), check('subcategories_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+).enableRLS()
+
+export const topics = pgTable(
+  'topics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subcategoryId: uuid('subcategory_id')
+      .notNull()
+      .references(() => subcategories.id, { onDelete: 'restrict' }),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    position: integer('position').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+  },
+  (t) => [uniqueIndex('topics_subcategory_slug_key').on(t.subcategoryId, t.slug), check('topics_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+).enableRLS()
+
+export const deliveryMethods = pgTable(
+  'delivery_methods',
+  {
+    slug: text('slug').primaryKey(),
+    name: text('name').notNull(),
+    position: integer('position').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+  },
+  (t) => [check('delivery_methods_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`)],
+).enableRLS()
+
+export const courseLevels = pgTable(
+  'course_levels',
+  {
+    slug: text('slug').primaryKey(),
+    name: text('name').notNull(),
+    position: integer('position').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+  },
+  (t) => [check('course_levels_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`)],
+).enableRLS()
+
 export type Profile = typeof profiles.$inferSelect
 export type Organisation = typeof organisations.$inferSelect
 export type OrganisationMember = typeof organisationMembers.$inferSelect
 export type AdminUser = typeof adminUsers.$inferSelect
 export type ActivityLogEntry = typeof activityLog.$inferSelect
 export type NewActivityLogEntry = typeof activityLog.$inferInsert
+export type Category = typeof categories.$inferSelect
+export type DeliveryMethod = typeof deliveryMethods.$inferSelect
 export type Post = typeof posts.$inferSelect
 export type NewPost = typeof posts.$inferInsert

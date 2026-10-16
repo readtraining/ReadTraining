@@ -17,6 +17,7 @@ import SubjectReviews from "@/components/testPrep/subject/SubjectReviews";
 import { TESTS_ID } from "@/components/testPrep/subject/scrollToTests";
 import { testPrepPage } from "@/data/testPrep";
 import { bookHref, getSubject, getSubjectCourses, getSubjectSlugs, moreSubjects, resolveTests, subjectHref } from "@/lib/testPrep";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Test prep subject page (/test-prep/<slug>): one template for every subject, driven by data/testPrepSubjects.js.
 // Order: slim bar (fixed, once the H1 has scrolled away, with "Start free test") > hero band (breadcrumb, category, H1, intro,
@@ -40,6 +41,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const s = getSubject(slug);
   if (!s) return { title: "Test not found | ReadTraining" };
@@ -57,6 +59,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function TestPrepSubjectPage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const s = getSubject(slug);
   if (!s) notFound();

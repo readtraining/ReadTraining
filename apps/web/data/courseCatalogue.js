@@ -1,6 +1,7 @@
 import { findMockTest } from "@/data/testPrep";
 import { providers } from "@/data/providers";
 import { coursePath } from "@/lib/routes";
+import { LEVEL_ALIASES, METHOD_ALIASES, categoryName, getTaxonomy, methodName, subcategoriesOf } from "@/lib/taxonomy";
 // Courses catalogue: filter model, sort options, dummy data and the pure filter/sort/URL helpers.
 // Swap `catalogueCourses` for an API response later; everything else only reads this shape:
 // { id, title, description, subject, methods[], level, venues[{ city, postcode }], providers,
@@ -11,30 +12,17 @@ export const PAGE_SIZE = 6;
 
 const slugify = (label) => label.toLowerCase().replace(/ & /g, "-and-").replace(/\s+/g, "-");
 
-export const subjects = [
-  "Accounting and Finance", "Building Services", "Business", "Construction", "First Aid",
-  "Health and Care", "Health and Safety", "Hospitality", "Lifestyle", "Marketing",
-  "Personal Development", "Security", "Teaching & Academics", "Telecommunication",
-].map((label) => ({ label, value: slugify(label) }));
-
-export const methods = [
-  { label: "Classroom", value: "classroom", icon: "icon-online-learning-4" },
-  { label: "Live (Online)", value: "live-online", icon: "icon-online-learning-2" },
-  { label: "On Demand", value: "on-demand", icon: "icon-time-management" },
-];
-
-export const levels = [
-  { label: "Beginner", value: "beginner", icon: "icon-book" },
-  { label: "Intermediate", value: "intermediate", icon: "icon-bar-chart" },
-  { label: "Advanced", value: "advance", icon: "icon-graduate-cap" },
-];
-
-// Single-select groups; `key` is both the state key and the URL query key.
-export const filterGroups = [
-  { key: "subject", label: "Subject", title: "Subjects", options: subjects },
-  { key: "method", label: "Method of Study", title: "Methods of Study", options: methods },
-  { key: "level", label: "Course Level", title: "Course Levels", options: levels },
-];
+// The filter groups, built from the catalogue's one list (lib/taxonomy.js: categories, delivery methods and levels from the
+// database). `key` is both the state key and the URL query key. Only the icons live here (how a method looks, not what it is).
+const METHOD_ICONS = { classroom: "icon-online-learning-4", "live-online": "icon-online-learning-2", "self-paced": "icon-time-management" };
+const LEVEL_ICONS = { beginner: "icon-book", intermediate: "icon-bar-chart", advanced: "icon-graduate-cap" };
+export function catalogueFilterGroups(t = getTaxonomy()) {
+  return [
+    { key: "subject", label: "Subject", title: "Subjects", options: t.categories.map((c) => ({ value: c.slug, label: c.name })) },
+    { key: "method", label: "Method of Study", title: "Methods of Study", options: t.methods.map((m) => ({ label: m.name, value: m.slug, icon: METHOD_ICONS[m.slug] || "icon-book" })) },
+    { key: "level", label: "Course Level", title: "Course Levels", options: t.levels.map((l) => ({ label: l.name, value: l.slug, icon: LEVEL_ICONS[l.slug] || "icon-book" })) },
+  ];
+}
 
 export const sortOptions = [
   { value: "popular", label: "Most popular" },
@@ -47,8 +35,6 @@ export const sortOptions = [
 export const closestSortOption = { value: "closest", label: "Closest" };
 const allSortValues = [...sortOptions.map((o) => o.value), closestSortOption.value];
 
-// Older links (e.g. the landing page search band) use these method labels.
-const methodAliases = { "live online": "live-online", "online self-paced": "on-demand" };
 
 const ldn = { city: "London", postcode: "EC1A 1BB", lat: 51.52, lng: -0.1 };
 const ldn2 = { city: "London", postcode: "E14 5AB", lat: 51.505, lng: -0.02 };
@@ -62,8 +48,8 @@ const liv = { city: "Liverpool", postcode: "L1 8JQ", lat: 53.41, lng: -2.98 };
 const not = { city: "Nottingham", postcode: "NG1 5FS", lat: 52.95, lng: -1.15 };
 const nwc = { city: "Newcastle", postcode: "NE1 4ST", lat: 54.97, lng: -1.61 };
 
-const C = "classroom", L = "live-online", D = "on-demand";
-const BEG = "beginner", INT = "intermediate", ADV = "advance";
+const C = "classroom", L = "live-online", D = "self-paced";
+const BEG = "beginner", INT = "intermediate", ADV = "advanced";
 
 const c = (id, subject, title, description, methods, level, venues, providers, rating, reviews, price, wasPrice, duration, validity) => ({
   id, title, description, subject: slugify(subject),
@@ -132,28 +118,18 @@ export const catalogueCourses = [
   { ...c(51, "Lifestyle", "Workplace Wellbeing Basics", "Practical habits for stress, sleep and healthy routines at work.", [L], BEG, [], 4, 4.5, 77, 295, 349, "1 day", "Certificate included"), imageSrc: "" },
 ];
 
-// Sub-subjects: shown in the Subjects filter after a subject is chosen (drill-down).
-const subDefs = {
-  "accounting-and-finance": [["Accountancy", [30, 31]], ["Bookkeeping", [29]]],
-  "building-services": [["Electrical", [32, 33]], ["Gas", [34]]],
-  business: [["Project Management", [26]], ["Human Resources", [27]], ["Leadership and Management", [28]]],
-  construction: [["CITB Courses", [10, 11]], ["CSCS Cards", [9]], ["Site Safety", [12, 48]]],
-  "first-aid": [["Workplace First Aid", [5, 6]], ["Paediatric First Aid", [7]], ["Mental Health First Aid", [8]]],
-  "health-and-care": [["Care Certificate", [17]], ["Safeguarding", [18]], ["Medication", [19]]],
-  "health-and-safety": [["IOSH", [13]], ["NEBOSH", [14]], ["Manual Handling", [15]], ["Fire Safety", [16]]],
-  hospitality: [["Food Hygiene", [20, 49]], ["Licensing", [21]], ["Barista and Coffee", [22]]],
-  lifestyle: [["Yoga and Fitness", [35]], ["Nutrition and Wellbeing", [36, 51]]],
-  marketing: [["Digital Marketing", [37, 39]], ["Social Media Marketing", [38]]],
-  "personal-development": [["Productivity", [40]], ["Communication", [41, 42]]],
-  security: [["SIA Licence Training", [1, 2, 3, 46, 52]], ["Close Protection", [4]], ["Conflict Management", [47, 50]]],
-  "teaching-and-academics": [["Teaching Qualifications", [23, 25]], ["Quality Assurance", [24]]],
-  telecommunication: [["Fibre and Cabling", [43, 44]], ["Networking", [45]]],
-};
-export const subSubjects = Object.fromEntries(
-  Object.entries(subDefs).map(([subject, subs]) => [subject, subs.map(([label]) => ({ label, value: slugify(label) }))]),
-);
+// Each demo course's sub-category (a slug from the catalogue list; shown in the Subjects drill-down once a subject is ticked).
 const subByCourseId = {};
-Object.values(subDefs).forEach((subs) => subs.forEach(([label, ids]) => ids.forEach((id) => (subByCourseId[id] = slugify(label)))));
+Object.entries({
+  bookkeeping: [29], "accounting-qualifications": [30, 31], electrical: [32, 33], gas: [34],
+  "project-management": [26], "human-resources": [27], "leadership-and-management": [28],
+  "cscs-cards": [9], "site-safety": [10, 11, 12, 48], "workplace-first-aid": [5, 6], "paediatric-first-aid": [7], "mental-health-first-aid": [8],
+  "care-certificate": [17], safeguarding: [18], medication: [19], "iosh-and-nebosh": [13, 14], "manual-handling": [15], "fire-safety": [16],
+  "food-safety": [20, 49], licensing: [21], "barista-and-coffee": [22], "yoga-and-fitness": [35], wellbeing: [36, 51],
+  "digital-marketing": [37, 38, 39], productivity: [40], communication: [41, 42],
+  "sia-licence-training": [1, 2, 3, 4], "sia-top-up": [46, 52], "conflict-management": [47, 50],
+  "teaching-qualifications": [23, 24, 25], "fibre-optics": [43], "network-cabling": [44], networking: [45],
+}).forEach(([sub, ids]) => ids.forEach((id) => (subByCourseId[id] = sub)));
 catalogueCourses.forEach((course) => {
   course.sub = subByCourseId[course.id] || "";
 });
@@ -163,8 +139,6 @@ catalogueCourses.forEach((course) => {
   course.detailsHref = coursePath(course.slug);
 });
 
-const methodByValue = Object.fromEntries(methods.map((m) => [m.value, m]));
-export const getMethodLabel = (value) => methodByValue[value]?.label ?? value;
 
 // --- location matching -------------------------------------------------------
 const norm = (s) => s.toLowerCase().replace(/\s+/g, "");
@@ -186,13 +160,11 @@ export function matchesLocation(course, query) {
 }
 
 // --- filtering / sorting -----------------------------------------------------
-const subjectLabelByValue = Object.fromEntries(subjects.map((x) => [x.value, x.label]));
-
 // Keyword matches title, subject and description, case-insensitive.
 const matchesKeyword = (course, q) => {
   const needle = (q || "").trim().toLowerCase();
   if (!needle) return true;
-  return [course.title, subjectLabelByValue[course.subject], course.description].some((t) => (t || "").toLowerCase().includes(needle));
+  return [course.title, categoryName(course.subject), course.description].some((t) => (t || "").toLowerCase().includes(needle));
 };
 
 // subject, sub, method and level are arrays of ticked values. Inside a group a course matches ANY ticked value (OR);
@@ -268,7 +240,7 @@ const valid = (group, value) => (group.options.some((o) => o.value === value) ? 
 
 // `base` is a course page's fixed choice ({ subject }: /courses/first-aid). Its sub-subjects are valid without ?subject=.
 export function parseCatalogueParams(params, base = {}) {
-  const [subjectG, methodG, levelG] = filterGroups;
+  const [subjectG, methodG, levelG] = catalogueFilterGroups();
   const sort = params.get("sort");
   const page = parseInt(params.get("page") || "1", 10);
   // a town page (/courses/<page>/<town>) sets the town as `base.location`; ?location= (even empty) overrides it
@@ -287,12 +259,12 @@ export function parseCatalogueParams(params, base = {}) {
   const many = (key, allowed, map = (v) => v) =>
     [...new Set((params.get(key) || "").split(",").map((v) => map(v.trim().toLowerCase())).filter((v) => allowed.has(v)))].sort();
   const subject = many("subject", new Set(subjectG.options.map((o) => o.value)));
-  const allowedSubs = new Set([...subject, ...(base.subject ? [base.subject] : [])].flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
+  const allowedSubs = new Set([...subject, ...(base.subject ? [base.subject] : [])].flatMap((sv) => subcategoriesOf(sv).map((x) => x.slug)));
   return {
     subject,
     sub: many("sub", allowedSubs),
-    method: many("method", new Set(methodG.options.map((o) => o.value)), (v) => methodAliases[v] || v),
-    level: many("level", new Set(levelG.options.map((o) => o.value))),
+    method: many("method", new Set(methodG.options.map((o) => o.value)), (v) => METHOD_ALIASES[v] || v),
+    level: many("level", new Set(levelG.options.map((o) => o.value)), (v) => LEVEL_ALIASES[v] || v),
     q: (params.get("q") || "").trim().slice(0, 80),
     location,
     min,
@@ -728,11 +700,11 @@ export function buildCourseDetail(course) {
       if (i < 4) makeSession("classroom", 21 + i * 4 + (course.id % 5), v);
     });
   }
-  // Live online has dated sessions; On Demand is its own option with one "start any time" entry.
+  // Live online has dated sessions; Self-paced is its own option with one "start any time" entry.
   if (course.methods.includes("live-online")) {
     for (let i = 0; i < 5; i++) makeSession("online", i * 7 + (course.id % 6), null);
   }
-  if (course.methods.includes("on-demand")) makeSession("ondemand", course.id % 6, null);
+  if (course.methods.includes("self-paced")) makeSession("ondemand", course.id % 6, null);
   sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
 
   // rating breakdown that always totals 100
@@ -747,7 +719,7 @@ export function buildCourseDetail(course) {
     return { name, date, rating: i === 3 || i === 5 ? 4 : 5, title, body, helpfulCount: ((course.id * 3 + i * 7) % 18) + 1 };
   });
 
-  const delivery = course.methods.map((m) => (m === "classroom" ? "classroom" : m === "live-online" ? "live online" : "on demand")).join(", ");
+  const delivery = course.methods.map((m) => methodName(m).toLowerCase()).join(", ");
   const faqs = [
     { question: "How long does this course take?", answer: `The course takes ${course.duration.toLowerCase()}. Exact start and finish times are shown against each date.` },
     { question: "What certificate will I receive?", answer: `You receive a ${info.qual.toLowerCase()} on completion. Certificate validity: ${course.validity.toLowerCase()}.` },
@@ -769,13 +741,13 @@ export function buildCourseDetail(course) {
   const examSubjects = ["security", "first-aid", "construction", "health-and-safety"];
   const features = course.id % 7 === 0 ? [] : (examSubjects.includes(course.subject)
     ? ["Unlimited exam resits", "Same day results", "Quicker certification", "Approved courses"]
-    : ["Certificate on completion", "Approved providers only"]).concat(course.methods.includes("on-demand") ? ["Study at your own pace"] : []).slice(0, 5);
+    : ["Certificate on completion", "Approved providers only"]).concat(course.methods.includes("self-paced") ? ["Study at your own pace"] : []).slice(0, 5);
   const assessment = course.id % 11 === 0 ? undefined : {
     format: course.subject === "first-aid" ? "Practical assessment" : course.subject === "security" ? "Multiple-choice exam and practical" : "Multiple-choice exam",
     questions: course.id % 5 === 0 ? undefined : 20 + (course.id % 4) * 10,
     passMark: course.id % 5 === 0 ? undefined : "70%",
     duration: hours <= 3 ? "45 minutes" : "1 hour",
-    openBook: course.level === "advance" ? "Open book" : "Closed book",
+    openBook: course.level === "advanced" ? "Open book" : "Closed book",
     resits: "One free resit within 28 days",
   };
   const certificate = {

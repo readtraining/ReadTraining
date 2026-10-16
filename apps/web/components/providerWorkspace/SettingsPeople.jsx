@@ -5,9 +5,10 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { pw } from "@/data/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { addQuestion, answerQuestion, changeRole, deleteQuestion, inviteMember, removeMember } from "@/lib/providerWorkspace";
-import { Empty, Pill, Tabs, ToolSelect, formatDay } from "./providerParts";
+import { Pill, Tabs, ToolSelect, formatDay } from "./providerParts";
 import { Confirm, Field, aria, isEmail, useParam } from "./settingsForm";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 // Settings › QA (learners' questions about a course, answered here and shown on the course page, plus questions the provider
 // answers up front) and the Team page (who can use the workspace, with a role each; the account owner can't be changed or removed).
@@ -92,9 +93,9 @@ export function QaTab({ data, say }) {
       </div>
       <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "question" : "questions"}`}</p>
       {data.qa.length === 0 ? (
-        <Empty title="No questions yet" text="When learners ask about a course, their questions arrive here. You can also answer common ones up front." action={{ label: "Add question", onClick: openAdd }} />
+        <EmptyState title="No questions yet" text="When learners ask about a course, their questions arrive here. You can also answer common ones up front." action={{ label: "Add question", onClick: openAdd }} />
       ) : list.length === 0 ? (
-        <p className="rt-acc__card rt-acc__empty">{show === "open" ? "Every question is answered." : "No questions match."}</p>
+        <EmptyState title={show === "open" ? "Every question is answered." : "No questions match."} />
       ) : (
         <ul className="rt-adm-items">
           {list.map((x) => (
@@ -184,7 +185,7 @@ export function TeamTab({ data, say }) {
       </div>
       <p className="rt-acc__note" aria-live="polite">{`${list.length} linked team ${list.length === 1 ? "member" : "members"} found.`}</p>
       {list.length === 0 ? (
-        <p className="rt-acc__card rt-acc__empty">{show === "pending" ? "No invites waiting." : "No one here yet."}</p>
+        <EmptyState title={show === "pending" ? "No invites waiting." : "No one here yet."} />
       ) : (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">

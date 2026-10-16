@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { filterGroups, subSubjects } from "@/data/courseCatalogue";
+import { catalogueFilterGroups } from "@/data/courseCatalogue";
+import { subcategoryOptions } from "@/lib/taxonomy";
 import FilterGroup from "./FilterGroup";
 import PriceRange from "./PriceRange";
 import { CheckRow } from "./RadioRow";
@@ -17,7 +18,7 @@ const SUBJECTS_COLLAPSED = 5;
 // `baseSubject` (a subject page) shows that subject's sub-subjects as their own group, "Course type", in place of Subject.
 export default function CatalogueFilters({ state, counts, onToggle, onPriceChange, hide = [], baseSubject = "" }) {
   const [showAll, setShowAll] = useState(false);
-  const [subjectGroup, methodGroup, levelGroup] = filterGroups;
+  const [subjectGroup, methodGroup, levelGroup] = catalogueFilterGroups();
 
   // If a ticked subject sits in the hidden part of the list, keep the list expanded.
   const tickedHidden = state.subject.some((v) => subjectGroup.options.findIndex((o) => o.value === v) >= SUBJECTS_COLLAPSED);
@@ -37,10 +38,10 @@ export default function CatalogueFilters({ state, counts, onToggle, onPriceChang
       </FilterGroup>
       )}
 
-      {baseSubject && subSubjects[baseSubject]?.length > 1 && (
+      {baseSubject && subcategoryOptions(baseSubject).length > 1 && (
         <FilterGroup id="rt-fp-sub" title="Course type">
           <div className="rt-fp__options">
-            {subSubjects[baseSubject].map((sub) => (
+            {subcategoryOptions(baseSubject).map((sub) => (
               <CheckRow key={sub.value} name="sub" opt={sub} checked={state.sub.includes(sub.value)} count={counts?.sub?.[sub.value]} onChange={() => onToggle("sub", sub.value)} />
             ))}
           </div>
@@ -51,7 +52,7 @@ export default function CatalogueFilters({ state, counts, onToggle, onPriceChang
       <FilterGroup id="rt-fp-subject" title="Subject">
         <div className="rt-fp__options">
           {subjectOptions.map((opt) => {
-            const subs = state.subject.includes(opt.value) ? subSubjects[opt.value] || [] : [];
+            const subs = state.subject.includes(opt.value) ? subcategoryOptions(opt.value) : [];
             return (
               <React.Fragment key={opt.value}>
                 <CheckRow name="subject" opt={opt} checked={state.subject.includes(opt.value)} count={counts?.subject?.[opt.value]} onChange={() => onToggle("subject", opt.value)} />

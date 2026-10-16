@@ -7,6 +7,7 @@ import { admin as A } from "@/data/admin";
 import { ago, decideApproval, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Due, Pill, Tabs, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.approvals;
 const TABS = ["pending", "changes", "approved", "rejected"];
@@ -135,7 +136,7 @@ export default function AdminApprovals() {
           ))}
         </ul>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">{copy.empty}</p>
+        <EmptyState title={copy.empty} />
       )}
 
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={asking ? `${asking.status === "rejected" ? copy.reject : copy.requestChanges}: ${asking.item.title}` : ""} closeLabel="Close">

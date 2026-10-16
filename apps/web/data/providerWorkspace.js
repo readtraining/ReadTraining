@@ -1,4 +1,3 @@
-import { levels, methods, subjects } from "@/data/courseCatalogue";
 
 // The provider workspace (/provider/*): the words on every page, the choice lists, and the demo records a new browser starts
 // with. DEMO: seedProvider() stands in for the provider API; lib/providerWorkspace.js keeps the records and every change in this
@@ -25,7 +24,7 @@ export const pw = {
     { key: "cohorts", label: "Cohorts", icon: "icon-online-learning-4", items: [
       { label: "Cohort list", href: "/provider/cohorts" },
       { label: "Calendar", href: "/provider/calendar" },
-      { label: "On demand", href: "/provider/cohorts?mode=on-demand" },
+      { label: "Self-paced", href: "/provider/cohorts?mode=self-paced" },
     ] },
     { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners" },
     { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders" },
@@ -64,33 +63,16 @@ export const pw = {
     help: { title: "Help", lead: "Videos, guides and a person to talk to when you need one." },
   },
 
-  // the choice lists (shared with the public catalogue so a provider's course lands in the right filters)
+  // How each delivery method is explained in the course wizard (Hurak's wording). `key` is the method's slug in the catalogue
+  // list; its name, and the categories, sub-categories, topics and levels, come from that list (lib/taxonomy.js), the same
+  // one the public filters read, so a provider's course always lands in the right filters.
   formats: [
-    { key: "classroom", label: "On set dates", short: "Classroom", icon: "icon-online-learning-4", text: "For workshops, classes and courses at a venue, on dates you choose.", more: "Add one or more dates to each run (a cohort) at one of your venues. Learners book a run, and you take the register and record results on the day." },
-    { key: "live-online", label: "Live online", short: "Live online", icon: "icon-online-learning-2", text: "For live, tutor-led training by video, one to one or in groups.", more: "Run sessions by video on dates you choose. Learners get the joining link in their joining instructions before each session." },
-    { key: "on-demand", label: "On demand", short: "On demand", icon: "icon-time-management", text: "For recorded lessons and self-paced e-learning.", more: "Build the course from lessons (text, video, quizzes and downloads). Learners start straight after booking and work at their own pace." },
+    { key: "classroom", label: "On set dates", icon: "icon-online-learning-4", text: "For workshops, classes and courses at a venue, on dates you choose.", more: "Add one or more dates to each run (a cohort) at one of your venues. Learners book a run, and you take the register and record results on the day." },
+    { key: "live-online", label: "Live online", icon: "icon-online-learning-2", text: "For live, tutor-led training by video, one to one or in groups.", more: "Run sessions by video on dates you choose. Learners get the joining link in their joining instructions before each session." },
+    { key: "self-paced", label: "Self-paced", icon: "icon-time-management", text: "For recorded lessons and self-paced e-learning.", more: "Build the course from lessons (text, video, quizzes and downloads). Learners start straight after booking and work at their own pace." },
   ],
-  methods,
-  levels,
-  categories: subjects,
   courseStatuses: { draft: "Draft", pending: "Waiting for approval", approved: "Approved", changes: "Changes requested" },
-  // the sub-categories and topics under each category (Hurak's course category > sub-category > topic)
-  subcategories: {
-    "accounting-and-finance": [["Bookkeeping", ["Sage", "Xero", "Payroll"]], ["Accounting qualifications", ["AAT", "ACCA"]]],
-    "building-services": [["Electrical", ["18th Edition", "Inspection and testing"]], ["Gas", ["ACS", "Gas safety"]], ["Plumbing", []]],
-    business: [["Leadership and management", ["ILM", "CMI"]], ["Project management", ["PRINCE2", "APM"]], ["Customer service", []]],
-    construction: [["Site safety", ["CITB SMSTS", "CITB SSSTS", "Site safety plus"]], ["Plant and access", ["Working at height", "PASMA", "IPAF"]], ["CSCS cards", ["Labourer", "Health and safety test"]]],
-    "first-aid": [["Workplace first aid", ["Emergency First Aid at Work", "First Aid at Work", "Requalification"]], ["Paediatric first aid", ["Paediatric", "Emergency paediatric"]], ["Mental health first aid", []]],
-    "health-and-care": [["Care Certificate", []], ["Medication", ["Safe handling of medicines"]], ["Safeguarding", ["Adults", "Children"]]],
-    "health-and-safety": [["Fire safety", ["Fire marshal", "Fire risk assessment"]], ["Manual handling", []], ["Hazardous substances", ["COSHH", "Asbestos awareness"]], ["IOSH and NEBOSH", ["IOSH Managing Safely", "NEBOSH General Certificate"]]],
-    hospitality: [["Food safety", ["Level 2 food hygiene", "Level 3 food hygiene"]], ["Licensing", ["APLH", "Personal licence"]], ["Allergens", []]],
-    lifestyle: [["Wellbeing", []], ["Hobbies", ["Photography", "Cooking"]]],
-    marketing: [["Digital marketing", ["Social media", "SEO"]], ["Sales", []]],
-    "personal-development": [["Communication", ["Public speaking", "Writing"]], ["Productivity", ["Time management"]]],
-    security: [["SIA licence training", ["Door Supervisor", "Security Officer", "CCTV Operator", "Close Protection"]], ["SIA top-up", ["Door Supervisor top-up", "Security Officer top-up"]], ["Conflict management", []]],
-    "teaching-and-academics": [["Teaching qualifications", ["Level 3 Award in Education and Training", "Assessor (CAVA)", "IQA"]], ["Functional skills", ["English", "Maths"]]],
-    telecommunication: [["Fibre optics", []], ["Network cabling", []]],
-  },
+
   // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
@@ -297,7 +279,7 @@ export function seedProvider(now = Date.now()) {
     {
       id: "C5", title: "Manual Handling", subtitle: "On-demand course on lifting and carrying safely, with a short assessment.",
       details: "Learn the law, how injuries happen and the TILE assessment, then show what you know in a 10-question quiz.",
-      format: "on-demand", level: "beginner", category: "health-and-safety", features: ["About 90 minutes", "Certificate on passing"],
+      format: "self-paced", level: "beginner", category: "health-and-safety", features: ["About 90 minutes", "Certificate on passing"],
       objectives: ["Explain the Manual Handling Operations Regulations", "Use TILE to assess a task", "Lift and carry with a safe technique", "Know when to ask for help or equipment"],
       topics: [], faqs: [], venues: [], media: [], status: "approved", enrolment: "public", pricing: { type: "flat", price: 25 },
       curriculum: [
@@ -323,21 +305,22 @@ export function seedProvider(now = Date.now()) {
       settings: settings(), updated: at(-2), rating: 0,
     },
     {
-      id: "C7", title: "COSHH Awareness", subtitle: "", details: "", format: "on-demand", level: "beginner", category: "health-and-safety", features: [],
+      id: "C7", title: "COSHH Awareness", subtitle: "", details: "", format: "self-paced", level: "beginner", category: "health-and-safety", features: [],
       objectives: [], topics: [], faqs: [], venues: [], media: [], status: "draft", enrolment: "private", pricing: { type: "flat", price: 0 }, curriculum: [],
       settings: settings(), updated: at(-1), rating: 0,
     },
   ];
 
-  // what Hurak's new-course wizard asks: sub-category, topic, compliance or not, performance model, Skill Saver
+  // what Hurak's new-course wizard asks: sub-category and topic (slugs from the catalogue list), compliance or not, performance
+  // model, Skill Saver
   const setup = {
-    C1: ["Workplace first aid", "Emergency First Aid at Work", "compliance", true],
-    C2: ["Workplace first aid", "First Aid at Work", "compliance", true],
-    C3: ["SIA licence training", "Door Supervisor", "compliance", true],
-    C4: ["Fire safety", "Fire marshal", "compliance", false],
-    C5: ["Manual handling", "", "compliance", false],
-    C6: ["Plant and access", "Working at height", "compliance", false],
-    C7: ["Hazardous substances", "COSHH", "compliance", false],
+    C1: ["workplace-first-aid", "emergency-first-aid-at-work", "compliance", true],
+    C2: ["workplace-first-aid", "first-aid-at-work", "compliance", true],
+    C3: ["sia-licence-training", "door-supervisor", "compliance", true],
+    C4: ["fire-safety", "fire-marshal", "compliance", false],
+    C5: ["manual-handling", "", "compliance", false],
+    C6: ["plant-and-access", "working-at-height", "compliance", false],
+    C7: ["hazardous-substances", "coshh", "compliance", false],
   };
   courses.forEach((c) => {
     const [subcategory, topic, type, skillSaver] = setup[c.id];

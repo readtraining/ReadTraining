@@ -7,6 +7,7 @@ import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { currentAdmin } from "@/lib/adminStore";
 import { Due, Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = W.requests;
 const TABS = ["open", "mine", "done", "all"];
@@ -61,7 +62,7 @@ export default function AdminRequests() {
           </table>
         </div>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">No requests here.</p>
+        <EmptyState title="No requests here." />
       )}
     </div>
   );

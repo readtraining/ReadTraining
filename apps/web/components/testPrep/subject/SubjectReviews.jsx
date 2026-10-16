@@ -6,6 +6,7 @@ import HomeStars from "@/components/home/HomeStars";
 import { testPrepPage } from "@/data/testPrep";
 import { getReviews, submitReview } from "@/lib/reviews";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { EmptyState } from "@/components/states/States";
 
 // "Mock exam reviews" at the end of a subject page (as on the reference, hurak.com): the home section head (eyebrow + title),
 // then the reviews, or an empty state with "Give a review". The button opens the test runner's pop-up (Sheet: centred on
@@ -98,14 +99,7 @@ export default function SubjectReviews({ subject }) {
         <h2 className="sectionTitle__title mt-20" id="rt-tps-reviews-h">{r.title}</h2>
 
         {reviews.length === 0 ? (
-          <div className="rt-tps__rvempty">
-            <span className="rt-benefit__icon" aria-hidden="true"><i className="icon-star text-16"></i></span>
-            <div className="rt-tps__rvempty-text">
-              <p className="rt-tps__rvempty-title">{r.emptyTitle}</p>
-              <p className="rt-tps__rvempty-sub">{r.emptyText}</p>
-            </div>
-            <button type="button" className="button -md -purple-1 text-white" onClick={openForm}>{r.cta}</button>
-          </div>
+          <EmptyState icon="icon-star" title={r.emptyTitle} text={r.emptyText} action={{ label: r.cta, onClick: openForm }} />
         ) : (
           <>
             <div className="rt-tps__rvsummary">

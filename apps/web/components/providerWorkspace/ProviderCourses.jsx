@@ -5,7 +5,9 @@ import Link from "next/link";
 import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { useProvider } from "@/lib/providerWorkspace";
-import { COURSE_TONE, Empty, Loading, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, Loading, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
+import { EmptyState } from "@/components/states/States";
 
 const FILTERS = ["q", "format", "enrolment", "category", "model", "status"];
 const formatOf = (key) => pw.formats.find((f) => f.key === key) || pw.formats[0];
@@ -24,7 +26,7 @@ export default function ProviderCourses() {
     const next = Object.fromEntries(FILTERS.map((k) => [k, getQuery(k) || ""]));
     if (!pw.formats.some((x) => x.key === next.format)) next.format = "";
     if (!pw.enrolment[next.enrolment]) next.enrolment = "";
-    if (!pw.categories.some((x) => x.value === next.category)) next.category = "";
+    if (!categoryName(next.category)) next.category = "";
     if (!pw.models[next.model]) next.model = "";
     if (!pw.courseStatuses[next.status]) next.status = "";
     setF(next);
@@ -32,7 +34,7 @@ export default function ProviderCourses() {
   }, []);
 
   if (!data) return <Loading rows={4} />;
-  if (!data.courses.length) return <Empty title="No courses yet" text="Create your first course: describe it, set the price and send it to us for approval." action={{ label: "New course", href: "/provider/courses/new" }} />;
+  if (!data.courses.length) return <EmptyState title="No courses yet" text="Create your first course: describe it, set the price and send it to us for approval." action={{ label: "New course", href: "/provider/courses/new" }} />;
 
   const needle = f.q.trim().toLowerCase();
   const list = data.courses.filter((c) => (!needle || (c.title || "untitled course").toLowerCase().includes(needle))
@@ -52,7 +54,7 @@ export default function ProviderCourses() {
     .map((t) => ({ ...t, count: data.courses.filter((c) => (!t.key || c.status === t.key)).length }));
   const learnersOf = (id) => new Set(data.enrolments.filter((e) => e.courseId === id && e.status !== "cancelled").map((e) => e.learnerId)).size;
   const upcomingOf = (id) => data.cohorts.filter((k) => k.courseId === id && k.status === "upcoming" && !k.cancelled).length;
-  const catOf = (c) => [pw.categories.find((x) => x.value === c.category)?.label, c.subcategory].filter(Boolean).join(" › ");
+  const catOf = (c) => [categoryName(c.category), subcategoryName(c.category, c.subcategory)].filter(Boolean).join(" › ");
 
   return (
     <div className="rt-acc__stack">
@@ -68,14 +70,14 @@ export default function ProviderCourses() {
         </div>
         <div className="rt-cx__bar" role="search" aria-label="Find courses">
           <Search value={f.q} onChange={set("q")} label="Search your courses" />
-          <ToolSelect id="rt-pws-cf-format" label="Mode of study" value={f.format} onChange={set("format")} options={[{ value: "", label: "All modes of study" }, ...pw.formats.map((x) => ({ value: x.key, label: x.short }))]} />
+          <ToolSelect id="rt-pws-cf-format" label="Mode of study" value={f.format} onChange={set("format")} options={[{ value: "", label: "All modes of study" }, ...pw.formats.map((x) => ({ value: x.key, label: methodName(x.key) }))]} />
           <ToolSelect id="rt-pws-cf-enr" label="Enrollment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrollment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
           <button type="button" className={`rt-cx__more${more ? " is-on" : ""}`} aria-expanded={more} aria-controls="rt-pws-cf-more" onClick={() => setMore(!more)}><i className="icon-setting text-14" aria-hidden="true"></i>Filters{(f.category || f.model) && <span className="rt-cx__dot" aria-label="filters on"></span>}</button>
           {filtered && <button type="button" className="rt-cd__link" onClick={reset}>Clear filters</button>}
         </div>
         {more && (
           <div className="rt-cx__bar -more" id="rt-pws-cf-more">
-            <ToolSelect id="rt-pws-cf-cat" label="Category" value={f.category} onChange={set("category")} options={[{ value: "", label: "All categories" }, ...pw.categories]} />
+            <ToolSelect id="rt-pws-cf-cat" label="Category" value={f.category} onChange={set("category")} options={[{ value: "", label: "All categories" }, ...categoryOptions()]} />
             <ToolSelect id="rt-pws-cf-model" label="Performance model" value={f.model} onChange={set("model")} options={[{ value: "", label: "All performance models" }, ...Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label }))]} />
           </div>
         )}
@@ -107,7 +109,7 @@ export default function ProviderCourses() {
                         {img ? <img src={img.src} alt="" className="rt-cx-course__img" /> : <Link href={href} className="rt-cx-course__img -none" title="Upload course image"><i className="icon-cloud text-16" aria-hidden="true"></i><span className="rt-sr">Upload course image for {c.title || "untitled course"}</span></Link>}
                         <span className="rt-cx-course__text">
                           <Link href={href} className="rt-cx-course__title" title={c.title || "Untitled course"}>{c.title || "Untitled course"}</Link>
-                          <small title={[fm.short, catOf(c)].filter(Boolean).join(" · ")}>{[fm.short, catOf(c)].filter(Boolean).join(" · ")}</small>
+                          <small title={[methodName(fm.key), catOf(c)].filter(Boolean).join(" · ")}>{[methodName(fm.key), catOf(c)].filter(Boolean).join(" · ")}</small>
                         </span>
                       </span>
                     </td>
@@ -115,7 +117,7 @@ export default function ProviderCourses() {
                     <td data-label="Enrolment">{pw.enrolment[c.enrolment]}</td>
                     <td data-label="Performance model">{pw.models[c.model]?.label}</td>
                     <td data-label="Learners" className="-num">{learnersOf(c.id)}</td>
-                    <td data-label="Upcoming" className="-num">{c.format === "on-demand" ? "—" : upcomingOf(c.id)}</td>
+                    <td data-label="Upcoming" className="-num">{c.format === "self-paced" ? "—" : upcomingOf(c.id)}</td>
                     <td data-label="Rating" className="-num">{c.rating ? <span className="rt-cx-rating"><i className="icon-star text-10" aria-hidden="true"></i>{c.rating.toFixed(1)}</span> : "—"}</td>
                     <td data-label="Actions" className="-act"><Link href={href} className="rt-cx-manage" title="Edit / manage course"><span className="rt-cx-manage__text">Edit / manage course</span><span className="rt-sr">: {c.title || "untitled course"}</span><i className="icon-chevron-right text-12" aria-hidden="true"></i></Link></td>
                   </tr>
@@ -124,10 +126,7 @@ export default function ProviderCourses() {
             </tbody>
           </table>
         ) : (
-          <div className="rt-cx__empty">
-            <p><b>No courses match.</b> Try another search or clear the filters.</p>
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={reset}>Clear filters</button>
-          </div>
+          <EmptyState inCard title="No courses match." text="Try another search or clear the filters." action={{ label: "Clear filters", onClick: reset }} />
         )}
       </section>
 

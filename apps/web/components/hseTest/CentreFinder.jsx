@@ -6,6 +6,7 @@ import { hseTest } from "@/data/hseTest";
 import { BookTestButton } from "./TestBooking";
 import { allCentres, centreName, locate, matchText, nearestTo, PROVIDER } from "@/lib/testCentreSearch";
 import { TEST_CENTRES_HREF, testCentreHref } from "@/lib/routes";
+import { EmptyState } from "@/components/states/States";
 
 const d = hseTest.directory;
 
@@ -78,10 +79,7 @@ export default function CentreFinder({ limit, headingLevel = "h3" }) {
           {shown.map((c) => <CentreCard key={c.slug} c={c} as={headingLevel} />)}
         </ul>
       ) : (
-        <div className="rt-tc__none">
-          <b>{d.none.title}</b>
-          <p>{d.none.text}</p>
-        </div>
+        <EmptyState inCard title={d.none.title} text={d.none.text} />
       )}
 
       {limit && (

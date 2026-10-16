@@ -12,6 +12,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { Due, Pill, formatWhen } from "./adminParts";
 import { REQUEST_TONE } from "./AdminRequests";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = W.requests;
 const d = copy.detail;
@@ -34,7 +35,7 @@ export default function AdminRequest({ reference }) {
   const noteRef = useRef(null);
   if (!data) return null;
   const r = data.requests.find((x) => x.ref === reference);
-  if (!r) return <p className="rt-acc__card rt-acc__empty">This request was not found. <Link href="/admin/requests">{d.back}</Link></p>;
+  if (!r) return <EmptyState title="This request was not found." action={{ href: "/admin/requests", label: d.back }} />;
 
   const steps = copy.steps[r.kind];
   const at = steps.indexOf(r.status);

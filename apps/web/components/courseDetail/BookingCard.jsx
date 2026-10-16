@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { IN_HOUSE_NOTE, MODE_LABEL, quoteHref, useBooking } from "./BookingProvider";
+import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
 import { formatDateRange, formatPrice, savePercent } from "@/lib/format";
 import { Check, Icon } from "./Icon";
+import { modeLabel } from "@/lib/courseModes";
 
 
 // The heart has no icon-font glyph, so it stays a line SVG (the same one as the listing card).
@@ -111,7 +112,7 @@ export default function BookingCard() {
           <label className="rt-bs__head">
             <input type="radio" name="rt-bk-mode" value={mode} checked onChange={() => {}} />
             <span className="rt-bs__radio is-on" aria-hidden="true" />
-            <span className="rt-bs__name">{MODE_LABEL[mode]}</span>
+            <span className="rt-bs__name">{modeLabel(mode)}</span>
           </label>
 
           {isInHouse ? (
@@ -180,7 +181,7 @@ export default function BookingCard() {
             <input type="radio" name="rt-bk-mode" value={m} checked={false} onChange={() => setMode(m)} />
             <span className="rt-bs__radio" aria-hidden="true" />
             <span className="rt-br__text">
-              <span className="rt-br__name">{MODE_LABEL[m]}</span>
+              <span className="rt-br__name">{modeLabel(m)}</span>
               <strong className="rt-br__from">{m === "inhouse" ? QUOTE_TEXT : `From ${formatPrice(fromFor(m))}`}</strong>
             </span>
           </label>

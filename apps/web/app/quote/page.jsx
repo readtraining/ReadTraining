@@ -7,6 +7,7 @@ import QuoteForm from "@/components/courseDetail/QuoteForm";
 import { courseHref, getCourseBySlug } from "@/lib/courses";
 import { QUOTE_HREF } from "@/lib/routes";
 import { pageMetadata } from "@/lib/seo";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Group quote (/quote, ?course=<slug> from a course page): the Contact page's layout (marketing hero, then how it works beside
 // the form in a frame), so it no longer stands out as a bare form. The form is QuoteForm (simulated sending: lib/quote.js).
@@ -33,6 +34,7 @@ export const metadata = pageMetadata({
 });
 
 export default async function QuotePage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const query = (await props.searchParams) || {};
   const course = query.course ? getCourseBySlug(String(query.course)) : null;
   const backHref = course ? courseHref(course.slug) : "/";

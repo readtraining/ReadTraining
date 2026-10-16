@@ -11,6 +11,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { savedCourseIds } from "@/lib/wishlist";
 import BookingRow, { placeOf, whenOf } from "./BookingRow";
 import { Stats } from "@/components/admin/adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.dashboard;
 const CERT_LABEL = { valid: "Valid", renew: "Renew soon", expired: "Expired" };
@@ -69,10 +70,7 @@ export default function AccountDashboard() {
             </div>
           </div>
         ) : (
-          <div className="rt-acc__none">
-            <p>{copy.next.none}</p>
-            <Link href={copy.next.cta.href} className="button -md -purple-1 text-white">{copy.next.cta.label}</Link>
-          </div>
+          <EmptyState inCard title={copy.next.none} action={{ href: copy.next.cta.href, label: copy.next.cta.label }} />
         )}
       </section>
 
@@ -86,7 +84,7 @@ export default function AccountDashboard() {
         {data.upcoming.length ? (
           <div className="rt-acc__rows">{data.upcoming.slice(0, 3).map((b) => <BookingRow key={b.reference} booking={b} />)}</div>
         ) : (
-          <p className="rt-acc__empty">{copy.next.none}</p>
+          <EmptyState inCard title={copy.next.none} />
         )}
       </section>
 
@@ -110,7 +108,7 @@ export default function AccountDashboard() {
               ))}
             </ul>
           ) : (
-            <p className="rt-acc__empty">{copy.certificates.none}</p>
+            <EmptyState inCard title={copy.certificates.none} />
           )}
         </section>
 
@@ -129,7 +127,7 @@ export default function AccountDashboard() {
               ))}
             </ul>
           ) : (
-            <p className="rt-acc__empty">{copy.saved.none}</p>
+            <EmptyState inCard title={copy.saved.none} />
           )}
         </section>
       </div>

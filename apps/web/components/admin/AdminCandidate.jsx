@@ -11,6 +11,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { Pill, formatWhen } from "./adminParts";
 import { CANDIDATE_TONE } from "./AdminJobs";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = W.jobs;
 const d = copy.detail;
@@ -33,7 +34,7 @@ export default function AdminCandidate({ reference }) {
   const noteRef = useRef(null);
   if (!data) return null;
   const c = data.candidates.find((x) => x.ref === reference);
-  if (!c) return <p className="rt-acc__card rt-acc__empty">This candidate was not found. <Link href="/admin/jobs">{d.back}</Link></p>;
+  if (!c) return <EmptyState title="This candidate was not found." action={{ href: "/admin/jobs", label: d.back }} />;
 
   const offered = new Set(c.intros.map((i) => i.role));
   const roleOptions = data.roles.filter((r) => !offered.has(r.id));

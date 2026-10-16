@@ -3,12 +3,14 @@ import CourseDetail from "@/components/courseDetail/CourseDetail";
 import { locationFinderHref } from "@/data/home/menu";
 import { getCourseLocation } from "@/lib/courseLocations";
 import { SITE_URL } from "@/lib/seo";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A course in a town or city (/course-locations/door-supervisor-course-in-london), the Locations menu's links, as the client's
 // site: the course page limited to that town's venues, with the venues listed under the learning options. A town where the
 // course has no venue goes to the course finder for that town instead. Copy and dates: lib/courseLocations.js.
 
 export async function generateMetadata(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const loc = getCourseLocation(slug);
   if (!loc) return { title: "Course not found | ReadTraining" };
@@ -25,6 +27,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function CourseLocationPage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const query = (await props.searchParams) || {};
   const loc = getCourseLocation(slug);

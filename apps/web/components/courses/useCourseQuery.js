@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { PRICE_BOUNDS, buildCatalogueQuery, defaultSort, parseCatalogueParams, subSubjects } from "@/data/courseCatalogue";
+import { PRICE_BOUNDS, buildCatalogueQuery, defaultSort, parseCatalogueParams } from "@/data/courseCatalogue";
+import { subcategoriesOf } from "@/lib/taxonomy";
 
 const CHECKBOX_GROUPS = ["subject", "sub", "method", "level"];
 // The filter keys that "Remove last filter" can undo.
@@ -73,7 +74,7 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
       if ("location" in patch && patch.location !== base.location) next.sort = defaultSort(next.location);
       // Sub-subjects only make sense under a ticked subject.
       if ("subject" in patch && !("sub" in patch)) {
-        const allowed = new Set([...next.subject, ...(baseSubject ? [baseSubject] : [])].flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
+        const allowed = new Set([...next.subject, ...(baseSubject ? [baseSubject] : [])].flatMap((sv) => subcategoriesOf(sv).map((x) => x.slug)));
         next.sub = next.sub.filter((v) => allowed.has(v));
       }
       if (record && !sameFilters(base, next)) {

@@ -7,6 +7,7 @@ import { learnerName, timeRange, useProvider } from "@/lib/providerWorkspace";
 import { ORDER_TONE, Loading, Pill, RowMenu } from "./providerParts";
 import { dayRange } from "./ProviderCohorts";
 import { money } from "./charts";
+import { EmptyState } from "@/components/states/States";
 
 // Student profile: Hurak's details (name, phone, town, email) and its booking cards (course, dates and times, venue's full address,
 // booking reference, order number and status, View cohort / Order details), in our layout: a header with the learner's numbers,
@@ -15,7 +16,7 @@ export default function ProviderLearner({ learnerId }) {
   const data = useProvider();
   if (!data) return <Loading rows={2} />;
   const l = data.byId.learner[learnerId];
-  if (!l) return <p className="rt-acc__card rt-acc__empty">This learner was not found. <Link href="/provider/learners">Back to learners</Link></p>;
+  if (!l) return <EmptyState title="This learner was not found." action={{ href: "/provider/learners", label: "Back to learners" }} />;
 
   const orderOf = (ref) => data.orders.find((o) => o.ref === ref);
   const list = data.enrolments.filter((e) => e.learnerId === l.id).sort((a, b) => (orderOf(b.orderRef)?.at || 0) - (orderOf(a.orderRef)?.at || 0));
@@ -62,7 +63,7 @@ export default function ProviderLearner({ learnerId }) {
                   <article className="rt-acc__card rt-lr-booking">
                     <div className="rt-lr-booking__head">
                       <div>
-                        <p className="rt-lr-booking__when">{k ? `${dayRange(k.first, k.last)} · ${[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}` : "On demand: starts when booked"}</p>
+                        <p className="rt-lr-booking__when">{k ? `${dayRange(k.first, k.last)} · ${[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}` : "Self-paced: starts when booked"}</p>
                         <h3 className="rt-lr-booking__course">{e.course ? <Link href={`/provider/courses/${e.course.id}`}>{e.course.title}</Link> : "Course removed"}</h3>
                       </div>
                       <div className="rt-lr-booking__side">

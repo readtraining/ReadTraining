@@ -32,6 +32,10 @@ const nextConfig: NextConfig = {
       { source: '/account/profile', destination: '/account/settings', permanent: true },
       // the old provider workspace prototype
       { source: '/admin/provider', destination: '/provider', permanent: true },
+      // delivery methods: the address is the method's name (brief §4); the client's old words redirect
+      { source: '/courses/virtual', destination: '/courses/live-online', permanent: true },
+      { source: '/courses/online', destination: '/courses/self-paced', permanent: true },
+      { source: '/courses/on-demand', destination: '/courses/self-paced', permanent: true },
     ]
   },
 }

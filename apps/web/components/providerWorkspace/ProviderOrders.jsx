@@ -6,8 +6,9 @@ import { pw } from "@/data/providerWorkspace";
 import { bookedBy, customerName, useProvider } from "@/lib/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import CataloguePagination from "@/components/courses/CataloguePagination";
-import { Empty, Loading, ORDER_TONE, Pill, RowMenu, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { Loading, ORDER_TONE, Pill, RowMenu, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { formatOrderDay } from "./moneyParts";
+import { EmptyState } from "@/components/states/States";
 
 const PER_PAGE = 10;
 const FIELDS = [
@@ -39,7 +40,7 @@ export default function ProviderOrders() {
   if (!data) return <Loading rows={2} />;
 
   if (!data.orders.length) {
-    return <Empty title="No orders yet" text="Bookings from ReadTraining, your website and the orders you add yourself appear here." action={{ href: "/provider/orders/new", label: "Create order" }} />;
+    return <EmptyState title="No orders yet" text="Bookings from ReadTraining, your website and the orders you add yourself appear here." action={{ href: "/provider/orders/new", label: "Create order" }} />;
   }
 
   const has = (v, needle) => !needle.trim() || String(v || "").toLowerCase().includes(needle.trim().toLowerCase());
@@ -121,10 +122,7 @@ export default function ProviderOrders() {
           {pages > 1 && <div className="rt-pws-coh__pages"><CataloguePagination page={at} totalPages={pages} hrefFor={(p) => `?page=${p}`} onNavigate={setPage} /></div>}
         </div>
       ) : (
-        <div className="rt-acc__card rt-acc__empty">
-          <p>No orders match these filters.</p>
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={clear}>Clear filters</button>
-        </div>
+        <EmptyState title="No orders match these filters." action={{ label: "Clear filters", onClick: clear }} />
       )}
     </div>
   );

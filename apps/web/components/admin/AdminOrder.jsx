@@ -9,6 +9,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { Pill, formatWhen } from "./adminParts";
 import { MONEY_TONE } from "./AdminOrders";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.orders;
 const d = copy.detail;
@@ -41,7 +42,7 @@ export default function AdminOrder({ reference }) {
   const noteRef = useRef(null);
   if (!data) return null;
   const o = data.orders.find((x) => x.ref === reference);
-  if (!o) return <p className="rt-acc__card rt-acc__empty">This order was not found. <Link href="/admin/orders">{d.back}</Link></p>;
+  if (!o) return <EmptyState title="This order was not found." action={{ href: "/admin/orders", label: d.back }} />;
   const change = data.changes.find((c) => c.ref === o.ref);
 
   const saveNote = (e) => {

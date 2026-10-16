@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { getHelpSearchIndex, getHelpTopic } from "@/lib/help";
+import { EmptyState } from "@/components/states/States";
 
 // Help: Hurak's three ways to get help (how-to guides, help and support, live chat) in our layout: a search across every help
 // article, the provider guides as a list, and the three ways to reach us beside it.
@@ -36,7 +37,7 @@ export default function ProviderHelp() {
                 <li key={a.href}><Link href={a.href}><b>{a.title}</b><small>{a.topic} · {a.summary}</small><i className="icon-arrow-right text-12" aria-hidden="true"></i></Link></li>
               ))}
             </ul>
-          ) : <p className="rt-hp-none">No articles match “{q.trim()}”. <Link href="/contact-us">Ask our provider team</Link>.</p>
+          ) : <EmptyState inCard title={`No articles match “${q.trim()}”.`} action={{ href: "/contact-us", label: "Ask our provider team" }} />
         )}
       </section>
 

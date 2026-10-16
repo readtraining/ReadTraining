@@ -1,10 +1,14 @@
-import { buildCourseDetail, catalogueCourses, filterGroups, getMethodLabel, subSubjects } from "@/data/courseCatalogue";
+import { buildCourseDetail, catalogueCourses } from "@/data/courseCatalogue";
+import { categoryName, getTaxonomy, methodName, subcategoryName } from "@/lib/taxonomy";
 
 // All reads for the course detail page go through here. Swap the bodies for API calls later.
 // The lookup accepts a slug or the numeric id (old links and the demo data use ids; /course/<id> redirects to the slug).
-const cache = new Map();
+// cached per catalogue list (the details carry its names), so a renamed method shows without a restart
+let cache = new Map();
+let cacheFor;
 
 export function getCourseBySlug(slugOrId) {
+  if (cacheFor !== getTaxonomy()) [cache, cacheFor] = [new Map(), getTaxonomy()];
   const key = String(slugOrId);
   if (cache.has(key)) return cache.get(key);
   const base = catalogueCourses.find((c) => c.slug === key || String(c.id) === key);
@@ -35,20 +39,16 @@ export const toCourseCard = (c) => ({
   imageSrc: c.imageSrc,
   providers: c.providers,
   duration: c.duration,
-  method: c.methods.map(getMethodLabel).join(" • "),
+  method: c.methods.map(methodName).join(" • "),
   rating: c.rating,
   ratingCount: c.popularity,
   price: c.price,
   wasPrice: c.wasPrice,
 });
 
-export function getSubjectLabel(course) {
-  return filterGroups[0].options.find((o) => o.value === course.subject)?.label || "";
-}
-
-export function getSubLabel(course) {
-  return (subSubjects[course.subject] || []).find((x) => x.value === course.sub)?.label || "";
-}
+// names from the catalogue list (server code awaits loadTaxonomy() first)
+export const getSubjectLabel = (course) => categoryName(course.subject);
+export const getSubLabel = (course) => subcategoryName(course.subject, course.sub);
 
 // ---- shared formatting: lib/format.js (re-exported, so everything keeps importing it from here) ----
 export { formatPrice, formatDate, formatShortDate, formatMonthYear, formatNumber, savePercent, formatDateRange } from "@/lib/format";
