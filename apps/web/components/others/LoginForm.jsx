@@ -13,6 +13,7 @@ import {
   loginWithProvider,
   resendConfirmation,
 } from "@/lib/auth/authClient";
+import { safeNext } from "@/lib/safeNext";
 
 const BUTTON_LABELS = {
   idle: "Log in",
@@ -46,7 +47,7 @@ export default function LoginForm() {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const n = q.get("next");
-    if (n && n.startsWith("/") && !n.startsWith("//")) setNext(n);
+    if (n) setNext(safeNext(n, AUTH_ROUTES.afterLogin));
     if (q.get("error") === "link") setFormError("That link has expired or was already used. Log in, or ask for a new link.");
   }, []);
 

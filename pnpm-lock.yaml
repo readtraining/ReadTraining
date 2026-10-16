@@ -20,6 +20,9 @@ importers:
       '@readtraining/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@readtraining/permissions':
+        specifier: workspace:*
+        version: link:../../packages/permissions
       '@supabase/supabase-js':
         specifier: ^2.117.0
         version: 2.117.0
@@ -197,6 +200,12 @@ importers:
       drizzle-kit:
         specifier: ^0.31.11
         version: 0.31.11
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/permissions:
+    devDependencies:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

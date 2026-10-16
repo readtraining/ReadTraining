@@ -10,7 +10,8 @@ const WEB_ORIGIN = process.env.WEB_ORIGIN || 'http://localhost:3000'
 
 const app = express()
 
-app.use(cors({ origin: WEB_ORIGIN, credentials: true }))
+// The web app sends a Bearer token, not cookies, so no credentialed CORS is needed (in production it's the same domain anyway).
+app.use(cors({ origin: WEB_ORIGIN }))
 
 // Mounted under /api because Vercel Services passes the full /api/... path through to this service.
 app.use(

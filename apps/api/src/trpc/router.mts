@@ -1,3 +1,4 @@
+import { meRouter } from '../modules/me/me.router.mjs'
 import { postsRouter } from '../modules/posts/posts.router.mjs'
 import { createTRPCRouter, publicProcedure } from './trpc.mjs'
 
@@ -6,6 +7,7 @@ export const appRouter = createTRPCRouter({
     status: 'ok',
     timestamp: new Date(),
   })),
+  me: meRouter,
   posts: postsRouter,
 })
 

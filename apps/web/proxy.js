@@ -1,25 +1,32 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { safeNext } from "@/lib/safeNext";
 
-// Runs before the account pages and the log in / sign up pages (Next.js 16 calls this file "proxy", formerly "middleware"). It
-// refreshes the Supabase session cookies, sends signed-out visitors of /account and /business to log in (and back afterwards
-// via ?next=), and sends signed-in visitors of /login and /signup to their account. The pages still check on their own.
+// Runs before the account areas and the log in / sign up pages (Next.js 16 calls this file "proxy", formerly "middleware").
+// It refreshes the Supabase session cookies and checks the sign-in with getClaims(), which verifies the token's signature
+// against the project's public keys (no network call), so a forged or expired cookie counts as signed out.
+// - Signed-out visitors of /account, /business, /provider and /admin go to log in, and back afterwards via ?next=.
+// - Signed-in visitors of /login and /signup go to their account (or a safe ?next=).
+// Being signed in is all this checks. What a person may open (provider team role, admin switches) is checked on the server
+// by the pages and the API; the pages also check the sign-in again.
 // /skill-saver only needs the fresh session: the page reads it on the server to show the right buttons and level.
-const PROTECTED = ["/account", "/business", "/provider"];
+const PROTECTED = ["/account", "/business", "/provider", "/admin"];
 const GUEST_ONLY = ["/login", "/signup"];
+
+const isProtected = (path) => PROTECTED.some((p) => path === p || path.startsWith(`${p}/`));
+function toLogin(request) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/login";
+  url.search = `?next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`;
+  return NextResponse.redirect(url);
+}
 
 export async function proxy(request) {
   let response = NextResponse.next({ request });
-  // without the Supabase settings nobody can be signed in: account pages go to log in, everything else opens as normal
+  const path = request.nextUrl.pathname;
+  // without the Supabase settings nobody can be signed in: account areas go to log in, everything else opens as normal
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    const path = request.nextUrl.pathname;
-    if (PROTECTED.some((p) => path === p || path.startsWith(`${p}/`))) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
-      return NextResponse.redirect(url);
-    }
-    return response;
+    return isProtected(path) ? toLogin(request) : response;
   }
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
@@ -31,19 +38,13 @@ export async function proxy(request) {
       },
     },
   });
-  const { data } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
+  const { data } = await supabase.auth.getClaims();
+  const signedIn = Boolean(data?.claims?.sub);
 
-  if (!data.user && PROTECTED.some((p) => path === p || path.startsWith(`${p}/`))) {
+  if (!signedIn && isProtected(path)) return toLogin(request);
+  if (signedIn && GUEST_ONLY.includes(path)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
-    return NextResponse.redirect(url);
-  }
-  if (data.user && GUEST_ONLY.includes(path)) {
-    const url = request.nextUrl.clone();
-    const next = request.nextUrl.searchParams.get("next");
-    url.pathname = next && next.startsWith("/") && !next.startsWith("//") ? next.split("?")[0] : "/account";
+    url.pathname = safeNext(request.nextUrl.searchParams.get("next"), "/account").split("?")[0];
     url.search = "";
     return NextResponse.redirect(url);
   }
@@ -51,5 +52,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/account/:path*", "/business/:path*", "/provider/:path*", "/login", "/signup", "/skill-saver"],
+  matcher: ["/account/:path*", "/business/:path*", "/provider/:path*", "/admin/:path*", "/login", "/signup", "/skill-saver"],
 };

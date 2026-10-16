@@ -6,7 +6,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { httpBatchLink, loggerLink } from '@trpc/client'
 import SuperJSON from 'superjson'
 
+import { getSupabase, isSupabaseConfigured } from '../supabase/client'
 import { api } from './react'
+
+// The signed-in person's access token for the API (Authorization: Bearer …); the API verifies it on every request.
+// getSession() is fine here: it only reads the browser's own session, and the API never trusts it without checking.
+async function authHeaders(): Promise<Record<string, string>> {
+  if (!isSupabaseConfigured) return {}
+  const { data } = await getSupabase().auth.getSession()
+  const token = data.session?.access_token
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 // In production the API is served from the same domain (/api), so the URL is relative.
 const API_URL =
@@ -22,8 +32,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
         httpBatchLink({
           url: `${API_URL}/api/trpc`,
           transformer: SuperJSON,
-          fetch: (url, options) =>
-            fetch(url, { ...options, credentials: 'include' }),
+          headers: authHeaders,
         }),
       ],
     }),

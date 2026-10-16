@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@readtraining/db": "workspace:*",
+    "@readtraining/permissions": "workspace:*",
     "@supabase/supabase-js": "^2.117.0",
     "@trpc/server": "^11.7.0",
     "cors": "^2.8.5",

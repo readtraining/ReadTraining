@@ -6,10 +6,12 @@ import { createServerClient } from "@supabase/ssr";
 // Without the two NEXT_PUBLIC_SUPABASE_ settings it returns a signed-out stand-in, so pages render for visitors instead of erroring.
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const notConfigured = new Error("Supabase is not configured");
 const signedOut = {
   auth: {
-    getUser: async () => ({ data: { user: null }, error: null }),
-    exchangeCodeForSession: async () => ({ data: null, error: new Error("Supabase is not configured") }),
+    getClaims: async () => ({ data: null, error: null }),
+    exchangeCodeForSession: async () => ({ data: null, error: notConfigured }),
+    verifyOtp: async () => ({ data: null, error: notConfigured }),
   },
 };
 
@@ -28,5 +30,9 @@ export async function getServerSupabase() {
   });
 }
 
-// Only paths on this site may be a redirect target (no open redirects through ?next=).
-export const safeNext = (value, fallback = "/account") => (typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : fallback);
+// The signed-in person on the server, from the verified token (getClaims checks its signature against the project's public
+// keys, so it can't be faked with a cookie). Returns the claims (sub, email, aal, user_metadata …) or null.
+export async function getServerClaims() {
+  const { data } = await (await getServerSupabase()).auth.getClaims();
+  return data?.claims ?? null;
+}

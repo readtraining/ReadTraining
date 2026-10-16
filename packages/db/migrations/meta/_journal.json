@@ -29,6 +29,13 @@
       "when": 1792073174899,
       "tag": "0003_harden_privileges",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792075248071,
+      "tag": "0004_auth_activity",
+      "breakpoints": true
     }
   ]
 }
