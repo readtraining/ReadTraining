@@ -130,7 +130,7 @@ export default function LoginForm() {
       lead="Access your courses, bookings and dashboard."
       footer={
         <>
-          <p>Don&apos;t have an account? <Link href={AUTH_ROUTES.signUp}>Sign up</Link></p>
+          <p>Don&apos;t have an account? <Link href={next === AUTH_ROUTES.afterLogin ? AUTH_ROUTES.signUp : `${AUTH_ROUTES.signUp}?next=${encodeURIComponent(next)}`}>Sign up</Link></p>
           <p className="rt-auth__partner">
             Looking to partner with ReadTraining?
             <span><Link href="/for-providers">Course provider</Link><span aria-hidden="true"> | </span><Link href="/for-business">Business account</Link></span>

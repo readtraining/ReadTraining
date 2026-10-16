@@ -32,15 +32,13 @@ export const pw = {
     { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews" },
     { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
   ],
-  // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team, switch account, log out
+  // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team; then Switch account (the
+  // identities on this login, added by ProviderShell from the API) and log out
   accountMenu: [
     { label: "Account settings", href: "/account/settings" },
     { label: "Requests", href: "/provider/requests" },
     { label: "Public profile", href: "/provider/profile" },
     { label: "Team", href: "/provider/team" },
-    { group: "Switch account" },
-    { label: "Learner account", href: "/account" },
-    { label: "Business account", href: "/business" },
   ],
 
   pages: {

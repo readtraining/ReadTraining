@@ -3,7 +3,6 @@ import { admin as A } from "@/data/admin";
 import { catalogueCourses, subjects } from "@/data/courseCatalogue";
 import { certificates as seedCertificates } from "@/data/certificates";
 import { getCourseBySlug } from "@/lib/courses";
-import { readProviderApplications, toAdminApplication } from "@/lib/providerApplication";
 import { getProviders } from "@/lib/providers";
 import { ADMIN_EVENT, DAY, HOUR, addWorkingDays, audit, read, update } from "@/lib/adminStore";
 import { buildWork } from "@/lib/adminWork";
@@ -45,8 +44,8 @@ export function ago(ms, now = Date.now()) {
 
 // ---- the records ------------------------------------------------------------------------------------------------------------
 
-// the seeded applications plus any sent from the provider onboarding in this browser (lib/providerApplication.js)
-const allApplications = (now) => [...readProviderApplications().map((a) => toAdminApplication(a, now)), ...A.applications];
+// DEMO: the seeded applications (real provider sign-ups are organisations in the database; the admin reads them in Part B)
+const allApplications = () => A.applications;
 
 function buildProviders(saved, now, defaultRate) {
   const listed = getProviders().map((p, i) => {

@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
+    // where proxy.js and server pages reach the API (local: http://localhost:4000; on Vercel empty, so the site's own address)
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? '',
   },
   images: { unoptimized: true },
   // pages that left the template routes (auth, shop, checkout): old links and bookmarks land on the new addresses, query kept

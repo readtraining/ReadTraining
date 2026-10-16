@@ -8,6 +8,7 @@ import {
   registerAccount,
   signUpWithProvider,
 } from "./authClient";
+import { safeNext } from "@/lib/safeNext";
 
 // Sign-up behaviour (state, validation, submit flow) kept separate from the UI
 // so any sign-up layout can reuse it. Swap the authClient stubs for real calls
@@ -84,18 +85,22 @@ export function useSignUpForm() {
 
     setStatus("submitting");
     try {
+      // ?next= (for example from "Become a provider" or "Create a business account" via log in): the confirmation email
+      // and the first sign-in continue there
+      const next = safeNext(new URLSearchParams(window.location.search).get("next"), AUTH_ROUTES.afterLogin);
       const result = await registerAccount({
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         email: values.email.trim(),
         password: values.password,
         marketingOptIn: values.marketingOptIn,
+        next,
       });
       // the project requires email confirmation: the account opens from the link in the email
       if (result.needsConfirmation) return setStatus("sent");
       setStatus("success");
       redirectTimer.current = setTimeout(
-        () => router.push(AUTH_ROUTES.afterLogin),
+        () => router.push(next),
         1200
       );
     } catch (err) {

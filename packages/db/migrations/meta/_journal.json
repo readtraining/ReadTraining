@@ -43,6 +43,13 @@
       "when": 1792081767805,
       "tag": "0005_avatars_bucket",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792131593544,
+      "tag": "0006_member_job_title",
+      "breakpoints": true
     }
   ]
 }

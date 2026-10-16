@@ -106,6 +106,8 @@ export const organisationMembers = pgTable(
       .notNull()
       .references(() => authUsers.id, { onDelete: 'cascade' }),
     role: memberRole('role').notNull(),
+    // the person's job in the organisation, as they wrote it (a business account's "Your role", e.g. Operations Manager)
+    jobTitle: text('job_title'),
     status: memberStatus('status').notNull().default('active'),
     invitedBy: uuid('invited_by').references(() => authUsers.id, { onDelete: 'set null' }),
     createdAt: createdAt(),

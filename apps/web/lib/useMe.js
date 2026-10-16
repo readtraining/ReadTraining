@@ -22,9 +22,11 @@ export function useMe() {
   useEffect(() => {
     if (!ended) return;
     const here = window.location.pathname + window.location.search;
+    // on an account area the page can't work, so go to log in; on a public page (the header reads this too) just sign out
+    const inAccountArea = /^\/(account|business|provider|admin)(\/|$)/.test(window.location.pathname);
     signOut()
       .catch(() => {})
-      .finally(() => window.location.replace(`/login?next=${encodeURIComponent(here)}&ended=1`));
+      .finally(() => inAccountArea && window.location.replace(`/login?next=${encodeURIComponent(here)}&ended=1`));
   }, [ended]);
   return { person, ...query };
 }

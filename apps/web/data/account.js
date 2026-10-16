@@ -19,7 +19,40 @@ export const account = {
     { key: "settings", label: "Account settings", href: "/account/settings", icon: "icon-setting" },
   ],
   signOut: "Sign out",
-  switchTo: { label: "Switch to the business account", href: "/business" },
+  // Switch account (Hurak's): the identities on this login, the current one marked, and how to add the ones missing
+  switchAccount: {
+    title: "Switch account",
+    current: "Current",
+    student: { label: "Student account", sub: "My learning and bookings", href: "/account" },
+    provider: { sub: "Provider account", href: "/provider" },
+    business: { sub: "Business account", href: "/business" },
+    becomeProvider: { label: "Become a provider", sub: "List and run your courses", href: "/provider/onboarding" },
+    createBusiness: { label: "Create a business account", sub: "Buy and manage team training", href: "/business/create" },
+  },
+  noAccess: {
+    back: "Go to my account",
+    provider: {
+      eyebrow: "Provider workspace",
+      title: "This page is for training providers",
+      heading: "You don't have a provider account yet",
+      text: "Provider pages are only open to people who run a training provider on ReadTraining. Add a provider account to your login to list and run your courses.",
+      cta: { label: "Become a provider", href: "/provider/onboarding" },
+    },
+    business: {
+      eyebrow: "Business account",
+      title: "This page is for business accounts",
+      heading: "You don't have a business account yet",
+      text: "Business pages are only open to members of a business account. Create one to buy training for your team and manage it in one place.",
+      cta: { label: "Create a business account", href: "/business/create" },
+    },
+    unavailable: {
+      eyebrow: "Something went wrong",
+      title: "We couldn't open this page",
+      heading: "We couldn't check your access",
+      text: "This is usually brief. Please try again in a moment.",
+      cta: null,
+    },
+  },
 
   dashboard: {
     greeting: "Hello, {name}",

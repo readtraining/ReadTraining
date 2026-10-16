@@ -8,7 +8,10 @@ import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { RowMenu } from "@/components/admin/adminParts";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
-import { useProvider } from "@/lib/providerWorkspace";
+import { actAs, useProvider } from "@/lib/providerWorkspace";
+import { useMe } from "@/lib/useMe";
+import { useSwitchAccount } from "@/lib/useSwitchAccount";
+import { useWorkspace } from "@/lib/workspaceContext";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -38,7 +41,18 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   };
   const data = useProvider();
   const counts = data?.counts || {};
-  const org = data?.org.name || "";
+  // the real provider (from the server check in the layout) and the signed-in person; the pages' records are still DEMO data
+  const workspace = useWorkspace();
+  const org = workspace?.name || "";
+  const { person, data: meData } = useMe();
+  const meName = meData ? `${meData.profile.firstName} ${meData.profile.lastName}`.trim() : person?.name || "";
+  const meEmail = meData?.email || person?.email || "";
+  const switcher = useSwitchAccount({ kind: "provider", organisationId: workspace?.id });
+  const student = switcher.entries.find((e) => e.kind === "student");
+  useEffect(() => {
+    if (meName) actAs({ name: meName, email: meEmail, orgName: workspace?.name });
+  }, [meName, meEmail, workspace?.name]);
+  const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
   const logOut = async () => {
     await signOut();
     router.replace("/");
@@ -56,15 +70,15 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
           </Link>
           <div className="rt-adm__topside">
             <Link href="/provider/courses/new" className="button -sm -purple-1 text-white rt-pws__new">New course</Link>
-            <Link href="/account" className="rt-adm__site rt-pws__student"><i className="icon-person text-16" aria-hidden="true"></i><span>Student</span></Link>
+            <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}><i className="icon-person text-16" aria-hidden="true"></i><span>Student</span></Link>
             <Link href="/provider/notifications" className="rt-pws__bell" aria-label={counts.unread ? `Notifications, ${counts.unread} unread` : "Notifications"}>
               <i className="icon-notification text-18" aria-hidden="true"></i>
               {counts.unread > 0 && <span className="rt-pws__bellcount" aria-hidden="true">{counts.unread}</span>}
             </Link>
-            {data && (
-              <RowMenu label="Account menu" triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(data.me.name)}</span>}
-                head={<><strong>{data.me.name}</strong><span>{data.me.email}</span><small>Provider account</small></>}
-                items={[...pw.accountMenu, { label: "Log out", onClick: logOut }]} />
+            {meName && (
+              <RowMenu label="Account menu" triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
+                head={<><strong>{meName}</strong><span>{meEmail}</span><small>{org ? `${org} · Provider account` : "Provider account"}</small></>}
+                items={[...pw.accountMenu, ...switchItems, { label: "Log out", onClick: logOut }]} />
             )}
           </div>
         </div>

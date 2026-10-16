@@ -15,6 +15,7 @@ export const AUTH_ROUTES = {
   signUp: "/signup",
   login: "/login",
   terms: "/terms-and-conditions",
+  providerTerms: "/provider-terms",
   privacy: "/privacy-policy",
 };
 

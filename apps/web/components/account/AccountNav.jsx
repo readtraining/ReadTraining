@@ -7,6 +7,8 @@ import { account as copy } from "@/data/account";
 import { businessAccount } from "@/data/businessAccount";
 import { signOut } from "@/lib/auth/authClient";
 import { useMe } from "@/lib/useMe";
+import { useWorkspace } from "@/lib/workspaceContext";
+import SwitchAccount from "./SwitchAccount";
 
 const SignOutIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -14,8 +16,8 @@ const SignOutIcon = () => (
   </svg>
 );
 
-// The account menu. From 992px: a card beside the content with who is signed in (the company, in the Business account), the
-// area's pages, the switch to the other account and Sign out (sticky). Below that: the same pages as the filter chips in one row
+// The account menu. From 992px: a card beside the content with who is signed in (the business, in the Business account), the
+// area's pages, Switch account (the identities on this login) and Sign out (sticky). Below that: the same pages as the filter chips in one row
 // that scrolls sideways (Baymard: a few clear pages, understood on every visit).
 export default function AccountNav({ area = "account", current }) {
   const router = useRouter();
@@ -24,7 +26,9 @@ export default function AccountNav({ area = "account", current }) {
   const me = data ? { firstName: data.profile.firstName, lastName: data.profile.lastName, email: data.email } : person;
   const photo = area === "business" ? null : data?.profile.photoUrl;
   const menu = area === "business" ? businessAccount : copy;
-  const name = area === "business" ? businessAccount.company.name : me ? `${me.firstName || ""} ${me.lastName || ""}`.trim() || me.email : "";
+  // the business this page belongs to (from the server check in the Business layout)
+  const workspace = useWorkspace();
+  const name = area === "business" ? workspace?.name || "" : me ? `${me.firstName || ""} ${me.lastName || ""}`.trim() || me.email : "";
   const sub = area === "business" ? (me ? `${businessAccount.title} · ${me.firstName} ${me.lastName}` : businessAccount.title) : me?.email || "";
   const initials = name ? name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() : "";
   const leave = async () => {
@@ -53,7 +57,7 @@ export default function AccountNav({ area = "account", current }) {
             </li>
           ))}
         </ul>
-        <Link href={menu.switchTo.href} className="fb-textlink rt-acc__switch">{menu.switchTo.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
+        <SwitchAccount current={area === "business" ? { kind: "business", organisationId: workspace?.id } : { kind: "student" }} />
         <button type="button" className="rt-acc__signout" onClick={leave}><SignOutIcon />{copy.signOut}</button>
       </div>
       <ul className="rt-acc__chips">

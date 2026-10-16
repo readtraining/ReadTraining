@@ -15,7 +15,26 @@ export const businessAccount = {
     { key: "billing", label: "Billing and invoices", href: "/business/billing", icon: "icon-badge" },
     { key: "team", label: "Team", href: "/business/team", icon: "icon-friend" },
   ],
-  switchTo: { label: "Switch to my personal account", href: "/account" },
+
+  // Create a business account (/business/create), as the client's "Create a Business Account": the company, your role and a
+  // phone number, added to this same login
+  create: {
+    eyebrow: "Business account",
+    title: "Create a business account",
+    lead: "Buy training for your team, assign places now or keep them for later, and keep learners and certificates together.",
+    formTitle: "Your business details",
+    formLead: "You use the same login for your learner and business accounts, and can switch between them at any time.",
+    company: "Company name",
+    companyHint: "The name on your invoices and team training.",
+    jobTitle: "Your role",
+    jobTitleHint: "For example Operations Manager.",
+    phone: "Phone number",
+    phoneHint: "Used for business account support and training enquiries.",
+    terms: { before: "By creating a business account, you agree to our", terms: "Terms and conditions", and: "and", privacy: "Privacy policy" },
+    submit: "Create business account",
+    sending: "Creating…",
+    loading: "Loading…",
+  },
 
   dashboard: {
     lead: "Your team's training, places, certificates and billing in one place.",
