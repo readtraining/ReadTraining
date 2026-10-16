@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { account } from "@/data/account";
-import { bookingState, calendarFile, firstDate, getBookings, getCertificates, getProfile } from "@/lib/account";
+import { bookingState, calendarFile, firstDate, getBookings, getCertificates } from "@/lib/account";
+import { useMe } from "@/lib/useMe";
 import { getCoursesByIds } from "@/lib/courses";
 import { courseHref } from "@/data/courseSlugs";
 import { formatDate, formatPrice } from "@/lib/format";
@@ -14,10 +15,10 @@ import { Stats } from "@/components/admin/adminParts";
 const copy = account.dashboard;
 const CERT_LABEL = { valid: "Valid", renew: "Renew soon", expired: "Expired" };
 
-// The dashboard's heading: "Hello, Sam" (the name is read in the browser).
+// The dashboard's heading: "Hello, Sam" (the saved profile's first name, or the sign-in record's while it loads).
 export function Greeting() {
-  const [name, setName] = useState("");
-  useEffect(() => setName(getProfile().firstName), []);
+  const { person, data } = useMe();
+  const name = data?.profile.firstName || person?.firstName;
   return <>{name ? copy.greeting.replace("{name}", name) : account.title}</>;
 }
 

@@ -4183,11 +4183,27 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__done .rt-acc__h2:focus { outline: none; }
 .rt-acc__done .rt-acc__lead { margin: 0 auto 20px; }
 .rt-ck__tick.-requested { background: var(--color-orange-7); color: var(--color-orange-6); }
-/* profile */
+/* account forms (settings, cancellation) */
 .rt-acc__formsub { margin-top: 6px; }
 .rt-acc__fs .rt-bk__check { font-weight: 500; }
+/* account settings (four parts, each saved on its own) */
+.rt-acc__form > .rt-acc__note { margin: -10px 0 0; }
 .rt-acc__formfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-.rt-acc__savedmsg { margin: 0; font-size: 14px; font-weight: 600; color: var(--color-success); }
+.rt-acc__savedmsg { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-success); }
+.rt-acc__savedmsg:empty { display: none; }
+.rt-acc__formerr { flex-basis: 100%; margin: 0; }
+.rt-acc__photo { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
+.rt-acc__photoimg { flex: none; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; font-size: 20px; }
+.rt-acc__photobody { display: grid; gap: 2px; min-width: 0; }
+.rt-acc__photobody strong { font-size: var(--rt-text); color: var(--rt-c-text); }
+.rt-acc__photobody .rt-acc__note { margin: 0; }
+.rt-acc__photoactions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
+.rt-acc__linkbtn { padding: 0; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.rt-acc__linkbtn:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; border-radius: var(--rt-radius-sm); }
+.rt-acc__notice { margin: 0; padding: 12px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-acc__notice.-ok { background: var(--rt-c-success-soft); }
+.rt-acc__state { display: grid; justify-items: start; gap: 10px; }
+.rt-acc__state .rt-acc__h2, .rt-acc__state .rt-acc__note { margin: 0; }
 /* saved courses: the course list's cards */
 .rt-acc__count { margin: 0; font-size: 14px; color: var(--color-light-1); }
 .rt-acc__savedlist { display: grid; gap: 16px; }

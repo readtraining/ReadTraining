@@ -146,15 +146,33 @@ export const account = {
 
   profile: {
     title: "Account settings",
-    lead: "Your details are filled in for you at checkout.",
-    personal: "Personal details",
-    address: "Billing address",
-    company: "Company (optional)",
-    preferences: { title: "Emails from us", alerts: "Course dates and renewal reminders", offers: "Offers and new courses" },
-    password: { title: "Change password", current: "Current password", next: "New password", hint: "At least 8 characters, with a letter and a number.", confirm: "Confirm new password" },
+    lead: "Your personal details, address, email and password.",
+    loading: "Loading your account settings",
     save: "Save changes",
+    saving: "Saving…",
     saved: "Your changes have been saved.",
-    passwordSaved: "Your password has been changed.",
+    failed: { title: "We couldn't load your settings", text: "Check your connection, then try again.", retry: "Try again" },
+    basic: { title: "Basic information", lead: "Used for your account and on your bookings.", verified: "Verified" },
+    photo: { title: "Profile photo", hint: "A square JPG, PNG or WebP works best.", add: "Add a photo", change: "Change photo", remove: "Remove photo", saved: "Your photo has been updated.", removed: "Your photo has been removed." },
+    address: { title: "Address", lead: "Your billing address." },
+    email: {
+      title: "Email",
+      lead: "The email address you log in with. To change it, enter the new address and your current password.",
+      sent: "Check your inboxes: we've sent a link to {email} and to your current address. Your email changes when you've opened both.",
+      pending: "Waiting for you to confirm {email}. Open the links we sent to both addresses.",
+      oneMore: "Thanks. Now open the link we sent to the other address to finish changing to {email}.",
+      changed: "Your email address is now {email}.",
+    },
+    password: {
+      title: "Password",
+      lead: "Choose a strong password you don't use anywhere else. Other devices are signed out when you change it.",
+      hint: "At least 8 characters, with a letter and a number.",
+      show: "Show passwords",
+      save: "Change password",
+      saved: "Your password has been changed. Other devices have been signed out.",
+    },
+    noPassword: "You log in with Google or Facebook, so there's no password here yet. To add one, use \"Forgot password\" on the log in page.",
+    marketing: { title: "Emails from us", label: "Send me offers and news about new courses", note: "You can change this at any time. We always email you about your bookings." },
     delete: { title: "Close your account", text: "To close your account and delete your data, contact us. We keep booking records the law asks us to keep.", cta: { label: "Contact us", href: "/contact-us" } },
   },
 
@@ -174,7 +192,6 @@ export const account = {
     { id: "w1", daysAgo: 88, label: "Welcome credit for your first booking", amount: 25 },
     { id: "w2", daysAgo: 40, label: "Goodwill credit from our team", amount: 15 },
   ],
-  demoUser: { firstName: "Sam", lastName: "Carter", email: "sam.carter@example.com", phone: "07700 900982", company: "", line1: "14 Deansgate", line2: "", city: "Manchester", postcode: "M3 2BW", alerts: true, offers: false },
   // dates are days from today, so the demo always has upcoming and past courses; `courseId` is the catalogue course
   demoBookings: [
     { reference: "RT-2026-104512", bookedDaysAgo: 18, method: "card", status: "confirmed", lines: [{ courseId: 1, mode: "classroom", startIn: 12, days: 6, time: "09:30 to 17:00", venue: "Manchester Training Centre", city: "Manchester", postcode: "M1 1AE", provider: "ClearView Learning", unit: 193.02, delegates: ["Sam Carter"] }] },

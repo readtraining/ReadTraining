@@ -36,6 +36,13 @@
       "when": 1792075248071,
       "tag": "0004_auth_activity",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792081767805,
+      "tag": "0005_avatars_bucket",
+      "breakpoints": true
     }
   ]
 }

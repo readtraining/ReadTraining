@@ -19,8 +19,16 @@ app.use(
   trpcExpress.createExpressMiddleware({
     router: appRouter,
     createContext: createTRPCContext,
+    // One short line per error: never the input (it can hold passwords) and never the whole error object.
     onError({ error, path }) {
-      console.error(`tRPC error on ${path}:`, error)
+      if (error.code === 'INTERNAL_SERVER_ERROR') {
+        // the deepest cause (for a failed query: the database's own code and message, not the query or its values)
+        let root: unknown = error
+        while (root instanceof Error && root.cause instanceof Error) root = root.cause
+        const r = root as Error & { code?: string }
+        console.error(`tRPC ${path}: ${error.code} ← ${r.code ?? r.name}: ${r.message.split('\n')[0]}`)
+      }
+      else console.warn(`tRPC ${path}: ${error.code}`)
     },
   }),
 )

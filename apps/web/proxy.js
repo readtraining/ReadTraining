@@ -42,7 +42,10 @@ export async function proxy(request) {
   const signedIn = Boolean(data?.claims?.sub);
 
   if (!signedIn && isProtected(path)) return toLogin(request);
-  if (signedIn && GUEST_ONLY.includes(path)) {
+  // a signed-in person normally skips log in and sign up, but not when the page carries a message for them: an email link
+  // that expired or was already used (from /auth/confirm) must be explained, not silently turned into the account page
+  const hasMessage = request.nextUrl.searchParams.has("error");
+  if (signedIn && GUEST_ONLY.includes(path) && !hasMessage) {
     const url = request.nextUrl.clone();
     url.pathname = safeNext(request.nextUrl.searchParams.get("next"), "/account").split("?")[0];
     url.search = "";

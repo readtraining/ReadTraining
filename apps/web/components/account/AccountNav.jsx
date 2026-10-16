@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { account as copy } from "@/data/account";
 import { businessAccount } from "@/data/businessAccount";
-import { getProfile } from "@/lib/account";
-import { signOut, useAuthUser } from "@/lib/auth/authClient";
+import { signOut } from "@/lib/auth/authClient";
+import { useMe } from "@/lib/useMe";
 
 const SignOutIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -19,11 +19,10 @@ const SignOutIcon = () => (
 // that scrolls sideways (Baymard: a few clear pages, understood on every visit).
 export default function AccountNav({ area = "account", current }) {
   const router = useRouter();
-  const [demo, setDemo] = useState(null);
-  const person = useAuthUser();
-  useEffect(() => setDemo(getProfile()), []);
-  // the signed-in person (Supabase Auth); the demo profile only fills in until the session is read
-  const me = person ? { firstName: person.firstName, lastName: person.lastName, email: person.email } : demo;
+  // the signed-in person: the saved profile (API), or the sign-in record's name while that loads
+  const { person, data } = useMe();
+  const me = data ? { firstName: data.profile.firstName, lastName: data.profile.lastName, email: data.email } : person;
+  const photo = area === "business" ? null : data?.profile.photoUrl;
   const menu = area === "business" ? businessAccount : copy;
   const name = area === "business" ? businessAccount.company.name : me ? `${me.firstName || ""} ${me.lastName || ""}`.trim() || me.email : "";
   const sub = area === "business" ? (me ? `${businessAccount.title} · ${me.firstName} ${me.lastName}` : businessAccount.title) : me?.email || "";
@@ -38,7 +37,7 @@ export default function AccountNav({ area = "account", current }) {
     <nav className="rt-acc__nav" aria-label={menu.title}>
       <div className="rt-acc__navcard">
         <div className="rt-acc__me">
-          <span className="rt-acc__avatar" aria-hidden="true">{initials}</span>
+          {photo ? <img className="rt-acc__avatar rt-acc__photoimg" src={photo} alt="" width="44" height="44" /> : <span className="rt-acc__avatar" aria-hidden="true">{initials}</span>}
           <div className="rt-acc__mewho">
             <strong>{name || " "}</strong>
             <span>{sub || " "}</span>

@@ -13,9 +13,12 @@ export const createTRPCContext = async ({ req }: CreateExpressContextOptions) =>
   const forwarded = req.headers['x-forwarded-for']
   const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim() || req.socket.remoteAddress || null
 
+  const user = await verifyAccessToken(token)
   return {
     db,
-    user: await verifyAccessToken(token),
+    user,
+    // the verified token, for the few calls the API makes to Supabase Auth on the person's behalf (an email change)
+    accessToken: user ? token! : null,
     ip,
   }
 }

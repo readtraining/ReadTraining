@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { account } from "@/data/account";
-import { cancellableLines, getBooking, getProfile, requestCancellation } from "@/lib/account";
+import { cancellableLines, getBooking, requestCancellation } from "@/lib/account";
+import { useAuthUser } from "@/lib/auth/authClient";
 import { formatPrice } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -16,6 +17,7 @@ const copy = account.cancel;
 // request button. It is a request, not an instant refund: each training provider sets its own refund policy (our terms), so the
 // booking shows "Cancellation requested" until the provider decides. The GOV.UK form patterns as the rest of the site.
 export default function CancelRequest({ reference }) {
+  const person = useAuthUser();
   const [booking, setBooking] = useState(undefined);
   const [chosen, setChosen] = useState([]);
   const [reason, setReason] = useState("");
@@ -63,7 +65,7 @@ export default function CancelRequest({ reference }) {
             <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l2.5 2" /></svg>
           </span>
           <h2 className="rt-acc__h2" tabIndex={-1} ref={doneRef}>{copy.done.title}</h2>
-          <p className="rt-acc__lead">{copy.done.text.replace("{ref}", request.reference).replace("{email}", getProfile().email)}</p>
+          <p className="rt-acc__lead">{copy.done.text.replace("{ref}", request.reference).replace("{email}", person?.email ?? "")}</p>
           <Link href={`/account/bookings/${booking.reference}`} className="button -md -purple-1 text-white">{copy.done.back}</Link>
         </section>
       </div>

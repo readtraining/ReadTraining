@@ -12,6 +12,7 @@ import {
   loginWithPassword,
   loginWithProvider,
   resendConfirmation,
+  useAuthUser,
 } from "@/lib/auth/authClient";
 import { safeNext } from "@/lib/safeNext";
 
@@ -35,6 +36,8 @@ export default function LoginForm() {
   const [values, setValues] = useState({ email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
+  const [linkProblem, setLinkProblem] = useState(false); // arrived from an expired or used email link
+  const person = useAuthUser();
   const [status, setStatus] = useState("idle"); // idle | validating | submitting
   const [showPassword, setShowPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState("");
@@ -48,7 +51,11 @@ export default function LoginForm() {
     const q = new URLSearchParams(window.location.search);
     const n = q.get("next");
     if (n) setNext(safeNext(n, AUTH_ROUTES.afterLogin));
-    if (q.get("error") === "link") setFormError("That link has expired or was already used. Log in, or ask for a new link.");
+    if (q.get("error") === "link") {
+      setLinkProblem(true);
+      setFormError("That link has expired or was already used. Log in, or ask for a new link.");
+    }
+    if (q.get("ended") === "1") setFormError("You've been signed out on this device, for example because your password was changed. Please log in again.");
   }, []);
 
   const busy = status !== "idle" || Boolean(socialLoading);
@@ -134,7 +141,12 @@ export default function LoginForm() {
       <form className="rt-auth__form" onSubmit={handleSubmit} noValidate ref={formRef}>
         {formError && (
           <AuthNotice>
-            {formError}
+            {linkProblem && person ? "That link has expired or was already used. You're still logged in." : formError}
+            {linkProblem && person && (
+              <span className="rt-auth__noticeaction">
+                <Link href={next}>Go to your account</Link>
+              </span>
+            )}
             {unconfirmed && (
               <span className="rt-auth__noticeaction">
                 {resent === "sent" ? (

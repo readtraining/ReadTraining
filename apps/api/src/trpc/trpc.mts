@@ -17,6 +17,8 @@ const t = initTRPC.context<TRPCContext>().create({
       data: {
         ...shape.data,
         zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+        // a check that failed on one form field (for example a wrong current password), so the form shows it there
+        field: error.cause && 'field' in error.cause && typeof error.cause.field === 'string' ? error.cause.field : null,
       },
     }
   },
