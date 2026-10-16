@@ -1,3 +1,4 @@
+import { adminRouter } from '../modules/admin/admin.router.mjs'
 import { meRouter } from '../modules/me/me.router.mjs'
 import { organisationsRouter } from '../modules/organisations/organisations.router.mjs'
 import { postsRouter } from '../modules/posts/posts.router.mjs'
@@ -8,6 +9,7 @@ export const appRouter = createTRPCRouter({
     status: 'ok',
     timestamp: new Date(),
   })),
+  admin: adminRouter,
   me: meRouter,
   organisations: organisationsRouter,
   posts: postsRouter,

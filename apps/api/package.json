@@ -10,7 +10,8 @@
     "dev": "tsx watch --env-file-if-exists=../../.env src/index.mts",
     "build": "tsc --noEmit && node build.mjs",
     "start": "tsx --env-file-if-exists=../../.env src/index.mts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "admin:grant": "tsx --env-file-if-exists=../../.env src/scripts/admin-grant.mts"
   },
   "dependencies": {
     "@readtraining/db": "workspace:*",

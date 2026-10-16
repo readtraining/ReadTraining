@@ -7,7 +7,9 @@
 
 export const admin = {
   title: "ReadTraining Admin",
-  staff: { name: "Sara Ahmed", role: "Super admin", email: "sara.ahmed@readtraining.co.uk" },
+  // the signed-in admin's access, as the top bar shows it, and the way out
+  presets: { full: "Full access", support: "Support", finance: "Finance", custom: "Custom access" },
+  signOut: "Sign out",
   // the sidebar, in the plan's groups (later phases join it as they are built)
   nav: [
     { group: "Overview", items: [

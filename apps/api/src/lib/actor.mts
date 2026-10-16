@@ -42,7 +42,13 @@ export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Acto
       .innerJoin(organisations, eq(organisations.id, organisationMembers.organisationId))
       .where(eq(organisationMembers.userId, user.id)),
     db
-      .select({ active: adminUsers.active, preset: adminUsers.preset, permissions: adminUsers.permissions, refundLimitPence: adminUsers.refundLimitPence })
+      .select({
+        active: adminUsers.active,
+        preset: adminUsers.preset,
+        permissions: adminUsers.permissions,
+        refundLimitPence: adminUsers.refundLimitPence,
+        twoStep: sql<boolean>`exists (select 1 from auth.mfa_factors f where f.user_id = ${user.id}::uuid and f.status = 'verified')`,
+      })
       .from(adminUsers)
       .where(and(eq(adminUsers.userId, user.id), eq(adminUsers.active, true))),
   ])

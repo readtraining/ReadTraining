@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { inviteStaff, saveFees, setStaffRole, useAdmin } from "@/lib/admin";
+import { currentAdmin } from "@/lib/adminStore";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -103,7 +104,7 @@ export default function AdminSettings() {
               <thead><tr><th scope="col">{sc.name}</th><th scope="col">{sc.role}</th><th scope="col">{sc.twofa}</th><th scope="col">{sc.last}</th></tr></thead>
               <tbody>
                 {data.staff.map((s) => {
-                  const me = s.email === A.staff.email;
+                  const me = s.email === currentAdmin().email;
                   return (
                     <tr key={s.email}>
                       <td data-label={sc.name}><span className="rt-adm-strong">{s.name}{me ? " (you)" : ""}</span><small>{s.email}</small></td>

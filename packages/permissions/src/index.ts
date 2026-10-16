@@ -27,6 +27,8 @@ export type AdminAccess = {
   preset: 'full' | 'support' | 'finance' | 'custom'
   permissions: string[]
   refundLimitPence: number
+  // has a verified authenticator (Supabase MFA): once set up, two-step sign-in is needed for every admin action
+  twoStep?: boolean
 }
 
 // Who is asking. `aal` is the sign-in strength from the token: aal2 means two-step sign-in was completed.
@@ -166,6 +168,9 @@ export const PROVIDER_ACTIONS = Object.keys(PROVIDER_RULES) as ProviderAction[]
 export const BUSINESS_ACTIONS = Object.keys(BUSINESS_RULES) as BusinessAction[]
 export const ADMIN_ACTIONS = Object.keys(ADMIN_RULES) as AdminAction[]
 
+// Two-step sign-in is required for Full admins (the brief) and for any admin who has set up an authenticator.
+export const needsTwoStep = (admin: AdminAccess) => admin.preset === 'full' || admin.twoStep === true
+
 // The switches an admin actually holds: a preset's list, or the stored list for "custom".
 export function adminPermissions(admin: AdminAccess | null): AdminPermission[] {
   if (!admin || !admin.active) return []
@@ -184,8 +189,8 @@ export function can(actor: Actor | null, action: Action, target: Target = {}): b
     const rule: { permission: AdminPermission | null; limited?: boolean; notOwnRequest?: boolean } = ADMIN_RULES[action as AdminAction]
     const admin = actor.admin
     if (!admin || !admin.active) return false
-    // a Full admin must have completed two-step sign-in for every admin action
-    if (admin.preset === 'full' && actor.aal !== 'aal2') return false
+    // a Full admin, and any admin who has set up an authenticator, must have completed two-step sign-in
+    if (needsTwoStep(admin) && actor.aal !== 'aal2') return false
     if (rule.permission && !adminPermissions(admin).includes(rule.permission)) return false
     // nobody approves their own request
     if (rule.notOwnRequest && target.createdBy && target.createdBy === actor.userId) return false

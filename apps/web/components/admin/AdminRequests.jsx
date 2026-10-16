@@ -5,6 +5,7 @@ import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
+import { currentAdmin } from "@/lib/adminStore";
 import { Due, Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
 
 const copy = W.requests;
@@ -26,7 +27,7 @@ export default function AdminRequests() {
   }, []);
   if (!data) return null;
 
-  const me = A.staff.name;
+  const me = currentAdmin().name;
   const inTab = (r, t) => (t === "open" ? r.open : t === "mine" ? r.open && r.assignee === me : t === "done" ? !r.open : true);
   const needle = q.trim().toLowerCase();
   const list = data.requests.filter((r) => inTab(r, tab) && (!needle || `${r.ref} ${r.name} ${r.email} ${r.company || ""}`.toLowerCase().includes(needle)));
