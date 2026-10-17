@@ -7,7 +7,8 @@ import { pw } from "@/data/providerWorkspace";
 import { createCourse } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { CardChoice, Choice } from "./providerParts";
+import { CardChoice, Choice, Loading } from "./providerParts";
+import { useTaxonomy } from "@/lib/taxonomyContext";
 import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { ErrorState } from "@/components/states/States";
 
@@ -19,6 +20,7 @@ const YES_NO = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
 
 export default function ProviderNewCourse() {
   const router = useRouter();
+  const taxonomy = useTaxonomy();
   const [step, setStep] = useState(1);
   const [f, setF] = useState({ title: "", category: "", subcategory: "", topic: "", type: "", sharedLanding: "", model: "", skillSaver: "" });
   const [errors, setErrors] = useState({});
@@ -68,7 +70,7 @@ export default function ProviderNewCourse() {
   const Err = ({ k }) => (errors[k] ? <p className="rt-q__err" id={`rt-pws-nc-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p> : null);
 
   // the categories come from the catalogue list; without it a course can't be filed, so say so instead of empty lists
-  if (!categoryOptions().length) return <ErrorState title="We couldn't load the course categories." text="Check your connection, then try again." onRetry={() => router.refresh()} />;
+  if (!categoryOptions().length) return taxonomy?.loading ? <Loading rows={2} /> : <ErrorState title="We couldn't load the course categories." text="Check your connection, then try again." onRetry={taxonomy?.retry} />;
 
   return (
     <form className="rt-acc__card rt-pws-wiz" onSubmit={next} noValidate ref={ref}>

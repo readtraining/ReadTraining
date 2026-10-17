@@ -28,7 +28,6 @@ import { useCourseQuery } from "./useCourseQuery";
 import { EmptyState } from "@/components/states/States";
 import { ErrorState } from "@/components/states/States";
 import { useTaxonomy } from "@/lib/taxonomyContext";
-import { useRouter } from "next/navigation";
 
 // Quick links under the search: each applies the matching subject filter (no navigation).
 const popularSearches = [
@@ -49,7 +48,6 @@ const countLabel = (n) => `${n} ${n === 1 ? "course" : "courses"}`;
 // The hero then shows the page's title and intro, and links to the other course pages instead of the popular searches.
 export default function CourseCatalogue({ courses = catalogueCourses, scope = null }) {
   const taxonomy = useTaxonomy();
-  const router = useRouter();
   const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject, scope?.location);
   const [toast, setToast] = useState(null);
 
@@ -398,7 +396,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
               </div>
               <div className="rt-fp__scrollwrap">
                 <div className="rt-fp__scroll" ref={scrollRef}>
-                  {taxonomy?.unavailable && <ErrorState inCard title="We couldn't load the filters." text="The courses below are still up to date." onRetry={() => router.refresh()} />}
+                  {taxonomy?.unavailable && !taxonomy.loading && <ErrorState inCard title="We couldn't load the filters." text="The courses below are still up to date." onRetry={taxonomy.retry} />}
                   <CatalogueFilters
                     state={state}
                     counts={counts}
