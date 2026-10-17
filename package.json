@@ -12,7 +12,10 @@
     "db:migrate": "pnpm --filter @readtraining/db migrate",
     "db:push": "pnpm --filter @readtraining/db push",
     "db:studio": "pnpm --filter @readtraining/db studio",
-    "admin:grant": "pnpm --filter @readtraining/api admin:grant"
+    "admin:grant": "pnpm --filter @readtraining/api admin:grant",
+    "live": "node scripts/live.mjs",
+    "supabase:templates": "node scripts/supabase-templates.mjs",
+    "supabase:google": "node scripts/supabase-google.mjs"
   },
   "devDependencies": {
     "turbo": "^2.5.8",

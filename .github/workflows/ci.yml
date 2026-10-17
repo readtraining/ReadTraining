@@ -1,0 +1,37 @@
+# Checks every pull request and every merge to main before anything is deployed: the migrations are consistent, every package
+# type-checks, and the API and the website build. No secrets are needed: without Supabase settings the site builds with sign-in
+# switched off, which is enough to prove it compiles.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # drizzle-kit reads a connection string from its config even for the offline consistency check
+      DIRECT_URL: postgres://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migrations are consistent
+        run: pnpm --filter @readtraining/db exec drizzle-kit check
+      - name: Database package builds
+        run: pnpm --filter @readtraining/db build
+      - name: Type-check every package
+        run: pnpm typecheck
+      - name: Build the API and the website
+        run: pnpm build

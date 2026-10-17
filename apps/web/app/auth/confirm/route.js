@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safeNext";
+import { mutateApiAsUser } from "@/lib/serverApi";
 
 // Where Supabase's links land, then on to ?next= (a path on this site only):
 // - email links (confirm the account, reset the password, change the email): ?token_hash=…&type=… → verifyOtp. Works when the
 //   link is opened in another browser or on another device, because nothing from the original browser is needed.
 // - Google / Facebook and older email links: ?code=… → exchangeCodeForSession (PKCE).
-// A missing, expired or used link goes to log in with a message.
+// A missing, expired or used link goes to log in with a message. After a successful sign-in the API is asked to send the
+// welcome email (it goes once per account, so later links do nothing); that never holds up or blocks the redirect.
 const EMAIL_TYPES = ["signup", "email", "recovery", "email_change", "invite", "magiclink"];
+
+async function signedIn(next, origin) {
+  await mutateApiAsUser("me.welcome").catch(() => {});
+  return NextResponse.redirect(new URL(next, origin));
+}
 
 export async function GET(request) {
   const url = new URL(request.url);
@@ -21,10 +28,10 @@ export async function GET(request) {
     const supabase = await getServerSupabase();
     if (tokenHash && EMAIL_TYPES.includes(type)) {
       const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-      if (!error) return NextResponse.redirect(new URL(next, url.origin));
+      if (!error) return signedIn(next, url.origin);
     } else if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (!error) return NextResponse.redirect(new URL(next, url.origin));
+      if (!error) return signedIn(next, url.origin);
     }
   }
   return NextResponse.redirect(new URL("/login?error=link", url.origin));

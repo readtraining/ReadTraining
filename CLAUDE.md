@@ -18,7 +18,12 @@ pnpm db:generate  # after editing packages/db/src/schema.ts, writes SQL to packa
 pnpm db:migrate   # apply migrations to Supabase
 pnpm db:push      # push schema directly, no migration
 pnpm db:studio
+
+pnpm admin:grant <email> [--preset support|finance|--revoke|--reset-two-step|--list]   # admins (no sign-up)
+pnpm live <command>     # run a command against the live project (LIVE_* in .env), e.g. pnpm live db:migrate
 ```
+
+The Supabase dashboard settings every project needs (auth, SMTP, email templates, redirect URLs) are listed in `supabase/README.md`; the email templates are in `supabase/templates/`.
 
 To run a command in one package, use `pnpm --filter @readtraining/<api|web|db> <script>`. The repo has no lint or test scripts. `playwright-core` is a devDependency of web, and QA is done by driving a browser against the dev server.
 

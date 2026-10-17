@@ -64,6 +64,13 @@
       "when": 1792152538419,
       "tag": "0008_catalogue_starting_list",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792170301854,
+      "tag": "0009_profile_welcome_sent",
+      "breakpoints": true
     }
   ]
 }

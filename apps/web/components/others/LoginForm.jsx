@@ -15,6 +15,7 @@ import {
   useAuthUser,
 } from "@/lib/auth/authClient";
 import { safeNext } from "@/lib/safeNext";
+import { api } from "@/lib/trpc/react";
 
 const BUTTON_LABELS = {
   idle: "Log in",
@@ -45,6 +46,8 @@ export default function LoginForm() {
   const [resent, setResent] = useState("");
   const [next, setNext] = useState(AUTH_ROUTES.afterLogin);
   const formRef = useRef(null);
+  // after a log-in, the API sends the welcome email if this account never got one (it goes once; usually after the confirm link)
+  const welcome = api.me.welcome.useMutation();
 
   // ?next= (where to go after logging in, set by the account pages) and ?error=link (an email link that expired or was used)
   useEffect(() => {
@@ -90,6 +93,7 @@ export default function LoginForm() {
         email: values.email.trim(),
         password: values.password,
       });
+      welcome.mutate();
       router.replace(next);
       router.refresh();
     } catch (err) {
@@ -114,12 +118,11 @@ export default function LoginForm() {
     if (busy) return;
     setFormError("");
     setSocialLoading(provider);
+    // on success the browser goes to the provider; it only stays here on a problem
     try {
-      await loginWithProvider(provider);
-      router.replace(next);
+      await loginWithProvider(provider, next);
     } catch (err) {
       setFormError(err?.message || "Social sign-in failed. Please try again.");
-    } finally {
       setSocialLoading("");
     }
   };

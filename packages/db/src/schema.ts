@@ -64,6 +64,8 @@ export const profiles = pgTable(
     postcode: text('postcode'),
     marketingOptIn: boolean('marketing_opt_in').notNull().default(false),
     marketingOptInAt: timestamp('marketing_opt_in_at', { withTimezone: true }),
+    // when the welcome email went out (sent once, on the first confirmed sign-in; null = not sent yet)
+    welcomeSentAt: timestamp('welcome_sent_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { AUTH_ROUTES } from "@/lib/routes";
+import { safeNext } from "@/lib/safeNext";
 
 // Auth through Supabase Auth (email and password; the project requires email confirmation). The log in, sign up, forgot and reset
 // password screens only depend on these functions: each resolves on success and throws an Error with a message people can act on.
@@ -48,11 +49,27 @@ export async function resendConfirmation({ email }) {
   if (error) throw fail(error, "We couldn't send the link. Please try again.");
 }
 
-// Google and Facebook are not switched on in the Supabase project yet (Authentication > Sign In / Providers).
-export async function loginWithProvider(provider) {
-  const name = provider === "facebook" ? "Facebook" : "Google";
-  throw new Error(`${name} sign-in isn't available yet. Please log in with your email.`);
+// Google (and Facebook once Meta has verified the business) through Supabase: the browser goes to the provider and comes back
+// to /auth/callback?next=… signed in, with the profile's name and photo from the provider. Supabase is asked first whether
+// the provider is switched on (Authentication > Sign In / Providers), so a provider that isn't set up shows a message here
+// instead of Supabase's error page. On success the browser leaves the page, so this only returns on a problem.
+async function providerEnabled(provider) {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY } });
+    return Boolean((await res.json())?.external?.[provider]);
+  } catch {
+    return false;
+  }
 }
+async function socialSignIn(provider, next, signingUp) {
+  const name = provider === "facebook" ? "Facebook" : "Google";
+  const with_ = signingUp ? "sign up with your email" : "log in with your email";
+  if (!isSupabaseConfigured || !(await providerEnabled(provider))) throw new Error(`${name} ${signingUp ? "sign-up" : "sign-in"} isn't available yet. Please ${with_}.`);
+  const back = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext(next, AUTH_ROUTES.afterLogin))}`;
+  const { error } = await getSupabase().auth.signInWithOAuth({ provider, options: { redirectTo: back } });
+  if (error) throw fail(error, `${name} ${signingUp ? "sign-up" : "sign-in"} didn't work. Please try again, or ${with_}.`);
+}
+export const loginWithProvider = (provider, next) => socialSignIn(provider, next, false);
 
 // Sends the reset email; its link opens /reset-password signed in for that one change. Says nothing about whether the
 // email has an account, so the form cannot be used to find out who is registered.
@@ -88,10 +105,7 @@ export async function registerAccount({ firstName, lastName, email, password, ma
   return { email: email.trim(), needsConfirmation: !data.session };
 }
 
-export async function signUpWithProvider(provider) {
-  const name = provider === "facebook" ? "Facebook" : "Google";
-  throw new Error(`${name} sign-up isn't available yet. Please sign up with your email.`);
-}
+export const signUpWithProvider = (provider, next) => socialSignIn(provider, next, true);
 
 export async function signOut() {
   if (!isSupabaseConfigured) return;

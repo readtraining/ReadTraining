@@ -3,12 +3,14 @@ import { randomUUID } from 'node:crypto'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { eq, inArray, organisations, profiles, sql } from '@readtraining/db'
+import { and, eq, inArray, isNull, organisations, profiles, sql } from '@readtraining/db'
 import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { welcomeEmail } from '../../emails/welcome.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
-import { requestEmailChange, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
+import { sendEmail } from '../../lib/email.mjs'
+import { requestEmailChange, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
 import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
 
 // Account settings, in Hurak's four parts: basic information, address, email (needs the current password) and password
@@ -204,5 +206,27 @@ export const meRouter = createTRPCRouter({
     })
     if (supabase && before?.avatarUrl && !/^https:\/\//.test(before.avatarUrl)) await supabase.storage.from(AVATARS).remove([before.avatarUrl])
     return { ok: true }
+  }),
+
+  // The welcome email: once per account, after its first confirmed sign-in (the confirm link, Google, or a later log-in as a
+  // fallback). The row is claimed first, so two sign-ins at the same moment can't send it twice; if sending fails the claim is
+  // released and the next sign-in tries again.
+  welcome: protectedProcedure.mutation(async ({ ctx }) => {
+    const [auth] = await ctx.db.execute<{ email: string; confirmed: boolean }>(sql`
+      select email, email_confirmed_at is not null as confirmed from auth.users where id = ${ctx.user.id}::uuid`)
+    if (!auth?.confirmed) return { sent: false }
+    const [claimed] = await ctx.db
+      .update(profiles)
+      .set({ welcomeSentAt: new Date() })
+      .where(and(eq(profiles.id, ctx.user.id), isNull(profiles.welcomeSentAt)))
+      .returning({ firstName: profiles.firstName })
+    if (!claimed) return { sent: false }
+    const sent = await sendEmail(welcomeEmail({ to: auth.email, firstName: claimed.firstName, siteUrl }))
+    if (!sent) {
+      await ctx.db.update(profiles).set({ welcomeSentAt: null }).where(eq(profiles.id, ctx.user.id))
+      return { sent: false }
+    }
+    await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'system', action: 'email.welcome_sent', targetType: 'account', targetId: ctx.user.id, metadata: {}, ip: ctx.ip })
+    return { sent: true }
   }),
 })

@@ -113,12 +113,11 @@ export function useSignUpForm() {
     if (busy) return;
     setFormError("");
     setSocialLoading(provider);
+    // on success the browser goes to the provider and comes back signed in (to ?next= when there is one)
     try {
-      await signUpWithProvider(provider);
-      router.push(AUTH_ROUTES.afterLogin);
+      await signUpWithProvider(provider, safeNext(new URLSearchParams(window.location.search).get("next"), AUTH_ROUTES.afterLogin));
     } catch (err) {
       setFormError(err?.message || "Social sign-up failed. Please try again.");
-    } finally {
       setSocialLoading("");
     }
   };
