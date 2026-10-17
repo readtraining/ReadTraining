@@ -14,6 +14,7 @@
     "db:studio": "pnpm --filter @readtraining/db studio",
     "admin:grant": "pnpm --filter @readtraining/api admin:grant",
     "live": "node scripts/live.mjs",
+    "supabase:auth": "node scripts/supabase-auth.mjs",
     "supabase:templates": "node scripts/supabase-templates.mjs",
     "supabase:google": "node scripts/supabase-google.mjs"
   },

@@ -21,6 +21,17 @@ up by hand from this list, identically. Tick every line for each project.
 
 ## 3. Authentication settings
 
+Three commands set almost all of this section through the Supabase Management API (they need `SUPABASE_ACCESS_TOKEN` in `.env`,
+a token with Auth config and Project Settings write access for that project), and read every value back:
+
+- `pnpm supabase:auth [--live]`: confirm email, minimum password 8, secure email and password change, current password
+  required, TOTP, SMTP as ReadTraining, email rate limit.
+- `pnpm supabase:templates [--live]`: the four email templates, their subjects and the sender name.
+- `pnpm supabase:google [--live] [--site https://…]`: Google sign-in and the allowed return addresses.
+
+The list below is what they set, for checking in the dashboard or setting by hand. JWT signing keys and the Site URL are
+still set in the dashboard.
+
 **Sign In / Providers**
 - [ ] Email: on. **Confirm email**: on.
 - [ ] **Secure email change**: on (both the old and the new address must confirm).

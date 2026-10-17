@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? '',
   },
   images: { unoptimized: true },
+  // the test copy (Vercel preview deployments) can be opened by anyone with the link, but search engines never index it
+  async headers() {
+    return process.env.VERCEL_ENV === 'preview' ? [{ source: '/(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }] : []
+  },
   // pages that left the template routes (auth, shop, checkout): old links and bookmarks land on the new addresses, query kept
   async redirects() {
     return [
