@@ -4,9 +4,11 @@ import "react-calendar/dist/Calendar.css";
 import "aos/dist/aos.css";
 import Providers from "./Providers";
 import { SITE_URL } from "@/lib/seo";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // The root layout: a server component, so every page gets the site-wide metadata below (a page's own pageMetadata() adds its
-// title, description and canonical). Browser-only parts (basket, tRPC, animations) are in Providers.
+// title, description and canonical). Browser-only parts (basket, tRPC, animations) are in Providers. The catalogue list
+// (categories, methods, levels) is loaded here once and handed to every page through Providers.
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: "ReadTraining | Accredited training courses across the UK",
@@ -22,11 +24,12 @@ export const viewport = {
   themeColor: "#140342",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const taxonomy = await loadTaxonomy();
   return (
     <html lang="en-GB" data-scroll-behavior="smooth">
       <body>
-        <Providers>{children}</Providers>
+        <Providers taxonomy={taxonomy}>{children}</Providers>
       </body>
     </html>
   );

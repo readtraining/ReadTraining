@@ -1,6 +1,8 @@
 import { providers } from "@/data/providers";
 import { getCourseBySlug, getSubjectLabel } from "@/lib/courses";
 import { catalogueCourses } from "@/data/courseCatalogue";
+import { MODE_METHOD, modeLabel } from "@/lib/courseModes";
+import { getTaxonomy } from "@/lib/taxonomy";
 
 // All reads for the listed providers go through here. Swap the bodies for API calls later.
 // A provider's courses are the catalogue courses that have at least one session with that provider (the names on the course
@@ -10,14 +12,15 @@ export const PROVIDERS_HREF = "/providers";
 export const PROVIDERS_PAGE_SIZE = 6;
 export const providerHref = (slug) => `${PROVIDERS_HREF}/${slug}`;
 
-const MODE_LABEL = { classroom: "Classroom", online: "Live online", ondemand: "On demand" };
-const MODE_ORDER = Object.keys(MODE_LABEL);
+const MODE_ORDER = Object.keys(MODE_METHOD);
 const unique = (list) => [...new Set(list)];
 
 // "BrightPath Academy" -> "BA", the stand-in for a logo until providers upload one
 const providerInitials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
 
+// built once per catalogue list (names come from it), so a renamed category or method shows without a restart
 let index;
+let indexFor;
 function buildIndex() {
   const byName = new Map(providers.map((p) => [p.name, []]));
   for (const base of catalogueCourses) {
@@ -37,7 +40,7 @@ function buildIndex() {
         href: base.detailsHref,
         duration: base.duration,
         subject: getSubjectLabel(base),
-        modes: MODE_ORDER.filter((m) => sessions.some((s) => s.mode === m)).map((m) => MODE_LABEL[m]),
+        modes: MODE_ORDER.filter((m) => sessions.some((s) => s.mode === m)).map(modeLabel),
         cities: unique(sessions.map((s) => s.city).filter(Boolean)),
         price: lowest.price,
         wasPrice: lowest.wasPrice,
@@ -53,14 +56,15 @@ function buildIndex() {
       imageSrc: `/assets/img/coursesCards/${(i % 12) + 1}.png`, // stand-in photo until providers upload one
       courses,
       subjects: unique(courses.map((c) => c.subject)),
-      modes: MODE_ORDER.map((m) => MODE_LABEL[m]).filter((l) => courses.some((c) => c.modes.includes(l))),
+      modes: MODE_ORDER.map(modeLabel).filter((l) => courses.some((c) => c.modes.includes(l))),
       cities: unique(courses.flatMap((c) => c.cities)).sort(),
     };
   });
 }
 
 export function getProviders() {
-  return (index ||= buildIndex());
+  if (indexFor !== getTaxonomy()) [index, indexFor] = [buildIndex(), getTaxonomy()];
+  return index;
 }
 
 export const getProvider = (slug) => getProviders().find((p) => p.slug === slug) || null;

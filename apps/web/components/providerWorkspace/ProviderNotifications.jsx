@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { markAllRead, markRead, useProvider } from "@/lib/providerWorkspace";
 import CataloguePagination from "@/components/courses/CataloguePagination";
-import { Empty, Loading, Tabs, formatWhen, getQuery, setQuery } from "./providerParts";
+import { Loading, Tabs, formatWhen, getQuery, setQuery } from "./providerParts";
+import { EmptyState } from "@/components/states/States";
 
 const PER_PAGE = 10;
 
@@ -28,7 +29,7 @@ export default function ProviderNotifications() {
   const rows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
   const tabs = [{ key: "all", label: "All", count: all.length }, { key: "unread", label: "Unread", count: unread.length }];
 
-  if (!all.length) return <Empty title="No notifications yet" text="Updates on your courses, orders and reviews appear here." />;
+  if (!all.length) return <EmptyState title="No notifications yet" text="Updates on your courses, orders and reviews appear here." />;
 
   return (
     <div className="rt-acc__stack">
@@ -56,7 +57,7 @@ export default function ProviderNotifications() {
         {pages > 1 && <div className="rt-pws-coh__pages"><CataloguePagination page={at} totalPages={pages} hrefFor={(p) => `?page=${p}`} onNavigate={setPage} /></div>}
         </div>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">You have read everything.</p>
+        <EmptyState title="You have read everything." />
       )}
     </div>
   );

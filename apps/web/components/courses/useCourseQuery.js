@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { PRICE_BOUNDS, buildCatalogueQuery, defaultSort, parseCatalogueParams, subSubjects } from "@/data/courseCatalogue";
+import { PRICE_BOUNDS, buildCatalogueQuery, defaultSort, parseCatalogueParams } from "@/data/courseCatalogue";
+import { subcategoriesOf } from "@/lib/taxonomy";
+import { useTaxonomy } from "@/lib/taxonomyContext";
 
 const CHECKBOX_GROUPS = ["subject", "sub", "method", "level"];
 // The filter keys that "Remove last filter" can undo.
@@ -21,11 +23,16 @@ const TICK_DEBOUNCE = 250;
 //   scroll jump. Filter changes replace the entry; page changes push one so Back / Forward restore the page.
 // `baseSubject` is a course page's own subject (/courses/first-aid): its sub-subjects work without a ticked subject.
 // `baseLocation` is a town page's town (/courses/first-aid/leeds): the location until the visitor changes it.
+// The address is read against the catalogue list, so it is read again when the list arrives (a page built ahead of time
+// fetches it in the browser), and it is never tidied while the list is still unknown, or ?subject=… would be lost.
 export function useCourseQuery(baseSubject = "", baseLocation = "") {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const base = useMemo(() => ({ ...(baseSubject ? { subject: baseSubject } : {}), ...(baseLocation ? { location: baseLocation } : {}) }), [baseSubject, baseLocation]);
-  const urlState = useMemo(() => parseCatalogueParams(searchParams, base), [searchParams, base]);
+  const taxonomy = useTaxonomy();
+  const listKnown = Boolean(taxonomy?.categories?.length);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const urlState = useMemo(() => parseCatalogueParams(searchParams, base), [searchParams, base, taxonomy]);
 
   const [pending, setPending] = useState(null); // optimistic state while a debounced write is waiting
   const state = pending ?? urlState;
@@ -53,13 +60,13 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
 
   // Tidy the address bar: unknown values, duplicates, unsorted lists and legacy names are rewritten to the clean form.
   useEffect(() => {
-    if (pending) return;
+    if (pending || !listKnown) return;
     const clean = buildCatalogueQuery(urlState, base);
     const current = searchParams.toString().replace(/%2C/g, ",");
     if (current && clean !== current) {
       if (parseCatalogueParams(new URLSearchParams(current), base).page === urlState.page) writeUrl(clean, "replace");
     }
-  }, [searchParams, urlState, pending, writeUrl, base]);
+  }, [searchParams, urlState, pending, writeUrl, base, listKnown]);
 
   // Small history of filter changes so the latest single change can be undone ("Remove last filter").
   const history = useRef([]);
@@ -73,7 +80,7 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
       if ("location" in patch && patch.location !== base.location) next.sort = defaultSort(next.location);
       // Sub-subjects only make sense under a ticked subject.
       if ("subject" in patch && !("sub" in patch)) {
-        const allowed = new Set([...next.subject, ...(baseSubject ? [baseSubject] : [])].flatMap((sv) => (subSubjects[sv] || []).map((x) => x.value)));
+        const allowed = new Set([...next.subject, ...(baseSubject ? [baseSubject] : [])].flatMap((sv) => subcategoriesOf(sv).map((x) => x.slug)));
         next.sub = next.sub.filter((v) => allowed.has(v));
       }
       if (record && !sameFilters(base, next)) {

@@ -4,9 +4,11 @@ import React, { useEffect, useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { inviteStaff, saveFees, setStaffRole, useAdmin } from "@/lib/admin";
+import { currentAdmin } from "@/lib/adminStore";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.settings;
 const TABS = ["staff", "fees", "audit"];
@@ -103,7 +105,7 @@ export default function AdminSettings() {
               <thead><tr><th scope="col">{sc.name}</th><th scope="col">{sc.role}</th><th scope="col">{sc.twofa}</th><th scope="col">{sc.last}</th></tr></thead>
               <tbody>
                 {data.staff.map((s) => {
-                  const me = s.email === A.staff.email;
+                  const me = s.email === currentAdmin().email;
                   return (
                     <tr key={s.email}>
                       <td data-label={sc.name}><span className="rt-adm-strong">{s.name}{me ? " (you)" : ""}</span><small>{s.email}</small></td>
@@ -160,7 +162,7 @@ export default function AdminSettings() {
               </tbody>
             </table>
           </div>
-        ) : <p className="rt-acc__card rt-acc__empty">{data.audit.length ? "No changes match." : copy.auditEmpty}</p>
+        ) : <EmptyState title={data.audit.length ? "No changes match." : copy.auditEmpty} />
       )}
 
       <Sheet open={inviting} onClose={() => setInviting(false)} title={copy.inviteTitle} closeLabel="Close">

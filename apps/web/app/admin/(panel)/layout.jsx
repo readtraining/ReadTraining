@@ -1,0 +1,12 @@
+import { redirect } from "next/navigation";
+import { getAdminAccess } from "@/lib/adminAccess";
+import { AdminAccessProvider } from "@/lib/adminContext";
+import { AUTH_ROUTES } from "@/lib/routes";
+
+// Every admin panel page: only for an active admin who has finished sign-in (two-step where required). Checked by proxy.js on
+// each request and again here if that check didn't pass through; anyone else goes to the admin login, which never says why.
+export default async function AdminPanelLayout({ children }) {
+  const admin = await getAdminAccess();
+  if (!admin) redirect(AUTH_ROUTES.adminLogin);
+  return <AdminAccessProvider value={admin}>{children}</AdminAccessProvider>;
+}

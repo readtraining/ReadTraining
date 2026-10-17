@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { todayIso, useProvider } from "@/lib/providerWorkspace";
-import { Empty, Loading, Tabs, getQuery, setQuery, shortDay } from "./providerParts";
+import { Loading, Tabs, getQuery, setQuery, shortDay } from "./providerParts";
 import { addDays, longDay, monthLabel, weekday } from "./ProviderCohorts";
+import { EmptyState } from "@/components/states/States";
 
 // The calendar: every session of every cohort by month, week or day (view and date kept in the address, ?view= and ?date=); the
 // List / Calendar switch above it goes back to the cohort list. Sessions show in their cohort's colour, past ones grey. Each session is a link to its cohort; cancelled cohorts stay visible, struck through. On phones the month becomes a
@@ -62,7 +63,7 @@ export default function ProviderCalendar() {
   };
 
   if (!data) return <Loading rows={1} />;
-  if (!data.cohorts.length) return <Empty title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={{ label: "Add a cohort", href: "/provider/cohorts" }} />;
+  if (!data.cohorts.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={{ label: "Add a cohort", href: "/provider/cohorts" }} />;
 
   const byDay = sessionsByDay(data.cohorts);
   const today = data.today;
@@ -170,7 +171,7 @@ function WeekView({ start, today, byDay }) {
 
 function DayList({ days, today, byDay, showEmpty = false, emptyText = "" }) {
   const withSessions = days.filter((d) => byDay[d]);
-  if (!withSessions.length && !showEmpty) return <p className="rt-acc__card rt-acc__empty">{emptyText}</p>;
+  if (!withSessions.length && !showEmpty) return <EmptyState title={emptyText} />;
   const shown = showEmpty ? days : withSessions;
   return (
     <div className="rt-acc__stack rt-pws-cal__list">
@@ -192,7 +193,7 @@ function DayList({ days, today, byDay, showEmpty = false, emptyText = "" }) {
                 ))}
               </ul>
             ) : (
-              <p className="rt-pws-cal__none">No sessions on this day.</p>
+              <EmptyState inCard title="No sessions on this day." />
             )}
           </section>
         );

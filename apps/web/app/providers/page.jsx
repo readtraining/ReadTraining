@@ -8,6 +8,7 @@ import ProviderDirectory from "@/components/providers/ProviderDirectory";
 import { providerPages } from "@/data/providers";
 import { PROVIDERS_HREF, getProviders, toProviderCard } from "@/lib/providers";
 import { abs, breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Listed training providers (/providers), the footer's "Listed Training Providers" link, in the marketing-page language of
 // /about-us and /blog: centred dark hero (Get started goes to /for-providers) > the providers as cards with the count, Show all
@@ -18,7 +19,8 @@ const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training provider
 
 export const metadata = pageMetadata({ title: p.title, description: p.description, path: PROVIDERS_HREF });
 
-export default function ProvidersPage() {
+export default async function ProvidersPage() {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const providers = getProviders();
   const listLd = {
     "@context": "https://schema.org",

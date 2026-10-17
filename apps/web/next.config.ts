@@ -12,8 +12,14 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
+    // where proxy.js and server pages reach the API (local: http://localhost:4000; on Vercel empty, so the site's own address)
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? '',
   },
   images: { unoptimized: true },
+  // the test copy (Vercel preview deployments) can be opened by anyone with the link, but search engines never index it
+  async headers() {
+    return process.env.VERCEL_ENV === 'preview' ? [{ source: '/(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }] : []
+  },
   // pages that left the template routes (auth, shop, checkout): old links and bookmarks land on the new addresses, query kept
   async redirects() {
     return [
@@ -30,6 +36,10 @@ const nextConfig: NextConfig = {
       { source: '/account/profile', destination: '/account/settings', permanent: true },
       // the old provider workspace prototype
       { source: '/admin/provider', destination: '/provider', permanent: true },
+      // delivery methods: the address is the method's name (brief §4); the client's old words redirect
+      { source: '/courses/virtual', destination: '/courses/live-online', permanent: true },
+      { source: '/courses/online', destination: '/courses/self-paced', permanent: true },
+      { source: '/courses/on-demand', destination: '/courses/self-paced', permanent: true },
     ]
   },
 }

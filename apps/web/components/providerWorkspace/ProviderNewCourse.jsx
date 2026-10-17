@@ -7,7 +7,10 @@ import { pw } from "@/data/providerWorkspace";
 import { createCourse } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { CardChoice, Choice } from "./providerParts";
+import { CardChoice, Choice, Loading } from "./providerParts";
+import { useTaxonomy } from "@/lib/taxonomyContext";
+import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
+import { ErrorState } from "@/components/states/States";
 
 // A new course in Hurak's five steps: 1 working title, 2 category, sub-category and topic, 3 compliance or not (a compliance course
 // can also go on the shared landing page), 4 performance model, 5 Skill Saver. Previous / Continue, Exit back to the courses;
@@ -17,14 +20,15 @@ const YES_NO = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
 
 export default function ProviderNewCourse() {
   const router = useRouter();
+  const taxonomy = useTaxonomy();
   const [step, setStep] = useState(1);
   const [f, setF] = useState({ title: "", category: "", subcategory: "", topic: "", type: "", sharedLanding: "", model: "", skillSaver: "" });
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const ref = useRef(null);
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
-  const subs = (pw.subcategories[f.category] || []).map(([label, topics]) => ({ value: label, label, topics }));
-  const topics = subs.find((x) => x.value === f.subcategory)?.topics || [];
+  const subs = subcategoryOptions(f.category);
+  const topics = topicOptions(f.category, f.subcategory);
 
   const check = () => {
     const e = {};
@@ -65,6 +69,9 @@ export default function ProviderNewCourse() {
   };
   const Err = ({ k }) => (errors[k] ? <p className="rt-q__err" id={`rt-pws-nc-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p> : null);
 
+  // the categories come from the catalogue list; without it a course can't be filed, so say so instead of empty lists
+  if (!categoryOptions().length) return taxonomy?.loading ? <Loading rows={2} /> : <ErrorState title="We couldn't load the course categories." text="Check your connection, then try again." onRetry={taxonomy?.retry} />;
+
   return (
     <form className="rt-acc__card rt-pws-wiz" onSubmit={next} noValidate ref={ref}>
       <div className="rt-pws-wiz__top">
@@ -94,7 +101,7 @@ export default function ProviderNewCourse() {
             <div className="rt-field">
               <label htmlFor="rt-pws-nc-category">Category</label>
               <Err k="category" />
-              <FieldSelect id="rt-pws-nc-category" label="Category" placeholder="Choose a category" value={f.category} onChange={(v) => set({ category: v, subcategory: "", topic: "" })} options={pw.categories} invalid={Boolean(errors.category)} describedBy={errors.category ? "rt-pws-nc-category-e" : undefined} />
+              <FieldSelect id="rt-pws-nc-category" label="Category" placeholder="Choose a category" value={f.category} onChange={(v) => set({ category: v, subcategory: "", topic: "" })} options={categoryOptions()} invalid={Boolean(errors.category)} describedBy={errors.category ? "rt-pws-nc-category-e" : undefined} />
             </div>
             <div className="rt-field">
               <label htmlFor="rt-pws-nc-subcategory">Sub-category</label>

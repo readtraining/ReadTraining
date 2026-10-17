@@ -2,14 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
-import { MODE_LABEL, quoteHref, useBooking } from "./BookingProvider";
+import { quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import DatesDialog from "./DatesDialog";
 import { Check, Icon } from "./Icon";
+import { modeLabel } from "@/lib/courseModes";
+import { EmptyState } from "@/components/states/States";
 
 
-// Existing descriptions per option. An option with no description (On Demand) simply shows none.
+// Existing descriptions per option. An option with no description (Self-paced) simply shows none.
 const BULLETS = {
   classroom: ["Focused study away from the workplace.", "Face-to-face support with experienced tutors.", "Interact with fellow professionals."],
   online: ["Learn from home or at work.", "Live sessions with an experienced tutor.", "Join from any device."],
@@ -42,7 +44,7 @@ function DatesSummary({ rows, mode }) {
   );
 }
 
-// Learning options: the one place where the choice is made. Every option (Classroom, Live online, On Demand, team training) is
+// Learning options: the one place where the choice is made. Every option (Classroom, Live online, Self-paced, team training) is
 // the same card; the grid picks one row, 2 x 2 or a single column from the number of options and the room available. The dates for the selected option follow,
 // then the staff training and exam prep boxes. Choosing never moves the page.
 export default function LearningSection() {
@@ -69,7 +71,7 @@ export default function LearningSection() {
                 {/* Every card has the same five parts (badge, title, points, "+ more", price), some of them empty, so the
                     parts line up across a row of cards (CSS subgrid). */}
                 <span className="rt-lc__top">{course.popularMode === m && <span className="rt-pill -accent">Most popular</span>}</span>
-                <h3 className="rt-lc__name" id={`rt-lc-${m}`}>{m === "inhouse" ? TEAM.cardTitle : MODE_LABEL[m]}</h3>
+                <h3 className="rt-lc__name" id={`rt-lc-${m}`}>{m === "inhouse" ? TEAM.cardTitle : modeLabel(m)}</h3>
                 <ul className="rt-lc__list">{list.slice(0, 2).map((b) => <li key={b}><Check /> <span>{b}</span></li>)}</ul>
                 <span className="rt-lc__more">{more > 0 && `+ ${more} more`}</span>
                 <span className="rt-lc__price">
@@ -103,7 +105,7 @@ export default function LearningSection() {
             </div>
           </div>
         ) : mode === "ondemand" ? null : rows.length === 0 ? (
-          <p className="rt-cd__empty">No dates in this location yet. Try another location.</p>
+          <EmptyState inCard title="No dates in this location yet." text="Try another location." />
         ) : (
           <>
             <DatesSummary rows={rows} mode={mode} />

@@ -13,7 +13,7 @@ import SaverProgress from "@/components/skillSaver/SaverProgress";
 import { SKILL_SAVER_PATH, skillSaverLearner as s } from "@/data/skillSaverLearner";
 import { SKILL_SAVER_LEVELS } from "@/lib/skillSaver";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
-import { getServerSupabase } from "@/lib/supabase/server";
+import { getServerClaims } from "@/lib/supabase/server";
 
 // Skill Saver Programme for learners (/skill-saver), the footer's "Skill Saver Programme", in the Provider Skill Saver page
 // language: masthead with an example learner level > how it works > the three levels (lavender) > your own level beside the
@@ -38,8 +38,8 @@ const exNext = SKILL_SAVER_LEVELS[ex.level];
 const exampleStatus = { ...exLevel, next: { ...exNext, have: ex.have } };
 
 export default async function SkillSaverLearnerPage() {
-  const { data } = await (await getServerSupabase()).auth.getUser();
-  const person = data.user ? { firstName: data.user.user_metadata?.first_name || "" } : null;
+  const claims = await getServerClaims();
+  const person = claims ? { firstName: claims.user_metadata?.first_name || "" } : null;
   const [primary, secondary] = person ? s.hero.signedIn : [s.hero.primary, s.hero.secondary];
 
   return (

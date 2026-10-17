@@ -33,6 +33,15 @@ export const providerPages = {
       secondary: { label: "Need support? Contact us", href: "/contact-us" },
     },
   },
+  // a provider that has just joined (created in the database): its profile exists straight away, with what isn't there yet
+  // said plainly; it stays out of search engines until the provider is approved
+  newProvider: {
+    eyebrow: "Training provider",
+    lead: "Training courses from {name} on ReadTraining.",
+    primary: { label: "Browse all courses", href: "/courses" },
+    about: { title: "About {name}", text: "{name} hasn't added their details yet." },
+    courses: { title: "No courses yet", text: "{name} hasn't published any courses yet. Browse other courses in the meantime.", action: { label: "Browse courses", href: "/courses" } },
+  },
   detail: {
     eyebrow: "Approved provider",
     badge: "Approved on ReadTraining",

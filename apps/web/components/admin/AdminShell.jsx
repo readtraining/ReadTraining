@@ -1,23 +1,39 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
+import { useAdminAccess } from "@/lib/adminContext";
+import { actAsAdmin } from "@/lib/adminStore";
+import { AUTH_ROUTES } from "@/lib/routes";
+import { getSupabase } from "@/lib/supabase/client";
 
-const initials = (name) => name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
 // The admin's layout: a work layout, not the public site's. The checkout header's dark band with the logo and an "Admin" tag, the
-// signed-in staff member and "View site"; a sidebar with the plan's groups (each page with its icon and a live count where
+// signed-in admin (from the server check: name, access level), "View site" and Sign out; a sidebar with the plan's groups (each page with its icon and a live count where
 // something waits); then the page head (title, intro, the page's actions) and the page. Below 992px the
 // sidebar becomes the account's chip row that scrolls sideways. `current` marks the page.
 export default function AdminShell({ current, title, lead, actions = null, children }) {
   const sideRef = useRef(null);
+  const router = useRouter();
+  const me = useAdminAccess();
+  const [leaving, setLeaving] = useState(false);
+  // the demo records (notes, history, the staff list) carry the real admin's name
+  actAsAdmin(me);
   const data = useAdmin();
   const counts = data?.counts || {};
   const items = A.nav.flatMap((g) => g.items);
+  const signOut = async () => {
+    setLeaving(true);
+    await getSupabase().auth.signOut().catch(() => {});
+    router.replace(AUTH_ROUTES.adminLogin);
+    router.refresh();
+  };
 
   return (
     <div className="rt-home rt-adm">
@@ -31,9 +47,10 @@ export default function AdminShell({ current, title, lead, actions = null, child
           <div className="rt-adm__topside">
             <Link href={A.backToSite.href} className="rt-adm__site">{A.backToSite.label}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>
             <div className="rt-adm__me">
-              <span className="rt-acc__avatar" aria-hidden="true">{initials(A.staff.name)}</span>
-              <span className="rt-adm__mewho"><strong>{A.staff.name}</strong><span>{A.staff.role}</span></span>
+              <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{A.presets[me?.preset] ?? ""}</span></span>
             </div>
+            <button type="button" className="rt-adm__out" onClick={signOut} disabled={leaving}>{A.signOut}</button>
           </div>
         </div>
       </header>

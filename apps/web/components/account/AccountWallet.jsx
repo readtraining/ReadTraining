@@ -5,6 +5,7 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { getWallet } from "@/lib/account";
 import { formatDate, formatPrice } from "@/lib/format";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.wallet;
 
@@ -44,7 +45,7 @@ export default function AccountWallet() {
             </tbody>
           </table>
         ) : (
-          <p className="rt-acc__empty">{copy.none}</p>
+          <EmptyState inCard title={copy.none} />
         )}
       </section>
 

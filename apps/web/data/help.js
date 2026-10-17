@@ -59,7 +59,7 @@ export const helpTopics = [
         summary: "Classroom, live online or online self-paced: what each one means.",
         blocks: [
           "Many courses can be taken in more than one way. Each course page shows the ways it is available.",
-          { type: "ul", items: ["**Classroom:** at a training venue, with a trainer and other learners.", "**Live online:** with a trainer at set times, joining from home or work.", "**Online self-paced:** in your own time, at your own pace."] },
+          { type: "ul", items: ["**Classroom:** at a training venue, with a trainer and other learners.", "**Live online:** with a trainer at set times, joining from home or work.", "**Self-paced:** in your own time, at your own pace."] },
           "Some qualifications need an in-person assessment, so not every course is available in every format.",
         ],
       },

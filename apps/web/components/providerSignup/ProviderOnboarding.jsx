@@ -1,241 +1,111 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import BasketSteps from "@/components/basket/BasketSteps";
+import { useRouter } from "next/navigation";
 import { providerSignup } from "@/data/providerSignup";
-import { useAuthUser } from "@/lib/auth/authClient";
-import { getApplicationFor, submitProviderApplication } from "@/lib/providerApplication";
+import { api } from "@/lib/trpc/react";
+import { errorsFrom, useMe } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { formatDate } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
-import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const o = providerSignup.onboarding;
-const EMPTY = { name: "", company: "", vat: "", city: "", website: "", phone: "", subjects: [], methods: [], courses: "", body: "", centre: "", accExpiry: "", cover: "", insExpiry: "", files: [] };
-const COMPANY_RE = /^([0-9]{8}|[A-Z]{2}[0-9]{6})$/i;
-const today = () => new Date().toISOString().slice(0, 10);
 
-// What each step needs before "Continue". Documents must be in date (the admin can't approve a provider with an expired one).
-function validate(step, v) {
+function validate(v) {
   const e = {};
-  if (step === 0) {
-    if (!v.name.trim()) e.name = "Enter your training company's name.";
-    if (!v.company.trim()) e.company = "Enter your Companies House number.";
-    else if (!COMPANY_RE.test(v.company.replace(/\s/g, ""))) e.company = "Enter a Companies House number in the correct format, like 12345678 or SC123456.";
-    if (!v.vat) e.vat = "Select whether you're VAT registered.";
-    if (!v.city.trim()) e.city = "Enter the town or city you're based in.";
-    if (v.website.trim() && !/^(https?:\/\/)?[^\s.]+\.[^\s]{2,}$/i.test(v.website.trim())) e.website = "Enter a website address, like www.example.co.uk.";
-    if (v.phone.replace(/\D/g, "").length < 10) e.phone = "Enter a phone number, like 0161 496 0000.";
-  }
-  if (step === 1) {
-    if (!v.subjects.length) e.subjects = "Choose at least one subject.";
-    if (!v.methods.length) e.methods = "Choose at least one way you deliver training.";
-    if (!v.courses) e.courses = "Select how many courses you run.";
-  }
-  if (step === 2) {
-    if (!v.body.trim()) e.body = "Enter your awarding body or accreditation.";
-    if (!v.centre.trim()) e.centre = "Enter your centre or approval number.";
-    if (!v.accExpiry) e.accExpiry = "Enter the date your accreditation expires.";
-    else if (v.accExpiry <= today()) e.accExpiry = "This date has passed. Your accreditation must be in date.";
-    if (!v.cover) e.cover = "Select your public liability cover.";
-    if (!v.insExpiry) e.insExpiry = "Enter the date your insurance expires.";
-    else if (v.insExpiry <= today()) e.insExpiry = "This date has passed. Your insurance must be in date.";
-  }
-  if (step === 3 && !v.agree) e.agree = "Confirm your details and agree to the provider terms.";
+  const name = v.name.trim();
+  if (name.length < 2 || !/[\p{L}\p{N}]/u.test(name)) e.name = "Enter your company or instructor name.";
+  else if (name.length > 100) e.name = "Your company or instructor name must be 100 characters or fewer.";
+  const digits = v.mobile.replace(/\D/g, "").length;
+  if (!v.mobile.trim()) e.mobile = "Enter your mobile number.";
+  else if (!/^\+?[\d\s()-]+$/.test(v.mobile.trim()) || digits < 10 || digits > 15) e.mobile = "Enter a phone number, like 07700 900 982.";
+  if (!v.acceptTerms) e.acceptTerms = "Agree to the provider terms to continue.";
   return e;
 }
 
-// Provider onboarding (/provider/onboarding, after "Become a provider"): four steps on one card with the booking steps indicator:
-// your organisation > what you teach > accreditation and insurance > review and submit, then a reference and what happens next.
-// An account that has already applied sees its application's status instead. DEMO: the application is stored in this browser
-// (lib/providerApplication.js) and shows in Admin > Providers > Applications.
+// Provider onboarding (/provider/onboarding): the step after "Become a provider", as the client's site has it, with the
+// brief's fields: company or instructor name, mobile number and the provider terms. It adds a provider to this same login
+// (no second account), opens the new provider workspace, and the empty public profile exists from that moment. Someone who
+// already has a provider goes straight to it. The API checks everything again and logs it.
 export default function ProviderOnboarding() {
-  const person = useAuthUser();
-  const [step, setStep] = useState(0);
-  const [v, setV] = useState(EMPTY);
+  const router = useRouter();
+  const me = useMe();
+  const utils = api.useUtils();
+  const create = api.organisations.createProvider.useMutation();
+  const [v, setV] = useState({ name: "", mobile: "", acceptTerms: false });
   const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState("idle"); // idle | sending | done
-  const [existing, setExisting] = useState(undefined);
+  const [general, setGeneral] = useState("");
+  const [busy, setBusy] = useState(false);
   const formRef = useRef(null);
-  const headRef = useRef(null);
+  const existing = me.data?.identities.find((i) => i.kind === "provider");
 
+  // the mobile number from the profile, if one is saved
   useEffect(() => {
-    if (person) setExisting(getApplicationFor(person.id));
-  }, [person]);
+    if (me.data?.profile.phone) setV((x) => (x.mobile ? x : { ...x, mobile: me.data.profile.phone }));
+  }, [me.data?.profile.phone]);
   useEffect(() => {
-    headRef.current?.focus();
-  }, [step, status]);
+    if (existing) router.replace("/provider");
+  }, [existing, router]);
 
-  // a field's error clears as soon as it is changed; the rest stay until the next "Continue"
-  const clear = (k) => setErrors((x) => (x[k] ? Object.fromEntries(Object.entries(x).filter(([key]) => key !== k)) : x));
   const set = (k) => (e) => {
-    clear(k);
-    setV((x) => ({ ...x, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+    const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    setV((x) => ({ ...x, [k]: value }));
+    if (errors[k]) setErrors((x) => ({ ...x, [k]: "" }));
   };
-  const toggle = (k, value) => {
-    clear(k);
-    setV((x) => ({ ...x, [k]: x[k].includes(value) ? x[k].filter((y) => y !== value) : [...x[k], value] }));
-  };
-  const next = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const found = validate(step, v);
+    setGeneral("");
+    const found = validate(v);
     setErrors(found);
     if (Object.keys(found).length) return focusFirstError(formRef.current);
-    if (step < 3) return setStep(step + 1);
-    setStatus("sending");
-    submitProviderApplication(person.id, { name: person.name, email: person.email }, { ...v, company: v.company.replace(/\s/g, "") }).then((app) => {
-      setExisting(app);
-      setStatus("done");
-      trackEvent("provider_application_sent", { subjects: v.subjects.length });
-    });
+    setBusy(true);
+    try {
+      await create.mutateAsync({ name: v.name.trim(), mobile: v.mobile.trim(), acceptTerms: true });
+      trackEvent("provider_created");
+      await utils.me.get.invalidate();
+      router.push("/provider");
+    } catch (err) {
+      const { fields, general: g } = errorsFrom(err);
+      setErrors(fields);
+      setGeneral(err?.data?.code === "CONFLICT" ? err.message : g);
+      if (Object.keys(fields).length) requestAnimationFrame(() => focusFirstError(formRef.current));
+      setBusy(false);
+    }
   };
 
-  if (!person || existing === undefined) return <div className="rt-acc__card rt-po__card"><p className="rt-po__wait">Loading…</p></div>;
+  if (me.isLoading || me.person === undefined || existing) return <div className="rt-acc__card rt-po__card"><p className="rt-po__wait">{o.loading}</p></div>;
 
-  if (status === "done" || existing) {
-    const a = existing;
+  const field = (k, label, hint, props) => {
+    const id = `rt-po-${k}`;
+    const by = [`${id}-hint`, errors[k] && `${id}-e`].filter(Boolean).join(" ");
     return (
-      <div className="rt-acc__card rt-po__card" role="status">
-        <h2 className="rt-po__h2" tabIndex={-1} ref={headRef}>{status === "done" ? o.done.title : o.pending.title}</h2>
-        <p className="rt-po__text">
-          {status === "done"
-            ? o.done.text.replace("{ref}", a.reference).replace("{email}", person.email)
-            : o.pending.text.replace("{date}", formatDate(new Date(a.submittedAt).toISOString().slice(0, 10))).replace("{ref}", a.reference)}
-        </p>
-        <ol className="rt-po__next">
-          {o.done.next.map((x) => <li key={x}>{x}</li>)}
-        </ol>
-        <Link href={o.done.cta.href} className="button -md -outline-purple-1 text-purple-1">{o.done.cta.label}</Link>
+      <div className="rt-field">
+        <label htmlFor={id}>{label}</label>
+        <small className="rt-field__hint" id={`${id}-hint`}>{hint}</small>
+        {errors[k] && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p>}
+        <input id={id} value={v[k]} onChange={set(k)} aria-invalid={errors[k] ? true : undefined} aria-describedby={by} disabled={busy} {...props} />
       </div>
     );
-  }
-
-  const err = (k) => errors[k] && <p className="rt-q__err" id={`rt-po-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p>;
-  const aria = (k, hint) => ({ "aria-invalid": errors[k] ? true : undefined, "aria-describedby": [hint && `rt-po-${k}-hint`, errors[k] && `rt-po-${k}-e`].filter(Boolean).join(" ") || undefined });
-  const text = (k, label, props = {}, hint) => (
-    <div className="rt-field">
-      <label htmlFor={`rt-po-${k}`}>{label}</label>
-      {hint && <small className="rt-field__hint" id={`rt-po-${k}-hint`}>{hint}</small>}
-      {err(k)}
-      {props.options ? (
-        <FieldSelect id={`rt-po-${k}`} label={label} value={v[k]} onChange={(value) => set(k)({ target: { value } })} options={props.options} invalid={Boolean(errors[k])} describedBy={aria(k, hint)["aria-describedby"]} />
-      ) : (
-        <input id={`rt-po-${k}`} value={v[k]} onChange={set(k)} {...aria(k, hint)} {...props} />
-      )}
-    </div>
-  );
-  const checks = (k, legend, items, hint) => (
-    <fieldset className="rt-po__set" aria-describedby={[hint && `rt-po-${k}-hint`, errors[k] && `rt-po-${k}-e`].filter(Boolean).join(" ") || undefined}>
-      <legend>{legend}</legend>
-      {hint && <small className="rt-field__hint" id={`rt-po-${k}-hint`}>{hint}</small>}
-      {err(k)}
-      <div className="rt-po__checks">
-        {items.map((it) => {
-          const value = typeof it === "string" ? it : it.value;
-          const label = typeof it === "string" ? it : it.label;
-          const id = `rt-po-${k}-${value.replace(/[^a-z0-9]/gi, "")}`;
-          return (
-            <label key={value} className="rt-po__check" htmlFor={id}>
-              <input id={id} type="checkbox" className="rt-fp__check" checked={v[k].includes(value)} onChange={() => toggle(k, value)} aria-invalid={errors[k] ? true : undefined} />
-              <span>{label}</span>
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
-  const row = (label, value, to) => (
-    <div className="rt-po__row">
-      <dt>{label}</dt>
-      <dd>{value || "Not given"}</dd>
-      <dd><button type="button" className="rt-po__change" onClick={() => setStep(to)}>{o.review.change}<span className="rt-sr"> {label.toLowerCase()}</span></button></dd>
-    </div>
-  );
-  const methodLabel = (m) => providerSignup.methods.find((x) => x.value === m)?.label || m;
+  };
 
   return (
-    <div className="rt-acc__card rt-po__card">
-      <BasketSteps steps={o.steps} current={step} label="Application progress" />
-      <form className="rt-q__form rt-po__form" onSubmit={next} noValidate ref={formRef}>
-        <h2 className="rt-po__h2" tabIndex={-1} ref={headRef}>{o.stepTitles[step]}</h2>
-
-        {step === 0 && (
-          <>
-            {text("name", o.org.name, { type: "text", autoComplete: "organization" })}
-            <div className="rt-contact__pair">
-              {text("company", o.org.company, { type: "text", autoCapitalize: "characters", spellCheck: false }, o.org.companyHint)}
-              {text("vat", o.org.vat, { options: o.org.vats })}
-            </div>
-            <div className="rt-contact__pair">
-              {text("city", o.org.city, { type: "text", autoComplete: "address-level2" })}
-              {text("phone", o.org.phone, { type: "tel", autoComplete: "tel" })}
-            </div>
-            {text("website", o.org.website, { type: "url", inputMode: "url", autoComplete: "url", spellCheck: false })}
-          </>
-        )}
-
-        {step === 1 && (
-          <>
-            {checks("subjects", o.teach.subjects, providerSignup.subjects, o.teach.subjectsHint)}
-            {checks("methods", o.teach.methods, providerSignup.methods)}
-            {text("courses", o.teach.courses, { options: o.teach.coursesOptions })}
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <p className="rt-acc__note">{o.docs.intro}</p>
-            <div className="rt-contact__pair">
-              {text("body", o.docs.body, { type: "text" }, o.docs.bodyHint)}
-              {text("centre", o.docs.centre, { type: "text", spellCheck: false })}
-            </div>
-            {text("accExpiry", o.docs.accExpiry, { type: "date", min: today() })}
-            <div className="rt-contact__pair">
-              {text("cover", o.docs.cover, { options: o.docs.covers })}
-              {text("insExpiry", o.docs.insExpiry, { type: "date", min: today() })}
-            </div>
-            <div className="rt-field">
-              <label htmlFor="rt-po-files">{o.docs.files}</label>
-              <small className="rt-field__hint" id="rt-po-files-hint">{o.docs.filesHint}</small>
-              <input id="rt-po-files" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" aria-describedby="rt-po-files-hint" onChange={(e) => setV((x) => ({ ...x, files: [...e.target.files].map((f) => f.name) }))} />
-            </div>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
-            <dl className="rt-po__review">
-              {row(o.org.name, v.name, 0)}
-              {row(o.org.company, v.company.toUpperCase(), 0)}
-              {row(o.org.vat, v.vat, 0)}
-              {row("Based in", v.city, 0)}
-              {row(o.org.phone, v.phone, 0)}
-              {row(o.teach.subjects, v.subjects.join(", "), 1)}
-              {row(o.teach.methods, v.methods.map(methodLabel).join(", "), 1)}
-              {row(o.teach.courses, v.courses, 1)}
-              {row("Accreditation", `${v.body} ${v.centre}, expires ${formatDate(v.accExpiry)}`, 2)}
-              {row("Insurance", `${v.cover}, expires ${formatDate(v.insExpiry)}`, 2)}
-              {row("Certificates", v.files.join(", "), 2)}
-            </dl>
-            <p className="rt-acc__note">{o.review.fee}</p>
-            <div className="rt-lic__consent">
-              {err("agree")}
-              <label className="rt-po__check" htmlFor="rt-po-agree">
-                <input id="rt-po-agree" type="checkbox" className="rt-fp__check" checked={Boolean(v.agree)} onChange={set("agree")} aria-invalid={errors.agree ? true : undefined} aria-describedby={errors.agree ? "rt-po-agree-e" : undefined} />
-                <span>{o.review.agree}</span>
-              </label>
-            </div>
-          </>
-        )}
-
-        <div className="rt-po__actions">
-          {step > 0 && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => { setErrors({}); setStep(step - 1); }}>{o.back}</button>}
-          <button type="submit" className="button -md -purple-1 text-white" disabled={status === "sending"} aria-busy={status === "sending"}>
-            {step < 3 ? o.next : status === "sending" ? o.sending : o.submit}
-          </button>
-        </div>
-      </form>
-    </div>
+    <form className="rt-acc__card rt-acc__form rt-po__card" onSubmit={submit} noValidate ref={formRef} aria-labelledby="rt-po-h">
+      <h2 className="rt-po__h2" id="rt-po-h">{o.formTitle}</h2>
+      <p className="rt-acc__note">{o.formLead}</p>
+      {field("name", o.name, o.nameHint, { type: "text", autoComplete: "organization", maxLength: 120 })}
+      {field("mobile", o.mobile, o.mobileHint, { type: "tel", autoComplete: "tel" })}
+      <div className="rt-field">
+        {errors.acceptTerms && <p className="rt-q__err" id="rt-po-terms-e"><span className="rt-sr">Error: </span>{errors.acceptTerms}</p>}
+        <label className="rt-po__check" htmlFor="rt-po-terms">
+          <input id="rt-po-terms" type="checkbox" checked={v.acceptTerms} onChange={set("acceptTerms")} aria-invalid={errors.acceptTerms ? true : undefined} aria-describedby={errors.acceptTerms ? "rt-po-terms-e" : undefined} disabled={busy} />
+          <span>
+            {o.terms.before} <a href={o.terms.termsHref} target="_blank" rel="noopener">{o.terms.terms}</a> {o.terms.and} <a href={o.terms.privacyHref} target="_blank" rel="noopener">{o.terms.privacy}</a>.
+          </span>
+        </label>
+      </div>
+      <div className="rt-acc__formfoot">
+        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy}>{busy ? o.sending : o.submit}</button>
+        {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
+      </div>
+    </form>
   );
 }

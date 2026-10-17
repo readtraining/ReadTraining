@@ -4,8 +4,9 @@ import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { deleteFaq, saveFaq } from "@/lib/providerWorkspace";
-import { Empty, Search } from "./providerParts";
+import { Search } from "./providerParts";
 import { Confirm, Field, aria, useParam } from "./settingsForm";
+import { EmptyState } from "@/components/states/States";
 
 // Settings › FAQs: the provider's reusable answers. A list with search (kept in the address), an add / edit panel (several at
 // once when adding), and delete, which is blocked while a course still uses the answer.
@@ -52,9 +53,9 @@ export function FaqsTab({ data, say }) {
       </div>
       <Count n={list.length} one="FAQ" />
       {data.faqs.length === 0 ? (
-        <Empty title="No FAQs yet" text="Add the questions learners ask most, then pick them on each course." action={{ label: "Add FAQ", onClick: () => open(null) }} />
+        <EmptyState title="No FAQs yet" text="Add the questions learners ask most, then pick them on each course." action={{ label: "Add FAQ", onClick: () => open(null) }} />
       ) : list.length === 0 ? (
-        <p className="rt-acc__card rt-acc__empty">No FAQs match “{q}”.</p>
+        <EmptyState title={`No FAQs match “${q}”.`} />
       ) : (
         <ul className="rt-adm-items">
           {list.map((f) => {

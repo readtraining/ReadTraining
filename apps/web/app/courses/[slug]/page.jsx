@@ -14,6 +14,7 @@ import { getCoursePage, getCoursePageSlugs, getCourseTowns } from "@/lib/courseP
 import { BLOG_HREF } from "@/lib/blog";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A course page (/courses/<slug>: a study method, a subject or a set of courses, from the footer's "Find a course"): the course
 // catalogue scoped to the page (its title and intro in the hero, links to the other course pages, the same search, filters,
@@ -25,6 +26,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const page = getCoursePage(slug);
   if (!page) return { title: "Courses not found | ReadTraining" };
@@ -32,6 +34,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function CoursePage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const page = getCoursePage(slug);
   if (!page) notFound();

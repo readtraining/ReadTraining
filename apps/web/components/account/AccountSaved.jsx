@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { account } from "@/data/account";
 import { getCoursesByIds } from "@/lib/courses";
 import { savedCourseIds } from "@/lib/wishlist";
 import CatalogueCourseCard from "@/components/courses/CatalogueCourseCard";
 import Toast from "@/components/courses/Toast";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.saved;
 
@@ -33,12 +33,7 @@ export default function AccountSaved() {
           </div>
         </>
       ) : (
-        <div className="rt-bk__empty rt-acc__emptybox">
-          <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-bookmark text-24"></i></span>
-          <h2>{copy.empty.title}</h2>
-          <p>{copy.empty.text}</p>
-          <Link href={copy.empty.cta.href} className="button -md -purple-1 text-white">{copy.empty.cta.label}</Link>
-        </div>
+        <EmptyState large icon="icon-bookmark" headingLevel={2} title={copy.empty.title} text={copy.empty.text} action={{ href: copy.empty.cta.href, label: copy.empty.cta.label }} />
       )}
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>

@@ -11,6 +11,7 @@ import CourseTowns from "@/components/courses/CourseTowns";
 import { getCourseTownPage, getCourseTownParams, getCourseTowns } from "@/lib/coursePages";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds), as Hurak's course finder pages: the same
 // catalogue with the town as its location (courses with a venue there, closest first; the visitor can change the town), the
@@ -21,6 +22,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug, town } = await props.params;
   const page = getCourseTownPage(slug, town);
   if (!page) return { title: "Courses not found | ReadTraining" };
@@ -28,6 +30,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function CourseTownPage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug, town } = await props.params;
   const page = getCourseTownPage(slug, town);
   if (!page) notFound();

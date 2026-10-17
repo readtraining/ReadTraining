@@ -5,6 +5,7 @@ import { businessAccount as biz } from "@/data/businessAccount";
 import { getBusiness } from "@/lib/businessAccount";
 import BookingRow from "@/components/account/BookingRow";
 import { asBooking } from "./bizParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = biz.bookings;
 const TABS = ["upcoming", "past", "cancelled"];
@@ -49,7 +50,7 @@ export default function BizBookings() {
           ))}
         </div>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">{copy.empty[tab]}</p>
+        <EmptyState title={copy.empty[tab]} />
       )}
     </div>
   );

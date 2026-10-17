@@ -12,6 +12,7 @@ import SubjectCourses from "@/components/testPrep/subject/SubjectCourses";
 import { testPrepPage } from "@/data/testPrep";
 import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, resolveTests, subjectHref } from "@/lib/testPrep";
 import { getPaper, getTest } from "@/lib/testPrepRunner";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A single mock test (/mock-exams-test/<subject>/<test>). A test with questions opens the test runner (the paper is sent
 // without answers; marking happens on the server). As on the reference (hurak.com/mock-exams-test/...): a compact flat band
@@ -30,6 +31,7 @@ const find = (subjectSlug, testSlug) => {
 };
 
 export async function generateMetadata(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { subject, test } = await props.params;
   const hit = find(subject, test);
   if (!hit) return { title: "Test not found | ReadTraining" };
@@ -42,6 +44,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function MockTestPage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { subject: subjectSlug, test: testSlug } = await props.params;
   const hit = find(subjectSlug, testSlug);
   if (!hit) notFound();

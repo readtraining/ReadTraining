@@ -1,15 +1,14 @@
 import { account } from "@/data/account";
 import { getCourseBySlug } from "@/lib/courses";
 
-// The customer account's reads and writes. There are no account, booking or cancellation endpoints in apps/api yet, so the profile
-// and bookings live in this browser (localStorage): the demo profile and bookings from data/account.js, plus every booking made at
+// The customer account's bookings, cancellations, cards and wallet. The profile is real (me.* in apps/api, lib/useMe.js); there are no
+// booking endpoints yet, so these live in this browser (localStorage): the demo bookings from data/account.js, plus every booking made at
 // checkout (saveBooking). Swap the bodies for API calls later; the pages only depend on these shapes. Browser-only: call from effects.
 //
 // A booking: { reference, bookedAt, method: "card" | "klarna", status: "confirmed" | "cancelled", total, company?, cancelledAt?, refund?,
 //   cancellation?: { reference, requestedAt, lines: [index], reason }, demo?: true,
 //   lines: [{ courseId, title, slug, imageSrc, mode, date, endDate, time, venue, city, postcode, provider, quantity, unit, total, delegates, certificate? }] }
 
-const PROFILE_KEY = "rt-profile";
 const BOOKINGS_KEY = "rt-bookings"; // bookings made at checkout, newest first
 const UPDATES_KEY = "rt-booking-updates"; // cancellation requests, by reference
 const DAY = 86400000;
@@ -29,17 +28,6 @@ const write = (key, value) => {
 const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 const today = () => isoDay(Date.now());
 
-// ---- profile ----
-export const getProfile = () => ({ ...account.demoUser, ...read(PROFILE_KEY, {}) });
-export const saveProfile = async (profile) => {
-  await new Promise((r) => setTimeout(r, 500));
-  write(PROFILE_KEY, profile);
-  return profile;
-};
-export const changePassword = async () => {
-  await new Promise((r) => setTimeout(r, 600));
-  return true;
-};
 
 // ---- bookings ----
 // the demo bookings with real dates (days from today) and the catalogue course's title and picture

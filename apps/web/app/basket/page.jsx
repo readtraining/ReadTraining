@@ -8,6 +8,7 @@ import { catalogueCourses } from "@/data/courseCatalogue";
 import { toCourseCard } from "@/lib/courses";
 import { pageMetadata } from "@/lib/seo";
 import { BASKET_HREF } from "@/lib/routes";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // The course basket (/basket, where every "Add to basket" and the header's basket lead): our header and footer, the
 // title and booking steps, the lines beside the order summary, more courses, need help.
@@ -18,7 +19,8 @@ export const metadata = pageMetadata({ title: "Your basket | ReadTraining", desc
 // the most booked courses; the page leaves out any already in the basket
 const recommended = [...catalogueCourses].sort((a, b) => b.popularity - a.popularity).slice(0, 8).map(toCourseCard);
 
-export default function CourseCartPage() {
+export default async function CourseCartPage() {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   return (
     <div className="main-content rt-home fb-page rt-bk-page">
       <a href="#rt-bk-main" className="rt-skip">Skip to main content</a>

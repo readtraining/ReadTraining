@@ -2,11 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MODE_LABEL, useBooking } from "./BookingProvider";
+import { useBooking } from "./BookingProvider";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { Icon } from "./Icon";
 import CatalogueDropdown from "@/components/courses/CatalogueDropdown";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
+import { modeLabel } from "@/lib/courseModes";
+import { EmptyState } from "@/components/states/States";
 
 const SORTS = { classroom: [["cheapest", "Cheapest"], ["soonest", "Soonest"], ["name", "Name (A to Z)"]], online: [["cheapest", "Cheapest"], ["soonest", "Soonest"]] };
 const DEFAULT_SORT = "cheapest";
@@ -16,7 +18,7 @@ const PinIcon = () => <Icon name="location" />;
 const CloseIcon = () => <Icon name="close" />;
 const Chevron = () => <Icon name="chevron-down" />;
 
-// On demand has no date: it starts whenever the learner likes.
+// Self-paced has no date: it starts whenever the learner likes.
 const whenLabel = (s) => (s.mode === "ondemand" ? s.time : formatDateRange(s.date, s.endDate));
 const dayLabel = (iso) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 const norm = (v) => String(v || "").toLowerCase().replace(/\s+/g, "");
@@ -115,14 +117,14 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
     <>
       <div className="rt-dd__head">
         <span className="rt-dd__mode">{classroom ? <PinIcon /> : <CalendarIcon />}</span>
-        <h2 id="rt-dd-title" className="rt-dd__title" tabIndex={-1} data-initial={isDesktop ? undefined : ""}>{modes ? course.title : MODE_LABEL[mode]}</h2>
+        <h2 id="rt-dd-title" className="rt-dd__title" tabIndex={-1} data-initial={isDesktop ? undefined : ""}>{modes ? course.title : modeLabel(mode)}</h2>
         <button type="button" className="rt-icon-btn rt-dd__close" aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </div>
 
       {modes && modes.length > 1 && (
         <div className="rt-dd__modes" role="group" aria-label="How you want to study">
           {modes.map((m) => (
-            <button key={m} type="button" className={`rt-tr__filter${m === mode ? " is-on" : ""}`} aria-pressed={m === mode} onClick={() => onMode(m)}>{MODE_LABEL[m]}</button>
+            <button key={m} type="button" className={`rt-tr__filter${m === mode ? " is-on" : ""}`} aria-pressed={m === mode} onClick={() => onMode(m)}>{modeLabel(m)}</button>
           ))}
         </div>
       )}
@@ -148,7 +150,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
 
       <div className="rt-dd__list rt-pill-scroll" ref={listRef}>
         {list.length === 0 ? (
-          <p className="rt-dd__empty">No venues match. Try another town or postcode.</p>
+          <EmptyState inCard title="No venues match." text="Try another town or postcode." />
         ) : classroom ? (
           list.map((v) => {
             const on = open.includes(v.key);

@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { desc, eq, posts } from '@readtraining/db'
 
-import { createTRPCRouter, publicProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
 
 export const postsRouter = createTRPCRouter({
   list: publicProcedure.query(({ ctx }) =>
@@ -20,7 +20,8 @@ export const postsRouter = createTRPCRouter({
       return post
     }),
 
-  create: publicProcedure
+  // signed-in only: proves the token check end to end
+  create: protectedProcedure
     .input(z.object({ title: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const [post] = await ctx.db.insert(posts).values(input).returning()

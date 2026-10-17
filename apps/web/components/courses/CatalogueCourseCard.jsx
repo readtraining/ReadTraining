@@ -2,7 +2,7 @@ import React, { Fragment, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useContextElement } from "@/context/Context";
-import { filterGroups, getMethodLabel, levels } from "@/data/courseCatalogue";
+import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
 import { bookableModes, defaultMode, firstSession, formatShortDate, getCourseBySlug } from "@/lib/courses";
@@ -15,8 +15,6 @@ import { isSkillSaverCourse } from "@/lib/skillSaver";
 const gbp = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatPrice = (n) => gbp.format(Number(n) || 0); // always two decimals: £295.00
 
-const subjectLabel = (value) => filterGroups[0].options.find((o) => o.value === value)?.label;
-const levelLabel = (value) => levels.find((l) => l.value === value)?.label;
 
 // One course row: image (with the save heart) | details | price + actions. Every field except title and price is
 // optional and simply not shown when missing. `onNotify({ message, href?, label? })` shows a toast.
@@ -80,8 +78,8 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
   const showInBasket = inBasket && status !== "added" && status !== "loading";
 
   // Meta row 1: short items only (Duration | Level | N providers). Meta row 2: delivery modes as plain text.
-  const metaItems = [course.duration, levelLabel(course.level), course.providers > 0 ? `${course.providers} providers` : ""].filter(Boolean);
-  const delivery = course.methods?.length ? course.methods.map(getMethodLabel).join(", ") : "";
+  const metaItems = [course.duration, levelName(course.level), course.providers > 0 ? `${course.providers} providers` : ""].filter(Boolean);
+  const delivery = course.methods?.length ? course.methods.map(methodName).join(", ") : "";
 
   const thumb = course.imageSrc ? (
     <Image width={440} height={276} src={course.imageSrc} alt="" priority={index < 2} />
@@ -118,7 +116,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
       </div>
 
       <div className="rt-card__body">
-        <span className="rt-card__subject">{subjectLabel(course.subject)}</span>
+        <span className="rt-card__subject">{categoryName(course.subject)}</span>
         <h3 className="rt-card__title">
           {/* Styled like a link (hover colour + underline); not navigating yet. Swap for <Link href={href}> when wanted. */}
           <span className="rt-card__title-link">{course.title}</span>

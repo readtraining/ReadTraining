@@ -10,11 +10,11 @@ import {
   catalogueCourses,
   closestSortOption,
   filterCourses,
-  filterGroups,
+  catalogueFilterGroups,
   sortCourses,
   sortOptions,
-  subSubjects,
 } from "@/data/courseCatalogue";
+import { subcategoryOptions } from "@/lib/taxonomy";
 import { trackEvent, toItem } from "@/lib/analytics";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import ActiveFilters from "./ActiveFilters";
@@ -25,6 +25,9 @@ import CataloguePagination from "./CataloguePagination";
 import Toast from "./Toast";
 import FilterScrollPill from "./FilterScrollPill";
 import { useCourseQuery } from "./useCourseQuery";
+import { EmptyState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
+import { useTaxonomy } from "@/lib/taxonomyContext";
 
 // Quick links under the search: each applies the matching subject filter (no navigation).
 const popularSearches = [
@@ -44,6 +47,7 @@ const countLabel = (n) => `${n} ${n === 1 ? "course" : "courses"}`;
 // A subject page's `subject` replaces the Subject filter with its sub-subjects ("Course type").
 // The hero then shows the page's title and intro, and links to the other course pages instead of the popular searches.
 export default function CourseCatalogue({ courses = catalogueCourses, scope = null }) {
+  const taxonomy = useTaxonomy();
   const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject, scope?.location);
   const [toast, setToast] = useState(null);
 
@@ -208,8 +212,9 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
 
   // ---- chips: one per ticked value, plus keyword, location and a price range ----
   const optionLabel = (group, value) => group.options.find((o) => o.value === value)?.label;
+  const filterGroups = catalogueFilterGroups();
   const [subjectGroup, methodGroup, levelGroup] = filterGroups;
-  const subLabels = Object.fromEntries(Object.values(subSubjects).flat().map((x) => [x.value, x.label]));
+  const subLabels = Object.fromEntries(subjectGroup.options.flatMap((o) => subcategoryOptions(o.value)).map((x) => [x.value, x.label]));
   const priceActive = state.min > PRICE_BOUNDS.min || state.max < PRICE_BOUNDS.max;
   const chips = [
     state.q && { key: "q", label: `\u201c${state.q}\u201d` },
@@ -254,7 +259,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
   // (its own group is ignored, so ticking one option never makes its siblings read 0).
   const counts = useMemo(() => {
     const out = {};
-    filterGroups.forEach((g) => {
+    catalogueFilterGroups().forEach((g) => {
       out[g.key] = {};
       g.options.forEach((o) => {
         out[g.key][o.value] = filterCourses(courses, { ...state, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }).length;
@@ -262,7 +267,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
     });
     out.sub = {};
     [...new Set([...state.subject, ...(scope?.subject ? [scope.subject] : [])])].forEach((sv) =>
-      (subSubjects[sv] || []).forEach((o) => {
+      subcategoryOptions(sv).forEach((o) => {
         out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }).length;
       }),
     );
@@ -391,6 +396,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
               </div>
               <div className="rt-fp__scrollwrap">
                 <div className="rt-fp__scroll" ref={scrollRef}>
+                  {taxonomy?.unavailable && !taxonomy.loading && <ErrorState inCard title="We couldn't load the filters." text="The courses below are still up to date." onRetry={taxonomy.retry} />}
                   <CatalogueFilters
                     state={state}
                     counts={counts}
@@ -440,18 +446,7 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
             <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} />
 
             {noMatches && (
-              <div className="rt-res__empty" role="status">
-                <p className="rt-res__empty-title">No courses match your filters</p>
-                <p>Try removing a filter or choosing a different price range.</p>
-                <div className="rt-res__empty-actions">
-                  <button type="button" className="rt-res__btn rt-res__btn--secondary" onClick={removeLast}>
-                    Remove last filter
-                  </button>
-                  <button type="button" className="rt-res__btn rt-res__btn--primary" onClick={clearAll}>
-                    Clear all filters
-                  </button>
-                </div>
-              </div>
+              <EmptyState live title="No courses match your filters" text="Try removing a filter or choosing a different price range." secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
             )}
 
             <div className="rt-res__list" id="rt-res-list" tabIndex={-1}>

@@ -7,10 +7,11 @@ import { setOfferingStatus, setPreCourse, useAdmin } from "@/lib/admin";
 import { courseHref } from "@/data/courseSlugs";
 import { formatPrice } from "@/lib/format";
 import { Pill } from "./adminParts";
+import { modeLabel } from "@/lib/courseModes";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.catalogue;
 const d = copy.detail;
-const MODE = { classroom: "Classroom", online: "Live online", ondemand: "On demand" };
 
 // One course: what it is (category, duration, level, validity, study methods, "From" price), the pre-course e-learning flag
 // (a switch, with what it changes), and its offerings, one per provider (modes, from price, upcoming dates, Live or Paused, with
@@ -20,7 +21,7 @@ export default function AdminCourse({ id }) {
   const [said, setSaid] = useState("");
   if (!data) return null;
   const c = data.catalogue.find((x) => String(x.id) === String(id));
-  if (!c) return <p className="rt-acc__card rt-acc__empty">This course was not found. <Link href="/admin/catalogue">{d.back}</Link></p>;
+  if (!c) return <EmptyState title="This course was not found." action={{ href: "/admin/catalogue", label: d.back }} />;
 
   return (
     <div className="rt-acc__stack">
@@ -61,7 +62,7 @@ export default function AdminCourse({ id }) {
             {c.offerings.map((o) => (
               <tr key={o.provider}>
                 <td data-label="Provider"><span className="rt-adm-strong">{o.provider}</span></td>
-                <td data-label="How it runs">{o.modes.map((m) => MODE[m]).join(", ")}</td>
+                <td data-label="How it runs">{o.modes.map(modeLabel).join(", ")}</td>
                 <td data-label="From">{formatPrice(o.from)}</td>
                 <td data-label="Upcoming dates">{o.sessions}</td>
                 <td data-label="Status"><Pill tone={o.status === "paused" ? "muted" : "ok"}>{o.status === "paused" ? d.paused : d.live}</Pill></td>

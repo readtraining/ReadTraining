@@ -8,6 +8,7 @@ import { bookingState, calendarFile, cancellableLines, getBooking } from "@/lib/
 import { courseHref } from "@/data/courseSlugs";
 import { formatDate, formatPrice } from "@/lib/format";
 import { StatusPill, placeOf, whenOf } from "./BookingRow";
+import { EmptyState } from "@/components/states/States";
 
 const copy = account.detail;
 
@@ -20,12 +21,7 @@ export default function BookingDetail({ reference }) {
   if (booking === undefined) return null;
   if (!booking) {
     return (
-      <div className="rt-bk__empty rt-acc__emptybox">
-        <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-calendar text-24"></i></span>
-        <h2>{copy.notFound.title}</h2>
-        <p>{copy.notFound.text}</p>
-        <Link href={copy.notFound.cta.href} className="button -md -purple-1 text-white">{copy.notFound.cta.label}</Link>
-      </div>
+      <EmptyState large icon="icon-calendar" headingLevel={2} title={copy.notFound.title} text={copy.notFound.text} action={{ href: copy.notFound.cta.href, label: copy.notFound.cta.label }} />
     );
   }
 

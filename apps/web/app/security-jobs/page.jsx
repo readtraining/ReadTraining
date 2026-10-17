@@ -16,6 +16,7 @@ import JobsApplication from "@/components/securityJobs/JobsApplication";
 import JobsTraining from "@/components/securityJobs/JobsTraining";
 import { securityJobs as s } from "@/data/securityJobs";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Security jobs (/security-jobs, the footer's For providers > Security Jobs), in the For Providers / Skill Saver page language.
 // The opportunity first: hero with example matches > key facts strip > the five roles (#roles) > who can apply, as what employers
@@ -34,7 +35,8 @@ const faqLd = {
   mainEntity: s.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
 };
 
-export default function SecurityJobsPage() {
+export default async function SecurityJobsPage() {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   return (
     <div className="main-content rt-home fb-page rt-jobs-page">
       <a href="#rt-jobs-main" className="rt-skip">Skip to main content</a>

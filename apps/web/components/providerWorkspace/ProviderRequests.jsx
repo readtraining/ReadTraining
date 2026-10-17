@@ -6,9 +6,10 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
 import { decideRefund, learnerName, useProvider } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Empty, Loading, formatWhen } from "./providerParts";
+import { Loading, formatWhen } from "./providerParts";
 import { money } from "./charts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 // Requests (Hurak's, from the account menu): every learner's refund request in one place. Hurak's columns: refund number, booking
 // reference, learner, course, refund type (full, or partial with the amount), the learner's reason, and two actions: view the order,
@@ -29,7 +30,7 @@ export default function ProviderRequests() {
   const formRef = useRef(null);
   const clearToast = useCallback(() => setToast(null), []);
   if (!data) return <Loading rows={3} />;
-  if (!data.refunds.length) return <Empty title="No refund requests" text="When a learner asks for their money back, the request appears here and on the order." />;
+  if (!data.refunds.length) return <EmptyState title="No refund requests" text="When a learner asks for their money back, the request appears here and on the order." />;
 
   const order = (ref) => data.orders.find((o) => o.ref === ref);
   const rows = [...data.refunds]

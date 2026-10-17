@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { LockIcon } from "./authIcons";
 
 // Set a new password (/reset-password), opened from the reset email (the link signs the person in for this change through
-// /auth/callback). The shared auth card: the new password twice with "Show passwords", the sign-up page's password rule, the
+// /auth/confirm). The shared auth card: the new password twice with "Show passwords", the sign-up page's password rule, the
 // message above each field and the first one focused; then "Password changed" and on to the account. Without a valid link
 // (opened directly, expired or used) it says so and offers a new link.
 export default function ResetPasswordForm() {

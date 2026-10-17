@@ -10,6 +10,7 @@ import TestPrepHub from "@/components/testPrep/TestPrepHub";
 import TestPrepCourses from "@/components/testPrep/TestPrepCourses";
 import { testPrepPage, tests } from "@/data/testPrep";
 import { resolveTests, subjectExam, subjectLead } from "@/lib/testPrep";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 export const metadata = {
   title: testPrepPage.title,
@@ -21,6 +22,7 @@ export const metadata = {
 // row (/for-business), the full test list, home's course cards, the FAQ accordion and the dark CTA band.
 // `fb-page` turns on the business/provider section styles that StepsSection uses.
 export default async function TestPrepPage(props) {
+  await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const query = (await props.searchParams) || {};
   const { resources, resourcesCta, steps, faq } = testPrepPage;
   // each card shows the subject page's own lead and exam numbers, so the hub and the subject page agree

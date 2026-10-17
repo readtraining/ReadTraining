@@ -130,7 +130,7 @@ export default function BecomeProvider() {
           </div>
         </div>
         <p className="rt-bp__terms">
-          {c.terms.before} <Link href={AUTH_ROUTES.terms}>{c.terms.terms}</Link> {c.terms.and} <Link href={AUTH_ROUTES.privacy}>{c.terms.privacy}</Link>.
+          {c.terms.before} <Link href={AUTH_ROUTES.providerTerms}>{c.terms.terms}</Link> {c.terms.and} <Link href={AUTH_ROUTES.privacy}>{c.terms.privacy}</Link>.
         </p>
         {status === "failed" && <p className="rt-q__err" role="alert">{failMsg}</p>}
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={status === "sending"} aria-busy={status === "sending"}>{status === "sending" ? c.sending : c.submit}</button>

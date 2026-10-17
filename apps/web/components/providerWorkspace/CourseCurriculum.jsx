@@ -6,8 +6,9 @@ import { saveCourse } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { Choice, Empty, Pill, Toggle } from "./providerParts";
+import { Choice, Pill, Toggle } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = {
   intro: "Build the course from units and activities: text, downloads, assignments, quizzes, video, a certificate and Scorm packages. Learners see them in their account after booking.",
@@ -58,7 +59,7 @@ export default function CourseCurriculum({ course }) {
 
   const lessons = sections.reduce((n, s) => n + s.lessons.length, 0);
   const minutes = sections.reduce((n, s) => n + s.lessons.reduce((m, l) => m + (Number(l.minutes) || 0), 0), 0);
-  const live = course.format !== "on-demand";
+  const live = course.format !== "self-paced";
 
   const addSection = (e) => {
     e.preventDefault();
@@ -115,7 +116,7 @@ export default function CourseCurriculum({ course }) {
         </div>
       </section>
 
-      {sections.length === 0 && <Empty title={copy.emptyTitle} text={copy.emptyText} />}
+      {sections.length === 0 && <EmptyState title={copy.emptyTitle} text={copy.emptyText} />}
 
       {sections.map((s, si) => (
         <section key={s.id} className="rt-acc__card rt-pws-cur__section" aria-label={`Unit ${si + 1}: ${s.title}`}>
@@ -172,7 +173,7 @@ export default function CourseCurriculum({ course }) {
               })}
             </ol>
           ) : (
-            <p className="rt-acc__note rt-pws-cur__none">No activities in this unit yet.</p>
+            <EmptyState inCard title="No activities in this unit yet." />
           )}
           <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-pws-cur__add" onClick={() => setLessonFor({ sectionId: s.id, lesson: null })}>Add an activity<span className="rt-sr"> to {s.title}</span></button>
         </section>

@@ -6,6 +6,7 @@ import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
 import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = W.businesses;
 const TABS = ["all", "credit", "overdue", "suspended"];
@@ -52,7 +53,7 @@ export default function AdminBusinesses() {
             </tbody>
           </table>
         </div>
-      ) : <p className="rt-acc__card rt-acc__empty">No business accounts here.</p>}
+      ) : <EmptyState title="No business accounts here." />}
     </div>
   );
 }

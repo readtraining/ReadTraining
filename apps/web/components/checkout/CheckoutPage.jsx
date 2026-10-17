@@ -14,6 +14,7 @@ import BasketSteps from "@/components/basket/BasketSteps";
 import CheckoutSummary, { CheckoutMiniSummary } from "./CheckoutSummary";
 import { useSkillSaver } from "@/lib/useSkillSaver";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { EmptyState } from "@/components/states/States";
 
 const FORM_ID = "rt-ck-form";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -224,12 +225,7 @@ export default function CheckoutPage() {
         {head}
         <section className="rt-bk layout-pt-md layout-pb-lg">
           <div className="container">
-            <div className="rt-bk__empty">
-              <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-basket text-24"></i></span>
-              <h2>{msg.title}</h2>
-              <p>{msg.text}</p>
-              <Link href={msg.cta.href} className="button -md -purple-1 text-white">{msg.cta.label}</Link>
-            </div>
+            <EmptyState large icon="icon-basket" headingLevel={2} title={msg.title} text={msg.text} action={{ href: msg.cta.href, label: msg.cta.label }} />
           </div>
         </section>
       </>

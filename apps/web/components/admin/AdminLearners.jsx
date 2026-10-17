@@ -9,6 +9,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.learners;
 const CERT_TONE = { valid: "ok", none: "ok", expiring: "warn", expired: "muted", revoked: "late" };
@@ -106,7 +107,7 @@ export default function AdminLearners() {
               </tbody>
             </table>
           </div>
-        ) : <p className="rt-acc__card rt-acc__empty">No learners match.</p>
+        ) : <EmptyState title="No learners match." />
       ) : (
         <>
           <p className="rt-acc__note rt-adm-help">{copy.checkerNote}</p>
@@ -134,7 +135,7 @@ export default function AdminLearners() {
                 </tbody>
               </table>
             </div>
-          ) : <p className="rt-acc__card rt-acc__empty">No certificates match.</p>}
+          ) : <EmptyState title="No certificates match." />}
         </>
       )}
 

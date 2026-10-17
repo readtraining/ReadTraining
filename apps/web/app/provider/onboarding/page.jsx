@@ -7,8 +7,9 @@ import { PROVIDER_ONBOARDING_HREF, providerSignup } from "@/data/providerSignup"
 import { pageMetadata } from "@/lib/seo";
 
 // Provider onboarding (/provider/onboarding): after "Become a provider" creates the account (or a signed-in person continues),
-// the provider details we need before creating the workspace. proxy.js sends signed-out visitors to log in and back. An app page
-// (DESIGN-SYSTEM.md): the account pages' head band, then one card. Copy: data/providerSignup.js.
+// the provider details (company or instructor name, mobile, provider terms) that add a provider to this login and open the
+// workspace. proxy.js sends signed-out visitors to log in and back; unlike the rest of /provider it needs no provider. An app
+// page (DESIGN-SYSTEM.md): the account pages' head band, then one card. Copy: data/providerSignup.js.
 
 const o = providerSignup.onboarding;
 
@@ -24,7 +25,7 @@ export default function ProviderOnboardingPage() {
         <main id="rt-po-main" tabIndex={-1}>
           <section className="rt-bk__head">
             <div className="container">
-              <p className="rt-acc__eyebrow">Become a provider</p>
+              <p className="rt-acc__eyebrow">{o.eyebrow}</p>
               <h1 className="rt-bk__h1">{o.title}</h1>
               <p className="rt-acc__lead">{o.lead}</p>
             </div>

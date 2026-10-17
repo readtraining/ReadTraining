@@ -3,12 +3,13 @@ import { terms } from "@/data/legal/terms";
 import { privacy } from "@/data/legal/privacy";
 import { cookies } from "@/data/legal/cookies";
 import { accessibility } from "@/data/legal/accessibility";
+import { providerTerms } from "@/data/legal/providerTerms";
 
-// Legal documents (terms, privacy, cookies, accessibility; provider terms later). Pages read through here, not from data/
+// Legal documents (terms, privacy, cookies, accessibility, provider terms). Pages read through here, not from data/
 // directly, so the bodies can move to the API or a CMS later with the same return shape. A new document: add its data file
 // here and a page that renders <LegalDocPage slug="..." />; it then appears in every legal page's tab bar too.
 
-const documents = { terms, privacy, cookies, accessibility };
+const documents = { terms, privacy, cookies, accessibility, providerTerms };
 
 // "8 October 2026" from "2026-10-08" (UTC, so the server and the browser agree)
 export const formatLongDate = (iso) =>

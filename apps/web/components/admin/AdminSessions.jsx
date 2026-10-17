@@ -8,6 +8,7 @@ import { cancelSession, markJoiningSent, setSalesClosed, useAdmin } from "@/lib/
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.sessions;
 const TABS = ["upcoming", "week", "cancelled", "venues"];
@@ -141,7 +142,7 @@ export default function AdminSessions() {
           )}
         </div>
       ) : (
-        <p className="rt-acc__card rt-acc__empty">No sessions here.</p>
+        <EmptyState title="No sessions here." />
       )}
 
       <Sheet open={Boolean(cancelling)} onClose={() => setCancelling(null)} title={copy.cancelTitle} closeLabel="Close">

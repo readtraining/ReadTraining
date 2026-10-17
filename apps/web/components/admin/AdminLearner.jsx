@@ -10,6 +10,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { Pill, formatWhen } from "./adminParts";
 import { MONEY_TONE } from "./AdminOrders";
 import { CertPill } from "./AdminLearners";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.learners;
 const d = copy.detail;
@@ -28,7 +29,7 @@ export default function AdminLearner({ id }) {
   const formRef = useRef(null);
   if (!data) return null;
   const l = data.learners.find((x) => x.id === id);
-  if (!l) return <p className="rt-acc__card rt-acc__empty">This learner was not found. <Link href="/admin/learners">{d.back}</Link></p>;
+  if (!l) return <EmptyState title="This learner was not found." action={{ href: "/admin/learners", label: d.back }} />;
   const certs = data.certificates.filter((c) => c.holder === l.name);
   const limit = data.fees.supportLimit;
 
@@ -86,7 +87,7 @@ export default function AdminLearner({ id }) {
               ))}
             </tbody>
           </table>
-        ) : <p className="rt-acc__empty rt-adm-tablenote">No bookings yet.</p>}
+        ) : <EmptyState inCard title="No bookings yet." />}
       </section>
 
       <div className="rt-adm-grid2">
@@ -99,7 +100,7 @@ export default function AdminLearner({ id }) {
             <ul className="rt-adm-list">
               {l.wallet.map((w) => <li key={w.at}><div><span className="rt-adm-strong">{w.note}</span><small>{w.who} · {formatWhen(w.at)}</small></div><span className="rt-adm-strong">+{formatPrice(w.amount)}</span></li>)}
             </ul>
-          ) : <p className="rt-acc__empty">No wallet credit.</p>}
+          ) : <EmptyState inCard title="No wallet credit." />}
           {l.status !== "closed" && <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-adm-mt" onClick={() => { setCrediting(true); setErrors({}); setForm({ amount: "", note: "" }); }}>{d.addCredit}</button>}
           <p className="rt-acc__note">{d.walletNote.replace("£100", formatPrice(limit).replace(".00", ""))}</p>
         </section>
@@ -121,7 +122,7 @@ export default function AdminLearner({ id }) {
             <ul className="rt-adm-list">
               {certs.map((c) => <li key={c.number}><div><span className="rt-adm-strong">{c.course}</span><small>{c.number} · {c.expires ? `Expires ${formatDate(c.expires)}` : "No expiry"}</small></div><CertPill cert={c} now={data.now} /></li>)}
             </ul>
-          ) : <p className="rt-acc__empty">No certificates yet.</p>}
+          ) : <EmptyState inCard title="No certificates yet." />}
         </section>
 
         <section className="rt-acc__card" aria-labelledby="rt-adm-pr-h">

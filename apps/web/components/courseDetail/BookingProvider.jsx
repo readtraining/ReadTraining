@@ -13,7 +13,6 @@ import { BASKET_HREF, QUOTE_HREF } from "@/lib/routes";
 
 const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
-export const MODE_LABEL = { classroom: "Classroom", online: "Live online", ondemand: "On Demand", inhouse: "In-house" };
 export const IN_HOUSE_NOTE = TEAM.note;
 export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.id}`;
 

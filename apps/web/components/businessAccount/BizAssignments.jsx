@@ -8,6 +8,7 @@ import { formatDateRange } from "@/lib/format";
 import { Avatar } from "@/components/marketing/parts";
 import { PlacesBar } from "./bizParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = biz.assignments;
 
@@ -94,12 +95,7 @@ export default function BizAssignments() {
 
   if (!upcoming.length) {
     return (
-      <div className="rt-bk__empty rt-acc__emptybox">
-        <span className="rt-bk__emptyicon" aria-hidden="true"><i className="icon-list text-24"></i></span>
-        <h2>{copy.empty.title}</h2>
-        <p>{copy.empty.text}</p>
-        <Link href={copy.empty.cta.href} className="button -md -purple-1 text-white">{copy.empty.cta.label}</Link>
-      </div>
+      <EmptyState large icon="icon-list" headingLevel={2} title={copy.empty.title} text={copy.empty.text} action={{ href: copy.empty.cta.href, label: copy.empty.cta.label }} />
     );
   }
   return (

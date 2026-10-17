@@ -6,8 +6,9 @@ import { pw } from "@/data/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import { clonePackage, deletePackage, setPackageActive, useProvider } from "@/lib/providerWorkspace";
 import PackageEditor from "./PackageEditor";
-import { Empty, Loading, RowMenu, Search, Toggle, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { Loading, RowMenu, Search, Toggle, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
+import { EmptyState } from "@/components/states/States";
 
 const ARCHIVE = [{ value: "", label: "All plans" }, { value: "active", label: "Active" }, { value: "archive", label: "Archive" }];
 
@@ -58,7 +59,7 @@ export default function ProviderPackages() {
   if (!data.packages.length) {
     return (
       <>
-        <Empty title="No pricing plans yet" text="Create Saver, Flexi and Premium options once, then use them on any tiered course." action={{ label: "Create package", onClick: create }} />
+        <EmptyState title="No pricing plans yet" text="Create Saver, Flexi and Premium options once, then use them on any tiered course." action={{ label: "Create package", onClick: create }} />
         <PackageEditor open={editor.open} packageId={editor.id} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={() => say("Package created")} />
         <Toast toast={toast} onDone={clearToast} />
       </>
@@ -116,10 +117,7 @@ export default function ProviderPackages() {
           </table>
         </div>
       ) : (
-        <div className="rt-acc__card rt-acc__empty">
-          <p>No plans match these filters.</p>
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={clear}>Clear filters</button>
-        </div>
+        <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
       )}
       <p className="rt-acc__note">Archived plans stay on the courses that use them, but can&apos;t be picked for other courses.</p>
 

@@ -8,6 +8,69 @@
       "when": 1790231975034,
       "tag": "0000_amazing_praxagora",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792072002477,
+      "tag": "0001_core_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792072012375,
+      "tag": "0002_auth_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792073174899,
+      "tag": "0003_harden_privileges",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792075248071,
+      "tag": "0004_auth_activity",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792081767805,
+      "tag": "0005_avatars_bucket",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792131593544,
+      "tag": "0006_member_job_title",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792152509334,
+      "tag": "0007_catalogue_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792152538419,
+      "tag": "0008_catalogue_starting_list",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792170301854,
+      "tag": "0009_profile_welcome_sent",
+      "breakpoints": true
     }
   ]
 }

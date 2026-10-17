@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { admin as A } from "@/data/admin";
-import { catalogueCourses, subjects } from "@/data/courseCatalogue";
+import { catalogueCourses } from "@/data/courseCatalogue";
+import { categoryName } from "@/lib/taxonomy";
 import { certificates as seedCertificates } from "@/data/certificates";
 import { getCourseBySlug } from "@/lib/courses";
-import { readProviderApplications, toAdminApplication } from "@/lib/providerApplication";
 import { getProviders } from "@/lib/providers";
-import { ADMIN_EVENT, DAY, HOUR, addWorkingDays, audit, read, update } from "@/lib/adminStore";
+import { ADMIN_EVENT, DAY, HOUR, addWorkingDays, audit, currentAdmin, read, update } from "@/lib/adminStore";
 import { buildWork } from "@/lib/adminWork";
 
 // The admin's reads and writes. There is no admin API yet (front end only, see the admin plan's Scope), so the records come from
@@ -45,8 +45,8 @@ export function ago(ms, now = Date.now()) {
 
 // ---- the records ------------------------------------------------------------------------------------------------------------
 
-// the seeded applications plus any sent from the provider onboarding in this browser (lib/providerApplication.js)
-const allApplications = (now) => [...readProviderApplications().map((a) => toAdminApplication(a, now)), ...A.applications];
+// DEMO: the seeded applications (real provider sign-ups are organisations in the database; the admin reads them in Part B)
+const allApplications = () => A.applications;
 
 function buildProviders(saved, now, defaultRate) {
   const listed = getProviders().map((p, i) => {
@@ -230,7 +230,6 @@ function buildChanges(saved, orders, now) {
 // ---- part 2: catalogue, sessions and venues, learners and certificates, staff and fees ---------------------------------------
 
 const hash = (...n) => n.reduce((h, x) => (h * 31 + x) % 9973, 7);
-const SUBJECT_LABEL = Object.fromEntries(subjects.map((x) => [x.value, x.label]));
 
 function buildCatalogue(saved, today) {
   return catalogueCourses.map((c) => {
@@ -249,7 +248,7 @@ function buildCatalogue(saved, today) {
       title: c.title,
       slug: course.slug,
       subject: c.subject,
-      category: SUBJECT_LABEL[c.subject] || c.subject,
+      category: categoryName(c.subject) || c.subject,
       duration: c.duration,
       validity: c.validity,
       level: c.level,
@@ -363,8 +362,13 @@ function buildLearners(saved, orders, catalogue, now) {
   return { learners, certificates: registry.sort((a, b) => (a.issued < b.issued ? 1 : -1)) };
 }
 
+// the demo team, with the signed-in admin in the first (Super admin) row
+const PRESET_ROLE = { full: "super", support: "support", finance: "ops", custom: "ops" };
 function buildStaff(saved, now) {
-  const seeded = A.staffSeeds.map(([name, email, role, twofa, hoursAgo]) => ({ name, email, role, twofa, last: now - hoursAgo * HOUR - 20 * 60000, invited: false }));
+  const you = currentAdmin();
+  const seeded = A.staffSeeds.map(([name, email, role, twofa, hoursAgo], i) =>
+    i === 0 && you.email ? { name: you.name, email: you.email, role: PRESET_ROLE[you.preset] || "ops", twofa: you.twoStep, last: now, invited: false } : { name, email, role, twofa, last: now - hoursAgo * HOUR - 20 * 60000, invited: false },
+  );
   const all = [...seeded, ...(saved.staff || []).map((s) => ({ ...s, twofa: false, last: null, invited: true }))];
   return all.map((s) => ({ ...s, role: saved.roles?.[s.email] || s.role }));
 }
@@ -452,7 +456,7 @@ export const verifyProviderDoc = (p, doc) =>
 export const addProviderNote = (p, text) =>
   update((s) => {
     const cur = s.providers?.[p.slug] || {};
-    s.providers = { ...(s.providers || {}), [p.slug]: { ...cur, notes: [{ at: Date.now(), who: A.staff.name, text }, ...(cur.notes || [])] } };
+    s.providers = { ...(s.providers || {}), [p.slug]: { ...cur, notes: [{ at: Date.now(), who: currentAdmin().name, text }, ...(cur.notes || [])] } };
     audit(s, "Added a note", p.name);
   });
 
@@ -462,13 +466,13 @@ const orderEvent = (s, ref, text) => {
 };
 export const resendConfirmation = (order) =>
   update((s) => {
-    orderEvent(s, order.ref, `Confirmation emailed again by ${A.staff.name}`);
+    orderEvent(s, order.ref, `Confirmation emailed again by ${currentAdmin().name}`);
     audit(s, "Resent the confirmation", order.ref);
   });
 export const addOrderNote = (order, text) =>
   update((s) => {
     const cur = s.orders?.[order.ref] || {};
-    s.orders = { ...(s.orders || {}), [order.ref]: { ...cur, notes: [{ at: Date.now(), who: A.staff.name, text }, ...(cur.notes || [])] } };
+    s.orders = { ...(s.orders || {}), [order.ref]: { ...cur, notes: [{ at: Date.now(), who: currentAdmin().name, text }, ...(cur.notes || [])] } };
     audit(s, "Added a note", order.ref);
   });
 
@@ -520,7 +524,7 @@ const setLearner = (learner, fn, action) =>
     audit(s, action, learner.name);
   });
 export const addWalletCredit = (learner, amount, note) =>
-  setLearner(learner, (cur) => ({ ...cur, wallet: [{ at: Date.now(), amount, type: "goodwill", note, who: A.staff.name }, ...(cur.wallet || [])] }), `Added £${amount.toFixed(2)} goodwill credit`);
+  setLearner(learner, (cur) => ({ ...cur, wallet: [{ at: Date.now(), amount, type: "goodwill", note, who: currentAdmin().name }, ...(cur.wallet || [])] }), `Added £${amount.toFixed(2)} goodwill credit`);
 export const setConsent = (learner, key, on) => setLearner(learner, (cur) => ({ ...cur, consents: { ...learner.consents, ...(cur.consents || {}), [key]: on } }), `${on ? "Turned on" : "Turned off"} ${key === "email" ? "marketing emails" : "marketing texts"}`);
 export const closeAccount = (learner) => setLearner(learner, (cur) => ({ ...cur, closed: true }), "Closed the account");
 export const logExport = (learner) => update((s) => audit(s, "Downloaded the learner's data", learner.name));

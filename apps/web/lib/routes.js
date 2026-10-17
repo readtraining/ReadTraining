@@ -15,7 +15,10 @@ export const AUTH_ROUTES = {
   signUp: "/signup",
   login: "/login",
   terms: "/terms-and-conditions",
+  providerTerms: "/provider-terms",
   privacy: "/privacy-policy",
+  admin: "/admin",
+  adminLogin: "/admin/login",
 };
 
 // The CITB HS&E test (the "CSCS test"): the test page, the test centre directory and a centre's page (the client's URLs).

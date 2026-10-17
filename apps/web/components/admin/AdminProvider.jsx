@@ -8,6 +8,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { Pill, formatWhen } from "./adminParts";
 import { STATUS_TONE } from "./AdminProviders";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.providers;
 const d = copy.detail;
@@ -31,7 +32,7 @@ export default function AdminProvider({ slug }) {
     if (p) setRate(String(p.commission));
   }, [p?.commission]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!data) return null;
-  if (!p) return <p className="rt-acc__card rt-acc__empty">This provider was not found. <Link href="/admin/providers">{d.back}</Link></p>;
+  if (!p) return <EmptyState title="This provider was not found." action={{ href: "/admin/providers", label: d.back }} />;
 
   const now = data.now;
   const application = data.approvals.find((a) => a.id === `app-${p.slug}`);

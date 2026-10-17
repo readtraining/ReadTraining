@@ -1,0 +1,1 @@
+ALTER TABLE "organisation_members" ADD COLUMN "job_title" text;

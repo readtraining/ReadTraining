@@ -7,6 +7,7 @@ import { formatNumber } from "@/lib/format";
 import { Icon } from "./Icon";
 import { initials } from "@/components/marketing/parts";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
+import { EmptyState } from "@/components/states/States";
 
 const fmtDate = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "long", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
 const FIRST = 6;
@@ -142,7 +143,7 @@ export default function ReviewsSection() {
         <p className="rt-cd__rcount" aria-live="polite">Showing {filtered.length} written {filtered.length === 1 ? "review" : "reviews"} of {formatNumber(course.reviewCount)} ratings</p>
 
         {filtered.length === 0 ? (
-          <p className="rt-cd__empty">No reviews match.</p>
+          <EmptyState inCard title="No reviews match." />
         ) : (
           <ul className="row y-gap-20 rt-cd__rlist">
             {filtered.map((r) => <ReviewCard key={keyOf(r)} r={r} helpful={helpful} toggle={toggle} wide />)}

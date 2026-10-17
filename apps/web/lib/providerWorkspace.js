@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/format";
 const KEY = "rt-provider";
 export const PROVIDER_EVENT = "rt-provider-change";
 export const DAY = 86400000;
-const VERSION = 3; // 3: refund requests keep their booking reference (2: Hurak course setup fields, no payouts)
+const VERSION = 4; // 4: categories, sub-categories, topics and methods as catalogue slugs (3: refund booking reference; 2: Hurak setup fields)
 
 const readRaw = () => {
   try {
@@ -36,6 +36,21 @@ export function updateProvider(fn) {
     window.dispatchEvent(new Event(PROVIDER_EVENT));
   } catch {}
   return out;
+}
+
+// The demo records are kept, but the person working in them and the provider's name are the real ones (from the sign-in and
+// the server check), so greetings, notes and "booked by" show who really did it. Writes only when something changed.
+export function actAs({ name, email, orgName }) {
+  const s = readRaw();
+  const own = (s.team || []).find((t) => t.id === s.me.id);
+  const same = s.me.name === name && s.me.email === email && (!own || (own.name === name && own.email === email)) && (!orgName || s.org.name === orgName);
+  if (!name || same) return;
+  updateProvider((x) => {
+    x.me = { ...x.me, name, email };
+    // the team list's "That's you" row is the same person
+    x.team = (x.team || []).map((t) => (t.id === x.me.id ? { ...t, name, email } : t));
+    if (orgName) x.org = { ...x.org, name: orgName };
+  });
 }
 
 // DEMO: start again from the demo records (Settings has no button for this; used by tests).

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = W.jobs;
 const TABS = ["candidates", "roles", "employers"];
@@ -56,7 +57,7 @@ export default function AdminJobs() {
             </tbody>
           </table>
         </div>
-      ) : <p className="rt-acc__card rt-acc__empty">No candidates match.</p>)}
+      ) : <EmptyState title="No candidates match." />)}
 
       {tab === "roles" && (
         <div className="rt-acc__card rt-biz__tablecard">

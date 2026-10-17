@@ -8,6 +8,7 @@ import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
 import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
 
 const copy = A.catalogue;
 const TABS = ["courses", "categories", "packages"];
@@ -88,7 +89,7 @@ export default function AdminCatalogue() {
               )}
             </div>
           ) : (
-            <p className="rt-acc__card rt-acc__empty">No courses match.</p>
+            <EmptyState title="No courses match." />
           )}
         </>
       )}

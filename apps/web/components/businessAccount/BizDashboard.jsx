@@ -9,6 +9,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import BookingRow from "@/components/account/BookingRow";
 import { CertPill, PlacesBar, asBooking, certLine } from "./bizParts";
 import { Stats } from "@/components/admin/adminParts";
+import { EmptyState } from "@/components/states/States";
 
 const copy = biz.dashboard;
 
@@ -55,7 +56,7 @@ export default function BizDashboard() {
             ))}
           </ul>
         ) : (
-          <p className="rt-acc__empty">{copy.assign.none}</p>
+          <EmptyState inCard title={copy.assign.none} />
         )}
       </section>
 
@@ -75,7 +76,7 @@ export default function BizDashboard() {
               ))}
             </ul>
           ) : (
-            <p className="rt-acc__empty">{copy.renewals.none}</p>
+            <EmptyState inCard title={copy.renewals.none} />
           )}
         </section>
 

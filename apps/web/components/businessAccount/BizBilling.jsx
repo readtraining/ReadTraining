@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
 import { getBusiness, payBalance } from "@/lib/businessAccount";
+import { useWorkspace } from "@/lib/workspaceContext";
 import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 
@@ -14,6 +15,8 @@ const STATUS_TONE = { paid: "completed", due: "confirmed", overdue: "requested" 
 // balance (a simulated card payment: the open invoices are marked paid and the credit frees up), every invoice with its status and
 // a View that opens it with Print, and the billing details on the account. ?invoice= (from the bookings) opens one invoice.
 export default function BizBilling() {
+  // the real business name (from the server check); the address, VAT and credit are still DEMO
+  const companyName = useWorkspace()?.name ?? "";
   const [data, setData] = useState(null);
   const [view, setView] = useState(null); // invoice number shown
   const [paying, setPaying] = useState(false);
@@ -91,7 +94,7 @@ export default function BizBilling() {
       <section className="rt-acc__card" aria-labelledby="rt-bb-det-h">
         <h2 className="rt-acc__h2" id="rt-bb-det-h">{copy.details.title}</h2>
         <dl className="rt-biz__details">
-          <div><dt>Company</dt><dd>{data.company.name}</dd></div>
+          <div><dt>Company</dt><dd>{companyName}</dd></div>
           <div><dt>Account number</dt><dd>{data.company.account}</dd></div>
           <div><dt>Billing email</dt><dd>{data.company.email}</dd></div>
           <div><dt>Billing address</dt><dd>{data.company.address}</dd></div>
@@ -112,7 +115,7 @@ export default function BizBilling() {
         {invoice && (
           <div className="rt-biz__invbody">
             <dl className="rt-biz__details">
-              <div><dt>Billed to</dt><dd>{data.company.name}, {data.company.address}</dd></div>
+              <div><dt>Billed to</dt><dd>{companyName}, {data.company.address}</dd></div>
               <div><dt>Date</dt><dd>{formatDate(invoice.date)}</dd></div>
               <div><dt>Booking</dt><dd>{invoice.reference}{purchase?.po ? ` · ${purchase.po}` : ""}</dd></div>
               <div><dt>Status</dt><dd>{copy.status[invoice.status]}{invoice.status !== "paid" ? `, due ${formatDate(invoice.due)}` : ""}</dd></div>
