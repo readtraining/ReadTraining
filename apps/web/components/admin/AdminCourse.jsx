@@ -15,7 +15,7 @@ const d = copy.detail;
 
 // One course: what it is (category, duration, level, validity, study methods, "From" price), the pre-course e-learning flag
 // (a switch, with what it changes), and its offerings, one per provider (modes, from price, upcoming dates, Live or Paused, with
-// Pause / Resume). Changes are kept with an audit entry and announced.
+// Pause / Resume). Changes are kept and announced.
 export default function AdminCourse({ id }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");

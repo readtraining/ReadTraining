@@ -61,22 +61,23 @@ export function Search({ value, onChange, label }) {
 // `items`: [{ label, onClick } | { label, href }], `danger` for a destructive item. A real menu: arrow keys move between items,
 // Esc closes it and puts focus back on the button, a click outside closes it. Looks like the site's dropdown panel.
 // The provider's account menu uses it too: `trigger` replaces the dots, `head` goes above the items, and { group } items label
-// the ones after them.
+// the ones after them. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
 export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null }) {
   const [open, setOpen] = React.useState(false);
   const wrap = React.useRef(null);
   const btn = React.useRef(null);
   const id = React.useId();
+  // the items on show (a `phone` item is hidden on wider screens)
+  const shownItems = () => [...(wrap.current?.querySelectorAll('[role="menuitem"]') ?? [])].filter((el) => el.offsetParent !== null);
   React.useEffect(() => {
     if (!open) return;
-    const first = wrap.current?.querySelector('[role="menuitem"]');
-    first?.focus();
+    shownItems()[0]?.focus();
     const out = (e) => wrap.current && !wrap.current.contains(e.target) && setOpen(false);
     document.addEventListener("pointerdown", out);
     return () => document.removeEventListener("pointerdown", out);
   }, [open]);
   const onKey = (e) => {
-    const all = [...wrap.current.querySelectorAll('[role="menuitem"]')];
+    const all = shownItems();
     const i = all.indexOf(document.activeElement);
     if (e.key === "Escape") { e.preventDefault(); setOpen(false); btn.current?.focus(); }
     if (e.key === "ArrowDown") { e.preventDefault(); all[(i + 1) % all.length]?.focus(); }
@@ -98,7 +99,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
         <ul className="rt-rowmenu__list" role="menu" id={id} aria-label={label}>
           {head && <li role="none" className="rt-rowmenu__head">{head}</li>}
           {items.map((item) => (
-            <li key={item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : undefined}>
+            <li key={item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>
               {item.group ? item.group : item.href
                 ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)}>{item.label}</Link>
                 : <button type="button" role="menuitem" className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => pick(item)}>{item.label}</button>}

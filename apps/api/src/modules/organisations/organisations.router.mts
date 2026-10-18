@@ -5,7 +5,7 @@ import { and, eq, like, or, organisationMembers, organisations } from '@readtrai
 import { can } from '@readtraining/permissions'
 
 import { logActivity, logDenied } from '../../lib/activity.mjs'
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
 
 // One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
 // person belongs to. These procedures add an identity, open a workspace (the server-side check behind every /provider and
@@ -123,10 +123,37 @@ export const organisationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN' })
       }
       const [org] = await ctx.db
-        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status })
+        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote })
         .from(organisations)
         .where(eq(organisations.id, chosen.organisationId))
       return { ...org, type: input.type, role: chosen.role }
+    }),
+
+  // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and
+  // the account goes back to waiting for a decision.
+  resubmit: orgProcedure('provider.profile.edit')
+    .input(z.object({ organisationId: z.string().uuid(), reply: z.string().trim().max(1000, 'Keep your note to 1,000 characters or fewer.').optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const reply = input.reply?.trim() || null
+      return ctx.db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(organisations)
+          .set({ status: 'pending', statusNote: null, statusChangedAt: new Date() })
+          .where(and(eq(organisations.id, input.organisationId), eq(organisations.type, 'provider'), eq(organisations.status, 'changes_requested')))
+          .returning({ id: organisations.id })
+        if (!updated) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is not waiting for changes any more. Reload the page.' })
+        await logActivity(tx, {
+          actorUserId: ctx.user.id,
+          actorIdentity: 'provider',
+          organisationId: input.organisationId,
+          action: 'provider.resubmitted',
+          targetType: 'organisation',
+          targetId: input.organisationId,
+          metadata: reply ? { reply } : {},
+          ip: ctx.ip,
+        })
+        return { status: 'pending' as const }
+      })
     }),
 
   // Switch account: logs which identity the person moved to (the page they land on checks access itself).

@@ -3,7 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { admin as A } from "@/data/admin";
-import { docState, useAdmin } from "@/lib/admin";
+import { useAdmin } from "@/lib/admin";
+import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Pill, Stats } from "./adminParts";
 import { MONEY_TONE } from "./AdminOrders";
@@ -13,16 +14,16 @@ const copy = A.dashboard;
 const DAY = 86400000;
 
 // The admin dashboard: the four numbers that say how today is going (the account dashboard's stats strip), the queues with their
-// counts and how many are overdue, the sessions starting this week without joining instructions (the gap Hurak's learners
+// counts and how many are overdue (provider applications are real, API admin.providers.counts; the rest is DEMO), the sessions starting this week without joining instructions (the gap Hurak's learners
 // complain about), and the latest orders.
 export default function AdminDashboard() {
   const data = useAdmin();
+  const providers = api.admin.providers.counts.useQuery();
   if (!data) return null;
-  const { now, orders, approvals, changes, providers } = data;
+  const { now, orders, approvals, changes } = data;
   const week = orders.filter((o) => o.booked > now - 7 * DAY && o.state !== "cancelled");
   const pending = approvals.filter((a) => a.status === "pending");
   const open = changes.filter((c) => c.open);
-  const docs = providers.filter((p) => p.listed && p.documents.some((d) => docState(d, now) !== "ok"));
   const stats = [
     { icon: "icon-basket", value: String(week.length), label: copy.stats.orders },
     { icon: "icon-save-money", value: formatPrice(week.reduce((s, o) => s + o.total, 0)), label: copy.stats.revenue },
@@ -31,9 +32,8 @@ export default function AdminDashboard() {
   ];
   const queues = [
     { key: "approvals", n: pending.length, overdue: pending.filter((a) => a.due < now).length },
-    { key: "applications", n: data.counts.applications, overdue: 0 },
+    { key: "applications", n: providers.data?.applications ?? 0, overdue: 0 },
     { key: "changes", n: open.length, overdue: open.filter((c) => c.due < now).length },
-    { key: "documents", n: docs.length, overdue: 0 },
     // Phase 2 queues (lib/adminWork.js)
     { key: "requests", n: data.counts.requests, overdue: data.counts.requestsOverdue },
     { key: "credit", n: data.counts.credit, overdue: 0 },

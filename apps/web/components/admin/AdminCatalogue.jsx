@@ -9,14 +9,15 @@ import { formatPrice } from "@/lib/format";
 import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import AdminCatalogueList from "./AdminCatalogueList";
 
 const copy = A.catalogue;
-const TABS = ["courses", "categories", "packages"];
+const TABS = ["courses", "list", "packages"];
 const PAGE = 20;
 
 // The catalogue: Courses (search, a category filter, the table with providers, upcoming dates, "From" price and the
-// pre-course e-learning flag; 20 at a time with "Show more"), Categories (each with its courses and providers) and Packages and
-// add-ons (the basket's Saver / Flexi packages and the first aid add-on, as the basket applies them). Tabs in the address.
+// pre-course e-learning flag; 20 at a time with "Show more"; DEMO courses), Categories and filters (the real list,
+// AdminCatalogueList) and Packages and add-ons (the basket's Saver / Flexi packages and the first aid add-on, as the basket applies them). Tabs in the address.
 export default function AdminCatalogue() {
   const data = useAdmin();
   const [tab, setTab] = useState("courses");
@@ -32,16 +33,16 @@ export default function AdminCatalogue() {
   if (!data) return null;
 
   const { catalogue } = data;
-  const categories = [...new Set(catalogue.map((c) => c.subject))].map((key) => {
-    const list = catalogue.filter((c) => c.subject === key);
-    return { key, label: list[0].category, courses: list.length, providers: new Set(list.flatMap((c) => c.offerings.map((o) => o.provider))).size, upcoming: list.reduce((n, c) => n + c.upcoming, 0) };
-  }).sort((a, b) => a.label.localeCompare(b.label));
+  // the Courses tab's category filter: each category the demo courses use, with its count
+  const categories = [...new Set(catalogue.map((c) => c.subject))]
+    .map((key) => ({ key, label: catalogue.find((c) => c.subject === key).category, courses: catalogue.filter((c) => c.subject === key).length }))
+    .sort((a, b) => a.label.localeCompare(b.label));
   const needle = q.trim().toLowerCase();
   const list = catalogue.filter((c) => (cat === "all" || c.subject === cat) && (!needle || c.title.toLowerCase().includes(needle)));
   const cols = copy.columns;
   const tabs = [
     { key: "courses", label: copy.tabs.courses, count: catalogue.length },
-    { key: "categories", label: copy.tabs.categories, count: categories.length },
+    { key: "list", label: copy.tabs.list },
     { key: "packages", label: copy.tabs.packages },
   ];
   const pickCat = (k) => {
@@ -94,26 +95,7 @@ export default function AdminCatalogue() {
         </>
       )}
 
-      {tab === "categories" && (
-        <div className="rt-acc__card rt-biz__tablecard">
-          <p className="rt-acc__note rt-adm-tablenote">{copy.categoriesNote}</p>
-          <table className="rt-biz__table rt-adm-table">
-            <thead>
-              <tr><th scope="col">Category</th><th scope="col">Courses</th><th scope="col">Providers</th><th scope="col">{cols.sessions}</th></tr>
-            </thead>
-            <tbody>
-              {categories.map((c) => (
-                <tr key={c.key}>
-                  <td data-label="Category"><button type="button" className="rt-biz__name" onClick={() => { setTab("courses"); setQuery("tab", ""); pickCat(c.key); }}>{c.label}</button></td>
-                  <td data-label="Courses">{c.courses}</td>
-                  <td data-label="Providers">{c.providers}</td>
-                  <td data-label={cols.sessions}>{c.upcoming}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {tab === "list" && <AdminCatalogueList />}
 
       {tab === "packages" && (
         <>

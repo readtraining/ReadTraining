@@ -11,6 +11,12 @@ export const pw = {
   tag: "Provider",
   backToSite: { label: "View site", href: "/" },
   help: { label: "Help centre", href: "/help-centre" },
+  // the provider account's status, at the top of every workspace page (real: set by the ReadTraining team in the admin)
+  accountStatus: {
+    pending: { title: "Your provider account is waiting for review", text: "Our team checks every new provider, usually within 2 working days. You can set up your courses while you wait; they can be booked once you're approved." },
+    changes_requested: { title: "We need a few changes before we can approve you", text: "Here is what our team asked for:", reply: "Anything to tell our team? (optional)", send: "I've made the changes: send for review", sent: "Sent for review. We'll email you when we've decided.", onlyManagers: "The account owner or an admin can send it back for review." },
+    suspended: { title: "Your provider account is suspended", text: "You can still look around, but you can't change anything and your courses can't be booked. The reason:" },
+  },
 
   // the sidebar: our dashboard, then Hurak's sections in its order. Courses and Cohorts open to show their pages (the group heading
   // is a button, not a link); Orders and Performance are plain links because their pages already offer Create order and the

@@ -8,6 +8,7 @@ import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
+import { api } from "@/lib/trpc/react";
 import { actAsAdmin } from "@/lib/adminStore";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { getSupabase } from "@/lib/supabase/client";
@@ -26,8 +27,12 @@ export default function AdminShell({ current, title, lead, actions = null, child
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
-  const counts = data?.counts || {};
-  const items = A.nav.flatMap((g) => g.items);
+  // the waiting provider applications are real; the other badges are still DEMO counts
+  const providers = api.admin.providers.counts.useQuery(undefined, { staleTime: 30000 });
+  const counts = { ...(data?.counts || {}), applications: providers.data?.applications ?? 0 };
+  // pages behind an admin switch are listed only for admins who have it
+  const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => !x.permission || me?.permissions?.includes(x.permission)) })).filter((g) => g.items.length);
+  const items = nav.flatMap((g) => g.items);
   const signOut = async () => {
     setLeaving(true);
     await getSupabase().auth.signOut().catch(() => {});
@@ -57,7 +62,7 @@ export default function AdminShell({ current, title, lead, actions = null, child
 
       <div className="rt-adm__body">
         <nav className="rt-adm__side rt-pill-scroll" aria-label="Admin" ref={sideRef}>
-          {A.nav.map((g) => (
+          {nav.map((g) => (
             <div key={g.group} className="rt-adm__group">
               <p className="rt-adm__grouplabel">{g.group}</p>
               <ul>

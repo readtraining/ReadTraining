@@ -33,7 +33,7 @@ function MoneySteps({ money }) {
 
 // One order: what was booked (course, provider, dates, delegates, price) with where its money is, the customer, the payment (and
 // purchase order and invoice for invoiced business orders), the timeline of everything that happened (newest first), "Resend
-// confirmation", and the team's notes. Changes are kept with an audit entry (lib/admin.js) and announced.
+// confirmation", and the team's notes. Changes are kept (lib/admin.js) and announced.
 export default function AdminOrder({ reference }) {
   const data = useAdmin();
   const [note, setNote] = useState("");

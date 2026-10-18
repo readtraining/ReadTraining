@@ -22,7 +22,7 @@ const NEXT = {
 // Cancellations, date changes and card disputes in one queue: Open (oldest deadline first) and Done. Each request shows its
 // order, customer, course, provider and amount, why it was raised, its deadline, and only the actions its state allows
 // (a cancellation: provider approved > refund to card or to wallet, wallet only when the customer chose it; a date change:
-// confirm the new date; a dispute: evidence sent > won or lost). Each action updates the order's timeline and the audit log.
+// confirm the new date; a dispute: evidence sent > won or lost). Each action updates the order's timeline.
 export default function AdminChanges() {
   const data = useAdmin();
   const [tab, setTab] = useState("open");

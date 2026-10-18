@@ -20,7 +20,7 @@ const ELIGIBILITY = { licence: "Holds a current SIA licence", work: "Right to wo
 
 // One candidate: status actions, licence and availability, eligibility answers, and the roles offered to them. Introducing a
 // candidate to an employer (sharing their details) stays locked until their yes for THAT role is recorded, with how they said it,
-// as the Security Jobs page promises. Then interview and start. Each change is saved with an audit entry.
+// as the Security Jobs page promises. Then interview and start. Each change is saved.
 export default function AdminCandidate({ reference }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");

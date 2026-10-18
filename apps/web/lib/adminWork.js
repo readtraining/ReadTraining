@@ -1,11 +1,11 @@
 import { adminWork as W, businessSeeds, candidateSeeds, employers, requestSeeds, roles } from "@/data/adminWork";
 import { testCentres } from "@/data/testCentres";
 import { readInbox } from "@/lib/inbox";
-import { DAY, HOUR, addWorkingDays, audit, update } from "@/lib/adminStore";
+import { DAY, HOUR, addWorkingDays, update } from "@/lib/adminStore";
 
 // Admin Phase 2 reads and writes: Requests and fulfilment, Security Jobs and Business accounts. The records are the demo ones in
 // data/adminWork.js plus what visitors sent from the site's forms in this browser (lib/inbox.js); the team's changes are saved
-// with an audit entry (lib/adminStore.js). lib/admin.js getAdmin() adds these to the admin data. Swap for API calls later.
+// in this browser (lib/adminStore.js). lib/admin.js getAdmin() adds these to the admin data. Swap for API calls later.
 
 const R = W.requests;
 const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
@@ -53,7 +53,6 @@ const setRequest = (r, patch, action) =>
   update((s) => {
     const cur = s.requests?.[r.ref] || {};
     s.requests = { ...(s.requests || {}), [r.ref]: { ...cur, ...patch, events: [say(action), ...(cur.events || [])] } };
-    audit(s, action, `${r.ref} (${r.name})`);
   });
 
 export const nextStatus = (r) => {
@@ -79,7 +78,6 @@ export const addRequestNote = (r, text) =>
   update((s) => {
     const cur = s.requests?.[r.ref] || {};
     s.requests = { ...(s.requests || {}), [r.ref]: { ...cur, notes: [{ at: Date.now(), who: "Sara Ahmed", text }, ...(cur.notes || [])] } };
-    audit(s, "Added a note", r.ref);
   });
 
 // ---- Security Jobs ------------------------------------------------------------------------------------------------------------
@@ -112,26 +110,25 @@ function buildJobs(saved, now) {
   };
 }
 
-const setCandidate = (c, fn, action) =>
+const setCandidate = (c, fn) =>
   update((s) => {
     const cur = s.candidates?.[c.ref] || {};
     s.candidates = { ...(s.candidates || {}), [c.ref]: fn(cur) };
-    audit(s, action, `${c.ref} (${c.name})`);
   });
 const currentIntro = (c, role) => c.intros.find((i) => i.role === role) || {};
-export const setCandidateStatus = (c, status) => setCandidate(c, (cur) => ({ ...cur, status }), `Set candidate to ${W.jobs.statuses[status]}`);
+export const setCandidateStatus = (c, status) => setCandidate(c, (cur) => ({ ...cur, status }));
 export const offerRole = (c, role) =>
-  setCandidate(c, (cur) => ({ ...cur, status: cur.status === "new" || cur.status === "screening" || !cur.status ? "shortlisted" : cur.status, intros: { ...(cur.intros || {}), [role]: { status: "asked", at: Date.now(), consent: null } } }), `Asked for consent: ${roleById[role]?.title}`);
+  setCandidate(c, (cur) => ({ ...cur, status: cur.status === "new" || cur.status === "screening" || !cur.status ? "shortlisted" : cur.status, intros: { ...(cur.intros || {}), [role]: { status: "asked", at: Date.now(), consent: null } } }));
 export const recordConsent = (c, role, how) =>
-  setCandidate(c, (cur) => ({ ...cur, intros: { ...(cur.intros || {}), [role]: { ...currentIntro(c, role), roleInfo: undefined, status: "consent", at: Date.now(), consent: { at: Date.now(), how } } } }), `Recorded the candidate's yes for ${roleById[role]?.title} (${how})`);
+  setCandidate(c, (cur) => ({ ...cur, intros: { ...(cur.intros || {}), [role]: { ...currentIntro(c, role), roleInfo: undefined, status: "consent", at: Date.now(), consent: { at: Date.now(), how } } } }));
 // introducing (sharing the candidate's details with the employer) is only possible after a recorded yes for that role
 export const moveIntro = (c, role, status) => {
   const i = currentIntro(c, role);
   if (status === "introduced" && !i.consent) return;
   const statusFor = { introduced: "introduced", interview: "interview", started: "started" }[status];
-  setCandidate(c, (cur) => ({ ...cur, ...(statusFor ? { status: statusFor } : {}), intros: { ...(cur.intros || {}), [role]: { ...i, roleInfo: undefined, status, at: Date.now() } } }), `${W.jobs.introStatuses[status]}: ${roleById[role]?.title}`);
+  setCandidate(c, (cur) => ({ ...cur, ...(statusFor ? { status: statusFor } : {}), intros: { ...(cur.intros || {}), [role]: { ...i, roleInfo: undefined, status, at: Date.now() } } }));
 };
-export const addCandidateNote = (c, text) => setCandidate(c, (cur) => ({ ...cur, notes: [{ at: Date.now(), who: "Sara Ahmed", text }, ...(cur.notes || [])] }), "Added a note");
+export const addCandidateNote = (c, text) => setCandidate(c, (cur) => ({ ...cur, notes: [{ at: Date.now(), who: "Sara Ahmed", text }, ...(cur.notes || [])] }));
 
 // ---- business accounts --------------------------------------------------------------------------------------------------------
 const B = W.businesses;
@@ -176,18 +173,17 @@ function buildBusinesses(saved, now) {
     };
   });
 }
-const setBusiness = (b, fn, action) =>
+const setBusiness = (b, fn) =>
   update((s) => {
     const cur = s.businesses?.[b.slug] || {};
     s.businesses = { ...(s.businesses || {}), [b.slug]: fn(cur) };
-    audit(s, action, b.name);
   });
-export const offerCredit = (b, limit) => setBusiness(b, (cur) => ({ ...cur, credit: "approved", limit }), `Offered credit of £${limit.toLocaleString("en-GB")} on ${B.termsDays} days`);
-export const changeCreditLimit = (b, limit) => setBusiness(b, (cur) => ({ ...cur, limit }), `Changed the credit limit to £${limit.toLocaleString("en-GB")}`);
-export const setCreditHold = (b, hold) => setBusiness(b, (cur) => ({ ...cur, credit: hold ? "suspended" : "approved" }), hold ? "Put credit on hold" : "Lifted the credit hold");
-export const remindInvoice = (b, inv) => setBusiness(b, (cur) => ({ ...cur, reminded: { ...(cur.reminded || {}), [inv.no]: Date.now() } }), `Sent a payment reminder for ${inv.no}`);
-export const markInvoicePaid = (b, inv) => setBusiness(b, (cur) => ({ ...cur, paid: [...(cur.paid || []), inv.no] }), `Marked ${inv.no} as paid`);
-export const addBusinessNote = (b, text) => setBusiness(b, (cur) => ({ ...cur, notes: [{ at: Date.now(), who: "Sara Ahmed", text }, ...(cur.notes || [])] }), "Added a note");
+export const offerCredit = (b, limit) => setBusiness(b, (cur) => ({ ...cur, credit: "approved", limit }));
+export const changeCreditLimit = (b, limit) => setBusiness(b, (cur) => ({ ...cur, limit }));
+export const setCreditHold = (b, hold) => setBusiness(b, (cur) => ({ ...cur, credit: hold ? "suspended" : "approved" }));
+export const remindInvoice = (b, inv) => setBusiness(b, (cur) => ({ ...cur, reminded: { ...(cur.reminded || {}), [inv.no]: Date.now() } }));
+export const markInvoicePaid = (b, inv) => setBusiness(b, (cur) => ({ ...cur, paid: [...(cur.paid || []), inv.no] }));
+export const addBusinessNote = (b, text) => setBusiness(b, (cur) => ({ ...cur, notes: [{ at: Date.now(), who: "Sara Ahmed", text }, ...(cur.notes || [])] }));
 
 // everything Phase 2 adds to getAdmin()
 export function buildWork(saved, now) {

@@ -19,7 +19,7 @@ const INVOICE_TONE = { paid: "ok", due: "info", overdue: "late" };
 
 // One business account: the company, places bought vs assigned, the credit facility (as on Hurak, companies don't apply: we offer
 // credit with a limit once their history meets every eligibility check; then change the limit, put credit on hold or lift it), money owed by age, the invoices with their purchase orders (send a reminder,
-// mark paid), and the team's notes. Each change is saved with an audit entry.
+// mark paid), and the team's notes. Each change is saved.
 export default function AdminBusiness({ slug }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");

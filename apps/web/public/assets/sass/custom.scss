@@ -4918,12 +4918,79 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm-checks .rt-bk__check { font-weight: 500; }
 .rt-adm-privacy { display: grid; gap: 20px; }
 .rt-adm-privacy .rt-acc__note { margin-top: 6px; }
-.rt-adm-roles { margin-top: 0; }
-.rt-adm-roles .rt-teamtile { background: #fff; }
-.rt-adm-roles .rt-teamtile__title { margin-top: 0; }
-.rt-adm-roles .rt-teamtile__text strong { color: var(--color-dark-1); }
 .rt-adm-fees { display: grid; justify-items: start; gap: 20px; }
 .rt-adm-fees .rt-adm-cardnote { margin: 0; }
+/* activity log (/admin/activity) */
+.rt-adm-activity__dates { display: flex; gap: 12px; }
+.rt-adm-activity__dates .rt-field { margin: 0; }
+.rt-adm-activity__dates label { font-size: var(--rt-text-xs); }
+.rt-adm-activity__dates input { min-height: 44px; }
+.rt-adm-activity__who { display: block; padding: 0; border: 0; background: none; text-align: inherit; cursor: pointer; }
+.rt-adm-activity__who:hover .rt-adm-strong { text-decoration: underline; text-underline-offset: 2px; }
+.rt-adm-activity__who:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-adm-activity__who + .rt-pill { margin-top: 6px; }
+.rt-adm-activity__target { overflow-wrap: anywhere; }
+.rt-adm-activity__more { margin-top: 4px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-adm-activity__more summary { cursor: pointer; color: var(--rt-c-brand); }
+.rt-adm-activity__more dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; margin: 6px 0 0; }
+.rt-adm-activity__more dt { font-weight: 600; }
+.rt-adm-activity__more dd { margin: 0; overflow-wrap: anywhere; }
+.rt-adm-activity__older { align-self: center; }
+@media (max-width: 991px) {
+  .rt-adm-activity__who, .rt-adm-activity__who + .rt-pill { text-align: right; }
+  .rt-adm-activity__more dl { text-align: left; }
+}
+@media (max-width: 575px) {
+  .rt-adm-activity__dates { width: 100%; }
+  .rt-adm-activity__dates .rt-field { flex: 1 1 0; }
+}
+/* catalogue settings (/admin/catalogue?tab=list): the one list as nested rows, each with move up/down and its menu */
+.rt-adm-cat { display: grid; margin: 0; padding: 0; list-style: none; }
+.rt-adm-cat > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rt-c-line); }
+.rt-adm-cat > li:first-child { border-top: 0; }
+.rt-adm-cat > li.rt-adm-muted { display: block; font-size: var(--rt-text-sm); }
+.rt-adm-cat > li.is-retired .rt-adm-strong { color: var(--rt-c-muted) !important; }
+.rt-adm-cat.-sub { margin: 8px 0 4px 18px; padding-left: 14px; border-left: 2px solid var(--rt-c-line); }
+.rt-adm-cat__row { display: contents; }
+.rt-adm-cat > li > *, .rt-adm-cat__row > *, .rt-adm-cat__group summary { min-width: 0; } /* long names wrap instead of running under the buttons */
+.rt-adm-cat__name .rt-adm-strong { overflow-wrap: anywhere; }
+.rt-adm-cat__group summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 36px; cursor: pointer; }
+.rt-adm-cat__group summary::marker { color: var(--rt-c-muted); }
+.rt-adm-cat__name { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.rt-adm-cat__name small, .rt-adm-cat__count { font-size: var(--rt-text-xs); color: var(--rt-c-muted); overflow-wrap: anywhere; }
+.rt-adm-cat__actions { display: flex; align-items: center; gap: 6px; }
+.rt-adm-cat__move { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; }
+.rt-adm-cat__move:hover:not(:disabled) { border-color: var(--rt-c-text); }
+.rt-adm-cat__move:disabled { opacity: 0.35; cursor: default; }
+.rt-adm-cat__move:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-adm-cat__add { margin-top: 10px; }
+.rt-rowmenu__phone { display: none; }
+/* on phones only the menu stays beside the name (moving is in the menu), so names keep their room */
+@media (max-width: 575px) {
+  .rt-adm-cat > li { gap: 8px; }
+  .rt-adm-cat.-sub { margin-left: 4px; padding-left: 10px; }
+  .rt-adm-cat__move { display: none; }
+  .rt-rowmenu__phone { display: block; }
+}
+/* the provider account's status at the top of the provider workspace */
+.rt-pws-status { display: grid; gap: 8px; margin: 0 0 24px; padding: 16px 20px; border: 1px solid var(--rt-c-line); border-left: 4px solid var(--rt-c-brand); border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); }
+.rt-pws-status.-changes_requested { border-left-color: var(--color-orange-1); background: var(--rt-c-surface); }
+.rt-pws-status.-suspended { border-left-color: var(--rt-c-error); background: var(--rt-c-surface); }
+.rt-pws-status__title { margin: 0; font-size: var(--rt-text); font-weight: 600; color: var(--rt-c-text); }
+.rt-pws-status__text { margin: 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); }
+.rt-pws-status__note { margin: 0; padding: 10px 14px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand-soft); white-space: pre-line; overflow-wrap: anywhere; font-size: var(--rt-text-sm); line-height: 1.6; color: var(--rt-c-text); }
+.rt-pws-status__form { display: grid; gap: 10px; justify-items: start; }
+.rt-pws-status__form .rt-field { width: 100%; margin: 0; }
+/* providers (/admin/providers): the admin's message or the provider's note, kept as written */
+.rt-adm-provider__note { margin: 0; white-space: pre-line; overflow-wrap: anywhere; font-size: var(--rt-text-sm); line-height: 1.6; color: var(--rt-c-text); }
+/* learners (/admin/learners): the accounts a person also has, and the record's photo */
+.rt-adm-learners__orgs { display: grid; gap: 4px; }
+.rt-adm-learners__orgs small { display: inline !important; margin-left: 6px !important; }
+.rt-adm-learner__who { display: flex; align-items: center; gap: 16px; }
+.rt-adm-learner__photo { flex: 0 0 auto; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+.rt-adm-team__count { margin: 0; }
+.rt-adm-team__switches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+@media (max-width: 575px) { .rt-adm-team__switches { grid-template-columns: minmax(0, 1fr); } }
 .rt-adm-fees__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 32px; width: 100%; }
 @media (max-width: 767px) {
   .rt-adm-fees__grid { grid-template-columns: minmax(0, 1fr); }

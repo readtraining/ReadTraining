@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { queryApiAsUser } from "@/lib/serverApi";
 
-// The admin a /admin page is opened by (server only): { name, email, preset, permissions, twoStep } or null. proxy.js has
+// The admin a /admin page is opened by (server only): { id, name, email, preset, permissions, twoStep } or null. proxy.js has
 // already asked the API for this request and passes the answer in the x-rt-admin header; without it (a prefetch, or the proxy
 // didn't run) this asks the API itself, so the panel never opens without a check.
 export async function getAdminAccess() {
