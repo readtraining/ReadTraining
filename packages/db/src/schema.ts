@@ -162,6 +162,20 @@ export const platformSettings = pgTable(
   (t) => [index('platform_settings_updated_by_idx').on(t.updatedBy)],
 ).enableRLS()
 
+// The site's editable content (Part B, B2): the trust numbers, the homepage's featured courses, testimonials and so on, one row
+// per key, each in the shape the API checks for that key. A key with no row uses the website's built-in wording, so the site
+// reads the same until an admin changes something. Read publicly through the API; written by admins only (RLS on, no policy).
+export const siteContent = pgTable(
+  'site_content',
+  {
+    key: text('key').primaryKey(),
+    value: jsonb('value').notNull(),
+    updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('site_content_updated_by_idx').on(t.updatedBy)],
+).enableRLS()
+
 // Append-only record of every action (who, as which identity, what, on what, when). No foreign keys, so deleting a user or
 // an organisation never has to change a log row; update, delete and truncate are blocked by triggers. No Data API access.
 export const activityLog = pgTable(

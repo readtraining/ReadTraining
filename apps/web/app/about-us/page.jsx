@@ -11,7 +11,8 @@ import SubjectFacts from "@/components/testPrep/subject/SubjectFacts";
 import AboutStory from "@/components/aboutUs/AboutStory";
 import AboutAudiences from "@/components/aboutUs/AboutAudiences";
 import AboutMission from "@/components/aboutUs/AboutMission";
-import { about } from "@/data/about";
+import { about, aboutFacts } from "@/data/about";
+import { loadSiteContent } from "@/lib/siteContentServer";
 import { founded, topBar } from "@/data/home";
 import { abs, breadcrumbLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
 
@@ -42,7 +43,8 @@ const faqLd = {
   mainEntity: about.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  await loadSiteContent();
   return (
     <div className="main-content rt-home fb-page rt-tpage rt-about-page">
       <a href="#rt-about-main" className="rt-skip">Skip to main content</a>
@@ -52,7 +54,7 @@ export default function AboutPage() {
         <main id="rt-about-main" tabIndex={-1}>
           <MarketingHero hero={about.hero} />
           <div className="container">
-            <SubjectFacts facts={about.facts} />
+            <SubjectFacts facts={aboutFacts()} />
           </div>
           <AboutStory story={about.story} />
           <StepsSection workflow={about.steps} tone="lavender" />

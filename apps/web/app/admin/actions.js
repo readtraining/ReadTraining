@@ -13,3 +13,11 @@ export async function refreshCatalogueList() {
   updateTag("taxonomy");
   return { ok: true };
 }
+
+// The same for the site's editable content (lib/siteContentServer.js, tag "content"), after an admin saves some.
+export async function refreshSiteContent() {
+  const admin = await getAdminAccess();
+  if (!admin?.permissions?.includes("content")) return { ok: false };
+  updateTag("content");
+  return { ok: true };
+}

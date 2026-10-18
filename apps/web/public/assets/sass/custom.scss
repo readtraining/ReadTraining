@@ -4944,6 +4944,23 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
   .rt-adm-activity__dates { width: 100%; }
   .rt-adm-activity__dates .rt-field { flex: 1 1 0; }
 }
+/* site content (/admin/content): the save row and the testimonials list */
+.rt-adm-content__status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.rt-adm-content__status .rt-acc__note { margin: 0; }
+.rt-adm-content__save { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 20px; }
+.rt-adm-content__save .rt-acc__note { margin: 0; }
+.rt-adm-content__grid { margin-top: 16px; }
+.rt-adm-content__max { margin: 0 0 4px; }
+.rt-adm-content__preview { margin: 16px 0 0; padding: 10px 14px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand-soft); }
+.rt-adm-tm li { align-items: flex-start; }
+.rt-adm-tm__text { margin: 6px 0 0; font-size: var(--rt-text-sm); line-height: 1.6; color: var(--rt-c-text); overflow-wrap: anywhere; }
+.rt-adm-tm__side { display: grid; justify-items: end; gap: 8px; flex: 0 0 auto; }
+.rt-adm-tm__buttons { display: flex; gap: 16px; }
+/* on phones the tick and the buttons go below the words, so the words keep the full width */
+@media (max-width: 575px) {
+  .rt-adm-tm li { flex-direction: column; align-items: stretch; gap: 10px; }
+  .rt-adm-tm__side { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+}
 /* catalogue settings (/admin/catalogue?tab=list): the one list as nested rows, each with move up/down and its menu */
 .rt-adm-cat { display: grid; margin: 0; padding: 0; list-style: none; }
 .rt-adm-cat > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rt-c-line); }

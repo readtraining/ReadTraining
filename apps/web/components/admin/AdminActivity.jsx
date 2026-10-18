@@ -130,7 +130,7 @@ export default function AdminActivity() {
                         )}
                       </td>
                       <td data-label={c.on}>
-                        {e.target && e.target.type !== "session" ? <span className="rt-adm-activity__target">{CATALOGUE.has(e.target.type) ? e.metadata.to ?? e.metadata.name ?? e.target.label : e.target.label}</span> : <span className="rt-adm-muted">–</span>}
+                        {e.target && e.target.type !== "session" ? <span className="rt-adm-activity__target">{CATALOGUE.has(e.target.type) ? e.metadata.to ?? e.metadata.name ?? e.target.label : e.target.type === "content" ? copy.facts.key.values[e.target.id] ?? e.target.label : e.target.label}</span> : <span className="rt-adm-muted">–</span>}
                         {e.organisation && e.target?.label !== e.organisation && <small>{e.organisation}</small>}
                       </td>
                     </tr>

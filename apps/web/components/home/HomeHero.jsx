@@ -3,13 +3,11 @@ import gsap from "gsap";
 import Link from "next/link";
 import { ShapeRendering } from "@/svg/index";
 import { hero } from "@/data/home";
+import { trustFigures } from "@/lib/siteContent";
 import React, { useEffect } from "react";
 import Image, { StaticImageData } from "next/image";
 
 import hero_bg from "@/public/assets/img/home-1/hero/bg.png";
-import masthead_icon_1 from "@/public/assets/img/masthead/icons/1.svg";
-import masthead_icon_2 from "@/public/assets/img/masthead/icons/2.svg";
-import masthead_icon_3 from "@/public/assets/img/masthead/icons/3.svg";
 // move img and icon
 import move_img_1 from "@/public/assets/img/masthead/1.png";
 
@@ -18,8 +16,6 @@ import move_img_3 from "@/public/assets/img/masthead/3.png";
 import move_icon_2 from "@/public/assets/img/masthead/4.png";
 import move_icon_3 from "@/public/assets/img/masthead/2.svg";
 
-const masthead_icons = [masthead_icon_1, masthead_icon_2, masthead_icon_3];
-const masthead_info = hero.highlights.slice(0, 3).map((text, i) => ({ id: i + 1, icon: masthead_icons[i % 3], text }));
 
 const hero_content = {
   title: hero.title,
@@ -36,6 +32,7 @@ const hero_content = {
 const { title, text_underline, info_hero, starts } = hero_content;
 
 const HomeHero = () => {
+  const trust = trustFigures();
   useEffect(() => {
     const parallaxIt = () => {
       const target = document.querySelectorAll(".js-mouse-move-container");
@@ -161,9 +158,9 @@ const HomeHero = () => {
                           <div key={index} className={start}></div>
                         ))}
                       </div>
-                      <span className="text-14 fw-500 text-white lh-1">{hero.socialProof.rating}</span>
+                      <span className="text-14 fw-500 text-white lh-1">{trust.ratingOutOf}</span>
                     </div>
-                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>{hero.socialProof.text}</div>
+                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>Based on {trust.reviews} verified reviews · {trust.customers} customers</div>
                   </div>
                 </div>
               </div>

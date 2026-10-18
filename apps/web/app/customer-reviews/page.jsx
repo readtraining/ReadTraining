@@ -10,26 +10,32 @@ import SubjectFacts from "@/components/testPrep/subject/SubjectFacts";
 import ReviewsFeatured from "@/components/customerReviews/ReviewsFeatured";
 import ReviewsList from "@/components/customerReviews/ReviewsList";
 import ReviewsHow from "@/components/customerReviews/ReviewsHow";
-import { customerReviews as r } from "@/data/customerReviews";
+import { customerReviews } from "@/data/customerReviews";
+import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 
 // Customer reviews (/customer-reviews), in the marketing-page language of /about-us: centred dark hero with the rating facts on
 // its edge > the featured video story > a selection of reviews, filterable by subject (lavender) > how we collect reviews >
 // FAQs > call to action > need help > footer. No review structured data: the reviews have no individual ratings, and Google does
-// not show self-published reviews of the site itself. Copy: data/customerReviews.js.
+// not show self-published reviews of the site itself. Copy: data/customerReviews.js (numbers and reviews: the site's editable
+// content, loaded first).
 
 const PATH = "/customer-reviews";
-const crumbs = [{ label: "Home", href: "/" }, { label: r.hero.eyebrow }];
+export async function generateMetadata() {
+  await loadSiteContent();
+  const r = customerReviews();
+  return pageMetadata({ title: r.title, description: r.description, path: PATH });
+}
 
-export const metadata = pageMetadata({ title: r.title, description: r.description, path: PATH });
-
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: r.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
-
-export default function CustomerReviewsPage() {
+export default async function CustomerReviewsPage() {
+  await loadSiteContent();
+  const r = customerReviews();
+  const crumbs = [{ label: "Home", href: "/" }, { label: r.hero.eyebrow }];
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: r.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  };
   return (
     <div className="main-content rt-home fb-page rt-tpage rt-reviews-page">
       <a href="#rt-reviews-main" className="rt-skip">Skip to main content</a>
