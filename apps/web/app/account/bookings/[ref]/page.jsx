@@ -12,7 +12,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { ref } = await props.params;
   return (
-    <AccountShell current="bookings" title={`Booking ${ref}`}>
+    <AccountShell demo current="bookings" title={`Booking ${ref}`}>
       <BookingDetail reference={ref} />
     </AccountShell>
   );

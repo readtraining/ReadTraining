@@ -5,7 +5,7 @@ import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { actOnChange, ago, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Due, Pill, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { Due, Pill, Tabs, formatWhen, getQuery, setQuery, Said } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = A.changes;
@@ -44,7 +44,7 @@ export default function AdminChanges() {
   return (
     <div className="rt-acc__stack">
       <Tabs tabs={[{ key: "open", label: copy.tabs.open, count: open.length }, { key: "done", label: copy.tabs.done, count: done.length }]} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "done" ? t : ""); }} label="Show requests" />
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
       {list.length ? (
         <ul className="rt-adm-items">
           {list.map((c) => {

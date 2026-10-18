@@ -10,7 +10,7 @@ export const metadata = pageMetadata({ title: "Billing and invoices | ReadTraini
 
 export default function Page() {
   return (
-    <AccountShell area="business" current="billing" title={biz.billing.title} lead={biz.billing.lead}>
+    <AccountShell demo area="business" current="billing" title={biz.billing.title} lead={biz.billing.lead}>
       <BizBilling />
     </AccountShell>
   );

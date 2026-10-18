@@ -10,26 +10,31 @@ export const admin = {
   // the signed-in admin's access, as the top bar shows it, and the way out
   presets: { full: "Full access", support: "Support", finance: "Finance", custom: "Custom access" },
   signOut: "Sign out",
+  // `demo`: the page shows made-up records (true) or some made-up parts ("partly") until bookings and payments are real
+  demo: {
+    all: { label: "Demo data", note: "The records on this page are made up for now. They become real when bookings and payments are connected." },
+    partly: { label: "Partly demo", note: "Some numbers on this page are made up for now. They become real when bookings and payments are connected." },
+  },
   // the sidebar, in the plan's groups (later phases join it as they are built)
   nav: [
     { group: "Overview", items: [
-      { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/admin" },
-      { key: "approvals", label: "Approvals", icon: "icon-check", href: "/admin/approvals", badge: "approvals" },
+      { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/admin", demo: "partly" },
+      { key: "approvals", label: "Approvals", icon: "icon-check", href: "/admin/approvals", badge: "approvals", demo: true },
     ] },
     { group: "Marketplace", items: [
       { key: "providers", label: "Providers", icon: "icon-person-3", href: "/admin/providers", badge: "applications" },
-      { key: "catalogue", label: "Catalogue", icon: "icon-book", href: "/admin/catalogue" },
-      { key: "sessions", label: "Sessions and venues", icon: "icon-calendar", href: "/admin/sessions" },
+      { key: "catalogue", label: "Catalogue", icon: "icon-book", href: "/admin/catalogue", demo: "partly" },
+      { key: "sessions", label: "Sessions and venues", icon: "icon-calendar", href: "/admin/sessions", demo: true },
     ] },
     { group: "Sales", items: [
-      { key: "orders", label: "Orders and bookings", icon: "icon-basket", href: "/admin/orders" },
-      { key: "changes", label: "Changes and refunds", icon: "icon-wall-clock", href: "/admin/changes", badge: "changes" },
-      { key: "requests", label: "Requests", icon: "icon-message", href: "/admin/requests", badge: "requests" },
+      { key: "orders", label: "Orders and bookings", icon: "icon-basket", href: "/admin/orders", demo: true },
+      { key: "changes", label: "Changes and refunds", icon: "icon-wall-clock", href: "/admin/changes", badge: "changes", demo: true },
+      { key: "requests", label: "Requests", icon: "icon-message", href: "/admin/requests", badge: "requests", demo: true },
     ] },
     { group: "Customers", items: [
-      { key: "learners", label: "Learners and certificates", icon: "icon-person", href: "/admin/learners" },
-      { key: "businesses", label: "Business accounts", icon: "icon-save-money", href: "/admin/businesses", badge: "credit" },
-      { key: "jobs", label: "Security Jobs", icon: "icon-badge", href: "/admin/jobs", badge: "candidates" },
+      { key: "learners", label: "Learners and certificates", icon: "icon-person", href: "/admin/learners", demo: "partly" },
+      { key: "businesses", label: "Business accounts", icon: "icon-save-money", href: "/admin/businesses", badge: "credit", demo: true },
+      { key: "jobs", label: "Security Jobs", icon: "icon-badge", href: "/admin/jobs", badge: "candidates", demo: true },
     ] },
     { group: "Content", items: [
       { key: "content", label: "Site content", icon: "icon-edit", href: "/admin/content" },
@@ -37,10 +42,23 @@ export const admin = {
     { group: "System", items: [
       { key: "activity", label: "Activity log", icon: "icon-list", href: "/admin/activity" },
       { key: "team", label: "Admin team", icon: "icon-person-2", href: "/admin/team", permission: "admins" },
-      { key: "settings", label: "Settings", icon: "icon-setting", href: "/admin/settings" },
+      { key: "settings", label: "Settings", icon: "icon-setting", href: "/admin/settings", demo: "partly" },
     ] },
   ],
   backToSite: { label: "View site", href: "/" },
+  // the top bar's search (components/admin/AdminSearch.jsx)
+  search: {
+    button: "Search",
+    title: "Search the admin",
+    placeholder: "Pages, learners, providers…",
+    pages: "Pages",
+    providers: "Providers",
+    learners: "Learners",
+    searching: "Searching…",
+    none: "Nothing found. Try a name, an email address or a phone number.",
+    more: "Keep typing to search learners and providers.",
+    hint: "↑ ↓ to move, Enter to open, Esc to close",
+  },
 
   // Admin Users & Roles (Part B, B1): real data from the API (admin.team). One role with switches and presets.
   team: {
@@ -196,6 +214,10 @@ export const admin = {
     atRiskNone: "Every session this week has its joining instructions.",
     noJoining: "No joining instructions",
     allOrders: "All orders",
+    activity: "Recent activity",
+    activityAll: "Activity log",
+    activityNone: "Nothing has happened yet. Every change an admin, provider or learner makes shows here.",
+    demoTag: "Demo",
   },
 
   approvals: {

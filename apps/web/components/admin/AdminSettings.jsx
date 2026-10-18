@@ -6,7 +6,7 @@ import { saveFees, useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
-import { formatWhen } from "./adminParts";
+import { formatWhen, Said } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 
 const copy = A.settings;
@@ -45,7 +45,7 @@ export default function AdminSettings() {
 
   return (
     <div className="rt-acc__stack">
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
       <CommissionCard onSaved={setSaid} />
 
       <form className="rt-acc__card rt-adm-fees" onSubmit={submitFees} noValidate ref={feeRef}>

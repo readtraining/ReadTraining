@@ -9,7 +9,7 @@ import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, formatWhen } from "./adminParts";
+import { Pill, RowMenu, formatWhen, Said, TableSkeleton } from "./adminParts";
 
 const copy = A.team;
 const PRESETS = ["full", "support", "finance", "custom"];
@@ -25,7 +25,7 @@ export default function AdminTeam() {
   const [confirm, setConfirm] = useState(null); // { kind: "remove" | "reset", admin }
   const [said, setSaid] = useState("");
 
-  if (list.isLoading) return null;
+  if (list.isLoading) return <TableSkeleton rows={4} />;
   if (list.error) return <ErrorState onRetry={() => list.refetch()} />;
   const { me, switches, presets, admins } = list.data;
   const c = copy.columns;
@@ -40,7 +40,7 @@ export default function AdminTeam() {
         <p className="rt-acc__note rt-adm-team__count">{admins.length === 1 ? "1 admin" : `${admins.length} admins`}</p>
         <button type="button" className="button -sm -purple-1 text-white" onClick={() => setForm({ mode: "add", email: "", preset: "support", permissions: [], refundLimit: "100" })}>{copy.add}</button>
       </div>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       {admins.length ? (
         <div className="rt-acc__card rt-biz__tablecard">

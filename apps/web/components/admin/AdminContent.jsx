@@ -14,7 +14,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { builtInLegal, getLegalList, legalContentKey } from "@/lib/legal";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
 import { FaqForm, LegalForm } from "./AdminContentPages";
 import { SaveRow, describedBy, field, useSave } from "./contentParts";
 
@@ -50,7 +50,7 @@ export default function AdminContent() {
     if (faqSet(getQuery("set"))) setFaqKey(getQuery("set"));
     if (LEGAL.some((d) => d.slug === getQuery("doc"))) setDocSlug(getQuery("doc"));
   }, []);
-  if (site.isLoading || changes.isLoading) return null;
+  if (site.isLoading || changes.isLoading) return <TableSkeleton rows={5} />;
   if (site.error || changes.error) return <ErrorState onRetry={() => { site.refetch(); changes.refetch(); }} />;
 
   const faq = faqSet(faqKey);

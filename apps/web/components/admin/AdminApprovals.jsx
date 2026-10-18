@@ -5,7 +5,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { ago, decideApproval, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Due, Pill, Tabs, getQuery, setQuery } from "./adminParts";
+import { Due, Pill, Tabs, getQuery, setQuery, Said } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = A.approvals;
@@ -98,7 +98,7 @@ export default function AdminApprovals() {
           </div>
         )}
       </div>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       {shown.length ? (
         <ul className="rt-adm-items">

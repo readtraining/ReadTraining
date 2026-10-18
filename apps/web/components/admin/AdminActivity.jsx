@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
 
 const copy = A.activity;
 const KINDS = Object.keys(copy.kinds);
@@ -100,7 +100,7 @@ export default function AdminActivity() {
 
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />
-      ) : !ready || list.isLoading ? null : entries.length ? (
+      ) : !ready || list.isLoading ? <TableSkeleton /> : entries.length ? (
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">

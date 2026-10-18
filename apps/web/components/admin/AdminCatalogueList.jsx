@@ -9,7 +9,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu } from "./adminParts";
+import { Pill, RowMenu, Said, TableSkeleton } from "./adminParts";
 
 const copy = A.catalogue.list;
 const RENAMEABLE = new Set(["category", "subcategory", "topic"]);
@@ -28,7 +28,7 @@ export default function AdminCatalogueList() {
   const setActive = api.admin.catalogue.setActive.useMutation();
   const move = api.admin.catalogue.move.useMutation();
 
-  if (list.isLoading) return null;
+  if (list.isLoading) return <TableSkeleton />;
   if (list.error) return <ErrorState onRetry={() => list.refetch()} />;
   const { categories, methods, levels } = list.data;
 
@@ -83,7 +83,7 @@ export default function AdminCatalogueList() {
     <div className="rt-acc__stack">
       <p className="rt-acc__note rt-adm-help">{copy.note} {copy.retireNote}</p>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cat-h">
         <h2 className="rt-acc__h2" id="rt-adm-cat-h">{copy.sections.category}</h2>

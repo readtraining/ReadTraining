@@ -13,7 +13,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { ref } = await props.params;
   return (
-    <AccountShell current="bookings" title={account.cancel.title} lead={account.cancel.lead}>
+    <AccountShell demo current="bookings" title={account.cancel.title} lead={account.cancel.lead}>
       <CancelRequest reference={ref} />
     </AccountShell>
   );

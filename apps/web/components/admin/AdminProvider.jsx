@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, formatWhen } from "./adminParts";
+import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { STATUS_TONE } from "./AdminProviders";
 import { RateForm, formatRate } from "./commissionParts";
 
@@ -36,7 +36,7 @@ export default function AdminProvider({ slug }) {
   const [said, setSaid] = useState("");
   const [warning, setWarning] = useState("");
 
-  if (record.isLoading) return null;
+  if (record.isLoading) return <DetailSkeleton />;
   if (record.error?.data?.code === "NOT_FOUND") return <EmptyState title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const p = record.data;
@@ -54,14 +54,13 @@ export default function AdminProvider({ slug }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/providers" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
       {warning && <p className="rt-adm-item__block" role="alert">{warning}</p>}
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Status">
         <div>
           <div className="rt-adm-item__top"><Pill tone={STATUS_TONE[p.status]}>{copy.statuses[p.status]}</Pill></div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{p.name}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{p.name}</h1>
           <p className="rt-acc__note">Signed up {formatWhen(Date.parse(p.appliedAt))}{p.statusChangedAt ? ` · status changed ${formatWhen(Date.parse(p.statusChangedAt))}` : ""}</p>
         </div>
         <div className="rt-adm-hero__actions">

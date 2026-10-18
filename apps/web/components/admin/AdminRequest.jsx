@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
@@ -9,7 +8,7 @@ import { addRequestNote, advanceRequest, assignRequest, cancelRequest, nextLabel
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Due, Pill, formatWhen } from "./adminParts";
+import { Due, Pill, formatWhen, Said } from "./adminParts";
 import { REQUEST_TONE } from "./AdminRequests";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -85,8 +84,7 @@ export default function AdminRequest({ reference }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/requests" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Request">
         <div>
@@ -95,7 +93,7 @@ export default function AdminRequest({ reference }) {
             <span className="rt-adm-item__when">{copy.kinds[r.kind]} · {formatWhen(r.at)}</span>
             {r.status === "new" && <Due due={r.due} now={data.now} />}
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{r.ref}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{r.ref}</h1>
           <p className="rt-acc__note">{r.title}{r.price ? ` · ${formatPrice(r.price)}` : ""}{r.amount ? ` · Quoted ${formatPrice(r.amount)}` : ""}</p>
           {r.cancelReason && <p className="rt-acc__note">Cancelled: {r.cancelReason}</p>}
         </div>

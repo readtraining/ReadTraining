@@ -14,7 +14,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { slug } = await props.params;
   return (
-    <AdminShell current="businesses" title={W.businesses.title}>
+    <AdminShell current="businesses" title={W.businesses.title} detail="Business account">
       <AdminBusiness slug={slug} />
     </AdminShell>
   );

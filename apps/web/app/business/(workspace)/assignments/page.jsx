@@ -10,7 +10,7 @@ export const metadata = pageMetadata({ title: "Assign places | ReadTraining", de
 
 export default function Page() {
   return (
-    <AccountShell area="business" current="assignments" title={biz.assignments.title} lead={biz.assignments.lead}>
+    <AccountShell demo area="business" current="assignments" title={biz.assignments.title} lead={biz.assignments.lead}>
       <BizAssignments />
     </AccountShell>
   );

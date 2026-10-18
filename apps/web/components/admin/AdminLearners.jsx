@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { Pill, Search, Tabs, getQuery, setQuery, Said } from "./adminParts";
 import AdminLearnerList from "./AdminLearnerList";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -83,7 +83,7 @@ export default function AdminLearners() {
           <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setIssuing(true); setErrors({}); setForm({ holder: "", courseId: "", issued: today() }); }}>{copy.issue}</button>
         </div>}
       </div>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       {tab === "learners" ? (
         <AdminLearnerList />

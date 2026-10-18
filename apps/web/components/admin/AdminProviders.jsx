@@ -5,7 +5,7 @@ import Link from "next/link";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
 import { formatRate } from "./commissionParts";
 
 const copy = A.providers;
@@ -56,7 +56,7 @@ export default function AdminProviders() {
       </div>
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />
-      ) : !ready || list.isLoading ? null : providers.length ? (
+      ) : !ready || list.isLoading ? <TableSkeleton /> : providers.length ? (
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">

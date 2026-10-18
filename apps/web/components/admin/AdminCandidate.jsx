@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { addCandidateNote, moveIntro, offerRole, recordConsent, setCandidateStatus } from "@/lib/adminWork";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Pill, formatWhen } from "./adminParts";
+import { Pill, formatWhen, Said } from "./adminParts";
 import { CANDIDATE_TONE } from "./AdminJobs";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -78,8 +77,7 @@ export default function AdminCandidate({ reference }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/jobs" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Candidate">
         <div>
@@ -87,7 +85,7 @@ export default function AdminCandidate({ reference }) {
             <Pill tone={CANDIDATE_TONE[c.status] || "info"}>{copy.statuses[c.status]}</Pill>
             <span className="rt-adm-item__when">Applied {formatWhen(c.at)}</span>
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{c.name}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{c.name}</h1>
           <p className="rt-acc__note">{c.ref} · {c.licence.type} licence · {c.city || c.postcode}</p>
         </div>
         <div className="rt-adm-hero__actions">

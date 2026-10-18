@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
+import AdminSearch from "./AdminSearch";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -18,8 +19,11 @@ const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0])
 // The admin's layout: a work layout, not the public site's. The checkout header's dark band with the logo and an "Admin" tag, the
 // signed-in admin (from the server check: name, access level), "View site" and Sign out; a sidebar with the plan's groups (each page with its icon and a live count where
 // something waits); then the page head (title, intro, the page's actions) and the page. Below 992px the
-// sidebar becomes the account's chip row that scrolls sideways. `current` marks the page.
-export default function AdminShell({ current, title, lead, actions = null, children }) {
+// sidebar becomes the account's chip row that scrolls sideways. `current` marks the page. The top bar's search (Ctrl+K) reaches
+// every page and the real learners and providers. A page that still shows made-up records says so beside its title (the nav's
+// `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a breadcrumb back to the list and
+// the record's own card carries the page's h1.
+export default function AdminShell({ current, title, lead, actions = null, detail = null, children }) {
   const sideRef = useRef(null);
   const router = useRouter();
   const me = useAdminAccess();
@@ -33,6 +37,9 @@ export default function AdminShell({ current, title, lead, actions = null, child
   // pages behind an admin switch are listed only for admins who have it
   const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => !x.permission || me?.permissions?.includes(x.permission)) })).filter((g) => g.items.length);
   const items = nav.flatMap((g) => g.items);
+  const page = items.find((x) => x.key === current);
+  const demo = page?.demo ? A.demo[page.demo === true ? "all" : page.demo] : null;
+  const demoTag = demo && <span className="rt-demo-tag" title={demo.note}>{demo.label}<span className="rt-sr">: {demo.note}</span></span>;
   const signOut = async () => {
     setLeaving(true);
     await getSupabase().auth.signOut().catch(() => {});
@@ -49,6 +56,7 @@ export default function AdminShell({ current, title, lead, actions = null, child
             <Image width={150} height={38} src="/assets/img/general/readtraining-logo.svg" alt="" priority />
             <span className="rt-adm__tag">Admin</span>
           </Link>
+          <AdminSearch pages={items} />
           <div className="rt-adm__topside">
             <Link href={A.backToSite.href} className="rt-adm__site">{A.backToSite.label}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>
             <div className="rt-adm__me">
@@ -92,13 +100,28 @@ export default function AdminShell({ current, title, lead, actions = null, child
         </ul>
 
         <main id="rt-adm-main" className="rt-adm__main" tabIndex={-1}>
-          <div className="rt-adm__head">
-            <div>
-              <h1 className="rt-adm__h1">{title}</h1>
-              {lead && <p className="rt-adm__lead">{lead}</p>}
+          {detail ? (
+            <div className="rt-adm__crumbrow">
+              <nav aria-label="Breadcrumb">
+                <ol className="rt-adm__crumbs">
+                  <li><Link href={page?.href ?? "/admin"}>{page?.label ?? title}</Link></li>
+                  <li aria-current="page">{detail}</li>
+                </ol>
+              </nav>
+              {demoTag}
             </div>
-            {actions}
-          </div>
+          ) : (
+            <div className="rt-adm__head">
+              <div>
+                <div className="rt-adm__titlerow">
+                  <h1 className="rt-adm__h1">{title}</h1>
+                  {demoTag}
+                </div>
+                {lead && <p className="rt-adm__lead">{lead}</p>}
+              </div>
+              {actions}
+            </div>
+          )}
           {children}
         </main>
       </div>

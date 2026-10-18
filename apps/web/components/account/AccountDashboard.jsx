@@ -9,6 +9,7 @@ import { getCoursesByIds } from "@/lib/courses";
 import { courseHref } from "@/data/courseSlugs";
 import { formatDate, formatPrice } from "@/lib/format";
 import { savedCourseIds } from "@/lib/wishlist";
+import { CATALOGUE_HREF } from "@/lib/routes";
 import BookingRow, { placeOf, whenOf } from "./BookingRow";
 import { Stats } from "@/components/admin/adminParts";
 import { EmptyState } from "@/components/states/States";
@@ -127,7 +128,7 @@ export default function AccountDashboard() {
               ))}
             </ul>
           ) : (
-            <EmptyState inCard title={copy.saved.none} />
+            <EmptyState inCard icon="icon-bookmark" title={copy.saved.none} text={copy.saved.noneText} action={{ label: copy.saved.browse, href: CATALOGUE_HREF }} />
           )}
         </section>
       </div>

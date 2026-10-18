@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, formatWhen } from "./adminParts";
+import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { STATE_TONE } from "./AdminLearnerList";
 
 const copy = A.learners;
@@ -30,7 +30,7 @@ export default function AdminLearner({ id }) {
   const [sheet, setSheet] = useState(null); // "block" | "unblock"
   const [said, setSaid] = useState("");
 
-  if (record.isLoading) return null;
+  if (record.isLoading) return <DetailSkeleton />;
   if (record.error?.data?.code === "NOT_FOUND" || record.error?.data?.code === "BAD_REQUEST") return <EmptyState title={d.notFound} action={{ href: "/admin/learners", label: d.back }} />;
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const l = record.data;
@@ -61,8 +61,7 @@ export default function AdminLearner({ id }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/learners" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label={d.profile}>
         <div className="rt-adm-learner__who">
@@ -72,7 +71,7 @@ export default function AdminLearner({ id }) {
               <Pill tone={STATE_TONE[l.status]}>{copy.states[l.status]}</Pill>
               {l.admin && <Pill tone="info">{d.adminAccess}: {A.presets[l.admin]}</Pill>}
             </div>
-            <h2 className="rt-acc__h2 rt-adm-hero__name">{l.name}</h2>
+            <h1 className="rt-adm__h1 rt-adm-hero__name">{l.name}</h1>
             <p className="rt-acc__note">{l.email} · Joined {formatDate(l.joinedAt.slice(0, 10))}</p>
           </div>
         </div>

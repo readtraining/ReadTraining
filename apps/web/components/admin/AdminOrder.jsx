@@ -7,7 +7,7 @@ import { addOrderNote, resendConfirmation, useAdmin } from "@/lib/admin";
 import { courseHref } from "@/data/courseSlugs";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDateRange, formatPrice } from "@/lib/format";
-import { Pill, formatWhen } from "./adminParts";
+import { Pill, formatWhen, Said } from "./adminParts";
 import { MONEY_TONE } from "./AdminOrders";
 import { EmptyState } from "@/components/states/States";
 
@@ -59,8 +59,7 @@ export default function AdminOrder({ reference }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/orders" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Order">
         <div>
@@ -68,7 +67,7 @@ export default function AdminOrder({ reference }) {
             <Pill tone={o.state === "cancelled" ? "muted" : o.state === "upcoming" ? "info" : "ok"}>{copy.tabs[o.state]}</Pill>
             <span className="rt-adm-item__when">Booked {formatWhen(o.booked)}</span>
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{o.ref}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{o.ref}</h1>
           <p className="rt-acc__note">{o.buyer.name} · {formatPrice(o.total)} · {copy.methods[o.method]}</p>
           {change && <p className="rt-acc__note"><Link href="/admin/changes">{A.changes.types[change.type]}: {A.changes.statuses[change.status]}</Link></p>}
         </div>
