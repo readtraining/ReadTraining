@@ -32,6 +32,17 @@ export function trustFigures() {
   return { rating, ratingSlash: `${rating} / 5`, ratingOutOf: `${rating} out of 5`, reviews: plus(t.reviews), customers: plus(t.customers), courses: plus(t.courses) };
 }
 
+// Text with trust placeholders filled in: "{rating}" 4.9, "{ratingSlash}" 4.9 / 5, "{ratingOutOf}" 4.9 out of 5, "{reviews}",
+// "{customers}", "{courses}". Lets an FAQ answer quote a number without it going out of date.
+export const withTrust = (text) => {
+  const f = trustFigures();
+  return text.replace(/\{(rating|ratingSlash|ratingOutOf|reviews|customers|courses)\}/g, (_, k) => f[k]);
+};
+
+// One page's FAQ list: the one an admin saved for it, else the page's own built-in list (`defaults`). `key` is the page's set
+// (data/faqSets.js lists them). Call after loadSiteContent() on the server.
+export const faqItems = (key, defaults) => (current[`faq:${key}`]?.items ?? defaults).map(({ q, a }) => ({ q: withTrust(q), a: withTrust(a) }));
+
 export const featuredGroups = () => current.featured.groups;
 export const testimonials = () => current.testimonials;
 export const homeTestimonials = () => current.testimonials.filter((t) => t.home).slice(0, 4);

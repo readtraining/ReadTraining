@@ -12,7 +12,9 @@ import { Eyebrow } from "@/components/marketing/parts";
 import SubjectFacts from "@/components/testPrep/subject/SubjectFacts";
 import LicenceHubGrid, { LicenceHubGridFromUrl } from "@/components/licences/LicenceHubGrid";
 import { licencesHub as hub, licences } from "@/data/licences";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 // Licences & cards hub (/licences, the menu's "Licences & Cards"), in the learner pages' language: the marketing hero (dark,
 // centred) > key facts strip > every licence and card with industry filters (#all) > how it works (the shared four-step row) >
@@ -23,13 +25,9 @@ const crumbs = [{ label: "Home", href: "/" }, { label: hub.hero.eyebrow }];
 
 export const metadata = pageMetadata({ title: hub.title, description: hub.description, path: PATH });
 
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: hub.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
-
-export default function LicencesPage() {
+export default async function LicencesPage() {
+  await loadSiteContent();
+  const faq = faqItems("licences", hub.faq.items);
   return (
     <div className="main-content rt-home fb-page rt-tpage rt-lic-page">
       <a href="#rt-lic-main" className="rt-skip">Skip to main content</a>
@@ -64,14 +62,14 @@ export default function LicencesPage() {
               </ul>
             </div>
           </section>
-          <FaqSection eyebrow={hub.faq.eyebrow} title={hub.faq.title} items={hub.faq.items} idPrefix="lic-hub-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
+          <FaqSection eyebrow={hub.faq.eyebrow} title={hub.faq.title} items={faq} idPrefix="lic-hub-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
           <CtaBand cta={hub.cta} id="rt-lic-hub-cta-h" />
         </main>
         <HomeHelp />
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, PATH)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }

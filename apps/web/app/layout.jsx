@@ -12,6 +12,11 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 // title, description and canonical). Browser-only parts (basket, tRPC, animations) are in Providers. The catalogue list
 // (categories, methods, levels) and the site's editable content are loaded here once and handed to every page through
 // Providers.
+// Pages built ahead of time (on Vercel the site is built before its API is running) show the built-in wording for the catalogue
+// list and the site's editable content; this has every page rebuild itself at least every 5 minutes, so they catch up with what
+// admins have saved even when nothing has marked them out of date.
+export const revalidate = 300;
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: "ReadTraining | Accredited training courses across the UK",

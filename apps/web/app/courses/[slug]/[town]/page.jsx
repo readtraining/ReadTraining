@@ -9,6 +9,8 @@ import CourseCatalogue from "@/components/courses/CourseCatalogue";
 import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import CourseTowns from "@/components/courses/CourseTowns";
 import { getCourseTownPage, getCourseTownParams, getCourseTowns } from "@/lib/coursePages";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
@@ -30,10 +32,11 @@ export async function generateMetadata(props) {
 }
 
 export default async function CourseTownPage(props) {
-  await loadTaxonomy(); // catalogue names (categories, methods) on the server
+  await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
   const { slug, town } = await props.params;
   const page = getCourseTownPage(slug, town);
   if (!page) notFound();
+  const faq = faqItems(`course-page-${slug}`, page.faq); // the same list as the page this town belongs to
   const crumbs = [{ label: "Home", href: "/" }, { label: "All courses", href: CATALOGUE_HREF }, { label: page.label, href: page.scope.parent.href }, { label: page.city }];
 
   return (
@@ -47,7 +50,7 @@ export default async function CourseTownPage(props) {
             <CourseCatalogue courses={page.courses} scope={page.scope} />
           </Suspense>
           <CourseTowns title={`${page.label.replace(/ courses$/i, "")} courses in other towns`} towns={getCourseTowns(slug)} current={town} />
-          <FaqSection eyebrow={page.label} title="Frequently asked questions" items={page.faq} idPrefix={`ctown-faq-${slug}`} />
+          <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`ctown-faq-${slug}`} />
         </main>
         <HomeHelp />
         <HomeFooter />

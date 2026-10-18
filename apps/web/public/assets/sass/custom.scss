@@ -4949,6 +4949,13 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm-content__status .rt-acc__note { margin: 0; }
 .rt-adm-content__save { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 20px; }
 .rt-adm-content__save .rt-acc__note { margin: 0; }
+/* the FAQ and legal editors: the move/remove links on each row, the plain-text legal box, the earlier-versions list */
+.rt-adm-content__rowtools { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.rt-adm-content__rowtools button:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
+.rt-adm-content__legal { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--rt-text-sm); line-height: 1.6; white-space: pre-wrap; }
+.rt-adm-content__history { padding: 10px 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); }
+.rt-adm-content__history summary { cursor: pointer; font-weight: 600; }
+.rt-adm-content__history .rt-adm-list { margin-top: 8px; }
 .rt-adm-content__grid { margin-top: 16px; }
 .rt-adm-content__max { margin: 0 0 4px; }
 .rt-adm-content__preview { margin: 16px 0 0; padding: 10px 14px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand-soft); }

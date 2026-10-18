@@ -12,7 +12,9 @@ import SkillSaverLevels from "@/components/skillSaver/SkillSaverLevels";
 import SkillSaverFunding from "@/components/skillSaver/SkillSaverFunding";
 import SkillSaverResults from "@/components/skillSaver/SkillSaverResults";
 import { skillSaver } from "@/data/skillSaver";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 // Provider Skill Saver (/provider-skill-saver), the footer's "Provider Skill Saver" link, in the /for-providers page language:
 // masthead with the learner's view of a Skill Saver listing > how it works > the learner levels (lavender, switchable frame) >
@@ -23,13 +25,9 @@ const crumbs = [{ label: "Home", href: "/" }, { label: "For providers", href: "/
 
 export const metadata = pageMetadata({ title: skillSaver.title, description: skillSaver.description, path: PATH });
 
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: skillSaver.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
-
-export default function ProviderSkillSaverPage() {
+export default async function ProviderSkillSaverPage() {
+  await loadSiteContent();
+  const faq = faqItems("provider-skill-saver", skillSaver.faq.items);
   return (
     <div className="main-content rt-home fb-page rt-ss-page">
       <a href="#rt-ss-main" className="rt-skip">Skip to main content</a>
@@ -47,7 +45,7 @@ export default function ProviderSkillSaverPage() {
           <SkillSaverLevels levels={skillSaver.levels} />
           <SkillSaverFunding funding={skillSaver.funding} />
           <SkillSaverResults results={skillSaver.results} />
-          <FaqSection eyebrow={skillSaver.faq.eyebrow} title={skillSaver.faq.title} items={skillSaver.faq.items} idPrefix="ss-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
+          <FaqSection eyebrow={skillSaver.faq.eyebrow} title={skillSaver.faq.title} items={faq} idPrefix="ss-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
           <div className="layout-pt-lg">
             <CtaBand cta={skillSaver.cta} id="rt-ss-cta-h" />
           </div>
@@ -56,7 +54,7 @@ export default function ProviderSkillSaverPage() {
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, PATH)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }

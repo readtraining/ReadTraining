@@ -14,7 +14,8 @@ import AboutMission from "@/components/aboutUs/AboutMission";
 import { about, aboutFacts } from "@/data/about";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { founded, topBar } from "@/data/home";
-import { abs, breadcrumbLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
+import { abs, breadcrumbLd, faqPageLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
+import { faqItems } from "@/lib/siteContent";
 
 // About ReadTraining (/about-us), in the site's marketing-page language (/for-business, the Test Prep hub; `fb-page rt-tpage`
 // turns on their section styles and the home heading scale): centred dark hero with the key facts on its edge > our story with
@@ -37,14 +38,9 @@ const organizationLd = {
   telephone: topBar.phone,
   areaServed: "GB",
 };
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: about.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
-
 export default async function AboutPage() {
   await loadSiteContent();
+  const faq = faqItems("about", about.faq.items);
   return (
     <div className="main-content rt-home fb-page rt-tpage rt-about-page">
       <a href="#rt-about-main" className="rt-skip">Skip to main content</a>
@@ -60,7 +56,7 @@ export default async function AboutPage() {
           <StepsSection workflow={about.steps} tone="lavender" />
           <AboutAudiences audiences={about.audiences} />
           <AboutMission mission={about.mission} />
-          <FaqSection eyebrow={about.faq.eyebrow} title={about.faq.title} items={about.faq.items} idPrefix="about-faq" />
+          <FaqSection eyebrow={about.faq.eyebrow} title={about.faq.title} items={faq} idPrefix="about-faq" />
           <CtaBand cta={about.cta} id="rt-about-cta-h" />
         </main>
         <HomeHelp />
@@ -68,7 +64,7 @@ export default async function AboutPage() {
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(organizationLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, PATH)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }

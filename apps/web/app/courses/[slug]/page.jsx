@@ -12,7 +12,9 @@ import PostCard from "@/components/blog/PostCard";
 import CourseTowns from "@/components/courses/CourseTowns";
 import { getCoursePage, getCoursePageSlugs, getCourseTowns } from "@/lib/coursePages";
 import { BLOG_HREF } from "@/lib/blog";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
@@ -34,16 +36,12 @@ export async function generateMetadata(props) {
 }
 
 export default async function CoursePage(props) {
-  await loadTaxonomy(); // catalogue names (categories, methods) on the server
+  await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
   const { slug } = await props.params;
   const page = getCoursePage(slug);
   if (!page) notFound();
+  const faq = faqItems(`course-page-${slug}`, page.faq);
   const crumbs = [{ label: "Home", href: "/" }, { label: "All courses", href: CATALOGUE_HREF }, { label: page.label }];
-  const faqLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: page.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-  };
 
   return (
     <div className="main-content rt-home rt-cat-page">
@@ -79,13 +77,13 @@ export default async function CoursePage(props) {
               </div>
             </section>
           )}
-          <FaqSection eyebrow={page.label} title="Frequently asked questions" items={page.faq} idPrefix={`cpage-faq-${page.slug}`} />
+          <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`cpage-faq-${page.slug}`} />
         </main>
         <HomeHelp />
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, page.href)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }

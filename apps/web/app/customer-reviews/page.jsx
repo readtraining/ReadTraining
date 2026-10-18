@@ -11,8 +11,9 @@ import ReviewsFeatured from "@/components/customerReviews/ReviewsFeatured";
 import ReviewsList from "@/components/customerReviews/ReviewsList";
 import ReviewsHow from "@/components/customerReviews/ReviewsHow";
 import { customerReviews } from "@/data/customerReviews";
+import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 
 // Customer reviews (/customer-reviews), in the marketing-page language of /about-us: centred dark hero with the rating facts on
 // its edge > the featured video story > a selection of reviews, filterable by subject (lavender) > how we collect reviews >
@@ -31,11 +32,7 @@ export default async function CustomerReviewsPage() {
   await loadSiteContent();
   const r = customerReviews();
   const crumbs = [{ label: "Home", href: "/" }, { label: r.hero.eyebrow }];
-  const faqLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: r.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-  };
+  const faq = faqItems("customer-reviews", r.faq.items);
   return (
     <div className="main-content rt-home fb-page rt-tpage rt-reviews-page">
       <a href="#rt-reviews-main" className="rt-skip">Skip to main content</a>
@@ -50,7 +47,7 @@ export default async function CustomerReviewsPage() {
           <ReviewsFeatured featured={r.featured} />
           <ReviewsList list={r.list} />
           <ReviewsHow how={r.how} />
-          <FaqSection eyebrow={r.faq.eyebrow} title={r.faq.title} items={r.faq.items} idPrefix="reviews-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
+          <FaqSection eyebrow={r.faq.eyebrow} title={r.faq.title} items={faq} idPrefix="reviews-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
           <div className="rt-reviews__cta">
             <CtaBand cta={r.cta} id="rt-reviews-cta-h" />
           </div>
@@ -59,7 +56,7 @@ export default async function CustomerReviewsPage() {
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, PATH)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }

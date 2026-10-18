@@ -92,6 +92,20 @@
       "when": 1792339557539,
       "tag": "0012_site_content",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792350553743,
+      "tag": "0013_site_content_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792350556770,
+      "tag": "0014_site_content_history_append_only",
+      "breakpoints": true
     }
   ]
 }

@@ -176,6 +176,22 @@ export const siteContent = pgTable(
   (t) => [index('site_content_updated_by_idx').on(t.updatedBy)],
 ).enableRLS()
 
+// Every version of every piece of site content that was ever saved: what an admin can look back at (the legal pages in
+// particular: what did the terms say on a given day). Append-only, like the activity log: update, delete and truncate are
+// blocked by a trigger (migration 0014). Read and written by the API only.
+export const siteContentVersions = pgTable(
+  'site_content_versions',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    key: text('key').notNull(),
+    value: jsonb('value').notNull(),
+    // no foreign key (like the activity log): removing an account must never have to change a history row
+    savedBy: uuid('saved_by'),
+    savedAt: timestamp('saved_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('site_content_versions_key_idx').on(t.key, t.savedAt.desc())],
+).enableRLS()
+
 // Append-only record of every action (who, as which identity, what, on what, when). No foreign keys, so deleting a user or
 // an organisation never has to change a log row; update, delete and truncate are blocked by triggers. No Data API access.
 export const activityLog = pgTable(

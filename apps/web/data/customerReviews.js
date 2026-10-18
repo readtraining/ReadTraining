@@ -62,7 +62,7 @@ export const customerReviews = () => {
     title: "Questions about reviews",
     items: [
       { q: "Are these reviews from real customers?", a: "Yes. They are written by people who booked a course through ReadTraining, in their own words." },
-      { q: "Why do you show only some reviews here?", a: `This page shows a selection. Our ${t.ratingSlash} rating comes from ${t.reviews} verified reviews, and each course page shows the reviews for that course.` },
+      { q: "Why do you show only some reviews here?", a: "This page shows a selection. Our {ratingSlash} rating comes from {reviews} verified reviews, and each course page shows the reviews for that course." },
       { q: "Do you remove negative reviews?", a: "No. We publish positive and negative reviews alike. We only remove a review that is spam, offensive or includes someone's personal details." },
       { q: "How can I leave a review?", a: "After your course, tell us how it went by sending us a message. We read every one." },
     ],

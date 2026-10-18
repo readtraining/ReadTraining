@@ -6,28 +6,38 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
+import { faqGroups, faqSet, faqSets } from "@/data/faqSets";
 import { contentDefaults } from "@/data/home";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { builtInLegal, getLegalList, legalContentKey } from "@/lib/legal";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
 import { Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { FaqForm, LegalForm } from "./AdminContentPages";
+import { SaveRow, describedBy, field, useSave } from "./contentParts";
 
 const copy = A.content;
 const TABS = Object.keys(copy.tabs);
 const MAX_TABS = 4;
 const MAX_PER_TAB = 4;
+const LEGAL = getLegalList();
+const faqOptions = faqGroups.flatMap((g) => g.sets.map((x) => ({ value: x.key, label: `${g.name}: ${x.label}` })));
 
-// Site content (Part B, B2): the numbers, featured courses, testimonials and video words the whole site shares (API content.*).
-// Each tab saves its own piece; a piece that was never saved shows the site's built-in wording. With the "content" switch an
-// admin can change them; after a save the site's saved copy is marked out of date, so every page shows it within seconds.
-// Tab in the address.
+// Site content (Part B, B2): the numbers, featured courses, testimonials and video words the whole site shares, each page's
+// FAQs, and the legal pages (API content.*). Each tab saves its own piece; a piece that was never saved shows the site's
+// built-in wording ("Use the built-in wording" goes back to it), and every saved version is kept under "Earlier versions". With
+// the "content" switch an admin can change them; after a save the site's saved copy is marked out of date, so every page shows
+// it within seconds. Tab, FAQ page and legal page are kept in the address.
 export default function AdminContent() {
   const me = useAdminAccess();
   const canEdit = me?.permissions?.includes("content");
   const [tab, setTab] = useState("trust");
+  const [faqKey, setFaqKey] = useState(faqSets[0].key);
+  const [docSlug, setDocSlug] = useState(LEGAL[0].slug);
   const [version, setVersion] = useState(0); // a reset starts the tab's form again from the built-in values
+  const [loaded, setLoaded] = useState(null); // an earlier version brought into the form: { key, id, at, value }
   const [said, setSaid] = useState("");
   const [confirming, setConfirming] = useState(false);
   const utils = api.useUtils();
@@ -37,46 +47,101 @@ export default function AdminContent() {
   useEffect(() => {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
+    if (faqSet(getQuery("set"))) setFaqKey(getQuery("set"));
+    if (LEGAL.some((d) => d.slug === getQuery("doc"))) setDocSlug(getQuery("doc"));
   }, []);
   if (site.isLoading || changes.isLoading) return null;
   if (site.error || changes.error) return <ErrorState onRetry={() => { site.refetch(); changes.refetch(); }} />;
-  const content = { ...contentDefaults, ...site.data };
-  const when = changes.data?.[tab];
+
+  const faq = faqSet(faqKey);
+  const legal = LEGAL.find((d) => d.slug === docSlug);
+  // the key this tab edits, and what it shows when nothing was saved
+  const contentKey = tab === "faqs" ? `faq:${faqKey}` : tab === "legal" ? legalContentKey(docSlug) : tab;
+  const builtIn = tab === "faqs" ? { items: faq.defaults() } : tab === "legal" ? builtInLegal(docSlug) : contentDefaults[tab];
+  const here = loaded?.key === contentKey ? loaded : null;
+  const value = here ? here.value : site.data[contentKey] ?? builtIn;
+  const when = changes.data?.[contentKey];
+
   const pick = (t) => {
     setTab(t);
     setSaid("");
+    setLoaded(null);
     setQuery("tab", t === "trust" ? "" : t);
+    setQuery("set", t === "faqs" ? faqKey : "");
+    setQuery("doc", t === "legal" ? docSlug : "");
+  };
+  const pickFaq = (k) => {
+    setFaqKey(k);
+    setSaid("");
+    setLoaded(null);
+    setQuery("set", k);
+  };
+  const pickDoc = (d) => {
+    setDocSlug(d);
+    setSaid("");
+    setLoaded(null);
+    setQuery("doc", d);
   };
   const doReset = async () => {
     try {
-      await reset.mutateAsync({ key: tab });
+      await reset.mutateAsync({ key: contentKey });
       await utils.content.invalidate();
       utils.admin.activity.list.invalidate();
       await refreshSiteContent();
       setVersion((v) => v + 1);
+      setLoaded(null);
       setSaid(copy.resetDone);
-      setConfirming(false);
     } catch (err) {
       setSaid(errorsFrom(err).general);
-      setConfirming(false);
     }
+    setConfirming(false);
   };
-  const Panel = { trust: TrustForm, featured: FeaturedForm, testimonials: Testimonials, video: VideoForm }[tab];
+  const Panel = { trust: TrustForm, featured: FeaturedForm, testimonials: Testimonials, video: VideoForm, faqs: FaqForm, legal: LegalForm }[tab];
+  const panelProps = tab === "faqs" ? { contentKey, set: faq } : tab === "legal" ? { contentKey, doc: legal } : {};
 
   return (
     <div className="rt-acc__stack">
       <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key] }))} value={tab} onChange={pick} label="Show site content" />
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
+
+      {tab === "faqs" && (
+        <div className="rt-acc__card">
+          <p className="rt-acc__note">{copy.faqs.note}</p>
+          <div className="rt-field rt-adm-mt">
+            <label htmlFor="rt-adm-faq-pick">{copy.faqs.pick}</label>
+            <FieldSelect id="rt-adm-faq-pick" label={copy.faqs.pick} value={faqKey} onChange={pickFaq} options={faqOptions} />
+          </div>
+          <a href={faq.href} target="_blank" rel="noreferrer" className="fb-textlink rt-adm-mt">{copy.faqs.view}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></a>
+        </div>
+      )}
+      {tab === "legal" && (
+        <div className="rt-acc__card">
+          <p className="rt-acc__note">{copy.legal.note}</p>
+          <div className="rt-field rt-adm-mt">
+            <label htmlFor="rt-adm-legal-pick">{copy.legal.pick}</label>
+            <FieldSelect id="rt-adm-legal-pick" label={copy.legal.pick} value={docSlug} onChange={pickDoc} options={LEGAL.map((d) => ({ value: d.slug, label: d.title }))} />
+          </div>
+          <a href={legal.href} target="_blank" rel="noreferrer" className="fb-textlink rt-adm-mt">{copy.legal.view}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></a>
+        </div>
+      )}
+
       <div className="rt-adm-content__status">
         <p className="rt-acc__note rt-adm-help">{when ? copy.lastChanged.replace("{when}", formatWhen(Date.parse(when.at))).replace("{who}", when.by || "an admin") : copy.neverChanged}</p>
         {when && canEdit && <button type="button" className="rt-cd__link" onClick={() => setConfirming(true)}>{copy.reset}</button>}
       </div>
+      <History contentKey={contentKey} canEdit={canEdit} onUse={(v) => { setLoaded(v); setSaid(""); }} />
+      {here && (
+        <p className="rt-acc__notice">
+          {copy.history.showing.replace("{when}", formatWhen(Date.parse(here.at)))}{" "}
+          <button type="button" className="rt-cd__link" onClick={() => setLoaded(null)}>{copy.history.cancel}</button>
+        </p>
+      )}
       <p className="rt-acc__note" role="status">{said}</p>
-      <Panel key={`${tab}-${version}`} value={content[tab]} canEdit={canEdit} />
+      <Panel key={`${contentKey}-${version}-${here?.id ?? ""}`} value={value} canEdit={canEdit} {...panelProps} />
 
       <Sheet open={confirming} onClose={() => setConfirming(false)} title={copy.resetTitle} closeLabel="Close">
         <div className="rt-q__form rt-biz__sheetform">
-          <p className="rt-adm-strong">{copy.tabs[tab]}</p>
+          <p className="rt-adm-strong">{tab === "faqs" ? faq.label : tab === "legal" ? legal.title : copy.tabs[tab]}</p>
           <p className="rt-acc__note">{copy.resetText}</p>
           <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={doReset} disabled={reset.isPending}>{copy.reset}</button>
         </div>
@@ -85,38 +150,43 @@ export default function AdminContent() {
   );
 }
 
-// One piece of content's save: the mutation, then the lists read again and the site's copy marked out of date.
-function useSave(key) {
+// The saved versions of one piece of content, newest first (who and when): look at the list, and with the "content" switch bring
+// one back into the form (it is only live once it is saved again).
+function History({ contentKey, canEdit, onUse }) {
+  const h = copy.history;
   const utils = api.useUtils();
-  const save = api.content.save.useMutation();
-  return async (value) => {
-    await save.mutateAsync({ key, value });
-    await utils.content.invalidate();
-    utils.admin.activity.list.invalidate();
-    await refreshSiteContent();
+  const list = api.content.history.useQuery({ key: contentKey });
+  const [error, setError] = useState("");
+  const use = async (v) => {
+    setError("");
+    try {
+      const r = await utils.content.version.fetch({ key: contentKey, id: v.id });
+      onUse({ key: contentKey, id: v.id, at: v.at, value: r.value });
+    } catch {
+      setError(h.loadError);
+    }
   };
-}
-
-// A form's footer: the general error, the Save button (when allowed) and a confirmation line for screen readers and sighted users.
-function SaveRow({ canEdit, saving, error, saved }) {
+  if (!list.data) return null;
   return (
-    <div className="rt-adm-content__save">
-      {error && <p className="rt-q__err rt-acc__formerr" role="alert">{error}</p>}
-      {canEdit && <button type="submit" className="button -md -purple-1 text-white" disabled={saving}>{copy.save}</button>}
-      <p className="rt-acc__note" role="status">{saved ? copy.saved : ""}</p>
-    </div>
+    <details className="rt-adm-content__history">
+      <summary>{h.title} <span className="rt-adm-muted">{list.data.length}</span></summary>
+      {list.data.length ? (
+        <ul className="rt-adm-list">
+          {list.data.map((v) => (
+            <li key={v.id}>
+              <div>
+                <span className="rt-adm-strong">{formatWhen(Date.parse(v.at))}</span>
+                <small>{v.by || "an admin"}{v.reset ? ` · ${h.resetEntry}` : ""}</small>
+              </div>
+              {canEdit && !v.reset && <button type="button" className="rt-cd__link" onClick={() => use(v)}>{h.use}<span className="rt-sr"> {formatWhen(Date.parse(v.at))}</span></button>}
+            </li>
+          ))}
+        </ul>
+      ) : <p className="rt-acc__note">{h.none}</p>}
+      {error && <p className="rt-q__err" role="alert">{error}</p>}
+    </details>
   );
 }
-
-const field = (id, label, hint, error, input) => (
-  <div className="rt-field">
-    <label htmlFor={id}>{label}</label>
-    {hint && <small className="rt-field__hint" id={`${id}-hint`}>{hint}</small>}
-    {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
-    {input}
-  </div>
-);
-const describedBy = (id, hint, error) => [hint && `${id}-hint`, error && `${id}-e`].filter(Boolean).join(" ") || undefined;
 
 // ---- trust numbers -------------------------------------------------------------------------------------------------------
 function TrustForm({ value, canEdit }) {
