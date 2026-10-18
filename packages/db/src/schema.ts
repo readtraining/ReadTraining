@@ -82,6 +82,11 @@ export const organisations = pgTable(
     slug: text('slug').notNull(),
     mobile: text('mobile'),
     status: organisationStatus('status').notNull().default('pending'),
+    // why the status is what it is, from the admin who set it (changes asked for, rejected, suspended); the provider sees it
+    statusNote: text('status_note'),
+    statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+    // a provider's own commission in basis points (2500 = 25%); null = the platform default (platform_settings)
+    commissionBps: integer('commission_bps'),
     termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
     termsVersion: text('terms_version'),
     createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
@@ -91,6 +96,7 @@ export const organisations = pgTable(
   (t) => [
     uniqueIndex('organisations_slug_key').on(t.slug),
     index('organisations_created_by_idx').on(t.createdBy),
+    check('organisations_commission_range', sql`${t.commissionBps} between 0 and 6000`),
     pgPolicy('organisations: read where member', {
       for: 'select',
       to: authenticatedRole,
@@ -141,6 +147,19 @@ export const adminUsers = pgTable(
   updatedAt: updatedAt(),
   },
   (t) => [index('admin_users_created_by_idx').on(t.createdBy)],
+).enableRLS()
+
+// Platform-wide settings an admin changes (for example the default commission), one row per key. Read and written by the API
+// only (RLS on, no policy); a key with no row uses the API's built-in default.
+export const platformSettings = pgTable(
+  'platform_settings',
+  {
+    key: text('key').primaryKey(),
+    value: jsonb('value').notNull(),
+    updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('platform_settings_updated_by_idx').on(t.updatedBy)],
 ).enableRLS()
 
 // Append-only record of every action (who, as which identity, what, on what, when). No foreign keys, so deleting a user or

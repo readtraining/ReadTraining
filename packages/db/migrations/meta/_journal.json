@@ -71,6 +71,20 @@
       "when": 1792170301854,
       "tag": "0009_profile_welcome_sent",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792333718484,
+      "tag": "0010_provider_status_note",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792335939726,
+      "tag": "0011_commission",
+      "breakpoints": true
     }
   ]
 }
