@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
@@ -9,7 +8,7 @@ import { addRequestNote, advanceRequest, assignRequest, cancelRequest, nextLabel
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Due, Pill, formatWhen } from "./adminParts";
+import { Due, Pill, formatWhen, Said } from "./adminParts";
 import { REQUEST_TONE } from "./AdminRequests";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -19,7 +18,7 @@ const d = copy.detail;
 
 // One request: its progress as steps, what they asked for, their contact details, the document checklist ("apply for me"), who
 // has it, the next action (send a quote asks for the amount; the payment link waits for every document to be checked), cancel
-// with a reason (the cancellation rule shown), the timeline and the team's notes. Each change is saved with an audit entry.
+// with a reason (the cancellation rule shown), the timeline and the team's notes. Each change is saved.
 export default function AdminRequest({ reference }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");
@@ -42,7 +41,6 @@ export default function AdminRequest({ reference }) {
   const to = nextStatus(r);
   const needsDocs = r.status === "documents" && r.docs && r.checked.length < r.docs.length;
   const sendsQuote = r.status === "new" && ["quote", "inhouse", "training"].includes(r.kind);
-  const staff = data.staff.filter((s) => !s.invited).map((s) => s.name);
 
   const next = () => {
     if (sendsQuote) return setQuoteOpen(true);
@@ -86,8 +84,7 @@ export default function AdminRequest({ reference }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/requests" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Request">
         <div>
@@ -96,7 +93,7 @@ export default function AdminRequest({ reference }) {
             <span className="rt-adm-item__when">{copy.kinds[r.kind]} · {formatWhen(r.at)}</span>
             {r.status === "new" && <Due due={r.due} now={data.now} />}
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{r.ref}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{r.ref}</h1>
           <p className="rt-acc__note">{r.title}{r.price ? ` · ${formatPrice(r.price)}` : ""}{r.amount ? ` · Quoted ${formatPrice(r.amount)}` : ""}</p>
           {r.cancelReason && <p className="rt-acc__note">Cancelled: {r.cancelReason}</p>}
         </div>
@@ -142,7 +139,7 @@ export default function AdminRequest({ reference }) {
             <form className="rt-adm-inline" noValidate onSubmit={(e) => { e.preventDefault(); assignRequest(r, assignee ?? r.assignee); setSaid("Assigned"); }}>
               <div className="rt-field">
                 <label htmlFor="rt-adm-assign">{d.assign}</label>
-                <FieldSelect id="rt-adm-assign" label={d.assign} value={assignee ?? r.assignee} onChange={setAssignee} options={[{ value: "", label: copy.unassigned }, ...staff]} compact />
+                <FieldSelect id="rt-adm-assign" label={d.assign} value={assignee ?? r.assignee} onChange={setAssignee} options={[{ value: "", label: copy.unassigned }, ...data.staff]} compact />
               </div>
               <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{d.assignSave}</button>
             </form>

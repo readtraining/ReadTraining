@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { setOfferingStatus, setPreCourse, useAdmin } from "@/lib/admin";
 import { courseHref } from "@/data/courseSlugs";
 import { formatPrice } from "@/lib/format";
-import { Pill } from "./adminParts";
+import { Pill, Said } from "./adminParts";
 import { modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
 
@@ -15,7 +15,7 @@ const d = copy.detail;
 
 // One course: what it is (category, duration, level, validity, study methods, "From" price), the pre-course e-learning flag
 // (a switch, with what it changes), and its offerings, one per provider (modes, from price, upcoming dates, Live or Paused, with
-// Pause / Resume). Changes are kept with an audit entry and announced.
+// Pause / Resume). Changes are kept and announced.
 export default function AdminCourse({ id }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");
@@ -25,8 +25,7 @@ export default function AdminCourse({ id }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/catalogue" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label={d.about}>
         <div>
@@ -34,7 +33,7 @@ export default function AdminCourse({ id }) {
             <Pill tone="info">{c.category}</Pill>
             {c.preCourse && <Pill tone="warn">{copy.preCourse}</Pill>}
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{c.title}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{c.title}</h1>
           <p className="rt-acc__note">{c.duration} · {c.validity} · From {formatPrice(c.from)} · {c.upcoming} upcoming dates</p>
         </div>
         <div className="rt-adm-hero__actions">

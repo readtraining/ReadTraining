@@ -1,22 +1,20 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { ago, decideApproval, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Due, Pill, Tabs, getQuery, setQuery } from "./adminParts";
+import { Due, Pill, Tabs, getQuery, setQuery, Said } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = A.approvals;
 const TABS = ["pending", "changes", "approved", "rejected"];
-const TYPE_TONE = { application: "info", offering: "ok", dates: "muted", price: "warn" };
+const TYPE_TONE = { offering: "ok", dates: "muted", price: "warn" };
 
-// One inbox for everything providers send for review (provider applications, new course listings, new dates, price changes),
+// One inbox for what providers send for review (new course listings, new dates, price changes; DEMO until courses are real),
 // oldest first so nothing waits silently, each with its deadline. Waiting items can be ticked and approved together (the plan's
-// bulk approve); an application with an expired or unverified document cannot be approved until that is fixed. "Ask for changes"
-// and "Reject" need a reason, shown to the provider (the site's pop-up, GOV.UK field, the first
+// bulk approve). Provider applications are decided on the Providers page. "Ask for changes" and "Reject" need a reason, shown to the provider (the site's pop-up, GOV.UK field, the first
 // error focused). Tabs and the type filter are kept in the address.
 export default function AdminApprovals() {
   const data = useAdmin();
@@ -41,7 +39,7 @@ export default function AdminApprovals() {
   const ofType = approvals.filter((a) => type === "all" || a.type === type);
   const shown = ofType.filter((a) => a.status === tab);
   if (tab !== "pending") shown.sort((a, b) => (b.decidedAt || 0) - (a.decidedAt || 0));
-  const pickable = shown.filter((a) => a.status === "pending" && !a.blockers.length);
+  const pickable = shown.filter((a) => a.status === "pending");
   const allPicked = pickable.length > 0 && pickable.every((a) => picked.includes(a.id));
 
   const choose = (t) => {
@@ -100,13 +98,13 @@ export default function AdminApprovals() {
           </div>
         )}
       </div>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       {shown.length ? (
         <ul className="rt-adm-items">
           {shown.map((a) => (
             <li key={a.id} className={`rt-acc__card rt-adm-item${picked.includes(a.id) ? " is-picked" : ""}`}>
-              {a.status === "pending" && !a.blockers.length && (
+              {a.status === "pending" && (
                 <label className="rt-adm-item__pick" htmlFor={`rt-adm-p-${a.id}`}>
                   <input id={`rt-adm-p-${a.id}`} type="checkbox" checked={picked.includes(a.id)} onChange={() => toggle(a.id)} />
                   <span className="rt-sr">Select {a.title}</span>
@@ -120,14 +118,13 @@ export default function AdminApprovals() {
                 </div>
                 <h3 className="rt-acc__h3">{a.title}</h3>
                 <p className="rt-acc__note">
-                  {a.type === "application" ? <Link href={`/admin/providers/${a.providerSlug}`}>{a.provider}</Link> : a.provider} · {a.detail}
+                  {a.provider} · {a.detail}
                 </p>
                 {a.reason && <p className="rt-adm-item__reason"><strong>Reason given:</strong> {a.reason}</p>}
-                {a.status === "pending" && a.blockers.length > 0 && <p className="rt-adm-item__block"><strong>{copy.blocked}</strong> {a.blockers.join(", ")}.</p>}
               </div>
               {a.status === "pending" && (
                 <div className="rt-adm-item__actions">
-                  {!a.blockers.length && <button type="button" className="button -sm -purple-1 text-white" onClick={() => approve([a])}>{copy.approve}</button>}
+                  <button type="button" className="button -sm -purple-1 text-white" onClick={() => approve([a])}>{copy.approve}</button>
                   <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open(a, "changes")}>{copy.requestChanges}</button>
                   <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => open(a, "rejected")}>{copy.reject}</button>
                 </div>

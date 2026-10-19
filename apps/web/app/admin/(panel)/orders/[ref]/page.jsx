@@ -13,7 +13,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { ref } = await props.params;
   return (
-    <AdminShell current="orders" title={A.orders.title}>
+    <AdminShell current="orders" title={A.orders.title} detail={ref}>
       <AdminOrder reference={ref} />
     </AdminShell>
   );

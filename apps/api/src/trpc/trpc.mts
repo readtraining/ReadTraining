@@ -43,7 +43,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 })
 
 // Refuses with FORBIDDEN and records the attempt in the activity log.
-async function refuse(ctx: { db: TRPCContext['db']; ip: string | null; user: { id: string } }, action: Action, organisationId: string | null, path: string): Promise<never> {
+export async function refuse(ctx: { db: TRPCContext['db']; ip: string | null; user: { id: string } }, action: Action, organisationId: string | null, path: string): Promise<never> {
   await logDenied(ctx.db, {
     actorUserId: ctx.user.id,
     actorIdentity: action.startsWith('admin.') ? 'admin' : action.startsWith('provider.') ? 'provider' : action.startsWith('business.') ? 'business' : 'student',

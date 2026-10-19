@@ -9,7 +9,7 @@ export const metadata = pageMetadata({ title: "Wallet | ReadTraining", descripti
 
 export default function Page() {
   return (
-    <AccountShell current="wallet" title={account.wallet.title} lead={account.wallet.lead}>
+    <AccountShell demo current="wallet" title={account.wallet.title} lead={account.wallet.lead}>
       <AccountWallet />
     </AccountShell>
   );

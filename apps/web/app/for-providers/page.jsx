@@ -15,13 +15,17 @@ import FaqSection from "@/components/marketing/FaqSection";
 import { provider } from "@/data/provider";
 import ProCta from "@/components/provider/ProCta";
 import BecomeProvider from "@/components/providerSignup/BecomeProvider";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 export const metadata = {
   title: "ReadTraining for Training Providers | List courses, manage cohorts and learners",
   description: "Run your training business in one provider workspace and list eligible dates on the ReadTraining marketplace. No monthly subscription.",
 };
 
-export default function ForProvidersPage() {
+export default async function ForProvidersPage() {
+  await loadSiteContent();
+  const faq = faqItems("for-providers", provider.faq.items);
   return (
     <div className="main-content rt-home fb-page">
       <Preloader />
@@ -35,7 +39,7 @@ export default function ForProvidersPage() {
         <ProLms />
         <ProMarketplace />
         <ProPricing />
-        <FaqSection eyebrow={provider.faq.eyebrow} title={provider.faq.title} text={provider.faq.text} items={provider.faq.items} idPrefix="pro-faq" />
+        <FaqSection eyebrow={provider.faq.eyebrow} title={provider.faq.title} text={provider.faq.text} items={faq} idPrefix="pro-faq" />
         <ProCta />
         <HomeBrands />
         <HomeHelp />

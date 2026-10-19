@@ -4,7 +4,6 @@
 import { courseLink } from "@/data/courseSlugs";
 import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 
-const img = (n) => `/assets/img/coursesCards/${n}.png`;
 const course = (slug) => ({ slug, href: courseLink(1) });
 
 export const topBar = {
@@ -38,7 +37,6 @@ export const hero = {
   subline: "Compare accredited providers, dates and prices in one place. No account needed to search.",
   primaryButton: { label: "Find Courses", href: CATALOGUE_HREF },
   secondaryButton: { label: "Book for your team", href: "/for-business" },
-  socialProof: { rating: "4.9 out of 5", text: "Based on 12,450+ verified reviews · 250,000+ customers" },
   methods: ["All methods", "Classroom", "Live online", "Online self-paced"],
   coursePlaceholder: "Search for a course",
   locationPlaceholder: "Town or postcode",
@@ -47,49 +45,9 @@ export const hero = {
     { href: courseLink(1), label: "Emergency First Aid", slug: "/course/emergency-first-aid-at-work-training-1-day" },
     { href: courseLink(1), label: "CSCS Green Card", slug: "/course/cscs-green-card-labourers-card-course" },
   ],
-  rating: "4.9 out of 5 · Based on 12,450+ verified reviews",
-  highlights: ["1,000+ courses", "UK-wide dates and locations", "Price-match guarantee", "Flexible booking options", "End-to-end support", "250,000+ customers"],
 };
 
-export const counters = [
-  { id: 1, number: "1,000+", title: "Courses" },
-  { id: 2, number: "250,000+", title: "Customers" },
-  { id: 3, number: "12,450+", title: "Verified reviews" },
-  { id: 4, number: "4.9 / 5", title: "Average rating" },
-];
-
 export const employers = ["G4S", "Transport for London", "Armani", "North East Autism Society", "Balfour Beatty", "Kier", "Mace", "Skanska", "Berkeley Group", "Coventry College"];
-
-// "Popular courses and qualifications": three groups of four, exactly as on the client's site.
-export const courseCategories = ["Security & SIA", "First Aid & Health and Safety", "Construction"];
-
-const card = (id, category, title, method, slug, image, price, duration, providers, validity, wasPrice) => ({
-  id, category, title, method, slug,
-  imageSrc: image,
-  price, duration, providers, validity, wasPrice,
-  rating: 4.9,
-  ratingCount: 1991,
-  paid: true,
-  popular: id === 1 || id === 5 || id === 9,
-});
-
-// Real course facts (price = lowest "all inclusive" price, duration, number of providers, certificate validity)
-// Home's course cards. The first argument is the course's catalogue id: the card opens that course's page and shows its
-// Skill Saver badge. A course not in the catalogue gets its own `href` instead.
-export const courses = [
-  card(1, "Security & SIA", "SIA Door Supervisor Training", "Classroom", "/course/sia-door-supervisor-training", img(1), 198.99, "6 days", 46, "SIA licence-linked"),
-  card(3, "Security & SIA", "SIA CCTV Operator Training", "Classroom", "/course/sia-cctv-operator-training", img(2), 179.99, "3 days", 25, "SIA licence-linked"),
-  card(46, "Security & SIA", "SIA Door Supervisor Refresher", "Classroom", "/course/sia-top-up-refresher-training-door-supervisor", img(3), 99, "2 days", 30, "Renews SIA licence"),
-  card(2, "Security & SIA", "Security Guard Training", "Classroom", "/course/sia-top-up-refresher-training-security-guard", img(4), 89.99, "1 day", 23, "Renews SIA licence"),
-  card(5, "First Aid & Health and Safety", "Emergency First Aid at Work", "Classroom", "/course/emergency-first-aid-at-work-training-1-day", img(5), 63.2, "1 day", 45, "Valid 3 years"),
-  card(6, "First Aid & Health and Safety", "First Aid at Work (3-Day)", "Classroom", "/course/first-aid-at-work-training-3-days", img(6), 159.99, "3 days", 21, "Valid 3 years"),
-  card(16, "First Aid & Health and Safety", "Fire Marshal Training", "Classroom • Live online • Online self-paced", "/course/fire-marshal-fire-warden-online", img(7), 29.99, "2 to 3 hours", 12, "Valid 3 years"),
-  { ...card(108, "First Aid & Health and Safety", "Safety Harness Training", "Classroom • Online self-paced", "/course/safety-harness-training", img(8), 24.99, "2 to 4 hours", 3, "Valid 3 years"), href: "/courses?subject=health-and-safety" }, // not in the catalogue yet
-  card(9, "Construction", "CSCS Green Card Course", "Classroom • Live online • Online self-paced", "/course/cscs-green-card-labourers-card-course", img(9), 89.99, "1 day", 10, "CSCS-approved route", 109.99),
-  card(10, "Construction", "CITB SMSTS Course", "Classroom • Live online", "/course/citb-site-manager-safety-training-scheme-smsts", img(10), 449.99, "5 days", 12, "Valid 5 years"),
-  card(11, "Construction", "CITB SSSTS Refresher Course", "Classroom • Live online", "/course/citb-site-supervisor-safety-training-scheme-sssts-online-refresher", img(11), 192, "1 day", 12, "CITB Site Safety Plus"),
-  card(12, "Construction", "Traffic Marshal Course", "Classroom • Live online • Online self-paced", "/course/traffic-banksman-traffic-marshal-training-course", img(12), 29.99, "2 to 3 hours", 5, "Valid 3 years"),
-];
 
 export const bookingOptions = {
   eyebrow: "Why book through ReadTraining",
@@ -195,36 +153,46 @@ export const subjects = [
   { id: 8, title: "Hospitality", slug: "/courses/hospitality", href: "/courses?subject=hospitality", items: ["Personal Licence (APLH)", "Barista Skills", "Allergen Awareness", "Customer Service"] },
 ];
 
-export const testimonials = [
-  { id: 1, author: "Oliver Desuza", position: "SIA Door Supervisor Course · Kingston upon Thames", text: "I’ve wanted to work in security since my old job at a theme park. The course was informative, practical and really engaging. I especially enjoyed putting what we learned into practice, and I’m now ready to go straight into the industry." },
-  { id: 2, author: "Denni Fibbs", position: "Door Supervisor Refresher Training · Canary Wharf", text: "I just completed my Door Supervisor Refresher Training today, and I couldn’t be happier with the experience. The instructor was absolutely excellent, incredibly knowledgeable, with a deep, practical understanding of the security industry. Highly recommended." },
-  { id: 3, author: "Toby McDonald", position: "SIA Security Guard Course · Kingston upon Thames", text: "I wanted a career that gave me the flexibility to earn while building my own company. The training was very hands-on, in-depth and well structured, and the instructor made the whole experience enjoyable." },
-  { id: 4, author: "Kirsty Lynch", position: "CSCS Green Card Course · Canary Wharf", text: "I’ve just completed my CSCS course and found it really interesting. The presentation was engaging, there was plenty of useful information, and I learned a lot about health and safety on construction sites." },
-  { id: 5, author: "Arton Asllani", position: "Fire Warden & Fire Marshal Course · Birmingham", text: "Great website to use, with reasonable prices for courses that are helpful in many ways and easy to follow. They have a great support team that actually helps when needed." },
-  { id: 6, author: "Laxley Lamley", position: "NEBOSH National General Certificate · Rainham", text: "Very good instructor who explained everything clearly and precisely, making the course easy to understand. The sessions were informative and well organised. I would definitely recommend." },
-  { id: 7, author: "Fabricio Santos", position: "CITB SEATS Course · Nottingham", text: "Excellent training sessions, well elaborated on verbally and physically. I would recommend them to everyone who is looking for security courses." },
+const testimonials = [
+  { id: "1", author: "Oliver Desuza", position: "SIA Door Supervisor Course · Kingston upon Thames", text: "I’ve wanted to work in security since my old job at a theme park. The course was informative, practical and really engaging. I especially enjoyed putting what we learned into practice, and I’m now ready to go straight into the industry.", source: "", home: false },
+  { id: "2", author: "Denni Fibbs", position: "Door Supervisor Refresher Training · Canary Wharf", text: "I just completed my Door Supervisor Refresher Training today, and I couldn’t be happier with the experience. The instructor was absolutely excellent, incredibly knowledgeable, with a deep, practical understanding of the security industry. Highly recommended.", source: "", home: false },
+  { id: "3", author: "Toby McDonald", position: "SIA Security Guard Course · Kingston upon Thames", text: "I wanted a career that gave me the flexibility to earn while building my own company. The training was very hands-on, in-depth and well structured, and the instructor made the whole experience enjoyable.", source: "Google", home: true },
+  { id: "4", author: "Kirsty Lynch", position: "CSCS Green Card Course · Canary Wharf", text: "I’ve just completed my CSCS course and found it really interesting. The presentation was engaging, there was plenty of useful information, and I learned a lot about health and safety on construction sites.", source: "Trustpilot", home: true },
+  { id: "5", author: "Arton Asllani", position: "Fire Warden & Fire Marshal Course · Birmingham", text: "Great website to use, with reasonable prices for courses that are helpful in many ways and easy to follow. They have a great support team that actually helps when needed.", source: "Google", home: true },
+  { id: "6", author: "Laxley Lamley", position: "NEBOSH National General Certificate · Rainham", text: "Very good instructor who explained everything clearly and precisely, making the course easy to understand. The sessions were informative and well organised. I would definitely recommend.", source: "Trustpilot", home: true },
+  { id: "7", author: "Fabricio Santos", position: "CITB SEATS Course · Nottingham", text: "Excellent training sessions, well elaborated on verbally and physically. I would recommend them to everyone who is looking for security courses.", source: "", home: false },
 ];
 
-export const testimonialAvatars = [1, 2, 3, 4, 5].map((n) => `/assets/img/avatars/small/${n}.png`);
-
-// Customer stories block: featured quote + four written reviews (real Hurak reviews, template avatars).
+// Customer stories block: the video story, the trust numbers and the testimonials ticked for the homepage (all editable in the
+// admin: lib/siteContent.js; the video file and the avatars stay here).
 export const stories = {
   eyebrow: "Customer stories",
   title: "Real experiences from people who booked through ReadTraining",
   text: "Hear from learners and teams who booked training through ReadTraining.",
-  video: { author: testimonials[0].author, position: testimonials[0].position, quote: "The course was informative, practical and really engaging.", duration: "0:10", src: "/assets/video/story-1.mp4", poster: "/assets/video/story-1-poster.jpg" },
-  stats: [
-    { value: "4.9 / 5", label: "Average rating" },
-    { value: "12,450+", label: "Verified reviews" },
-    { value: "250,000+", label: "Customers" },
-  ],
-  reviews: [2, 3, 4, 5].map((i, k) => ({
-    author: testimonials[i].author,
-    position: testimonials[i].position,
-    text: testimonials[i].text,
-    source: k % 2 ? "Trustpilot" : "Google",
-    avatar: `/assets/img/avatars/small/${k + 2}.png`,
-  })),
+  video: { duration: "0:10", src: "/assets/video/story-1.mp4", poster: "/assets/video/story-1-poster.jpg" },
+  avatars: [2, 3, 4, 5].map((n) => `/assets/img/avatars/small/${n}.png`),
+};
+
+// The editable content's built-in values (Part B, B2): what the site shows for a key until an admin saves one in the admin
+// (API content.site). Same shapes as the API checks; lib/siteContent.js merges them.
+export const contentDefaults = {
+  trust: { rating: 4.9, reviews: 12450, customers: 250000, courses: 1000 },
+  // the search-engine words (admin > Platform settings): the homepage's, and the description pages without their own use
+  seo: {
+    homeTitle: "ReadTraining | Accredited training courses across the UK",
+    homeDescription: "Search vocational and compliance training from trusted UK training providers, explore dates and locations, and book with confidence.",
+    siteDescription: "Find and book accredited training courses from trusted UK providers: compare dates, locations and prices in one place.",
+  },
+  // "Popular courses and qualifications": tabs of up to four courses, by course number in the catalogue
+  featured: {
+    groups: [
+      { name: "Security & SIA", courses: [1, 3, 46, 2] },
+      { name: "First Aid & Health and Safety", courses: [5, 6, 16, 13] },
+      { name: "Construction", courses: [9, 10, 11, 12] },
+    ],
+  },
+  testimonials,
+  video: { author: testimonials[0].author, position: testimonials[0].position, quote: "The course was informative, practical and really engaging." },
 };
 
 export const teamBooking = {

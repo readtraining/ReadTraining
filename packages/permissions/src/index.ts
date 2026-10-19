@@ -137,6 +137,8 @@ export const ADMIN_PRESETS: Record<'full' | 'support' | 'finance', AdminPermissi
 
 const ADMIN_RULES = {
   'admin.panel.open': { permission: null },
+  'admin.activity.view': { permission: null }, // the activity log viewer: every admin, read only
+  'admin.students.view': { permission: null }, // the student list and records: every admin, read only
   'admin.approvals.decide': { permission: 'approve', notOwnRequest: true },
   'admin.catalogue.edit': { permission: 'catalogue' },
   'admin.content.edit': { permission: 'content' },

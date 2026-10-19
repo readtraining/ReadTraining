@@ -1,13 +1,21 @@
 import React from "react";
 import Image from "next/image";
 import { stories } from "@/data/home";
+import { homeTestimonials, trustFigures, videoStory } from "@/lib/siteContent";
 import HomeTextLink from "./HomeTextLink";
 import HomeVideoStory from "./HomeVideoStory";
 import Stars from "./HomeStars";
 
-
-// Customer stories: centered header, featured quote card + 2x2 review grid.
+// Customer stories: centered header, the video story with the trust numbers, and the testimonials ticked for the homepage in
+// a 2x2 grid (all editable in the admin; lib/siteContent.js).
 export default function HomeStories() {
+  const trust = trustFigures();
+  const video = { ...stories.video, ...videoStory() };
+  const stats = [
+    { value: trust.ratingSlash, label: "Average rating" },
+    { value: trust.reviews, label: "Verified reviews" },
+    { value: trust.customers, label: "Customers" },
+  ];
   return (
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">
@@ -24,13 +32,13 @@ export default function HomeStories() {
 
         <div className="row y-gap-30 pt-40">
           <div className="col-lg-5">
-            <HomeVideoStory video={stories.video} stats={stories.stats} />
+            <HomeVideoStory video={video} stats={stats} />
           </div>
 
           <div className="col-lg-7">
             <div className="row y-gap-24 rt-stories-grid">
-              {stories.reviews.map((r) => (
-                <div key={r.author} className="col-md-6">
+              {homeTestimonials().map((r, i) => (
+                <div key={r.id} className="col-md-6">
                   <div className="rt-review">
                     <div className="rt-review__top">
                       <Stars />
@@ -38,7 +46,7 @@ export default function HomeStories() {
                     </div>
                     <p className="rt-review__quote">{r.text}</p>
                     <div className="rt-review__who">
-                      <Image width={36} height={36} src={r.avatar} alt={r.author} />
+                      <Image width={36} height={36} src={stories.avatars[i % stories.avatars.length]} alt={r.author} />
                       <div>
                         <div className="rt-review__name">{r.author}</div>
                         <div className="rt-review__course">{r.position}</div>

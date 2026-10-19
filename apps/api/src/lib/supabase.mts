@@ -80,3 +80,14 @@ export async function verifyAccessToken(token: string | undefined): Promise<Veri
     sessionId: typeof c.session_id === 'string' ? c.session_id : null,
   }
 }
+
+// Profile photos: a private bucket, read through short-lived signed addresses.
+export const AVATARS = 'avatars'
+
+/** A profile photo the browser can show for an hour: a signed address for an uploaded photo, or a Google/Facebook picture as is. */
+export async function signedPhotoUrl(stored: string | null) {
+  if (!stored) return null
+  if (/^https:\/\//.test(stored)) return stored
+  const { data } = (await supabase?.storage.from(AVATARS).createSignedUrl(stored, 3600)) ?? { data: null }
+  return data?.signedUrl ?? null
+}

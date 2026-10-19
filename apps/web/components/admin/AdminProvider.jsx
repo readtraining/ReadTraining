@@ -1,166 +1,220 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
+import Sheet from "@/components/testPrep/runner/Sheet";
+import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
-import { addProviderNote, approvalBlockers, decideApproval, docState, setProviderCommission, setProviderHold, setProviderStatus, useAdmin, verifyProviderDoc } from "@/lib/admin";
+import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Pill, formatWhen } from "./adminParts";
+import { api } from "@/lib/trpc/react";
+import { errorsFrom } from "@/lib/useMe";
+import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { STATUS_TONE } from "./AdminProviders";
-import { EmptyState } from "@/components/states/States";
+import { RateForm, formatRate } from "./commissionParts";
 
 const copy = A.providers;
 const d = copy.detail;
-const DOC_TONE = { ok: "ok", expiring: "warn", expired: "late" };
+const roles = A.learners.detail.roles;
+// the decisions each status allows, in the order the buttons show
+const NEXT = { pending: ["approve", "changes", "reject"], changes_requested: ["approve", "reject"], active: ["suspend"], suspended: ["reinstate"], rejected: [] };
+const SWITCH = { approve: "approve", changes: "approve", reject: "approve", suspend: "suspend", reinstate: "suspend" };
+const PRIMARY = new Set(["approve", "reinstate"]);
+const DANGER = new Set(["reject", "suspend"]);
 
-// One provider: its status and the actions that change it (approve an application, only once every document is in date and
-// verified; suspend; reinstate), the profile, the documents
-// with their expiry (expired = red, within 30 days = orange) and "Mark verified", the commission override, the payout hold, and
-// the team's notes. Every change is kept with an audit entry (lib/admin.js) and announced.
+// One provider (API admin.providers.get): its status and the decisions it allows (approve, ask for changes, don't approve,
+// suspend, reinstate; each confirmed in a pop-up, with a message where the provider needs one), why it has its status, its
+// details and team, its commission (its own rate or the platform default; changed with the "fees and commission" switch), and
+// its activity. An admin never decides on a provider account they opened themselves.
 export default function AdminProvider({ slug }) {
-  const data = useAdmin();
-  const [rate, setRate] = useState("");
-  const [rateError, setRateError] = useState("");
-  const [note, setNote] = useState("");
-  const [noteError, setNoteError] = useState("");
+  const me = useAdminAccess();
+  const utils = api.useUtils();
+  const record = api.admin.providers.get.useQuery({ slug }, { retry: (n, e) => e?.data?.code !== "NOT_FOUND" && n < 2 });
+  const activity = api.admin.activity.list.useQuery({ q: record.data?.id ?? "", limit: 8 }, { enabled: Boolean(record.data?.id) });
+  const [deciding, setDeciding] = useState(null);
   const [said, setSaid] = useState("");
-  const rateRef = useRef(null);
-  const noteRef = useRef(null);
-  const p = data?.providers.find((x) => x.slug === slug);
-  useEffect(() => {
-    if (p) setRate(String(p.commission));
-  }, [p?.commission]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!data) return null;
-  if (!p) return <EmptyState title="This provider was not found." action={{ href: "/admin/providers", label: d.back }} />;
+  const [warning, setWarning] = useState("");
 
-  const now = data.now;
-  const application = data.approvals.find((a) => a.id === `app-${p.slug}`);
-  const isApplicant = ["applied", "review", "changes"].includes(p.status);
-  const blockers = approvalBlockers(p, now);
-  const done = (text) => setSaid(text);
-
-  const saveRate = (e) => {
-    e.preventDefault();
-    const n = Number(rate);
-    if (!/^\d{1,2}(\.\d)?$/.test(rate.trim()) || n < 0 || n > 60) {
-      setRateError("Enter a commission between 0 and 60, like 25.");
-      return focusFirstError(rateRef.current);
-    }
-    setRateError("");
-    setProviderCommission(p, n);
-    done(`Commission set to ${n}%`);
+  if (record.isLoading) return <DetailSkeleton />;
+  if (record.error?.data?.code === "NOT_FOUND") return <EmptyState title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
+  if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
+  const p = record.data;
+  const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));
+  const decisions = p.ownRequest ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
+  const blockedNote = NEXT[p.status].length && !decisions.length ? (p.ownRequest && NEXT[p.status].some((k) => SWITCH[k] === "approve") ? d.ownRequest : d.noSwitch) : "";
+  const decided = (decision, emailed) => {
+    setSaid(d.done[decision]);
+    setWarning(emailed ? "" : d.notEmailed);
+    utils.admin.providers.invalidate();
+    utils.admin.activity.list.invalidate();
   };
-  const saveNote = (e) => {
-    e.preventDefault();
-    if (!note.trim()) {
-      setNoteError("Write the note first.");
-      return focusFirstError(noteRef.current);
-    }
-    setNoteError("");
-    addProviderNote(p, note.trim());
-    setNote("");
-    done("Note added");
-  };
+  const f = d.fields;
+  const lastReply = p.status === "pending" && activity.data?.entries.find((e) => e.action === "provider.resubmitted");
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/providers" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
+      {warning && <p className="rt-adm-item__block" role="alert">{warning}</p>}
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Status">
         <div>
-          <div className="rt-adm-item__top">
-            <Pill tone={STATUS_TONE[p.status]}>{copy.statuses[p.status]}</Pill>
-            {p.hold && <Pill tone="warn">{d.payoutHold}</Pill>}
-          </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{p.name}</h2>
-          <p className="rt-acc__note">{p.city} · {p.courses} {p.courses === 1 ? "course" : "courses"} · {p.subjects.map((s) => s.replace(/-/g, " ")).join(", ")}</p>
+          <div className="rt-adm-item__top"><Pill tone={STATUS_TONE[p.status]}>{copy.statuses[p.status]}</Pill></div>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{p.name}</h1>
+          <p className="rt-acc__note">Signed up {formatWhen(Date.parse(p.appliedAt))}{p.statusChangedAt ? ` · status changed ${formatWhen(Date.parse(p.statusChangedAt))}` : ""}</p>
         </div>
         <div className="rt-adm-hero__actions">
-          {isApplicant && application && application.status !== "approved" && (blockers.length ? (
-            <p className="rt-adm-item__block"><strong>{A.approvals.blocked}</strong> {blockers.join(", ")}.</p>
-          ) : (
-            <button type="button" className="button -sm -purple-1 text-white" onClick={() => { decideApproval(application, "approved"); done(`${p.name} approved`); }}>{d.approve}</button>
+          {decisions.map((k) => (
+            <button key={k} type="button" className={PRIMARY.has(k) ? "button -sm -purple-1 text-white" : DANGER.has(k) ? "rt-cd__link rt-adm-danger" : "button -sm -outline-purple-1 text-purple-1"} onClick={() => setDeciding(k)}>{d.actions[k]}</button>
           ))}
-          {p.status === "active" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setProviderStatus(p, "suspended"); done(`${p.name} suspended`); }}>{d.suspend}</button>}
-          {p.status === "suspended" && <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setProviderStatus(p, "active"); done(`${p.name} reinstated`); }}>{d.reinstate}</button>}
-          {p.listed && <Link href={`/providers/${p.slug}`} className="fb-textlink">Public profile<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>}
+          {blockedNote && <p className="rt-acc__notice">{blockedNote}</p>}
+          {!["rejected", "suspended"].includes(p.status) && <Link href={`/providers/${p.slug}`} className="fb-textlink">{d.publicProfile}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>}
         </div>
       </section>
 
+      {p.statusNote && d.noteFor[p.status] && (
+        <section className="rt-acc__card" aria-labelledby="rt-adm-pn-h">
+          <h2 className="rt-acc__h2" id="rt-adm-pn-h">{d.noteFor[p.status]}</h2>
+          <p className="rt-adm-provider__note">{p.statusNote}</p>
+        </section>
+      )}
+      {lastReply && (
+        <section className="rt-acc__card" aria-labelledby="rt-adm-pr-h">
+          <h2 className="rt-acc__h2" id="rt-adm-pr-h">{d.waiting}</h2>
+          {lastReply.metadata.reply && <p className="rt-adm-provider__note">{lastReply.metadata.reply}</p>}
+          <p className="rt-acc__note">{lastReply.actor?.name} · {formatWhen(Date.parse(lastReply.at))}</p>
+        </section>
+      )}
+
       <div className="rt-adm-grid2">
-        <section className="rt-acc__card" aria-labelledby="rt-adm-prof-h">
-          <h2 className="rt-acc__h2" id="rt-adm-prof-h">{d.profile}</h2>
+        <section className="rt-acc__card" aria-labelledby="rt-adm-pd-h">
+          <h2 className="rt-acc__h2" id="rt-adm-pd-h">{d.details}</h2>
           <dl className="rt-adm-dl">
-            <div><dt>Contact</dt><dd>{p.contact}</dd></div>
-            <div><dt>Email</dt><dd>{p.email}</dd></div>
-            <div><dt>Company number</dt><dd>{p.company}</dd></div>
-            <div><dt>VAT</dt><dd>{p.vat}</dd></div>
-            <div><dt>{p.listed ? "On ReadTraining since" : "Applied"}</dt><dd>{p.listed ? formatDate(p.joined) : formatWhen(p.applied)}</dd></div>
+            <div><dt>{f.name}</dt><dd>{p.name}</dd></div>
+            <div><dt>{f.address}</dt><dd>/providers/{p.slug}</dd></div>
+            <div><dt>{f.phone}</dt><dd>{p.mobile || <span className="rt-adm-muted">–</span>}</dd></div>
+            <div><dt>{f.terms}</dt><dd>{p.termsAcceptedAt ? d.termsAccepted.replace("{v}", p.termsVersion || "").replace("{date}", formatDate(p.termsAcceptedAt.slice(0, 10))) : <span className="rt-adm-muted">{d.termsMissing}</span>}</dd></div>
+            <div><dt>{f.applied}</dt><dd>{formatWhen(Date.parse(p.appliedAt))}</dd></div>
           </dl>
         </section>
 
-        <section className="rt-acc__card" aria-labelledby="rt-adm-docs-h">
-          <h2 className="rt-acc__h2" id="rt-adm-docs-h">{d.documents}</h2>
+        <CommissionCard provider={p} canChange={me?.permissions?.includes("finance.settings")} onSaved={(text) => { setSaid(text); utils.admin.providers.invalidate(); utils.admin.commission.invalidate(); utils.admin.activity.list.invalidate(); }} />
+
+        <section className="rt-acc__card" aria-labelledby="rt-adm-pt-h">
+          <h2 className="rt-acc__h2" id="rt-adm-pt-h">{d.team}</h2>
           <ul className="rt-adm-list">
-            {p.documents.map((doc) => {
-              const st = docState(doc, now);
-              return (
-                <li key={doc.key}>
-                  <div>
-                    <span className="rt-adm-strong">{doc.type}</span>
-                    <small>{doc.ref} · {st === "expired" ? "Expired" : d.expires} {formatDate(doc.expires)}</small>
-                  </div>
-                  <div className="rt-adm-list__side">
-                    {st !== "ok" && <Pill tone={DOC_TONE[st]}>{st === "expired" ? d.expired : d.expiring}</Pill>}
-                    {doc.verified ? <Pill tone="ok">{d.verified}</Pill> : <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { verifyProviderDoc(p, doc); done(`${doc.type} verified`); }}>{d.verify}</button>}
-                  </div>
-                </li>
-              );
-            })}
+            {p.team.map((m) => (
+              <li key={m.userId}>
+                <div><Link href={`/admin/learners/${m.userId}`} className="rt-adm-strong">{m.name}</Link><small>{m.email} · {roles[m.role] ?? m.role}</small></div>
+                {m.status !== "active" && <Pill tone="muted">Invited</Pill>}
+              </li>
+            ))}
           </ul>
         </section>
-
-        <section className="rt-acc__card" aria-labelledby="rt-adm-com-h">
-          <h2 className="rt-acc__h2" id="rt-adm-com-h">{d.commission}</h2>
-          <form className="rt-adm-inline" onSubmit={saveRate} noValidate ref={rateRef}>
-            <div className="rt-field">
-              <label htmlFor="rt-adm-rate">Commission (%)</label>
-              <small className="rt-field__hint" id="rt-adm-rate-hint">{d.commissionNote.replace("{rate}", data.fees.commission)}</small>
-              {rateError && <p className="rt-q__err" id="rt-adm-rate-e"><span className="rt-sr">Error: </span>{rateError}</p>}
-              <div className="rt-adm-inline__row">
-                <input id="rt-adm-rate" type="text" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} aria-invalid={rateError ? true : undefined} aria-describedby={`rt-adm-rate-hint${rateError ? " rt-adm-rate-e" : ""}`} className="rt-adm-num" />
-                <button type="submit" className="button -sm -purple-1 text-white">Save</button>
-              </div>
-            </div>
-          </form>
-          <div className="rt-adm-hold">
-            <label className="rt-bk__check" htmlFor="rt-adm-hold">
-              <input id="rt-adm-hold" type="checkbox" checked={p.hold} onChange={(e) => { setProviderHold(p, e.target.checked); done(e.target.checked ? "Payout hold placed" : "Payout hold lifted"); }} />
-              <span>{d.payoutHold}</span>
-            </label>
-            <p className="rt-acc__note">{d.payoutHoldNote}</p>
-          </div>
-        </section>
-
-        <section className="rt-acc__card" aria-labelledby="rt-adm-notes-h">
-          <h2 className="rt-acc__h2" id="rt-adm-notes-h">{d.notes}</h2>
-          <form className="rt-adm-noteform" onSubmit={saveNote} noValidate ref={noteRef}>
-            <div className="rt-field">
-              <label htmlFor="rt-adm-note" className="rt-sr">{d.notePlaceholder}</label>
-              {noteError && <p className="rt-q__err" id="rt-adm-note-e"><span className="rt-sr">Error: </span>{noteError}</p>}
-              <textarea id="rt-adm-note" rows={3} maxLength={1000} placeholder={d.notePlaceholder} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={noteError ? true : undefined} aria-describedby={noteError ? "rt-adm-note-e" : undefined} />
-            </div>
-            <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{d.addNote}</button>
-          </form>
-          {p.notes.length > 0 && (
-            <ul className="rt-adm-notes">
-              {p.notes.map((n) => <li key={n.at}><p>{n.text}</p><small>{n.who} · {formatWhen(n.at)}</small></li>)}
-            </ul>
-          )}
-        </section>
       </div>
+
+      <section className="rt-acc__card" aria-labelledby="rt-adm-pa-h">
+        <div className="rt-acc__cardhead">
+          <h2 className="rt-acc__h2" id="rt-adm-pa-h">{d.activity}</h2>
+          <Link href={`/admin/activity?q=${p.id}`} className="fb-textlink">{d.allActivity}</Link>
+        </div>
+        {activity.data?.entries.length ? (
+          <ul className="rt-adm-list">
+            {activity.data.entries.map((e) => (
+              <li key={e.id}>
+                <div>
+                  <span className="rt-adm-strong">{A.activity.actions[e.action] ?? e.action}</span>
+                  <small>{e.actor ? `${e.actor.name} · ` : ""}{formatWhen(Date.parse(e.at))}</small>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : activity.isLoading ? null : <p className="rt-acc__note">{d.noActivity}</p>}
+      </section>
+
+      <p className="rt-acc__note rt-adm-help">{d.later}</p>
+
+      <DecisionSheet provider={p} decision={deciding} onClose={() => setDeciding(null)} onDone={decided} />
     </div>
+  );
+}
+
+// The provider's commission: its rate, whether that's its own or the platform default, and (with the switch) the field to
+// change it and "Use the platform default".
+function CommissionCard({ provider: p, canChange, onSaved }) {
+  const save = api.admin.providers.setCommission.useMutation();
+  const def = formatRate(p.defaultCommissionBps);
+  const rate = p.commissionBps ?? p.defaultCommissionBps;
+  const own = p.commissionBps !== null;
+  return (
+    <section className="rt-acc__card" aria-labelledby="rt-adm-pc-h">
+      <div className="rt-acc__cardhead">
+        <h2 className="rt-acc__h2" id="rt-adm-pc-h">{d.commission}</h2>
+        <strong className="rt-adm-price">{formatRate(rate)}</strong>
+      </div>
+      <p className="rt-acc__note">{(own ? d.hasOwn : d.usesDefault).replace("{rate}", def)}</p>
+      {canChange ? (
+        <>
+          <RateForm id="rt-adm-pcom" label={d.commissionLabel} hint={d.commissionHint.replace("{rate}", def)} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
+          {own && <button type="button" className="rt-cd__link rt-adm-mt" onClick={async () => { await save.mutateAsync({ organisationId: p.id, bps: null }); onSaved(d.commissionSaved); }} disabled={save.isPending}>{d.useDefault}</button>}
+        </>
+      ) : <p className="rt-acc__notice rt-adm-mt">{d.commissionReadOnly}</p>}
+    </section>
+  );
+}
+
+// The pop-up for one decision: what happens, a message when the provider needs one (required), then the button.
+function DecisionSheet({ provider, decision, onClose, onDone }) {
+  const decide = api.admin.providers.decide.useMutation();
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [general, setGeneral] = useState("");
+  const ref = useRef(null);
+  const close = () => {
+    setMessage("");
+    setError("");
+    setGeneral("");
+    onClose();
+  };
+  const sheet = decision ? d.sheets[decision] : null;
+  const submit = async (e) => {
+    e.preventDefault();
+    setGeneral("");
+    if (sheet.label && !message.trim()) {
+      setError(decision === "changes" ? "Enter what the provider needs to change." : decision === "reject" ? "Enter why the provider is not approved." : "Enter why the provider is suspended.");
+      return focusFirstError(ref.current);
+    }
+    setError("");
+    try {
+      const res = await decide.mutateAsync({ organisationId: provider.id, decision, message: sheet.label ? message.trim() : undefined });
+      onDone(decision, res.emailed);
+      close();
+    } catch (err) {
+      const { fields, general: g } = errorsFrom(err);
+      if (fields.message) {
+        setError(fields.message);
+        focusFirstError(ref.current);
+      } else setGeneral(g);
+    }
+  };
+  return (
+    <Sheet open={Boolean(decision)} onClose={close} title={sheet?.title ?? ""} closeLabel="Close">
+      {sheet && (
+        <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
+          <p className="rt-acc__note"><strong>{provider.name}</strong></p>
+          <p className="rt-acc__note">{sheet.text}</p>
+          {sheet.label && (
+            <div className="rt-field">
+              <label htmlFor="rt-adm-pmsg">{sheet.label}</label>
+              <small className="rt-field__hint" id="rt-adm-pmsg-hint">{sheet.hint}</small>
+              {error && <p className="rt-q__err" id="rt-adm-pmsg-e"><span className="rt-sr">Error: </span>{error}</p>}
+              <textarea id="rt-adm-pmsg" rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-pmsg-hint${error ? " rt-adm-pmsg-e" : ""}`} />
+            </div>
+          )}
+          {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
+          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={decide.isPending}>{sheet.button}</button>
+        </form>
+      )}
+    </Sheet>
   );
 }

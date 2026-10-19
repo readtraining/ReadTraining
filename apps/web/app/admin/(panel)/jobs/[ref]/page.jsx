@@ -14,7 +14,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { ref } = await props.params;
   return (
-    <AdminShell current="jobs" title={W.jobs.title}>
+    <AdminShell current="jobs" title={W.jobs.title} detail="Candidate">
       <AdminCandidate reference={ref} />
     </AdminShell>
   );

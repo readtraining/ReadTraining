@@ -6,12 +6,39 @@ import { adminPermissions, can, needsTwoStep } from '@readtraining/permissions'
 
 import { logActivity, logDenied } from '../../lib/activity.mjs'
 import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
+import { activityRouter } from './activity.mjs'
+import { catalogueAdminRouter } from './catalogue.mjs'
+import { commissionRouter } from './commission.mjs'
+import { couponsRouter } from './coupons.mjs'
+import { emailsRouter } from './emails.mjs'
+import { disputesRouter, ordersRouter, refundsRouter } from './money.mjs'
+import { feesRouter, ledgerRouter, payoutsRouter } from './payouts.mjs'
+import { platformRouter } from './platform.mjs'
+import { providersRouter } from './providers.mjs'
+import { studentsRouter } from './students.mjs'
+import { teamRouter } from './team.mjs'
 
 // The admin sign-in (/admin/login) and the check behind every /admin page. Admins are people with an active admin_users row
 // (added with the admin:grant script; there is no sign-up). Full admins, and any admin who has set up an authenticator,
 // must finish two-step sign-in (Supabase MFA, aal2) before the panel opens.
 
 export const adminRouter = createTRPCRouter({
+  team: teamRouter,
+  activity: activityRouter,
+  students: studentsRouter,
+  providers: providersRouter,
+  commission: commissionRouter,
+  catalogue: catalogueAdminRouter,
+  emails: emailsRouter,
+  coupons: couponsRouter,
+  platform: platformRouter,
+  orders: ordersRouter,
+  refunds: refundsRouter,
+  disputes: disputesRouter,
+  payouts: payoutsRouter,
+  ledger: ledgerRouter,
+  fees: feesRouter,
+
   // The login page, after the password step (`attempt`) or when it opens with a session already there. Says what comes next:
   // set up an authenticator, enter its code, or open the panel. Not an admin is an expected answer here, not an error:
   // `denied` (the page signs them out), logged when it was a sign-in attempt.
@@ -40,6 +67,7 @@ export const adminRouter = createTRPCRouter({
       from auth.users u left join public.profiles p on p.id = u.id
       where u.id = ${ctx.user.id}::uuid`)
     return {
+      id: ctx.user.id,
       name: `${me?.first_name ?? ''} ${me?.last_name ?? ''}`.trim() || (me?.email ?? ''),
       email: me?.email ?? '',
       preset: admin!.preset,

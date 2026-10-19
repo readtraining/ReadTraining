@@ -9,7 +9,7 @@ export const metadata = pageMetadata({ title: "Payment methods | ReadTraining", 
 
 export default function Page() {
   return (
-    <AccountShell current="payments" title={account.payments.title} lead={account.payments.lead}>
+    <AccountShell demo current="payments" title={account.payments.title} lead={account.payments.lead}>
       <AccountPayments />
     </AccountShell>
   );

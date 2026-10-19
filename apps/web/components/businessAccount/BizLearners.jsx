@@ -119,7 +119,7 @@ export default function BizLearners() {
                     <td data-label={copy.columns[1]}>{l.job || "Not given"}</td>
                     <td data-label={copy.columns[2]}>{next ? <>{next.title}<small>{formatDate(next.date)}</small></> : <span className="rt-biz__muted">No training booked</span>}</td>
                     <td data-label={copy.columns[3]}>{cs ? <CertPill state={cs} /> : <span className="rt-biz__muted">None yet</span>}</td>
-                    <td data-label={copy.columns[4]}><span className={`rt-pill rt-acc__status -${l.status === "active" ? "confirmed" : "cancelled"}`}>{copy.status[l.status]}</span></td>
+                    <td data-label={copy.columns[4]}><span className={`rt-pill rt-acc__status -${l.status === "active" ? "completed" : "cancelled"}`}>{copy.status[l.status]}</span></td>
                   </tr>
                 );
               })}

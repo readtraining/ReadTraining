@@ -1,11 +1,12 @@
-import { bookingOptions, counters, footer, founded } from "@/data/home";
+import { bookingOptions, footer, founded } from "@/data/home";
+import { trustFigures } from "@/lib/siteContent";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
 // About ReadTraining (/about-us). The section headings follow the client's current About page (hurak.com/about-us: "Get to
 // know…", "Who we are", "What we do", "Why we do it", the mission statement). The copy written for this page lives here; numbers, accreditations, booking promises and
-// contact details are imported from data/home, so the About and home pages always say the same thing.
+// contact details are imported from data/home and the trust numbers from lib/siteContent.js, so the About and home pages always
+// say the same thing.
 
-const count = (title) => counters.find((c) => c.title === title).number;
 const accreditations = footer.accreditations;
 // "SIA, CITB, CSCS, Highfield and Qualsafe" (the bodies; "Ofqual-regulated" describes qualifications, not a body)
 const bodies = accreditations.filter((a) => !/regulated/i.test(a));
@@ -21,13 +22,6 @@ export const about = {
     primary: { label: "Find courses", href: CATALOGUE_HREF },
     secondary: { label: "Contact us", href: "/contact-us" },
   },
-  // the key facts strip on the hero's lower edge (SubjectFacts)
-  facts: [
-    { icon: "icon-wall-clock", value: `Est. ${founded}`, label: "Training people across the UK" },
-    { icon: "icon-person-3", value: count("Customers"), label: "Customers" },
-    { icon: "icon-book", value: count("Courses"), label: "Courses to compare" },
-    { icon: "icon-star", value: count("Average rating"), label: `From ${count("Verified reviews")} verified reviews` },
-  ],
   story: {
     eyebrow: "Our story",
     title: "Who we are",
@@ -83,4 +77,16 @@ export const about = {
     primary: { label: "Find courses", href: CATALOGUE_HREF },
     secondary: { label: "Talk to our team", href: "/contact-us" },
   },
+};
+
+// the key facts strip on the hero's lower edge (SubjectFacts): the trust numbers (the site's editable content; call after
+// loadSiteContent())
+export const aboutFacts = () => {
+  const t = trustFigures();
+  return [
+    { icon: "icon-wall-clock", value: `Est. ${founded}`, label: "Training people across the UK" },
+    { icon: "icon-person-3", value: t.customers, label: "Customers" },
+    { icon: "icon-book", value: t.courses, label: "Courses to compare" },
+    { icon: "icon-star", value: t.ratingSlash, label: `From ${t.reviews} verified reviews` },
+  ];
 };

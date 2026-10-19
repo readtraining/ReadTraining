@@ -8,6 +8,8 @@ import { courseFaq, courseFaqEyebrow, courseFaqTitle } from "@/data/courseFaq";
 import CourseCatalogue from "@/components/courses/CourseCatalogue";
 import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 // Static metadata on purpose: reading searchParams here would make the server re-render the page (and show any
 // loading UI) on every filter change. Filtering is handled entirely in the browser.
@@ -26,7 +28,8 @@ const breadcrumbLd = {
   ],
 };
 
-export default function page() {
+export default async function page() {
+  await loadSiteContent();
   return (
     <div className="main-content rt-home rt-cat-page">
       <a className="rt-skip" href="#rt-res-list">Skip to courses</a>
@@ -39,7 +42,7 @@ export default function page() {
             <CourseCatalogue />
           </Suspense>
         </main>
-        <FaqSection eyebrow={courseFaqEyebrow} title={courseFaqTitle} items={courseFaq} idPrefix="cfaq" />
+        <FaqSection eyebrow={courseFaqEyebrow} title={courseFaqTitle} items={faqItems("courses", courseFaq)} idPrefix="cfaq" />
         <HomeHelp />
         <HomeFooter />
       </div>

@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
+import { Inline } from "@/components/doc/DocBlocks";
 
 /* FAQ section: the site's one FAQ (pill, centred title, divider accordion with plus/minus and animated height), used on
    every marketing page, the course catalogue and For Business / For Providers, taking its content as props. One answer is open at a time;
-   a closed answer is inert, so it cannot be tabbed into. */
+   a closed answer is inert, so it cannot be tabbed into. An answer may hold [label](link) and **bold** (as the legal pages' text
+   does) and nothing else, so what an admin writes can never inject markup. */
 export default function FaqSection({ eyebrow, title, text, items, idPrefix = "faq", className = "layout-pt-lg layout-pb-lg", id, compact = false }) {
   const [open, setOpen] = useState(0);
   return (
@@ -30,7 +32,7 @@ export default function FaqSection({ eyebrow, title, text, items, idPrefix = "fa
                   </button>
                 </h3>
                 <div className="bz-acc__panel" id={`${idPrefix}-${i}`} role="region" aria-labelledby={`${idPrefix}-btn-${i}`} inert={!isOpen}>
-                  <div className="bz-acc__inner"><p>{it.a}</p></div>
+                  <div className="bz-acc__inner"><p><Inline text={it.a} /></p></div>
                 </div>
               </div>
             );

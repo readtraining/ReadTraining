@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { dueState } from "@/lib/admin";
+import Toast from "@/components/courses/Toast";
 
 // Shared bits of the admin pages, all from the site's design system: the account's status pills (.rt-pill .rt-acc__status), the
 // filter chips with counts (.rt-tr__filter), the stats strip, the account card (.rt-acc__card) and the business account's table
@@ -26,6 +27,45 @@ export function Stats({ items, label, iconSize = 16 }) {
 // A status as the account's pill. Tones: info (purple), ok (green), warn (orange), muted (grey), late (red outline).
 const TONE = { info: "confirmed", ok: "completed", warn: "requested", muted: "cancelled", late: "late" };
 export const Pill = ({ tone = "info", children }) => <span className={`rt-pill rt-acc__status -${TONE[tone]}`}>{children}</span>;
+
+// An action's confirmation ("Credit saved", "Approved: …"): read out by screen readers and shown as the site's toast for a few
+// seconds, so a change made from a menu or a sheet is never silent.
+export function Said({ text }) {
+  const [toast, setToast] = React.useState(null);
+  const done = React.useCallback(() => setToast(null), []);
+  React.useEffect(() => {
+    if (text) setToast({ message: text });
+  }, [text]);
+  return (
+    <>
+      <p className="rt-sr" aria-live="polite">{text}</p>
+      <Toast toast={toast} onDone={done} quiet />
+    </>
+  );
+}
+
+// Loading placeholders in the shape of what is coming (never a spinner): a table card's rows, or a record's page (its head card
+// and two cards). Hidden from screen readers; the page is marked busy instead.
+const bar = (w, h = 14) => <span className="rt-skel rt-skel--line" style={{ width: w, height: h }}></span>;
+export function TableSkeleton({ rows = 6 }) {
+  return (
+    <div className="rt-acc__card rt-adm-skel" aria-hidden="true">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="rt-adm-skel__row">{bar("22%")}{bar("30%")}{bar("16%")}{bar("12%", 22)}</div>
+      ))}
+    </div>
+  );
+}
+export function DetailSkeleton() {
+  return (
+    <div className="rt-acc__stack" aria-hidden="true">
+      <div className="rt-acc__card rt-adm-skel">{bar(90, 22)}{bar("40%", 28)}{bar("55%")}</div>
+      <div className="rt-adm-grid2">
+        {[0, 1].map((i) => <div key={i} className="rt-acc__card rt-adm-skel">{bar("35%", 20)}{bar("90%")}{bar("80%")}{bar("70%")}</div>)}
+      </div>
+    </div>
+  );
+}
 
 // A deadline: "Due in 2 days" / "Due today" / "Overdue by 1 day", coloured by how close it is.
 export function Due({ due, now }) {
@@ -61,22 +101,23 @@ export function Search({ value, onChange, label }) {
 // `items`: [{ label, onClick } | { label, href }], `danger` for a destructive item. A real menu: arrow keys move between items,
 // Esc closes it and puts focus back on the button, a click outside closes it. Looks like the site's dropdown panel.
 // The provider's account menu uses it too: `trigger` replaces the dots, `head` goes above the items, and { group } items label
-// the ones after them.
+// the ones after them. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
 export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null }) {
   const [open, setOpen] = React.useState(false);
   const wrap = React.useRef(null);
   const btn = React.useRef(null);
   const id = React.useId();
+  // the items on show (a `phone` item is hidden on wider screens)
+  const shownItems = () => [...(wrap.current?.querySelectorAll('[role="menuitem"]') ?? [])].filter((el) => el.offsetParent !== null);
   React.useEffect(() => {
     if (!open) return;
-    const first = wrap.current?.querySelector('[role="menuitem"]');
-    first?.focus();
+    shownItems()[0]?.focus();
     const out = (e) => wrap.current && !wrap.current.contains(e.target) && setOpen(false);
     document.addEventListener("pointerdown", out);
     return () => document.removeEventListener("pointerdown", out);
   }, [open]);
   const onKey = (e) => {
-    const all = [...wrap.current.querySelectorAll('[role="menuitem"]')];
+    const all = shownItems();
     const i = all.indexOf(document.activeElement);
     if (e.key === "Escape") { e.preventDefault(); setOpen(false); btn.current?.focus(); }
     if (e.key === "ArrowDown") { e.preventDefault(); all[(i + 1) % all.length]?.focus(); }
@@ -98,7 +139,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
         <ul className="rt-rowmenu__list" role="menu" id={id} aria-label={label}>
           {head && <li role="none" className="rt-rowmenu__head">{head}</li>}
           {items.map((item) => (
-            <li key={item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : undefined}>
+            <li key={item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>
               {item.group ? item.group : item.href
                 ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)}>{item.label}</Link>
                 : <button type="button" role="menuitem" className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => pick(item)}>{item.label}</button>}

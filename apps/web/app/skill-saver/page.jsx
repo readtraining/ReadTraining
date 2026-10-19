@@ -12,8 +12,10 @@ import SaverLevels from "@/components/skillSaver/SaverLevels";
 import SaverProgress from "@/components/skillSaver/SaverProgress";
 import { SKILL_SAVER_PATH, skillSaverLearner as s } from "@/data/skillSaverLearner";
 import { SKILL_SAVER_LEVELS } from "@/lib/skillSaver";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { getServerClaims } from "@/lib/supabase/server";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 // Skill Saver Programme for learners (/skill-saver), the footer's "Skill Saver Programme", in the Provider Skill Saver page
 // language: masthead with an example learner level > how it works > the three levels (lavender) > your own level beside the
@@ -25,12 +27,6 @@ const crumbs = [{ label: "Home", href: "/" }, { label: "Skill Saver Programme" }
 
 export const metadata = pageMetadata({ title: s.title, description: s.description, path: SKILL_SAVER_PATH });
 
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: s.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
-
 // the hero's example learner: Level 2, part way to Level 3
 const ex = s.hero.example;
 const exLevel = SKILL_SAVER_LEVELS[ex.level - 1];
@@ -38,6 +34,8 @@ const exNext = SKILL_SAVER_LEVELS[ex.level];
 const exampleStatus = { ...exLevel, next: { ...exNext, have: ex.have } };
 
 export default async function SkillSaverLearnerPage() {
+  await loadSiteContent();
+  const faq = faqItems("skill-saver", s.faq.items);
   const claims = await getServerClaims();
   const person = claims ? { firstName: claims.user_metadata?.first_name || "" } : null;
   const [primary, secondary] = person ? s.hero.signedIn : [s.hero.primary, s.hero.secondary];
@@ -58,7 +56,7 @@ export default async function SkillSaverLearnerPage() {
           <StepsSection workflow={s.steps} />
           <SaverLevels levels={s.levels} />
           <SaverProgress progress={s.progress} initialPerson={person} />
-          <FaqSection eyebrow={s.faq.eyebrow} title={s.faq.title} items={s.faq.items} idPrefix="sv-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
+          <FaqSection eyebrow={s.faq.eyebrow} title={s.faq.title} items={faq} idPrefix="sv-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
           <div className="layout-pt-lg">
             <CtaBand cta={s.cta} id="rt-sv-cta-h" />
           </div>
@@ -67,7 +65,7 @@ export default async function SkillSaverLearnerPage() {
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, SKILL_SAVER_PATH)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }

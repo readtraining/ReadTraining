@@ -7,7 +7,7 @@ import { admin as A } from "@/data/admin";
 import { cancelSession, markJoiningSent, setSalesClosed, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { Pill, Search, Tabs, getQuery, setQuery, Said } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = A.sessions;
@@ -81,7 +81,7 @@ export default function AdminSessions() {
         {tab !== "venues" && <Search value={q} onChange={(v) => { setQ(v); setShown(PAGE); }} label={copy.search} />}
       </div>
       {tab === "week" && missing > 0 && <p className="rt-adm-item__block">{copy.weekMissing.replace("{n}", `${missing} ${missing === 1 ? "session starts" : "sessions start"}`)}</p>}
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       {tab === "venues" ? (
         <div className="rt-acc__card rt-biz__tablecard">

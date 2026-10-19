@@ -15,8 +15,10 @@ import JobsGrow from "@/components/securityJobs/JobsGrow";
 import JobsApplication from "@/components/securityJobs/JobsApplication";
 import JobsTraining from "@/components/securityJobs/JobsTraining";
 import { securityJobs as s } from "@/data/securityJobs";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 // Security jobs (/security-jobs, the footer's For providers > Security Jobs), in the For Providers / Skill Saver page language.
 // The opportunity first: hero with example matches > key facts strip > the five roles (#roles) > who can apply, as what employers
@@ -29,13 +31,9 @@ const crumbs = [{ label: "Home", href: "/" }, { label: s.hero.eyebrow }];
 
 export const metadata = pageMetadata({ title: s.title, description: s.description, path: PATH });
 
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: s.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
-
 export default async function SecurityJobsPage() {
+  await loadSiteContent();
+  const faq = faqItems("security-jobs", s.faq.items);
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   return (
     <div className="main-content rt-home fb-page rt-jobs-page">
@@ -55,14 +53,14 @@ export default async function SecurityJobsPage() {
           <JobsGrow grow={s.grow} />
           <JobsApplication />
           <JobsTraining training={s.training} />
-          <FaqSection eyebrow={s.faq.eyebrow} title={s.faq.title} items={s.faq.items} idPrefix="jobs-faq" className="layout-pt-lg layout-pb-lg bg-light-4 rt-jobs__anchor" id="faqs" />
+          <FaqSection eyebrow={s.faq.eyebrow} title={s.faq.title} items={faq} idPrefix="jobs-faq" className="layout-pt-lg layout-pb-lg bg-light-4 rt-jobs__anchor" id="faqs" />
           <CtaBand cta={s.cta} id="rt-jobs-cta-h" />
         </main>
         <HomeHelp />
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, PATH)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }
