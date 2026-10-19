@@ -3,9 +3,6 @@
 // muted #4F547B).
 export const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 
-export const para = (text: string, muted = false) =>
-  `<p style="margin:0 0 12px;font-size:${muted ? 14 : 16}px;line-height:1.5;${muted ? 'color:#4F547B;' : ''}">${escape(text)}</p>`
-
 export const button = (href: string, label: string) =>
   `<a href="${href}" style="display:inline-block;margin-top:8px;padding:12px 22px;background:#6440FB;border-radius:8px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">${escape(label)}</a>`
 

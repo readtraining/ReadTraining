@@ -106,6 +106,13 @@
       "when": 1792350556770,
       "tag": "0014_site_content_history_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792356816593,
+      "tag": "0015_coupons",
+      "breakpoints": true
     }
   ]
 }

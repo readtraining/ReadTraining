@@ -177,6 +177,12 @@ export const stories = {
 // (API content.site). Same shapes as the API checks; lib/siteContent.js merges them.
 export const contentDefaults = {
   trust: { rating: 4.9, reviews: 12450, customers: 250000, courses: 1000 },
+  // the search-engine words (admin > Platform settings): the homepage's, and the description pages without their own use
+  seo: {
+    homeTitle: "ReadTraining | Accredited training courses across the UK",
+    homeDescription: "Search vocational and compliance training from trusted UK training providers, explore dates and locations, and book with confidence.",
+    siteDescription: "Find and book accredited training courses from trusted UK providers: compare dates, locations and prices in one place.",
+  },
   // "Popular courses and qualifications": tabs of up to four courses, by course number in the catalogue
   featured: {
     groups: [

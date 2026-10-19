@@ -7,6 +7,7 @@ import { getCourseBySlug } from "@/lib/courses";
 import { getProviders } from "@/lib/providers";
 import { ADMIN_EVENT, DAY, HOUR, addWorkingDays, currentAdmin, read, update } from "@/lib/adminStore";
 import { buildWork } from "@/lib/adminWork";
+import { buildReviews } from "@/lib/adminReviews";
 
 // The admin's reads and writes. There is no admin API yet (front end only, see the admin plan's Scope), so the records come from
 // data/admin.js and the live catalogue, and every decision made on the admin pages (an approval, a suspension, a refund, a note)
@@ -299,6 +300,7 @@ export function getAdmin() {
   const sessions = buildSessions(saved, catalogue, now);
   const certificates = buildCertificates(saved, orders, catalogue);
   const work = buildWork(saved, now); // Phase 2: requests, Security Jobs, business accounts (lib/adminWork.js)
+  const reviews = buildReviews(saved, now); // B3: review moderation (lib/adminReviews.js)
   return {
     now,
     ...work,
@@ -309,6 +311,7 @@ export function getAdmin() {
     sessions,
     venues: buildVenues(sessions),
     certificates,
+    reviews,
     staff: staffNames(),
     fees,
     counts: {
@@ -316,6 +319,7 @@ export function getAdmin() {
       changes: openChanges.length,
       overdue: pending.filter((a) => a.due < now).length + openChanges.filter((c) => c.due < now).length + work.workCounts.requestsOverdue,
       ...work.workCounts,
+      reviews: reviews.filter((r) => r.challenge).length,
     },
   };
 }

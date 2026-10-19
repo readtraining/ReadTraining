@@ -7,7 +7,7 @@ import { and, eq, inArray, isNull, organisations, profiles, sql } from '@readtra
 import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { welcomeEmail } from '../../emails/welcome.mjs'
+import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
 import { sendEmail } from '../../lib/email.mjs'
 import { AVATARS, requestEmailChange, signedPhotoUrl, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
@@ -213,7 +213,7 @@ export const meRouter = createTRPCRouter({
       .where(and(eq(profiles.id, ctx.user.id), isNull(profiles.welcomeSentAt)))
       .returning({ firstName: profiles.firstName })
     if (!claimed) return { sent: false }
-    const sent = await sendEmail(welcomeEmail({ to: auth.email, firstName: claimed.firstName, siteUrl }))
+    const sent = await sendEmail(renderEmail('welcome', await wordsFor(ctx.db, 'welcome'), { firstName: claimed.firstName }, siteUrl, auth.email))
     if (!sent) {
       await ctx.db.update(profiles).set({ welcomeSentAt: null }).where(eq(profiles.id, ctx.user.id))
       return { sent: false }

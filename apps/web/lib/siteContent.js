@@ -47,3 +47,4 @@ export const featuredGroups = () => current.featured.groups;
 export const testimonials = () => current.testimonials;
 export const homeTestimonials = () => current.testimonials.filter((t) => t.home).slice(0, 4);
 export const videoStory = () => current.video;
+export const seoSettings = () => current.seo;

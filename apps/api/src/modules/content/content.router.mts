@@ -3,16 +3,21 @@ import { z } from 'zod'
 
 import { siteContent, siteContentVersions, sql } from '@readtraining/db'
 
+import { can } from '@readtraining/permissions'
+
+import { EMAIL_KEY, editableTemplate, wordsSchema } from '../../emails/templates.mjs'
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
-import { adminProcedure, createTRPCRouter, publicProcedure } from '../../trpc/trpc.mjs'
+import { adminProcedure, createTRPCRouter, publicProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // The site's editable content (Part B, B2), one value per key. The website reads them all at once (public); a key with no
 // value uses the website's built-in wording. Admins with the "content" switch save one key at a time; each save is checked
 // against that key's shape, logged, and kept as a version (so earlier wording can be looked at and brought back).
 //
-// Keys: trust, featured, testimonials, video (fixed); faq:<set> (one page's FAQ list: any name in the safe pattern, the website
-// decides which sets exist); page:<slug> (a legal document: terms, privacy, cookies, accessibility, provider-terms).
+// Keys: trust, featured, testimonials, video, seo (fixed); faq:<set> (one page's FAQ list: any name in the safe pattern, the
+// website decides which sets exist); page:<slug> (a legal document: terms, privacy, cookies, accessibility, provider-terms);
+// email:<template> (an automated email's words, emails/templates.mts: never sent to the website).
+// `seo` is a platform setting (the "platform.settings" switch); everything else needs the "content" switch.
 
 const text = (min: number, max: number, what: string) => z.string().trim().min(min, `Enter the ${what}.`).max(max, `Keep the ${what} to ${max} characters or fewer.`)
 const whole = { required_error: 'Enter a whole number.', invalid_type_error: 'Enter a whole number.' }
@@ -60,6 +65,8 @@ const FIXED = {
     .refine((a) => a.filter((t) => t.home).length <= 4, 'Choose up to 4 testimonials for the homepage.'),
   // the words on the homepage's video story (the video itself stays as it is)
   video: z.object({ author: text(2, 60, 'name'), position: text(0, 120, 'course and place'), quote: text(5, 200, 'quote') }),
+  // Platform settings: the search-engine words for the homepage, and the description any page without its own uses
+  seo: z.object({ homeTitle: text(10, 70, 'homepage title'), homeDescription: text(50, 160, 'homepage description'), siteDescription: text(50, 160, 'default description') }),
 } as const
 
 // ---- one page's FAQ list --------------------------------------------------------------------------------------------------
@@ -110,8 +117,13 @@ function schemaFor(key: string): z.ZodTypeAny | null {
   if (FAQ_KEY.test(key)) return faqSet
   const m = /^page:([a-z-]+)$/.exec(key)
   if (m && (LEGAL as readonly string[]).includes(m[1])) return legalDoc
+  const e = EMAIL_KEY.exec(key)
+  if (e && editableTemplate(e[1])) return wordsSchema(e[1])
   return null
 }
+// the switch a key's changes need
+const actionFor = (key: string) => (key === 'seo' ? 'admin.platform.settings' : 'admin.content.edit') as 'admin.platform.settings' | 'admin.content.edit'
+const isPublic = (key: string) => !EMAIL_KEY.test(key)
 const keyInput = z.string().max(80)
 const unknownKey = () => new TRPCError({ code: 'BAD_REQUEST', message: 'That content does not exist.' })
 
@@ -125,7 +137,7 @@ export const contentRouter = createTRPCRouter({
   // Everything that has been set (keys never set are left out, so the website uses its own wording for them).
   site: publicProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db.execute<{ key: string; value: unknown }>(sql`select key, value from ${siteContent}`)
-    return Object.fromEntries(rows.filter((r) => schemaFor(r.key)).map((r) => [r.key, r.value])) as Record<string, unknown>
+    return Object.fromEntries(rows.filter((r) => isPublic(r.key) && schemaFor(r.key)).map((r) => [r.key, r.value])) as Record<string, unknown>
   }),
 
   // When each key was last changed and by whom (the admin's content page).
@@ -159,11 +171,12 @@ export const contentRouter = createTRPCRouter({
     }),
 
   // One key's new value, checked against that key's shape; the first problem is the answer's message (with where it is).
-  save: adminProcedure('admin.content.edit')
+  save: adminProcedure('admin.panel.open')
     .input(z.object({ key: keyInput, value: z.unknown() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
       const schema = schemaFor(input.key)
       if (!schema) throw unknownKey()
+      if (!can(ctx.actor, actionFor(input.key))) await refuse(ctx, actionFor(input.key), null, path)
       const parsed = schema.safeParse(input.value)
       if (!parsed.success) {
         const issue = parsed.error.issues[0]
@@ -186,10 +199,11 @@ export const contentRouter = createTRPCRouter({
     }),
 
   // Back to the website's built-in wording for one key (its saved value is removed; the history keeps what it was).
-  reset: adminProcedure('admin.content.edit')
+  reset: adminProcedure('admin.panel.open')
     .input(z.object({ key: keyInput }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
       if (!schemaFor(input.key)) throw unknownKey()
+      if (!can(ctx.actor, actionFor(input.key))) await refuse(ctx, actionFor(input.key), null, path)
       await ctx.db.transaction(async (tx) => {
         const removed = await tx.execute<{ key: string }>(sql`delete from ${siteContent} where key = ${input.key} returning key`)
         if (!removed.length) return

@@ -13,15 +13,16 @@ import HomeProviders from "@/components/home/HomeProviders";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 import { getCoursesByIds, toCourseCard } from "@/lib/courses";
-import { featuredGroups } from "@/lib/siteContent";
+import { featuredGroups, seoSettings } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
-export const metadata = {
-  title: "ReadTraining | Accredited training courses across the UK",
-  description:
-    "Search vocational and compliance training from trusted UK training providers, explore dates and locations, and book with confidence.",
-};
+// the homepage's search-engine words (admin > Platform settings)
+export async function generateMetadata() {
+  await loadSiteContent();
+  const { homeTitle, homeDescription } = seoSettings();
+  return { title: homeTitle, description: homeDescription };
+}
 
 // The featured courses (an admin picks them; lib/siteContent.js) as course cards, read from the catalogue on the server so the
 // catalogue never reaches the browser. The first card in each tab is marked "Most booked".

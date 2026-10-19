@@ -4,7 +4,7 @@ import "react-calendar/dist/Calendar.css";
 import "aos/dist/aos.css";
 import Providers from "./Providers";
 import { SITE_URL } from "@/lib/seo";
-import { browserContent } from "@/lib/siteContent";
+import { browserContent, seoSettings } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
@@ -17,14 +17,19 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 // admins have saved even when nothing has marked them out of date.
 export const revalidate = 300;
 
-export const metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: "ReadTraining | Accredited training courses across the UK",
-  description: "Find and book accredited training courses from trusted UK providers: compare dates, locations and prices in one place.",
-  applicationName: "ReadTraining",
-  openGraph: { type: "website", siteName: "ReadTraining", locale: "en_GB" },
-  twitter: { card: "summary" },
-};
+// the default title and description (admin > Platform settings), for any page without its own
+export async function generateMetadata() {
+  await loadSiteContent();
+  const seo = seoSettings();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: seo.homeTitle,
+    description: seo.siteDescription,
+    applicationName: "ReadTraining",
+    openGraph: { type: "website", siteName: "ReadTraining", locale: "en_GB" },
+    twitter: { card: "summary" },
+  };
+}
 
 export const viewport = {
   width: "device-width",

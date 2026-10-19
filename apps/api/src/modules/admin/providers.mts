@@ -5,8 +5,7 @@ import { organisations, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 import type { AdminAction } from '@readtraining/permissions'
 
-import { providerDecisionEmail } from '../../emails/providerDecision.mjs'
-import type { ProviderDecision } from '../../emails/providerDecision.mjs'
+import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { logActivity } from '../../lib/activity.mjs'
 import { sendEmail } from '../../lib/email.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
@@ -21,6 +20,9 @@ import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
 type Status = 'pending' | 'changes_requested' | 'active' | 'suspended' | 'rejected'
 
 // what each decision needs, which statuses it can start from, where it leads, and whether a message is required
+type ProviderDecision = 'approve' | 'changes' | 'reject' | 'suspend' | 'reinstate'
+// the email each decision sends (emails/templates.mts)
+const DECISION_EMAIL: Record<ProviderDecision, string> = { approve: 'provider-approved', changes: 'provider-changes', reject: 'provider-rejected', suspend: 'provider-suspended', reinstate: 'provider-reinstated' }
 const DECISIONS: Record<ProviderDecision, { action: AdminAction; from: Status[]; to: Status; message: boolean; log: string }> = {
   approve: { action: 'admin.approvals.decide', from: ['pending', 'changes_requested'], to: 'active', message: false, log: 'admin.provider_approved' },
   changes: { action: 'admin.approvals.decide', from: ['pending'], to: 'changes_requested', message: true, log: 'admin.provider_changes_requested' },
@@ -170,7 +172,7 @@ export const providersRouter = createTRPCRouter({
         select u.email, p.first_name from public.organisation_members m join auth.users u on u.id = m.user_id
         left join public.profiles p on p.id = m.user_id where m.organisation_id = ${o.id}::uuid and m.role = 'owner' limit 1`)
       const emailed = owner?.email
-        ? await sendEmail(providerDecisionEmail({ to: owner.email, firstName: owner.first_name ?? '', provider: o.name, decision: input.decision, message: rule.message ? message : null, siteUrl }))
+        ? await sendEmail(renderEmail(DECISION_EMAIL[input.decision], await wordsFor(ctx.db, DECISION_EMAIL[input.decision]), { firstName: owner.first_name ?? '', provider: o.name, message: rule.message ? message ?? '' : '' }, siteUrl, owner.email))
         : false
       if (emailed) await logActivity(ctx.db, { actorUserId: null, actorIdentity: 'system', organisationId: o.id, action: 'email.provider_decision_sent', targetType: 'organisation', targetId: o.id, metadata: { decision: input.decision }, ip: null })
       return { status: rule.to, emailed }

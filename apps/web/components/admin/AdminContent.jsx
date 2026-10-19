@@ -16,7 +16,7 @@ import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
 import { Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
 import { FaqForm, LegalForm } from "./AdminContentPages";
-import { SaveRow, describedBy, field, useSave } from "./contentParts";
+import { History, SaveRow, describedBy, field, useSave } from "./contentParts";
 
 const copy = A.content;
 const TABS = Object.keys(copy.tabs);
@@ -147,44 +147,6 @@ export default function AdminContent() {
         </div>
       </Sheet>
     </div>
-  );
-}
-
-// The saved versions of one piece of content, newest first (who and when): look at the list, and with the "content" switch bring
-// one back into the form (it is only live once it is saved again).
-function History({ contentKey, canEdit, onUse }) {
-  const h = copy.history;
-  const utils = api.useUtils();
-  const list = api.content.history.useQuery({ key: contentKey });
-  const [error, setError] = useState("");
-  const use = async (v) => {
-    setError("");
-    try {
-      const r = await utils.content.version.fetch({ key: contentKey, id: v.id });
-      onUse({ key: contentKey, id: v.id, at: v.at, value: r.value });
-    } catch {
-      setError(h.loadError);
-    }
-  };
-  if (!list.data) return null;
-  return (
-    <details className="rt-adm-content__history">
-      <summary>{h.title} <span className="rt-adm-muted">{list.data.length}</span></summary>
-      {list.data.length ? (
-        <ul className="rt-adm-list">
-          {list.data.map((v) => (
-            <li key={v.id}>
-              <div>
-                <span className="rt-adm-strong">{formatWhen(Date.parse(v.at))}</span>
-                <small>{v.by || "an admin"}{v.reset ? ` · ${h.resetEntry}` : ""}</small>
-              </div>
-              {canEdit && !v.reset && <button type="button" className="rt-cd__link" onClick={() => use(v)}>{h.use}<span className="rt-sr"> {formatWhen(Date.parse(v.at))}</span></button>}
-            </li>
-          ))}
-        </ul>
-      ) : <p className="rt-acc__note">{h.none}</p>}
-      {error && <p className="rt-q__err" role="alert">{error}</p>}
-    </details>
   );
 }
 

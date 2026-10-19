@@ -293,6 +293,43 @@ export const courseLevels = pgTable(
   (t) => [check('course_levels_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`)],
 ).enableRLS()
 
+// ---- coupons (Part B, B3) -------------------------------------------------------------------------------------------------
+// Discount codes an admin creates: a percentage or an amount off (pence), an optional start and end, an optional limit on how
+// many times it can be used, and what it applies to (everything, some categories by slug, or some courses by course number).
+// Codes are stored in capitals and are unique; a coupon is never deleted (turned off instead), so past orders can still name it.
+// `used` counts orders that used it (checkout adds to it once payments are real). Read and written by the API only.
+export const couponKind = pgEnum('coupon_kind', ['percent', 'amount'])
+export const couponScope = pgEnum('coupon_scope', ['all', 'categories', 'courses'])
+export const coupons = pgTable(
+  'coupons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').notNull(),
+    kind: couponKind('kind').notNull(),
+    value: integer('value').notNull(), // whole percent (1-100) or pence
+    startsAt: timestamp('starts_at', { withTimezone: true }),
+    endsAt: timestamp('ends_at', { withTimezone: true }),
+    usageLimit: integer('usage_limit'),
+    used: integer('used').notNull().default(0),
+    scope: couponScope('scope').notNull().default('all'),
+    categories: text('categories').array().notNull().default(sql`'{}'::text[]`),
+    courses: integer('courses').array().notNull().default(sql`'{}'::integer[]`),
+    active: boolean('active').notNull().default(true),
+    createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('coupons_code_key').on(t.code),
+    index('coupons_created_by_idx').on(t.createdBy),
+    check('coupons_code_format', sql`${t.code} ~ '^[A-Z0-9][A-Z0-9-]{2,29}$'`),
+    check('coupons_value_range', sql`(${t.kind} = 'percent' and ${t.value} between 1 and 100) or (${t.kind} = 'amount' and ${t.value} between 1 and 10000000)`),
+    check('coupons_dates_order', sql`${t.startsAt} is null or ${t.endsAt} is null or ${t.startsAt} < ${t.endsAt}`),
+    check('coupons_limit_positive', sql`${t.usageLimit} is null or ${t.usageLimit} > 0`),
+    check('coupons_used_positive', sql`${t.used} >= 0`),
+  ],
+).enableRLS()
+
 export type Profile = typeof profiles.$inferSelect
 export type Organisation = typeof organisations.$inferSelect
 export type OrganisationMember = typeof organisationMembers.$inferSelect
@@ -301,5 +338,6 @@ export type ActivityLogEntry = typeof activityLog.$inferSelect
 export type NewActivityLogEntry = typeof activityLog.$inferInsert
 export type Category = typeof categories.$inferSelect
 export type DeliveryMethod = typeof deliveryMethods.$inferSelect
+export type Coupon = typeof coupons.$inferSelect
 export type Post = typeof posts.$inferSelect
 export type NewPost = typeof posts.$inferInsert
