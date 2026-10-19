@@ -11,6 +11,8 @@ import { catalogueAdminRouter } from './catalogue.mjs'
 import { commissionRouter } from './commission.mjs'
 import { couponsRouter } from './coupons.mjs'
 import { emailsRouter } from './emails.mjs'
+import { disputesRouter, ordersRouter, refundsRouter } from './money.mjs'
+import { feesRouter, ledgerRouter, payoutsRouter } from './payouts.mjs'
 import { platformRouter } from './platform.mjs'
 import { providersRouter } from './providers.mjs'
 import { studentsRouter } from './students.mjs'
@@ -30,6 +32,12 @@ export const adminRouter = createTRPCRouter({
   emails: emailsRouter,
   coupons: couponsRouter,
   platform: platformRouter,
+  orders: ordersRouter,
+  refunds: refundsRouter,
+  disputes: disputesRouter,
+  payouts: payoutsRouter,
+  ledger: ledgerRouter,
+  fees: feesRouter,
 
   // The login page, after the password step (`attempt`) or when it opens with a session already there. Says what comes next:
   // set up an authenticator, enter its code, or open the panel. Not an admin is an expected answer here, not an error:

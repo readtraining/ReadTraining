@@ -113,6 +113,20 @@
       "when": 1792356816593,
       "tag": "0015_coupons",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792380634501,
+      "tag": "0016_money",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792380649361,
+      "tag": "0017_ledger_append_only",
+      "breakpoints": true
     }
   ]
 }
