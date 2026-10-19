@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
+import NavIcon from "./navIcons";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -41,13 +42,26 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const [folded, setFolded] = useState([]); // the groups this admin folded
   const [menuOpen, setMenuOpen] = useState(false); // the drawer, below 992px
   const menuBtn = useRef(null);
+  const closeBtn = useRef(null);
   const pathname = usePathname();
   useEffect(() => setFolded(readFolded()), []);
   useEffect(() => setMenuOpen(false), [pathname]);
-  useFocusTrap(menuOpen, sideRef, () => {
+  // the open drawer: focus on its close button, and the page behind doesn't scroll
+  useEffect(() => {
+    if (!menuOpen) return;
+    closeBtn.current?.focus();
+    const html = document.documentElement;
+    const before = html.style.overflow;
+    html.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = before;
+    };
+  }, [menuOpen]);
+  const closeMenu = () => {
     setMenuOpen(false);
     menuBtn.current?.focus();
-  });
+  };
+  useFocusTrap(menuOpen, sideRef, closeMenu);
   const fold = (group) =>
     setFolded((f) => {
       const next = f.includes(group) ? f.filter((g) => g !== group) : [...f, group];
@@ -103,8 +117,15 @@ export default function AdminShell({ current, title, lead, actions = null, detai
       </header>
 
       <div className="rt-adm__body">
-        {menuOpen && <div className="rt-adm__scrim" onClick={() => setMenuOpen(false)} aria-hidden="true"></div>}
+        {menuOpen && <div className="rt-adm__scrim" onClick={closeMenu} aria-hidden="true"></div>}
         <nav id="rt-adm-side" className={`rt-adm__side rt-pill-scroll${menuOpen ? " is-open" : ""}`} aria-label="Admin" ref={sideRef}>
+          <div className="rt-adm__drawerhead">
+            <span className="rt-adm__drawertitle">Menu</span>
+            <button type="button" className="rt-adm__drawerclose" ref={closeBtn} onClick={closeMenu}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              <span className="rt-sr">Close menu</span>
+            </button>
+          </div>
           {nav.map((g) => {
             const here = g.items.some((x) => x.key === current);
             const shut = folded.includes(g.group) && !here;
@@ -121,7 +142,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
                   {g.items.map((x) => (
                     <li key={x.key}>
                       <Link href={x.href} className={`rt-adm__link${x.key === current ? " is-active" : ""}`} aria-current={x.key === current ? "page" : undefined}>
-                        <i className={`${x.icon} text-16`} aria-hidden="true"></i>
+                        <NavIcon name={x.key} />
                         <span>{x.label}</span>
                         {x.badge && counts[x.badge] > 0 && <span className="rt-adm__count" aria-label={`${counts[x.badge]} waiting`}>{counts[x.badge]}</span>}
                       </Link>
@@ -131,6 +152,14 @@ export default function AdminShell({ current, title, lead, actions = null, detai
               </div>
             );
           })}
+          <div className="rt-adm__drawerfoot">
+            <div className="rt-adm__me">
+              <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{A.presets[me?.preset] ?? ""}</span></span>
+            </div>
+            <Link href={A.backToSite.href} className="rt-adm__link">{A.backToSite.label}</Link>
+            <button type="button" className="rt-adm__link" onClick={signOut} disabled={leaving}>{A.signOut}</button>
+          </div>
           <FilterScrollPill scrollRef={sideRef} />
         </nav>
 

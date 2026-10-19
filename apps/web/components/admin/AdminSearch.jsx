@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import NavIcon from "./navIcons";
 
 const copy = A.search;
 
@@ -57,9 +58,9 @@ export default function AdminSearch({ pages }) {
   const providers = api.admin.providers.list.useQuery({ q: term, limit: 5 }, { enabled: open && look, staleTime: 30000 });
   const needle = q.trim().toLowerCase();
   const results = [
-    ...pages.filter((p) => !needle || p.label.toLowerCase().includes(needle)).slice(0, needle ? 6 : 8).map((p) => ({ group: copy.pages, key: `p-${p.key}`, label: p.label, href: p.href, icon: p.icon })),
-    ...(look ? (providers.data?.providers ?? []).map((p) => ({ group: copy.providers, key: `o-${p.id}`, label: p.name, sub: p.owner?.email || A.providers.statuses[p.status], href: `/admin/providers/${p.slug}`, icon: "icon-person-3" })) : []),
-    ...(look ? (learners.data?.students ?? []).map((s) => ({ group: copy.learners, key: `l-${s.id}`, label: s.name, sub: s.email, href: `/admin/learners/${s.id}`, icon: "icon-person" })) : []),
+    ...pages.filter((p) => !needle || p.label.toLowerCase().includes(needle)).slice(0, needle ? 6 : 8).map((p) => ({ group: copy.pages, key: `p-${p.key}`, label: p.label, href: p.href, icon: p.key })),
+    ...(look ? (providers.data?.providers ?? []).map((p) => ({ group: copy.providers, key: `o-${p.id}`, label: p.name, sub: p.owner?.email || A.providers.statuses[p.status], href: `/admin/providers/${p.slug}`, icon: "providers" })) : []),
+    ...(look ? (learners.data?.students ?? []).map((s) => ({ group: copy.learners, key: `l-${s.id}`, label: s.name, sub: s.email, href: `/admin/learners/${s.id}`, icon: "team" })) : []),
   ];
   const busy = look && (learners.isFetching || providers.isFetching);
   useEffect(() => setAt(0), [q, results.length]);
@@ -112,7 +113,7 @@ export default function AdminSearch({ pages }) {
                 <React.Fragment key={r.key}>
                   {(i === 0 || results[i - 1].group !== r.group) && <li role="presentation" className="rt-adm-find__group">{r.group}</li>}
                   <li id={`${id}-${i}`} role="option" aria-selected={i === at} className={`rt-adm-find__item${i === at ? " is-on" : ""}`} onMouseMove={() => setAt(i)} onClick={() => go(r)}>
-                    <i className={`${r.icon} text-16`} aria-hidden="true"></i>
+                    <NavIcon name={r.icon} />
                     <span className="rt-adm-find__label">{r.label}{r.sub && <small>{r.sub}</small>}</span>
                     <i className="icon-arrow-right text-12 rt-adm-find__go" aria-hidden="true"></i>
                   </li>

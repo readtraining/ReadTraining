@@ -4817,15 +4817,19 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__grouplabel[aria-disabled] { cursor: default; }
 .rt-adm__grouplabel i { transition: transform 150ms ease; }
 .rt-adm__group.is-folded .rt-adm__grouplabel i { transform: rotate(-90deg); }
+@media (hover: hover) and (pointer: fine) { .rt-adm__grouplabel i { opacity: 0; } .rt-adm__grouplabel:hover i, .rt-adm__grouplabel:focus-visible i, .rt-adm__group.is-folded .rt-adm__grouplabel i { opacity: 1; } }
 @media (hover: hover) and (pointer: fine) { .rt-adm__grouplabel:not([aria-disabled]):hover { background: var(--color-light-4); color: var(--rt-c-text); } }
 .rt-adm__grouplabel .rt-adm__count { min-width: 20px; height: 20px; margin: 0; font-size: 11px; line-height: 20px; letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__grouplabel i { transition: none; } }
 .rt-adm__link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--color-dark-1) !important; text-decoration: none; transition: background-color 150ms ease; }
-.rt-adm__link i { color: var(--color-light-1); }
+.rt-adm__link i, .rt-adm__icon { flex: none; color: var(--color-light-1); }
 @media (hover: hover) and (pointer: fine) { a.rt-adm__link:hover { background: var(--color-light-4); } }
 .rt-adm__link.is-active { background: var(--color-purple-3); font-weight: 600; color: var(--color-purple-1) !important; }
-.rt-adm__link.is-active i { color: var(--color-purple-1); }
-.rt-adm__count { min-width: 22px; height: 22px; margin-left: auto; padding: 0 7px; border-radius: 999px; background: var(--color-purple-1); font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; color: #fff; }
+.rt-adm__link.is-active i, .rt-adm__link.is-active .rt-adm__icon { color: var(--color-purple-1); }
+button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left; cursor: pointer; }
+/* counts are quiet: a soft pill, not a filled badge */
+.rt-adm__count { min-width: 22px; height: 20px; margin-left: auto; padding: 0 7px; border-radius: var(--rt-radius-pill); background: var(--color-light-4); font-size: 12px; font-weight: 600; line-height: 20px; text-align: center; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
+.rt-adm__link.is-active .rt-adm__count { background: var(--rt-c-surface); color: var(--rt-c-brand); }
 .rt-adm__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
 .rt-adm__h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 700; color: var(--color-dark-1); }
 .rt-adm__lead { max-width: 70ch; margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: var(--color-light-1); }
@@ -6715,3 +6719,14 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-sort:hover, .rt-adm-sort.is-on { color: var(--rt-c-text); }
 .rt-adm-sort__arrow { font-size: 11px; opacity: 0.45; }
 .rt-adm-sort.is-on .rt-adm-sort__arrow { opacity: 1; color: var(--rt-c-brand); }
+/* the sidebar drawer's own header and footer (below 992px only) */
+.rt-adm__drawerhead { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 8px; padding: 0 4px 12px 12px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-adm__drawertitle { font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
+.rt-adm__drawerclose { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: var(--rt-radius-control); background: none; color: var(--rt-c-text); }
+.rt-adm__drawerclose:hover { background: var(--color-light-4); }
+.rt-adm__drawerfoot { display: grid; gap: 2px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rt-c-line); }
+.rt-adm__drawerfoot .rt-adm__me { padding: 4px 12px 10px; }
+.rt-adm__drawerfoot .rt-adm__mewho strong { color: var(--rt-c-text); }
+.rt-adm__drawerfoot .rt-adm__mewho span { color: var(--rt-c-muted); }
+@media (min-width: 992px) { .rt-adm__drawerhead, .rt-adm__drawerfoot { display: none; } }
+@media (max-width: 991px) { .rt-adm__topside .rt-adm__out, .rt-adm__topside .rt-adm__site { display: none; } }
