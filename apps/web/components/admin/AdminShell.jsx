@@ -28,8 +28,9 @@ const readFolded = () => {
 
 // The admin's layout: a work layout, not the public site's. The checkout header's dark band with the logo and an "Admin" tag, the
 // signed-in admin (from the server check: name, access level), "View site" and Sign out; a sidebar with the plan's groups (each page with its icon and a live count where
-// something waits); then the page head (title, intro, the page's actions) and the page. Each sidebar group folds (remembered in
-// this browser; the current page's group always shows, and a folded group still shows how many things wait in it). Below 992px
+// something waits); then the page head (title, intro, the page's actions) and the page. Each sidebar group folds, and "Collapse
+// all" / "Expand all" does them all at once (remembered in this browser; a folded group still shows how many things wait in it,
+// and the page you are on is marked on its heading). Below 992px
 // the sidebar is a menu drawer opened from the top bar. `current` marks the page. The top bar's search (Ctrl+K) reaches
 // every page and the real learners and providers. A page that still shows made-up records says so beside its title (the nav's
 // `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a breadcrumb back to the list and
@@ -62,14 +63,13 @@ export default function AdminShell({ current, title, lead, actions = null, detai
     menuBtn.current?.focus();
   };
   useFocusTrap(menuOpen, sideRef, closeMenu);
-  const fold = (group) =>
-    setFolded((f) => {
-      const next = f.includes(group) ? f.filter((g) => g !== group) : [...f, group];
-      try {
-        window.localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+  const keep = (next) => {
+    try {
+      window.localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
+    } catch {}
+    return next;
+  };
+  const fold = (group) => setFolded((f) => keep(f.includes(group) ? f.filter((g) => g !== group) : [...f, group]));
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
@@ -126,17 +126,28 @@ export default function AdminShell({ current, title, lead, actions = null, detai
               <span className="rt-sr">Close menu</span>
             </button>
           </div>
+          <div className="rt-adm__sidetools">
+            {(() => {
+              const allShut = nav.every((g) => folded.includes(g.group));
+              return (
+                <button type="button" className="rt-adm__foldall" onClick={() => setFolded(keep(allShut ? [] : nav.map((g) => g.group)))}>
+                  {allShut ? "Expand all" : "Collapse all"}
+                </button>
+              );
+            })()}
+          </div>
           {nav.map((g) => {
             const here = g.items.some((x) => x.key === current);
-            const shut = folded.includes(g.group) && !here;
+            const shut = folded.includes(g.group);
             const waiting = g.items.reduce((n, x) => n + (x.badge ? counts[x.badge] || 0 : 0), 0);
             const id = `rt-adm-g-${g.group.toLowerCase()}`;
             return (
               <div key={g.group} className={`rt-adm__group${shut ? " is-folded" : ""}`}>
-                <button type="button" className="rt-adm__grouplabel" aria-expanded={!shut} aria-controls={id} onClick={() => !here && fold(g.group)} aria-disabled={here || undefined}>
+                <button type="button" className={`rt-adm__grouplabel${shut && here ? " is-here" : ""}`} aria-expanded={!shut} aria-controls={id} onClick={() => fold(g.group)}>
+                  <svg className="rt-adm__chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                   <span>{g.group}</span>
+                  {shut && here && <span className="rt-sr">, contains the page you are on</span>}
                   {shut && waiting > 0 && <span className="rt-adm__count" aria-label={`${waiting} waiting`}>{waiting}</span>}
-                  {!here && <i className="icon-chevron-down text-10" aria-hidden="true"></i>}
                 </button>
                 <ul id={id} hidden={shut}>
                   {g.items.map((x) => (

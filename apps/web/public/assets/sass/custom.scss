@@ -4804,7 +4804,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__chips { margin: 0; padding: 12px 16px 4px; }
 .rt-adm__main { min-width: 0; padding: 20px 16px 64px; }
 @media (min-width: 992px) {
-  .rt-adm__body { display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+  .rt-adm__body { display: grid; grid-template-columns: 264px minmax(0, 1fr); }
   .rt-adm__side { position: sticky; top: 64px; z-index: auto; display: block; width: auto; height: calc(100vh - 64px); padding: 12px 12px 32px; border-right: 1px solid var(--color-light-5); background: #fff; box-shadow: none; transform: none; visibility: visible; transition: none; }
   .rt-adm__menu, .rt-adm__scrim { display: none; }
   .rt-adm__chips { display: none; }
@@ -4812,15 +4812,21 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 }
 .rt-adm__group ul { margin: 0; padding: 0; list-style: none; }
 .rt-adm__group li { list-style: none; }
-.rt-adm__grouplabel { display: flex; align-items: center; gap: 8px; width: calc(100% - 8px); margin: 14px 4px 4px; padding: 6px 8px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: 11px; font-weight: 700; letter-spacing: var(--rt-eyebrow-ls); text-align: left; text-transform: uppercase; color: var(--color-light-1); cursor: pointer; }
-.rt-adm__grouplabel > span:first-child { flex: 1; }
-.rt-adm__grouplabel[aria-disabled] { cursor: default; }
-.rt-adm__grouplabel i { transition: transform 150ms ease; }
-.rt-adm__group.is-folded .rt-adm__grouplabel i { transform: rotate(-90deg); }
-@media (hover: hover) and (pointer: fine) { .rt-adm__grouplabel i { opacity: 0; } .rt-adm__grouplabel:hover i, .rt-adm__grouplabel:focus-visible i, .rt-adm__group.is-folded .rt-adm__grouplabel i { opacity: 1; } }
-@media (hover: hover) and (pointer: fine) { .rt-adm__grouplabel:not([aria-disabled]):hover { background: var(--color-light-4); color: var(--rt-c-text); } }
-.rt-adm__grouplabel .rt-adm__count { min-width: 20px; height: 20px; margin: 0; font-size: 11px; line-height: 20px; letter-spacing: 0; }
-@media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__grouplabel i { transition: none; } }
+/* group headings: a fold arrow, then the name in dark small capitals; the group's pages sit indented under a guide line */
+.rt-adm__sidetools { display: flex; justify-content: flex-end; padding: 2px 4px 0; }
+.rt-adm__foldall { padding: 4px 8px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); cursor: pointer; }
+.rt-adm__foldall:hover { background: var(--color-light-4); color: var(--rt-c-text); }
+.rt-adm__grouplabel { display: flex; align-items: center; gap: 6px; width: calc(100% - 8px); margin: 10px 4px 2px; padding: 7px 8px 7px 6px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-align: left; text-transform: uppercase; color: var(--rt-c-text); cursor: pointer; }
+.rt-adm__grouplabel > span:first-of-type { flex: 1; }
+.rt-adm__chev { flex: none; color: var(--rt-c-muted); transition: transform 150ms ease; }
+.rt-adm__group.is-folded .rt-adm__chev { transform: rotate(-90deg); }
+.rt-adm__grouplabel.is-here { color: var(--rt-c-brand); }
+.rt-adm__grouplabel.is-here .rt-adm__chev { color: var(--rt-c-brand); }
+@media (hover: hover) and (pointer: fine) { .rt-adm__grouplabel:hover { background: var(--color-light-4); } }
+.rt-adm__grouplabel .rt-adm__count { min-width: 20px; height: 20px; margin: 0; font-size: 11px; line-height: 20px; letter-spacing: 0; text-transform: none; }
+.rt-adm__group ul { margin: 0 0 4px 17px; padding-left: 8px; border-left: 1px solid var(--rt-c-line); }
+.rt-adm__group .rt-adm__link { padding: 8px 10px; }
+@media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__chev { transition: none; } }
 .rt-adm__link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--color-dark-1) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-adm__link i, .rt-adm__icon { flex: none; color: var(--color-light-1); }
 @media (hover: hover) and (pointer: fine) { a.rt-adm__link:hover { background: var(--color-light-4); } }
