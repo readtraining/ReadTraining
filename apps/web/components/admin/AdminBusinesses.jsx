@@ -5,12 +5,12 @@ import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh, TableSkeleton } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = W.businesses;
 const TABS = ["all", "credit", "overdue", "suspended"];
-export const CREDIT_TONE = { none: "muted", approved: "ok", suspended: "late" };
 
 const BUSINESS_SORT = { name: (b) => b.name, places: (b) => b.places.bought, credit: (b) => b.credit, owed: (b) => b.owed, overdue: (b) => b.overdue };
 
@@ -48,9 +48,9 @@ export default function AdminBusinesses() {
                 <tr key={b.slug}>
                   <td data-label={c.name}><Link href={`/admin/businesses/${b.slug}`} className="rt-adm-strong">{b.name}</Link><small>{b.contact} · {b.city}</small></td>
                   <td data-label={c.places}>{b.places.assigned} of {b.places.bought}<small>{b.places.bought - b.places.assigned} not assigned</small></td>
-                  <td data-label={c.credit}><Pill tone={CREDIT_TONE[b.credit]}>{copy.credit[b.credit]}</Pill>{b.limit > 0 && <small>Limit {formatPrice(b.limit)}</small>}{b.eligible && <small>Eligible for credit</small>}</td>
+                  <td data-label={c.credit}><AdminStatus kind="credit" status={b.credit}>{copy.credit[b.credit]}</AdminStatus>{b.limit > 0 && <small>Limit {formatPrice(b.limit)}</small>}{b.eligible && <small>Eligible for credit</small>}</td>
                   <td data-label={c.owed}>{formatPrice(b.owed)}</td>
-                  <td data-label={c.overdue}>{b.overdue > 0 ? <span className="rt-adm-due -late">{formatPrice(b.overdue)}</span> : <span className="rt-acc__note">None</span>}</td>
+                  <td data-label={c.overdue}>{b.overdue > 0 ? <span className="rt-adm-money-late">{formatPrice(b.overdue)}</span> : <span className="rt-acc__note">None</span>}</td>
                 </tr>
               ))}
             </tbody>

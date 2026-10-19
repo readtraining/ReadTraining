@@ -12,14 +12,14 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery } from "./adminParts";
+import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.coupons;
 const f = copy.fields;
 const TABS = Object.keys(copy.tabs);
-const TONE = { live: "ok", scheduled: "info", ended: "muted", off: "muted" };
 const BLANK = { code: "", kind: "percent", value: "", startsOn: "", endsOn: "", usageLimit: "", scope: "all", categories: [], courses: [] };
 
 export const discountText = (c) => (c.kind === "percent" ? `${c.value}% off` : `${formatPrice(c.value)} off`);
@@ -99,12 +99,12 @@ export default function AdminCoupons() {
             <tbody>
               {rows.map((x) => (
                 <tr key={x.id}>
-                  <td data-label={c.code}><span className="rt-adm-coupon">{x.code}</span>{x.createdBy && <small>{x.createdBy}</small>}</td>
+                  <td data-label={c.code}><AdminTag code>{x.code}</AdminTag>{x.createdBy && <small>{x.createdBy}</small>}</td>
                   <td data-label={c.discount}>{discountText(x)}</td>
                   <td data-label={c.applies}>{appliesText(x)}</td>
                   <td data-label={c.dates}>{datesText(x)}</td>
                   <td data-label={c.used}>{x.usageLimit ? copy.of.replace("{used}", x.used).replace("{limit}", x.usageLimit) : copy.unlimited.replace("{used}", x.used)}</td>
-                  <td data-label={c.status}><Pill tone={TONE[x.status]}>{copy.statuses[x.status]}</Pill></td>
+                  <td data-label={c.status}><AdminStatus kind="coupon" status={x.status}>{copy.statuses[x.status]}</AdminStatus></td>
                   {canEdit && (
                     <td data-label="Actions">
                       <RowMenu label={`Actions for ${x.code}`} items={[{ label: copy.edit, onClick: () => setSheet({ coupon: x }) }, { label: x.status === "off" ? copy.turnOn : copy.turnOff, onClick: () => toggle(x), danger: x.status !== "off" }]} />

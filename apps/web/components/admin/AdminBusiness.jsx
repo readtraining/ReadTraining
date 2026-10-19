@@ -8,13 +8,12 @@ import { addBusinessNote, changeCreditLimit, offerCredit, markInvoicePaid, remin
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
-import { CREDIT_TONE } from "./AdminBusinesses";
+import { formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = W.businesses;
 const d = copy.detail;
-const INVOICE_TONE = { paid: "ok", due: "info", overdue: "late" };
 
 // One business account: the company, places bought vs assigned, the credit facility (as on Hurak, companies don't apply: we offer
 // credit with a limit once their history meets every eligibility check; then change the limit, put credit on hold or lift it), money owed by age, the invoices with their purchase orders (send a reminder,
@@ -69,7 +68,7 @@ export default function AdminBusiness({ slug }) {
       <section className="rt-acc__card rt-adm-hero" aria-label="Business account">
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone={CREDIT_TONE[b.credit]}>{copy.credit[b.credit]}</Pill>
+            <AdminStatus kind="credit" status={b.credit}>{copy.credit[b.credit]}</AdminStatus>
             <span className="rt-adm-item__when">Customer since {formatDate(b.since)}</span>
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name">{b.name}</h1>
@@ -102,7 +101,7 @@ export default function AdminBusiness({ slug }) {
               <h3 className="rt-adm-h3">{d.eligibility}</h3>
               <dl className="rt-adm-dl">
                 {b.checks.map((c) => (
-                  <div key={c.key}><dt>{c.label}</dt><dd><Pill tone={c.ok ? "ok" : "muted"}>{c.ok ? "Yes" : "Not yet"}</Pill> {c.value}</dd></div>
+                  <div key={c.key}><dt>{c.label}</dt><dd><AdminStatus kind="check" status={c.ok ? "yes" : "no"}>{c.ok ? "Yes" : "Not yet"}</AdminStatus> {c.value}</dd></div>
                 ))}
               </dl>
               <p className="rt-acc__note">{b.eligible ? d.eligibleYes : d.eligibleNo}</p>
@@ -142,7 +141,7 @@ export default function AdminBusiness({ slug }) {
                   <td data-label="Issued">{formatDate(inv.issued)}</td>
                   <td data-label="Due">{formatDate(inv.due)}</td>
                   <td data-label="Amount">{formatPrice(inv.amount)}</td>
-                  <td data-label="Status"><Pill tone={INVOICE_TONE[inv.status]}>{copy.invoiceStatuses[inv.status]}</Pill>{inv.status === "overdue" && <small>{inv.late} days late</small>}{inv.reminded && <small>Reminded {formatWhen(inv.reminded)}</small>}</td>
+                  <td data-label="Status"><AdminStatus kind="invoice" status={inv.status}>{copy.invoiceStatuses[inv.status]}</AdminStatus>{inv.status === "overdue" && <small>{inv.late} days late</small>}{inv.reminded && <small>Reminded {formatWhen(inv.reminded)}</small>}</td>
                   <td data-label="Actions">
                     {inv.status !== "paid" && (
                       <div className="rt-adm-rowactions">

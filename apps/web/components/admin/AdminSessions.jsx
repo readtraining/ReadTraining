@@ -7,8 +7,9 @@ import { admin as A } from "@/data/admin";
 import { cancelSession, markJoiningSent, setSalesClosed, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.sessions;
 const TABS = ["upcoming", "week", "cancelled", "venues"];
@@ -113,11 +114,11 @@ export default function AdminSessions() {
                   <td data-label={c.date}><span className="rt-adm-strong">{formatDate(s.date)}</span><small>{s.daysAway <= 0 ? "Today" : `In ${s.daysAway} ${s.daysAway === 1 ? "day" : "days"}`}</small></td>
                   <td data-label={c.course}><Link href={`/admin/catalogue/${s.courseId}`} className="rt-adm-strong">{s.course}</Link><small>{s.provider}{s.preCourse ? " · Pre-course e-learning" : ""}</small></td>
                   <td data-label={c.where}>{s.mode === "classroom" ? s.city : MODE.online}<small>{s.mode === "classroom" ? s.postcode : s.time}</small></td>
-                  <td data-label={c.seats}>{s.cancelled ? <Pill tone="muted">Cancelled</Pill> : <Seats s={s} />}{s.salesClosed && !s.cancelled && <small>{copy.salesClosed}</small>}</td>
+                  <td data-label={c.seats}>{s.cancelled ? <AdminStatus kind="session" status="cancelled">Cancelled</AdminStatus> : <Seats s={s} />}{s.salesClosed && !s.cancelled && <small>{copy.salesClosed}</small>}</td>
                   <td data-label={c.joining}>
-                    {s.cancelled ? <span className="rt-adm-muted">{s.cancelReason}</span> : s.joiningSent ? <Pill tone="ok">{copy.sent}</Pill> : (
+                    {s.cancelled ? <span className="rt-adm-muted">{s.cancelReason}</span> : s.joiningSent ? <AdminStatus kind="session" status="sent">{copy.sent}</AdminStatus> : (
                       <span className="rt-adm-cellrow">
-                        <Pill tone={s.daysAway <= 6 ? "late" : "muted"}>{copy.notSent}</Pill>
+                        <AdminStatus kind="session" status={s.daysAway <= 6 ? "notSent" : "notSentLater"}>{copy.notSent}</AdminStatus>
                         <button type="button" className="rt-cd__link" onClick={() => { markJoiningSent(s); setSaid(`Joining instructions marked as sent: ${s.course}`); }}>{copy.markSent}</button>
                       </span>
                     )}

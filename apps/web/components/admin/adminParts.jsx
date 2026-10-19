@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { dueState } from "@/lib/admin";
 import Toast from "@/components/courses/Toast";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
@@ -165,12 +164,6 @@ export function DetailSkeleton() {
       </div>
     </div>
   );
-}
-
-// A deadline: "Due in 2 days" / "Due today" / "Overdue by 1 day", coloured by how close it is.
-export function Due({ due, now }) {
-  const d = dueState(due, now);
-  return <span className={`rt-adm-due -${d.tone}`}>{d.text}</span>;
 }
 
 // Tabs as the account's filter chips, each with its count; the chosen tab is pressed.

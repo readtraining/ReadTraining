@@ -4,12 +4,12 @@ import React, { useEffect, useState } from "react";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
 import DateField from "./DateField";
+import { AdminTag } from "./AdminStatus";
 
 const copy = A.activity;
 const KINDS = Object.keys(copy.kinds);
-const IDENTITY_TONE = { student: "muted", provider: "info", business: "info", admin: "warn", system: "muted" };
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 // a change to the catalogue list is about an entry: show its name rather than its id
 const CATALOGUE = new Set(["category", "subcategory", "topic", "method", "level"]);
@@ -123,7 +123,7 @@ export default function AdminActivity() {
                             {e.actor.email && <small>{e.actor.email}</small>}
                           </button>
                         ) : <span className="rt-adm-strong">{copy.system}</span>}
-                        <span title={copy.identityNote}><Pill tone={IDENTITY_TONE[e.identity]}>{copy.identities[e.identity]}</Pill></span>
+                        <span title={copy.identityNote}><AdminTag>{copy.identities[e.identity]}</AdminTag></span>
                       </td>
                       <td data-label={c.what}>
                         <span className="rt-adm-strong">{copy.actions[e.action] ?? e.action}</span>

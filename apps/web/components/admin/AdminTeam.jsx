@@ -9,7 +9,8 @@ import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh } from "./adminParts";
+import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh } from "./adminParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.team;
 const PRESETS = ["full", "support", "finance", "custom"];
@@ -57,7 +58,7 @@ export default function AdminTeam() {
                     <td data-label={c.name}><span className="rt-adm-strong">{a.name}{mine ? " (you)" : ""}</span><small>{a.email}</small></td>
                     <td data-label={c.access}>{copy.presets[a.preset].label}{a.preset === "custom" && <small>{a.permissions.length} of {switches.length} switches</small>}</td>
                     <td data-label={c.limit}>{a.preset === "full" ? <span className="rt-adm-muted">No limit</span> : a.permissions.includes("refunds") ? `£${a.refundLimit}` : <span className="rt-adm-muted">No refunds</span>}</td>
-                    <td data-label={c.twoStep}>{a.twoStep ? <Pill tone="ok">On</Pill> : a.preset === "full" ? <Pill tone="warn">At next sign-in</Pill> : <Pill tone="muted">Off</Pill>}</td>
+                    <td data-label={c.twoStep}>{a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
                     <td data-label={c.last}>{a.lastSignInAt ? formatWhen(new Date(a.lastSignInAt).getTime()) : <span className="rt-adm-muted">Not yet</span>}</td>
                     <td data-label={mine ? undefined : "Actions"}>
                       {!mine && (

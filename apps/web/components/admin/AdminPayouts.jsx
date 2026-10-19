@@ -12,11 +12,12 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, Said, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging } from "./adminParts";
+import { Said, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
-import { PAYOUT_TONE, toPence, useMoneyRefresh } from "./moneyParts";
+import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
+import { AdminStatus } from "./AdminStatus";
 
 const P = A.payouts;
 const L = A.ledger;
@@ -96,7 +97,7 @@ export function AdminPayouts() {
             <li key={w.id} className="rt-acc__card rt-adm-item">
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
-                  <Pill tone={PAYOUT_TONE[w.status]}>{P.statuses[w.status]}</Pill>
+                  <AdminStatus kind="payout" status={w.status}>{P.statuses[w.status]}</AdminStatus>
                   <span className="rt-adm-item__when">{w.ref} · {c.period} {formatDate(w.periodEnd)}</span>
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{formatPrice(w.amount)} <span className="rt-adm-muted">to {w.provider}</span></p>

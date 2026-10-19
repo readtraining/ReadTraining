@@ -6,9 +6,10 @@ import { admin as A } from "@/data/admin";
 import { setOfferingStatus, setPreCourse, useAdmin } from "@/lib/admin";
 import { courseHref } from "@/data/courseSlugs";
 import { formatPrice } from "@/lib/format";
-import { Pill, Said, DetailSkeleton } from "./adminParts";
+import { Said, DetailSkeleton } from "./adminParts";
 import { modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.catalogue;
 const d = copy.detail;
@@ -30,8 +31,8 @@ export default function AdminCourse({ id }) {
       <section className="rt-acc__card rt-adm-hero" aria-label={d.about}>
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone="info">{c.category}</Pill>
-            {c.preCourse && <Pill tone="warn">{copy.preCourse}</Pill>}
+            <AdminTag>{c.category}</AdminTag>
+            {c.preCourse && <AdminTag>{copy.preCourse}</AdminTag>}
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name">{c.title}</h1>
           <p className="rt-acc__note">{c.duration} · {c.validity} · From {formatPrice(c.from)} · {c.upcoming} upcoming dates</p>
@@ -64,7 +65,7 @@ export default function AdminCourse({ id }) {
                 <td data-label="How it runs">{o.modes.map(modeLabel).join(", ")}</td>
                 <td data-label="From">{formatPrice(o.from)}</td>
                 <td data-label="Upcoming dates">{o.sessions}</td>
-                <td data-label="Status"><Pill tone={o.status === "paused" ? "muted" : "ok"}>{o.status === "paused" ? d.paused : d.live}</Pill></td>
+                <td data-label="Status"><AdminStatus kind="offering" status={o.status === "paused" ? "paused" : "live"}>{o.status === "paused" ? d.paused : d.live}</AdminStatus></td>
                 <td className="rt-biz__act">
                   <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { const next = o.status === "paused" ? "live" : "paused"; setOfferingStatus(c, o, next); setSaid(`${o.provider}: ${next === "paused" ? "paused" : "live again"}`); }} aria-label={`${o.status === "paused" ? d.resume : d.pause} ${o.provider}`}>
                     {o.status === "paused" ? d.resume : d.pause}

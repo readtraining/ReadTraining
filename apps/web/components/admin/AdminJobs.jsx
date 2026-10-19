@@ -4,12 +4,12 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = W.jobs;
 const TABS = ["candidates", "roles", "employers"];
-export const CANDIDATE_TONE = { new: "warn", started: "ok", unsuitable: "muted", withdrawn: "muted" };
 
 // Security Jobs (admin plan module 10): candidates from the Security Jobs page (newest first, searchable), the open roles and the
 // employers we work with, as three tabs kept in the address. The consent rule is stated once above the list.
@@ -50,7 +50,7 @@ export default function AdminJobs() {
                   <td data-label={copy.columns.candidate}>{c.name}<small>{c.email}</small></td>
                   <td data-label={copy.columns.licence}>{c.licence.type}<small>Ends {c.licence.expiry} · ending {c.licence.last4}</small></td>
                   <td data-label={copy.columns.area}>{c.city || c.postcode}<small>{c.travel}</small></td>
-                  <td data-label={copy.columns.status}><Pill tone={CANDIDATE_TONE[c.status] || "info"}>{copy.statuses[c.status]}</Pill></td>
+                  <td data-label={copy.columns.status}><AdminStatus kind="candidate" status={c.status}>{copy.statuses[c.status]}</AdminStatus></td>
                   <td data-label={copy.columns.applied}>{formatWhen(c.at)}</td>
                 </tr>
               ))}

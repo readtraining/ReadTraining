@@ -6,10 +6,10 @@ import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Pill, Stats, formatWhen, DetailSkeleton } from "./adminParts";
-import { ORDER_TONE } from "./moneyParts";
+import { Stats, formatWhen, DetailSkeleton } from "./adminParts";
 import { useAdminAccess } from "@/lib/adminContext";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.dashboard;
 const demoTag = <span className="rt-demo-tag" title={A.demo.all.note}>{copy.demoTag}</span>;
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
                 <Link href={copy.queueItems[q.key].href} className={`rt-adm-queue${q.n ? "" : " is-clear"}`}>
                   <span className="rt-adm-queue__n">{q.n}</span>
                   <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
-                  {q.overdue > 0 && <Pill tone="late">{copy.overdueNote.replace("{n}", q.overdue)}</Pill>}
+                  {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
                   <i className="icon-chevron-right text-12" aria-hidden="true"></i>
                 </Link>
               </li>
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
                     <Link href={`/admin/catalogue/${s.courseId}`} className="rt-adm-strong">{s.course}</Link>
                     <small>{formatDate(s.date)} · {s.provider} · {s.city}</small>
                   </div>
-                  <Pill tone="warn">{copy.noJoining}</Pill>
+                  <AdminStatus kind="queue" status="noJoining">{copy.noJoining}</AdminStatus>
                 </li>
               ))}
             </ul>
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="rt-adm-list__side">
                       <strong className="rt-adm-num-cell">{formatPrice(o.gross)}</strong>
-                      <Pill tone={ORDER_TONE[o.status]}>{A.orders.statuses[o.status]}</Pill>
+                      <AdminStatus kind="order" status={o.status}>{A.orders.statuses[o.status]}</AdminStatus>
                     </div>
                   </li>
                 ))}

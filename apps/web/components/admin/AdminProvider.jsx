@@ -10,9 +10,9 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
-import { STATUS_TONE } from "./AdminProviders";
+import { formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.providers;
 const d = copy.detail;
@@ -59,7 +59,7 @@ export default function AdminProvider({ slug }) {
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Status">
         <div>
-          <div className="rt-adm-item__top"><Pill tone={STATUS_TONE[p.status]}>{copy.statuses[p.status]}</Pill></div>
+          <div className="rt-adm-item__top"><AdminStatus kind="provider" status={p.status}>{copy.statuses[p.status]}</AdminStatus></div>
           <h1 className="rt-adm__h1 rt-adm-hero__name">{p.name}</h1>
           <p className="rt-acc__note">Signed up {formatWhen(Date.parse(p.appliedAt))}{p.statusChangedAt ? ` · status changed ${formatWhen(Date.parse(p.statusChangedAt))}` : ""}</p>
         </div>
@@ -106,7 +106,7 @@ export default function AdminProvider({ slug }) {
             {p.team.map((m) => (
               <li key={m.userId}>
                 <div><Link href={`/admin/learners/${m.userId}`} className="rt-adm-strong">{m.name}</Link><small>{m.email} · {roles[m.role] ?? m.role}</small></div>
-                {m.status !== "active" && <Pill tone="muted">Invited</Pill>}
+                {m.status !== "active" && <AdminStatus kind="provider" status="invited">Invited</AdminStatus>}
               </li>
             ))}
           </ul>

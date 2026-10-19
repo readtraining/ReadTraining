@@ -6,10 +6,11 @@ import { admin as A } from "@/data/admin";
 import { basket } from "@/data/basket";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
+import { AdminTag } from "./AdminStatus";
 
 const copy = A.catalogue;
 const TABS = ["courses", "list", "packages"];
@@ -80,7 +81,7 @@ export default function AdminCatalogue() {
                       <td data-label={cols.providers}>{c.offerings.length}{c.offerings.some((o) => o.status === "paused") && <small>{c.offerings.filter((o) => o.status === "paused").length} paused</small>}</td>
                       <td data-label={cols.sessions}>{c.upcoming}</td>
                       <td data-label={cols.from}>{formatPrice(c.from)}</td>
-                      <td data-label={cols.flags}>{c.preCourse ? <Pill tone="warn">{copy.preCourse}</Pill> : <span className="rt-adm-muted">None</span>}</td>
+                      <td data-label={cols.flags}>{c.preCourse ? <AdminTag>{copy.preCourse}</AdminTag> : <span className="rt-adm-muted">None</span>}</td>
                     </tr>
                   ))}
                 </tbody>

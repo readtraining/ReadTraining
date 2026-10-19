@@ -14,10 +14,11 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pager, Pill, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging } from "./adminParts";
+import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging } from "./adminParts";
 import { describedBy, field } from "./contentParts";
-import { ORDER_TONE, toPence, useMoneyRefresh } from "./moneyParts";
+import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.orders;
 const TABS = Object.keys(copy.tabs);
@@ -74,7 +75,7 @@ export default function AdminOrders() {
                     <td data-label={c.course}>{o.course}<small>{o.startsOn ? `${formatDate(o.startsOn)} · ` : ""}{o.quantity} {o.quantity === 1 ? "place" : "places"}</small></td>
                     <td data-label={c.provider}>{o.provider}{o.bookedBy && <small>{copy.staff.replace("{name}", o.bookedBy)}</small>}</td>
                     <td data-label={c.total}><span className="rt-adm-num-cell">{formatPrice(o.gross)}</span><small>{copy.methods[o.method]}</small></td>
-                    <td data-label={c.state}><Pill tone={ORDER_TONE[o.status]}>{copy.statuses[o.status]}</Pill></td>
+                    <td data-label={c.state}><AdminStatus kind="order" status={o.status}>{copy.statuses[o.status]}</AdminStatus></td>
                   </tr>
                 ))}
               </tbody>

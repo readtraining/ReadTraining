@@ -5112,13 +5112,36 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
   .rt-adm-toolbar__end .rt-adm-search { flex: 1 1 auto; }
   .rt-adm-cellrow.-end { justify-content: flex-start; }
 }
-/* UI fixes: pager rows dropdown, toolbar search width, activity feed ids */
-/* the rows-per-page dropdown in the pager opens upwards, so its options are never cut off at the bottom of the page */
-.rt-adm-pager .rt-cat-dd .rt-cat-dd__panel { top: auto; bottom: calc(100% + 8px); }
-/* the toolbar search keeps enough width for its full placeholder (it was cut off on /admin/orders) */
-@media (min-width: 768px) { .rt-adm-toolbar__end .rt-adm-search { flex: 0 0 340px; } }
-/* recent activity: long record ids are cut short with an ellipsis so each line stays on one row */
-.rt-adm-feed p .rt-adm-muted { display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+/* Platform admin only (.rt-adm--platform is on AdminShell's root, never on the provider workspace's): the status system
+   (components/admin/AdminStatus.jsx). One build, five tones, and a neutral tag for anything that is not a status.
+     success  done and good                      info     in progress, waiting on someone else
+     warning  needs an admin, due within a day   danger   late, blocked, failed, or money at risk
+     neutral  closed, inactive, not started, due in 2 days or more
+   Brand green is never a status here. The colours are set once on the admin root; every text colour passes WCAG AA at 12px. */
+.rt-adm--platform {
+  --rt-adm-success-bg: #e3f6ec;
+  --rt-adm-success: #0f7a4a;
+  --rt-adm-warning: #9a4a0b;
+  --rt-adm-danger: #b3261e;
+  --rt-adm-neutral-bg: #eef0f4;
+  --rt-adm-tag-line: #dfe1ea;
+  --rt-adm-tag-bg: #fff;
+}
+.rt-adm--platform .rt-adm-status { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; white-space: nowrap; }
+.rt-adm--platform .rt-adm-status.-success { background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
+.rt-adm--platform .rt-adm-status.-info { background: var(--color-purple-3); color: var(--color-purple-1); }
+.rt-adm--platform .rt-adm-status.-warning { background: var(--color-orange-7); color: var(--rt-adm-warning); }
+.rt-adm--platform .rt-adm-status.-danger { background: var(--color-red-2); color: var(--rt-adm-danger); }
+.rt-adm--platform .rt-adm-status.-neutral { background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
+.rt-adm--platform .rt-adm-tag { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid var(--rt-adm-tag-line); border-radius: 4px; background: var(--rt-adm-tag-bg); font-size: 12px; font-weight: 500; line-height: 18px; color: var(--color-light-1); white-space: nowrap; }
+.rt-adm--platform .rt-adm-tag.-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.02em; }
+.rt-adm--platform .rt-adm-money-late { font-weight: 600; color: var(--rt-adm-danger); }
+/* rows-per-page dropdown opens upwards so its options are not cut off at the bottom of the page */
+.rt-adm--platform .rt-adm-pager .rt-cat-dd .rt-cat-dd__panel { top: auto; bottom: calc(100% + 8px); }
+/* toolbar search keeps enough width for its full placeholder */
+@media (min-width: 768px) { .rt-adm--platform .rt-adm-toolbar__end .rt-adm-search { flex: 0 0 340px; } }
+/* recent activity: long record ids are cut short so each line stays on one row */
+.rt-adm--platform .rt-adm-feed p .rt-adm-muted { display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 /* ---------- end PLATFORM ADMIN ---------- */
 
 /* ---------- HEADER ACCOUNT MENU (components/home/HeaderAuth): signed in, the person's initials and first name open their account's

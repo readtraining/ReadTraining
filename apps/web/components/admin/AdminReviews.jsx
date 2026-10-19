@@ -11,7 +11,8 @@ import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { hideReview, keepReview, showReview } from "@/lib/adminReviews";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Pill, Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging } from "./adminParts";
+import { Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging } from "./adminParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.reviews;
 const TABS = Object.keys(copy.tabs);
@@ -63,8 +64,8 @@ export default function AdminReviews() {
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
                   <span className="rt-adm-stars" aria-label={copy.rating.replace("{n}", r.rating)}>{"★".repeat(r.rating)}<span aria-hidden="true">{"★".repeat(5 - r.rating)}</span></span>
-                  {r.challenge && <Pill tone="late">{copy.challenge}</Pill>}
-                  {r.hidden && <Pill tone="muted">{copy.hiddenTag}</Pill>}
+                  {r.challenge && <AdminStatus kind="review" status="challenge">{copy.challenge}</AdminStatus>}
+                  {r.hidden && <AdminStatus kind="review" status="hidden">{copy.hiddenTag}</AdminStatus>}
                   <span className="rt-adm-item__when">{r.learner} · {formatWhen(r.at)}</span>
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{r.title}</p>

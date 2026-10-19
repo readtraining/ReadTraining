@@ -15,10 +15,6 @@ import DateField from "./DateField";
 // shown before anyone clicks), and the forms to ask for a refund and to record a dispute. All real (API admin.refunds /
 // admin.disputes); every change reads the money lists again.
 
-export const ORDER_TONE = { paid: "ok", part_refunded: "warn", refunded: "muted", cancelled: "muted" };
-export const REFUND_TONE = { requested: "warn", approved: "ok", declined: "muted" };
-export const DISPUTE_TONE = { open: "late", won: "ok", lost: "muted" };
-export const PAYOUT_TONE = { draft: "warn", approved: "info", held: "late", sent: "ok" };
 
 // pounds typed in a box → whole pence, or null
 export const toPence = (v) => (/^\d+(\.\d{1,2})?$/.test(String(v).trim()) ? Math.round(Number(v) * 100) : null);

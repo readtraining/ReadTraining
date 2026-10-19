@@ -5,12 +5,12 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { ago, decideApproval, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Due, Pill, Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
+import { Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminTag, AdminDue } from "./AdminStatus";
 
 const copy = A.approvals;
 const TABS = ["pending", "changes", "approved", "rejected"];
-const TYPE_TONE = { offering: "ok", dates: "muted", price: "warn" };
 
 // One inbox for what providers send for review (new course listings, new dates, price changes; DEMO until courses are real),
 // oldest first so nothing waits silently, each with its deadline. Waiting items can be ticked and approved together (the plan's
@@ -112,9 +112,9 @@ export default function AdminApprovals() {
               )}
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
-                  <Pill tone={TYPE_TONE[a.type]}>{copy.types[a.type]}</Pill>
+                  <AdminTag>{copy.types[a.type]}</AdminTag>
                   <span className="rt-adm-item__when">Sent {ago(a.submitted, now)}</span>
-                  {a.status === "pending" && <Due due={a.due} now={now} />}
+                  {a.status === "pending" && <AdminDue due={a.due} now={now} />}
                 </div>
                 <h3 className="rt-acc__h3">{a.title}</h3>
                 <p className="rt-acc__note">

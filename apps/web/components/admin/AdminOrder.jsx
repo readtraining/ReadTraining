@@ -11,9 +11,10 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Pill, Said, SortTh, formatWhen } from "./adminParts";
+import { DetailSkeleton, Said, SortTh, formatWhen } from "./adminParts";
 import { describedBy, field } from "./contentParts";
-import { DISPUTE_TONE, DisputeForm, ORDER_TONE, REFUND_TONE, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
+import { DisputeForm, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.orders;
 const d = copy.detail;
@@ -47,7 +48,7 @@ export default function AdminOrder({ reference }) {
       <section className="rt-acc__card rt-adm-hero" aria-label="Order">
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone={ORDER_TONE[o.status]}>{copy.statuses[o.status]}</Pill>
+            <AdminStatus kind="order" status={o.status}>{copy.statuses[o.status]}</AdminStatus>
             <span className="rt-adm-item__when">Booked {formatWhen(Date.parse(o.at))}{o.bookedBy ? ` · ${copy.staff.replace("{name}", o.bookedBy)}` : ""}</span>
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name">{o.ref}</h1>
@@ -97,7 +98,7 @@ export default function AdminOrder({ reference }) {
             {o.refunds.map((r) => (
               <li key={r.id}>
                 <div>
-                  <span className="rt-adm-strong">{formatPrice(r.amount)}</span> <Pill tone={REFUND_TONE[r.status]}>{A.refunds.statuses[r.status]}</Pill>
+                  <span className="rt-adm-strong">{formatPrice(r.amount)}</span> <AdminStatus kind="refund" status={r.status}>{A.refunds.statuses[r.status]}</AdminStatus>
                   <small>{r.reason} · {A.refunds.by.replace("{name}", r.requestedBy || "an admin")}, {formatWhen(Date.parse(r.at))}</small>
                   {r.decidedBy && <small>{A.refunds.decidedBy.replace("{status}", A.refunds.statuses[r.status]).replace("{name}", r.decidedBy)}{r.decisionNote ? `: ${r.decisionNote}` : ""}</small>}
                 </div>
@@ -115,7 +116,7 @@ export default function AdminOrder({ reference }) {
           <ul className="rt-adm-list">
             {o.disputes.map((x) => (
               <li key={x.id}>
-                <div><span className="rt-adm-strong">{formatPrice(x.amount)}</span> <Pill tone={DISPUTE_TONE[x.status]}>{A.disputes.statuses[x.status]}</Pill><small>{x.reason} · {A.disputes.columns.due}: {formatDate(x.evidenceDue)}</small></div>
+                <div><span className="rt-adm-strong">{formatPrice(x.amount)}</span> <AdminStatus kind="dispute" status={x.status}>{A.disputes.statuses[x.status]}</AdminStatus><small>{x.reason} · {A.disputes.columns.due}: {formatDate(x.evidenceDue)}</small></div>
               </li>
             ))}
           </ul>
@@ -153,7 +154,7 @@ export function LedgerTable({ entries, showOrder = false, sorter = null }) {
         {entries.map((e) => (
           <tr key={e.id}>
             <td data-label={c.when}>{formatWhen(Date.parse(e.at))}{e.by && <small>{e.by}</small>}</td>
-            <td data-label={c.type}><span className={`rt-adm-ltype -${e.type}`}>{L.types[e.type]}</span>{e.note && <small>{e.note}</small>}</td>
+            <td data-label={c.type}><AdminTag>{L.types[e.type]}</AdminTag>{e.note && <small>{e.note}</small>}</td>
             {showOrder && <td data-label={c.what}>{e.orderRef ? <Link href={`/admin/orders/${e.orderRef}`} className="rt-adm-strong">{e.orderRef}</Link> : e.payoutRef || "–"}<small>{e.providerName}</small></td>}
             <td data-label={c.gross} className="rt-adm-num-cell">{e.gross ? sign(e.gross) : "–"}</td>
             <td data-label={c.fee} className="rt-adm-num-cell">{e.fee ? sign(e.fee) : "–"}</td>

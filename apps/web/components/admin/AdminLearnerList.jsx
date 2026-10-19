@@ -5,11 +5,11 @@ import Link from "next/link";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.learners;
 const FILTERS = Object.keys(copy.filters);
-export const STATE_TONE = { active: "ok", unconfirmed: "warn", blocked: "late" };
 
 // The real learners (API admin.students): everyone with an account, newest first. Search by name, email or phone; filter by
 // email not confirmed, blocked, or who also has a provider or business account. Search and filter stay in the address;
@@ -72,7 +72,7 @@ export default function AdminLearnerList() {
                         </span>
                       ) : <span className="rt-adm-muted">–</span>}
                     </td>
-                    <td data-label={c.status}><Pill tone={STATE_TONE[st.status]}>{copy.states[st.status]}</Pill></td>
+                    <td data-label={c.status}><AdminStatus kind="learner" status={st.status}>{copy.states[st.status]}</AdminStatus></td>
                   </tr>
                 ))}
               </tbody>

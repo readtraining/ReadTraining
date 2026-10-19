@@ -4,12 +4,11 @@ import React, { useEffect, useState } from "react";
 import { admin as A } from "@/data/admin";
 import { actOnChange, ago, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Due, Pill, Tabs, formatWhen, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
+import { Tabs, formatWhen, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus, AdminTag, AdminDue } from "./AdminStatus";
 
 const copy = A.changes;
-const TYPE_TONE = { cancel: "warn", date: "info", dispute: "late" };
-const STATUS_TONE = { provider: "warn", approved: "info", evidence: "late", refunded: "ok", moved: "ok", rejected: "muted", won: "ok", lost: "muted" };
 // what can be done next, by type and status
 const NEXT = {
   "cancel:provider": ["approve", "decline"],
@@ -52,10 +51,10 @@ export default function AdminChanges() {
               <li key={c.id} className="rt-acc__card rt-adm-item">
                 <div className="rt-adm-item__body">
                   <div className="rt-adm-item__top">
-                    <Pill tone={TYPE_TONE[c.type]}>{copy.types[c.type]}</Pill>
-                    <Pill tone={STATUS_TONE[c.status]}>{copy.statuses[c.status]}{c.outcome ? ` (${c.outcome})` : ""}</Pill>
+                    <AdminTag>{copy.types[c.type]}</AdminTag>
+                    <AdminStatus kind="change" status={c.status}>{copy.statuses[c.status]}{c.outcome ? ` (${c.outcome})` : ""}</AdminStatus>
                     <span className="rt-adm-item__when">Raised {ago(c.raised, now)}</span>
-                    {c.open && <Due due={c.due} now={now} />}
+                    {c.open && <AdminDue due={c.due} now={now} />}
                   </div>
                   <h3 className="rt-acc__h3">{c.ref} · {c.buyer.name}</h3>
                   <p className="rt-acc__note">{c.course} · {formatDate(c.date)} · {c.provider} · {formatPrice(c.amount)}</p>

@@ -5,12 +5,12 @@ import Link from "next/link";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
 import { formatRate } from "./commissionParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.providers;
 const TABS = Object.keys(copy.tabs);
-export const STATUS_TONE = { pending: "info", changes_requested: "warn", active: "ok", suspended: "late", rejected: "muted" };
 
 // The real provider accounts (API admin.providers): tabs with their counts (All, Applications, Active, Suspended, Not
 // approved), a search by name, owner or phone, each with its commission (its own rate is marked), newest first and a page at
@@ -67,7 +67,7 @@ export default function AdminProviders() {
                     <td data-label={c.owner}>{p.owner ? <><Link href={`/admin/learners/${p.owner.id}`} className="rt-adm-strong">{p.owner.name}</Link><small>{p.owner.email}</small></> : <span className="rt-adm-muted">–</span>}</td>
                     <td data-label={c.applied}>{formatWhen(Date.parse(p.appliedAt))}</td>
                     <td data-label={c.commission}>{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>
-                    <td data-label={c.status}><Pill tone={STATUS_TONE[p.status]}>{copy.statuses[p.status]}</Pill></td>
+                    <td data-label={c.status}><AdminStatus kind="provider" status={p.status}>{copy.statuses[p.status]}</AdminStatus></td>
                   </tr>
                 ))}
               </tbody>

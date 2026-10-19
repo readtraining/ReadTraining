@@ -6,12 +6,12 @@ import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { currentAdmin } from "@/lib/adminStore";
-import { Due, Pill, Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus, AdminDue } from "./AdminStatus";
 
 const copy = W.requests;
 const TABS = ["open", "mine", "done", "all"];
-export const REQUEST_TONE = { new: "warn", done: "ok", cancelled: "muted" };
 
 const REQUEST_SORT = { when: (r) => r.at, who: (r) => r.name, kind: (r) => r.kind, status: (r) => r.status, due: (r) => (r.status === "new" ? -r.due : null) };
 
@@ -58,8 +58,8 @@ export default function AdminRequests() {
                   <td data-label={c.ref}><Link href={`/admin/requests/${r.ref}`} className="rt-adm-strong">{r.ref}</Link><small>{formatWhen(r.at)}</small></td>
                   <td data-label={c.who}>{r.name}<small>{r.company || r.email}</small></td>
                   <td data-label={c.kind}>{copy.kinds[r.kind]}<small>{r.title}</small></td>
-                  <td data-label={c.status}><Pill tone={REQUEST_TONE[r.status] || "info"}>{copy.statuses[r.status]}</Pill><small>{r.assignee || copy.unassigned}</small></td>
-                  <td data-label={c.due}>{r.status === "new" ? <Due due={r.due} now={data.now} /> : <span className="rt-acc__note">—</span>}</td>
+                  <td data-label={c.status}><AdminStatus kind="request" status={r.status}>{copy.statuses[r.status]}</AdminStatus><small>{r.assignee || copy.unassigned}</small></td>
+                  <td data-label={c.due}>{r.status === "new" ? <AdminDue due={r.due} now={data.now} /> : <span className="rt-acc__note">—</span>}</td>
                 </tr>
               ))}
             </tbody>

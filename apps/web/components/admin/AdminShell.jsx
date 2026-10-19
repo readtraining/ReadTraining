@@ -92,7 +92,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   };
 
   return (
-    <div className="rt-home rt-adm">
+    <div className="rt-home rt-adm rt-adm--platform">
       <a href="#rt-adm-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">

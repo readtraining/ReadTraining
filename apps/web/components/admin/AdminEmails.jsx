@@ -5,10 +5,10 @@ import Link from "next/link";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Pill, Tabs, TableSkeleton, formatWhen, useSort, SortTh } from "./adminParts";
+import { Tabs, TableSkeleton, formatWhen, useSort, SortTh } from "./adminParts";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.emails;
-const TONE = { live: "ok", later: "muted", auth: "info" };
 const AUDIENCES = ["all", "Learner", "Provider", "Everyone"];
 const AUDIENCE_LABEL = { all: "All", Learner: "Learners", Provider: "Providers", Everyone: "Sign-in" };
 
@@ -41,7 +41,7 @@ export default function AdminEmails() {
                 </td>
                 <td data-label={c.audience}>{e.audience}</td>
                 <td data-label={c.trigger} className="rt-adm-emails__when">{e.trigger}</td>
-                <td data-label={c.status}><span title={copy.statusNotes[e.status]}><Pill tone={TONE[e.status]}>{copy.statuses[e.status]}</Pill></span></td>
+                <td data-label={c.status}><span title={copy.statusNotes[e.status]}>{e.status === "live" ? <AdminStatus kind="email" status="live">{copy.statuses[e.status]}</AdminStatus> : <AdminTag>{copy.statuses[e.status]}</AdminTag>}</span></td>
               </tr>
             ))}
           </tbody>

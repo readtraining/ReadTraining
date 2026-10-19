@@ -6,17 +6,17 @@ import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
 import AdminLearnerList from "./AdminLearnerList";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import DateField from "./DateField";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.learners;
-const CERT_TONE = { valid: "ok", none: "ok", expiring: "warn", expired: "muted", revoked: "late" };
 export const CertPill = ({ cert, now }) => {
   const st = certState(cert, now);
-  return <Pill tone={CERT_TONE[st]}>{copy.certStates[st]}</Pill>;
+  return <AdminStatus kind="certificate" status={st}>{copy.certStates[st]}</AdminStatus>;
 };
 const today = () => new Date().toISOString().slice(0, 10);
 

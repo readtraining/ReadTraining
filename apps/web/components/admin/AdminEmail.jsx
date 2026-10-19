@@ -8,12 +8,12 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Pill, Said, formatWhen } from "./adminParts";
+import { DetailSkeleton, Said, formatWhen } from "./adminParts";
 import { History, describedBy, field, useSave } from "./contentParts";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.emails;
 const FIELDS = ["subject", "heading", "body", "button"];
-const TONE = { live: "ok", later: "muted" };
 
 // One automated email (API admin.emails.get): its words beside a live preview with example details (admin.emails.preview).
 // With the "content" switch an admin saves the words (content key email:<template>, kept in Earlier versions), sends a test to
@@ -136,7 +136,7 @@ function Editor({ t, initial, canEdit, when, note, onRestart }) {
       <section className="rt-acc__card rt-adm-hero" aria-label="Email">
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone={TONE[t.status]}>{copy.statuses[t.status]}</Pill>
+            {t.status === "live" ? <AdminStatus kind="email" status="live">{copy.statuses[t.status]}</AdminStatus> : <AdminTag>{copy.statuses[t.status]}</AdminTag>}
             <span className="rt-adm-item__when">{t.audience}</span>
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name">{t.name}</h1>
