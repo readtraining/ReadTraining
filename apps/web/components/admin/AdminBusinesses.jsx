@@ -5,12 +5,14 @@ import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = W.businesses;
 const TABS = ["all", "credit", "overdue", "suspended"];
 export const CREDIT_TONE = { none: "muted", approved: "ok", suspended: "late" };
+
+const BUSINESS_SORT = { name: (b) => b.name, places: (b) => b.places.bought, credit: (b) => b.credit, owed: (b) => b.owed, overdue: (b) => b.overdue };
 
 // Business accounts (admin plan module 11): every company with its places used, credit facility, what it owes and how much is
 // overdue. Tabs: all, eligible for credit (regular customers we can offer credit to, as on Hurak), overdue money, credit on hold (kept in the address); a search by company or contact.
@@ -18,6 +20,7 @@ export default function AdminBusinesses() {
   const data = useAdmin();
   const [tab, setTab] = useState("all");
   const [q, setQ] = useState("");
+  const sorter = useSort();
   useEffect(() => {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
@@ -39,9 +42,9 @@ export default function AdminBusinesses() {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">{c.name}</th><th scope="col">{c.places}</th><th scope="col">{c.credit}</th><th scope="col">{c.owed}</th><th scope="col">{c.overdue}</th></tr></thead>
+            <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.places} col="places" sorter={sorter} numeric /><SortTh label={c.credit} col="credit" sorter={sorter} /><SortTh label={c.owed} col="owed" sorter={sorter} numeric /><SortTh label={c.overdue} col="overdue" sorter={sorter} numeric /></tr></thead>
             <tbody>
-              {list.map((b) => (
+              {sorter.apply(list, BUSINESS_SORT).map((b) => (
                 <tr key={b.slug}>
                   <td data-label={c.name}><Link href={`/admin/businesses/${b.slug}`} className="rt-adm-strong">{b.name}</Link><small>{b.contact} · {b.city}</small></td>
                   <td data-label={c.places}>{b.places.assigned} of {b.places.bought}<small>{b.places.bought - b.places.assigned} not assigned</small></td>

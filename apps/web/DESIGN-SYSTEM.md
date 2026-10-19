@@ -111,7 +111,8 @@ Set metadata with `pageMetadata({ title, description, path, noindex })` from `li
 - **Made-up records** are labelled: the admin nav's `demo` (`data/admin.js`) and `AccountShell`'s `demo` show the
   `.rt-demo-tag` beside the title. Remove the flag when the page's data becomes real.
 - **Breadcrumbs** on the course and test prep heroes use `Crumbs` (`components/courseDetail/Crumbs.jsx`).
-- **Tables:** use the `.rt-biz__table` pattern, which stacks into labelled rows on phones via `data-label`.
+- **Tables:** use the `.rt-biz__table` pattern, which stacks into labelled rows on phones via `data-label`. A table that holds every row
+  sorts by its columns with `useSort` + `SortTh` (`adminParts.jsx`); a paged list keeps the server's order.
 
 **Sidebars:** use one pattern: the account and admin nav (a white card list with a `--rt-c-brand-soft` active item),
 which becomes a scrolling chip row below 992px. Long documents use `DocToc` (contents in a `<details>` on phones).

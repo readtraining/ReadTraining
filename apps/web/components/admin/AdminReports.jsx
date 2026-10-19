@@ -7,7 +7,7 @@ import { useAdmin } from "@/lib/admin";
 import { modeLabel } from "@/lib/courseModes";
 import { formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { Said, Stats, TableSkeleton, Tabs } from "./adminParts";
+import { Said, Stats, TableSkeleton, Tabs, useSort, SortTh } from "./adminParts";
 
 const copy = A.reports;
 const DAY = 86400000;
@@ -15,6 +15,8 @@ const RANGES = Object.keys(copy.ranges).map(Number);
 const GROUPS = Object.keys(copy.groups);
 const round = (n) => Math.round(n * 100) / 100;
 const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
+
+const REPORT_SORT = { name: (g) => g.name, orders: (g) => g.orders, sales: (g) => g.sales, commission: (g) => g.commission };
 
 // Reports (Part B, B3): sales over a date range, broken down by provider, category, location or delivery method, with the weekly
 // trend and a CSV download. DEMO: worked out from the demo orders (lib/admin.js) until bookings are real; the commission uses the
@@ -25,6 +27,7 @@ export default function AdminReports() {
   const [range, setRange] = useState(30);
   const [by, setBy] = useState("provider");
   const [said, setSaid] = useState("");
+  const sorter = useSort();
   if (!data || rate.isLoading) return <TableSkeleton rows={6} />;
 
   const { now, orders, catalogue, fees } = data;
@@ -111,9 +114,9 @@ export default function AdminReports() {
         </div>
         {groups.length ? (
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">{copy.groups[by]}</th><th scope="col">{copy.columns.orders}</th><th scope="col">{copy.columns.sales}</th><th scope="col">{copy.columns.commission}</th><th scope="col">{copy.columns.share}</th></tr></thead>
+            <thead><tr><SortTh label={copy.groups[by]} col="name" sorter={sorter} /><SortTh label={copy.columns.orders} col="orders" sorter={sorter} numeric /><SortTh label={copy.columns.sales} col="sales" sorter={sorter} numeric /><SortTh label={copy.columns.commission} col="commission" sorter={sorter} numeric /><th scope="col">{copy.columns.share}</th></tr></thead>
             <tbody>
-              {groups.map((g) => (
+              {sorter.apply(groups, REPORT_SORT).map((g) => (
                 <tr key={g.name}>
                   <td data-label={copy.groups[by]}><span className="rt-adm-strong">{g.name}</span></td>
                   <td data-label={copy.columns.orders}>{g.orders}</td>

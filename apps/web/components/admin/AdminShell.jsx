@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
 import { admin as A } from "@/data/admin";
@@ -13,13 +13,23 @@ import { api } from "@/lib/trpc/react";
 import { actAsAdmin } from "@/lib/adminStore";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { getSupabase } from "@/lib/supabase/client";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+const FOLDED_KEY = "rt-adm-nav-folded";
+const readFolded = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem(FOLDED_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
 
 // The admin's layout: a work layout, not the public site's. The checkout header's dark band with the logo and an "Admin" tag, the
 // signed-in admin (from the server check: name, access level), "View site" and Sign out; a sidebar with the plan's groups (each page with its icon and a live count where
-// something waits); then the page head (title, intro, the page's actions) and the page. Below 992px the
-// sidebar becomes the account's chip row that scrolls sideways. `current` marks the page. The top bar's search (Ctrl+K) reaches
+// something waits); then the page head (title, intro, the page's actions) and the page. Each sidebar group folds (remembered in
+// this browser; the current page's group always shows, and a folded group still shows how many things wait in it). Below 992px
+// the sidebar is a menu drawer opened from the top bar. `current` marks the page. The top bar's search (Ctrl+K) reaches
 // every page and the real learners and providers. A page that still shows made-up records says so beside its title (the nav's
 // `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a breadcrumb back to the list and
 // the record's own card carries the page's h1.
@@ -28,6 +38,24 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const router = useRouter();
   const me = useAdminAccess();
   const [leaving, setLeaving] = useState(false);
+  const [folded, setFolded] = useState([]); // the groups this admin folded
+  const [menuOpen, setMenuOpen] = useState(false); // the drawer, below 992px
+  const menuBtn = useRef(null);
+  const pathname = usePathname();
+  useEffect(() => setFolded(readFolded()), []);
+  useEffect(() => setMenuOpen(false), [pathname]);
+  useFocusTrap(menuOpen, sideRef, () => {
+    setMenuOpen(false);
+    menuBtn.current?.focus();
+  });
+  const fold = (group) =>
+    setFolded((f) => {
+      const next = f.includes(group) ? f.filter((g) => g !== group) : [...f, group];
+      try {
+        window.localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
@@ -54,6 +82,10 @@ export default function AdminShell({ current, title, lead, actions = null, detai
       <a href="#rt-adm-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">
+          <button type="button" className="rt-adm__menu" ref={menuBtn} aria-expanded={menuOpen} aria-controls="rt-adm-side" onClick={() => setMenuOpen((o) => !o)}>
+            <span aria-hidden="true"></span>
+            <span className="rt-sr">{menuOpen ? "Close menu" : "Menu"}</span>
+          </button>
           <Link href="/admin" className="rt-adm__logo" aria-label={`${A.title} dashboard`}>
             <Image width={150} height={38} src="/assets/img/general/readtraining-logo.svg" alt="" priority />
             <span className="rt-adm__tag">Admin</span>
@@ -71,35 +103,36 @@ export default function AdminShell({ current, title, lead, actions = null, detai
       </header>
 
       <div className="rt-adm__body">
-        <nav className="rt-adm__side rt-pill-scroll" aria-label="Admin" ref={sideRef}>
-          {nav.map((g) => (
-            <div key={g.group} className="rt-adm__group">
-              <p className="rt-adm__grouplabel">{g.group}</p>
-              <ul>
-                {g.items.map((x) => (
-                  <li key={x.key}>
-                    <Link href={x.href} className={`rt-adm__link${x.key === current ? " is-active" : ""}`} aria-current={x.key === current ? "page" : undefined}>
-                      <i className={`${x.icon} text-16`} aria-hidden="true"></i>
-                      <span>{x.label}</span>
-                      {x.badge && counts[x.badge] > 0 && <span className="rt-adm__count" aria-label={`${counts[x.badge]} waiting`}>{counts[x.badge]}</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        {menuOpen && <div className="rt-adm__scrim" onClick={() => setMenuOpen(false)} aria-hidden="true"></div>}
+        <nav id="rt-adm-side" className={`rt-adm__side rt-pill-scroll${menuOpen ? " is-open" : ""}`} aria-label="Admin" ref={sideRef}>
+          {nav.map((g) => {
+            const here = g.items.some((x) => x.key === current);
+            const shut = folded.includes(g.group) && !here;
+            const waiting = g.items.reduce((n, x) => n + (x.badge ? counts[x.badge] || 0 : 0), 0);
+            const id = `rt-adm-g-${g.group.toLowerCase()}`;
+            return (
+              <div key={g.group} className={`rt-adm__group${shut ? " is-folded" : ""}`}>
+                <button type="button" className="rt-adm__grouplabel" aria-expanded={!shut} aria-controls={id} onClick={() => !here && fold(g.group)} aria-disabled={here || undefined}>
+                  <span>{g.group}</span>
+                  {shut && waiting > 0 && <span className="rt-adm__count" aria-label={`${waiting} waiting`}>{waiting}</span>}
+                  {!here && <i className="icon-chevron-down text-10" aria-hidden="true"></i>}
+                </button>
+                <ul id={id} hidden={shut}>
+                  {g.items.map((x) => (
+                    <li key={x.key}>
+                      <Link href={x.href} className={`rt-adm__link${x.key === current ? " is-active" : ""}`} aria-current={x.key === current ? "page" : undefined}>
+                        <i className={`${x.icon} text-16`} aria-hidden="true"></i>
+                        <span>{x.label}</span>
+                        {x.badge && counts[x.badge] > 0 && <span className="rt-adm__count" aria-label={`${counts[x.badge]} waiting`}>{counts[x.badge]}</span>}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
           <FilterScrollPill scrollRef={sideRef} />
         </nav>
-        <ul className="rt-acc__chips rt-adm__chips">
-          {items.map((x) => (
-            <li key={x.key}>
-              <Link href={x.href} className={`rt-tr__filter${x.key === current ? " is-on" : ""}`} aria-current={x.key === current ? "page" : undefined}>
-                {x.label}
-                {x.badge && counts[x.badge] > 0 && <span className="rt-tr__filter-n">{counts[x.badge]}</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
 
         <main id="rt-adm-main" className="rt-adm__main" tabIndex={-1}>
           {detail ? (

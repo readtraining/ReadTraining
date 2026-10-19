@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { basket } from "@/data/basket";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
@@ -14,6 +14,8 @@ import AdminCatalogueList from "./AdminCatalogueList";
 const copy = A.catalogue;
 const TABS = ["courses", "list", "packages"];
 const PAGE = 20;
+
+const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.offerings.length, sessions: (c) => c.upcoming, from: (c) => c.from };
 
 // The catalogue: Courses (search, a category filter, the table with providers, upcoming dates, "From" price and the
 // pre-course e-learning flag; 20 at a time with "Show more"; DEMO courses), Categories and filters (the real list,
@@ -24,6 +26,7 @@ export default function AdminCatalogue() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const [shown, setShown] = useState(PAGE);
+  const sorter = useSort();
   useEffect(() => {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
@@ -69,10 +72,10 @@ export default function AdminCatalogue() {
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table">
                 <thead>
-                  <tr><th scope="col">{cols.course}</th><th scope="col">{cols.providers}</th><th scope="col">{cols.sessions}</th><th scope="col">{cols.from}</th><th scope="col">{cols.flags}</th></tr>
+                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><SortTh label={cols.providers} col="providers" sorter={sorter} numeric /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric /><SortTh label={cols.from} col="from" sorter={sorter} numeric /><th scope="col">{cols.flags}</th></tr>
                 </thead>
                 <tbody>
-                  {list.slice(0, shown).map((c) => (
+                  {sorter.apply(list, COURSE_SORT).slice(0, shown).map((c) => (
                     <tr key={c.id}>
                       <td data-label={cols.course}><Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link><small>{c.category} · {c.duration}</small></td>
                       <td data-label={cols.providers}>{c.offerings.length}{c.offerings.some((o) => o.status === "paused") && <small>{c.offerings.filter((o) => o.status === "paused").length} paused</small>}</td>

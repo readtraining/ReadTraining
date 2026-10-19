@@ -44,6 +44,39 @@ export function Said({ text }) {
   );
 }
 
+// Sortable tables: `useSort(first)` keeps which column sorts a table and which way (call it with the page's other hooks);
+// `sorter.apply(rows, columns)` sorts the rows, where `columns` maps a column key to the value to sort by (a number, a date in
+// ms, or text). <SortTh> is that column's header: a button that sorts by it, a second click turns it round, and aria-sort tells
+// screen readers. Only for tables that hold every row; paged lists keep the server's order (newest first).
+const collator = new Intl.Collator("en-GB", { sensitivity: "base", numeric: true });
+export function useSort(first = null) {
+  const [sort, setSort] = React.useState(first); // { key, dir: 1 | -1 } or null for the list's own order
+  const apply = (rows, columns) => {
+    if (!sort || !columns[sort.key]) return rows;
+    const value = columns[sort.key];
+    return [...rows].sort((a, b) => {
+      const x = value(a), y = value(b);
+      if (x == null || x === "") return 1;
+      if (y == null || y === "") return -1;
+      return (typeof x === "number" && typeof y === "number" ? x - y : collator.compare(String(x), String(y))) * sort.dir;
+    });
+  };
+  // a number column starts biggest first, a text column A to Z
+  const by = (key, numeric = false) => setSort((s) => (s?.key === key ? { key, dir: -s.dir } : { key, dir: numeric ? -1 : 1 }));
+  return { sort, by, apply };
+}
+export function SortTh({ label, col, sorter, numeric = false }) {
+  const on = sorter.sort?.key === col;
+  return (
+    <th scope="col" aria-sort={on ? (sorter.sort.dir === 1 ? "ascending" : "descending") : "none"}>
+      <button type="button" className={`rt-adm-sort${on ? " is-on" : ""}`} onClick={() => sorter.by(col, numeric)}>
+        {label}
+        <span className="rt-adm-sort__arrow" aria-hidden="true">{on ? (sorter.sort.dir === 1 ? "↑" : "↓") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
 // Loading placeholders in the shape of what is coming (never a spinner): a table card's rows, or a record's page (its head card
 // and two cards). Hidden from screen readers; the page is marked busy instead.
 const bar = (w, h = 14) => <span className="rt-skel rt-skel--line" style={{ width: w, height: h }}></span>;

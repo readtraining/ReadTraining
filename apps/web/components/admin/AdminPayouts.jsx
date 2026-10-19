@@ -12,13 +12,14 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, Said, TableSkeleton, Tabs, formatWhen } from "./adminParts";
+import { Pill, Said, TableSkeleton, Tabs, formatWhen, useSort, SortTh } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
 import { PAYOUT_TONE, toPence, useMoneyRefresh } from "./moneyParts";
 
 const P = A.payouts;
 const L = A.ledger;
+const OWED_SORT = { provider: (r) => r.name, balance: (r) => r.balance, held: (r) => r.held, waiting: (r) => r.waiting, payable: (r) => r.payable };
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 
 // Payouts (Part B, B4; API admin.payouts): what each provider is owed up to a day (their ledger balance less holds and payouts
@@ -32,6 +33,7 @@ export function AdminPayouts() {
   const [said, setSaid] = useState("");
   const [holding, setHolding] = useState(null);
   const [viewing, setViewing] = useState(null);
+  const sorter = useSort();
   const owed = api.admin.payouts.preview.useQuery({ periodEnd: day });
   const list = api.admin.payouts.list.useQuery({ status: tab });
   const run = api.admin.payouts.run.useMutation();
@@ -70,9 +72,9 @@ export function AdminPayouts() {
         <p className="rt-acc__note rt-adm-cardnote">{P.owedNote}</p>
         {owed.error ? <ErrorState inCard onRetry={() => owed.refetch()} /> : owed.isLoading ? <TableSkeleton rows={3} /> : owed.data.length ? (
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">{c.provider}</th><th scope="col">{c.balance}</th><th scope="col">{c.held}</th><th scope="col">{c.waiting}</th><th scope="col">{c.payable}</th></tr></thead>
+            <thead><tr><SortTh label={c.provider} col="provider" sorter={sorter} /><SortTh label={c.balance} col="balance" sorter={sorter} numeric /><SortTh label={c.held} col="held" sorter={sorter} numeric /><SortTh label={c.waiting} col="waiting" sorter={sorter} numeric /><SortTh label={c.payable} col="payable" sorter={sorter} numeric /></tr></thead>
             <tbody>
-              {owed.data.map((r) => (
+              {sorter.apply(owed.data, OWED_SORT).map((r) => (
                 <tr key={r.providerId}>
                   <td data-label={c.provider}><Link href={`/admin/providers/${r.slug}`} className="rt-adm-strong">{r.name}</Link>{r.status !== "active" && <small>{A.providers.statuses[r.status]}</small>}</td>
                   <td data-label={c.balance} className="rt-adm-num-cell">{formatPrice(r.balance)}</td>

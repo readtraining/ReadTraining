@@ -12,7 +12,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, Said, Search, TableSkeleton, Tabs } from "./adminParts";
+import { Pill, RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 
 const copy = A.coupons;
@@ -32,6 +32,9 @@ const datesText = (c) =>
     : c.endsOn ? copy.until.replace("{date}", formatDate(c.endsOn))
     : copy.always;
 
+// what each sortable column sorts by
+const COUPON_SORT = { code: (x) => x.code, discount: (x) => (x.kind === "percent" ? x.value : x.value / 1000), dates: (x) => x.endsOn || x.startsOn, used: (x) => x.used, status: (x) => x.status };
+
 // Coupons (Part B, B3): the real list (API admin.coupons), by status with counts, searchable by code. With the "coupons" switch an
 // admin creates one, edits it, or turns it off and on again (never deletes it). Checkout (still demo) applies them once payments
 // are real, so "Used" stays at 0 until then.
@@ -43,6 +46,7 @@ export default function AdminCoupons() {
   const [search, setSearch] = useState("");
   const [sheet, setSheet] = useState(null); // null, or { coupon } (undefined coupon = a new one)
   const [said, setSaid] = useState("");
+  const sorter = useSort();
   const utils = api.useUtils();
   const setActive = api.admin.coupons.setActive.useMutation();
   useEffect(() => {
@@ -63,7 +67,7 @@ export default function AdminCoupons() {
   };
   const counts = list.data?.counts;
   const total = counts ? counts.live + counts.scheduled + counts.ended + counts.off : undefined;
-  const rows = list.data?.coupons ?? [];
+  const rows = sorter.apply(list.data?.coupons ?? [], COUPON_SORT);
   const c = copy.columns;
 
   return (
@@ -85,7 +89,7 @@ export default function AdminCoupons() {
       ) : rows.length ? (
         <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">{c.code}</th><th scope="col">{c.discount}</th><th scope="col">{c.applies}</th><th scope="col">{c.dates}</th><th scope="col">{c.used}</th><th scope="col">{c.status}</th>{canEdit && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
+            <thead><tr><SortTh label={c.code} col="code" sorter={sorter} /><SortTh label={c.discount} col="discount" sorter={sorter} numeric /><th scope="col">{c.applies}</th><SortTh label={c.dates} col="dates" sorter={sorter} /><SortTh label={c.used} col="used" sorter={sorter} numeric /><SortTh label={c.status} col="status" sorter={sorter} />{canEdit && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
             <tbody>
               {rows.map((x) => (
                 <tr key={x.id}>
