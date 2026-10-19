@@ -7,11 +7,11 @@ import { useAdmin } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Pill, Stats, formatWhen } from "./adminParts";
-import { MONEY_TONE } from "./AdminOrders";
+import { ORDER_TONE } from "./moneyParts";
+import { useAdminAccess } from "@/lib/adminContext";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
 const copy = A.dashboard;
-const DAY = 86400000;
 const demoTag = <span className="rt-demo-tag" title={A.demo.all.note}>{copy.demoTag}</span>;
 
 // The latest entries of the real activity log (API admin.activity.list): who did what, and when.
@@ -52,22 +52,29 @@ function RecentActivity() {
 // The admin dashboard: the four numbers that say how today is going (the account dashboard's stats strip), the queues with their
 // counts and how many are overdue (provider applications are real, API admin.providers.counts; the rest is DEMO) beside the real
 // activity log's latest entries, then the sessions starting this week without joining instructions (the gap Hurak's learners
-// complain about) and the latest orders, both DEMO and tagged so.
+// complain about, DEMO and tagged so) and the latest real orders. The numbers on top and the money queues are real (API
+// admin.orders.summary) for admins who can see orders.
 export default function AdminDashboard() {
   const data = useAdmin();
+  const me = useAdminAccess();
+  const seesMoney = Boolean(me?.permissions?.includes("orders.view"));
   const providers = api.admin.providers.counts.useQuery();
+  const money = api.admin.orders.summary.useQuery(undefined, { enabled: seesMoney });
+  const latestOrders = api.admin.orders.list.useQuery({ limit: 5 }, { enabled: seesMoney });
   if (!data) return null;
-  const { now, orders, approvals, changes } = data;
-  const week = orders.filter((o) => o.booked > now - 7 * DAY && o.state !== "cancelled");
+  const { now, approvals, changes } = data;
+  const m = money.data;
   const pending = approvals.filter((a) => a.status === "pending");
   const open = changes.filter((c) => c.open);
+  // real: orders and sales in the last 7 days, refunds to decide, payouts to approve
   const stats = [
-    { icon: "icon-basket", value: String(week.length), label: copy.stats.orders },
-    { icon: "icon-save-money", value: formatPrice(week.reduce((s, o) => s + o.total, 0)), label: copy.stats.revenue },
-    { icon: "icon-check", value: String(pending.length + open.length), label: copy.stats.pending },
-    { icon: "icon-wall-clock", value: String(data.counts.overdue), label: copy.stats.overdue },
+    { icon: "icon-basket", value: m ? String(m.orders) : "–", label: copy.stats.orders },
+    { icon: "icon-save-money", value: m ? formatPrice(m.sales) : "–", label: copy.stats.revenue },
+    { icon: "icon-check", value: m ? String(m.refunds) : "–", label: copy.stats.refunds },
+    { icon: "icon-bar-chart-2", value: m ? String(m.payoutsToApprove) : "–", label: copy.stats.payouts },
   ];
   const queues = [
+    ...(m ? [{ key: "refunds", n: m.refunds, overdue: 0 }, { key: "disputes", n: m.disputes, overdue: m.disputesOverdue }, { key: "payouts", n: m.payoutsToApprove, overdue: 0 }] : []),
     { key: "approvals", n: pending.length, overdue: pending.filter((a) => a.due < now).length },
     { key: "applications", n: providers.data?.applications ?? 0, overdue: 0 },
     { key: "changes", n: open.length, overdue: open.filter((c) => c.due < now).length },
@@ -79,7 +86,6 @@ export default function AdminDashboard() {
   ];
   // the same sessions as Sessions and venues > Next 7 days
   const soon = data.sessions.filter((s) => !s.cancelled && s.daysAway <= 7 && !s.joiningSent);
-  const latest = [...orders].sort((a, b) => b.booked - a.booked).slice(0, 5);
 
   return (
     <div className="rt-acc__stack">
@@ -129,27 +135,30 @@ export default function AdminDashboard() {
           {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
         </section>
 
-        <section className="rt-acc__card" aria-labelledby="rt-adm-latest-h">
-          <div className="rt-acc__cardhead">
+        {seesMoney && (
+          <section className="rt-acc__card" aria-labelledby="rt-adm-latest-h">
             <h2 className="rt-acc__h2" id="rt-adm-latest-h">{copy.recent}</h2>
-            {demoTag}
-          </div>
-          <ul className="rt-adm-list">
-            {latest.map((o) => (
-              <li key={o.ref}>
-                <div>
-                  <Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.buyer.name}</Link>
-                  <small>{o.lines[0].title} · {o.ref}</small>
-                </div>
-                <div className="rt-adm-list__side">
-                  <strong className="rt-adm-num-cell">{formatPrice(o.total)}</strong>
-                  <Pill tone={MONEY_TONE[o.lines[0].money]}>{A.orders.money[o.lines[0].money]}</Pill>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <Link href="/admin/orders" className="fb-textlink rt-adm-mt">{copy.allOrders}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
-        </section>
+            {latestOrders.data?.orders.length ? (
+              <ul className="rt-adm-list">
+                {latestOrders.data.orders.map((o) => (
+                  <li key={o.id}>
+                    <div>
+                      <Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.buyer.name}</Link>
+                      <small>{o.course} · {o.ref}</small>
+                    </div>
+                    <div className="rt-adm-list__side">
+                      <strong className="rt-adm-num-cell">{formatPrice(o.gross)}</strong>
+                      <Pill tone={ORDER_TONE[o.status]}>{A.orders.statuses[o.status]}</Pill>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : latestOrders.isLoading ? null : (
+              <EmptyState inCard title={A.orders.empty} text={A.orders.emptyText} />
+            )}
+            <Link href="/admin/orders" className="fb-textlink rt-adm-mt">{copy.allOrders}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
+          </section>
+        )}
       </div>
     </div>
   );

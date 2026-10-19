@@ -6663,3 +6663,28 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-review__title { margin: 0 0 4px; font-size: var(--rt-text); }
 .rt-adm-review__text { margin: 0 0 8px; font-size: var(--rt-text-sm); line-height: 1.55; color: var(--rt-c-text); }
 .rt-adm-review.is-hidden .rt-adm-review__title, .rt-adm-review.is-hidden .rt-adm-review__text { color: var(--rt-c-muted); }
+/* ---------- PART B4: money (orders, refunds, disputes, payouts, transactions) ---------- */
+.rt-adm-split { display: flex; gap: 3px; height: 12px; margin: 4px 0 16px; overflow: hidden; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); }
+.rt-adm-split span, .rt-adm-key { background: var(--rt-c-brand); }
+.rt-adm-split .-fee, .rt-adm-key.-fee { background: var(--color-orange-6); }
+.rt-adm-split .-commission, .rt-adm-key.-commission { background: var(--rt-c-dark); }
+.rt-adm-split .-provider, .rt-adm-key.-provider { background: var(--rt-c-brand); }
+.rt-adm-key { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 3px; vertical-align: 0; }
+.rt-adm-dl__sub { display: block; margin-top: 2px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-adm-ltype { display: inline-block; padding: 2px 8px; border-radius: var(--rt-radius-sm); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-text); }
+.rt-adm-ltype.-purchase { background: var(--rt-c-success-soft); color: var(--rt-c-success); }
+.rt-adm-ltype.-payout { background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
+.rt-adm-ltype.-refund, .rt-adm-ltype.-cancel, .rt-adm-ltype.-dispute, .rt-adm-ltype.-charge { background: var(--color-orange-7); }
+.rt-adm-ledger td.rt-adm-num-cell { white-space: nowrap; }
+.rt-adm-ledger td.-minus strong { color: var(--rt-c-error); }
+.rt-adm-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; margin: 0; overflow: hidden; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-line); }
+.rt-adm-totals > div { padding: 14px 18px; background: var(--rt-c-surface); }
+.rt-adm-totals dt { font-size: var(--rt-text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rt-c-muted); }
+.rt-adm-totals dd { margin: 4px 0 0; font-size: 20px; font-weight: 700; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
+.rt-adm-book__total { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 0 8px; padding: 12px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-soft); font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-adm-book__total strong { font-size: 20px; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
+.rt-adm-inline { display: flex; align-items: center; gap: 10px; margin: 0; }
+.rt-adm-inline label { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); }
+.rt-adm-inline input { height: 44px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-adm-inline input:focus { border-color: var(--rt-c-brand); outline: none; box-shadow: 0 0 0 3px var(--rt-c-brand-soft); }
+.rt-adm-widesheet .rt-dd__panel { max-width: 860px; }

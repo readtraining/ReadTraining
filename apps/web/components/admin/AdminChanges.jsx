@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { actOnChange, ago, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
@@ -58,7 +57,7 @@ export default function AdminChanges() {
                     <span className="rt-adm-item__when">Raised {ago(c.raised, now)}</span>
                     {c.open && <Due due={c.due} now={now} />}
                   </div>
-                  <h3 className="rt-acc__h3"><Link href={`/admin/orders/${c.ref}`}>{c.ref}</Link> · {c.buyer.name}</h3>
+                  <h3 className="rt-acc__h3">{c.ref} · {c.buyer.name}</h3>
                   <p className="rt-acc__note">{c.course} · {formatDate(c.date)} · {c.provider} · {formatPrice(c.amount)}</p>
                   <p className="rt-adm-item__reason"><strong>Reason:</strong> {c.reason}</p>
                   {c.type === "dispute" && c.evidenceSent && c.open && <p className="rt-acc__note">Evidence sent. Waiting for the card issuer.</p>}

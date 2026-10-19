@@ -2,70 +2,84 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { admin as A } from "@/data/admin";
-import { saveFees, useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
+import { errorsFrom } from "@/lib/useMe";
 import { formatWhen, Said } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 
 const copy = A.settings;
+const F = A.fees;
 // what each fee field accepts: [min, max, whole numbers only]
-const LIMITS = { card: [0, 10, false], bnpl: [0, 15, false], payoutDay: [1, 28, true], supportLimit: [0, 1000, true] };
+const LIMITS = { card: [0, 10, false], bnpl: [0, 15, false], payoutDay: [1, 28, true] };
 
-// Settings: the platform's default commission (real, API admin.commission; changed with the "fees and commission" switch), then
-// the fees and payouts preview (card and Klarna fees, payout day and the Support limit; DEMO until payments), checked and saved
-// together. The admin team and the activity log have their own pages (/admin/team, /admin/activity).
+// Financial settings: the platform's default commission (API admin.commission) and the payment fees and payout day (API
+// admin.fees), both real and changed with the "fees and commission" switch. New orders take today's rates; existing orders keep
+// theirs. The admin team (with each admin's refund limit) and the activity log have their own pages.
 export default function AdminSettings() {
-  const data = useAdmin();
-  const [fees, setFees] = useState(null);
-  const [errors, setErrors] = useState({});
   const [said, setSaid] = useState("");
-  const feeRef = useRef(null);
-  useEffect(() => {
-    if (data && !fees) setFees(Object.fromEntries(Object.entries(data.fees).map(([k, v]) => [k, String(v)])));
-  }, [data, fees]);
-  if (!data || !fees) return null;
-
-  const err = (k) => errors[k] && <p className="rt-q__err" id={`rt-adm-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p>;
-
-  const submitFees = (e) => {
-    e.preventDefault();
-    const found = {};
-    Object.entries(LIMITS).forEach(([k, [min, max, whole]]) => {
-      const v = fees[k].trim();
-      const ok = whole ? /^\d+$/.test(v) : /^\d+(\.\d{1,2})?$/.test(v);
-      if (!ok || Number(v) < min || Number(v) > max) found[k] = `Enter ${whole ? "a whole number" : "a number"} from ${min} to ${max}.`;
-    });
-    setErrors(found);
-    if (Object.keys(found).length) return focusFirstError(feeRef.current);
-    saveFees(Object.fromEntries(Object.entries(fees).map(([k, v]) => [k, Number(v)])), data.fees);
-    setSaid(copy.feesSaved);
-  };
-
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
       <CommissionCard onSaved={setSaid} />
-
-      <form className="rt-acc__card rt-adm-fees" onSubmit={submitFees} noValidate ref={feeRef}>
-        <div>
-          <h2 className="rt-acc__h2">{copy.feesTitle}</h2>
-          <p className="rt-acc__note">{copy.feesNote}</p>
-        </div>
-        <div className="rt-adm-fees__grid">
-          {Object.entries(copy.fees).map(([k, f]) => (
-            <div key={k} className="rt-field">
-              <label htmlFor={`rt-adm-${k}`}>{f.label}{f.unit && ` (${f.unit})`}</label>
-              <small className="rt-field__hint" id={`rt-adm-${k}-hint`}>{f.hint}</small>
-              {err(k)}
-              <input id={`rt-adm-${k}`} type="text" inputMode="decimal" value={fees[k]} onChange={(e) => setFees((x) => ({ ...x, [k]: e.target.value }))} aria-invalid={errors[k] ? true : undefined} aria-describedby={`rt-adm-${k}-hint${errors[k] ? ` rt-adm-${k}-e` : ""}`} className="rt-adm-num" />
-            </div>
-          ))}
-        </div>
-        <button type="submit" className="button -md -purple-1 text-white">Save settings</button>
-      </form>
+      <FeesCard onSaved={setSaid} />
     </div>
+  );
+}
+
+function FeesCard({ onSaved }) {
+  const me = useAdminAccess();
+  const canEdit = me?.permissions?.includes("finance.settings");
+  const current = api.admin.fees.get.useQuery();
+  const save = api.admin.fees.set.useMutation();
+  const utils = api.useUtils();
+  const [v, setV] = useState(null);
+  const [errors, setErrors] = useState({});
+  const ref = useRef(null);
+  useEffect(() => {
+    if (current.data && !v) setV({ card: String(current.data.cardPercent), bnpl: String(current.data.bnplPercent), payoutDay: String(current.data.payoutDay) });
+  }, [current.data, v]);
+  if (!v) return null;
+  const err = (k) => errors[k] && <p className="rt-q__err" id={`rt-adm-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p>;
+  const submit = async (e) => {
+    e.preventDefault();
+    const found = {};
+    Object.entries(LIMITS).forEach(([k, [min, max, whole]]) => {
+      const n = v[k].trim();
+      const ok = whole ? /^\d+$/.test(n) : /^\d+(\.\d{1,2})?$/.test(n);
+      if (!ok || Number(n) < min || Number(n) > max) found[k] = `Enter ${whole ? "a whole number" : "a number"} from ${min} to ${max}.`;
+    });
+    setErrors(found);
+    if (Object.keys(found).length) return focusFirstError(ref.current);
+    try {
+      await save.mutateAsync({ cardBps: Math.round(Number(v.card) * 100), bnplBps: Math.round(Number(v.bnpl) * 100), payoutDay: Number(v.payoutDay) });
+      await utils.admin.fees.invalidate();
+      utils.admin.activity.list.invalidate();
+      onSaved(F.saved);
+    } catch (err) {
+      setErrors(errorsFrom(err).fields);
+    }
+  };
+  return (
+    <form className="rt-acc__card rt-adm-fees" onSubmit={submit} noValidate ref={ref}>
+      <div>
+        <h2 className="rt-acc__h2">{F.title}</h2>
+        <p className="rt-acc__note">{F.note}</p>
+      </div>
+      {!canEdit && <p className="rt-acc__notice">{F.readOnly}</p>}
+      <div className="rt-adm-fees__grid">
+        {Object.keys(LIMITS).map((k) => (
+          <div key={k} className="rt-field">
+            <label htmlFor={`rt-adm-${k}`}>{F[k].label}</label>
+            <small className="rt-field__hint" id={`rt-adm-${k}-hint`}>{F[k].hint}</small>
+            {err(k)}
+            <input id={`rt-adm-${k}`} type="text" inputMode="decimal" value={v[k]} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, [k]: e.target.value }))} aria-invalid={errors[k] ? true : undefined} aria-describedby={`rt-adm-${k}-hint${errors[k] ? ` rt-adm-${k}-e` : ""}`} className="rt-adm-num" />
+          </div>
+        ))}
+      </div>
+      {canEdit && <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending}>{A.content.save}</button>}
+    </form>
   );
 }
 

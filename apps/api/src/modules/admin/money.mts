@@ -119,6 +119,18 @@ export const ordersRouter = createTRPCRouter({
       }
     }),
 
+  // The dashboard's money numbers: orders and sales in the last 7 days, and what waits for a decision.
+  summary: adminProcedure('admin.orders.view').query(async ({ ctx }) => {
+    const [r] = await ctx.db.execute<{ orders: number; sales: number; refunds: number; disputes: number; overdue: number; payouts: number }>(sql`
+      select (select count(*) from ${orders} where created_at > now() - interval '7 days')::int orders,
+             (select coalesce(sum(gross_pence), 0) from ${orders} where created_at > now() - interval '7 days')::int sales,
+             (select count(*) from ${refunds} where status = 'requested')::int refunds,
+             (select count(*) from ${disputes} where status = 'open')::int disputes,
+             (select count(*) from ${disputes} where status = 'open' and evidence_due < (now() at time zone 'Europe/London')::date)::int overdue,
+             (select count(*) from public.payouts where status = 'draft')::int payouts`)
+    return { orders: r.orders, sales: r.sales / 100, refunds: r.refunds, disputes: r.disputes, disputesOverdue: r.overdue, payoutsToApprove: r.payouts }
+  }),
+
   // One order with everything about its money: the split, every ledger entry, refunds and disputes.
   get: adminProcedure('admin.orders.view')
     .input(z.object({ ref: z.string().max(40) }))

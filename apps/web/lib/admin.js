@@ -290,7 +290,7 @@ export function useAdmin() {
 export function getAdmin() {
   const saved = read();
   const now = Date.now();
-  const fees = { ...A.feeDefaults, ...(saved.fees || {}) };
+  const fees = A.feeDefaults; // the demo reports use the default card fee
   const approvals = buildApprovals(saved, now);
   const orders = buildOrders(saved, now);
   const changes = buildChanges(saved, orders, now);
@@ -409,8 +409,3 @@ export function issueCertificate({ holder, course, provider, issued, years }, ex
   return number;
 }
 
-export const saveFees = (fees, before) =>
-  update((s) => {
-    s.fees = fees;
-    const changed = Object.keys(fees).filter((k) => fees[k] !== before[k]);
-  });
