@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Pill, Stats, formatWhen } from "./adminParts";
+import { Pill, Stats, formatWhen, DetailSkeleton } from "./adminParts";
 import { ORDER_TONE } from "./moneyParts";
 import { useAdminAccess } from "@/lib/adminContext";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   const providers = api.admin.providers.counts.useQuery();
   const money = api.admin.orders.summary.useQuery(undefined, { enabled: seesMoney });
   const latestOrders = api.admin.orders.list.useQuery({ limit: 5 }, { enabled: seesMoney });
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const { now, approvals, changes } = data;
   const m = money.data;
   const pending = approvals.filter((a) => a.status === "pending");

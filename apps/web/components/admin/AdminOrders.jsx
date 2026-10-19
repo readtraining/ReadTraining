@@ -14,9 +14,10 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, Search, TableSkeleton, Tabs, formatWhen } from "./adminParts";
+import { Pager, Pill, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { ORDER_TONE, toPence, useMoneyRefresh } from "./moneyParts";
+import DateField from "./DateField";
 
 const copy = A.orders;
 const TABS = Object.keys(copy.tabs);
@@ -31,34 +32,40 @@ export default function AdminOrders() {
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [booking, setBooking] = useState(false);
+  const paging = usePaging({ key: "booked", dir: -1 });
   useEffect(() => {
     const t = setTimeout(() => setSearch(q.trim()), 300);
     return () => clearTimeout(t);
   }, [q]);
-  const list = api.admin.orders.list.useInfiniteQuery({ q: search || undefined, status: tab === "all" ? undefined : tab, limit: 50 }, { getNextPageParam: (p) => p.next ?? undefined, placeholderData: (prev) => prev });
-  const counts = list.data?.pages[0]?.counts;
-  const rows = list.data?.pages.flatMap((p) => p.orders) ?? [];
+  const pick = (t) => {
+    setTab(t);
+    paging.restart();
+  };
+  const list = api.admin.orders.list.useQuery({ q: search || undefined, status: tab === "all" ? undefined : tab, ...paging.input }, { enabled: paging.ready, placeholderData: (prev) => prev });
+  const counts = list.data?.counts;
+  const rows = list.data?.orders ?? [];
+  const s = paging.sorter;
   const c = copy.columns;
 
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: counts?.[key] }))} value={tab} onChange={setTab} label="Show orders" />
+        <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: counts?.[key] }))} value={tab} onChange={pick} label="Show orders" />
         <div className="rt-adm-toolbar__end">
-          <Search value={q} onChange={setQ} label={copy.search} />
+          <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
           {canBook && <button type="button" className="button -md -purple-1 text-white" onClick={() => setBooking(true)}>{copy.book}</button>}
         </div>
       </div>
 
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />
-      ) : list.isLoading ? (
+      ) : list.isPending ? (
         <TableSkeleton />
       ) : rows.length ? (
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
-              <thead><tr><th scope="col">{c.ref}</th><th scope="col">{c.buyer}</th><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><th scope="col">{c.total}</th><th scope="col">{c.state}</th></tr></thead>
+              <thead><tr><SortTh label={c.ref} col="booked" sorter={s} numeric /><SortTh label={c.buyer} col="buyer" sorter={s} /><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><SortTh label={c.total} col="total" sorter={s} numeric /><SortTh label={c.state} col="status" sorter={s} /></tr></thead>
               <tbody>
                 {rows.map((o) => (
                   <tr key={o.id}>
@@ -73,7 +80,7 @@ export default function AdminOrders() {
               </tbody>
             </table>
           </div>
-          {list.hasNextPage && <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-adm-activity__older" onClick={() => list.fetchNextPage()} disabled={list.isFetchingNextPage}>{copy.more}</button>}
+          <Pager paging={paging} total={list.data.total} label="orders" />
         </>
       ) : search || tab !== "all" ? (
         <EmptyState title={copy.none} action={search ? { label: copy.clear, onClick: () => setQ("") } : undefined} />
@@ -94,7 +101,7 @@ function BookForm() {
   const data = useAdmin();
   const router = useRouter();
   const refresh = useMoneyRefresh();
-  const providers = api.admin.providers.list.useQuery({ tab: "active", limit: 100 });
+  const providers = api.admin.providers.list.useQuery({ tab: "active", limit: 100, sort: "name", dir: "asc" });
   const book = api.admin.orders.book.useMutation();
   const [v, setV] = useState({ buyerName: "", buyerEmail: "", buyerCompany: "", providerId: "", courseId: "", startsOn: "", quantity: "1", unit: "", method: "invoice", note: "" });
   const [errors, setErrors] = useState({});
@@ -149,7 +156,7 @@ function BookForm() {
       {field("rt-bk-courseId", b.course, null, errors.courseId, (
         <FieldSelect id="rt-bk-courseId" label={b.course} value={v.courseId} onChange={pickCourse} options={courses.map((x) => ({ value: String(x.id), label: x.title }))} invalid={Boolean(errors.courseId)} describedBy={describedBy("rt-bk-courseId", null, errors.courseId)} />
       ))}
-      {field("rt-bk-startsOn", b.startsOn, null, errors.startsOn, input("startsOn", { type: "date" }))}
+      {field("rt-bk-startsOn", b.startsOn, null, errors.startsOn, <DateField id="rt-bk-startsOn" clearable value={v.startsOn} onChange={(d) => setV((x) => ({ ...x, startsOn: d }))} />)}
       <Choice name="rt-bk-method" legend={b.method} value={v.method} onChange={(m) => setV((x) => ({ ...x, method: m, unit: m === "free" ? "0" : x.unit === "0" ? "" : x.unit }))} options={["invoice", "payment_link", ...(canFree ? ["free"] : [])].map((m) => ({ value: m, label: b.methods[m] }))} />
       <div className="rt-adm-couponform__two">
         {field("rt-bk-quantity", b.quantity, null, errors.quantity, input("quantity", { type: "text", inputMode: "numeric", className: "rt-adm-num" }))}

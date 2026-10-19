@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { setOfferingStatus, setPreCourse, useAdmin } from "@/lib/admin";
 import { courseHref } from "@/data/courseSlugs";
 import { formatPrice } from "@/lib/format";
-import { Pill, Said } from "./adminParts";
+import { Pill, Said, DetailSkeleton } from "./adminParts";
 import { modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
 
@@ -19,7 +19,7 @@ const d = copy.detail;
 export default function AdminCourse({ id }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const c = data.catalogue.find((x) => String(x.id) === String(id));
   if (!c) return <EmptyState title="This course was not found." action={{ href: "/admin/catalogue", label: d.back }} />;
 

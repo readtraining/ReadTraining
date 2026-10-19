@@ -7,7 +7,7 @@ import { useAdmin } from "@/lib/admin";
 import { addCandidateNote, moveIntro, offerRole, recordConsent, setCandidateStatus } from "@/lib/adminWork";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Pill, formatWhen, Said } from "./adminParts";
+import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { CANDIDATE_TONE } from "./AdminJobs";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -31,7 +31,7 @@ export default function AdminCandidate({ reference }) {
   const offerRef = useRef(null);
   const consentRef = useRef(null);
   const noteRef = useRef(null);
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const c = data.candidates.find((x) => x.ref === reference);
   if (!c) return <EmptyState title="This candidate was not found." action={{ href: "/admin/jobs", label: d.back }} />;
 

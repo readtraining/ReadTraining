@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { dueState } from "@/lib/admin";
 import Toast from "@/components/courses/Toast";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 // Shared bits of the admin pages, all from the site's design system: the account's status pills (.rt-pill .rt-acc__status), the
 // filter chips with counts (.rt-tr__filter), the stats strip, the account card (.rt-acc__card) and the business account's table
@@ -74,6 +75,72 @@ export function SortTh({ label, col, sorter, numeric = false }) {
         <span className="rt-adm-sort__arrow" aria-hidden="true">{on ? (sorter.sort.dir === 1 ? "↑" : "↓") : "↕"}</span>
       </button>
     </th>
+  );
+}
+
+// Numbered pages for the long lists the server pages and sorts (orders, learners, providers, the activity log). `usePaging(sort)`
+// keeps the page, rows a page and the sort (whose `sorter` drives <SortTh>, like useSort's) and mirrors them in the address
+// (?page=&size=&sort=&dir=), so a view can be shared and the back button returns to it; `input` is what the list query takes.
+// A new sort or page size starts again at page 1; a list whose filters change calls `restart()`.
+const SIZES = [25, 50, 100];
+export function usePaging(first) {
+  const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(50);
+  const [sort, setSort] = React.useState(first); // { key, dir: 1 | -1 }
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => {
+    const n = Number(getQuery("page"));
+    const size = Number(getQuery("size"));
+    const key = getQuery("sort");
+    if (n > 1) setPage(Math.floor(n));
+    if (SIZES.includes(size)) setLimit(size);
+    if (key) setSort({ key, dir: getQuery("dir") === "asc" ? 1 : -1 });
+    setReady(true);
+  }, []);
+  React.useEffect(() => {
+    if (!ready) return;
+    setQuery("page", page > 1 ? String(page) : "");
+    setQuery("size", limit !== 50 ? String(limit) : "");
+    const changed = sort.key !== first.key || sort.dir !== first.dir;
+    setQuery("sort", changed ? sort.key : "");
+    setQuery("dir", changed ? (sort.dir === 1 ? "asc" : "desc") : "");
+  }, [ready, page, limit, sort]); // eslint-disable-line react-hooks/exhaustive-deps -- `first` is a constant
+  const by = (key, numeric = false) => {
+    setSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: numeric ? -1 : 1 }));
+    setPage(1);
+  };
+  return {
+    ready,
+    page,
+    limit,
+    setPage,
+    setLimit: (n) => { setLimit(n); setPage(1); },
+    restart: () => setPage(1),
+    sorter: { sort, by },
+    input: { page, limit, sort: sort.key, dir: sort.dir === 1 ? "asc" : "desc" },
+  };
+}
+const count = new Intl.NumberFormat("en-GB");
+export function Pager({ paging, total, label = "results" }) {
+  if (!total) return null;
+  const pages = Math.max(1, Math.ceil(total / paging.limit));
+  const from = (paging.page - 1) * paging.limit + 1;
+  const to = Math.min(total, paging.page * paging.limit);
+  return (
+    <nav className="rt-adm-pager" aria-label={`Pages of ${label}`}>
+      <p className="rt-adm-pager__count" aria-live="polite">{from > total ? `Page ${paging.page} is empty` : `${count.format(from)} to ${count.format(to)} of ${count.format(total)}`}</p>
+      <div className="rt-adm-pager__size">
+        <label htmlFor={`rt-pg-${label}`}>Rows</label>
+        <FieldSelect id={`rt-pg-${label}`} label="Rows a page" value={String(paging.limit)} onChange={(v) => paging.setLimit(Number(v))} options={SIZES.map((n) => ({ value: String(n), label: String(n) }))} compact />
+      </div>
+      <div className="rt-adm-pager__nav">
+        <button type="button" onClick={() => paging.setPage(1)} disabled={paging.page <= 1} aria-label="First page">«</button>
+        <button type="button" onClick={() => paging.setPage(paging.page - 1)} disabled={paging.page <= 1}>Previous</button>
+        <span className="rt-adm-pager__where">Page {count.format(Math.min(paging.page, pages))} of {count.format(pages)}</span>
+        <button type="button" onClick={() => paging.setPage(paging.page + 1)} disabled={paging.page >= pages}>Next</button>
+        <button type="button" onClick={() => paging.setPage(pages)} disabled={paging.page >= pages} aria-label="Last page">»</button>
+      </div>
+    </nav>
   );
 }
 

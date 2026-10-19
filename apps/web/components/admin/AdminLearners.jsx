@@ -6,10 +6,11 @@ import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, Said } from "./adminParts";
+import { Pill, Search, Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
 import AdminLearnerList from "./AdminLearnerList";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import DateField from "./DateField";
 
 const copy = A.learners;
 const CERT_TONE = { valid: "ok", none: "ok", expiring: "warn", expired: "muted", revoked: "late" };
@@ -35,7 +36,7 @@ export default function AdminLearners() {
   useEffect(() => {
     if (getQuery("tab") === "certificates") setTab("certificates");
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const { certificates, catalogue, now } = data;
   const needle = q.trim().toLowerCase();
@@ -147,7 +148,7 @@ export default function AdminLearners() {
           <div className="rt-field">
             <label htmlFor="rt-adm-issued">Issue date</label>
             {err("issued")}
-            <input id="rt-adm-issued" type="date" max={today()} value={form.issued} onChange={(e) => setForm((f) => ({ ...f, issued: e.target.value }))} aria-invalid={errors.issued ? true : undefined} aria-describedby={errors.issued ? "rt-adm-issued-e" : undefined} className="rt-ck__short" />
+            <DateField id="rt-adm-issued" max={today()} value={form.issued} onChange={(v) => setForm((f) => ({ ...f, issued: v }))} invalid={Boolean(errors.issued)} describedBy={errors.issued ? "rt-adm-issued-e" : undefined} />
           </div>
           <p className="rt-acc__note">The expiry date comes from the course's validity.</p>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{copy.issue}</button>

@@ -11,7 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Pill, Said, formatWhen } from "./adminParts";
+import { DetailSkeleton, Pill, Said, SortTh, formatWhen } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { DISPUTE_TONE, DisputeForm, ORDER_TONE, REFUND_TONE, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
 
@@ -142,13 +142,13 @@ export default function AdminOrder({ reference }) {
   );
 }
 
-// a ledger's rows (the order page and Transactions): signed amounts, from the provider's side
-export function LedgerTable({ entries, showOrder = false }) {
+// a ledger's rows (the order page and Transactions): signed amounts, from the provider's side; `sorter` makes the date sortable
+export function LedgerTable({ entries, showOrder = false, sorter = null }) {
   const c = L.columns;
   const sign = (n) => (n < 0 ? `−${formatPrice(-n)}` : formatPrice(n));
   return (
     <table className="rt-biz__table rt-adm-table rt-adm-ledger">
-      <thead><tr><th scope="col">{c.when}</th><th scope="col">{c.type}</th>{showOrder && <th scope="col">{c.what}</th>}<th scope="col">{c.gross}</th><th scope="col">{c.fee}</th><th scope="col">{c.commission}</th><th scope="col">{c.share}</th></tr></thead>
+      <thead><tr>{sorter ? <SortTh label={c.when} col="when" sorter={sorter} numeric /> : <th scope="col">{c.when}</th>}<th scope="col">{c.type}</th>{showOrder && <th scope="col">{c.what}</th>}<th scope="col">{c.gross}</th><th scope="col">{c.fee}</th><th scope="col">{c.commission}</th><th scope="col">{c.share}</th></tr></thead>
       <tbody>
         {entries.map((e) => (
           <tr key={e.id}>

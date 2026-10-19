@@ -5,7 +5,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { ago, decideApproval, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Due, Pill, Tabs, getQuery, setQuery, Said } from "./adminParts";
+import { Due, Pill, Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = A.approvals;
@@ -33,7 +33,7 @@ export default function AdminApprovals() {
     const ty = getQuery("type");
     if (ty && copy.types[ty]) setType(ty);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const { approvals, now } = data;
   const ofType = approvals.filter((a) => type === "all" || a.type === type);

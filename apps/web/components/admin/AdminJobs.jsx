@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = W.jobs;
@@ -21,7 +21,7 @@ export default function AdminJobs() {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const needle = q.trim().toLowerCase();
   const candidates = data.candidates.filter((c) => !needle || `${c.ref} ${c.name} ${c.postcode} ${c.city}`.toLowerCase().includes(needle));

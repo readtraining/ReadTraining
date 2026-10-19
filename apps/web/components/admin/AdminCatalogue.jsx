@@ -6,14 +6,13 @@ import { admin as A } from "@/data/admin";
 import { basket } from "@/data/basket";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh } from "./adminParts";
+import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
 
 const copy = A.catalogue;
 const TABS = ["courses", "list", "packages"];
-const PAGE = 20;
 
 const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.offerings.length, sessions: (c) => c.upcoming, from: (c) => c.from };
 
@@ -25,7 +24,7 @@ export default function AdminCatalogue() {
   const [tab, setTab] = useState("courses");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
-  const [shown, setShown] = useState(PAGE);
+  const pages = usePaging({ key: "", dir: -1 });
   const sorter = useSort();
   useEffect(() => {
     const t = getQuery("tab");
@@ -33,7 +32,7 @@ export default function AdminCatalogue() {
     const c = getQuery("category");
     if (c) setCat(c);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const { catalogue } = data;
   // the Courses tab's category filter: each category the demo courses use, with its count
@@ -50,7 +49,7 @@ export default function AdminCatalogue() {
   ];
   const pickCat = (k) => {
     setCat(k);
-    setShown(PAGE);
+    pages.restart();
     setQuery("category", k === "all" ? "" : k);
   };
 
@@ -65,7 +64,7 @@ export default function AdminCatalogue() {
               <label htmlFor="rt-adm-cat" className="rt-sr">Category</label>
               <FieldSelect id="rt-adm-cat" label="Category" value={cat} onChange={pickCat} options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c.key, label: `${c.label} (${c.courses})` }))]} compact />
             </div>
-            <Search value={q} onChange={(v) => { setQ(v); setShown(PAGE); }} label={copy.search} />
+            <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
           </div>
           <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "course" : "courses"}`}</p>
           {list.length ? (
@@ -75,7 +74,7 @@ export default function AdminCatalogue() {
                   <tr><SortTh label={cols.course} col="course" sorter={sorter} /><SortTh label={cols.providers} col="providers" sorter={sorter} numeric /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric /><SortTh label={cols.from} col="from" sorter={sorter} numeric /><th scope="col">{cols.flags}</th></tr>
                 </thead>
                 <tbody>
-                  {sorter.apply(list, COURSE_SORT).slice(0, shown).map((c) => (
+                  {sorter.apply(list, COURSE_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((c) => (
                     <tr key={c.id}>
                       <td data-label={cols.course}><Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link><small>{c.category} · {c.duration}</small></td>
                       <td data-label={cols.providers}>{c.offerings.length}{c.offerings.some((o) => o.status === "paused") && <small>{c.offerings.filter((o) => o.status === "paused").length} paused</small>}</td>
@@ -86,11 +85,7 @@ export default function AdminCatalogue() {
                   ))}
                 </tbody>
               </table>
-              {list.length > shown && (
-                <div className="rt-adm-more">
-                  <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setShown((n) => n + PAGE)}>Show more ({list.length - shown} left)</button>
-                </div>
-              )}
+              <div className="rt-adm-more"><Pager paging={pages} total={list.length} label="courses" /></div>
             </div>
           ) : (
             <EmptyState title="No courses match." />

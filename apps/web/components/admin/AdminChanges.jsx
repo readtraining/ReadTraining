@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { admin as A } from "@/data/admin";
 import { actOnChange, ago, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Due, Pill, Tabs, formatWhen, getQuery, setQuery, Said } from "./adminParts";
+import { Due, Pill, Tabs, formatWhen, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = A.changes;
@@ -29,7 +29,7 @@ export default function AdminChanges() {
   useEffect(() => {
     if (getQuery("tab") === "done") setTab("done");
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const { changes, now } = data;
   const open = changes.filter((c) => c.open).sort((a, b) => a.due - b.due);

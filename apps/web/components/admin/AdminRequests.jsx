@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { currentAdmin } from "@/lib/adminStore";
-import { Due, Pill, Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh } from "./adminParts";
+import { Due, Pill, Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = W.requests;
@@ -23,13 +23,14 @@ export default function AdminRequests() {
   const [tab, setTab] = useState("open");
   const [q, setQ] = useState("");
   const sorter = useSort();
+  const pages = usePaging({ key: "", dir: -1 });
   useEffect(() => {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
     const s = getQuery("q");
     if (s) setQ(s);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const me = currentAdmin().name;
   const inTab = (r, t) => (t === "open" ? r.open : t === "mine" ? r.open && r.assignee === me : t === "done" ? !r.open : true);
@@ -41,8 +42,8 @@ export default function AdminRequests() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Tabs tabs={tabs} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "open" ? "" : t); }} label="Show requests" />
-        <Search value={q} onChange={(v) => { setQ(v); setQuery("q", v.trim()); }} label={copy.search} />
+        <Tabs tabs={tabs} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "open" ? "" : t); pages.restart(); }} label="Show requests" />
+        <Search value={q} onChange={(v) => { setQ(v); setQuery("q", v.trim()); pages.restart(); }} label={copy.search} />
       </div>
       <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "request" : "requests"}`}</p>
       {list.length ? (
@@ -52,7 +53,7 @@ export default function AdminRequests() {
               <tr><SortTh label={c.ref} col="when" sorter={sorter} numeric /><SortTh label={c.who} col="who" sorter={sorter} /><SortTh label={c.kind} col="kind" sorter={sorter} /><SortTh label={c.status} col="status" sorter={sorter} /><SortTh label={c.due} col="due" sorter={sorter} numeric /></tr>
             </thead>
             <tbody>
-              {sorter.apply(list, REQUEST_SORT).map((r) => (
+              {sorter.apply(list, REQUEST_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((r) => (
                 <tr key={r.ref}>
                   <td data-label={c.ref}><Link href={`/admin/requests/${r.ref}`} className="rt-adm-strong">{r.ref}</Link><small>{formatWhen(r.at)}</small></td>
                   <td data-label={c.who}>{r.name}<small>{r.company || r.email}</small></td>
@@ -63,6 +64,7 @@ export default function AdminRequests() {
               ))}
             </tbody>
           </table>
+          <div className="rt-adm-more"><Pager paging={pages} total={list.length} label="requests" /></div>
         </div>
       ) : (
         <EmptyState title="No requests here." />

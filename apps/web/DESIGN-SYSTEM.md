@@ -107,7 +107,7 @@ Set metadata with `pageMetadata({ title, description, path, noindex })` from `li
 - **Provider workspace:** `ProviderShell` (`components/providerWorkspace`), the admin's layout with the provider's organisation in the sidebar. Its extra parts (`Loading`, `Empty`, `Toggle`, `ToolSelect`, `Choice`, `Stats`) are in `providerParts.jsx`; records and actions in `lib/providerWorkspace.js`.
 - **Cards and titles:** cards are `.rt-acc__card` and card titles `.rt-acc__h2`.
 - **Status and controls:** status pills use `Pill`; tabs, search and due dates use `Tabs`, `Search` and `Due`; dashboard
-  number strips use `Stats` (`components/admin/adminParts.jsx`). Success pills use the success tokens, never the accent.
+  number strips use `Stats` (`components/admin/adminParts.jsx`). Positive status pills (Active, Paid, Valid, Live) use the brand green with navy text, like the home page's badges.
 - **Made-up records** are labelled: the admin nav's `demo` (`data/admin.js`) and `AccountShell`'s `demo` show the
   `.rt-demo-tag` beside the title. Remove the flag when the page's data becomes real.
 - **Breadcrumbs** on the course and test prep heroes use `Crumbs` (`components/courseDetail/Crumbs.jsx`).

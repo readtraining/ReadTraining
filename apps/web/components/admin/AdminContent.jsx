@@ -126,7 +126,7 @@ export default function AdminContent() {
       )}
 
       <div className="rt-adm-content__status">
-        <p className="rt-acc__note rt-adm-help">{when ? copy.lastChanged.replace("{when}", formatWhen(Date.parse(when.at))).replace("{who}", when.by || "an admin") : copy.neverChanged}</p>
+        <p className="rt-acc__note rt-adm-help">{when ? copy.lastChanged.replace("{when}", formatWhen(Date.parse(when.at))).replace("{who}", when.by || "an admin") : <BuiltInNote contentKey={contentKey} />}</p>
         {when && canEdit && <button type="button" className="rt-cd__link" onClick={() => setConfirming(true)}>{copy.reset}</button>}
       </div>
       <History contentKey={contentKey} canEdit={canEdit} onUse={(v) => { setLoaded(v); setSaid(""); }} />
@@ -148,6 +148,12 @@ export default function AdminContent() {
       </Sheet>
     </div>
   );
+}
+
+// the status line when a piece shows its built-in wording: "again" when it was saved before (its history has versions)
+function BuiltInNote({ contentKey }) {
+  const history = api.content.history.useQuery({ key: contentKey });
+  return history.data?.length ? copy.builtInAgain : copy.neverChanged;
 }
 
 // ---- trust numbers -------------------------------------------------------------------------------------------------------
@@ -190,6 +196,7 @@ function TrustForm({ value, canEdit }) {
     <form className="rt-acc__card" onSubmit={submit} noValidate ref={ref}>
       <h2 className="rt-acc__h2">{c.title}</h2>
       <p className="rt-acc__note">{c.note}</p>
+      <p className="rt-acc__notice -warn rt-adm-mt">{c.legal}</p>
       <div className="rt-adm-fees__grid rt-adm-content__grid">
         {Object.entries(c.fields).map(([k, f]) => (
           <React.Fragment key={k}>

@@ -6,6 +6,7 @@ import { sql } from '@readtraining/db'
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { signedPhotoUrl, supabase } from '../../lib/supabase.mjs'
+import { orderBy, paging, total, window } from '../../lib/paging.mjs'
 import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 
 // Students (Part B, B1): every account on the site, from the real data. Every admin can find a person and open their record
@@ -35,6 +36,8 @@ async function person(db: typeof Db, userId: string) {
   return row
 }
 
+const STUDENT_SORT = { joined: sql`u.created_at`, name: sql`lower(coalesce(nullif(trim(concat_ws(' ', p.first_name, p.last_name)), ''), u.email))`, last: sql`u.last_sign_in_at` }
+
 export const studentsRouter = createTRPCRouter({
   // Newest accounts first, a page at a time.
   list: adminProcedure('admin.students.view')
@@ -42,32 +45,30 @@ export const studentsRouter = createTRPCRouter({
       z.object({
         q: z.string().trim().max(200).optional(), // a name, an email, a phone number or an account id
         status: z.enum(['unconfirmed', 'blocked', 'providers', 'businesses']).optional(),
-        cursor: z.object({ at: z.string().datetime({ offset: true }), id: z.string().uuid() }).optional(), // the last row of the page before
-        limit: z.number().int().min(1).max(100).default(50),
+        sort: z.enum(['joined', 'name', 'last']).default('joined'),
+        ...paging,
       }),
     )
     .query(async ({ ctx, input }) => {
       const where = [sql`u.deleted_at is null`]
       if (input.status) where.push(STATUS[input.status])
-      if (input.cursor) where.push(sql`(u.created_at, u.id) < (${input.cursor.at}::timestamptz, ${input.cursor.id}::uuid)`)
       if (input.q) {
         const like = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(sql`(u.email ilike ${like} or concat_ws(' ', p.first_name, p.last_name) ilike ${like} or p.phone ilike ${like} or u.id::text = ${input.q})`)
       }
-      const rows = await ctx.db.execute<Named & { id: string; created_at: string; last_sign_in_at: string | null; email_confirmed_at: string | null; banned: boolean; orgs: { type: 'provider' | 'business'; name: string }[] | null; admin: boolean }>(sql`
-        select u.id, u.email, u.created_at, u.last_sign_in_at, u.email_confirmed_at, coalesce(u.banned_until > now(), false) banned,
+      const rows = await ctx.db.execute<Named & { id: string; created_at: string; total: number; last_sign_in_at: string | null; email_confirmed_at: string | null; banned: boolean; orgs: { type: 'provider' | 'business'; name: string }[] | null; admin: boolean }>(sql`
+        select u.id, u.email, u.created_at, ${total} total, u.last_sign_in_at, u.email_confirmed_at, coalesce(u.banned_until > now(), false) banned,
                p.first_name, p.last_name,
                (select json_agg(json_build_object('type', o.type, 'name', o.name) order by o.name)
                   from public.organisation_members m join public.organisations o on o.id = m.organisation_id where m.user_id = u.id) orgs,
                exists (select 1 from public.admin_users a where a.user_id = u.id and a.active) admin
         from auth.users u left join public.profiles p on p.id = u.id
         where ${sql.join(where, sql` and `)}
-        order by u.created_at desc, u.id desc
-        limit ${input.limit + 1}`)
-      const page = rows.slice(0, input.limit)
-      const last = page[page.length - 1]
+        order by ${orderBy(STUDENT_SORT[input.sort], input.dir, sql`u.id`)}
+        ${window(input.page, input.limit)}`)
       return {
-        students: page.map((r) => ({
+        total: rows[0]?.total ?? 0,
+        students: rows.map((r) => ({
           id: r.id,
           name: nameOf(r),
           email: r.email,
@@ -77,7 +78,6 @@ export const studentsRouter = createTRPCRouter({
           organisations: r.orgs ?? [],
           admin: r.admin,
         })),
-        next: rows.length > input.limit ? { at: iso(last.created_at)!, id: last.id } : null,
       }
     }),
 

@@ -11,7 +11,7 @@ import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { hideReview, keepReview, showReview } from "@/lib/adminReviews";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Pill, Said, Search, TableSkeleton, Tabs, formatWhen } from "./adminParts";
+import { Pill, Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging } from "./adminParts";
 
 const copy = A.reviews;
 const TABS = Object.keys(copy.tabs);
@@ -29,6 +29,7 @@ export default function AdminReviews() {
   const [q, setQ] = useState("");
   const [hiding, setHiding] = useState(null);
   const [said, setSaid] = useState("");
+  const pages = usePaging({ key: "", dir: -1 });
   if (!data) return <TableSkeleton rows={5} />;
 
   const needle = q.trim().toLowerCase();
@@ -41,23 +42,23 @@ export default function AdminReviews() {
   const list = data.reviews
     .filter((r) => inTab[tab](r) && (stars === "0" || r.rating === Number(stars)) && (!needle || `${r.course} ${r.provider} ${r.learner}`.toLowerCase().includes(needle)))
     .sort((a, b) => Boolean(b.challenge) - Boolean(a.challenge) || b.at - a.at);
-  const clear = () => { setTab("all"); setStars("0"); setQ(""); };
+  const clear = () => { setTab("all"); setStars("0"); setQ(""); pages.restart(); };
 
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
       <div className="rt-adm-toolbar">
-        <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: data.reviews.filter(inTab[key]).length }))} value={tab} onChange={setTab} label="Show reviews" />
+        <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: data.reviews.filter(inTab[key]).length }))} value={tab} onChange={(k) => { setTab(k); pages.restart(); }} label="Show reviews" />
         <div className="rt-adm-toolbar__end">
-          <div className="rt-adm-select -inline"><FieldSelect id="rt-adm-rv-stars" label={copy.stars} value={stars} onChange={setStars} options={STARS.map((s) => ({ value: s, label: copy.starOptions[s] }))} compact /></div>
-          <Search value={q} onChange={setQ} label={copy.search} />
+          <div className="rt-adm-select -inline"><FieldSelect id="rt-adm-rv-stars" label={copy.stars} value={stars} onChange={(v) => { setStars(v); pages.restart(); }} options={STARS.map((s) => ({ value: s, label: copy.starOptions[s] }))} compact /></div>
+          <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
         </div>
       </div>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
 
       {list.length ? (
         <ul className="rt-adm-items">
-          {list.map((r) => (
+          {list.slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((r) => (
             <li key={r.id} className={`rt-acc__card rt-adm-item rt-adm-review${r.hidden ? " is-hidden" : ""}`}>
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
@@ -91,6 +92,7 @@ export default function AdminReviews() {
       ) : (
         <EmptyState title={copy.none} action={{ label: copy.clear, onClick: clear }} />
       )}
+      {list.length > 0 && <Pager paging={pages} total={list.length} label="reviews" />}
 
       <Sheet open={Boolean(hiding)} onClose={() => setHiding(null)} title={copy.hideTitle} closeLabel="Close">
         {hiding && <HideForm review={hiding} onDone={() => { setHiding(null); setSaid(copy.hiddenDone); }} />}

@@ -8,7 +8,7 @@ import { addBusinessNote, changeCreditLimit, offerCredit, markInvoicePaid, remin
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Pill, formatWhen, Said } from "./adminParts";
+import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { CREDIT_TONE } from "./AdminBusinesses";
 import { EmptyState } from "@/components/states/States";
 
@@ -28,7 +28,7 @@ export default function AdminBusiness({ slug }) {
   const [note, setNote] = useState("");
   const limitRef = useRef(null);
   const noteRef = useRef(null);
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const b = data.businesses.find((x) => x.slug === slug);
   if (!b) return <EmptyState title="This business account was not found." action={{ href: "/admin/businesses", label: d.back }} />;
 

@@ -8,7 +8,7 @@ import { addRequestNote, advanceRequest, assignRequest, cancelRequest, nextLabel
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Due, Pill, formatWhen, Said } from "./adminParts";
+import { Due, Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { REQUEST_TONE } from "./AdminRequests";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -32,7 +32,7 @@ export default function AdminRequest({ reference }) {
   const quoteRef = useRef(null);
   const cancelRef = useRef(null);
   const noteRef = useRef(null);
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const r = data.requests.find((x) => x.ref === reference);
   if (!r) return <EmptyState title="This request was not found." action={{ href: "/admin/requests", label: d.back }} />;
 

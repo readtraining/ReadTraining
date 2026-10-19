@@ -51,7 +51,7 @@ export function AdminRefunds() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={tab === "requested" ? c.empty : c.none} />
+        <EmptyState title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
       )}
     </div>
   );
@@ -110,7 +110,7 @@ export function AdminDisputes() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={tab === "open" ? c.empty : c.none} />
+        <EmptyState title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
       )}
     </div>
   );

@@ -12,8 +12,9 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh } from "./adminParts";
+import { Pill, RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery } from "./adminParts";
 import { describedBy, field } from "./contentParts";
+import DateField from "./DateField";
 
 const copy = A.coupons;
 const f = copy.fields;
@@ -49,6 +50,11 @@ export default function AdminCoupons() {
   const sorter = useSort();
   const utils = api.useUtils();
   const setActive = api.admin.coupons.setActive.useMutation();
+  // a coupon opened from the admin search arrives with its code (?q=)
+  useEffect(() => {
+    const code = getQuery("q");
+    if (code) setQ(code);
+  }, []);
   useEffect(() => {
     const t = setTimeout(() => setSearch(q.trim()), 250);
     return () => clearTimeout(t);
@@ -182,8 +188,8 @@ function CouponForm({ coupon, onDone }) {
         <input id="rt-cp-value" type="text" inputMode="decimal" className="rt-adm-num" value={v.value} onChange={set("value")} aria-invalid={errors.value ? true : undefined} aria-describedby={describedBy("rt-cp-value", true, errors.value)} />
       ))}
       <div className="rt-adm-couponform__two">
-        {field("rt-cp-startsOn", f.startsOn.label, f.startsOn.hint, errors.startsOn, input("startsOn", { type: "date" }))}
-        {field("rt-cp-endsOn", f.endsOn.label, f.endsOn.hint, errors.endsOn, input("endsOn", { type: "date", min: v.startsOn || undefined }))}
+        {field("rt-cp-startsOn", f.startsOn.label, f.startsOn.hint, errors.startsOn, <DateField id="rt-cp-startsOn" clearable value={v.startsOn} onChange={(d) => setV((x) => ({ ...x, startsOn: d }))} invalid={Boolean(errors.startsOn)} describedBy={describedBy("rt-cp-startsOn", f.startsOn.hint, errors.startsOn)} />)}
+        {field("rt-cp-endsOn", f.endsOn.label, f.endsOn.hint, errors.endsOn, <DateField id="rt-cp-endsOn" clearable min={v.startsOn || undefined} value={v.endsOn} onChange={(d) => setV((x) => ({ ...x, endsOn: d }))} invalid={Boolean(errors.endsOn)} describedBy={describedBy("rt-cp-endsOn", f.endsOn.hint, errors.endsOn)} />)}
       </div>
       {field("rt-cp-usageLimit", f.usageLimit.label, f.usageLimit.hint, errors.usageLimit, input("usageLimit", { type: "text", inputMode: "numeric", className: "rt-adm-num" }))}
       <Choice name="rt-cp-scope" legend={f.scope.label} value={v.scope} onChange={(k) => setV((x) => ({ ...x, scope: k }))} options={["all", "categories", "courses"].map((k) => ({ value: k, label: f.scope[k] }))} />

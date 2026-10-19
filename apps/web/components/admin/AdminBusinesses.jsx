@@ -5,7 +5,7 @@ import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh } from "./adminParts";
+import { Pill, Search, Tabs, getQuery, setQuery, useSort, SortTh, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
 
 const copy = W.businesses;
@@ -25,7 +25,7 @@ export default function AdminBusinesses() {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const inTab = (b, t) => (t === "credit" ? b.eligible : t === "overdue" ? b.overdue > 0 : t === "suspended" ? b.credit === "suspended" : true);
   const needle = q.trim().toLowerCase();
