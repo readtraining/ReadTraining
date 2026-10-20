@@ -208,6 +208,7 @@ export const admin = {
       "admin.catalogue_restored": "Restored to the catalogue list",
       "admin.catalogue_moved": "Reordered the catalogue list",
       "provider.resubmitted": "Sent the provider account back for review",
+      "provider.reapplied": "Applied again as a provider",
       "email.provider_decision_sent": "Decision email sent to the provider",
       "access.denied": "Was refused access",
     },

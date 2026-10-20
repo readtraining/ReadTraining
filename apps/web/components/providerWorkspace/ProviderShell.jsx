@@ -6,12 +6,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { RowMenu } from "@/components/admin/adminParts";
+import NavIcon from "@/components/admin/navIcons";
+import { DrawerHead, FoldChevron, MenuButton, useFoldedGroups, useWorkDrawer } from "@/components/admin/workNav";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
 import { actAs, useProvider } from "@/lib/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { api } from "@/lib/trpc/react";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -19,18 +22,17 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // The provider workspace's layout, with Hurak's navigation in our design (DESIGN-SYSTEM.md, "Provider workspace follows the same
 // shell pattern"). The dark band: the logo and "Provider" tag, then New course, Student (the learner side), the bell with unread
 // notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
-// Dashboard, then Courses and Cohorts as groups that open to their pages (the current page's group starts open), Learners,
-// Orders, Performance and Help; below 992px it becomes the scrolling chip row. Then the page head (title, intro, actions) and the page.
+// Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
+// sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups and, below 992px, the menu drawer. Then the page head (title, intro, actions) and the page.
 // `current` marks the section; the page inside it is matched on the address.
 export default function ProviderShell({ current, title, lead, actions = null, back = null, children }) {
   const sideRef = useRef(null);
   const router = useRouter();
   const path = usePathname();
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(() => new Set([current]));
+  const [folded, fold] = useFoldedGroups("rt-pws-nav-folded");
+  const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
   useEffect(() => setSearch(window.location.search), [path]);
-  // one group open at a time: opening a group closes the other
-  const toggle = (key) => setOpen((o) => (o.has(key) ? new Set() : new Set([key])));
   // a group's page is current when its path matches and, for ?tab= / ?mode= pages, its query does too
   // a page opened from a notification goes back to the notifications; otherwise to its own list (`back`)
   const backTo = /(^|[?&])from=notifications(&|$)/.test(search) ? { label: "Notifications", href: "/provider/notifications" } : back;
@@ -44,6 +46,17 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const counts = data?.counts || {};
   // the real provider (from the server check in the layout) and the signed-in person; the pages' records are still DEMO data
   const workspace = useWorkspace();
+  // the status can change while the page is open (approved, changes asked for, not approved, suspended): check quietly every
+  // minute and when the tab is used again, and reload the page from the server when it changed or the workspace closed
+  const live = api.organisations.openWorkspace.useQuery(
+    { type: "provider", organisationId: workspace?.id, path: path || "/provider" },
+    { enabled: Boolean(workspace?.id), refetchInterval: 60_000, refetchOnWindowFocus: true, retry: false },
+  );
+  const closed = live.error?.data?.code === "FORBIDDEN";
+  const changed = live.data && live.data.status !== workspace?.status;
+  useEffect(() => {
+    if (closed || changed) router.refresh();
+  }, [closed, changed, router]);
   const org = workspace?.name || "";
   const { person, data: meData } = useMe();
   const meName = meData ? `${meData.profile.firstName} ${meData.profile.lastName}`.trim() : person?.name || "";
@@ -65,6 +78,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
       <a href="#rt-pws-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">
+          <MenuButton drawer={drawer} controls="rt-pws-side" />
           <Link href="/provider" className="rt-adm__logo" aria-label={`${pw.title}: dashboard`}>
             <Image width={150} height={38} src="/assets/img/general/readtraining-logo.svg" alt="" priority />
             <span className="rt-adm__tag">{pw.tag}</span>
@@ -86,7 +100,9 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
       </header>
 
       <div className="rt-adm__body">
-        <nav className="rt-adm__side rt-pill-scroll" aria-label="Provider workspace" ref={sideRef}>
+        {drawer.menuOpen && <div className="rt-adm__scrim" onClick={drawer.closeMenu} aria-hidden="true"></div>}
+        <nav id="rt-pws-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Provider workspace" ref={sideRef}>
+          <DrawerHead drawer={drawer} />
           <div className="rt-pws__org">
             <span className="rt-pws__orgmark" aria-hidden="true">{org ? initials(org) : ""}</span>
             <span className="rt-pws__orgname"><strong>{org || " "}</strong><span>Training provider</span></span>
@@ -99,24 +115,28 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
                 return (
                   <li key={x.key}>
                     <Link href={x.href} className={`rt-adm__link${here ? " is-active" : ""}`} aria-current={here ? "page" : undefined}>
-                      <i className={`${x.icon} text-16`} aria-hidden="true"></i><span>{x.label}</span>{badge}
+                      <NavIcon name={x.key} /><span>{x.label}</span>{badge}
                     </Link>
                   </li>
                 );
               }
-              const isOpen = open.has(x.key);
+              // a group (Courses, Cohorts): its heading folds its pages, which sit indented under a guide line as the admin's do
+              const shut = folded.includes(x.key);
+              const id = `rt-pws-nav-${x.key}`;
               return (
-                <li key={x.key} className={`rt-pws__group${isOpen ? " is-open" : ""}${here ? " is-here" : ""}`}>
-                  <button type="button" className="rt-adm__link rt-pws__grouphead" aria-expanded={isOpen} aria-controls={`rt-pws-nav-${x.key}`} onClick={() => toggle(x.key)}>
-                    <i className={`${x.icon} text-16`} aria-hidden="true"></i><span>{x.label}</span>{!isOpen && badge}
-                    <i className="icon-chevron-down text-9 rt-pws__chev" aria-hidden="true"></i>
+                <li key={x.key} className={`rt-adm__group rt-pws__group${shut ? " is-folded" : ""}${here ? " is-here" : ""}`}>
+                  <button type="button" className="rt-adm__link rt-pws__grouphead" aria-expanded={!shut} aria-controls={id} onClick={() => fold(x.key)}>
+                    <NavIcon name={x.key} /><span>{x.label}</span>
+                    {shut && here && <span className="rt-sr">, contains the page you are on</span>}
+                    {shut && badge}
+                    <FoldChevron />
                   </button>
-                  <ul className="rt-pws__sub" id={`rt-pws-nav-${x.key}`} hidden={!isOpen}>
+                  <ul id={id} hidden={shut}>
                     {x.items.map((it) => {
                       const on = isHere(it.href, x.items);
                       const n = it.badge && counts[it.badge] > 0 ? counts[it.badge] : 0;
-                      const cls = `rt-pws__sublink${on ? " is-active" : ""}`;
-                      const inner = <><span>{it.label}</span>{n > 0 && <span className="rt-pws__subcount" aria-label={`${n} new`}>{n}</span>}</>;
+                      const cls = `rt-adm__link${on ? " is-active" : ""}`;
+                      const inner = <><span>{it.label}</span>{n > 0 && <span className="rt-adm__count" aria-label={`${n} new`}>{n}</span>}</>;
                       // a link to this same page with another ?tab= or ?mode= loads the page again, so it opens on that view
                       return (
                         <li key={it.href}>
@@ -131,18 +151,18 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
               );
             })}
           </ul>
+          <div className="rt-adm__drawerfoot">
+            {meName && (
+              <div className="rt-adm__me">
+                <span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>
+                <span className="rt-adm__mewho"><strong>{meName}</strong><span>{org ? `${org} · Provider account` : "Provider account"}</span></span>
+              </div>
+            )}
+            <Link href="/account" className="rt-adm__link" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}>Student account</Link>
+            <button type="button" className="rt-adm__link" onClick={logOut}>Log out</button>
+          </div>
           <FilterScrollPill scrollRef={sideRef} />
         </nav>
-        <ul className="rt-acc__chips rt-adm__chips">
-          {pw.nav.map((x) => (
-            <li key={x.key}>
-              <Link href={x.href || x.items[0].href} className={`rt-tr__filter${x.key === current ? " is-on" : ""}`} aria-current={x.key === current ? "page" : undefined}>
-                {x.label}
-                {x.badge && counts[x.badge] > 0 && <span className="rt-tr__filter-n">{counts[x.badge]}</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
           <ProviderAccountStatus />

@@ -4802,13 +4802,11 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__menu > span:first-child::before, .rt-adm__menu > span:first-child::after { content: ""; position: absolute; left: 0; }
 .rt-adm__menu > span:first-child::before { top: -6px; }
 .rt-adm__menu > span:first-child::after { top: 6px; }
-.rt-adm__chips { margin: 0; padding: 12px 16px 4px; }
 .rt-adm__main { min-width: 0; padding: 20px 16px 64px; }
 @media (min-width: 992px) {
   .rt-adm__body { display: grid; grid-template-columns: 264px minmax(0, 1fr); }
   .rt-adm__side { position: sticky; top: 64px; z-index: auto; display: block; width: auto; height: calc(100vh - 64px); padding: 12px 12px 32px; border-right: 1px solid var(--color-light-5); background: #fff; box-shadow: none; transform: none; visibility: visible; transition: none; }
   .rt-adm__menu, .rt-adm__scrim { display: none; }
-  .rt-adm__chips { display: none; }
   .rt-adm__main { padding: 28px 32px 72px; }
 }
 .rt-adm__group ul { margin: 0; padding: 0; list-style: none; }
@@ -5420,29 +5418,16 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* Hurak's top bar: New course, Student, the bell and the account menu */
 .rt-pws__nav { display: grid; gap: 2px; margin: 16px 0 0; padding: 0; list-style: none; }
 .rt-pws__nav li { list-style: none; }
-/* sidebar groups: the heading opens its pages; the current page's group starts open */
+/* sidebar groups (Courses, Cohorts): each folds on its own, as the admin's (components/admin/workNav.jsx) */
 .rt-pws__grouphead { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; }
-.rt-pws__group.is-here > .rt-pws__grouphead { font-weight: 600; }
-.rt-pws__group.is-here > .rt-pws__grouphead i:first-child { color: var(--rt-c-brand); }
-.rt-pws__chev { flex: none; margin-left: auto; font-size: 9px; color: var(--rt-c-muted); transition: transform 0.22s ease-in; }
-.rt-pws__grouphead .rt-adm__count + .rt-pws__chev { margin-left: 8px; }
-.rt-pws__group.is-open .rt-pws__chev { transform: rotate(180deg); }
-/* an open group is the site's dropdown panel (as .rt-cat-dd: white panel, 1px border, 12px radius) and its pages are its options
-   (bold purple text and the 4px purple bar when hovered or current, as the dropdowns in the workspace show them) */
-.rt-pws__sub { display: grid; gap: 2px; margin: 4px 0 8px; padding: 6px; border: 1px solid var(--color-light-5); border-radius: 12px; background: var(--rt-c-surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--color-dark-1) 4%, transparent), 0 8px 24px color-mix(in srgb, var(--color-dark-1) 6%, transparent); list-style: none; }
-.rt-pws__sub[hidden] { display: none; }
-.rt-pws__sub li { list-style: none; }
-.rt-pws__sublink { position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 14px; border-radius: 8px; font-size: 14px; font-weight: 400; color: var(--color-dark-1) !important; text-decoration: none; transition: color 0.25s ease-in; }
-.rt-pws__sublink > * { position: relative; z-index: 1; }
-.rt-pws__sublink::before { content: ""; position: absolute; z-index: 2; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: 3px; background: var(--color-purple-1); opacity: 0; transition: opacity 0.2s; }
-.rt-pws__sublink:hover { color: var(--color-purple-1) !important; font-weight: 600; }
-.rt-pws__sublink.is-active { color: var(--color-purple-1) !important; font-weight: 600; }
-.rt-pws__sublink:hover::before, .rt-pws__sublink.is-active::before { opacity: 1; }
-.rt-pws__sublink:focus-visible { outline: 2px solid var(--color-dark-1); outline-offset: -2px; }
+/* a group heading is a sidebar item like the others (same size as Learners or Orders), its fold arrow on the right; its pages sit
+   indented under the guide line (.rt-adm__group, the admin's). Folded, it shows its count and marks the page you are on. */
+.rt-pws .rt-pws__grouphead { padding: 9px 12px; }
+.rt-pws__grouphead .rt-adm__chev { margin-left: auto; }
+.rt-pws__grouphead .rt-adm__count + .rt-adm__chev { margin-left: 8px; }
+.rt-pws__group.is-folded.is-here > .rt-pws__grouphead { font-weight: 600; color: var(--rt-c-brand) !important; }
+.rt-pws__group.is-folded.is-here > .rt-pws__grouphead .rt-adm__icon { color: var(--rt-c-brand); }
 @media (hover: hover) and (pointer: fine) { .rt-pws__grouphead:hover { background: var(--color-light-4); } }
-.rt-pws__subcount { min-width: 20px; height: 20px; margin-left: auto; padding: 0 6px; border-radius: 999px; background: var(--rt-c-brand-soft); font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; color: var(--rt-c-brand); }
-.rt-pws__sublink.is-active .rt-pws__subcount { background: var(--rt-c-surface); }
-@media (prefers-reduced-motion: reduce) { .rt-pws__chev, .rt-pws__sublink, .rt-pws__sublink::before { transition: none; } }
 .rt-pws__student { min-height: 44px; }
 .rt-pws__bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; color: rgba(255, 255, 255, 0.85) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-pws__bell:hover { background: rgba(255, 255, 255, 0.1); color: var(--rt-c-surface) !important; }
@@ -6784,6 +6769,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm__drawerfoot .rt-adm__me { padding: 4px 12px 10px; }
 .rt-adm__drawerfoot .rt-adm__mewho strong { color: var(--rt-c-text); }
 .rt-adm__drawerfoot .rt-adm__mewho span { color: var(--rt-c-muted); }
+/* the drawer has room for the name, which the top bar hides on a phone */
+.rt-adm__drawerfoot .rt-adm__mewho { display: block; }
 @media (min-width: 992px) { .rt-adm__drawerhead, .rt-adm__drawerfoot { display: none; } }
 @media (max-width: 991px) { .rt-adm__topside .rt-adm__out, .rt-adm__topside .rt-adm__site { display: none; } }
 /* numbered pages under a long list (adminParts Pager) */
