@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { DAY, customerName, useProvider } from "@/lib/providerWorkspace";
+import { useMe } from "@/lib/useMe";
 import { COURSE_TONE, Loading, ORDER_TONE, Pill, formatWhen } from "./providerParts";
 import { Delta, Sparkline, money } from "./charts";
 import { Seats, dayRange } from "./ProviderCohorts";
@@ -15,6 +16,7 @@ import { Seats, dayRange } from "./ProviderCohorts";
 const greet = (h) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
 
 export default function ProviderDashboard() {
+  const { person, data: meData } = useMe();
   const data = useProvider();
   if (!data) return <Loading stats rows={3} />;
 
@@ -56,13 +58,15 @@ export default function ProviderDashboard() {
   ];
   const recent = [...data.orders].sort((a, b) => b.at - a.at).slice(0, 5);
   const statuses = Object.keys(pw.courseStatuses).map((k) => ({ k, n: data.courses.filter((c) => c.status === k).length }));
-  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Europe/London" }).format(now));
+  // the visitor's own clock (a provider in Lahore at 2:51pm sees "Good afternoon"), and the signed-in person's own first name
+  const hour = new Date(now).getHours();
+  const firstName = meData?.profile?.firstName || person?.name?.split(" ")[0] || "";
 
   return (
     <div className="rt-acc__stack rt-dash">
       <section className="rt-dash__hello" aria-labelledby="rt-dash-hi">
         <div>
-          <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}, {data.me.name.split(" ")[0]}</h2>
+          <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}{firstName ? `, ${firstName}` : ""}</h2>
           <p className="rt-dash__sub">{todo.length ? `${todo.length} ${todo.length === 1 ? "thing needs" : "things need"} you today.` : "You're all caught up."} {upcoming.length ? `Next cohort: ${upcoming[0].course?.title}, ${dayRange(upcoming[0].first, upcoming[0].last)}.` : ""}</p>
         </div>
         <div className="rt-dash__quick">

@@ -9,9 +9,11 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 // skeleton, the empty state, a toggle switch and a labelled select for toolbars.
 export { Pill, Tabs, Search, Stats, RowMenu, setQuery, getQuery, formatWhen } from "@/components/admin/adminParts";
 
-export const COURSE_TONE = { draft: "muted", pending: "warn", approved: "ok", changes: "late" };
-export const COHORT_TONE = { upcoming: "info", progress: "warn", completed: "muted", partial: "warn", certificated: "ok", cancelled: "muted" };
-export const ORDER_TONE = { paid: "ok", incomplete: "warn", cancelled: "muted", refunded: "muted", partial: "info", dispute: "late", lost: "late" };
+// The status tones, as the admin's (components/admin/AdminStatus.jsx), seen by the provider: ok green (done), info blue (waiting on
+// someone else), warn amber (the provider must act), late red (at risk), muted grey (closed or not started).
+export const COURSE_TONE = { draft: "muted", pending: "info", approved: "ok", changes: "warn" };
+export const COHORT_TONE = { upcoming: "muted", progress: "info", completed: "warn", partial: "warn", certificated: "ok", cancelled: "muted" };
+export const ORDER_TONE = { paid: "ok", incomplete: "warn", cancelled: "muted", refunded: "muted", partial: "muted", dispute: "late", lost: "muted" };
 
 // While the records load: grey blocks in the shape of the page (a strip of stats, then cards), not a spinner.
 export function Loading({ rows = 3, stats = false }) {

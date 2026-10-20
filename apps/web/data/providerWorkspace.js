@@ -36,6 +36,9 @@ export const pw = {
     { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders" },
     { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews" },
     { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
+    // the provider's own account: how it is set up, and the page learners see
+    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear" },
+    { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile" },
   ],
   // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team; then Switch account (the
   // identities on this login, added by ProviderShell from the API) and log out
@@ -160,7 +163,7 @@ export const pw = {
     { key: "affiliate", label: "Affiliate" },
     { key: "emails", label: "Emails" },
     { key: "faqs", label: "FAQs" },
-    { key: "qa", label: "QA" },
+    { key: "qa", label: "Q&A" },
     { key: "integrations", label: "Integrations" },
   ],
 

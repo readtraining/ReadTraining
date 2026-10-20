@@ -8,7 +8,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { EmptyState } from "@/components/states/States";
 
 const copy = account.purchases;
-const TONE = { paid: "completed", refunded: "cancelled", requested: "requested" };
+const TONE = { paid: "completed", refunded: "cancelled", requested: "confirmed" };
 
 // Purchase history (the client's "Purchase history"): every order, newest first, as a table (cards on phones): the order
 // reference, when it was placed, its courses, what was paid and how (card, Klarna, wallet), and its status (Paid, Cancellation

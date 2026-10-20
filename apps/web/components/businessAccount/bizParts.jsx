@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDate } from "@/lib/format";
+import { formatDay } from "@/lib/format";
 
 // Shared bits of the Business account pages.
 
@@ -29,7 +29,14 @@ export function PlacesBar({ purchase }) {
   );
 }
 
-// A certificate's state as the account's status pill: Valid (green), Renew soon (orange), Expired (neutral).
-const CERT = { valid: ["completed", "Valid"], renew: ["requested", "Renew soon"], expired: ["cancelled", "Expired"] };
+// A certificate's state as the account's status pill: Valid (green), Renew soon (amber: book it), Expired (red: the learner is not
+// covered now).
+const CERT = { valid: ["completed", "Valid"], renew: ["requested", "Renew soon"], expired: ["late", "Expired"] };
 export const CertPill = ({ state }) => <span className={`rt-pill rt-acc__status -${CERT[state][0]}`}>{CERT[state][1]}</span>;
-export const certLine = (c) => `${c.number} · ${c.state === "expired" ? "Expired" : "Expires"} ${formatDate(c.expires)}`;
+export const certLine = (c) => `${c.number} · Issued ${formatDay(c.issued)} · ${c.state === "expired" ? "Expired" : "Expires"} ${formatDay(c.expires)}`;
+
+// A course result as the account's status pill with the score: Passed (green) or Failed (red; the dashboard offers Rebook).
+const RESULT = { passed: ["completed", "Passed"], failed: ["late", "Failed"] };
+export const ResultPill = ({ result }) => (
+  <span className={`rt-pill rt-acc__status -${RESULT[result.outcome][0]}`}>{RESULT[result.outcome][1]}{result.score != null ? ` · ${result.score}%` : ""}</span>
+);

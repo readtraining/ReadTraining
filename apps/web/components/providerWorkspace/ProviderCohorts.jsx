@@ -13,6 +13,7 @@ import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
+import DateField from "@/components/admin/DateField";
 
 // Cohorts: every run of a course, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status (set here by
 // hand), its instructor (assigned here), students (booked of places, with enrolled / rescheduled / cancelled), whether it takes
@@ -26,7 +27,8 @@ const MODES = [
   { key: "all", label: "All" },
   { key: "classroom", label: "Classroom" },
   { key: "live-online", label: "Live online" },
-  { key: "self-paced", label: "Self-paced" },
+  // self-paced courses have no dates, so this tab lists courses, not cohorts (its count is not part of All)
+  { key: "self-paced", label: "Self-paced courses" },
 ];
 const WHEN = [
   { value: "upcoming", label: "Upcoming and in progress" },
@@ -81,6 +83,8 @@ export default function ProviderCohorts() {
   const [when, setWhen] = useState("upcoming");
   const [q, setQ] = useState("");
   const [date, setDate] = useState("");
+  // said under the filters when a status or a date set "When" to Any date, so the change is never silent
+  const [whenNote, setWhenNote] = useState("");
   const [page, setPage] = useState(1);
   const [moving, setMoving] = useState(null);
   const [moveTo, setMoveTo] = useState("");
@@ -138,6 +142,8 @@ export default function ProviderCohorts() {
     .filter((k) => !needle || `${k.course?.title} ${k.venue?.name || ONLINE} ${k.venue?.city || ""} ${k.tutor?.name || ""}`.toLowerCase().includes(needle))
     .sort((a, b) => (when === "past" ? b.first.localeCompare(a.first) : a.first.localeCompare(b.first)));
 
+  // any filter set (the tab aside), for "Clear filters" under the filters
+  const filtersSet = Boolean(course || status || venue || tutor || date || needle || when !== "upcoming");
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const at = Math.min(page, pages);
   const pageRows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
@@ -149,8 +155,9 @@ export default function ProviderCohorts() {
   const learnersIn = (rows) => rows.filter((k) => !k.cancelled).reduce((n, k) => n + k.booked, 0);
   const filtered = Boolean(status || venue || tutor || needle || date || course || mode !== "all" || when !== "upcoming");
 
-  const clear = () => {
-    setMode("all");
+  // back to the defaults; under the filters the tab stays (keepTab), from the empty state everything resets
+  const clear = (keepTab = false) => {
+    if (!keepTab) setMode("all");
     setCourse("");
     setStatus("");
     setVenue("");
@@ -159,7 +166,8 @@ export default function ProviderCohorts() {
     setQ("");
     setDate("");
     setPage(1);
-    ["mode", "course", "status", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
+    setWhenNote("");
+    [...(keepTab ? [] : ["mode"]), "course", "status", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
   const togglePick = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const sendJoining = () => {
@@ -206,23 +214,29 @@ export default function ProviderCohorts() {
       ) : (
         <>
           <div className="rt-adm-toolbar">
-            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); }} label="Delivery" />
+            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
             {create}
           </div>
           {mode !== "self-paced" && (
-            <div className="rt-adm-toolbar rt-pws-coh__filters">
-              <div className="rt-adm-toolbar__end">
+            <div className="rt-pws-coh__filterbox">
+              <div className="rt-pws-coh__filters">
+                <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
                 <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))]} />
-                <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setPage(1); }} options={WHEN} />
+                <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setWhenNote(""); setPage(1); }} options={WHEN} />
                 <div className="rt-field rt-adm-select -inline rt-pws-coh__datefilter">
                   <label htmlFor="rt-coh-date" className="rt-sr">Cohorts running on this date</label>
-                  <input id="rt-coh-date" type="date" value={date} onChange={(e) => { const v = e.target.value; setDate(v); keep("date", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } setPage(1); }} aria-label="Cohorts running on this date" />
+                  <DateField id="rt-coh-date" compact clearable placeholder="Any day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date to show the cohorts running on the day you picked."); } setPage(1); }} />
                 </div>
-                <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
-                <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />
+                <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date, so cohorts with this status show whatever their dates."); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
+                {/* live online cohorts have no venue */}
+                {mode !== "live-online" && <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />}
                 <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email })), { value: "none", label: "Not assigned" }]} />
               </div>
-              <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
+              <div className="rt-pws-coh__filtersum">
+                <b>{list.length} {list.length === 1 ? "cohort" : "cohorts"}</b>
+                {whenNote && <span>{whenNote}</span>}
+                {filtersSet && <button type="button" className="rt-cd__link" onClick={() => clear(true)}>Clear filters</button>}
+              </div>
             </div>
           )}
 
@@ -271,12 +285,10 @@ export default function ProviderCohorts() {
                       </label>
                     </th>
                     <th scope="col">Cohorts</th>
-                    <th scope="col">Cohort status</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Instructor</th>
                     <th scope="col">Students</th>
-                    <th scope="col">Status</th>
-                    <th scope="col"><span className="rt-sr">Favourite</span></th>
-                    <th scope="col"><span className="rt-sr">Actions</span></th>
+                    <th scope="col"><span className="rt-sr">Favourite and actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -302,13 +314,14 @@ export default function ProviderCohorts() {
                             </div>
                           </div>
                         </td>
-                        <td data-label="Cohort status">
+                        <td data-label="Status">
                           {k.cancelled ? <Pill tone={COHORT_TONE.cancelled}>{pw.cohortStatuses.cancelled}</Pill> : (
                             <div className="rt-field rt-adm-select -inline">
                               <label htmlFor={`rt-coh-st-${k.id}`} className="rt-sr">Cohort status for {name}</label>
                               <FieldSelect id={`rt-coh-st-${k.id}`} label={`Cohort status for ${name}`} value={k.status} onChange={(v) => changeStatus(k, v)} options={Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))} compact />
                             </div>
                           )}
+                          {k.disabled && !k.cancelled && <small>Bookings off</small>}
                         </td>
                         <td data-label="Instructor">
                           <div className="rt-field rt-adm-select -inline">
@@ -320,13 +333,10 @@ export default function ProviderCohorts() {
                           <Seats booked={k.booked} max={k.max} />
                           <small className="rt-pws-coh__places">{`${k.places.enrolled} enrolled · ${k.places.rescheduled} rescheduled · ${k.places.cancelled} cancelled`}</small>
                         </td>
-                        <td data-label="Status"><Pill tone={k.disabled ? "muted" : "ok"}>{k.disabled ? "Disabled" : "Enabled"}</Pill></td>
-                        <td data-label="Favourite">
+                        <td data-label="Actions" className="rt-pws-coh__end">
                           <button type="button" className={`rt-pws-coh__fav${k.favourite ? " is-on" : ""}`} aria-pressed={Boolean(k.favourite)} onClick={() => toggleFavourite(k.id)}>
                             <i className="icon-star" aria-hidden="true"></i><span className="rt-sr">Favourite: {name}</span>
                           </button>
-                        </td>
-                        <td data-label="Actions">
                           <RowMenu label={`Actions for ${name}`} items={[
                             { label: "View", href: `/provider/cohorts/${k.id}` },
                             ...(k.cancelled ? [] : [{ label: "Move", onClick: () => setMoving(k) }, { label: "Edit", onClick: () => setEditingK(k) }, { label: k.disabled ? "Enable bookings" : "Disable bookings", onClick: () => { setCohortEnabled(k.id, k.disabled); setToast({ message: k.disabled ? "Bookings enabled" : "Bookings disabled" }); } }]),
@@ -341,7 +351,7 @@ export default function ProviderCohorts() {
               {pages > 1 && <div className="rt-pws-coh__pages"><CataloguePagination page={at} totalPages={pages} hrefFor={(p) => `?page=${p}`} onNavigate={setPage} /></div>}
             </div>
           ) : (
-            <EmptyState title="No cohorts match these filters." action={filtered ? { label: "Clear filters", onClick: clear } : null} />
+            <EmptyState title="No cohorts match these filters." action={filtered ? { label: "Clear filters", onClick: () => clear() } : null} />
           )}
         </>
       )}
@@ -587,11 +597,11 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                       <div className="rt-pws-coh__slotgrid">
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-s${i}`}>Starts</label>
-                          <input id={`rt-cf-s${i}`} type="date" value={s.date} min={cohort ? undefined : today} onChange={(e) => setSlot(i, { date: e.target.value, end: !s.end || s.end < e.target.value ? e.target.value : s.end })} autoComplete="off" {...aria(`d${i}`)} />
+                          <DateField id={`rt-cf-s${i}`} value={s.date} min={cohort ? undefined : today} onChange={(v) => setSlot(i, { date: v, end: !s.end || s.end < v ? v : s.end })} invalid={Boolean(errors[`d${i}`])} describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
                         </div>
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-e${i}`}>Ends</label>
-                          <input id={`rt-cf-e${i}`} type="date" value={s.end || s.date} min={s.date} onChange={(e) => setSlot(i, { end: e.target.value })} autoComplete="off" />
+                          <DateField id={`rt-cf-e${i}`} value={s.end || s.date} min={s.date} onChange={(v) => setSlot(i, { end: v })} />
                         </div>
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-f${i}`}>From</label>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
 import { assignPlace, getBusiness, unassignPlace } from "@/lib/businessAccount";
 import { formatDateRange } from "@/lib/format";
+import { modeLabel } from "@/lib/courseModes";
 import { Avatar } from "@/components/marketing/parts";
 import { PlacesBar } from "./bizParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -37,6 +38,10 @@ function PlaceCard({ p, learners, highlight, onChange }) {
           <h2 className="rt-acc__h3" id={`rt-biz-p-${p.id}`}>{p.title}</h2>
           <p className="rt-acc__note rt-biz__meta">{formatDateRange(p.date, p.endDate)} · {p.time} · {p.venue ? `${p.venue}, ${p.city}` : "Live online"} · Ref {p.reference}</p>
         </div>
+      </div>
+      <div className="rt-biz__tags">
+        <span className="rt-biz__tag">{modeLabel(p.mode)}</span>
+        <span className="rt-biz__tag">{copy.left(p.free)}</span>
       </div>
       <PlacesBar purchase={p} />
       <ul className="fb-list rt-biz__places">
@@ -71,10 +76,14 @@ function PlaceCard({ p, learners, highlight, onChange }) {
 }
 
 // Team training assignments: every upcoming course the team has places on, each with its places bar, the learners who have a place
-// and the places still free. Filter to the courses with places to assign; ?place= (from the dashboard and bookings) scrolls to one.
+// and the places still free. As Hurak's Courses page: the course type, a title search, Clear filter and how many courses match, and
+// each course tagged with its type and places remaining. Filter to the courses with places to assign; ?place= (from the dashboard
+// and bookings) scrolls to one.
 export default function BizAssignments() {
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [type, setType] = useState("");
+  const [q, setQ] = useState("");
   const [focus, setFocus] = useState(null);
   const [announce, setAnnounce] = useState("");
   useEffect(() => {
@@ -87,7 +96,12 @@ export default function BizAssignments() {
   }, []);
   if (!data) return null;
   const upcoming = data.purchases.filter((p) => p.state === "upcoming").sort((a, b) => (a.date < b.date ? -1 : 1));
-  const shown = filter === "open" ? upcoming.filter((p) => p.free > 0) : upcoming;
+  const needle = q.trim().toLowerCase();
+  const matching = upcoming.filter((p) => (!type || p.mode === type) && (!needle || p.title.toLowerCase().includes(needle)));
+  const shown = filter === "open" ? matching.filter((p) => p.free > 0) : matching;
+  const types = [...new Set(upcoming.map((p) => p.mode))];
+  const filtered = Boolean(type || needle || filter !== "all");
+  const clear = () => { setType(""); setQ(""); setFilter("all"); };
   const changed = (msg) => {
     setData(getBusiness());
     setAnnounce(msg);
@@ -100,16 +114,30 @@ export default function BizAssignments() {
   }
   return (
     <div className="rt-acc__stack">
+      <div className="rt-acc__card rt-biz__toolbar rt-biz__coursefilters">
+        <div className="rt-field">
+          <label className="rt-sr" htmlFor="rt-biz-type">{copy.type}</label>
+          <FieldSelect id="rt-biz-type" label={copy.type} placeholder={copy.allTypes} value={type} onChange={setType} options={[{ value: "", label: copy.allTypes }, ...types.map((m) => ({ value: m, label: modeLabel(m) }))]} compact />
+        </div>
+        <label className="rt-field rt-biz__search">
+          <span className="rt-sr">{copy.search}</span>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={copy.search} autoComplete="off" />
+        </label>
+      </div>
       <div className="rt-biz__bar">
         <div className="rt-acc__tabs" role="group" aria-label="Show courses">
-          {[["all", upcoming.length], ["open", upcoming.filter((p) => p.free > 0).length]].map(([k, n]) => (
+          {[["all", matching.length], ["open", matching.filter((p) => p.free > 0).length]].map(([k, n]) => (
             <button key={k} type="button" className={`rt-tr__filter${filter === k ? " is-on" : ""}`} aria-pressed={filter === k} onClick={() => setFilter(k)}>{copy.filters[k]}<span className="rt-tr__filter-n">{n}</span></button>
           ))}
         </div>
         <Link href="/business/learners?add=1" className="fb-textlink">{copy.addLearner}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
       </div>
-      <p className="rt-sr" aria-live="polite">{announce}</p>
-      {shown.map((p) => <PlaceCard key={p.id} p={p} learners={data.learners} highlight={focus === p.id} onChange={changed} />)}
+      <div className="rt-biz__found">
+        <b>{copy.found(shown.length)}</b>
+        {filtered && <button type="button" className="rt-cd__link" onClick={clear}>{copy.clear}</button>}
+      </div>
+      <p className="rt-sr" aria-live="polite">{announce || copy.found(shown.length)}</p>
+      {shown.length ? shown.map((p) => <PlaceCard key={p.id} p={p} learners={data.learners} highlight={focus === p.id} onChange={changed} />) : <EmptyState inCard title={copy.noMatch} />}
     </div>
   );
 }

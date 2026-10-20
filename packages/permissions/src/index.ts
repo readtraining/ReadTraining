@@ -29,6 +29,8 @@ export type AdminAccess = {
   refundLimitPence: number
   // has a verified authenticator (Supabase MFA): once set up, two-step sign-in is needed for every admin action
   twoStep?: boolean
+  // the super admin (the platform's owner): a Full admin only they can change; see apps/api/src/modules/admin/team.mts
+  isSuper?: boolean
 }
 
 // Who is asking. `aal` is the sign-in strength from the token: aal2 means two-step sign-in was completed.

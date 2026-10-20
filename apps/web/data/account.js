@@ -38,6 +38,15 @@ export const account = {
       text: "Provider pages are only open to people who run a training provider on ReadTraining. Add a provider account to your login to list and run your courses.",
       cta: { label: "Become a provider", href: "/provider/onboarding" },
     },
+    // someone whose provider application was not approved: the team's reason, and applying again reopens it
+    providerRejected: {
+      eyebrow: "Provider workspace",
+      title: "Your provider application",
+      heading: "Your application for {name} wasn't approved",
+      reason: "Our team's reason:",
+      text: "You can apply again with updated details, and our team will review it.",
+      cta: { label: "Apply again", href: "/provider/onboarding" },
+    },
     business: {
       eyebrow: "Business account",
       title: "This page is for business accounts",

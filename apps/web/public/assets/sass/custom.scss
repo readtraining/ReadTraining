@@ -4045,12 +4045,24 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__chips a { text-decoration: none; }
 @media (min-width: 992px) {
   .rt-acc__nav { position: sticky; top: calc(var(--header-offset, 0px) + 24px); }
+  /* the template hides overflow on main and body, which stops sticky; clip hides sideways overflow without that (as the catalogue) */
+  :root:has(.rt-acc-page) body { overflow-x: clip; }
+  .rt-acc-page main { overflow: clip; }
   .rt-acc__chips { display: none; }
   .rt-acc__navcard { display: block; padding: 20px; border: 1px solid var(--color-light-5); border-radius: 16px; background: #fff; }
 }
 .rt-acc__me { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; margin-bottom: 12px; border-bottom: 1px solid var(--color-light-5); }
 .rt-acc__avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--color-purple-3); font-size: 15px; font-weight: 700; color: var(--color-purple-1); }
 .rt-acc__mewho { display: flex; flex-direction: column; min-width: 0; }
+/* who is signed in as the Switch account button: the whole row opens the menu of the other accounts, under it at its full width */
+.rt-acc__switch { margin-bottom: 12px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-acc__switch .rt-rowmenu { display: flex; padding-bottom: 12px; }
+.rt-acc__switch button.rt-acc__me { width: 100%; margin: 0; padding: 8px; border: 0; border-radius: var(--rt-radius-control); background: none; text-align: left; cursor: pointer; transition: background-color 0.15s ease; }
+.rt-acc__switch button.rt-acc__me:hover, .rt-acc__switch .is-open button.rt-acc__me { background: var(--rt-c-soft); }
+.rt-acc__switch button.rt-acc__me:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-acc__mechev { flex: none; margin-left: auto; color: var(--rt-c-muted); transition: transform 0.15s ease; }
+.rt-acc__switch .is-open .rt-acc__mechev { transform: rotate(180deg); }
+.rt-acc__switch .rt-rowmenu__list { top: calc(100% - 6px); left: 0; right: auto; min-width: 100%; width: max-content; max-width: 320px; }
 .rt-acc__mewho strong { font-size: 15px; color: var(--color-dark-1); }
 .rt-acc__mewho span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--color-light-1); }
 .rt-acc__links { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
@@ -4093,6 +4105,21 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 @media (min-width: 768px) { .rt-acc__nextbody { grid-template-columns: minmax(0, 1fr) auto; align-items: end; } .rt-acc__next .rt-acc__actions { flex-direction: column; align-items: stretch; } }
 .rt-acc__nexttitle { margin: 0; font-size: 18px; font-weight: 700; color: var(--color-dark-1); }
 .rt-tps__keyfacts.rt-acc__stats { margin: 0; box-shadow: none; }
+/* in the learner and business accounts the numbers sit two by two until there is room for a row of four (never 3 + 1 with an
+   empty cell); an odd last one spans the row */
+@media (max-width: 1279px) {
+  .rt-acc-page .rt-tps__keyfacts.rt-acc__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rt-acc-page .rt-acc__stats > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+/* a number card that links to its section (Stats `href`), and its short line (`hint`) */
+.rt-tps__keyfact.-link { padding: 0; }
+.rt-acc__statlink { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; padding: 18px 20px; color: inherit !important; text-decoration: none; transition: background-color 0.15s ease; }
+.rt-acc__statlink:hover { background: var(--rt-c-soft); }
+.rt-acc__statlink:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: -2px; }
+/* with a hint the label is no longer the last line, so it keeps the label's look here */
+.rt-tps__keyfact-text > span:has(+ .rt-acc__stathint) { font-size: 13px; line-height: 18px; color: var(--color-light-1); }
+.rt-acc__stathint { margin-top: 2px; font-size: var(--rt-text-xs); line-height: 16px; color: var(--rt-c-muted); }
+@media (max-width: 575px) { .rt-acc__statlink { padding: 16px; } }
 @media (min-width: 1200px) { .rt-tps__keyfacts.rt-acc__stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 /* the account, business and admin strips stack icon, number and label, so a label keeps the cell's full width and never wraps
    beside the icon */
@@ -4218,20 +4245,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 }
 /* ---------- BUSINESS ACCOUNT (/business): the customer account's layout and cards; the /for-business page's places bar, list
    rows, avatars and chips (scoped to .fb-page); a table that turns into cards on phones ---------- */
-/* Switch account: the identities on this login (account menu, Business account) */
-.rt-switch { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rt-c-line); }
-.rt-switch__title { margin: 0 0 8px; font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rt-c-muted); }
-.rt-switch__list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.rt-switch__row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: var(--rt-radius-control); background: none; text-align: left; cursor: pointer; }
-.rt-switch__row:hover:not(:disabled) { background: var(--rt-c-soft); }
-.rt-switch__row:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 1px; }
-.rt-switch__row.is-current { background: var(--rt-c-brand-soft); cursor: default; }
-.rt-switch__mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); }
-.rt-switch__row.is-current .rt-switch__mark { background: var(--rt-c-surface); }
-.rt-switch__row.is-add .rt-switch__mark { border: 1px dashed var(--rt-c-brand); background: none; font-size: var(--rt-text); }
-.rt-switch__text { display: grid; min-width: 0; }
-.rt-switch__text strong { font-size: var(--rt-text-sm); line-height: 1.35; color: var(--rt-c-text); overflow-wrap: anywhere; }
-.rt-switch__text span { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* no access to a workspace */
 .rt-na { padding-top: 24px; padding-bottom: 64px; }
 /* a provider that has just joined: about and courses not added yet */
@@ -4240,8 +4253,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-na .rt-acc__state { max-width: 640px; }
 .rt-na__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 6px; }
 .rt-acc__banner.-done { margin: 0; border: 1px solid color-mix(in srgb, var(--color-success) 35%, var(--color-white)); background: color-mix(in srgb, var(--color-success) 8%, var(--color-white)); }
-.rt-biz__lead { margin: -6px 0 14px; }
-.rt-biz__strong { color: var(--color-dark-1); }
 .rt-biz__muted { font-size: 13px; color: var(--color-light-1); }
 /* places to assign (dashboard) */
 .rt-biz__assignlist { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
@@ -4298,6 +4309,44 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* the page column is a grid: let the cards and the toolbar be narrower than their one-line content (long emails), so on phones
    the emails shorten with … instead of widening the page */
 .rt-biz__place, .rt-biz__bar { min-width: 0; }
+/* assign places, as Hurak's Courses page: course type and title search, how many courses match with Clear filter, and each
+   course's type and places remaining as tags */
+.rt-biz__coursefilters { grid-template-columns: minmax(0, 240px) minmax(0, 1fr); }
+.rt-biz__coursefilters .rt-field { margin: 0; }
+@media (max-width: 575px) { .rt-biz__coursefilters { grid-template-columns: minmax(0, 1fr); } }
+.rt-biz__found { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-biz__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rt-biz__tag { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; line-height: 18px; color: var(--rt-c-text); }
+/* dashboard: the two lists side by side keep their own height; the certificates table gives the learner and course the room;
+   the credit's numbers in one row with Pay balance */
+.rt-biz__duo { align-items: start; }
+.rt-biz__rows li > div:first-child { gap: 2px; }
+.rt-biz__certtable th:nth-child(3), .rt-biz__certtable th:nth-child(4) { width: 112px; }
+.rt-biz__certtable td small, .rt-biz__certtable td:nth-child(3), .rt-biz__certtable td:nth-child(4) { white-space: nowrap; } /* IDs and dates never break */
+.rt-biz__download { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rt-biz__rowacts { display: inline-flex; align-items: center; gap: 16px; }
+.rt-biz__creditrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 12px; }
+.rt-biz__creditrow .rt-biz__creditnums { flex: 1 1 420px; margin: 0; }
+.rt-biz__creditrow dd small { display: block; font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
+.rt-acc__certs .rt-biz__linkbtn { align-self: flex-start; margin-top: 4px; font-size: var(--rt-text-sm); }
+/* a downloaded certificate (BizCertificate): an A4 landscape page, hidden on screen, the only thing printed while it is open */
+.rt-certdoc { display: none; }
+@page rt-cert { size: A4 landscape; margin: 0; }
+@media print {
+  body:has(> .rt-certdoc) > *:not(.rt-certdoc) { display: none !important; }
+  .rt-certdoc { display: block; page: rt-cert; padding: 12mm; color: var(--rt-c-text); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .rt-certdoc__frame { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 184mm; padding: 14mm; border: 2mm solid var(--rt-c-brand); text-align: center; }
+  .rt-certdoc p { margin: 0; }
+  .rt-certdoc__brand { font-size: 20px; font-weight: 700; color: var(--rt-c-brand); }
+  .rt-certdoc__kicker { margin-top: 10mm !important; font-size: 34px; font-weight: 700; }
+  .rt-certdoc__line { margin-top: 6mm !important; font-size: 15px; color: var(--rt-c-muted); }
+  .rt-certdoc__name { margin-top: 3mm !important; font-size: 30px; font-weight: 700; }
+  .rt-certdoc__course { margin-top: 3mm !important; font-size: 22px; font-weight: 600; }
+  .rt-certdoc__facts { display: flex; gap: 14mm; margin: 12mm 0 0; }
+  .rt-certdoc__facts dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rt-c-muted); }
+  .rt-certdoc__facts dd { margin: 1mm 0 0; font-size: 15px; font-weight: 600; }
+  .rt-certdoc__check { margin-top: 10mm !important; font-size: 12px; color: var(--rt-c-muted); }
+}
 .rt-biz__place.is-highlight { border-color: var(--color-purple-1); box-shadow: inset 0 0 0 1px var(--color-purple-1); }
 .rt-biz__meta { margin-top: 4px; }
 .fb-page .fb-list.rt-biz__places { margin-top: 6px; }
@@ -4802,13 +4851,11 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__menu > span:first-child::before, .rt-adm__menu > span:first-child::after { content: ""; position: absolute; left: 0; }
 .rt-adm__menu > span:first-child::before { top: -6px; }
 .rt-adm__menu > span:first-child::after { top: 6px; }
-.rt-adm__chips { margin: 0; padding: 12px 16px 4px; }
 .rt-adm__main { min-width: 0; padding: 20px 16px 64px; }
 @media (min-width: 992px) {
   .rt-adm__body { display: grid; grid-template-columns: 264px minmax(0, 1fr); }
   .rt-adm__side { position: sticky; top: 64px; z-index: auto; display: block; width: auto; height: calc(100vh - 64px); padding: 12px 12px 32px; border-right: 1px solid var(--color-light-5); background: #fff; box-shadow: none; transform: none; visibility: visible; transition: none; }
   .rt-adm__menu, .rt-adm__scrim { display: none; }
-  .rt-adm__chips { display: none; }
   .rt-adm__main { padding: 28px 32px 72px; }
 }
 .rt-adm__group ul { margin: 0; padding: 0; list-style: none; }
@@ -4914,7 +4961,8 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-adm-hero__actions .rt-adm-item__block { margin: 0; max-width: 340px; }
 .rt-adm-item__hint { flex-basis: 100%; font-size: var(--rt-text-xs); text-align: right; color: var(--color-light-1); }
 .rt-adm-danger { color: var(--color-red-3) !important; }
-@media (max-width: 991px) { .rt-adm-item { flex-wrap: wrap; } .rt-adm-item__actions { justify-content: flex-start; width: 100%; max-width: none; padding-left: 34px; } .rt-adm-item__hint { text-align: left; } }
+/* below 992px the actions go under the text; only a card with a tick box (Approvals) indents them to line up past the box */
+@media (max-width: 991px) { .rt-adm-item { flex-wrap: wrap; } .rt-adm-item__actions { justify-content: flex-start; width: 100%; max-width: none; } .rt-adm-item:has(.rt-adm-item__pick) .rt-adm-item__actions { padding-left: 34px; } .rt-adm-item__hint { text-align: left; } }
 @media (max-width: 575px) { .rt-adm-item__actions { padding-left: 0; } .rt-adm-item__actions .button { flex: 1 1 auto; } }
 /* cards and lists */
 .rt-adm-grid2 { display: grid; gap: 16px; }
@@ -5112,13 +5160,14 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
   .rt-adm-toolbar__end .rt-adm-search { flex: 1 1 auto; }
   .rt-adm-cellrow.-end { justify-content: flex-start; }
 }
-/* Platform admin only (.rt-adm--platform is on AdminShell's root, never on the provider workspace's): the status system
+/* The status system, first built for the platform admin (.rt-adm--platform, AdminShell's root); its colours (just below) are
+   shared with the provider workspace and the accounts, whose pill takes them further down. The admin's
    (components/admin/AdminStatus.jsx). One build, five tones, and a neutral tag for anything that is not a status.
      success  done and good                      info     in progress, waiting on someone else
      warning  needs an admin, due within a day   danger   late, blocked, failed, or money at risk
      neutral  closed, inactive, not started, due in 2 days or more
    Brand green is never a status here, and info is blue so it never looks like a button or the chosen menu item. The colours are set once on the admin root; every text colour passes WCAG AA at 12px. */
-.rt-adm--platform {
+:is(.rt-adm--platform, .rt-pws, .rt-acc-page) {
   --rt-adm-success-bg: #e3f6ec;
   --rt-adm-success: #0f7a4a;
   --rt-adm-info-bg: #e7f0fb;
@@ -5140,6 +5189,15 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm--platform .rt-adm-money-late { font-weight: 600; color: var(--rt-adm-danger); }
 /* a full session is good news: its seat bar stays the normal colour, not the alarm orange */
 .rt-adm--platform .rt-adm-seats__bar span.-full { background: var(--color-purple-1); }
+/* The same five calm tones in the provider workspace and the learner and business accounts: their shared pill (.rt-acc__status,
+   adminParts Pill) takes the admin status's shape and colours. -confirmed blue (waiting on someone else), -completed green (done),
+   -requested amber (you must act), -cancelled grey (closed), -late red (at risk). The public site's own pills are unchanged. */
+:is(.rt-pws, .rt-acc-page) .rt-acc__status { padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-confirmed { border-color: transparent; background: var(--rt-adm-info-bg); color: var(--rt-adm-info); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-completed { border-color: transparent; background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-requested { border-color: transparent; background: var(--color-orange-7); color: var(--rt-adm-warning); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-cancelled { border-color: transparent; background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-late { border-color: transparent; background: var(--color-red-2); color: var(--rt-adm-danger); }
 /* activity log: the "acting as" tag always sits on its own line under the name */
 .rt-adm--platform .rt-adm-activity__as { display: block; margin-top: 4px; }
 /* rows-per-page dropdown opens upwards so its options are not cut off at the bottom of the page */
@@ -5420,29 +5478,16 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* Hurak's top bar: New course, Student, the bell and the account menu */
 .rt-pws__nav { display: grid; gap: 2px; margin: 16px 0 0; padding: 0; list-style: none; }
 .rt-pws__nav li { list-style: none; }
-/* sidebar groups: the heading opens its pages; the current page's group starts open */
+/* sidebar groups (Courses, Cohorts): each folds on its own, as the admin's (components/admin/workNav.jsx) */
 .rt-pws__grouphead { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; }
-.rt-pws__group.is-here > .rt-pws__grouphead { font-weight: 600; }
-.rt-pws__group.is-here > .rt-pws__grouphead i:first-child { color: var(--rt-c-brand); }
-.rt-pws__chev { flex: none; margin-left: auto; font-size: 9px; color: var(--rt-c-muted); transition: transform 0.22s ease-in; }
-.rt-pws__grouphead .rt-adm__count + .rt-pws__chev { margin-left: 8px; }
-.rt-pws__group.is-open .rt-pws__chev { transform: rotate(180deg); }
-/* an open group is the site's dropdown panel (as .rt-cat-dd: white panel, 1px border, 12px radius) and its pages are its options
-   (bold purple text and the 4px purple bar when hovered or current, as the dropdowns in the workspace show them) */
-.rt-pws__sub { display: grid; gap: 2px; margin: 4px 0 8px; padding: 6px; border: 1px solid var(--color-light-5); border-radius: 12px; background: var(--rt-c-surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--color-dark-1) 4%, transparent), 0 8px 24px color-mix(in srgb, var(--color-dark-1) 6%, transparent); list-style: none; }
-.rt-pws__sub[hidden] { display: none; }
-.rt-pws__sub li { list-style: none; }
-.rt-pws__sublink { position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 14px; border-radius: 8px; font-size: 14px; font-weight: 400; color: var(--color-dark-1) !important; text-decoration: none; transition: color 0.25s ease-in; }
-.rt-pws__sublink > * { position: relative; z-index: 1; }
-.rt-pws__sublink::before { content: ""; position: absolute; z-index: 2; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: 3px; background: var(--color-purple-1); opacity: 0; transition: opacity 0.2s; }
-.rt-pws__sublink:hover { color: var(--color-purple-1) !important; font-weight: 600; }
-.rt-pws__sublink.is-active { color: var(--color-purple-1) !important; font-weight: 600; }
-.rt-pws__sublink:hover::before, .rt-pws__sublink.is-active::before { opacity: 1; }
-.rt-pws__sublink:focus-visible { outline: 2px solid var(--color-dark-1); outline-offset: -2px; }
+/* a group heading is a sidebar item like the others (same size as Learners or Orders), its fold arrow on the right; its pages sit
+   indented under the guide line (.rt-adm__group, the admin's). Folded, it shows its count and marks the page you are on. */
+.rt-pws .rt-pws__grouphead { padding: 9px 12px; }
+.rt-pws__grouphead .rt-adm__chev { margin-left: auto; }
+.rt-pws__grouphead .rt-adm__count + .rt-adm__chev { margin-left: 8px; }
+.rt-pws__group.is-folded.is-here > .rt-pws__grouphead { font-weight: 600; color: var(--rt-c-brand) !important; }
+.rt-pws__group.is-folded.is-here > .rt-pws__grouphead .rt-adm__icon { color: var(--rt-c-brand); }
 @media (hover: hover) and (pointer: fine) { .rt-pws__grouphead:hover { background: var(--color-light-4); } }
-.rt-pws__subcount { min-width: 20px; height: 20px; margin-left: auto; padding: 0 6px; border-radius: 999px; background: var(--rt-c-brand-soft); font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; color: var(--rt-c-brand); }
-.rt-pws__sublink.is-active .rt-pws__subcount { background: var(--rt-c-surface); }
-@media (prefers-reduced-motion: reduce) { .rt-pws__chev, .rt-pws__sublink, .rt-pws__sublink::before { transition: none; } }
 .rt-pws__student { min-height: 44px; }
 .rt-pws__bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; color: rgba(255, 255, 255, 0.85) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-pws__bell:hover { background: rgba(255, 255, 255, 0.1); color: var(--rt-c-surface) !important; }
@@ -5611,11 +5656,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-course__title:hover { color: var(--rt-c-brand) !important; text-decoration: underline; text-underline-offset: 3px; }
 .rt-cx-course__text small { overflow: hidden; font-size: var(--rt-text-xs); text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-cx-course__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rt-cx-status { display: inline-flex; align-items: center; gap: 8px; font-size: var(--rt-text-sm); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); }
-.rt-cx-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--rt-c-muted); box-shadow: 0 0 0 3px var(--rt-c-soft); }
-.rt-cx-status.-ok::before { background: var(--rt-c-success); box-shadow: 0 0 0 3px var(--rt-c-success-soft); }
-.rt-cx-status.-warn::before { background: var(--color-yellow-1); box-shadow: 0 0 0 3px var(--color-yellow-2); }
-.rt-cx-status.-late::before { background: var(--rt-c-error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rt-c-error) 12%, transparent); }
 .rt-cx-rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 .rt-cx-rating i { color: var(--color-yellow-1); }
 .rt-cx-manage { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); font-size: var(--rt-text-xs); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
@@ -5844,7 +5884,13 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 
 /* provider workspace: part C */
 /* ---- provider workspace: cohorts, cohort, calendar (ProviderCohorts, ProviderCohort, ProviderCalendar) ---- */
-.rt-pws-coh__filters { align-items: flex-start; }
+/* the cohorts' filters: search first, then every filter in a grid that wraps (nothing runs off the page or cuts its words);
+   under them how many cohorts match, a note when "When" was changed for you, and Clear filters */
+.rt-pws-coh__filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; align-items: start; }
+.rt-pws-coh__filters .rt-adm-select.-inline, .rt-pws-coh__filters .rt-adm-search { width: auto; min-width: 0; margin: 0; }
+@media (min-width: 576px) { .rt-pws-coh__filters > .rt-adm-search { grid-column: span 2; } }
+.rt-pws-coh__filtersum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 12px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-coh__filtersum b { color: var(--rt-c-text); }
 .rt-pws-coh__bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-color: var(--rt-c-brand); }
 .rt-pws-coh__bulkn { margin-right: auto; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-coh__clear, .rt-pws-coh__remove { min-height: 44px; padding: 0 8px; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
@@ -5880,7 +5926,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__fav.is-on { color: var(--color-yellow-1); }
 .rt-pws-coh__fav:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-coh__datefilter input[type="date"] { width: auto; height: 44px; }
-.rt-pws-coh__pages { display: flex; justify-content: center; padding: 16px 0 4px; border-top: 1px solid var(--rt-c-line); }
+.rt-pws-coh__pages { --pg-border-strong: var(--color-light-5); --pg-text: var(--rt-c-text); --pg-muted: var(--rt-c-muted); --pg-brand: var(--color-purple-1); --pg-brand-hover: #5230E0; display: flex; justify-content: center; padding: 16px 0 4px; border-top: 1px solid var(--rt-c-line); }
 
 /* Manage cohort: the details grid, actions, students table (scrolls sideways on narrow screens), the register row, notes */
 .rt-pws-coh__details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin: 0; }
@@ -5916,9 +5962,25 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (max-width: 991px) {
   .rt-pws-coh__details { grid-template-columns: minmax(0, 1fr); }
 }
-/* below 1200px the cohorts table and the students table stack into labelled rows (as the account tables do on phones), so
-   nothing scrolls sideways and their dropdowns and menus are never clipped */
+/* below 1200px the students table on a cohort's page stacks into labelled rows (as the account tables do on phones), so its
+   dropdowns and menus are never clipped; the cohorts list stays a table down to 768px (one status column, the favourite
+   beside the menu) and stacks on phones */
 @media (max-width: 1199px) {
+  .rt-pws-coh__students thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .rt-pws-coh__students, .rt-pws-coh__students tbody, .rt-pws-coh__students tr, .rt-pws-coh__students td { display: block; width: 100%; }
+  .rt-pws-coh__students tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }
+  .rt-pws-coh__students tr:last-child { border-bottom: 0; }
+  .rt-pws-coh__students td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border: 0; text-align: right; }
+  .rt-pws-coh__students td::before { content: attr(data-label); flex: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); text-align: left; }
+  .rt-pws-coh__students td.rt-pws-coh__pick { justify-content: flex-start; width: auto; }
+  .rt-pws-coh__students td { flex-wrap: wrap; }
+  .rt-pws-coh__students td:has(.rt-field-dd, .rt-rowmenu) { flex-wrap: nowrap; }
+  .rt-pws-coh__students td small { display: block; flex-basis: 100%; text-align: right; }
+  .rt-pws-coh__students td.rt-pws-coh__pick::before { content: none; }
+  .rt-pws-coh__morerow td { display: block; padding: 12px; }
+  .rt-pws-coh__morerow td::before { content: none; }
+}
+@media (max-width: 767px) {
   :is(.rt-pws-coh__table, .rt-pws-coh__students) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   :is(.rt-pws-coh__table, .rt-pws-coh__students), :is(.rt-pws-coh__table, .rt-pws-coh__students) tbody, :is(.rt-pws-coh__table, .rt-pws-coh__students) tr, :is(.rt-pws-coh__table, .rt-pws-coh__students) td { display: block; width: 100%; }
   :is(.rt-pws-coh__table, .rt-pws-coh__students) tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }
@@ -6061,7 +6123,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 
 /* new order */
 .rt-pws-ord__layout { display: grid; gap: var(--rt-gap); align-items: start; }
-@media (min-width: 1200px) { .rt-pws-ord__layout { grid-template-columns: minmax(0, 1fr) 340px; } .rt-pws-ord__summary { position: sticky; top: 88px; } }
+@media (min-width: 1200px) { .rt-pws-ord__layout { grid-template-columns: minmax(0, 1fr) 340px; } .rt-pws-ord__summary { position: sticky; top: 88px; } .rt-pws-ord__layout > .rt-pws-ord__summary { grid-column: 2; grid-row: 1 / span 2; } .rt-pws-ord__layout > .rt-pws-ord__actions { grid-column: 1; } }
 .rt-pws-ord__step { display: flex; align-items: center; gap: 12px; }
 .rt-pws-ord__step span { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); font-weight: 700; color: var(--rt-c-brand); }
 .rt-pws-ord__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; margin-top: 16px; }
@@ -6368,9 +6430,12 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (max-width: 991px) { .rt-pws-ord__search { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 575px) { .rt-pws-ord__search { grid-template-columns: minmax(0, 1fr); } .rt-pws-ord__searchfoot > * { flex: 1 1 100%; } }
 .rt-pws-ord__table td { vertical-align: middle; }
-@media (min-width: 1200px) { .rt-pws-ord__table td[data-label="Date"], .rt-pws-ord__table td[data-label="Amount"] { white-space: nowrap; } }
-/* below 1200px the ten columns stack into labelled rows, as the cohorts table does */
-@media (max-width: 1199px) {
+.rt-pws-ord__table .rt-pws-money__num { white-space: nowrap; }
+.rt-pws-ord__flag { font-weight: 600; color: var(--rt-c-error) !important; }
+.rt-pws-coh__table td.rt-pws-coh__end { white-space: nowrap; text-align: right; }
+/* six columns, each with a second line, so the orders list stays a table down to 768px and stacks into labelled rows on
+   phones, as the cohorts list does */
+@media (max-width: 767px) {
   .rt-pws-ord__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-pws-ord__table, .rt-pws-ord__table tbody, .rt-pws-ord__table tr, .rt-pws-ord__table td { display: block; width: 100%; }
   .rt-pws-ord__table tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }
@@ -6784,6 +6849,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm__drawerfoot .rt-adm__me { padding: 4px 12px 10px; }
 .rt-adm__drawerfoot .rt-adm__mewho strong { color: var(--rt-c-text); }
 .rt-adm__drawerfoot .rt-adm__mewho span { color: var(--rt-c-muted); }
+/* the drawer has room for the name, which the top bar hides on a phone */
+.rt-adm__drawerfoot .rt-adm__mewho { display: block; }
 @media (min-width: 992px) { .rt-adm__drawerhead, .rt-adm__drawerfoot { display: none; } }
 @media (max-width: 991px) { .rt-adm__topside .rt-adm__out, .rt-adm__topside .rt-adm__site { display: none; } }
 /* numbered pages under a long list (adminParts Pager) */

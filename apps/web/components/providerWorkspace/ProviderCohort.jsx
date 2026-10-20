@@ -13,6 +13,7 @@ import { CohortForm, Seats, dayRange } from "./ProviderCohorts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
+import DateField from "@/components/admin/DateField";
 
 // Manage cohort, as Hurak's: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
 // whether it takes bookings, tutor), with Edit cohort details, Enroll student (a new order on these dates), Bulk enrolment (a
@@ -23,7 +24,7 @@ import { EmptyState } from "@/components/states/States";
 
 const GENDERS = ["Female", "Male", "Non-binary", "Prefer not to say"];
 const RESULTS = [{ value: "", label: "Not marked" }, { value: "pass", label: "Pass" }, { value: "fail", label: "Fail" }];
-const STUDENT_TONE = { enrolled: "info", rescheduled: "warn", cancelled: "muted" };
+const STUDENT_TONE = { enrolled: "ok", rescheduled: "info", cancelled: "muted" };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const customKey = (f) => (typeof f === "string" ? `custom-${slug(f)}` : f.key || `custom-${slug(f.label)}`);
@@ -42,6 +43,13 @@ function Field({ id, label, error, hint, children }) {
   );
 }
 const ariaFor = (id, error, hint) => ({ "aria-invalid": error ? true : undefined, "aria-describedby": [hint && `${id}-h`, error && `${id}-e`].filter(Boolean).join(" ") || undefined });
+
+// The page's heading: the cohort's course and dates (the page head is drawn on the server, the cohorts live in this browser).
+export function CohortTitle({ cohortId, fallback }) {
+  const data = useProvider();
+  const k = data?.byId.cohort[cohortId];
+  return k?.course ? `${k.course.title}, ${dayRange(k.first, k.last)}` : fallback;
+}
 
 export default function ProviderCohort({ cohortId }) {
   const data = useProvider();
@@ -167,7 +175,7 @@ export default function ProviderCohort({ cohortId }) {
           <div className="rt-pws-coh__heroactions">
             {people.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setMail({ ids: picked.length ? picked : active.map((e) => e.id) })} disabled={!active.length}>{picked.length ? `Email ${picked.length} picked` : "Email students"}</button>}
             {people.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={download}>Download register</button>}
-            {!k.cancelled && people.length > 0 && <button type="button" className="button -sm -purple-1 text-white" onClick={certify} disabled={!toCertify}>Issue certificates{toCertify ? ` (${toCertify})` : ""}</button>}
+            {!k.cancelled && people.length > 0 && k.last <= data.today && <button type="button" className="button -sm -purple-1 text-white" onClick={certify} disabled={!toCertify}>Issue certificates{toCertify ? ` (${toCertify})` : ""}</button>}
           </div>
         </div>
         {people.length ? (
@@ -711,7 +719,7 @@ function RecordSheet({ enrolment, clr, onClose, onSaved }) {
             <div className="rt-field">
               <label htmlFor="rt-clr-dob">Date of birth</label>
               {err("dob")}
-              <input id="rt-clr-dob" type="date" value={f.dob || ""} onChange={(e) => set("dob", e.target.value)} autoComplete="off" {...aria("dob")} />
+              <DateField id="rt-clr-dob" value={f.dob || ""} onChange={(v) => set("dob", v)} invalid={Boolean(errors.dob)} describedBy={errors.dob ? "rt-clr-dob-e" : undefined} />
             </div>
           )}
           {fields.includes("gender") && (
@@ -730,7 +738,7 @@ function RecordSheet({ enrolment, clr, onClose, onSaved }) {
           {fields.includes("dispatch") && (
             <div className="rt-field">
               <label htmlFor="rt-clr-dispatch">Certificate dispatch date</label>
-              <input id="rt-clr-dispatch" type="date" value={f.dispatch || ""} onChange={(e) => set("dispatch", e.target.value)} autoComplete="off" />
+              <DateField id="rt-clr-dispatch" clearable value={f.dispatch || ""} onChange={(v) => set("dispatch", v)} />
             </div>
           )}
           {custom.map((c) => {

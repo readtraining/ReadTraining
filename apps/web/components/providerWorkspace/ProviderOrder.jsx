@@ -15,6 +15,7 @@ import { MoveSheet, ResitSheet, bookingPlan, cohortChoices } from "./ProviderCoh
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
+import DateField from "@/components/admin/DateField";
 
 // Order details, as Hurak's: the order (amount, number, status, sales channel, payment method, purchase date, card), billing
 // details, the timeline with notes, the invoice (upload it, record when it was paid), the enrolled students (one card per
@@ -370,7 +371,7 @@ export default function ProviderOrder({ reference }) {
               <div className="rt-field">
                 <label htmlFor="rt-pws-ord-date">Date the invoice was paid</label>
                 <Err k="date" />
-                <input id="rt-pws-ord-date" type="date" value={form.date || ""} onChange={field("date")} autoComplete="off" {...aria("date")} />
+                <DateField id="rt-pws-ord-date" value={form.date || ""} onChange={(v) => field("date")({ target: { value: v } })} invalid={Boolean(errors.date)} describedBy={errors.date ? "rt-pws-ord-date-e" : undefined} />
               </div>
             )}
             {sheet === "upsell" && (

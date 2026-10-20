@@ -7,18 +7,21 @@ import { getBusiness, payBalance } from "@/lib/businessAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { DownloadIcon } from "./BizCertificate";
 
 const copy = biz.billing;
-const STATUS_TONE = { paid: "completed", due: "confirmed", overdue: "requested" };
+const STATUS_TONE = { paid: "completed", due: "requested", overdue: "late" };
 
 // Billing and invoices: the business credit account (limit, used, available, the amount due and when, the payment terms) with Pay
-// balance (a simulated card payment: the open invoices are marked paid and the credit frees up), every invoice with its status and
-// a View that opens it with Print, and the billing details on the account. ?invoice= (from the bookings) opens one invoice.
+// balance (a simulated card payment: the open invoices are marked paid and the credit frees up), every invoice with its status, a
+// View that opens it with Print and a Download (the invoice opens and the print window with it, where "Save as PDF" downloads it;
+// it closes again after), and the billing details on the account. ?invoice= (from the bookings) opens one invoice.
 export default function BizBilling() {
   // the real business name (from the server check); the address, VAT and credit are still DEMO
   const companyName = useWorkspace()?.name ?? "";
   const [data, setData] = useState(null);
   const [view, setView] = useState(null); // invoice number shown
+  const [downloading, setDownloading] = useState(false); // the open invoice was asked for as a download: print it, then close it
   const [paying, setPaying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState("");
@@ -29,6 +32,17 @@ export default function BizBilling() {
     const asked = new URLSearchParams(window.location.search).get("invoice");
     if (asked && d.invoices.some((i) => i.number === asked)) setView(asked);
   }, []);
+  useEffect(() => {
+    if (!downloading || !view) return;
+    const done = () => { setDownloading(false); setView(null); };
+    window.addEventListener("afterprint", done, { once: true });
+    // print once the invoice is on the page
+    const frame = requestAnimationFrame(() => window.print());
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("afterprint", done);
+    };
+  }, [downloading, view]);
   if (!data) return null;
 
   const open = data.invoices.filter((i) => i.status !== "paid");
@@ -84,7 +98,12 @@ export default function BizBilling() {
                 <td data-label={copy.invoices.columns[2]}>{i.reference}</td>
                 <td data-label={copy.invoices.columns[3]}><b>{formatPrice(i.amount)}</b></td>
                 <td data-label={copy.invoices.columns[4]}><span className={`rt-pill rt-acc__status -${STATUS_TONE[i.status]}`}>{copy.status[i.status]}</span></td>
-                <td className="rt-biz__act"><button type="button" className="fb-textlink rt-biz__linkbtn" aria-haspopup="dialog" onClick={() => setView(i.number)}>{copy.invoices.view}<span className="rt-sr"> {i.number}</span></button></td>
+                <td className="rt-biz__act">
+                  <span className="rt-biz__rowacts">
+                    <button type="button" className="fb-textlink rt-biz__linkbtn" aria-haspopup="dialog" onClick={() => setView(i.number)}>{copy.invoices.view}<span className="rt-sr"> {i.number}</span></button>
+                    <button type="button" className="fb-textlink rt-biz__linkbtn rt-biz__download" onClick={() => { setView(i.number); setDownloading(true); }}><DownloadIcon />{copy.invoices.download}<span className="rt-sr"> {i.number}</span></button>
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -111,7 +130,7 @@ export default function BizBilling() {
         <button type="button" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy} onClick={pay}>{busy ? "Paying" : copy.payConfirm.replace("{amount}", formatPrice(data.credit.due))}</button>
       </Sheet>
 
-      <Sheet open={Boolean(invoice)} onClose={() => setView(null)} title={invoice ? `Invoice ${invoice.number}` : ""} closeLabel="Close" className="rt-biz__invoice">
+      <Sheet open={Boolean(invoice)} onClose={() => { setView(null); setDownloading(false); }} title={invoice ? `Invoice ${invoice.number}` : ""} closeLabel="Close" className="rt-biz__invoice">
         {invoice && (
           <div className="rt-biz__invbody">
             <dl className="rt-biz__details">

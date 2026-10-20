@@ -456,11 +456,12 @@ export default function ProviderNewOrder() {
           </div>
         </section>
 
-        <div className="rt-pws-ord__actions">
-          <button type="submit" className="button -md -purple-1 text-white">Review order</button>
-        </div>
       </div>
       {summary}
+      {/* after the summary, so on a narrow screen the person sees the total before reviewing; beside it on a wide one */}
+      <div className="rt-pws-ord__actions">
+        <button type="submit" className="button -md -purple-1 text-white">Review order</button>
+      </div>
     </form>
   );
 }

@@ -4,6 +4,8 @@ const gbp = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP",
 export const formatPrice = (n) => gbp.format(Number(n) || 0);
 const dateFmt = (opts) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", ...opts });
 export const formatDate = (iso) => dateFmt({ weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
+// "17 Jul 2026": dates in tables and lists, where the weekday is clutter
+export const formatDay = (iso) => dateFmt({ day: "numeric", month: "short", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
 export const formatShortDate = (iso) => dateFmt({ day: "numeric", month: "short" }).format(new Date(`${iso}T00:00:00Z`));
 export const formatMonthYear = (iso) => dateFmt({ month: "long", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
 export const formatNumber = (n) => new Intl.NumberFormat("en-GB").format(n);

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
 import NavIcon from "./navIcons";
+import { DrawerHead, FoldChevron, MenuButton, useFoldedGroups, useWorkDrawer } from "./workNav";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -14,19 +15,10 @@ import { api } from "@/lib/trpc/react";
 import { actAsAdmin } from "@/lib/adminStore";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { getSupabase } from "@/lib/supabase/client";
-import { useFocusTrap } from "@/lib/useFocusTrap";
 import { SHOW_DEMO } from "@/lib/demo";
 import { EmptyState } from "@/components/states/States";
 
 const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-const FOLDED_KEY = "rt-adm-nav-folded";
-const readFolded = () => {
-  try {
-    return JSON.parse(window.localStorage.getItem(FOLDED_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
 
 // The admin's layout: a work layout, not the public site's. The checkout header's dark band with the logo and an "Admin" tag, the
 // signed-in admin (from the server check: name, access level), "View site" and Sign out; a sidebar with the plan's groups (each page with its icon and a live count where
@@ -42,36 +34,8 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const router = useRouter();
   const me = useAdminAccess();
   const [leaving, setLeaving] = useState(false);
-  const [folded, setFolded] = useState([]); // the groups this admin folded
-  const [menuOpen, setMenuOpen] = useState(false); // the drawer, below 992px
-  const menuBtn = useRef(null);
-  const closeBtn = useRef(null);
-  const pathname = usePathname();
-  useEffect(() => setFolded(readFolded()), []);
-  useEffect(() => setMenuOpen(false), [pathname]);
-  // the open drawer: focus on its close button, and the page behind doesn't scroll
-  useEffect(() => {
-    if (!menuOpen) return;
-    closeBtn.current?.focus();
-    const html = document.documentElement;
-    const before = html.style.overflow;
-    html.style.overflow = "hidden";
-    return () => {
-      html.style.overflow = before;
-    };
-  }, [menuOpen]);
-  const closeMenu = () => {
-    setMenuOpen(false);
-    menuBtn.current?.focus();
-  };
-  useFocusTrap(menuOpen, sideRef, closeMenu);
-  const keep = (next) => {
-    try {
-      window.localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
-    } catch {}
-    return next;
-  };
-  const fold = (group) => setFolded((f) => keep(f.includes(group) ? f.filter((g) => g !== group) : [...f, group]));
+  const [folded, fold, setAll] = useFoldedGroups("rt-adm-nav-folded"); // the groups this admin folded
+  const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
@@ -100,10 +64,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
       <a href="#rt-adm-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">
-          <button type="button" className="rt-adm__menu" ref={menuBtn} aria-expanded={menuOpen} aria-controls="rt-adm-side" onClick={() => setMenuOpen((o) => !o)}>
-            <span aria-hidden="true"></span>
-            <span className="rt-sr">{menuOpen ? "Close menu" : "Menu"}</span>
-          </button>
+          <MenuButton drawer={drawer} controls="rt-adm-side" />
           <Link href="/admin" className="rt-adm__logo" aria-label={`${A.title} dashboard`}>
             <Image width={150} height={38} src="/assets/img/general/readtraining-logo.svg" alt="" priority />
             <span className="rt-adm__tag">Admin</span>
@@ -113,7 +74,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
             <Link href={A.backToSite.href} className="rt-adm__site">{A.backToSite.label}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
             </div>
             <button type="button" className="rt-adm__out" onClick={signOut} disabled={leaving}>{A.signOut}</button>
           </div>
@@ -121,20 +82,14 @@ export default function AdminShell({ current, title, lead, actions = null, detai
       </header>
 
       <div className="rt-adm__body">
-        {menuOpen && <div className="rt-adm__scrim" onClick={closeMenu} aria-hidden="true"></div>}
-        <nav id="rt-adm-side" className={`rt-adm__side rt-pill-scroll${menuOpen ? " is-open" : ""}`} aria-label="Admin" ref={sideRef}>
-          <div className="rt-adm__drawerhead">
-            <span className="rt-adm__drawertitle">Menu</span>
-            <button type="button" className="rt-adm__drawerclose" ref={closeBtn} onClick={closeMenu}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
-              <span className="rt-sr">Close menu</span>
-            </button>
-          </div>
+        {drawer.menuOpen && <div className="rt-adm__scrim" onClick={drawer.closeMenu} aria-hidden="true"></div>}
+        <nav id="rt-adm-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Admin" ref={sideRef}>
+          <DrawerHead drawer={drawer} />
           <div className="rt-adm__sidetools">
             {(() => {
               const allShut = nav.every((g) => folded.includes(g.group));
               return (
-                <button type="button" className="rt-adm__foldall" onClick={() => setFolded(keep(allShut ? [] : nav.map((g) => g.group)))}>
+                <button type="button" className="rt-adm__foldall" onClick={() => setAll(allShut ? [] : nav.map((g) => g.group))}>
                   {allShut ? "Expand all" : "Collapse all"}
                 </button>
               );
@@ -148,7 +103,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
             return (
               <div key={g.group} className={`rt-adm__group${shut ? " is-folded" : ""}`}>
                 <button type="button" className={`rt-adm__grouplabel${shut && here ? " is-here" : ""}`} aria-expanded={!shut} aria-controls={id} onClick={() => fold(g.group)}>
-                  <svg className="rt-adm__chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                  <FoldChevron />
                   <span>{g.group}</span>
                   {shut && here && <span className="rt-sr">, contains the page you are on</span>}
                   {shut && waiting > 0 && <span className="rt-adm__count" aria-label={`${waiting} waiting`}>{waiting}</span>}
@@ -170,7 +125,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
           <div className="rt-adm__drawerfoot">
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
             </div>
             <Link href={A.backToSite.href} className="rt-adm__link">{A.backToSite.label}</Link>
             <button type="button" className="rt-adm__link" onClick={signOut} disabled={leaving}>{A.signOut}</button>
