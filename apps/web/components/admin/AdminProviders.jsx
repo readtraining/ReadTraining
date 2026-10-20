@@ -63,7 +63,7 @@ export default function AdminProviders() {
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.id}>
-                    <td data-label={c.name}><Link href={`/admin/providers/${p.slug}`} className="rt-adm-strong">{p.name}</Link><small>/providers/{p.slug}</small></td>
+                    <td data-label={c.name}><Link href={`/admin/providers/${p.slug}`} className="rt-adm-strong">{p.name}</Link></td>
                     <td data-label={c.owner}>{p.owner ? <><Link href={`/admin/learners/${p.owner.id}`} className="rt-adm-strong">{p.owner.name}</Link><small>{p.owner.email}</small></> : <span className="rt-adm-muted">–</span>}</td>
                     <td data-label={c.applied}>{formatWhen(Date.parse(p.appliedAt))}</td>
                     <td data-label={c.commission}>{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>
