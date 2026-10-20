@@ -4045,12 +4045,24 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__chips a { text-decoration: none; }
 @media (min-width: 992px) {
   .rt-acc__nav { position: sticky; top: calc(var(--header-offset, 0px) + 24px); }
+  /* the template hides overflow on main and body, which stops sticky; clip hides sideways overflow without that (as the catalogue) */
+  :root:has(.rt-acc-page) body { overflow-x: clip; }
+  .rt-acc-page main { overflow: clip; }
   .rt-acc__chips { display: none; }
   .rt-acc__navcard { display: block; padding: 20px; border: 1px solid var(--color-light-5); border-radius: 16px; background: #fff; }
 }
 .rt-acc__me { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; margin-bottom: 12px; border-bottom: 1px solid var(--color-light-5); }
 .rt-acc__avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--color-purple-3); font-size: 15px; font-weight: 700; color: var(--color-purple-1); }
 .rt-acc__mewho { display: flex; flex-direction: column; min-width: 0; }
+/* who is signed in as the Switch account button: the whole row opens the menu of the other accounts, under it at its full width */
+.rt-acc__switch { margin-bottom: 12px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-acc__switch .rt-rowmenu { display: flex; padding-bottom: 12px; }
+.rt-acc__switch button.rt-acc__me { width: 100%; margin: 0; padding: 8px; border: 0; border-radius: var(--rt-radius-control); background: none; text-align: left; cursor: pointer; transition: background-color 0.15s ease; }
+.rt-acc__switch button.rt-acc__me:hover, .rt-acc__switch .is-open button.rt-acc__me { background: var(--rt-c-soft); }
+.rt-acc__switch button.rt-acc__me:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-acc__mechev { flex: none; margin-left: auto; color: var(--rt-c-muted); transition: transform 0.15s ease; }
+.rt-acc__switch .is-open .rt-acc__mechev { transform: rotate(180deg); }
+.rt-acc__switch .rt-rowmenu__list { top: calc(100% - 6px); left: 0; right: auto; min-width: 100%; width: max-content; max-width: 320px; }
 .rt-acc__mewho strong { font-size: 15px; color: var(--color-dark-1); }
 .rt-acc__mewho span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--color-light-1); }
 .rt-acc__links { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
@@ -4093,6 +4105,21 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 @media (min-width: 768px) { .rt-acc__nextbody { grid-template-columns: minmax(0, 1fr) auto; align-items: end; } .rt-acc__next .rt-acc__actions { flex-direction: column; align-items: stretch; } }
 .rt-acc__nexttitle { margin: 0; font-size: 18px; font-weight: 700; color: var(--color-dark-1); }
 .rt-tps__keyfacts.rt-acc__stats { margin: 0; box-shadow: none; }
+/* in the learner and business accounts the numbers sit two by two until there is room for a row of four (never 3 + 1 with an
+   empty cell); an odd last one spans the row */
+@media (max-width: 1279px) {
+  .rt-acc-page .rt-tps__keyfacts.rt-acc__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rt-acc-page .rt-acc__stats > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+/* a number card that links to its section (Stats `href`), and its short line (`hint`) */
+.rt-tps__keyfact.-link { padding: 0; }
+.rt-acc__statlink { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; padding: 18px 20px; color: inherit !important; text-decoration: none; transition: background-color 0.15s ease; }
+.rt-acc__statlink:hover { background: var(--rt-c-soft); }
+.rt-acc__statlink:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: -2px; }
+/* with a hint the label is no longer the last line, so it keeps the label's look here */
+.rt-tps__keyfact-text > span:has(+ .rt-acc__stathint) { font-size: 13px; line-height: 18px; color: var(--color-light-1); }
+.rt-acc__stathint { margin-top: 2px; font-size: var(--rt-text-xs); line-height: 16px; color: var(--rt-c-muted); }
+@media (max-width: 575px) { .rt-acc__statlink { padding: 16px; } }
 @media (min-width: 1200px) { .rt-tps__keyfacts.rt-acc__stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 /* the account, business and admin strips stack icon, number and label, so a label keeps the cell's full width and never wraps
    beside the icon */
@@ -4218,20 +4245,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 }
 /* ---------- BUSINESS ACCOUNT (/business): the customer account's layout and cards; the /for-business page's places bar, list
    rows, avatars and chips (scoped to .fb-page); a table that turns into cards on phones ---------- */
-/* Switch account: the identities on this login (account menu, Business account) */
-.rt-switch { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rt-c-line); }
-.rt-switch__title { margin: 0 0 8px; font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rt-c-muted); }
-.rt-switch__list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.rt-switch__row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: var(--rt-radius-control); background: none; text-align: left; cursor: pointer; }
-.rt-switch__row:hover:not(:disabled) { background: var(--rt-c-soft); }
-.rt-switch__row:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 1px; }
-.rt-switch__row.is-current { background: var(--rt-c-brand-soft); cursor: default; }
-.rt-switch__mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); }
-.rt-switch__row.is-current .rt-switch__mark { background: var(--rt-c-surface); }
-.rt-switch__row.is-add .rt-switch__mark { border: 1px dashed var(--rt-c-brand); background: none; font-size: var(--rt-text); }
-.rt-switch__text { display: grid; min-width: 0; }
-.rt-switch__text strong { font-size: var(--rt-text-sm); line-height: 1.35; color: var(--rt-c-text); overflow-wrap: anywhere; }
-.rt-switch__text span { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* no access to a workspace */
 .rt-na { padding-top: 24px; padding-bottom: 64px; }
 /* a provider that has just joined: about and courses not added yet */
@@ -4240,8 +4253,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-na .rt-acc__state { max-width: 640px; }
 .rt-na__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 6px; }
 .rt-acc__banner.-done { margin: 0; border: 1px solid color-mix(in srgb, var(--color-success) 35%, var(--color-white)); background: color-mix(in srgb, var(--color-success) 8%, var(--color-white)); }
-.rt-biz__lead { margin: -6px 0 14px; }
-.rt-biz__strong { color: var(--color-dark-1); }
 .rt-biz__muted { font-size: 13px; color: var(--color-light-1); }
 /* places to assign (dashboard) */
 .rt-biz__assignlist { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
@@ -4298,6 +4309,44 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* the page column is a grid: let the cards and the toolbar be narrower than their one-line content (long emails), so on phones
    the emails shorten with … instead of widening the page */
 .rt-biz__place, .rt-biz__bar { min-width: 0; }
+/* assign places, as Hurak's Courses page: course type and title search, how many courses match with Clear filter, and each
+   course's type and places remaining as tags */
+.rt-biz__coursefilters { grid-template-columns: minmax(0, 240px) minmax(0, 1fr); }
+.rt-biz__coursefilters .rt-field { margin: 0; }
+@media (max-width: 575px) { .rt-biz__coursefilters { grid-template-columns: minmax(0, 1fr); } }
+.rt-biz__found { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-biz__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.rt-biz__tag { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; line-height: 18px; color: var(--rt-c-text); }
+/* dashboard: the two lists side by side keep their own height; the certificates table gives the learner and course the room;
+   the credit's numbers in one row with Pay balance */
+.rt-biz__duo { align-items: start; }
+.rt-biz__rows li > div:first-child { gap: 2px; }
+.rt-biz__certtable th:nth-child(3), .rt-biz__certtable th:nth-child(4) { width: 112px; }
+.rt-biz__certtable td small, .rt-biz__certtable td:nth-child(3), .rt-biz__certtable td:nth-child(4) { white-space: nowrap; } /* IDs and dates never break */
+.rt-biz__download { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rt-biz__rowacts { display: inline-flex; align-items: center; gap: 16px; }
+.rt-biz__creditrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 12px; }
+.rt-biz__creditrow .rt-biz__creditnums { flex: 1 1 420px; margin: 0; }
+.rt-biz__creditrow dd small { display: block; font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
+.rt-acc__certs .rt-biz__linkbtn { align-self: flex-start; margin-top: 4px; font-size: var(--rt-text-sm); }
+/* a downloaded certificate (BizCertificate): an A4 landscape page, hidden on screen, the only thing printed while it is open */
+.rt-certdoc { display: none; }
+@page rt-cert { size: A4 landscape; margin: 0; }
+@media print {
+  body:has(> .rt-certdoc) > *:not(.rt-certdoc) { display: none !important; }
+  .rt-certdoc { display: block; page: rt-cert; padding: 12mm; color: var(--rt-c-text); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .rt-certdoc__frame { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 184mm; padding: 14mm; border: 2mm solid var(--rt-c-brand); text-align: center; }
+  .rt-certdoc p { margin: 0; }
+  .rt-certdoc__brand { font-size: 20px; font-weight: 700; color: var(--rt-c-brand); }
+  .rt-certdoc__kicker { margin-top: 10mm !important; font-size: 34px; font-weight: 700; }
+  .rt-certdoc__line { margin-top: 6mm !important; font-size: 15px; color: var(--rt-c-muted); }
+  .rt-certdoc__name { margin-top: 3mm !important; font-size: 30px; font-weight: 700; }
+  .rt-certdoc__course { margin-top: 3mm !important; font-size: 22px; font-weight: 600; }
+  .rt-certdoc__facts { display: flex; gap: 14mm; margin: 12mm 0 0; }
+  .rt-certdoc__facts dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rt-c-muted); }
+  .rt-certdoc__facts dd { margin: 1mm 0 0; font-size: 15px; font-weight: 600; }
+  .rt-certdoc__check { margin-top: 10mm !important; font-size: 12px; color: var(--rt-c-muted); }
+}
 .rt-biz__place.is-highlight { border-color: var(--color-purple-1); box-shadow: inset 0 0 0 1px var(--color-purple-1); }
 .rt-biz__meta { margin-top: 4px; }
 .fb-page .fb-list.rt-biz__places { margin-top: 6px; }

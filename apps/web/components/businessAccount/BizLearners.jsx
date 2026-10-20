@@ -9,6 +9,7 @@ import { Avatar } from "@/components/marketing/parts";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { CertPill, certLine } from "./bizParts";
+import { DownloadCertificate, useCertificateDownload } from "./BizCertificate";
 import { EmptyState } from "@/components/states/States";
 
 const copy = biz.learners;
@@ -30,6 +31,7 @@ export default function BizLearners() {
   const [saving, setSaving] = useState(false);
   const [announce, setAnnounce] = useState("");
   const addRef = useRef(null);
+  const cert = useCertificateDownload();
   useEffect(() => {
     setData(getBusiness());
     if (new URLSearchParams(window.location.search).get("add") === "1") setAdding(true);
@@ -155,13 +157,19 @@ export default function BizLearners() {
             <h3 className="rt-acc__h3">{copy.detail.certificates}</h3>
             {learner.certificates.length ? (
               <ul className="rt-acc__certs">
-                {learner.certificates.map((c) => <li key={c.number}><div><b>{c.title}</b><span>{certLine(c)}</span></div><CertPill state={c.state} /></li>)}
+                {learner.certificates.map((c) => (
+                  <li key={c.number}>
+                    <div><b>{c.title}</b><span>{certLine(c)}</span><DownloadCertificate cert={c} onDownload={cert.download} /></div>
+                    <CertPill state={c.state} />
+                  </li>
+                ))}
               </ul>
             ) : <EmptyState inCard title={copy.detail.noCerts} />}
             <Link href="/business/assignments" className="fb-textlink">{copy.detail.assign}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
           </div>
         )}
       </Sheet>
+      {cert.page}
     </div>
   );
 }

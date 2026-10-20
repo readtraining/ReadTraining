@@ -58,9 +58,15 @@ export function getBusiness() {
     .filter((c) => byId[c.learnerId])
     .map((c) => {
       const expires = isoDay(now + c.expiresInDays * DAY);
-      return { ...c, learner: byId[c.learnerId].name, title: getCourseBySlug(c.courseId)?.title || "Course", expires, state: expires < today ? "expired" : expires <= soon ? "renew" : "valid" };
+      return { ...c, learner: byId[c.learnerId].name, title: getCourseBySlug(c.courseId)?.title || "Course", issued: isoDay(now - c.issuedDaysAgo * DAY), expires, state: expires < today ? "expired" : expires <= soon ? "renew" : "valid" };
     })
     .sort((a, b) => (a.expires < b.expires ? -1 : 1));
+
+  // newest first
+  const results = biz.results
+    .filter((r) => byId[r.learnerId])
+    .map((r) => ({ ...r, learner: byId[r.learnerId].name, title: getCourseBySlug(r.courseId)?.title || "Course", date: isoDay(now - r.daysAgo * DAY) }))
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const paid = new Set(saved.paid || []);
   const invoices = biz.invoices.map((i) => {
@@ -84,6 +90,7 @@ export function getBusiness() {
     learners: people,
     purchases,
     certificates,
+    results,
     invoices,
     credit: { limit: biz.company.limit, used, available: round(biz.company.limit - used), due: used, dueDate: nextDue, terms: biz.company.terms },
   };
