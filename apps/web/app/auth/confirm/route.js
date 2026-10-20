@@ -7,6 +7,7 @@ import { mutateApiAsUser } from "@/lib/serverApi";
 // - email links (confirm the account, reset the password, change the email): ?token_hash=…&type=… → verifyOtp. Works when the
 //   link is opened in another browser or on another device, because nothing from the original browser is needed.
 // - Google / Facebook and older email links: ?code=… → exchangeCodeForSession (PKCE).
+// - Google's own button (components/auth/GoogleButton.jsx): ?via=google, the browser already signed in → the claims are checked.
 // A missing, expired or used link goes to log in with a message. After a successful sign-in the API is asked to send the
 // welcome email (it goes once per account, so later links do nothing); that never holds up or blocks the redirect.
 const EMAIL_TYPES = ["signup", "email", "recovery", "email_change", "invite", "magiclink"];
@@ -32,6 +33,9 @@ export async function GET(request) {
     } else if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (!error) return signedIn(next, url.origin);
+    } else if (params.get("via") === "google") {
+      const { data } = await supabase.auth.getClaims();
+      if (data?.claims?.sub) return signedIn(next, url.origin);
     }
   }
   return NextResponse.redirect(new URL("/login?error=link", url.origin));
