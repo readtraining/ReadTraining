@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { api } from "@/lib/trpc/react";
 import { signOut, useAuthUser } from "@/lib/auth/authClient";
+import { AUTH_ROUTES } from "@/lib/routes";
 
 // The signed-in person from the API (me.get): profile, email and whether it's verified, a pending email change, the
 // identities they can switch between. One cached query shared by every account component; `refetch()` after a save.
@@ -22,11 +23,13 @@ export function useMe() {
   useEffect(() => {
     if (!ended) return;
     const here = window.location.pathname + window.location.search;
-    // on an account area the page can't work, so go to log in; on a public page (the header reads this too) just sign out
+    // on an account area the page can't work, so go to log in (an admin to the admin sign-in); on a public page (the header
+    // reads this too) just sign out
     const inAccountArea = /^\/(account|business|provider|admin)(\/|$)/.test(window.location.pathname);
+    const login = /^\/admin(\/|$)/.test(window.location.pathname) ? AUTH_ROUTES.adminLogin : AUTH_ROUTES.login;
     signOut()
       .catch(() => {})
-      .finally(() => inAccountArea && window.location.replace(`/login?next=${encodeURIComponent(here)}&ended=1`));
+      .finally(() => inAccountArea && window.location.replace(`${login}?next=${encodeURIComponent(here)}&ended=1`));
   }, [ended]);
   return { person, ...query };
 }
