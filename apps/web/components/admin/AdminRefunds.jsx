@@ -26,9 +26,8 @@ export function AdminRefunds() {
       <Said text={said} />
       <div className="rt-adm-toolbar">
         <Tabs tabs={Object.keys(c.tabs).map((key) => ({ key, label: c.tabs[key], count: list.data?.counts?.[key] }))} value={tab} onChange={setTab} label="Show refunds" />
-        {list.data && <p className="rt-acc__note">{limit === null ? c.noLimit : c.yourLimit.replace("{limit}", formatPrice((limit ?? 0) / 100))}</p>}
       </div>
-      <p className="rt-acc__notice">{A.recordOnly}</p>
+      <p className="rt-acc__notice">{A.recordOnly}{list.data && ` ${limit === null ? c.noLimit : c.yourLimit.replace("{limit}", formatPrice((limit ?? 0) / 100))}`}</p>
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />
       ) : list.isLoading ? (

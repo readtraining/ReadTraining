@@ -71,6 +71,7 @@ export function AdminPayouts() {
             {perms.includes("payouts") && <button type="button" className="button -md -purple-1 text-white" disabled={run.isPending || !payable} onClick={() => act(async () => { const r = await run.mutateAsync({ periodEnd: day }); if (!r.created) throw new Error(P.runNone); setTab("draft"); return r; }, P.runDone.replace("{n}", owed.data.filter((r) => r.payable > 0).length))}>{P.run}{payable ? ` (${formatPrice(payable)})` : ""}</button>}
           </div>
         </div>
+        {perms.includes("payouts") && owed.data && !payable && <p className="rt-adm-item__hint">{P.nothingPayable}</p>}
         <p className="rt-acc__note rt-adm-cardnote">{P.owedNote}</p>
         {owed.error ? <ErrorState inCard onRetry={() => owed.refetch()} /> : owed.isLoading ? <TableSkeleton rows={3} /> : owed.data.length ? (
           <table className="rt-biz__table rt-adm-table">
@@ -108,7 +109,7 @@ export function AdminPayouts() {
                   {w.heldBack > 0 && ` · ${formatPrice(w.heldBack)} held back`}
                 </p>
                 {w.holdReason && <p className="rt-adm-item__block"><strong>Held:</strong> {w.holdReason}</p>}
-                <button type="button" className="rt-cd__link" onClick={() => setViewing(w)}>{P.covers}</button>
+                <button type="button" className="fb-textlink" onClick={() => setViewing(w)}>{P.coversLink}<i className="icon-arrow-right text-12" aria-hidden="true"></i></button>
               </div>
               <div className="rt-adm-item__actions">
                 {w.status === "draft" && perms.includes("payouts") && (w.mine ? <p className="rt-adm-item__hint">{P.yours}</p> : <button type="button" className="button -sm -purple-1 text-white" onClick={() => act(() => approve.mutateAsync({ id: w.id }), P.approved)} disabled={approve.isPending}>{P.approve}</button>)}

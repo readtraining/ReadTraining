@@ -38,7 +38,7 @@ export const admin = {
       { key: "coupons", label: "Coupons", href: "/admin/coupons" },
     ] },
     { group: "Customers", items: [
-      { key: "learners", label: "Learners and certificates", href: "/admin/learners", demo: "partly" },
+      { key: "learners", label: "Learners & certificates", href: "/admin/learners", demo: "partly" },
       { key: "businesses", label: "Business accounts", href: "/admin/businesses", badge: "credit", demo: true },
       { key: "jobs", label: "Security Jobs", href: "/admin/jobs", badge: "candidates", demo: true },
       { key: "reviews", label: "Reviews", href: "/admin/reviews", badge: "reviews", demo: true },
@@ -456,6 +456,8 @@ export const admin = {
       sent: ["No payouts sent yet", "Sent payouts show here with the date and who sent them."],
     },
     covers: "What it covers",
+    coversLink: "See what it covers",
+    nothingPayable: "Nothing is payable yet.",
     noOwed: "No provider has money in the ledger yet.",
   },
 
@@ -868,6 +870,7 @@ export const admin = {
     reply: "Provider reply",
     noReply: "No reply from the provider yet.",
     challenge: "Challenged by the provider",
+    providerNote: "Provider’s note:",
     hide: "Hide review",
     show: "Show again",
     hiddenTag: "Hidden",

@@ -111,7 +111,7 @@ export default function AdminSessions() {
             <tbody>
               {list.slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((s) => (
                 <tr key={s.id}>
-                  <td data-label={c.date}><span className="rt-adm-strong">{formatDate(s.date)}</span><small>{s.daysAway <= 0 ? "Today" : `In ${s.daysAway} ${s.daysAway === 1 ? "day" : "days"}`}</small></td>
+                  <td data-label={c.date}><span className="rt-adm-strong">{s.date.slice(0, 4) === String(new Date().getFullYear()) ? formatDate(s.date).replace(/ \d{4}$/, "") : formatDate(s.date)}</span><small>{s.daysAway <= 0 ? "Today" : `In ${s.daysAway} ${s.daysAway === 1 ? "day" : "days"}`}</small></td>
                   <td data-label={c.course}><Link href={`/admin/catalogue/${s.courseId}`} className="rt-adm-strong">{s.course}</Link><small>{s.provider}{s.preCourse ? " · Pre-course e-learning" : ""}</small></td>
                   <td data-label={c.where}>{s.mode === "classroom" ? s.city : MODE.online}<small>{s.mode === "classroom" ? s.postcode : s.time}</small></td>
                   <td data-label={c.seats}>{s.cancelled ? <AdminStatus kind="session" status="cancelled">Cancelled</AdminStatus> : <Seats s={s} />}{s.salesClosed && !s.cancelled && <small>{copy.salesClosed}</small>}</td>

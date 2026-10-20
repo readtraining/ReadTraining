@@ -72,7 +72,7 @@ export default function AdminReviews() {
                 <p className="rt-adm-review__text">{r.text}</p>
                 <p className="rt-acc__note"><Link href={courseHref(r.courseId)} className="rt-adm-strong">{r.course}</Link> · {r.provider}</p>
                 {r.reply ? <p className="rt-adm-item__reason"><strong>{copy.reply}:</strong> {r.reply}</p> : !r.hidden && <p className="rt-acc__note">{copy.noReply}</p>}
-                {r.challenge && <p className="rt-adm-item__block"><strong>{copy.challenge}:</strong> {r.challenge}</p>}
+                {r.challenge && <p className="rt-adm-item__reason"><strong>{copy.providerNote}</strong> {r.challenge}</p>}
                 {r.hidden && <p className="rt-acc__note">{copy.hiddenNote.replace("{who}", r.hidden.by || "an admin").replace("{reason}", r.hidden.reason)}</p>}
               </div>
               {canEdit && (
@@ -82,7 +82,7 @@ export default function AdminReviews() {
                   ) : (
                     <>
                       {r.challenge && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { keepReview(r); setSaid(copy.kept); }}>{copy.keep}</button>}
-                      <button type="button" className={r.challenge ? "button -sm -purple-1 text-white" : "rt-cd__link rt-adm-danger"} onClick={() => setHiding(r)}>{copy.hide}</button>
+                      <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setHiding(r)}>{copy.hide}</button>
                     </>
                   )}
                 </div>

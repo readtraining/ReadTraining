@@ -68,7 +68,7 @@ export default function AdminLearnerList() {
                       {st.organisations.length || st.admin ? (
                         <span className="rt-adm-learners__orgs">
                           {st.organisations.map((o) => <span key={`${o.type}-${o.name}`}>{o.name}<small>{copy.detail.orgTypes[o.type]}</small></span>)}
-                          {st.admin && <span>{copy.adminTag}</span>}
+                          {st.admin && <span>ReadTraining<small>{copy.adminTag}</small></span>}
                         </span>
                       ) : <span className="rt-adm-muted">–</span>}
                     </td>
