@@ -5835,7 +5835,13 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 
 /* provider workspace: part C */
 /* ---- provider workspace: cohorts, cohort, calendar (ProviderCohorts, ProviderCohort, ProviderCalendar) ---- */
-.rt-pws-coh__filters { align-items: flex-start; }
+/* the cohorts' filters: search first, then every filter in a grid that wraps (nothing runs off the page or cuts its words);
+   under them how many cohorts match, a note when "When" was changed for you, and Clear filters */
+.rt-pws-coh__filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; align-items: start; }
+.rt-pws-coh__filters .rt-adm-select.-inline, .rt-pws-coh__filters .rt-adm-search { width: auto; min-width: 0; margin: 0; }
+@media (min-width: 576px) { .rt-pws-coh__filters > .rt-adm-search { grid-column: span 2; } }
+.rt-pws-coh__filtersum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 12px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-coh__filtersum b { color: var(--rt-c-text); }
 .rt-pws-coh__bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-color: var(--rt-c-brand); }
 .rt-pws-coh__bulkn { margin-right: auto; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-coh__clear, .rt-pws-coh__remove { min-height: 44px; padding: 0 8px; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }

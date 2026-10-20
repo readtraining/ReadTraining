@@ -27,7 +27,8 @@ const MODES = [
   { key: "all", label: "All" },
   { key: "classroom", label: "Classroom" },
   { key: "live-online", label: "Live online" },
-  { key: "self-paced", label: "Self-paced" },
+  // self-paced courses have no dates, so this tab lists courses, not cohorts (its count is not part of All)
+  { key: "self-paced", label: "Self-paced courses" },
 ];
 const WHEN = [
   { value: "upcoming", label: "Upcoming and in progress" },
@@ -82,6 +83,8 @@ export default function ProviderCohorts() {
   const [when, setWhen] = useState("upcoming");
   const [q, setQ] = useState("");
   const [date, setDate] = useState("");
+  // said under the filters when a status or a date set "When" to Any date, so the change is never silent
+  const [whenNote, setWhenNote] = useState("");
   const [page, setPage] = useState(1);
   const [moving, setMoving] = useState(null);
   const [moveTo, setMoveTo] = useState("");
@@ -139,6 +142,8 @@ export default function ProviderCohorts() {
     .filter((k) => !needle || `${k.course?.title} ${k.venue?.name || ONLINE} ${k.venue?.city || ""} ${k.tutor?.name || ""}`.toLowerCase().includes(needle))
     .sort((a, b) => (when === "past" ? b.first.localeCompare(a.first) : a.first.localeCompare(b.first)));
 
+  // any filter set (the tab aside), for "Clear filters" under the filters
+  const filtersSet = Boolean(course || status || venue || tutor || date || needle || when !== "upcoming");
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const at = Math.min(page, pages);
   const pageRows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
@@ -150,8 +155,9 @@ export default function ProviderCohorts() {
   const learnersIn = (rows) => rows.filter((k) => !k.cancelled).reduce((n, k) => n + k.booked, 0);
   const filtered = Boolean(status || venue || tutor || needle || date || course || mode !== "all" || when !== "upcoming");
 
-  const clear = () => {
-    setMode("all");
+  // back to the defaults; under the filters the tab stays (keepTab), from the empty state everything resets
+  const clear = (keepTab = false) => {
+    if (!keepTab) setMode("all");
     setCourse("");
     setStatus("");
     setVenue("");
@@ -160,7 +166,8 @@ export default function ProviderCohorts() {
     setQ("");
     setDate("");
     setPage(1);
-    ["mode", "course", "status", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
+    setWhenNote("");
+    [...(keepTab ? [] : ["mode"]), "course", "status", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
   const togglePick = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const sendJoining = () => {
@@ -207,23 +214,29 @@ export default function ProviderCohorts() {
       ) : (
         <>
           <div className="rt-adm-toolbar">
-            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); }} label="Delivery" />
+            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
             {create}
           </div>
           {mode !== "self-paced" && (
-            <div className="rt-adm-toolbar rt-pws-coh__filters">
-              <div className="rt-adm-toolbar__end">
+            <div className="rt-pws-coh__filterbox">
+              <div className="rt-pws-coh__filters">
+                <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
                 <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))]} />
-                <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setPage(1); }} options={WHEN} />
+                <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setWhenNote(""); setPage(1); }} options={WHEN} />
                 <div className="rt-field rt-adm-select -inline rt-pws-coh__datefilter">
                   <label htmlFor="rt-coh-date" className="rt-sr">Cohorts running on this date</label>
-                  <DateField id="rt-coh-date" compact clearable placeholder="Any day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } setPage(1); }} />
+                  <DateField id="rt-coh-date" compact clearable placeholder="Any day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date to show the cohorts running on the day you picked."); } setPage(1); }} />
                 </div>
-                <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
-                <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />
+                <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date, so cohorts with this status show whatever their dates."); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
+                {/* live online cohorts have no venue */}
+                {mode !== "live-online" && <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />}
                 <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email })), { value: "none", label: "Not assigned" }]} />
               </div>
-              <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
+              <div className="rt-pws-coh__filtersum">
+                <b>{list.length} {list.length === 1 ? "cohort" : "cohorts"}</b>
+                {whenNote && <span>{whenNote}</span>}
+                {filtersSet && <button type="button" className="rt-cd__link" onClick={() => clear(true)}>Clear filters</button>}
+              </div>
             </div>
           )}
 
@@ -338,7 +351,7 @@ export default function ProviderCohorts() {
               {pages > 1 && <div className="rt-pws-coh__pages"><CataloguePagination page={at} totalPages={pages} hrefFor={(p) => `?page=${p}`} onNavigate={setPage} /></div>}
             </div>
           ) : (
-            <EmptyState title="No cohorts match these filters." action={filtered ? { label: "Clear filters", onClick: clear } : null} />
+            <EmptyState title="No cohorts match these filters." action={filtered ? { label: "Clear filters", onClick: () => clear() } : null} />
           )}
         </>
       )}
