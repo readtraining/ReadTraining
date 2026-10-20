@@ -97,7 +97,7 @@ export const payoutsRouter = createTRPCRouter({
       const entries = await ctx.db.execute<{ id: number; at: string; type: string; gross_pence: number; provider_pence: number; note: string | null; ref: string | null }>(sql`
         select l.id, l.at, l.type, l.gross_pence, l.provider_pence, l.note, o.ref from ${ledgerEntries} l left join public.orders o on o.id = l.order_id
         where l.provider_id = ${w.provider_id}::uuid and l.type <> 'payout' and l.at < ${endOf(w.period_end)} ${prev?.period_end ? sql`and l.at >= ${endOf(prev.period_end)}` : sql``}
-        order by l.id`)
+        order by l.at, l.id`)
       return { id: w.id, ref: w.ref, provider: w.provider, periodEnd: w.period_end, amount: p(w.amount_pence), status: w.status, entries: entries.map((e) => ({ id: Number(e.id), at: new Date(e.at).toISOString(), type: e.type, gross: p(e.gross_pence), provider: p(e.provider_pence), note: e.note, ref: e.ref })) }
     }),
 
@@ -177,7 +177,8 @@ export const payoutsRouter = createTRPCRouter({
 
 const TYPES = ['purchase', 'refund', 'cancel', 'dispute', 'charge', 'adjust', 'payout'] as const
 export const ledgerRouter = createTRPCRouter({
-  // Every entry in numbered pages, newest or oldest first; by provider and type. Totals for everything that matches.
+  // Every entry in numbered pages, newest or oldest first by date (an entry can be dated earlier than it was saved, like a
+  // payout up to a past day); by provider and type. Totals for everything that matches, and how many of each type.
   list: adminProcedure('admin.orders.view')
     .input(z.object({ providerId: z.string().uuid().optional(), type: z.enum(TYPES).optional(), ...paging }))
     .query(async ({ ctx, input }) => {
@@ -188,11 +189,16 @@ export const ledgerRouter = createTRPCRouter({
       const rows = await ctx.db.execute<{ id: number; total: number; at: string; type: string; gross_pence: number; fee_pence: number; commission_pence: number; provider_pence: number; note: string | null; ref: string | null; payout_ref: string | null; provider: string | null; by: string | null }>(sql`
         select l.id, ${total} total, l.at, l.type, l.gross_pence, l.fee_pence, l.commission_pence, l.provider_pence, l.note, o.ref, w.ref payout_ref, g.name provider, ${who('l.created_by')} as "by"
         from ${ledgerEntries} l left join public.orders o on o.id = l.order_id left join ${payouts} w on w.id = l.payout_id left join ${organisations} g on g.id = l.provider_id
-        where ${sql.join(where, sql` and `)} order by ${orderBy(sql`l.id`, input.dir, sql`l.id`)} ${window(input.page, input.limit)}`)
+        where ${sql.join(where, sql` and `)} order by ${orderBy(sql`l.at`, input.dir, sql`l.id`)} ${window(input.page, input.limit)}`)
       const [t] = await ctx.db.execute<{ gross: number; fee: number; commission: number; provider: number }>(sql`
         select coalesce(sum(gross_pence), 0)::int gross, coalesce(sum(fee_pence), 0)::int fee, coalesce(sum(commission_pence), 0)::int commission, coalesce(sum(provider_pence), 0)::int provider
         from ${ledgerEntries} l where ${totalsWhere}`)
+      const byType = await ctx.db.execute<{ type: (typeof TYPES)[number]; n: number }>(sql`
+        select l.type, count(*)::int n from ${ledgerEntries} l where ${input.providerId ? sql`l.provider_id = ${input.providerId}::uuid` : sql`true`} group by l.type`)
+      const counts: Record<(typeof TYPES)[number] | 'all', number> = { all: 0, purchase: 0, refund: 0, cancel: 0, dispute: 0, charge: 0, adjust: 0, payout: 0 }
+      for (const r of byType) (counts[r.type] = r.n), (counts.all += r.n)
       return {
+        counts,
         total: rows[0]?.total ?? 0,
         totals: { gross: p(t.gross), fee: p(t.fee), commission: p(t.commission), provider: p(t.provider) },
         entries: rows.map((e) => ({ id: Number(e.id), at: new Date(e.at).toISOString(), type: e.type, gross: p(e.gross_pence), fee: p(e.fee_pence), commission: p(e.commission_pence), provider: p(e.provider_pence), note: e.note, orderRef: e.ref, payoutRef: e.payout_ref, providerName: e.provider, by: e.by })),

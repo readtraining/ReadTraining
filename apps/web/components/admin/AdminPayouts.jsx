@@ -196,7 +196,7 @@ export function AdminTransactions() {
     <div className="rt-acc__stack">
       <Said text={said} />
       <div className="rt-adm-toolbar">
-        <Tabs tabs={[{ key: "all", label: L.all }, ...Object.keys(L.types).map((key) => ({ key, label: L.types[key] }))]} value={type} onChange={pickType} label="Show transactions of this type" />
+        <Tabs tabs={[{ key: "all", label: L.all, count: list.data?.counts?.all }, ...Object.keys(L.types).map((key) => ({ key, label: L.types[key], count: list.data?.counts?.[key] }))]} value={type} onChange={pickType} label="Show transactions of this type" />
         <div className="rt-adm-toolbar__end">
           <div className="rt-adm-select"><FieldSelect id="rt-lg-provider" label={L.provider} value={providerId} onChange={pickProvider} options={options} compact /></div>
           {canAdjust && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setAdjusting(true)}>{L.adjust}</button>}

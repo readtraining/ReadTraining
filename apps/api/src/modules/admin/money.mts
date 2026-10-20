@@ -141,7 +141,7 @@ export const ordersRouter = createTRPCRouter({
       const m = await moneyOf(ctx.db, o)
       const ledger = await ctx.db.execute<{ id: number; at: string; type: string; gross_pence: number; fee_pence: number; commission_pence: number; provider_pence: number; note: string | null; by: string | null }>(sql`
         select l.id, l.at, l.type, l.gross_pence, l.fee_pence, l.commission_pence, l.provider_pence, l.note, ${who('l.created_by')} as "by"
-        from ${ledgerEntries} l where l.order_id = ${o.id}::uuid order by l.id`)
+        from ${ledgerEntries} l where l.order_id = ${o.id}::uuid order by l.at, l.id`)
       const refundRows = await ctx.db.execute<{ id: string; amount_pence: number; reason: string; status: string; created_at: string; decided_at: string | null; decision_note: string | null; requested_by_id: string | null; requested_by: string | null; decided_by: string | null }>(sql`
         select r.id, r.amount_pence, r.reason, r.status, r.created_at, r.decided_at, r.decision_note, r.requested_by requested_by_id, ${who('r.requested_by')} requested_by, ${who('r.decided_by')} decided_by
         from ${refunds} r where r.order_id = ${o.id}::uuid order by r.created_at desc`)

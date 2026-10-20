@@ -461,7 +461,7 @@ export const admin = {
 
   ledger: {
     title: "Transactions",
-    lead: "The ledger: every money movement on the platform, in Hurak’s seven types. Nothing in it is ever changed or deleted.",
+    lead: "The ledger: every money movement on the platform, in seven types. Nothing in it is ever changed or deleted.",
     types: { purchase: "Purchase", refund: "Refund", cancel: "Cancel", dispute: "Dispute", charge: "Charge", adjust: "Adjust", payout: "Payout" },
     all: "All types",
     provider: "Provider",
