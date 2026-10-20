@@ -78,7 +78,8 @@ export const activityRouter = createTRPCRouter({
           actor: r.actor_user_id
             ? { id: r.actor_user_id, email: r.actor_email, name: `${r.actor_first ?? ''} ${r.actor_last ?? ''}`.trim() || r.actor_email }
             : null,
-          target: r.target_type ? { type: r.target_type, id: r.target_id, label: r.target_email ?? r.org_name ?? r.target_id } : null,
+          // an account that has since been deleted is named as such, never by its raw id
+          target: r.target_type ? { type: r.target_type, id: r.target_id, label: r.target_email ?? r.org_name ?? (['account', 'profile', 'user'].includes(r.target_type) ? 'Deleted account' : r.target_id) } : null,
           organisation: r.org_name,
           metadata: r.metadata ?? {},
           ip: r.ip,

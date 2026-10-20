@@ -34,9 +34,9 @@ function RecentActivity() {
         <ul className="rt-adm-feed">
           {entries.map((e) => (
             <li key={e.id}>
-              <span className="rt-acc__avatar" aria-hidden="true">{(e.actor?.name || A.activity.system).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
+              <span className="rt-acc__avatar" aria-hidden="true">{(e.actor ? (e.actor.email ? e.actor.name : A.activity.deleted) : A.activity.system).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
               <div>
-                <p><strong>{e.actor ? e.actor.name : A.activity.system}</strong> {(A.activity.actions[e.action] ?? e.action).toLowerCase()}{e.target?.label && e.target.type !== "session" ? <> · <span className="rt-adm-muted">{e.target.label}</span></> : null}</p>
+                <p>{e.actor ? <><strong>{e.actor.email ? e.actor.name : A.activity.deleted}</strong> {(A.activity.actions[e.action] ?? e.action).toLowerCase()}</> : <strong>{A.activity.actions[e.action] ?? e.action}</strong>}{e.target?.label && e.target.type !== "session" ? <> · <span className="rt-adm-muted">{e.target.label}</span></> : null}</p>
                 <small>{formatWhen(Date.parse(e.at))}</small>
               </div>
             </li>
