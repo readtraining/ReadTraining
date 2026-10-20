@@ -5,9 +5,11 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { calendarFile, getBookings, getLearning } from "@/lib/account";
 import { courseHref } from "@/data/courseSlugs";
-import { formatDate } from "@/lib/format";
+import { formatDay } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
 import { EmptyState } from "@/components/states/States";
+import { useMe } from "@/lib/useMe";
+import { DownloadCertificate, useCertificateDownload } from "@/components/businessAccount/BizCertificate";
 
 const copy = account.learning;
 const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
@@ -22,6 +24,10 @@ export default function AccountLearning() {
   const [items, setItems] = useState(null);
   const [tab, setTab] = useState("upcoming");
   const [bookings, setBookings] = useState({});
+  // a certificate's download carries the learner's name
+  const { person, data } = useMe();
+  const me = data ? `${data.profile.firstName} ${data.profile.lastName}`.trim() : person?.name || "";
+  const cert = useCertificateDownload();
   useEffect(() => {
     setItems(getLearning());
     setBookings(Object.fromEntries(getBookings().map((b) => [b.reference, b])));
@@ -63,7 +69,12 @@ export default function AccountLearning() {
                   <p className="rt-acc__rowmeta">{placeOf(l)} · {l.provider}</p>
                   <p className="rt-acc__rowsub">{account.detail.attending}: {l.delegates.join(", ")}</p>
                   {l.mode === "ondemand" && l.state === "upcoming" && <p className="rt-acc__note">Your log-in for the online course is emailed by {l.provider}.</p>}
-                  {l.certificate && <p className="rt-acc__note">{copy.certificate.replace("{number}", l.certificate.number).replace("{date}", formatDate(l.certificate.expires))}</p>}
+                  {l.certificate && (
+                    <p className="rt-acc__note rt-acc__certline">
+                      {copy.certificate.replace("{number}", l.certificate.number).replace("{date}", formatDay(l.certificate.expires))}
+                      <DownloadCertificate cert={{ ...l.certificate, title: l.title, learner: me }} onDownload={cert.download} />
+                    </p>
+                  )}
                   <div className="rt-acc__lineactions">
                     <Link href={`/account/bookings/${l.reference}`} className="fb-textlink">{copy.view}<span className="rt-sr"> {l.reference}</span></Link>
                     {l.state === "upcoming" && l.mode !== "ondemand" && bookings[l.reference] && (
@@ -81,6 +92,7 @@ export default function AccountLearning() {
       ) : (
         <EmptyState large icon="icon-online-learning" headingLevel={2} title={copy.empty[tab].title} text={copy.empty[tab].text} action={{ href: account.dashboard.next.cta.href, label: account.dashboard.next.cta.label }} />
       )}
+      {cert.page}
     </div>
   );
 }

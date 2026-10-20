@@ -5,20 +5,23 @@ import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
 import { getBusiness, payBalance } from "@/lib/businessAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDay, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { DownloadIcon } from "./BizCertificate";
 
 const copy = biz.billing;
-const STATUS_TONE = { paid: "completed", due: "confirmed", overdue: "requested" };
+const STATUS_TONE = { paid: "completed", due: "requested", overdue: "late", refunded: "cancelled" };
 
 // Billing and invoices: the business credit account (limit, used, available, the amount due and when, the payment terms) with Pay
-// balance (a simulated card payment: the open invoices are marked paid and the credit frees up), every invoice with its status and
-// a View that opens it with Print, and the billing details on the account. ?invoice= (from the bookings) opens one invoice.
+// balance (a simulated card payment: the open invoices are marked paid and the credit frees up), every invoice with its status, a
+// View that opens it with Print and a Download (the invoice opens and the print window with it, where "Save as PDF" downloads it;
+// it closes again after), and the billing details on the account. ?invoice= (from the bookings) opens one invoice.
 export default function BizBilling() {
   // the real business name (from the server check); the address, VAT and credit are still DEMO
   const companyName = useWorkspace()?.name ?? "";
   const [data, setData] = useState(null);
   const [view, setView] = useState(null); // invoice number shown
+  const [downloading, setDownloading] = useState(false); // the open invoice was asked for as a download: print it, then close it
   const [paying, setPaying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState("");
@@ -29,9 +32,20 @@ export default function BizBilling() {
     const asked = new URLSearchParams(window.location.search).get("invoice");
     if (asked && d.invoices.some((i) => i.number === asked)) setView(asked);
   }, []);
+  useEffect(() => {
+    if (!downloading || !view) return;
+    const done = () => { setDownloading(false); setView(null); };
+    window.addEventListener("afterprint", done, { once: true });
+    // print once the invoice is on the page
+    const frame = requestAnimationFrame(() => window.print());
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("afterprint", done);
+    };
+  }, [downloading, view]);
   if (!data) return null;
 
-  const open = data.invoices.filter((i) => i.status !== "paid");
+  const open = data.invoices.filter((i) => i.status === "due" || i.status === "overdue");
   const usedPct = Math.min(100, (data.credit.used / data.credit.limit) * 100);
   const invoice = view && data.invoices.find((i) => i.number === view);
   const purchase = invoice && data.purchases.find((p) => p.reference === invoice.reference);
@@ -65,7 +79,7 @@ export default function BizBilling() {
             <div>
               <span>{copy.credit.due}</span>
               <strong>{formatPrice(data.credit.due)}</strong>
-              <small>{data.credit.due > 0 ? `Next due ${formatDate(data.credit.dueDate)} · ${copy.credit.terms} ${data.credit.terms}` : `${copy.credit.terms} ${data.credit.terms}`}</small>
+              <small>{data.credit.due > 0 ? `${copy.credit.next(formatPrice(data.credit.nextAmount), formatDay(data.credit.dueDate))} · ${copy.credit.terms} ${data.credit.terms}` : `${copy.credit.terms} ${data.credit.terms}`}</small>
             </div>
             {data.credit.due > 0 && <button type="button" ref={payRef} className="button -md -purple-1 text-white" aria-haspopup="dialog" onClick={() => setPaying(true)}>{copy.pay}</button>}
           </div>
@@ -80,11 +94,16 @@ export default function BizBilling() {
             {data.invoices.map((i) => (
               <tr key={i.number}>
                 <td data-label={copy.invoices.columns[0]}><b>{i.number}</b></td>
-                <td data-label={copy.invoices.columns[1]}>{formatDate(i.date)}<small>{i.status === "paid" ? "Paid" : `Due ${formatDate(i.due)}`}</small></td>
+                <td data-label={copy.invoices.columns[1]}>{formatDay(i.date)}<small>{i.status === "refunded" ? `Refunded ${formatDay(i.refundedAt)}` : i.status === "paid" ? "Paid" : `Due ${formatDay(i.due)}`}</small></td>
                 <td data-label={copy.invoices.columns[2]}>{i.reference}</td>
                 <td data-label={copy.invoices.columns[3]}><b>{formatPrice(i.amount)}</b></td>
                 <td data-label={copy.invoices.columns[4]}><span className={`rt-pill rt-acc__status -${STATUS_TONE[i.status]}`}>{copy.status[i.status]}</span></td>
-                <td className="rt-biz__act"><button type="button" className="fb-textlink rt-biz__linkbtn" aria-haspopup="dialog" onClick={() => setView(i.number)}>{copy.invoices.view}<span className="rt-sr"> {i.number}</span></button></td>
+                <td className="rt-biz__act">
+                  <span className="rt-biz__rowacts">
+                    <button type="button" className="fb-textlink rt-biz__linkbtn" aria-haspopup="dialog" onClick={() => setView(i.number)}>{copy.invoices.view}<span className="rt-sr"> {i.number}</span></button>
+                    <button type="button" className="fb-textlink rt-biz__linkbtn rt-biz__download" onClick={() => { setView(i.number); setDownloading(true); }}><DownloadIcon />{copy.invoices.download}<span className="rt-sr"> {i.number}</span></button>
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -106,23 +125,23 @@ export default function BizBilling() {
       <Sheet open={paying} onClose={() => setPaying(false)} title={copy.payTitle} closeLabel="Close" fallbackFocus={payRef}>
         <p className="rt-acc__note">{copy.payText.replace("{amount}", formatPrice(data.credit.due))}</p>
         <ul className="rt-ck__items rt-biz__payitems">
-          {open.map((i) => <li key={i.number}><div className="rt-ck__itemtop"><b>{i.number}</b><span>{formatPrice(i.amount)}</span></div><p>Due {formatDate(i.due)}</p></li>)}
+          {open.map((i) => <li key={i.number}><div className="rt-ck__itemtop"><b>{i.number}</b><span>{formatPrice(i.amount)}</span></div><p>Due {formatDay(i.due)}</p></li>)}
         </ul>
         <button type="button" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy} onClick={pay}>{busy ? "Paying" : copy.payConfirm.replace("{amount}", formatPrice(data.credit.due))}</button>
       </Sheet>
 
-      <Sheet open={Boolean(invoice)} onClose={() => setView(null)} title={invoice ? `Invoice ${invoice.number}` : ""} closeLabel="Close" className="rt-biz__invoice">
+      <Sheet open={Boolean(invoice)} onClose={() => { setView(null); setDownloading(false); }} title={invoice ? `Invoice ${invoice.number}` : ""} closeLabel="Close" className="rt-biz__invoice">
         {invoice && (
           <div className="rt-biz__invbody">
             <dl className="rt-biz__details">
               <div><dt>Billed to</dt><dd>{companyName}, {data.company.address}</dd></div>
-              <div><dt>Date</dt><dd>{formatDate(invoice.date)}</dd></div>
+              <div><dt>Date</dt><dd>{formatDay(invoice.date)}</dd></div>
               <div><dt>Booking</dt><dd>{invoice.reference}{purchase?.po ? ` · ${purchase.po}` : ""}</dd></div>
-              <div><dt>Status</dt><dd>{copy.status[invoice.status]}{invoice.status !== "paid" ? `, due ${formatDate(invoice.due)}` : ""}</dd></div>
+              <div><dt>Status</dt><dd>{copy.status[invoice.status]}{invoice.status === "refunded" ? `: ${formatPrice(invoice.refund)} on ${formatDay(invoice.refundedAt)}` : invoice.status !== "paid" ? `, due ${formatDay(invoice.due)}` : ""}</dd></div>
             </dl>
             {purchase && (
               <ul className="rt-ck__items">
-                <li><div className="rt-ck__itemtop"><b>{purchase.title}</b><span>{formatPrice(purchase.total)}</span></div><p>{purchase.places} {purchase.places === 1 ? "place" : "places"} × {formatPrice(purchase.unit)} · {formatDate(purchase.date)}</p></li>
+                <li><div className="rt-ck__itemtop"><b>{purchase.title}</b><span>{formatPrice(purchase.total)}</span></div><p>{purchase.places} {purchase.places === 1 ? "place" : "places"} × {formatPrice(purchase.unit)} · {formatDay(purchase.date)}</p></li>
               </ul>
             )}
             <div className="rt-bk__total"><span>Total</span><strong>{formatPrice(invoice.amount)}</strong></div>

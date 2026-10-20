@@ -5,6 +5,7 @@
 //   pnpm admin:grant <email> --preset support      Full, Support or Finance (see packages/permissions)
 //   pnpm admin:grant <email> --revoke              turn their admin access off
 //   pnpm admin:grant <email> --reset-two-step      remove their authenticator (a lost phone); they set up a new one at next login
+//   pnpm admin:grant <email> --super               make them the super admin (the platform's owner; a Full admin, only one)
 //   pnpm admin:grant --list                        everyone with an admin row
 //
 // Uses the database and Supabase settings in the root .env, so it acts on whichever project that file points at.
@@ -36,13 +37,13 @@ async function log(action: string, userId: string, metadata: Record<string, unkn
 
 async function main() {
   if (flag('list')) {
-    const rows = await db.execute<{ email: string; preset: string; active: boolean; two_step: boolean }>(sql`
-      select u.email, a.preset, a.active,
+    const rows = await db.execute<{ email: string; preset: string; active: boolean; is_super: boolean; two_step: boolean }>(sql`
+      select u.email, a.preset, a.active, a.is_super,
              exists (select 1 from auth.mfa_factors f where f.user_id = a.user_id and f.status = 'verified') as two_step
       from public.admin_users a join auth.users u on u.id = a.user_id
       order by u.email`)
     if (!rows.length) console.log('No admins yet.')
-    for (const r of rows) console.log(`${r.email}  ${r.preset}  ${r.active ? 'active' : 'off'}  two-step ${r.two_step ? 'set up' : 'not set up'}`)
+    for (const r of rows) console.log(`${r.email}  ${r.is_super ? 'SUPER ADMIN' : r.preset}  ${r.active ? 'active' : 'off'}  two-step ${r.two_step ? 'set up' : 'not set up'}`)
     return
   }
 
@@ -55,6 +56,20 @@ async function main() {
     if (!done.length) stop(`${email} is not an admin.`)
     await log('admin.revoked', user.id, {})
     console.log(`${email} can no longer open the admin panel.`)
+    return
+  }
+
+  if (flag('super')) {
+    // a Full admin (made one if needed), and the only super admin
+    await db.transaction(async (tx) => {
+      await tx.update(adminUsers).set({ isSuper: false }).where(eq(adminUsers.isSuper, true))
+      await tx
+        .insert(adminUsers)
+        .values({ userId: user.id, preset: 'full', active: true, isSuper: true })
+        .onConflictDoUpdate({ target: adminUsers.userId, set: { preset: 'full', active: true, isSuper: true } })
+    })
+    await log('admin.super_granted', user.id, {})
+    console.log(`${email} is now the super admin (Full access; nobody else can change or remove them).`)
     return
   }
 

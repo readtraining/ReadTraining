@@ -40,7 +40,9 @@ const orgName = (label: string) =>
     .refine((v) => /[\p{L}\p{N}]/u.test(v), `Enter your ${label}.`)
 
 export const organisationsRouter = createTRPCRouter({
-  // Become a provider (from the student account): company or instructor name, mobile number, the provider terms.
+  // Become a provider (from the student account): company or instructor name, mobile number, the provider terms. Someone whose
+  // application was not approved can apply again: that same application reopens with the new details and waits for a decision
+  // (no second provider, and its history stays with it).
   createProvider: protectedProcedure
     .input(
       z.object({
@@ -50,8 +52,31 @@ export const organisationsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.actor.memberships.some((m) => m.type === 'provider' && m.role === 'owner'))
+      const own = ctx.actor.memberships.find((m) => m.type === 'provider' && m.role === 'owner')
+      if (own && own.organisationStatus !== 'rejected')
         throw new TRPCError({ code: 'CONFLICT', message: 'You already have a provider account. Use Switch account to open it.' })
+      if (own) {
+        const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
+        return ctx.db.transaction(async (tx) => {
+          const [reopened] = await tx
+            .update(organisations)
+            .set({ name: input.name, mobile: input.mobile, status: 'pending', statusNote: null, statusChangedAt: new Date(), termsAcceptedAt: new Date(), termsVersion })
+            .where(and(eq(organisations.id, own.organisationId), eq(organisations.type, 'provider'), eq(organisations.status, 'rejected')))
+            .returning({ id: organisations.id, slug: organisations.slug, name: organisations.name })
+          if (!reopened) throw new TRPCError({ code: 'CONFLICT', message: 'Your provider account has changed. Reload the page.' })
+          await logActivity(tx, {
+            actorUserId: ctx.user.id,
+            actorIdentity: 'student',
+            organisationId: reopened.id,
+            action: 'provider.reapplied',
+            targetType: 'organisation',
+            targetId: reopened.id,
+            metadata: { termsVersion },
+            ip: ctx.ip,
+          })
+          return reopened
+        })
+      }
       const base = slugify(input.name)
       const taken = await ctx.db
         .select({ slug: organisations.slug })
@@ -103,6 +128,18 @@ export const organisationsRouter = createTRPCRouter({
         return created
       })
     }),
+
+  // The person's own provider application when it was not approved: its name and the team's reason, for the page that offers
+  // to apply again. null when there is none.
+  myRejectedApplication: protectedProcedure.query(async ({ ctx }) => {
+    const own = ctx.actor.memberships.find((m) => m.type === 'provider' && m.role === 'owner' && m.organisationStatus === 'rejected')
+    if (!own) return null
+    const [org] = await ctx.db
+      .select({ name: organisations.name, reason: organisations.statusNote })
+      .from(organisations)
+      .where(and(eq(organisations.id, own.organisationId), eq(organisations.status, 'rejected')))
+    return org ?? null
+  }),
 
   // The check behind every /provider and /business page, on every request: which of the person's organisations of that type
   // to open (the one asked for, or their first), and whether the shared permission table lets them in. A refusal is logged

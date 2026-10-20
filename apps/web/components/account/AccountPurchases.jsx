@@ -4,11 +4,12 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { account } from "@/data/account";
 import { getBookings } from "@/lib/account";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDay, formatPrice } from "@/lib/format";
+import { DownloadIcon } from "@/components/businessAccount/BizCertificate";
 import { EmptyState } from "@/components/states/States";
 
 const copy = account.purchases;
-const TONE = { paid: "completed", refunded: "cancelled", requested: "requested" };
+const TONE = { paid: "completed", refunded: "cancelled", requested: "confirmed" };
 
 // Purchase history (the client's "Purchase history"): every order, newest first, as a table (cards on phones): the order
 // reference, when it was placed, its courses, what was paid and how (card, Klarna, wallet), and its status (Paid, Cancellation
@@ -35,11 +36,16 @@ export default function AccountPurchases() {
             return (
               <tr key={o.reference}>
                 <td data-label={copy.columns[0]}><b>{o.reference}</b></td>
-                <td data-label={copy.columns[1]}>{formatDate(o.bookedAt)}</td>
+                <td data-label={copy.columns[1]}>{formatDay(o.bookedAt)}</td>
                 <td data-label={copy.columns[2]}>{o.lines[0].title}{o.lines.length > 1 && <small>+ {o.lines.length - 1} more</small>}</td>
                 <td data-label={copy.columns[3]}><b>{formatPrice(o.total)}</b><small>{paidWith(o)}{s === "refunded" && o.refund ? ` · ${formatPrice(o.refund)} refunded` : ""}</small></td>
                 <td data-label={copy.columns[4]}><span className={`rt-pill rt-acc__status -${TONE[s]}`}>{copy.status[s]}</span></td>
-                <td className="rt-biz__act"><Link href={`/account/bookings/${o.reference}`} className="fb-textlink">{copy.view}<span className="rt-sr"> order {o.reference}</span></Link></td>
+                <td className="rt-biz__act">
+                  <span className="rt-biz__rowacts">
+                    <Link href={`/account/bookings/${o.reference}`} className="fb-textlink">{copy.view}<span className="rt-sr"> order {o.reference}</span></Link>
+                    <Link href={`/account/bookings/${o.reference}?print=1`} className="fb-textlink rt-biz__download"><DownloadIcon />{copy.receipt}<span className="rt-sr"> for order {o.reference}</span></Link>
+                  </span>
+                </td>
               </tr>
             );
           })}

@@ -1,6 +1,6 @@
 import React from "react";
 import ProviderShell from "@/components/providerWorkspace/ProviderShell";
-import ProviderCohort from "@/components/providerWorkspace/ProviderCohort";
+import ProviderCohort, { CohortTitle } from "@/components/providerWorkspace/ProviderCohort";
 import { pw } from "@/data/providerWorkspace";
 import { pageMetadata } from "@/lib/seo";
 
@@ -14,7 +14,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { id } = await props.params;
   return (
-    <ProviderShell current="cohorts" title={p.title} back={{ label: "Cohorts", href: "/provider/cohorts" }}>
+    <ProviderShell current="cohorts" title={<CohortTitle cohortId={id} fallback={p.title} />} back={{ label: "Cohorts", href: "/provider/cohorts" }}>
       <ProviderCohort cohortId={id} />
     </ProviderShell>
   );

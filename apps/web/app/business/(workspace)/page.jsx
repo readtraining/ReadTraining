@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import AccountShell from "@/components/account/AccountShell";
 import BizDashboard from "@/components/businessAccount/BizDashboard";
 import { businessAccount as biz } from "@/data/businessAccount";
@@ -11,7 +12,20 @@ export const metadata = pageMetadata({ title: "Business account | ReadTraining",
 
 export default function Page() {
   return (
-    <AccountShell demo area="business" current="dashboard" title={<WorkspaceName />} lead={biz.dashboard.lead}>
+    <AccountShell
+      demo
+      area="business"
+      current="dashboard"
+      title={<WorkspaceName />}
+      lead={biz.dashboard.lead}
+      action={
+        <div className="rt-acc__actions">
+          {biz.dashboard.actions.map((a) => (
+            <Link key={a.href} href={a.href} className={a.primary ? "button -md -purple-1 text-white" : "button -md -outline-purple-1 text-purple-1"}>{a.label}</Link>
+          ))}
+        </div>
+      }
+    >
       <BizDashboard />
     </AccountShell>
   );

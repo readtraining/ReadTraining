@@ -6,7 +6,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
 import { decideRefund, learnerName, useProvider } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Loading, formatWhen } from "./providerParts";
+import { Loading, formatWhen, Pill } from "./providerParts";
 import { money } from "./charts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -92,7 +92,7 @@ export default function ProviderRequests() {
                   <td data-label="Refund type">{r.full ? "Full refund" : <>Partial refund <b className="rt-rq-amt">{money(r.amount)}</b></>}</td>
                   <td data-label="Refund reason" className="rt-rq-reason">{r.reason}<small>{formatWhen(r.at)}</small></td>
                   <td data-label="Status">
-                    <span className={`rt-cx-status -${TONE[r.status]}`}>{STATUS[r.status]}</span>
+                    <Pill tone={TONE[r.status]}>{STATUS[r.status]}</Pill>
                     {r.status !== "open" && r.note && <small className="rt-rq-note">{r.note}</small>}
                   </td>
                   <td data-label="Actions" className="rt-rq-act">

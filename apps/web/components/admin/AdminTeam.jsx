@@ -20,7 +20,8 @@ const TEAM_SORT = { name: (a) => a.name, access: (a) => a.preset, limit: (a) => 
 
 // Admin Users & Roles: the real admin team (API admin.team). Each admin with their access, refund limit, two-step sign-in and
 // last sign-in; "Add an admin" for an existing account; per row Change access, Reset two-step sign-in and Remove. Your own row
-// has no actions (the API refuses them too), and the API keeps at least one Full admin.
+// has no actions (the API refuses them too), and the API keeps at least one Full admin. The super admin (the platform's owner)
+// has no actions for anyone else, and once there is one, only they can add, change or remove Full admins, or hand the role on.
 export default function AdminTeam() {
   const utils = api.useUtils();
   const list = api.admin.team.list.useQuery();
@@ -31,7 +32,9 @@ export default function AdminTeam() {
 
   if (list.isLoading) return <TableSkeleton rows={4} />;
   if (list.error) return <ErrorState onRetry={() => list.refetch()} />;
-  const { me, switches, presets, admins } = list.data;
+  const { me, meSuper, hasSuper, switches, presets, admins } = list.data;
+  // once there is a super admin, Full access is theirs to give and take
+  const fullLocked = hasSuper && !meSuper;
   const c = copy.columns;
   const done = (text) => {
     setSaid(text);
@@ -56,7 +59,7 @@ export default function AdminTeam() {
                 return (
                   <tr key={a.userId}>
                     <td data-label={c.name}><span className="rt-adm-strong">{a.name}{mine ? " (you)" : ""}</span><small>{a.email}</small></td>
-                    <td data-label={c.access}>{copy.presets[a.preset].label}{a.preset === "custom" && <small>{a.permissions.length} of {switches.length} switches</small>}</td>
+                    <td data-label={c.access}>{a.isSuper ? <span className="rt-adm-strong" title={copy.superNote}>{copy.superAdmin}</span> : copy.presets[a.preset].label}{a.isSuper && <small>{copy.presets.full.label}</small>}{a.preset === "custom" && <small>{a.permissions.length} of {switches.length} switches</small>}</td>
                     <td data-label={c.limit}>{a.preset === "full" ? <span className="rt-adm-muted">No limit</span> : a.permissions.includes("refunds") ? `£${a.refundLimit}` : <span className="rt-adm-muted">No refunds</span>}</td>
                     <td data-label={c.twoStep}>{a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
                     <td data-label={c.last}>{a.lastSignInAt ? formatWhen(new Date(a.lastSignInAt).getTime()) : <span className="rt-adm-muted">Not yet</span>}</td>
@@ -64,10 +67,13 @@ export default function AdminTeam() {
                       {!mine && (
                         <RowMenu
                           label={`Actions for ${a.name}`}
-                          items={[
+                          items={a.isSuper || (fullLocked && a.preset === "full") ? [
+                            { label: "See their activity", href: `/admin/activity?q=${a.userId}` },
+                          ] : [
                             { label: copy.changeTitle, onClick: () => setForm({ mode: "change", userId: a.userId, name: a.name, email: a.email, preset: a.preset, permissions: a.preset === "custom" ? a.permissions : [], refundLimit: String(a.refundLimit) }) },
                             { label: "See their activity", href: `/admin/activity?q=${a.userId}` },
                             ...(a.twoStep ? [{ label: "Reset two-step sign-in", onClick: () => setConfirm({ kind: "reset", admin: a }) }] : []),
+                            ...(meSuper && a.preset === "full" ? [{ label: copy.handOver, onClick: () => setConfirm({ kind: "super", admin: a }) }] : []),
                             { label: "Remove from the admin team", danger: true, onClick: () => setConfirm({ kind: "remove", admin: a }) },
                           ]}
                         />
@@ -81,7 +87,7 @@ export default function AdminTeam() {
         </div>
       ) : <EmptyState title={copy.empty} />}
 
-      <AccessSheet form={form} setForm={setForm} switches={switches} presets={presets} onDone={done} />
+      <AccessSheet form={form} setForm={setForm} switches={switches} presets={presets} canGiveFull={!fullLocked} onDone={done} />
       <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} onDone={done} />
     </div>
   );
@@ -89,7 +95,7 @@ export default function AdminTeam() {
 
 // Add an admin, or change one admin's access: preset cards; with Custom, the switches; the refund limit when they can refund
 // and aren't Full. Errors inline, focus on the first.
-function AccessSheet({ form, setForm, switches, presets, onDone }) {
+function AccessSheet({ form, setForm, switches, presets, canGiveFull, onDone }) {
   const add = api.admin.team.add.useMutation();
   const update = api.admin.team.update.useMutation();
   const [errors, setErrors] = useState({});
@@ -142,7 +148,7 @@ function AccessSheet({ form, setForm, switches, presets, onDone }) {
           </div>
         ) : <p className="rt-acc__note">{form.email}</p>}
 
-        <CardChoice name="rt-adm-t-preset" legend="Access" value={form.preset} onChange={(preset) => set({ preset })} options={presetOptions} />
+        <CardChoice name="rt-adm-t-preset" legend="Access" value={form.preset} onChange={(preset) => set({ preset })} options={canGiveFull ? presetOptions : presetOptions.filter((o) => o.value !== "full")} />
 
         {form.preset === "custom" && (
           <fieldset className="rt-field" aria-describedby={errors.permissions ? "rt-adm-t-permissions-e" : undefined}>
@@ -177,6 +183,7 @@ function AccessSheet({ form, setForm, switches, presets, onDone }) {
 function ConfirmSheet({ confirm, onClose, onDone }) {
   const revoke = api.admin.team.revoke.useMutation();
   const reset = api.admin.team.resetTwoStep.useMutation();
+  const handOver = api.admin.team.handOver.useMutation();
   const [general, setGeneral] = useState("");
   const close = () => {
     setGeneral("");
@@ -184,24 +191,26 @@ function ConfirmSheet({ confirm, onClose, onDone }) {
   };
   if (!confirm) return <Sheet open={false} onClose={close} title="" closeLabel="Close" />;
   const removing = confirm.kind === "remove";
+  const handing = confirm.kind === "super";
   const { admin: a } = confirm;
   const go = async () => {
     try {
       if (removing) await revoke.mutateAsync({ userId: a.userId });
+      else if (handing) await handOver.mutateAsync({ userId: a.userId });
       else await reset.mutateAsync({ userId: a.userId });
-      onDone(removing ? `${a.name} removed from the admin team` : `${a.name}'s two-step sign-in reset`);
+      onDone(removing ? `${a.name} removed from the admin team` : handing ? `${a.name} is now the super admin` : `${a.name}'s two-step sign-in reset`);
       close();
     } catch (error) {
       setGeneral(errorsFrom(error).general);
     }
   };
   return (
-    <Sheet open onClose={close} title={removing ? copy.removeTitle : copy.resetTitle} closeLabel="Close">
+    <Sheet open onClose={close} title={removing ? copy.removeTitle : handing ? copy.handOverTitle : copy.resetTitle} closeLabel="Close">
       <div className="rt-q__form rt-biz__sheetform">
         <p className="rt-adm-strong">{a.name}<small>{a.email}</small></p>
-        <p className="rt-acc__note">{removing ? copy.removeText : copy.resetText}</p>
+        <p className="rt-acc__note">{removing ? copy.removeText : handing ? copy.handOverText : copy.resetText}</p>
         {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
-        <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={go} disabled={revoke.isPending || reset.isPending}>{removing ? "Remove" : "Reset two-step sign-in"}</button>
+        <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={go} disabled={revoke.isPending || reset.isPending || handOver.isPending}>{removing ? "Remove" : handing ? copy.handOver : "Reset two-step sign-in"}</button>
       </div>
     </Sheet>
   );

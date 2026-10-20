@@ -12,7 +12,7 @@ import { LockIcon, MailIcon, UserIcon } from "./authIcons";
 // a failed check the first field with a message gets the focus; once the account exists, "Check your email" (confirmation on)
 // or straight on to the account.
 export default function SignUpFormv2() {
-  const { values, fieldErrors, formError, status, busy, handleChange, handleSubmit, handleSocial } = useSignUpForm();
+  const { values, fieldErrors, formError, setFormError, status, busy, handleChange, handleSubmit, handleSocial } = useSignUpForm();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const formRef = useRef(null);
@@ -25,7 +25,7 @@ export default function SignUpFormv2() {
 
   return (
     <AuthPage
-      title={status === "sent" ? "Check your email" : "Create your ReadTraining account"}
+      title={status === "sent" ? "Check your email" : "Create your account"}
       lead={status === "sent" ? null : "Book courses and track your training in one place."}
       footer={
         <>
@@ -81,7 +81,7 @@ export default function SignUpFormv2() {
               {SIGNUP_BUTTON_LABELS[status]}
             </button>
           </form>
-          <SocialSignIn onSocial={handleSocial} disabled={busy} />
+          <SocialSignIn onSocial={handleSocial} disabled={busy} onError={setFormError} signingUp />
         </>
       )}
     </AuthPage>

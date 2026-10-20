@@ -5,7 +5,8 @@ import Link from "next/link";
 import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { useProvider } from "@/lib/providerWorkspace";
-import { COURSE_TONE, Loading, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { useWorkspace } from "@/lib/workspaceContext";
+import { COURSE_TONE, Loading, Pill, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
 
@@ -113,7 +114,7 @@ export default function ProviderCourses() {
                         </span>
                       </span>
                     </td>
-                    <td data-label="Course status"><span className={`rt-cx-status -${COURSE_TONE[c.status]}`}>{pw.courseStatuses[c.status]}</span></td>
+                    <td data-label="Course status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill></td>
                     <td data-label="Enrolment">{pw.enrolment[c.enrolment]}</td>
                     <td data-label="Performance model">{pw.models[c.model]?.label}</td>
                     <td data-label="Learners" className="-num">{learnersOf(c.id)}</td>
@@ -146,11 +147,14 @@ export default function ProviderCourses() {
 // courses and users), so the list starts straight under the title.
 export function CoursesProfile() {
   const data = useProvider();
+  const workspace = useWorkspace();
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
   if (!data) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
   const users = new Set(data.enrolments.map((e) => e.learnerId)).size;
-  const profileUrl = `https://readtraining.co.uk/providers/${data.org.slug}`;
+  // the real provider (the server check), not the demo records' one
+  const org = { name: workspace?.name || data.org.name, slug: workspace?.slug || data.org.slug };
+  const profileUrl = `https://readtraining.co.uk/providers/${org.slug}`;
   const copyProfile = async () => {
     try {
       await navigator.clipboard.writeText(profileUrl);
@@ -159,12 +163,12 @@ export function CoursesProfile() {
       setToast({ message: profileUrl });
     }
   };
-  const initials = data.org.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials = org.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
     <section className="rt-cx-org" aria-labelledby="rt-pws-cp-h">
       <span className="rt-cx-org__logo" aria-hidden="true">{initials}</span>
       <div className="rt-cx-org__who">
-        <h2 className="rt-cx-org__name" id="rt-pws-cp-h">{data.org.name}</h2>
+        <h2 className="rt-cx-org__name" id="rt-pws-cp-h">{org.name}</h2>
         <p className="rt-cx-org__links">
           <Link href="/provider/profile">View</Link>
           <Link href="/provider/settings">Edit</Link>

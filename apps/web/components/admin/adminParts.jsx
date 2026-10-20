@@ -11,15 +11,23 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 // Stats strip, the account and admin dashboards': icon, number, label. `items` is [{ icon, value, label }]; `iconSize` is the
 // icon's text size (16, or 18 on the learner and business dashboards).
+// An item may have `hint` (a short line under the label, as "Ready to assign") and `href` (the whole card links to that section).
 export function Stats({ items, label, iconSize = 16 }) {
   return (
     <ul className="rt-tps__keyfacts rt-acc__stats" aria-label={label}>
-      {items.map((s) => (
-        <li key={s.label} className="rt-tps__keyfact">
-          <span className="rt-benefit__icon" aria-hidden="true"><i className={`${s.icon} text-${iconSize}`}></i></span>
-          <span className="rt-tps__keyfact-text"><strong>{s.value}</strong><span className="rt-sr">, </span><span>{s.label}</span></span>
-        </li>
-      ))}
+      {items.map((s) => {
+        const body = (
+          <>
+            <span className="rt-benefit__icon" aria-hidden="true"><i className={`${s.icon} text-${iconSize}`}></i></span>
+            <span className="rt-tps__keyfact-text"><strong>{s.value}</strong><span className="rt-sr">, </span><span>{s.label}</span>{s.hint && <small className="rt-acc__stathint">{s.hint}</small>}</span>
+          </>
+        );
+        return (
+          <li key={s.label} className={`rt-tps__keyfact${s.href ? " -link" : ""}`}>
+            {s.href ? <Link href={s.href} className="rt-acc__statlink">{body}</Link> : body}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -232,7 +240,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
         <ul className="rt-rowmenu__list" role="menu" id={id} aria-label={label}>
           {head && <li role="none" className="rt-rowmenu__head">{head}</li>}
           {items.map((item) => (
-            <li key={item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>
+            <li key={item.key || item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>
               {item.group ? item.group : item.href
                 ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)}>{item.label}</Link>
                 : <button type="button" role="menuitem" className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => pick(item)}>{item.label}</button>}

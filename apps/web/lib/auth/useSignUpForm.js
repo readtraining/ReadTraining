@@ -131,5 +131,6 @@ export function useSignUpForm() {
     handleChange,
     handleSubmit,
     handleSocial,
+    setFormError,
   };
 }

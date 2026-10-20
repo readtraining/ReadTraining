@@ -253,7 +253,8 @@ function ReviewCard({ r, course, onSaved }) {
     setEditing(false);
     onSaved(r.reply ? "Reply updated" : "Reply posted");
   };
-  const showForm = editing || !r.reply;
+  // the reply box opens only when the provider chooses to reply (or edit a reply), so a list of reviews stays readable
+  const showForm = editing;
 
   return (
     <li className="rt-acc__card rt-pws-perf__review">
@@ -272,6 +273,11 @@ function ReviewCard({ r, course, onSaved }) {
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setText(r.reply); setEditing(true); }}>Edit reply<span className="rt-sr"> to {r.name}</span></button>
         </div>
       )}
+      {!r.reply && !editing && (
+        <div className="rt-adm-cellrow">
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Reply<span className="rt-sr"> to {r.name}</span></button>
+        </div>
+      )}
       {showForm && (
         <form className="rt-adm-noteform rt-pws-perf__replyform" onSubmit={save} noValidate ref={formRef}>
           <div className="rt-field">
@@ -281,7 +287,7 @@ function ReviewCard({ r, course, onSaved }) {
           </div>
           <div className="rt-adm-cellrow">
             <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{r.reply ? "Save reply" : "Post reply"}</button>
-            {editing && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(false); setError(""); }}>Cancel</button>}
+            <button type="button" className="rt-cd__link" onClick={() => { setEditing(false); setError(""); }}>Cancel</button>
           </div>
         </form>
       )}

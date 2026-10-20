@@ -4,12 +4,15 @@ import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
 import { account } from "@/data/account";
+import { queryApiAsUser } from "@/lib/serverApi";
 import RetryButton from "./RetryButton";
 
 // Shown at a /provider or /business address to someone signed in without that identity (or when access can't be checked):
 // what's wrong, and the one thing to do next (become a provider / create a business account), with the way back to their account.
-export default function NoAccess({ type, unavailable = false }) {
-  const c = unavailable ? account.noAccess.unavailable : account.noAccess[type];
+// Someone whose provider application was not approved sees that, with the team's reason, and can apply again.
+export default async function NoAccess({ type, unavailable = false }) {
+  const rejected = type === "provider" && !unavailable ? (await queryApiAsUser("organisations.myRejectedApplication")).data : null;
+  const c = unavailable ? account.noAccess.unavailable : rejected ? account.noAccess.providerRejected : account.noAccess[type];
   return (
     <div className="main-content rt-home rt-acc-page">
       <a href="#rt-na-main" className="rt-skip">Skip to main content</a>
@@ -25,7 +28,8 @@ export default function NoAccess({ type, unavailable = false }) {
           </section>
           <div className="container rt-na">
             <section className="rt-acc__card rt-acc__state" aria-labelledby="rt-na-h">
-              <h2 className="rt-acc__h2" id="rt-na-h">{c.heading}</h2>
+              <h2 className="rt-acc__h2" id="rt-na-h">{rejected ? c.heading.replace("{name}", rejected.name) : c.heading}</h2>
+              {rejected?.reason && <p className="rt-acc__notice"><strong>{c.reason}</strong> {rejected.reason}</p>}
               <p className="rt-acc__note">{c.text}</p>
               <div className="rt-na__actions">
                 {c.cta && <Link href={c.cta.href} className="button -md -purple-1 text-white">{c.cta.label}</Link>}

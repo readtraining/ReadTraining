@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import AccountShell from "@/components/account/AccountShell";
 import AccountDashboard, { Greeting } from "@/components/account/AccountDashboard";
 import { account } from "@/data/account";
@@ -9,7 +10,13 @@ export const metadata = pageMetadata({ title: "My account | ReadTraining", descr
 
 export default function Page() {
   return (
-    <AccountShell demo current="dashboard" title={<Greeting />} lead={account.dashboard.lead}>
+    <AccountShell
+      demo
+      current="dashboard"
+      title={<Greeting />}
+      lead={account.dashboard.lead}
+      action={<Link href={account.dashboard.action.href} className="button -md -purple-1 text-white">{account.dashboard.action.label}</Link>}
+    >
       <AccountDashboard />
     </AccountShell>
   );

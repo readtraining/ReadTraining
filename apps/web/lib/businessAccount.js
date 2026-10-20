@@ -46,6 +46,8 @@ export function getBusiness() {
       date,
       endDate,
       bookedAt: isoDay(now - p.bookedDaysAgo * DAY),
+      // who booked it: "you" (the account owner) or the team member's name
+      bookedByName: p.bookedBy === "owner" ? "you" : (() => { const m = biz.teamMembers.find((t) => t.id === p.bookedBy); return m ? `${m.first} ${m.last}` : "your team"; })(),
       assigned,
       free: Math.max(0, p.places - assigned.length),
       total: round(p.unit * p.places),
@@ -58,19 +60,30 @@ export function getBusiness() {
     .filter((c) => byId[c.learnerId])
     .map((c) => {
       const expires = isoDay(now + c.expiresInDays * DAY);
-      return { ...c, learner: byId[c.learnerId].name, title: getCourseBySlug(c.courseId)?.title || "Course", expires, state: expires < today ? "expired" : expires <= soon ? "renew" : "valid" };
+      return { ...c, learner: byId[c.learnerId].name, title: getCourseBySlug(c.courseId)?.title || "Course", issued: isoDay(now - c.issuedDaysAgo * DAY), expires, state: expires < today ? "expired" : expires <= soon ? "renew" : "valid" };
     })
     .sort((a, b) => (a.expires < b.expires ? -1 : 1));
+
+  // newest first
+  const results = biz.results
+    .filter((r) => byId[r.learnerId])
+    .map((r) => ({ ...r, learner: byId[r.learnerId].name, title: getCourseBySlug(r.courseId)?.title || "Course", date: isoDay(now - r.daysAgo * DAY) }))
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const paid = new Set(saved.paid || []);
   const invoices = biz.invoices.map((i) => {
     const due = isoDay(now + i.dueIn * DAY);
     const isPaid = i.paid || paid.has(i.number);
-    return { ...i, date: isoDay(now - i.daysAgo * DAY), due, status: isPaid ? "paid" : due < today ? "overdue" : "due" };
+    // a cancelled booking's invoice was refunded (the refund and its date come from the booking)
+    const cancelled = biz.purchases.find((p) => p.reference === i.reference)?.cancelled;
+    const status = cancelled ? "refunded" : isPaid ? "paid" : due < today ? "overdue" : "due";
+    return { ...i, date: isoDay(now - i.daysAgo * DAY), due, status, refund: cancelled?.refund, refundedAt: cancelled ? isoDay(now - cancelled.daysAgo * DAY) : undefined };
   });
-  const open = invoices.filter((i) => i.status !== "paid");
+  const open = invoices.filter((i) => i.status === "due" || i.status === "overdue");
   const used = round(open.reduce((s, i) => s + i.amount, 0));
   const nextDue = open.map((i) => i.due).sort()[0] || null;
+  // what is due on that next date (the rest is due later)
+  const nextAmount = round(open.filter((i) => i.due === nextDue).reduce((s, i) => s + i.amount, 0));
 
   // each learner's training (places assigned on upcoming or past courses) and certificates
   const people = learners.map((l) => {
@@ -84,8 +97,9 @@ export function getBusiness() {
     learners: people,
     purchases,
     certificates,
+    results,
     invoices,
-    credit: { limit: biz.company.limit, used, available: round(biz.company.limit - used), due: used, dueDate: nextDue, terms: biz.company.terms },
+    credit: { limit: biz.company.limit, used, available: round(biz.company.limit - used), due: used, dueDate: nextDue, nextAmount, terms: biz.company.terms },
   };
 }
 
