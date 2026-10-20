@@ -6,7 +6,6 @@ import { can } from '@readtraining/permissions'
 import type { Action, AdminAction, BusinessAction, ProviderAction } from '@readtraining/permissions'
 
 import { logDenied } from '../lib/activity.mjs'
-import { isSessionLive, loadActor } from '../lib/actor.mjs'
 import type { TRPCContext } from './context.mjs'
 
 const t = initTRPC.context<TRPCContext>().create({
@@ -37,7 +36,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: 'UNAUTHORIZED' })
   }
-  const [live, actor] = await Promise.all([isSessionLive(ctx.db, ctx.user), loadActor(ctx.db, ctx.user)])
+  const { live, actor } = await ctx.loadIdentity()
   if (!live) throw new TRPCError({ code: 'UNAUTHORIZED' })
   return next({ ctx: { ...ctx, user: ctx.user, actor } })
 })

@@ -10,6 +10,12 @@ const WEB_ORIGIN = process.env.WEB_ORIGIN || 'http://localhost:3000'
 
 const app = express()
 
+// A database error that arrives outside any request (a dropped or reset connection) is logged; it must never stop the API.
+process.on('unhandledRejection', (reason) => {
+  const r = reason as Error & { code?: string }
+  console.error(`Unhandled: ${r?.code ?? r?.name ?? 'error'}: ${String(r?.message ?? reason).split('\n')[0]}`)
+})
+
 // The web app sends a Bearer token, not cookies, so no credentialed CORS is needed (in production it's the same domain anyway).
 app.use(cors({ origin: WEB_ORIGIN }))
 
