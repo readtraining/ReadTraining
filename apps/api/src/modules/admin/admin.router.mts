@@ -73,6 +73,7 @@ export const adminRouter = createTRPCRouter({
       preset: admin!.preset,
       permissions: adminPermissions(admin),
       twoStep: admin!.twoStep === true,
+      isSuper: admin!.isSuper === true,
     }
   }),
 

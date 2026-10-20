@@ -1,0 +1,2 @@
+ALTER TABLE "admin_users" ADD COLUMN "is_super" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "admin_users_one_super" ON "admin_users" USING btree ("is_super") WHERE "admin_users"."is_super";

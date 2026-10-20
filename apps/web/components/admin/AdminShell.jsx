@@ -74,7 +74,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
             <Link href={A.backToSite.href} className="rt-adm__site">{A.backToSite.label}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
             </div>
             <button type="button" className="rt-adm__out" onClick={signOut} disabled={leaving}>{A.signOut}</button>
           </div>
@@ -125,7 +125,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
           <div className="rt-adm__drawerfoot">
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
             </div>
             <Link href={A.backToSite.href} className="rt-adm__link">{A.backToSite.label}</Link>
             <button type="button" className="rt-adm__link" onClick={signOut} disabled={leaving}>{A.signOut}</button>

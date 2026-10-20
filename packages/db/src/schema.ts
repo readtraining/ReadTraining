@@ -142,11 +142,13 @@ export const adminUsers = pgTable(
   preset: adminPreset('preset').notNull().default('custom'),
   permissions: text('permissions').array().notNull().default(sql`'{}'::text[]`),
   refundLimitPence: integer('refund_limit_pence').notNull().default(10000),
+  // the super admin: the platform's owner, a Full admin nobody else can change or remove; at most one (index below)
+  isSuper: boolean('is_super').notNull().default(false),
   createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   },
-  (t) => [index('admin_users_created_by_idx').on(t.createdBy)],
+  (t) => [index('admin_users_created_by_idx').on(t.createdBy), uniqueIndex('admin_users_one_super').on(t.isSuper).where(sql`${t.isSuper}`)],
 ).enableRLS()
 
 // Platform-wide settings an admin changes (for example the default commission), one row per key. Read and written by the API

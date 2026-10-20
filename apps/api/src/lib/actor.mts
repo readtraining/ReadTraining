@@ -47,6 +47,7 @@ export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Acto
         preset: adminUsers.preset,
         permissions: adminUsers.permissions,
         refundLimitPence: adminUsers.refundLimitPence,
+        isSuper: adminUsers.isSuper,
         twoStep: sql<boolean>`exists (select 1 from auth.mfa_factors f where f.user_id = ${user.id}::uuid and f.status = 'verified')`,
       })
       .from(adminUsers)
