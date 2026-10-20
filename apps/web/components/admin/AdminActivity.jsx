@@ -123,7 +123,7 @@ export default function AdminActivity() {
                             {e.actor.email && <small>{e.actor.email}</small>}
                           </button>
                         ) : <span className="rt-adm-strong">{copy.system}</span>}
-                        <span title={copy.identityNote}><AdminTag>{copy.identities[e.identity]}</AdminTag></span>
+                        <span className="rt-adm-activity__as" title={copy.identityNote}><AdminTag>{copy.identities[e.identity]}</AdminTag></span>
                       </td>
                       <td data-label={c.what}>
                         <span className="rt-adm-strong">{copy.actions[e.action] ?? e.action}</span>

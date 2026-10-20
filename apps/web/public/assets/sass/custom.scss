@@ -5136,6 +5136,8 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm--platform .rt-adm-tag { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid var(--rt-adm-tag-line); border-radius: 4px; background: var(--rt-adm-tag-bg); font-size: 12px; font-weight: 500; line-height: 18px; color: var(--color-light-1); white-space: nowrap; }
 .rt-adm--platform .rt-adm-tag.-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.02em; }
 .rt-adm--platform .rt-adm-money-late { font-weight: 600; color: var(--rt-adm-danger); }
+/* activity log: the "acting as" tag always sits on its own line under the name */
+.rt-adm--platform .rt-adm-activity__as { display: block; margin-top: 4px; }
 /* rows-per-page dropdown opens upwards so its options are not cut off at the bottom of the page */
 .rt-adm--platform .rt-adm-pager .rt-cat-dd .rt-cat-dd__panel { top: auto; bottom: calc(100% + 8px); }
 /* toolbar search keeps enough width for its full placeholder */
