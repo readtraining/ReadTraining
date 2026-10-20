@@ -37,6 +37,7 @@ export default function LoginForm() {
   const [values, setValues] = useState({ email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
+  const [info, setInfo] = useState(""); // a calm note, not a problem: the session ended elsewhere
   const [linkProblem, setLinkProblem] = useState(false); // arrived from an expired or used email link
   const person = useAuthUser();
   const [status, setStatus] = useState("idle"); // idle | validating | submitting
@@ -49,7 +50,8 @@ export default function LoginForm() {
   // after a log-in, the API sends the welcome email if this account never got one (it goes once; usually after the confirm link)
   const welcome = api.me.welcome.useMutation();
 
-  // ?next= (where to go after logging in, set by the account pages) and ?error=link (an email link that expired or was used)
+  // ?next= (where to go after logging in, set by the account pages), ?error=link (an email link that expired or was used) and
+  // ?ended=1 (the API ended this session: password changed, signed out everywhere, account closed; we never say which)
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const n = q.get("next");
@@ -58,7 +60,7 @@ export default function LoginForm() {
       setLinkProblem(true);
       setFormError("That link has expired or was already used. Log in, or ask for a new link.");
     }
-    if (q.get("ended") === "1") setFormError("You've been signed out on this device, for example because your password was changed. Please log in again.");
+    if (q.get("ended") === "1") setInfo("You've been signed out. This happens if your password was changed, you signed out everywhere, or the account was closed. Log in again to carry on.");
   }, []);
 
   const busy = status !== "idle" || Boolean(socialLoading);
@@ -142,6 +144,7 @@ export default function LoginForm() {
       }
     >
       <form className="rt-auth__form" onSubmit={handleSubmit} noValidate ref={formRef}>
+        {info && !formError && <AuthNotice tone="info">{info}</AuthNotice>}
         {formError && (
           <AuthNotice>
             {linkProblem && person ? "That link has expired or was already used. You're still logged in." : formError}

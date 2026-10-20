@@ -6554,6 +6554,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-auth__notice { padding: 12px 14px; border-radius: var(--rt-radius-control); font-size: var(--rt-text-sm); line-height: 1.5; overflow-wrap: anywhere; }
 .rt-auth__notice.-error { background: var(--color-red-2); color: var(--rt-c-error); }
 .rt-auth__notice.-success { background: var(--rt-c-success-soft); color: var(--rt-c-success); }
+.rt-auth__notice.-info { background: var(--rt-c-soft); color: var(--rt-c-text); }
 .rt-auth__noticeaction { display: block; margin-top: 6px; }
 .rt-auth__linkbtn { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; }
 .rt-auth__check { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); }

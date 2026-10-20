@@ -54,8 +54,8 @@ export function PasswordToggle({ shown, onToggle, disabled }) {
   );
 }
 
-// A message about the whole form from the server (wrong password, link expired, account created). Field problems never go
-// here: they sit above their own field.
+// A message about the whole form from the server (wrong password, link expired, account created), or a calm "info" note
+// that isn't a problem with what the person did (signed out elsewhere). Field problems never go here: they sit above their field.
 export function AuthNotice({ tone = "error", children }) {
   return <div className={`rt-auth__notice -${tone}`} role={tone === "error" ? "alert" : "status"}>{children}</div>;
 }

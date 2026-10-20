@@ -15,6 +15,17 @@ export const admin = {
     all: { label: "Demo data", note: "The records on this page are made up for now. They become real when bookings and payments are connected." },
     partly: { label: "Partly demo", note: "Some numbers on this page are made up for now. They become real when bookings and payments are connected." },
   },
+  // what a demo page says on the live site instead of its made-up records (lib/demo.js): [title, text]
+  demoOff: {
+    approvals: ["No course approvals yet", "New course listings, new dates and price changes from providers arrive here once providers list real courses."],
+    reports: ["No reports yet", "Sales and performance by provider, category, location and delivery method show here once bookings are live."],
+    sessions: ["No sessions yet", "Every course date across every provider shows here once providers add real dates."],
+    changes: ["No change requests yet", "Cancellations, date changes and card disputes on bookings arrive here once bookings are live."],
+    requests: ["No requests yet", "Apply-for-me requests, quotes, test bookings and contact messages arrive here once the site's forms are connected."],
+    businesses: ["No business accounts yet", "Companies that book training for their teams show here once business bookings are live."],
+    jobs: ["No candidates yet", "Applications from the Security Jobs page arrive here once that form is connected."],
+    reviews: ["No reviews yet", "Learners' reviews of their courses arrive here once real courses are booked and finished."],
+  },
   // the sidebar, in the plan's groups (later phases join it as they are built)
   nav: [
     { group: "Overview", items: [
@@ -50,7 +61,7 @@ export const admin = {
     { group: "System", items: [
       { key: "activity", label: "Activity log", href: "/admin/activity" },
       { key: "team", label: "Admin team", href: "/admin/team", permission: "admins" },
-      { key: "settings", label: "Financial settings", href: "/admin/settings", demo: "partly" },
+      { key: "settings", label: "Financial settings", href: "/admin/settings" },
       { key: "platform", label: "Platform settings", href: "/admin/platform" },
     ] },
   ],
