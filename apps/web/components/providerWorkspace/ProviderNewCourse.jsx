@@ -87,8 +87,8 @@ export default function ProviderNewCourse() {
             <label htmlFor="rt-pws-nc-title">Working title</label>
             <p className="rt-field__hint" id="rt-pws-nc-title-h">It&apos;s ok if you can&apos;t think of a good title now. You can change it later.</p>
             <Err k="title" />
-            <input id="rt-pws-nc-title" value={f.title} maxLength={60} onChange={(e) => set({ title: e.target.value })} placeholder="For example: Emergency First Aid at Work" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={`rt-pws-nc-title-h${errors.title ? " rt-pws-nc-title-e" : ""}`} />
-            <span className="rt-field__hint rt-pws-course-count">{f.title.length} of 60</span>
+            <input id="rt-pws-nc-title" value={f.title} maxLength={80} onChange={(e) => set({ title: e.target.value })} placeholder="For example: Emergency First Aid at Work" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={`rt-pws-nc-title-h${errors.title ? " rt-pws-nc-title-e" : ""}`} />
+            <span className="rt-field__hint rt-pws-course-count">{f.title.length} of 80</span>
           </div>
         </>
       )}

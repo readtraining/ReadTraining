@@ -13,6 +13,7 @@ import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
+import DateField from "@/components/admin/DateField";
 
 // Cohorts: every run of a course, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status (set here by
 // hand), its instructor (assigned here), students (booked of places, with enrolled / rescheduled / cancelled), whether it takes
@@ -216,7 +217,7 @@ export default function ProviderCohorts() {
                 <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setPage(1); }} options={WHEN} />
                 <div className="rt-field rt-adm-select -inline rt-pws-coh__datefilter">
                   <label htmlFor="rt-coh-date" className="rt-sr">Cohorts running on this date</label>
-                  <input id="rt-coh-date" type="date" value={date} onChange={(e) => { const v = e.target.value; setDate(v); keep("date", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } setPage(1); }} aria-label="Cohorts running on this date" />
+                  <DateField id="rt-coh-date" compact clearable placeholder="Any day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } setPage(1); }} />
                 </div>
                 <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v) { setWhen("all"); keep("when", "all", "upcoming"); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
                 <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />
@@ -271,12 +272,10 @@ export default function ProviderCohorts() {
                       </label>
                     </th>
                     <th scope="col">Cohorts</th>
-                    <th scope="col">Cohort status</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Instructor</th>
                     <th scope="col">Students</th>
-                    <th scope="col">Status</th>
-                    <th scope="col"><span className="rt-sr">Favourite</span></th>
-                    <th scope="col"><span className="rt-sr">Actions</span></th>
+                    <th scope="col"><span className="rt-sr">Favourite and actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -302,13 +301,14 @@ export default function ProviderCohorts() {
                             </div>
                           </div>
                         </td>
-                        <td data-label="Cohort status">
+                        <td data-label="Status">
                           {k.cancelled ? <Pill tone={COHORT_TONE.cancelled}>{pw.cohortStatuses.cancelled}</Pill> : (
                             <div className="rt-field rt-adm-select -inline">
                               <label htmlFor={`rt-coh-st-${k.id}`} className="rt-sr">Cohort status for {name}</label>
                               <FieldSelect id={`rt-coh-st-${k.id}`} label={`Cohort status for ${name}`} value={k.status} onChange={(v) => changeStatus(k, v)} options={Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))} compact />
                             </div>
                           )}
+                          {k.disabled && !k.cancelled && <small>Bookings off</small>}
                         </td>
                         <td data-label="Instructor">
                           <div className="rt-field rt-adm-select -inline">
@@ -320,13 +320,10 @@ export default function ProviderCohorts() {
                           <Seats booked={k.booked} max={k.max} />
                           <small className="rt-pws-coh__places">{`${k.places.enrolled} enrolled · ${k.places.rescheduled} rescheduled · ${k.places.cancelled} cancelled`}</small>
                         </td>
-                        <td data-label="Status"><Pill tone={k.disabled ? "muted" : "ok"}>{k.disabled ? "Disabled" : "Enabled"}</Pill></td>
-                        <td data-label="Favourite">
+                        <td data-label="Actions" className="rt-pws-coh__end">
                           <button type="button" className={`rt-pws-coh__fav${k.favourite ? " is-on" : ""}`} aria-pressed={Boolean(k.favourite)} onClick={() => toggleFavourite(k.id)}>
                             <i className="icon-star" aria-hidden="true"></i><span className="rt-sr">Favourite: {name}</span>
                           </button>
-                        </td>
-                        <td data-label="Actions">
                           <RowMenu label={`Actions for ${name}`} items={[
                             { label: "View", href: `/provider/cohorts/${k.id}` },
                             ...(k.cancelled ? [] : [{ label: "Move", onClick: () => setMoving(k) }, { label: "Edit", onClick: () => setEditingK(k) }, { label: k.disabled ? "Enable bookings" : "Disable bookings", onClick: () => { setCohortEnabled(k.id, k.disabled); setToast({ message: k.disabled ? "Bookings enabled" : "Bookings disabled" }); } }]),
@@ -587,11 +584,11 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                       <div className="rt-pws-coh__slotgrid">
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-s${i}`}>Starts</label>
-                          <input id={`rt-cf-s${i}`} type="date" value={s.date} min={cohort ? undefined : today} onChange={(e) => setSlot(i, { date: e.target.value, end: !s.end || s.end < e.target.value ? e.target.value : s.end })} autoComplete="off" {...aria(`d${i}`)} />
+                          <DateField id={`rt-cf-s${i}`} value={s.date} min={cohort ? undefined : today} onChange={(v) => setSlot(i, { date: v, end: !s.end || s.end < v ? v : s.end })} invalid={Boolean(errors[`d${i}`])} describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
                         </div>
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-e${i}`}>Ends</label>
-                          <input id={`rt-cf-e${i}`} type="date" value={s.end || s.date} min={s.date} onChange={(e) => setSlot(i, { end: e.target.value })} autoComplete="off" />
+                          <DateField id={`rt-cf-e${i}`} value={s.end || s.date} min={s.date} onChange={(v) => setSlot(i, { end: v })} />
                         </div>
                         <div className="rt-field">
                           <label htmlFor={`rt-cf-f${i}`}>From</label>

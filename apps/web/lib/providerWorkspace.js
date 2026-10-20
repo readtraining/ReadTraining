@@ -43,12 +43,15 @@ export function updateProvider(fn) {
 export function actAs({ name, email, orgName }) {
   const s = readRaw();
   const own = (s.team || []).find((t) => t.id === s.me.id);
-  const same = s.me.name === name && s.me.email === email && (!own || (own.name === name && own.email === email)) && (!orgName || s.org.name === orgName);
-  if (!name || same) return;
+  // the provider's name can come before the person's (it is known from the server check straight away)
+  const same = (!name || (s.me.name === name && s.me.email === email && (!own || (own.name === name && own.email === email)))) && (!orgName || s.org.name === orgName);
+  if ((!name && !orgName) || same) return;
   updateProvider((x) => {
-    x.me = { ...x.me, name, email };
-    // the team list's "That's you" row is the same person
-    x.team = (x.team || []).map((t) => (t.id === x.me.id ? { ...t, name, email } : t));
+    if (name) {
+      x.me = { ...x.me, name, email };
+      // the team list's "That's you" row is the same person
+      x.team = (x.team || []).map((t) => (t.id === x.me.id ? { ...t, name, email } : t));
+    }
     if (orgName) x.org = { ...x.org, name: orgName };
   });
 }

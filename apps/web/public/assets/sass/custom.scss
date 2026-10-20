@@ -4912,7 +4912,8 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-adm-hero__actions .rt-adm-item__block { margin: 0; max-width: 340px; }
 .rt-adm-item__hint { flex-basis: 100%; font-size: var(--rt-text-xs); text-align: right; color: var(--color-light-1); }
 .rt-adm-danger { color: var(--color-red-3) !important; }
-@media (max-width: 991px) { .rt-adm-item { flex-wrap: wrap; } .rt-adm-item__actions { justify-content: flex-start; width: 100%; max-width: none; padding-left: 34px; } .rt-adm-item__hint { text-align: left; } }
+/* below 992px the actions go under the text; only a card with a tick box (Approvals) indents them to line up past the box */
+@media (max-width: 991px) { .rt-adm-item { flex-wrap: wrap; } .rt-adm-item__actions { justify-content: flex-start; width: 100%; max-width: none; } .rt-adm-item:has(.rt-adm-item__pick) .rt-adm-item__actions { padding-left: 34px; } .rt-adm-item__hint { text-align: left; } }
 @media (max-width: 575px) { .rt-adm-item__actions { padding-left: 0; } .rt-adm-item__actions .button { flex: 1 1 auto; } }
 /* cards and lists */
 .rt-adm-grid2 { display: grid; gap: 16px; }
@@ -5110,13 +5111,14 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
   .rt-adm-toolbar__end .rt-adm-search { flex: 1 1 auto; }
   .rt-adm-cellrow.-end { justify-content: flex-start; }
 }
-/* Platform admin only (.rt-adm--platform is on AdminShell's root, never on the provider workspace's): the status system
+/* The status system, first built for the platform admin (.rt-adm--platform, AdminShell's root); its colours (just below) are
+   shared with the provider workspace and the accounts, whose pill takes them further down. The admin's
    (components/admin/AdminStatus.jsx). One build, five tones, and a neutral tag for anything that is not a status.
      success  done and good                      info     in progress, waiting on someone else
      warning  needs an admin, due within a day   danger   late, blocked, failed, or money at risk
      neutral  closed, inactive, not started, due in 2 days or more
    Brand green is never a status here, and info is blue so it never looks like a button or the chosen menu item. The colours are set once on the admin root; every text colour passes WCAG AA at 12px. */
-.rt-adm--platform {
+:is(.rt-adm--platform, .rt-pws, .rt-acc-page) {
   --rt-adm-success-bg: #e3f6ec;
   --rt-adm-success: #0f7a4a;
   --rt-adm-info-bg: #e7f0fb;
@@ -5138,6 +5140,15 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm--platform .rt-adm-money-late { font-weight: 600; color: var(--rt-adm-danger); }
 /* a full session is good news: its seat bar stays the normal colour, not the alarm orange */
 .rt-adm--platform .rt-adm-seats__bar span.-full { background: var(--color-purple-1); }
+/* The same five calm tones in the provider workspace and the learner and business accounts: their shared pill (.rt-acc__status,
+   adminParts Pill) takes the admin status's shape and colours. -confirmed blue (waiting on someone else), -completed green (done),
+   -requested amber (you must act), -cancelled grey (closed), -late red (at risk). The public site's own pills are unchanged. */
+:is(.rt-pws, .rt-acc-page) .rt-acc__status { padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-confirmed { border-color: transparent; background: var(--rt-adm-info-bg); color: var(--rt-adm-info); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-completed { border-color: transparent; background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-requested { border-color: transparent; background: var(--color-orange-7); color: var(--rt-adm-warning); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-cancelled { border-color: transparent; background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
+:is(.rt-pws, .rt-acc-page) .rt-acc__status.-late { border-color: transparent; background: var(--color-red-2); color: var(--rt-adm-danger); }
 /* activity log: the "acting as" tag always sits on its own line under the name */
 .rt-adm--platform .rt-adm-activity__as { display: block; margin-top: 4px; }
 /* rows-per-page dropdown opens upwards so its options are not cut off at the bottom of the page */
@@ -5596,11 +5607,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-course__title:hover { color: var(--rt-c-brand) !important; text-decoration: underline; text-underline-offset: 3px; }
 .rt-cx-course__text small { overflow: hidden; font-size: var(--rt-text-xs); text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-cx-course__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rt-cx-status { display: inline-flex; align-items: center; gap: 8px; font-size: var(--rt-text-sm); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); }
-.rt-cx-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--rt-c-muted); box-shadow: 0 0 0 3px var(--rt-c-soft); }
-.rt-cx-status.-ok::before { background: var(--rt-c-success); box-shadow: 0 0 0 3px var(--rt-c-success-soft); }
-.rt-cx-status.-warn::before { background: var(--color-yellow-1); box-shadow: 0 0 0 3px var(--color-yellow-2); }
-.rt-cx-status.-late::before { background: var(--rt-c-error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rt-c-error) 12%, transparent); }
 .rt-cx-rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 .rt-cx-rating i { color: var(--color-yellow-1); }
 .rt-cx-manage { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); font-size: var(--rt-text-xs); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
@@ -5865,7 +5871,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__fav.is-on { color: var(--color-yellow-1); }
 .rt-pws-coh__fav:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-coh__datefilter input[type="date"] { width: auto; height: 44px; }
-.rt-pws-coh__pages { display: flex; justify-content: center; padding: 16px 0 4px; border-top: 1px solid var(--rt-c-line); }
+.rt-pws-coh__pages { --pg-border-strong: var(--color-light-5); --pg-text: var(--rt-c-text); --pg-muted: var(--rt-c-muted); --pg-brand: var(--color-purple-1); --pg-brand-hover: #5230E0; display: flex; justify-content: center; padding: 16px 0 4px; border-top: 1px solid var(--rt-c-line); }
 
 /* Manage cohort: the details grid, actions, students table (scrolls sideways on narrow screens), the register row, notes */
 .rt-pws-coh__details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin: 0; }
@@ -5901,9 +5907,25 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (max-width: 991px) {
   .rt-pws-coh__details { grid-template-columns: minmax(0, 1fr); }
 }
-/* below 1200px the cohorts table and the students table stack into labelled rows (as the account tables do on phones), so
-   nothing scrolls sideways and their dropdowns and menus are never clipped */
+/* below 1200px the students table on a cohort's page stacks into labelled rows (as the account tables do on phones), so its
+   dropdowns and menus are never clipped; the cohorts list stays a table down to 768px (one status column, the favourite
+   beside the menu) and stacks on phones */
 @media (max-width: 1199px) {
+  .rt-pws-coh__students thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .rt-pws-coh__students, .rt-pws-coh__students tbody, .rt-pws-coh__students tr, .rt-pws-coh__students td { display: block; width: 100%; }
+  .rt-pws-coh__students tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }
+  .rt-pws-coh__students tr:last-child { border-bottom: 0; }
+  .rt-pws-coh__students td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border: 0; text-align: right; }
+  .rt-pws-coh__students td::before { content: attr(data-label); flex: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); text-align: left; }
+  .rt-pws-coh__students td.rt-pws-coh__pick { justify-content: flex-start; width: auto; }
+  .rt-pws-coh__students td { flex-wrap: wrap; }
+  .rt-pws-coh__students td:has(.rt-field-dd, .rt-rowmenu) { flex-wrap: nowrap; }
+  .rt-pws-coh__students td small { display: block; flex-basis: 100%; text-align: right; }
+  .rt-pws-coh__students td.rt-pws-coh__pick::before { content: none; }
+  .rt-pws-coh__morerow td { display: block; padding: 12px; }
+  .rt-pws-coh__morerow td::before { content: none; }
+}
+@media (max-width: 767px) {
   :is(.rt-pws-coh__table, .rt-pws-coh__students) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   :is(.rt-pws-coh__table, .rt-pws-coh__students), :is(.rt-pws-coh__table, .rt-pws-coh__students) tbody, :is(.rt-pws-coh__table, .rt-pws-coh__students) tr, :is(.rt-pws-coh__table, .rt-pws-coh__students) td { display: block; width: 100%; }
   :is(.rt-pws-coh__table, .rt-pws-coh__students) tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }
@@ -6046,7 +6068,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 
 /* new order */
 .rt-pws-ord__layout { display: grid; gap: var(--rt-gap); align-items: start; }
-@media (min-width: 1200px) { .rt-pws-ord__layout { grid-template-columns: minmax(0, 1fr) 340px; } .rt-pws-ord__summary { position: sticky; top: 88px; } }
+@media (min-width: 1200px) { .rt-pws-ord__layout { grid-template-columns: minmax(0, 1fr) 340px; } .rt-pws-ord__summary { position: sticky; top: 88px; } .rt-pws-ord__layout > .rt-pws-ord__summary { grid-column: 2; grid-row: 1 / span 2; } .rt-pws-ord__layout > .rt-pws-ord__actions { grid-column: 1; } }
 .rt-pws-ord__step { display: flex; align-items: center; gap: 12px; }
 .rt-pws-ord__step span { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); font-weight: 700; color: var(--rt-c-brand); }
 .rt-pws-ord__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; margin-top: 16px; }
@@ -6353,9 +6375,12 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (max-width: 991px) { .rt-pws-ord__search { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 575px) { .rt-pws-ord__search { grid-template-columns: minmax(0, 1fr); } .rt-pws-ord__searchfoot > * { flex: 1 1 100%; } }
 .rt-pws-ord__table td { vertical-align: middle; }
-@media (min-width: 1200px) { .rt-pws-ord__table td[data-label="Date"], .rt-pws-ord__table td[data-label="Amount"] { white-space: nowrap; } }
-/* below 1200px the ten columns stack into labelled rows, as the cohorts table does */
-@media (max-width: 1199px) {
+.rt-pws-ord__table .rt-pws-money__num { white-space: nowrap; }
+.rt-pws-ord__flag { font-weight: 600; color: var(--rt-c-error) !important; }
+.rt-pws-coh__table td.rt-pws-coh__end { white-space: nowrap; text-align: right; }
+/* six columns, each with a second line, so the orders list stays a table down to 768px and stacks into labelled rows on
+   phones, as the cohorts list does */
+@media (max-width: 767px) {
   .rt-pws-ord__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-pws-ord__table, .rt-pws-ord__table tbody, .rt-pws-ord__table tr, .rt-pws-ord__table td { display: block; width: 100%; }
   .rt-pws-ord__table tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }

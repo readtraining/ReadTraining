@@ -64,7 +64,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const switcher = useSwitchAccount({ kind: "provider", organisationId: workspace?.id });
   const student = switcher.entries.find((e) => e.kind === "student");
   useEffect(() => {
-    if (meName) actAs({ name: meName, email: meEmail, orgName: workspace?.name });
+    if (meName || workspace?.name) actAs({ name: meName, email: meEmail, orgName: workspace?.name });
   }, [meName, meEmail, workspace?.name]);
   const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
   const logOut = async () => {
@@ -115,7 +115,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
                 return (
                   <li key={x.key}>
                     <Link href={x.href} className={`rt-adm__link${here ? " is-active" : ""}`} aria-current={here ? "page" : undefined}>
-                      <NavIcon name={x.key} /><span>{x.label}</span>{badge}
+                      <NavIcon name={x.navIcon || x.key} /><span>{x.label}</span>{badge}
                     </Link>
                   </li>
                 );
@@ -126,7 +126,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
               return (
                 <li key={x.key} className={`rt-adm__group rt-pws__group${shut ? " is-folded" : ""}${here ? " is-here" : ""}`}>
                   <button type="button" className="rt-adm__link rt-pws__grouphead" aria-expanded={!shut} aria-controls={id} onClick={() => fold(x.key)}>
-                    <NavIcon name={x.key} /><span>{x.label}</span>
+                    <NavIcon name={x.navIcon || x.key} /><span>{x.label}</span>
                     {shut && here && <span className="rt-sr">, contains the page you are on</span>}
                     {shut && badge}
                     <FoldChevron />

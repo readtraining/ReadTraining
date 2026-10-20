@@ -122,7 +122,9 @@ export async function proxy(request) {
   const space = WORKSPACES.find((w) => under(path, w.prefix) && !w.open.some((o) => under(path, o)));
   if (signedIn && space && !prefetch) {
     const token = await accessToken();
-    const { status, data: workspace } = token ? await askApi(request, "organisations.openWorkspace", { type: space.type, path }, token) : { status: 401, data: null };
+    let { status, data: workspace } = token ? await askApi(request, "organisations.openWorkspace", { type: space.type, path }, token) : { status: 401, data: null };
+    // the API didn't answer in time (not a refusal): ask once more before saying access couldn't be checked
+    if (status >= 500) ({ status, data: workspace } = await askApi(request, "organisations.openWorkspace", { type: space.type, path }, token));
     if (status === 401) return toLogin(request);
     if (status !== 200 || !workspace) {
       const url = request.nextUrl.clone();

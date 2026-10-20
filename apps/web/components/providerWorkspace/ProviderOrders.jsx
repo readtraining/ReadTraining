@@ -51,6 +51,9 @@ export default function ProviderOrders() {
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const at = Math.min(page, pages);
   const rows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
+  // the course on each order (the first, with how many more), and which orders have an open refund request
+  const courseOf = (o) => data.byId.course[o.lines[0]?.courseId]?.title || "Course removed";
+  const refundAsked = new Set(data.refunds.filter((r) => r.status === "open").map((r) => r.orderRef));
   const filtered = Boolean(Object.values(f).some((v) => v.trim()) || channel || status);
   const setField = (k, v) => { setF((x) => ({ ...x, [k]: v })); setQuery(k, v.trim()); };
   const clear = () => {
@@ -82,15 +85,12 @@ export default function ProviderOrders() {
           <table className="rt-biz__table rt-adm-table rt-pws-ord__table">
             <thead>
               <tr>
-                <th scope="col">Order no</th>
-                <th scope="col">Customer name</th>
-                <th scope="col">Customer email</th>
-                <th scope="col">Sales channel</th>
-                <th scope="col">Booked by</th>
-                <th scope="col">Status</th>
+                <th scope="col">Order</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Course</th>
+                <th scope="col">Channel</th>
                 <th scope="col">Amount</th>
-                <th scope="col">Payment method</th>
-                <th scope="col">Date</th>
+                <th scope="col">Status</th>
                 <th scope="col"><span className="rt-sr">Actions</span></th>
               </tr>
             </thead>
@@ -99,15 +99,12 @@ export default function ProviderOrders() {
                 const k = o.lines.map((l) => l.cohortId).find(Boolean);
                 return (
                   <tr key={o.ref}>
-                    <td data-label="Order no"><Link href={`/provider/orders/${o.ref}`} className="rt-adm-strong">{o.ref}</Link></td>
-                    <td data-label="Customer name">{customerName(o.customer)}</td>
-                    <td data-label="Customer email">{o.customer.email}</td>
-                    <td data-label="Sales channel">{pw.channels[o.channel]}</td>
-                    <td data-label="Booked by">{bookedBy(o)}</td>
-                    <td data-label="Status"><Pill tone={ORDER_TONE[o.status]}>{pw.orderStatuses[o.status]}</Pill></td>
-                    <td data-label="Amount" className="rt-pws-money__num">{formatPrice(o.total)}</td>
-                    <td data-label="Payment method">{pw.paymentMethods[o.payment]}</td>
-                    <td data-label="Date">{formatOrderDay(o.at)}</td>
+                    <td data-label="Order"><Link href={`/provider/orders/${o.ref}`} className="rt-adm-strong">{o.ref}</Link><small>{formatOrderDay(o.at)}</small></td>
+                    <td data-label="Customer">{customerName(o.customer)}<small>{o.customer.email}</small></td>
+                    <td data-label="Course">{courseOf(o)}{o.lines.length > 1 && <small>+ {o.lines.length - 1} more</small>}</td>
+                    <td data-label="Channel">{pw.channels[o.channel]}<small>{bookedBy(o)}</small></td>
+                    <td data-label="Amount"><span className="rt-pws-money__num">{formatPrice(o.total)}</span><small>{pw.paymentMethods[o.payment]}</small></td>
+                    <td data-label="Status"><Pill tone={ORDER_TONE[o.status]}>{pw.orderStatuses[o.status]}</Pill>{refundAsked.has(o.ref) && <small className="rt-pws-ord__flag">Refund requested</small>}</td>
                     <td data-label="Actions">
                       <RowMenu label={`Actions for order ${o.ref}`} items={[
                         { label: "Order details", href: `/provider/orders/${o.ref}` },

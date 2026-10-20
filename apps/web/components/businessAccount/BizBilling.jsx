@@ -9,7 +9,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 
 const copy = biz.billing;
-const STATUS_TONE = { paid: "completed", due: "confirmed", overdue: "requested" };
+const STATUS_TONE = { paid: "completed", due: "requested", overdue: "late" };
 
 // Billing and invoices: the business credit account (limit, used, available, the amount due and when, the payment terms) with Pay
 // balance (a simulated card payment: the open invoices are marked paid and the credit frees up), every invoice with its status and
