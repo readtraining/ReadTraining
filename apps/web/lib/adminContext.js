@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-// The signed-in admin ({ name, email, preset, permissions, twoStep }), given by the /admin panel layout after the server check.
+// The signed-in admin ({ id, name, email, preset, permissions, twoStep }), given by the /admin panel layout after the server check.
 const AdminContext = createContext(null);
 
 export function AdminAccessProvider({ value, children }) {

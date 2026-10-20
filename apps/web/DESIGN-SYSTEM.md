@@ -101,13 +101,18 @@ Set metadata with `pageMetadata({ title, description, path, noindex })` from `li
 
 **App pages:**
 - **Customer and business:** `AccountShell` (`components/account`).
-- **Admin:** `AdminShell` (`components/admin`).
+- **Admin:** `AdminShell` (`components/admin`). Its top bar has the one admin search (`AdminSearch`: Ctrl+K or "/", pages
+  plus real learners and providers). A record's page passes `detail` to get a breadcrumb back to its list, and puts the
+  record's name in its head card as the page's only `h1`.
 - **Provider workspace:** `ProviderShell` (`components/providerWorkspace`), the admin's layout with the provider's organisation in the sidebar. Its extra parts (`Loading`, `Empty`, `Toggle`, `ToolSelect`, `Choice`, `Stats`) are in `providerParts.jsx`; records and actions in `lib/providerWorkspace.js`.
 - **Cards and titles:** cards are `.rt-acc__card` and card titles `.rt-acc__h2`.
 - **Status and controls:** status pills use `Pill`; tabs, search and due dates use `Tabs`, `Search` and `Due`; dashboard
-  number strips use `Stats` (`components/admin/adminParts.jsx`).
+  number strips use `Stats` (`components/admin/adminParts.jsx`). Positive status pills (Active, Paid, Valid, Live) use the brand green with navy text, like the home page's badges.
+- **Made-up records** are labelled: the admin nav's `demo` (`data/admin.js`) and `AccountShell`'s `demo` show the
+  `.rt-demo-tag` beside the title. Remove the flag when the page's data becomes real.
 - **Breadcrumbs** on the course and test prep heroes use `Crumbs` (`components/courseDetail/Crumbs.jsx`).
-- **Tables:** use the `.rt-biz__table` pattern, which stacks into labelled rows on phones via `data-label`.
+- **Tables:** use the `.rt-biz__table` pattern, which stacks into labelled rows on phones via `data-label`. A table that holds every row
+  sorts by its columns with `useSort` + `SortTh` (`adminParts.jsx`); a paged list keeps the server's order.
 
 **Sidebars:** use one pattern: the account and admin nav (a white card list with a `--rt-c-brand-soft` active item),
 which becomes a scrolling chip row below 992px. Long documents use `DocToc` (contents in a `<details>` on phones).
@@ -118,7 +123,8 @@ checkbox already gets the one style site-wide; switches use `Toggle`.
 **Dialogs and side panels:** use `Sheet` (`components/testPrep/runner/Sheet.jsx`), which handles the focus trap, Esc,
 scroll lock and returning focus. Don't build another modal. A panel that can't be a `Sheet` (a menu, a drop-down)
 uses `useFocusTrap` (`lib/useFocusTrap.js`) for the same keyboard behaviour. **Messages after an action:** `Toast`
-(`components/courses/Toast.jsx`).
+(`components/courses/Toast.jsx`); admin pages use `Said` (`adminParts.jsx`), which shows the toast and reads it out.
+**Loading in the admin:** `TableSkeleton` and `DetailSkeleton` (`adminParts.jsx`).
 
 ## 7. States
 

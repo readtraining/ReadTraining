@@ -7,16 +7,15 @@ import { and, eq, inArray, isNull, organisations, profiles, sql } from '@readtra
 import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { welcomeEmail } from '../../emails/welcome.mjs'
+import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
 import { sendEmail } from '../../lib/email.mjs'
-import { requestEmailChange, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
+import { AVATARS, requestEmailChange, signedPhotoUrl, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
 import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
 
 // Account settings, in Hurak's four parts: basic information, address, email (needs the current password) and password
 // (current, new, repeat). Every change is checked here, saved, and written to the activity log.
 
-const AVATARS = 'avatars'
 const PHOTO_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as const
 
 const name = (label: string) =>
@@ -61,13 +60,6 @@ const passwordProblem = (result: 'wrong' | 'no_password' | 'locked') =>
     : result === 'no_password'
       ? fieldError('currentPassword', 'Your account has no password yet. Use "Forgot password" on the log in page to set one.')
       : fieldError('currentPassword', 'Your current password is not right. Check it and try again.')
-
-const signedPhotoUrl = async (stored: string | null) => {
-  if (!stored) return null
-  if (/^https:\/\//.test(stored)) return stored // a Google or Facebook picture
-  const { data } = (await supabase?.storage.from(AVATARS).createSignedUrl(stored, 3600)) ?? { data: null }
-  return data?.signedUrl ?? null
-}
 
 export const meRouter = createTRPCRouter({
   // The signed-in person: profile, sign-in details, the identities they can switch between, and admin switches (if any).
@@ -221,7 +213,7 @@ export const meRouter = createTRPCRouter({
       .where(and(eq(profiles.id, ctx.user.id), isNull(profiles.welcomeSentAt)))
       .returning({ firstName: profiles.firstName })
     if (!claimed) return { sent: false }
-    const sent = await sendEmail(welcomeEmail({ to: auth.email, firstName: claimed.firstName, siteUrl }))
+    const sent = await sendEmail(renderEmail('welcome', await wordsFor(ctx.db, 'welcome'), { firstName: claimed.firstName }, siteUrl, auth.email))
     if (!sent) {
       await ctx.db.update(profiles).set({ welcomeSentAt: null }).where(eq(profiles.id, ctx.user.id))
       return { sent: false }

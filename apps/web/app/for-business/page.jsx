@@ -12,13 +12,17 @@ import CreditPanel from "@/components/business/CreditPanel";
 import FaqSection from "@/components/marketing/FaqSection";
 import { business } from "@/data/business";
 import FinalCta from "@/components/business/FinalCta";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 export const metadata = {
   title: "ReadTraining for Business | Buy, assign and manage team training",
   description: "Buy course places for your team, assign them now or later, and manage learners, certificates and renewals from one Business account.",
 };
 
-export default function ForBusinessPage() {
+export default async function ForBusinessPage() {
+  await loadSiteContent();
+  const faq = faqItems("for-business", business.faq.items);
   return (
     <div className="main-content rt-home fb-page">
       <Preloader />
@@ -30,7 +34,7 @@ export default function ForBusinessPage() {
         <LearnerTable />
         <RenewalTimeline />
         <CreditPanel />
-        <FaqSection eyebrow={business.faq.eyebrow} title={business.faq.title} text={business.faq.text} items={business.faq.items} idPrefix="biz-faq" />
+        <FaqSection eyebrow={business.faq.eyebrow} title={business.faq.title} text={business.faq.text} items={faq} idPrefix="biz-faq" />
         <FinalCta />
         <HomeBrands />
         <HomeHelp />

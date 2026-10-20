@@ -9,7 +9,9 @@ import ContactChannels from "@/components/contactUs/ContactChannels";
 import ContactForm from "@/components/contactUs/ContactForm";
 import { contact } from "@/data/contact";
 import { topBar } from "@/data/home";
-import { abs, breadcrumbLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
+import { abs, breadcrumbLd, faqPageLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 // Contact us (/contact-us), in the site's marketing-page language (as /about-us and /for-business; `fb-page rt-tpage`): centred
 // dark hero > ways to reach us beside the form (the main task, first) > how can we help (one tile per need, linking to a page or
@@ -33,13 +35,9 @@ const contactPageLd = {
     contactPoint: [{ "@type": "ContactPoint", contactType: "customer service", telephone: topBar.phone, email: topBar.email, areaServed: "GB", availableLanguage: "en-GB" }],
   },
 };
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: contact.faq.items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
-
-export default function ContactPage() {
+export default async function ContactPage() {
+  await loadSiteContent();
+  const faq = faqItems("contact", contact.faq.items);
   return (
     <div className="main-content rt-home fb-page rt-tpage rt-contact-page">
       <a href="#rt-contact-main" className="rt-skip">Skip to main content</a>
@@ -54,13 +52,13 @@ export default function ContactPage() {
             </Suspense>
           </ContactChannels>
           <ContactRoutes routes={contact.routes} />
-          <FaqSection eyebrow={contact.faq.eyebrow} title={contact.faq.title} items={contact.faq.items} idPrefix="contact-faq" />
+          <FaqSection eyebrow={contact.faq.eyebrow} title={contact.faq.title} items={faq} idPrefix="contact-faq" />
         </main>
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(contactPageLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, PATH)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
     </div>
   );
 }

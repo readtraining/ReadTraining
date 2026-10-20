@@ -9,7 +9,7 @@ export const metadata = pageMetadata({ title: "Purchase history | ReadTraining",
 
 export default function Page() {
   return (
-    <AccountShell current="purchases" title={account.purchases.title} lead={account.purchases.lead}>
+    <AccountShell demo current="purchases" title={account.purchases.title} lead={account.purchases.lead}>
       <AccountPurchases />
     </AccountShell>
   );

@@ -1,16 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { actOnChange, ago, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Due, Pill, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { Tabs, formatWhen, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus, AdminTag, AdminDue } from "./AdminStatus";
 
 const copy = A.changes;
-const TYPE_TONE = { cancel: "warn", date: "info", dispute: "late" };
-const STATUS_TONE = { provider: "warn", approved: "info", evidence: "late", refunded: "ok", moved: "ok", rejected: "muted", won: "ok", lost: "muted" };
 // what can be done next, by type and status
 const NEXT = {
   "cancel:provider": ["approve", "decline"],
@@ -22,7 +20,7 @@ const NEXT = {
 // Cancellations, date changes and card disputes in one queue: Open (oldest deadline first) and Done. Each request shows its
 // order, customer, course, provider and amount, why it was raised, its deadline, and only the actions its state allows
 // (a cancellation: provider approved > refund to card or to wallet, wallet only when the customer chose it; a date change:
-// confirm the new date; a dispute: evidence sent > won or lost). Each action updates the order's timeline and the audit log.
+// confirm the new date; a dispute: evidence sent > won or lost). Each action updates the order's timeline.
 export default function AdminChanges() {
   const data = useAdmin();
   const [tab, setTab] = useState("open");
@@ -30,7 +28,7 @@ export default function AdminChanges() {
   useEffect(() => {
     if (getQuery("tab") === "done") setTab("done");
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const { changes, now } = data;
   const open = changes.filter((c) => c.open).sort((a, b) => a.due - b.due);
@@ -44,7 +42,7 @@ export default function AdminChanges() {
   return (
     <div className="rt-acc__stack">
       <Tabs tabs={[{ key: "open", label: copy.tabs.open, count: open.length }, { key: "done", label: copy.tabs.done, count: done.length }]} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "done" ? t : ""); }} label="Show requests" />
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
       {list.length ? (
         <ul className="rt-adm-items">
           {list.map((c) => {
@@ -53,12 +51,12 @@ export default function AdminChanges() {
               <li key={c.id} className="rt-acc__card rt-adm-item">
                 <div className="rt-adm-item__body">
                   <div className="rt-adm-item__top">
-                    <Pill tone={TYPE_TONE[c.type]}>{copy.types[c.type]}</Pill>
-                    <Pill tone={STATUS_TONE[c.status]}>{copy.statuses[c.status]}{c.outcome ? ` (${c.outcome})` : ""}</Pill>
+                    <AdminTag>{copy.types[c.type]}</AdminTag>
+                    <AdminStatus kind="change" status={c.status}>{copy.statuses[c.status]}{c.outcome ? ` (${c.outcome})` : ""}</AdminStatus>
                     <span className="rt-adm-item__when">Raised {ago(c.raised, now)}</span>
-                    {c.open && <Due due={c.due} now={now} />}
+                    {c.open && <AdminDue due={c.due} now={now} />}
                   </div>
-                  <h3 className="rt-acc__h3"><Link href={`/admin/orders/${c.ref}`}>{c.ref}</Link> · {c.buyer.name}</h3>
+                  <h3 className="rt-acc__h3">{c.ref} · {c.buyer.name}</h3>
                   <p className="rt-acc__note">{c.course} · {formatDate(c.date)} · {c.provider} · {formatPrice(c.amount)}</p>
                   <p className="rt-adm-item__reason"><strong>Reason:</strong> {c.reason}</p>
                   {c.type === "dispute" && c.evidenceSent && c.open && <p className="rt-acc__note">Evidence sent. Waiting for the card issuer.</p>}

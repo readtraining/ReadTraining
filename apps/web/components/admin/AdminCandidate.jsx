@@ -1,17 +1,16 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { addCandidateNote, moveIntro, offerRole, recordConsent, setCandidateStatus } from "@/lib/adminWork";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Pill, formatWhen } from "./adminParts";
-import { CANDIDATE_TONE } from "./AdminJobs";
+import { formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = W.jobs;
 const d = copy.detail;
@@ -20,7 +19,7 @@ const ELIGIBILITY = { licence: "Holds a current SIA licence", work: "Right to wo
 
 // One candidate: status actions, licence and availability, eligibility answers, and the roles offered to them. Introducing a
 // candidate to an employer (sharing their details) stays locked until their yes for THAT role is recorded, with how they said it,
-// as the Security Jobs page promises. Then interview and start. Each change is saved with an audit entry.
+// as the Security Jobs page promises. Then interview and start. Each change is saved.
 export default function AdminCandidate({ reference }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");
@@ -32,7 +31,7 @@ export default function AdminCandidate({ reference }) {
   const offerRef = useRef(null);
   const consentRef = useRef(null);
   const noteRef = useRef(null);
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const c = data.candidates.find((x) => x.ref === reference);
   if (!c) return <EmptyState title="This candidate was not found." action={{ href: "/admin/jobs", label: d.back }} />;
 
@@ -78,16 +77,15 @@ export default function AdminCandidate({ reference }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/jobs" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Candidate">
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone={CANDIDATE_TONE[c.status] || "info"}>{copy.statuses[c.status]}</Pill>
+            <AdminStatus kind="candidate" status={c.status}>{copy.statuses[c.status]}</AdminStatus>
             <span className="rt-adm-item__when">Applied {formatWhen(c.at)}</span>
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{c.name}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{c.name}</h1>
           <p className="rt-acc__note">{c.ref} · {c.licence.type} licence · {c.city || c.postcode}</p>
         </div>
         <div className="rt-adm-hero__actions">
@@ -136,7 +134,7 @@ export default function AdminCandidate({ reference }) {
                     <small>{i.consent ? `Said yes ${formatWhen(i.consent.at)} · ${i.consent.how}` : "No yes recorded yet"}</small>
                   </div>
                   <div className="rt-adm-intro__side">
-                    <Pill tone={i.status === "started" ? "ok" : i.status === "asked" ? "warn" : "info"}>{copy.introStatuses[i.status]}</Pill>
+                    <AdminStatus kind="intro" status={i.status}>{copy.introStatuses[i.status]}</AdminStatus>
                     {i.status === "asked" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setConsentFor(i.role); setErrors({}); }}>{d.consentSave}</button>}
                     {n && <button type="button" className="button -sm -purple-1 text-white" onClick={() => { moveIntro(c, i.role, n[0]); setSaid(n[1]); }}>{n[1]}</button>}
                     {i.status === "asked" && <span className="rt-adm-locked"><i className="fa fa-lock" aria-hidden="true"></i>{d.introBlocked}</span>}

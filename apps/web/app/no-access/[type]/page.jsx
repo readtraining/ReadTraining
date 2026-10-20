@@ -8,7 +8,8 @@ export const metadata = pageMetadata({ title: "No access | ReadTraining", descri
 
 export default async function NoAccessPage({ params, searchParams }) {
   const { type } = await params;
-  if (type !== "provider" && type !== "business") notFound();
   const { unavailable } = await searchParams;
+  // admin only for "we couldn't check your access" (proxy.js); an admin who is refused goes to the admin login instead
+  if (type !== "provider" && type !== "business" && !(type === "admin" && unavailable === "1")) notFound();
   return <NoAccess type={type} unavailable={unavailable === "1"} />;
 }

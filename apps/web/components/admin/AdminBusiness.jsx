@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
 import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
@@ -9,17 +8,16 @@ import { addBusinessNote, changeCreditLimit, offerCredit, markInvoicePaid, remin
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Pill, formatWhen } from "./adminParts";
-import { CREDIT_TONE } from "./AdminBusinesses";
+import { formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = W.businesses;
 const d = copy.detail;
-const INVOICE_TONE = { paid: "ok", due: "info", overdue: "late" };
 
 // One business account: the company, places bought vs assigned, the credit facility (as on Hurak, companies don't apply: we offer
 // credit with a limit once their history meets every eligibility check; then change the limit, put credit on hold or lift it), money owed by age, the invoices with their purchase orders (send a reminder,
-// mark paid), and the team's notes. Each change is saved with an audit entry.
+// mark paid), and the team's notes. Each change is saved.
 export default function AdminBusiness({ slug }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");
@@ -29,7 +27,7 @@ export default function AdminBusiness({ slug }) {
   const [note, setNote] = useState("");
   const limitRef = useRef(null);
   const noteRef = useRef(null);
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const b = data.businesses.find((x) => x.slug === slug);
   if (!b) return <EmptyState title="This business account was not found." action={{ href: "/admin/businesses", label: d.back }} />;
 
@@ -65,16 +63,15 @@ export default function AdminBusiness({ slug }) {
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/businesses" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label="Business account">
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone={CREDIT_TONE[b.credit]}>{copy.credit[b.credit]}</Pill>
+            <AdminStatus kind="credit" status={b.credit}>{copy.credit[b.credit]}</AdminStatus>
             <span className="rt-adm-item__when">Customer since {formatDate(b.since)}</span>
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{b.name}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{b.name}</h1>
           <p className="rt-acc__note">{b.sector} · {b.city} · {b.contact}</p>
         </div>
         <div className="rt-adm-hero__actions">
@@ -104,7 +101,7 @@ export default function AdminBusiness({ slug }) {
               <h3 className="rt-adm-h3">{d.eligibility}</h3>
               <dl className="rt-adm-dl">
                 {b.checks.map((c) => (
-                  <div key={c.key}><dt>{c.label}</dt><dd><Pill tone={c.ok ? "ok" : "muted"}>{c.ok ? "Yes" : "Not yet"}</Pill> {c.value}</dd></div>
+                  <div key={c.key}><dt>{c.label}</dt><dd><AdminStatus kind="check" status={c.ok ? "yes" : "no"}>{c.ok ? "Yes" : "Not yet"}</AdminStatus> {c.value}</dd></div>
                 ))}
               </dl>
               <p className="rt-acc__note">{b.eligible ? d.eligibleYes : d.eligibleNo}</p>
@@ -144,7 +141,7 @@ export default function AdminBusiness({ slug }) {
                   <td data-label="Issued">{formatDate(inv.issued)}</td>
                   <td data-label="Due">{formatDate(inv.due)}</td>
                   <td data-label="Amount">{formatPrice(inv.amount)}</td>
-                  <td data-label="Status"><Pill tone={INVOICE_TONE[inv.status]}>{copy.invoiceStatuses[inv.status]}</Pill>{inv.status === "overdue" && <small>{inv.late} days late</small>}{inv.reminded && <small>Reminded {formatWhen(inv.reminded)}</small>}</td>
+                  <td data-label="Status"><AdminStatus kind="invoice" status={inv.status}>{copy.invoiceStatuses[inv.status]}</AdminStatus>{inv.status === "overdue" && <small>{inv.late} days late</small>}{inv.reminded && <small>Reminded {formatWhen(inv.reminded)}</small>}</td>
                   <td data-label="Actions">
                     {inv.status !== "paid" && (
                       <div className="rt-adm-rowactions">

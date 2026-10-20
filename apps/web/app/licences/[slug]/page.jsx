@@ -22,7 +22,9 @@ import LicenceCourses from "@/components/licences/LicenceCourses";
 import LicenceTiles from "@/components/licences/LicenceTiles";
 import { licencesHub as hub } from "@/data/licences";
 import { getGroup, getLicence, getLicenceSlugs, licenceCourses, licenceHref, relatedLicences } from "@/lib/licences";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { faqItems } from "@/lib/siteContent";
+import { loadSiteContent } from "@/lib/siteContentServer";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 
 // A licence or card guide (/licences/<slug>): one template for every licence, driven by data/licences.js, in the learner pages'
 // language (the test prep subject page's dark hero and key facts strip, then the For Business / Skill Saver sections).
@@ -43,9 +45,11 @@ export async function generateMetadata(props) {
 }
 
 export default async function LicencePage(props) {
+  await loadSiteContent();
   const { slug } = await props.params;
   const l = getLicence(slug);
   if (!l) notFound();
+  const faqs = faqItems(`licence-${slug}`, l.faqs);
 
   const t = hub.page;
   const path = licenceHref(slug);
@@ -58,11 +62,6 @@ export default async function LicencePage(props) {
       {l.heroCards.map((key) => <CscsCardArt key={key} card={l.cards.find((c) => c.key === key)} size="lg" />)}
     </div>
   ) : null;
-  const faqLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: l.faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-  };
 
   return (
     <div className="main-content rt-home fb-page rt-lic-page">
@@ -103,7 +102,7 @@ export default async function LicencePage(props) {
                 </div>
               </section>
             )}
-            <FaqSection eyebrow="FAQs" title={`${t.faqTitle} ${l.short}`} items={l.faqs} idPrefix="lic-faq" className="layout-pt-lg layout-pb-lg rt-lic__anchor" id="faqs" />
+            <FaqSection eyebrow="FAQs" title={`${t.faqTitle} ${l.short}`} items={faqs} idPrefix="lic-faq" className="layout-pt-lg layout-pb-lg rt-lic__anchor" id="faqs" />
             <CtaBand cta={l.cta || hub.cta} id="rt-lic-cta-h" />
           </LicenceRequest>
         </main>
@@ -111,7 +110,7 @@ export default async function LicencePage(props) {
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, path)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faqs)) }} />
     </div>
   );
 }

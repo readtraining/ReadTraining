@@ -51,6 +51,7 @@ export const account = {
       heading: "We couldn't check your access",
       text: "This is usually brief. Please try again in a moment.",
       cta: null,
+      retry: "Try again",
     },
   },
 
@@ -61,7 +62,7 @@ export const account = {
     stats: { upcoming: "Upcoming courses", completed: "Completed courses", certificates: "Certificates", saved: "Saved courses" },
     upcoming: { title: "Upcoming courses", all: "View my learning" },
     certificates: { title: "Certificates and renewals", text: "Your training provider issues certificates after the course. Renew before the expiry date to stay qualified.", renew: "Renew", none: "Certificates from completed courses show here." },
-    saved: { title: "Saved courses", all: "View saved courses", none: "Save courses with the heart on the course list to compare them later." },
+    saved: { title: "Saved courses", all: "View saved courses", none: "No saved courses yet", noneText: "Tap the heart on any course to keep it here and compare later.", browse: "Browse courses" },
     help: {
       title: "Need to change something?",
       items: [

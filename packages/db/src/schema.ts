@@ -82,6 +82,11 @@ export const organisations = pgTable(
     slug: text('slug').notNull(),
     mobile: text('mobile'),
     status: organisationStatus('status').notNull().default('pending'),
+    // why the status is what it is, from the admin who set it (changes asked for, rejected, suspended); the provider sees it
+    statusNote: text('status_note'),
+    statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+    // a provider's own commission in basis points (2500 = 25%); null = the platform default (platform_settings)
+    commissionBps: integer('commission_bps'),
     termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
     termsVersion: text('terms_version'),
     createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
@@ -91,6 +96,7 @@ export const organisations = pgTable(
   (t) => [
     uniqueIndex('organisations_slug_key').on(t.slug),
     index('organisations_created_by_idx').on(t.createdBy),
+    check('organisations_commission_range', sql`${t.commissionBps} between 0 and 6000`),
     pgPolicy('organisations: read where member', {
       for: 'select',
       to: authenticatedRole,
@@ -141,6 +147,49 @@ export const adminUsers = pgTable(
   updatedAt: updatedAt(),
   },
   (t) => [index('admin_users_created_by_idx').on(t.createdBy)],
+).enableRLS()
+
+// Platform-wide settings an admin changes (for example the default commission), one row per key. Read and written by the API
+// only (RLS on, no policy); a key with no row uses the API's built-in default.
+export const platformSettings = pgTable(
+  'platform_settings',
+  {
+    key: text('key').primaryKey(),
+    value: jsonb('value').notNull(),
+    updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('platform_settings_updated_by_idx').on(t.updatedBy)],
+).enableRLS()
+
+// The site's editable content (Part B, B2): the trust numbers, the homepage's featured courses, testimonials and so on, one row
+// per key, each in the shape the API checks for that key. A key with no row uses the website's built-in wording, so the site
+// reads the same until an admin changes something. Read publicly through the API; written by admins only (RLS on, no policy).
+export const siteContent = pgTable(
+  'site_content',
+  {
+    key: text('key').primaryKey(),
+    value: jsonb('value').notNull(),
+    updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('site_content_updated_by_idx').on(t.updatedBy)],
+).enableRLS()
+
+// Every version of every piece of site content that was ever saved: what an admin can look back at (the legal pages in
+// particular: what did the terms say on a given day). Append-only, like the activity log: update, delete and truncate are
+// blocked by a trigger (migration 0014). Read and written by the API only.
+export const siteContentVersions = pgTable(
+  'site_content_versions',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    key: text('key').notNull(),
+    value: jsonb('value').notNull(),
+    // no foreign key (like the activity log): removing an account must never have to change a history row
+    savedBy: uuid('saved_by'),
+    savedAt: timestamp('saved_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('site_content_versions_key_idx').on(t.key, t.savedAt.desc())],
 ).enableRLS()
 
 // Append-only record of every action (who, as which identity, what, on what, when). No foreign keys, so deleting a user or
@@ -244,6 +293,209 @@ export const courseLevels = pgTable(
   (t) => [check('course_levels_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`)],
 ).enableRLS()
 
+// ---- coupons (Part B, B3) -------------------------------------------------------------------------------------------------
+// Discount codes an admin creates: a percentage or an amount off (pence), an optional start and end, an optional limit on how
+// many times it can be used, and what it applies to (everything, some categories by slug, or some courses by course number).
+// Codes are stored in capitals and are unique; a coupon is never deleted (turned off instead), so past orders can still name it.
+// `used` counts orders that used it (checkout adds to it once payments are real). Read and written by the API only.
+export const couponKind = pgEnum('coupon_kind', ['percent', 'amount'])
+export const couponScope = pgEnum('coupon_scope', ['all', 'categories', 'courses'])
+export const coupons = pgTable(
+  'coupons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').notNull(),
+    kind: couponKind('kind').notNull(),
+    value: integer('value').notNull(), // whole percent (1-100) or pence
+    startsAt: timestamp('starts_at', { withTimezone: true }),
+    endsAt: timestamp('ends_at', { withTimezone: true }),
+    usageLimit: integer('usage_limit'),
+    used: integer('used').notNull().default(0),
+    scope: couponScope('scope').notNull().default('all'),
+    categories: text('categories').array().notNull().default(sql`'{}'::text[]`),
+    courses: integer('courses').array().notNull().default(sql`'{}'::integer[]`),
+    active: boolean('active').notNull().default(true),
+    createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('coupons_code_key').on(t.code),
+    index('coupons_created_by_idx').on(t.createdBy),
+    check('coupons_code_format', sql`${t.code} ~ '^[A-Z0-9][A-Z0-9-]{2,29}$'`),
+    check('coupons_value_range', sql`(${t.kind} = 'percent' and ${t.value} between 1 and 100) or (${t.kind} = 'amount' and ${t.value} between 1 and 10000000)`),
+    check('coupons_dates_order', sql`${t.startsAt} is null or ${t.endsAt} is null or ${t.startsAt} < ${t.endsAt}`),
+    check('coupons_limit_positive', sql`${t.usageLimit} is null or ${t.usageLimit} > 0`),
+    check('coupons_used_positive', sql`${t.used} >= 0`),
+  ],
+).enableRLS()
+
+// ---- money (Part B, B4) ---------------------------------------------------------------------------------------------------
+// Orders, refunds, disputes and payouts, and the ledger every money movement is written to. No payment provider is connected
+// yet: orders come from staff bookings (invoice, payment link or free) and test data, and refunds and payouts are RECORDED
+// (decided, approved, marked sent) without moving money. When Stripe is connected it writes the same rows.
+// Amounts are whole pence. An order keeps the card fee and commission rates it was booked at, so later rate changes never
+// rewrite the past. Read and written by the API only (RLS on, no policy).
+export const paymentMethod = pgEnum('payment_method', ['card', 'bnpl', 'invoice', 'payment_link', 'free'])
+export const orderStatus = pgEnum('order_status', ['paid', 'part_refunded', 'refunded', 'cancelled'])
+export const refundStatus = pgEnum('refund_status', ['requested', 'approved', 'declined'])
+export const disputeStatus = pgEnum('dispute_status', ['open', 'won', 'lost'])
+export const payoutStatus = pgEnum('payout_status', ['draft', 'approved', 'held', 'sent'])
+// Hurak's seven transaction types
+export const ledgerType = pgEnum('ledger_type', ['purchase', 'refund', 'cancel', 'dispute', 'charge', 'adjust', 'payout'])
+
+export const orders = pgTable(
+  'orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ref: text('ref').notNull(),
+    buyerUserId: uuid('buyer_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
+    buyerName: text('buyer_name').notNull(),
+    buyerEmail: text('buyer_email').notNull(),
+    buyerCompany: text('buyer_company'),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => organisations.id, { onDelete: 'restrict' }),
+    courseId: integer('course_id').notNull(),
+    courseTitle: text('course_title').notNull(),
+    startsOn: date('starts_on'),
+    quantity: integer('quantity').notNull(),
+    unitPence: integer('unit_pence').notNull(),
+    grossPence: integer('gross_pence').notNull(),
+    method: paymentMethod('method').notNull(),
+    status: orderStatus('status').notNull().default('paid'),
+    feeBps: integer('fee_bps').notNull(),
+    commissionBps: integer('commission_bps').notNull(),
+    bookedBy: uuid('booked_by').references(() => authUsers.id, { onDelete: 'set null' }), // a staff booking: the admin
+    note: text('note'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('orders_ref_key').on(t.ref),
+    index('orders_provider_idx').on(t.providerId, t.createdAt.desc()),
+    index('orders_created_idx').on(t.createdAt.desc()),
+    index('orders_buyer_idx').on(t.buyerUserId),
+    index('orders_booked_by_idx').on(t.bookedBy),
+    check('orders_amounts', sql`${t.quantity} between 1 and 500 and ${t.unitPence} >= 0 and ${t.grossPence} = ${t.unitPence} * ${t.quantity}`),
+    check('orders_free_is_zero', sql`(${t.method} = 'free') = (${t.grossPence} = 0)`),
+    check('orders_rates', sql`${t.feeBps} between 0 and 2000 and ${t.commissionBps} between 0 and 6000`),
+  ],
+).enableRLS()
+
+export const refunds = pgTable(
+  'refunds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'restrict' }),
+    amountPence: integer('amount_pence').notNull(),
+    reason: text('reason').notNull(),
+    status: refundStatus('status').notNull().default('requested'),
+    requestedBy: uuid('requested_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    decidedBy: uuid('decided_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decisionNote: text('decision_note'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('refunds_order_idx').on(t.orderId),
+    index('refunds_status_idx').on(t.status, t.createdAt.desc()),
+    index('refunds_requested_by_idx').on(t.requestedBy),
+    index('refunds_decided_by_idx').on(t.decidedBy),
+    check('refunds_amount_positive', sql`${t.amountPence} > 0`),
+  ],
+).enableRLS()
+
+export const disputes = pgTable(
+  'disputes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'restrict' }),
+    amountPence: integer('amount_pence').notNull(),
+    reason: text('reason').notNull(),
+    evidenceDue: date('evidence_due').notNull(),
+    status: disputeStatus('status').notNull().default('open'),
+    openedBy: uuid('opened_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    closedBy: uuid('closed_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('disputes_order_idx').on(t.orderId),
+    index('disputes_status_idx').on(t.status, t.evidenceDue),
+    index('disputes_opened_by_idx').on(t.openedBy),
+    index('disputes_closed_by_idx').on(t.closedBy),
+    check('disputes_amount_positive', sql`${t.amountPence} > 0`),
+  ],
+).enableRLS()
+
+export const payouts = pgTable(
+  'payouts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ref: text('ref').notNull(),
+    providerId: uuid('provider_id')
+      .notNull()
+      .references(() => organisations.id, { onDelete: 'restrict' }),
+    periodEnd: date('period_end').notNull(), // covers everything in the ledger up to the end of this UK day
+    amountPence: integer('amount_pence').notNull(),
+    heldBackPence: integer('held_back_pence').notNull().default(0), // kept back for open refund requests and disputes
+    status: payoutStatus('status').notNull().default('draft'),
+    holdReason: text('hold_reason'),
+    createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    approvedBy: uuid('approved_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    sentBy: uuid('sent_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('payouts_ref_key').on(t.ref),
+    index('payouts_provider_idx').on(t.providerId, t.createdAt.desc()),
+    index('payouts_status_idx').on(t.status),
+    index('payouts_created_by_idx').on(t.createdBy),
+    index('payouts_approved_by_idx').on(t.approvedBy),
+    index('payouts_sent_by_idx').on(t.sentBy),
+    check('payouts_amounts', sql`${t.amountPence} > 0 and ${t.heldBackPence} >= 0`),
+    check('payouts_second_approver', sql`${t.approvedBy} is null or ${t.createdBy} is null or ${t.approvedBy} <> ${t.createdBy}`),
+  ],
+).enableRLS()
+
+// The ledger: one row per money movement, never changed or removed (a trigger blocks it), so a provider's balance and every
+// payout can be rebuilt from it. Like the activity log it has no foreign keys. Signs are from the provider's side:
+// `providerPence` is what the provider gains (negative for refunds, charges and payouts); `commissionPence` and `feePence` are
+// ReadTraining's commission and the payment fee on the same movement.
+export const ledgerEntries = pgTable(
+  'ledger_entries',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    at: timestamp('at', { withTimezone: true }).defaultNow().notNull(),
+    type: ledgerType('type').notNull(),
+    providerId: uuid('provider_id').notNull(),
+    orderId: uuid('order_id'),
+    refundId: uuid('refund_id'),
+    disputeId: uuid('dispute_id'),
+    payoutId: uuid('payout_id'),
+    grossPence: integer('gross_pence').notNull().default(0),
+    feePence: integer('fee_pence').notNull().default(0),
+    commissionPence: integer('commission_pence').notNull().default(0),
+    providerPence: integer('provider_pence').notNull(),
+    note: text('note'),
+    createdBy: uuid('created_by'),
+  },
+  (t) => [
+    index('ledger_provider_idx').on(t.providerId, t.at.desc()),
+    index('ledger_order_idx').on(t.orderId),
+    index('ledger_payout_idx').on(t.payoutId),
+    index('ledger_at_idx').on(t.at.desc()),
+    check('ledger_split_adds_up', sql`${t.grossPence} = ${t.feePence} + ${t.commissionPence} + ${t.providerPence} or ${t.type} in ('charge', 'adjust', 'payout')`),
+  ],
+).enableRLS()
+
 export type Profile = typeof profiles.$inferSelect
 export type Organisation = typeof organisations.$inferSelect
 export type OrganisationMember = typeof organisationMembers.$inferSelect
@@ -252,5 +504,8 @@ export type ActivityLogEntry = typeof activityLog.$inferSelect
 export type NewActivityLogEntry = typeof activityLog.$inferInsert
 export type Category = typeof categories.$inferSelect
 export type DeliveryMethod = typeof deliveryMethods.$inferSelect
+export type Coupon = typeof coupons.$inferSelect
+export type Order = typeof orders.$inferSelect
+export type LedgerEntry = typeof ledgerEntries.$inferSelect
 export type Post = typeof posts.$inferSelect
 export type NewPost = typeof posts.$inferInsert

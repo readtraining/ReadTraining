@@ -6,35 +6,35 @@ import { admin as A } from "@/data/admin";
 import { setOfferingStatus, setPreCourse, useAdmin } from "@/lib/admin";
 import { courseHref } from "@/data/courseSlugs";
 import { formatPrice } from "@/lib/format";
-import { Pill } from "./adminParts";
+import { Said, DetailSkeleton } from "./adminParts";
 import { modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.catalogue;
 const d = copy.detail;
 
 // One course: what it is (category, duration, level, validity, study methods, "From" price), the pre-course e-learning flag
 // (a switch, with what it changes), and its offerings, one per provider (modes, from price, upcoming dates, Live or Paused, with
-// Pause / Resume). Changes are kept with an audit entry and announced.
+// Pause / Resume). Changes are kept and announced.
 export default function AdminCourse({ id }) {
   const data = useAdmin();
   const [said, setSaid] = useState("");
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const c = data.catalogue.find((x) => String(x.id) === String(id));
   if (!c) return <EmptyState title="This course was not found." action={{ href: "/admin/catalogue", label: d.back }} />;
 
   return (
     <div className="rt-acc__stack">
-      <Link href="/admin/catalogue" className="fb-textlink rt-adm-back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{d.back}</Link>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       <section className="rt-acc__card rt-adm-hero" aria-label={d.about}>
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone="info">{c.category}</Pill>
-            {c.preCourse && <Pill tone="warn">{copy.preCourse}</Pill>}
+            <AdminTag>{c.category}</AdminTag>
+            {c.preCourse && <AdminTag>{copy.preCourse}</AdminTag>}
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{c.title}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name">{c.title}</h1>
           <p className="rt-acc__note">{c.duration} · {c.validity} · From {formatPrice(c.from)} · {c.upcoming} upcoming dates</p>
         </div>
         <div className="rt-adm-hero__actions">
@@ -65,7 +65,7 @@ export default function AdminCourse({ id }) {
                 <td data-label="How it runs">{o.modes.map(modeLabel).join(", ")}</td>
                 <td data-label="From">{formatPrice(o.from)}</td>
                 <td data-label="Upcoming dates">{o.sessions}</td>
-                <td data-label="Status"><Pill tone={o.status === "paused" ? "muted" : "ok"}>{o.status === "paused" ? d.paused : d.live}</Pill></td>
+                <td data-label="Status"><AdminStatus kind="offering" status={o.status === "paused" ? "paused" : "live"}>{o.status === "paused" ? d.paused : d.live}</AdminStatus></td>
                 <td className="rt-biz__act">
                   <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { const next = o.status === "paused" ? "live" : "paused"; setOfferingStatus(c, o, next); setSaid(`${o.provider}: ${next === "paused" ? "paused" : "live again"}`); }} aria-label={`${o.status === "paused" ? d.resume : d.pause} ${o.provider}`}>
                     {o.status === "paused" ? d.resume : d.pause}

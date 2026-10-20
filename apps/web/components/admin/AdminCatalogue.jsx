@@ -6,47 +6,51 @@ import { admin as A } from "@/data/admin";
 import { basket } from "@/data/basket";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import AdminCatalogueList from "./AdminCatalogueList";
+import { AdminTag } from "./AdminStatus";
 
 const copy = A.catalogue;
-const TABS = ["courses", "categories", "packages"];
-const PAGE = 20;
+const TABS = ["courses", "list", "packages"];
+
+const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.offerings.length, sessions: (c) => c.upcoming, from: (c) => c.from };
 
 // The catalogue: Courses (search, a category filter, the table with providers, upcoming dates, "From" price and the
-// pre-course e-learning flag; 20 at a time with "Show more"), Categories (each with its courses and providers) and Packages and
-// add-ons (the basket's Saver / Flexi packages and the first aid add-on, as the basket applies them). Tabs in the address.
+// pre-course e-learning flag; 20 at a time with "Show more"; DEMO courses), Categories and filters (the real list,
+// AdminCatalogueList) and Packages and add-ons (the basket's Saver / Flexi packages and the first aid add-on, as the basket applies them). Tabs in the address.
 export default function AdminCatalogue() {
   const data = useAdmin();
   const [tab, setTab] = useState("courses");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
-  const [shown, setShown] = useState(PAGE);
+  const pages = usePaging({ key: "", dir: -1 });
+  const sorter = useSort();
   useEffect(() => {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
     const c = getQuery("category");
     if (c) setCat(c);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const { catalogue } = data;
-  const categories = [...new Set(catalogue.map((c) => c.subject))].map((key) => {
-    const list = catalogue.filter((c) => c.subject === key);
-    return { key, label: list[0].category, courses: list.length, providers: new Set(list.flatMap((c) => c.offerings.map((o) => o.provider))).size, upcoming: list.reduce((n, c) => n + c.upcoming, 0) };
-  }).sort((a, b) => a.label.localeCompare(b.label));
+  // the Courses tab's category filter: each category the demo courses use, with its count
+  const categories = [...new Set(catalogue.map((c) => c.subject))]
+    .map((key) => ({ key, label: catalogue.find((c) => c.subject === key).category, courses: catalogue.filter((c) => c.subject === key).length }))
+    .sort((a, b) => a.label.localeCompare(b.label));
   const needle = q.trim().toLowerCase();
   const list = catalogue.filter((c) => (cat === "all" || c.subject === cat) && (!needle || c.title.toLowerCase().includes(needle)));
   const cols = copy.columns;
   const tabs = [
     { key: "courses", label: copy.tabs.courses, count: catalogue.length },
-    { key: "categories", label: copy.tabs.categories, count: categories.length },
+    { key: "list", label: copy.tabs.list },
     { key: "packages", label: copy.tabs.packages },
   ];
   const pickCat = (k) => {
     setCat(k);
-    setShown(PAGE);
+    pages.restart();
     setQuery("category", k === "all" ? "" : k);
   };
 
@@ -61,32 +65,28 @@ export default function AdminCatalogue() {
               <label htmlFor="rt-adm-cat" className="rt-sr">Category</label>
               <FieldSelect id="rt-adm-cat" label="Category" value={cat} onChange={pickCat} options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c.key, label: `${c.label} (${c.courses})` }))]} compact />
             </div>
-            <Search value={q} onChange={(v) => { setQ(v); setShown(PAGE); }} label={copy.search} />
+            <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
           </div>
           <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "course" : "courses"}`}</p>
           {list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table">
                 <thead>
-                  <tr><th scope="col">{cols.course}</th><th scope="col">{cols.providers}</th><th scope="col">{cols.sessions}</th><th scope="col">{cols.from}</th><th scope="col">{cols.flags}</th></tr>
+                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><SortTh label={cols.providers} col="providers" sorter={sorter} numeric /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric /><SortTh label={cols.from} col="from" sorter={sorter} numeric /><th scope="col">{cols.flags}</th></tr>
                 </thead>
                 <tbody>
-                  {list.slice(0, shown).map((c) => (
+                  {sorter.apply(list, COURSE_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((c) => (
                     <tr key={c.id}>
                       <td data-label={cols.course}><Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link><small>{c.category} · {c.duration}</small></td>
                       <td data-label={cols.providers}>{c.offerings.length}{c.offerings.some((o) => o.status === "paused") && <small>{c.offerings.filter((o) => o.status === "paused").length} paused</small>}</td>
                       <td data-label={cols.sessions}>{c.upcoming}</td>
                       <td data-label={cols.from}>{formatPrice(c.from)}</td>
-                      <td data-label={cols.flags}>{c.preCourse ? <Pill tone="warn">{copy.preCourse}</Pill> : <span className="rt-adm-muted">None</span>}</td>
+                      <td data-label={cols.flags}>{c.preCourse ? <AdminTag>{copy.preCourse}</AdminTag> : <span className="rt-adm-muted">–</span>}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {list.length > shown && (
-                <div className="rt-adm-more">
-                  <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setShown((n) => n + PAGE)}>Show more ({list.length - shown} left)</button>
-                </div>
-              )}
+              <div className="rt-adm-more"><Pager paging={pages} total={list.length} label="courses" /></div>
             </div>
           ) : (
             <EmptyState title="No courses match." />
@@ -94,26 +94,7 @@ export default function AdminCatalogue() {
         </>
       )}
 
-      {tab === "categories" && (
-        <div className="rt-acc__card rt-biz__tablecard">
-          <p className="rt-acc__note rt-adm-tablenote">{copy.categoriesNote}</p>
-          <table className="rt-biz__table rt-adm-table">
-            <thead>
-              <tr><th scope="col">Category</th><th scope="col">Courses</th><th scope="col">Providers</th><th scope="col">{cols.sessions}</th></tr>
-            </thead>
-            <tbody>
-              {categories.map((c) => (
-                <tr key={c.key}>
-                  <td data-label="Category"><button type="button" className="rt-biz__name" onClick={() => { setTab("courses"); setQuery("tab", ""); pickCat(c.key); }}>{c.label}</button></td>
-                  <td data-label="Courses">{c.courses}</td>
-                  <td data-label="Providers">{c.providers}</td>
-                  <td data-label={cols.sessions}>{c.upcoming}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {tab === "list" && <AdminCatalogueList />}
 
       {tab === "packages" && (
         <>

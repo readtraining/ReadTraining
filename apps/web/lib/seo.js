@@ -20,6 +20,16 @@ export function pageMetadata({ title, description, path, noindex = false }) {
 }
 
 // `crumbs` is [{ label, href? }]; the last one (the current page) takes `path`.
+// An answer's [label](link) and **bold** as plain text, for search-engine data
+const plainText = (t) => t.replace(/\[([^\]]+)\]\([^)\s]+\)/g, "$1").replace(/\*\*([^*]+)\*\*/g, "$1");
+
+// FAQPage structured data for a page's questions and answers (the same list the page shows).
+export const faqPageLd = (items) => ({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: plainText(f.a) } })),
+});
+
 export const breadcrumbLd = (crumbs, path) => ({
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",

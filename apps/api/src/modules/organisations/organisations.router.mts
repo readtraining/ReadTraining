@@ -5,13 +5,15 @@ import { and, eq, like, or, organisationMembers, organisations } from '@readtrai
 import { can } from '@readtraining/permissions'
 
 import { logActivity, logDenied } from '../../lib/activity.mjs'
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
+import { providerTermsVersion } from '../content/content.router.mjs'
 
 // One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
 // person belongs to. These procedures add an identity, open a workspace (the server-side check behind every /provider and
 // /business page), log a switch between identities, and read a provider's public profile.
 
-// The provider terms a new provider accepts (the date of the version on /provider-terms; change both together).
+// The provider terms a new provider accepts: the date the provider terms (/provider-terms) were last updated. Once an admin has
+// saved the provider terms in the admin it is their date (providerTermsVersion); until then this built-in one.
 export const PROVIDER_TERMS_VERSION = '2026-10-16'
 
 const slugify = (s: string) =>
@@ -58,10 +60,11 @@ export const organisationsRouter = createTRPCRouter({
       const used = new Set(taken.map((t) => t.slug))
       let slug = base
       for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`
+      const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
       const org = await ctx.db.transaction(async (tx) => {
         const [created] = await tx
           .insert(organisations)
-          .values({ type: 'provider', name: input.name, slug, mobile: input.mobile, status: 'pending', termsAcceptedAt: new Date(), termsVersion: PROVIDER_TERMS_VERSION, createdBy: ctx.user.id })
+          .values({ type: 'provider', name: input.name, slug, mobile: input.mobile, status: 'pending', termsAcceptedAt: new Date(), termsVersion, createdBy: ctx.user.id })
           .returning({ id: organisations.id, slug: organisations.slug, name: organisations.name })
         await tx.insert(organisationMembers).values({ organisationId: created.id, userId: ctx.user.id, role: 'owner' })
         await logActivity(tx, {
@@ -71,7 +74,7 @@ export const organisationsRouter = createTRPCRouter({
           action: 'provider.created',
           targetType: 'organisation',
           targetId: created.id,
-          metadata: { termsVersion: PROVIDER_TERMS_VERSION },
+          metadata: { termsVersion },
           ip: ctx.ip,
         })
         return created
@@ -123,10 +126,37 @@ export const organisationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN' })
       }
       const [org] = await ctx.db
-        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status })
+        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote })
         .from(organisations)
         .where(eq(organisations.id, chosen.organisationId))
       return { ...org, type: input.type, role: chosen.role }
+    }),
+
+  // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and
+  // the account goes back to waiting for a decision.
+  resubmit: orgProcedure('provider.profile.edit')
+    .input(z.object({ organisationId: z.string().uuid(), reply: z.string().trim().max(1000, 'Keep your note to 1,000 characters or fewer.').optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const reply = input.reply?.trim() || null
+      return ctx.db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(organisations)
+          .set({ status: 'pending', statusNote: null, statusChangedAt: new Date() })
+          .where(and(eq(organisations.id, input.organisationId), eq(organisations.type, 'provider'), eq(organisations.status, 'changes_requested')))
+          .returning({ id: organisations.id })
+        if (!updated) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is not waiting for changes any more. Reload the page.' })
+        await logActivity(tx, {
+          actorUserId: ctx.user.id,
+          actorIdentity: 'provider',
+          organisationId: input.organisationId,
+          action: 'provider.resubmitted',
+          targetType: 'organisation',
+          targetId: input.organisationId,
+          metadata: reply ? { reply } : {},
+          ip: ctx.ip,
+        })
+        return { status: 'pending' as const }
+      })
     }),
 
   // Switch account: logs which identity the person moved to (the page they land on checks access itself).

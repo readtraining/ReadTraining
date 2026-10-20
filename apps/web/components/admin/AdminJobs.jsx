@@ -4,12 +4,14 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, useSort, SortTh } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = W.jobs;
 const TABS = ["candidates", "roles", "employers"];
-export const CANDIDATE_TONE = { new: "warn", started: "ok", unsuitable: "muted", withdrawn: "muted" };
+const CANDIDATE_SORT = { ref: (c) => c.ref, candidate: (c) => c.name, licence: (c) => c.licence.type, area: (c) => c.city || c.postcode, status: (c) => c.status, applied: (c) => c.at };
+const monthYear = (ym) => new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${ym}-01T00:00:00Z`));
 
 // Security Jobs (admin plan module 10): candidates from the Security Jobs page (newest first, searchable), the open roles and the
 // employers we work with, as three tabs kept in the address. The consent rule is stated once above the list.
@@ -17,11 +19,12 @@ export default function AdminJobs() {
   const data = useAdmin();
   const [tab, setTab] = useState("candidates");
   const [q, setQ] = useState("");
+  const sorter = useSort();
   useEffect(() => {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const needle = q.trim().toLowerCase();
   const candidates = data.candidates.filter((c) => !needle || `${c.ref} ${c.name} ${c.postcode} ${c.city}`.toLowerCase().includes(needle));
@@ -42,15 +45,15 @@ export default function AdminJobs() {
       {tab === "candidates" && (candidates.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr>{Object.values(copy.columns).map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
+            <thead><tr>{Object.entries(copy.columns).map(([k, h]) => <SortTh key={k} label={h} col={k} sorter={sorter} numeric={k === "applied"} />)}</tr></thead>
             <tbody>
-              {candidates.map((c) => (
+              {sorter.apply(candidates, CANDIDATE_SORT).map((c) => (
                 <tr key={c.ref}>
                   <td data-label={copy.columns.ref}><Link href={`/admin/jobs/${c.ref}`} className="rt-adm-strong">{c.ref}</Link></td>
                   <td data-label={copy.columns.candidate}>{c.name}<small>{c.email}</small></td>
-                  <td data-label={copy.columns.licence}>{c.licence.type}<small>Ends {c.licence.expiry} · ending {c.licence.last4}</small></td>
+                  <td data-label={copy.columns.licence}>{c.licence.type}<small>Ends {monthYear(c.licence.expiry)} · ending {c.licence.last4}</small></td>
                   <td data-label={copy.columns.area}>{c.city || c.postcode}<small>{c.travel}</small></td>
-                  <td data-label={copy.columns.status}><Pill tone={CANDIDATE_TONE[c.status] || "info"}>{copy.statuses[c.status]}</Pill></td>
+                  <td data-label={copy.columns.status}><AdminStatus kind="candidate" status={c.status}>{copy.statuses[c.status]}</AdminStatus></td>
                   <td data-label={copy.columns.applied}>{formatWhen(c.at)}</td>
                 </tr>
               ))}

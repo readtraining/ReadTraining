@@ -1,5 +1,6 @@
 import { adminRouter } from '../modules/admin/admin.router.mjs'
 import { catalogueRouter } from '../modules/catalogue/catalogue.router.mjs'
+import { contentRouter } from '../modules/content/content.router.mjs'
 import { meRouter } from '../modules/me/me.router.mjs'
 import { organisationsRouter } from '../modules/organisations/organisations.router.mjs'
 import { postsRouter } from '../modules/posts/posts.router.mjs'
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   })),
   admin: adminRouter,
   catalogue: catalogueRouter,
+  content: contentRouter,
   me: meRouter,
   organisations: organisationsRouter,
   posts: postsRouter,

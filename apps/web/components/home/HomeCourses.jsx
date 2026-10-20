@@ -3,22 +3,15 @@
 import React from "react";
 import HomeTextLink from "./HomeTextLink";
 import CourceCard from "./HomeCourseCard";
-import { courses as coursesData, courseCategories as catagories } from "@/data/home";
 import { CATALOGUE_HREF } from "@/lib/routes";
-import { useState, useEffect } from "react";
-export default function HomeCourses() {
-  const [filtered, setFiltered] = useState();
+import { useState } from "react";
+
+// "Popular courses and qualifications": the featured tabs an admin chose, each with its course cards (built on the server from
+// the catalogue, app/page.jsx).
+export default function HomeCourses({ groups }) {
+  const catagories = groups.map((g) => g.name);
   const [category, setCategory] = useState(catagories[0]);
-  useEffect(() => {
-    if (category == "All courses") {
-      setFiltered();
-    } else {
-      const filteredData = coursesData.filter(
-        (elm) => elm.category == category,
-      );
-      setFiltered(filteredData);
-    }
-  }, [category]);
+  const shown = (groups.find((g) => g.name === category) || groups[0])?.cards ?? [];
 
   return (
     <section className="layout-pt-lg layout-pb-lg">
@@ -42,8 +35,8 @@ export default function HomeCourses() {
         </div>
 
         <div className="row y-gap-30 pt-30">
-          {(filtered || coursesData.slice(0, 4)).map((elm, index) => (
-            <CourceCard key={index} data={elm} />
+          {shown.map((elm) => (
+            <CourceCard key={elm.id} data={elm} />
           ))}
         </div>
 

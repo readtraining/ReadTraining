@@ -12,6 +12,7 @@ import { actAs, useProvider } from "@/lib/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
+import ProviderAccountStatus from "./ProviderAccountStatus";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -144,6 +145,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         </ul>
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
+          <ProviderAccountStatus />
           {backTo && <Link href={backTo.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backTo.label}</Link>}
           <div className="rt-adm__head">
             <div>

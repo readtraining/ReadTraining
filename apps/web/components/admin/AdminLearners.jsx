@@ -1,25 +1,26 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { formatDate, formatPrice } from "@/lib/format";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery } from "./adminParts";
+import { formatDate } from "@/lib/format";
+import { Search, Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
+import AdminLearnerList from "./AdminLearnerList";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import DateField from "./DateField";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.learners;
-const CERT_TONE = { valid: "ok", none: "ok", expiring: "warn", expired: "muted", revoked: "late" };
 export const CertPill = ({ cert, now }) => {
   const st = certState(cert, now);
-  return <Pill tone={CERT_TONE[st]}>{copy.certStates[st]}</Pill>;
+  return <AdminStatus kind="certificate" status={st}>{copy.certStates[st]}</AdminStatus>;
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Learners and certificates. Learners: search, the table (bookings, wallet balance, last booking, status) opening each learner.
+// Learners and certificates. Learners: the real accounts (AdminLearnerList), each opening the learner's record.
 // Certificates: the register (number, holder, course, issued, expires, state), search, "Issue certificate" (holder, course, issue
 // date; the number is made, never a duplicate) and Revoke (with a reason) / Reinstate. Tab in the address.
 export default function AdminLearners() {
@@ -35,13 +36,11 @@ export default function AdminLearners() {
   useEffect(() => {
     if (getQuery("tab") === "certificates") setTab("certificates");
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
-  const { learners, certificates, catalogue, now } = data;
+  const { certificates, catalogue, now } = data;
   const needle = q.trim().toLowerCase();
-  const people = learners.filter((l) => !needle || `${l.name} ${l.email}`.toLowerCase().includes(needle));
   const certs = certificates.filter((c) => !needle || `${c.number} ${c.holder}`.toLowerCase().includes(needle));
-  const lc = copy.columns;
   const cc = copy.certColumns;
 
   const openRevoke = (c) => {
@@ -79,35 +78,16 @@ export default function AdminLearners() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Tabs tabs={[{ key: "learners", label: copy.tabs.learners, count: learners.length }, { key: "certificates", label: copy.tabs.certificates, count: certificates.length }]} value={tab} onChange={(t) => { setTab(t); setQ(""); setQuery("tab", t === "certificates" ? t : ""); }} label="Show" />
-        <div className="rt-adm-toolbar__end">
-          <Search value={q} onChange={setQ} label={tab === "learners" ? copy.search : copy.certSearch} />
-          {tab === "certificates" && <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setIssuing(true); setErrors({}); setForm({ holder: "", courseId: "", issued: today() }); }}>{copy.issue}</button>}
-        </div>
+        <Tabs tabs={[{ key: "learners", label: copy.tabs.learners }, { key: "certificates", label: copy.tabs.certificates, count: certificates.length }]} value={tab} onChange={(t) => { setTab(t); setQ(""); setQuery("tab", t === "certificates" ? t : ""); setQuery("q", ""); setQuery("show", ""); }} label="Show" />
+        {tab === "certificates" && <div className="rt-adm-toolbar__end">
+          <Search value={q} onChange={setQ} label={copy.certSearch} />
+          <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setIssuing(true); setErrors({}); setForm({ holder: "", courseId: "", issued: today() }); }}>{copy.issue}</button>
+        </div>}
       </div>
-      <p className="rt-sr" aria-live="polite">{said}</p>
+      <Said text={said} />
 
       {tab === "learners" ? (
-        people.length ? (
-          <div className="rt-acc__card rt-biz__tablecard">
-            <table className="rt-biz__table rt-adm-table">
-              <thead>
-                <tr><th scope="col">{lc.name}</th><th scope="col">{lc.bookings}</th><th scope="col">{lc.wallet}</th><th scope="col">{lc.last}</th><th scope="col">{lc.status}</th></tr>
-              </thead>
-              <tbody>
-                {people.map((l) => (
-                  <tr key={l.id}>
-                    <td data-label={lc.name}><Link href={`/admin/learners/${l.id}`} className="rt-adm-strong">{l.name}</Link><small>{l.email}</small></td>
-                    <td data-label={lc.bookings}>{l.orders.length}</td>
-                    <td data-label={lc.wallet}>{formatPrice(l.balance)}</td>
-                    <td data-label={lc.last}>{l.lastBooked ? formatWhen(l.lastBooked) : <span className="rt-adm-muted">None</span>}</td>
-                    <td data-label={lc.status}><Pill tone={l.status === "closed" ? "muted" : "ok"}>{l.status === "closed" ? copy.detail.closed : "Active"}</Pill></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : <EmptyState title="No learners match." />
+        <AdminLearnerList />
       ) : (
         <>
           <p className="rt-acc__note rt-adm-help">{copy.checkerNote}</p>
@@ -168,7 +148,7 @@ export default function AdminLearners() {
           <div className="rt-field">
             <label htmlFor="rt-adm-issued">Issue date</label>
             {err("issued")}
-            <input id="rt-adm-issued" type="date" max={today()} value={form.issued} onChange={(e) => setForm((f) => ({ ...f, issued: e.target.value }))} aria-invalid={errors.issued ? true : undefined} aria-describedby={errors.issued ? "rt-adm-issued-e" : undefined} className="rt-ck__short" />
+            <DateField id="rt-adm-issued" max={today()} value={form.issued} onChange={(v) => setForm((f) => ({ ...f, issued: v }))} invalid={Boolean(errors.issued)} describedBy={errors.issued ? "rt-adm-issued-e" : undefined} />
           </div>
           <p className="rt-acc__note">The expiry date comes from the course's validity.</p>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{copy.issue}</button>

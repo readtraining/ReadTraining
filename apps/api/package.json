@@ -11,7 +11,8 @@
     "build": "tsc --noEmit && node build.mjs",
     "start": "tsx --env-file-if-exists=../../.env src/index.mts",
     "typecheck": "tsc --noEmit",
-    "admin:grant": "tsx --env-file-if-exists=../../.env src/scripts/admin-grant.mts"
+    "admin:grant": "tsx --env-file-if-exists=../../.env src/scripts/admin-grant.mts",
+    "seed:money": "tsx --env-file-if-exists=../../.env src/scripts/seed-money.mts"
   },
   "dependencies": {
     "@readtraining/db": "workspace:*",

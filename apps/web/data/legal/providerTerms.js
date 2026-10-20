@@ -1,7 +1,8 @@
 // Provider Terms, written for ReadTraining in our own words, following the sections and meaning of the client's current
 // provider terms (hurak.com/terms/provider-terms, last updated 12 December 2025). Training providers agree to them when they
-// add a provider account (/provider/onboarding); the API records which version (organisations.terms_version, set from
-// PROVIDER_TERMS_VERSION in apps/api/src/modules/organisations/organisations.router.mts — change `updated` and that together).
+// add a provider account (/provider/onboarding); the API records which version (organisations.terms_version): the `updated` date of
+// the version an admin saved in the admin (admin > Site content > Legal pages), else PROVIDER_TERMS_VERSION in
+// apps/api/src/modules/organisations/organisations.router.mts, which must match `updated` here.
 // The fees and payout day match the marketplace settings (data/admin.js feeDefaults). Values in [brackets] are to be confirmed.
 
 export const providerTerms = {
