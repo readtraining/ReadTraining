@@ -10,8 +10,8 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, formatWhen, Said, DetailSkeleton } from "./adminParts";
-import { STATE_TONE } from "./AdminLearnerList";
+import { formatWhen, Said, DetailSkeleton } from "./adminParts";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.learners;
 const d = copy.detail;
@@ -68,8 +68,8 @@ export default function AdminLearner({ id }) {
           {l.photoUrl ? <img src={l.photoUrl} alt="" className="rt-adm-learner__photo" /> : <span className="rt-acc__avatar rt-adm-learner__photo" aria-hidden="true">{l.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>}
           <div>
             <div className="rt-adm-item__top">
-              <Pill tone={STATE_TONE[l.status]}>{copy.states[l.status]}</Pill>
-              {l.admin && <Pill tone="info">{d.adminAccess}: {A.presets[l.admin]}</Pill>}
+              <AdminStatus kind="learner" status={l.status}>{copy.states[l.status]}</AdminStatus>
+              {l.admin && <AdminTag>{d.adminAccess}: {A.presets[l.admin]}</AdminTag>}
             </div>
             <h1 className="rt-adm__h1 rt-adm-hero__name">{l.name}</h1>
             <p className="rt-acc__note">{l.email} · Joined {formatDate(l.joinedAt.slice(0, 10))}</p>
@@ -108,7 +108,7 @@ export default function AdminLearner({ id }) {
             {l.organisations.map((o) => (
               <li key={o.id}>
                 <div><span className="rt-adm-strong">{o.name}</span><small>{d.orgTypes[o.type]} · {d.roles[o.role] ?? o.role}{o.jobTitle ? ` (${o.jobTitle})` : ""} · since {formatDate(o.joinedAt.slice(0, 10))}</small></div>
-                <Pill tone={o.status === "active" ? "ok" : o.status === "suspended" || o.status === "rejected" ? "late" : "warn"}>{d.orgStatuses[o.status] ?? o.status}</Pill>
+                <AdminStatus kind="provider" status={o.status}>{d.orgStatuses[o.status] ?? o.status}</AdminStatus>
               </li>
             ))}
           </ul>

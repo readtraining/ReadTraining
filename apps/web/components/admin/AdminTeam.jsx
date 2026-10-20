@@ -9,11 +9,14 @@ import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, formatWhen, Said, TableSkeleton } from "./adminParts";
+import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh } from "./adminParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.team;
 const PRESETS = ["full", "support", "finance", "custom"];
 const presetOptions = PRESETS.map((value) => ({ value, label: copy.presets[value].label, text: copy.presets[value].text }));
+
+const TEAM_SORT = { name: (a) => a.name, access: (a) => a.preset, limit: (a) => (a.preset === "full" ? Infinity : a.refundLimit), last: (a) => (a.lastSignInAt ? Date.parse(a.lastSignInAt) : null) };
 
 // Admin Users & Roles: the real admin team (API admin.team). Each admin with their access, refund limit, two-step sign-in and
 // last sign-in; "Add an admin" for an existing account; per row Change access, Reset two-step sign-in and Remove. Your own row
@@ -24,6 +27,7 @@ export default function AdminTeam() {
   const [form, setForm] = useState(null); // { mode: "add" | "change", userId?, name?, email, preset, permissions, refundLimit }
   const [confirm, setConfirm] = useState(null); // { kind: "remove" | "reset", admin }
   const [said, setSaid] = useState("");
+  const sorter = useSort();
 
   if (list.isLoading) return <TableSkeleton rows={4} />;
   if (list.error) return <ErrorState onRetry={() => list.refetch()} />;
@@ -45,16 +49,16 @@ export default function AdminTeam() {
       {admins.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">{c.name}</th><th scope="col">{c.access}</th><th scope="col">{c.limit}</th><th scope="col">{c.twoStep}</th><th scope="col">{c.last}</th><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
+            <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.access} col="access" sorter={sorter} /><SortTh label={c.limit} col="limit" sorter={sorter} numeric /><th scope="col">{c.twoStep}</th><SortTh label={c.last} col="last" sorter={sorter} numeric /><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
             <tbody>
-              {admins.map((a) => {
+              {sorter.apply(admins, TEAM_SORT).map((a) => {
                 const mine = a.userId === me;
                 return (
                   <tr key={a.userId}>
                     <td data-label={c.name}><span className="rt-adm-strong">{a.name}{mine ? " (you)" : ""}</span><small>{a.email}</small></td>
                     <td data-label={c.access}>{copy.presets[a.preset].label}{a.preset === "custom" && <small>{a.permissions.length} of {switches.length} switches</small>}</td>
                     <td data-label={c.limit}>{a.preset === "full" ? <span className="rt-adm-muted">No limit</span> : a.permissions.includes("refunds") ? `£${a.refundLimit}` : <span className="rt-adm-muted">No refunds</span>}</td>
-                    <td data-label={c.twoStep}>{a.twoStep ? <Pill tone="ok">On</Pill> : a.preset === "full" ? <Pill tone="warn">At next sign-in</Pill> : <Pill tone="muted">Off</Pill>}</td>
+                    <td data-label={c.twoStep}>{a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
                     <td data-label={c.last}>{a.lastSignInAt ? formatWhen(new Date(a.lastSignInAt).getTime()) : <span className="rt-adm-muted">Not yet</span>}</td>
                     <td data-label={mine ? undefined : "Actions"}>
                       {!mine && (

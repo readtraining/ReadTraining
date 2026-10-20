@@ -7,12 +7,12 @@ import { admin as A } from "@/data/admin";
 import { cancelSession, markJoiningSent, setSalesClosed, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Pill, Search, Tabs, getQuery, setQuery, Said } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu } from "./adminParts";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.sessions;
 const TABS = ["upcoming", "week", "cancelled", "venues"];
-const PAGE = 25;
 const MODE = { classroom: "Classroom", online: "Live online" };
 
 // Seats as the business account's places bar (.fb-stack): booked of capacity, orange from 90% full
@@ -34,7 +34,7 @@ export default function AdminSessions() {
   const data = useAdmin();
   const [tab, setTab] = useState("upcoming");
   const [q, setQ] = useState("");
-  const [shown, setShown] = useState(PAGE);
+  const pages = usePaging({ key: "", dir: -1 });
   const [cancelling, setCancelling] = useState(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
@@ -44,7 +44,7 @@ export default function AdminSessions() {
     const t = getQuery("tab");
     if (TABS.includes(t)) setTab(t);
   }, []);
-  if (!data) return null;
+  if (!data) return <TableSkeleton />;
 
   const { sessions, venues } = data;
   const groups = {
@@ -60,7 +60,7 @@ export default function AdminSessions() {
 
   const pick = (t) => {
     setTab(t);
-    setShown(PAGE);
+    pages.restart();
     setQuery("tab", t === "upcoming" ? "" : t);
   };
   const confirmCancel = (e) => {
@@ -78,7 +78,7 @@ export default function AdminSessions() {
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
         <Tabs tabs={tabs} value={tab} onChange={pick} label="Show sessions" />
-        {tab !== "venues" && <Search value={q} onChange={(v) => { setQ(v); setShown(PAGE); }} label={copy.search} />}
+        {tab !== "venues" && <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />}
       </div>
       {tab === "week" && missing > 0 && <p className="rt-adm-item__block">{copy.weekMissing.replace("{n}", `${missing} ${missing === 1 ? "session starts" : "sessions start"}`)}</p>}
       <Said text={said} />
@@ -109,37 +109,36 @@ export default function AdminSessions() {
               <tr><th scope="col">{c.date}</th><th scope="col">{c.course}</th><th scope="col">{c.where}</th><th scope="col">{c.seats}</th><th scope="col">{c.joining}</th><th scope="col"><span className="rt-sr">{c.actions}</span></th></tr>
             </thead>
             <tbody>
-              {list.slice(0, shown).map((s) => (
+              {list.slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((s) => (
                 <tr key={s.id}>
-                  <td data-label={c.date}><span className="rt-adm-strong">{formatDate(s.date)}</span><small>{s.daysAway <= 0 ? "Today" : `In ${s.daysAway} ${s.daysAway === 1 ? "day" : "days"}`}</small></td>
+                  <td data-label={c.date}><span className="rt-adm-strong">{s.date.slice(0, 4) === String(new Date().getFullYear()) ? formatDate(s.date).replace(/ \d{4}$/, "") : formatDate(s.date)}</span><small>{s.daysAway <= 0 ? "Today" : `In ${s.daysAway} ${s.daysAway === 1 ? "day" : "days"}`}</small></td>
                   <td data-label={c.course}><Link href={`/admin/catalogue/${s.courseId}`} className="rt-adm-strong">{s.course}</Link><small>{s.provider}{s.preCourse ? " · Pre-course e-learning" : ""}</small></td>
                   <td data-label={c.where}>{s.mode === "classroom" ? s.city : MODE.online}<small>{s.mode === "classroom" ? s.postcode : s.time}</small></td>
-                  <td data-label={c.seats}>{s.cancelled ? <Pill tone="muted">Cancelled</Pill> : <Seats s={s} />}{s.salesClosed && !s.cancelled && <small>{copy.salesClosed}</small>}</td>
+                  <td data-label={c.seats}>{s.cancelled ? <AdminStatus kind="session" status="cancelled">Cancelled</AdminStatus> : <Seats s={s} />}{s.salesClosed && !s.cancelled && <small>{copy.salesClosed}</small>}</td>
                   <td data-label={c.joining}>
-                    {s.cancelled ? <span className="rt-adm-muted">{s.cancelReason}</span> : s.joiningSent ? <Pill tone="ok">{copy.sent}</Pill> : (
+                    {s.cancelled ? <span className="rt-adm-muted">{s.cancelReason}</span> : s.joiningSent ? <AdminStatus kind="session" status="sent">{copy.sent}</AdminStatus> : (
                       <span className="rt-adm-cellrow">
-                        <Pill tone={s.daysAway <= 6 ? "late" : "muted"}>{copy.notSent}</Pill>
+                        <AdminStatus kind="session" status={s.daysAway <= 6 ? "notSent" : "notSentLater"}>{copy.notSent}</AdminStatus>
                         <button type="button" className="rt-cd__link" onClick={() => { markJoiningSent(s); setSaid(`Joining instructions marked as sent: ${s.course}`); }}>{copy.markSent}</button>
                       </span>
                     )}
                   </td>
                   <td className="rt-biz__act">
                     {!s.cancelled && (
-                      <span className="rt-adm-cellrow -end">
-                        <button type="button" className="rt-cd__link" onClick={() => { setSalesClosed(s, !s.salesClosed); setSaid(`${s.salesClosed ? "Sales opened" : "Sales closed"}: ${s.course}`); }}>{s.salesClosed ? copy.openSales : copy.closeSales}</button>
-                        <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => { setCancelling(s); setReason(""); setError(""); }}>{copy.cancel}</button>
-                      </span>
+                      <RowMenu
+                        label={`Actions for ${s.course}, ${s.date}`}
+                        items={[
+                          { label: s.salesClosed ? copy.openSales : copy.closeSales, onClick: () => { setSalesClosed(s, !s.salesClosed); setSaid(`${s.salesClosed ? "Sales opened" : "Sales closed"}: ${s.course}`); } },
+                          { label: copy.cancel, danger: true, onClick: () => { setCancelling(s); setReason(""); setError(""); } },
+                        ]}
+                      />
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {list.length > shown && (
-            <div className="rt-adm-more">
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setShown((n) => n + PAGE)}>{copy.more} ({list.length - shown} left)</button>
-            </div>
-          )}
+          <div className="rt-adm-more"><Pager paging={pages} total={list.length} label="sessions" /></div>
         </div>
       ) : (
         <EmptyState title="No sessions here." />

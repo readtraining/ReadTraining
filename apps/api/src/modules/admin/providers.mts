@@ -10,6 +10,7 @@ import { logActivity } from '../../lib/activity.mjs'
 import { sendEmail } from '../../lib/email.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
 import { bps, defaultCommission, percent } from './commission.mjs'
+import { orderBy, paging, total, window } from '../../lib/paging.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
 
 // Providers and approvals (Part B, B1): the real provider accounts. Every admin can see them; deciding on an application
@@ -68,31 +69,30 @@ export const providersRouter = createTRPCRouter({
       z.object({
         q: z.string().trim().max(200).optional(),
         tab: z.enum(['applications', 'active', 'suspended', 'rejected']).optional(),
-        cursor: z.object({ at: z.string().datetime({ offset: true }), id: z.string().uuid() }).optional(),
-        limit: z.number().int().min(1).max(100).default(50),
+        sort: z.enum(['applied', 'name', 'status', 'commission']).default('applied'),
+        ...paging,
       }),
     )
     .query(async ({ ctx, input }) => {
       const where = [sql`o.type = 'provider'`]
       if (input.tab) where.push(TABS[input.tab])
-      if (input.cursor) where.push(sql`(o.created_at, o.id) < (${input.cursor.at}::timestamptz, ${input.cursor.id}::uuid)`)
       if (input.q) {
         const like = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(sql`(o.name ilike ${like} or o.slug ilike ${like} or o.mobile ilike ${like} or ow.email ilike ${like} or concat_ws(' ', ow.first_name, ow.last_name) ilike ${like} or o.id::text = ${input.q})`)
       }
-      const rows = await ctx.db.execute<{ id: string; name: string; slug: string; status: Status; created_at: string; status_changed_at: string | null; commission_bps: number | null; owner_id: string | null; email: string | null; first_name: string | null; last_name: string | null; members: number }>(sql`
-        select o.id, o.name, o.slug, o.status, o.created_at, o.status_changed_at, o.commission_bps, ow.user_id owner_id, ow.email, ow.first_name, ow.last_name,
+      const fallback = (await defaultCommission(ctx.db)).bps
+      const sortBy = { applied: sql`o.created_at`, name: sql`lower(o.name)`, status: sql`o.status::text`, commission: sql`coalesce(o.commission_bps, ${fallback})` }[input.sort]
+      const rows = await ctx.db.execute<{ id: string; name: string; slug: string; status: Status; created_at: string; total: number; status_changed_at: string | null; commission_bps: number | null; owner_id: string | null; email: string | null; first_name: string | null; last_name: string | null; members: number }>(sql`
+        select o.id, o.name, o.slug, o.status, o.created_at, ${total} total, o.status_changed_at, o.commission_bps, ow.user_id owner_id, ow.email, ow.first_name, ow.last_name,
                (select count(*)::int from public.organisation_members m where m.organisation_id = o.id) members
         from public.organisations o ${OWNER}
         where ${sql.join(where, sql` and `)}
-        order by o.created_at desc, o.id desc
-        limit ${input.limit + 1}`)
-      const page = rows.slice(0, input.limit)
-      const last = page[page.length - 1]
-      const fallback = (await defaultCommission(ctx.db)).bps
+        order by ${orderBy(sortBy, input.dir, sql`o.id`)}
+        ${window(input.page, input.limit)}`)
       return {
+        total: rows[0]?.total ?? 0,
         defaultBps: fallback,
-        providers: page.map((r) => ({
+        providers: rows.map((r) => ({
           id: r.id,
           name: r.name,
           slug: r.slug,
@@ -104,7 +104,6 @@ export const providersRouter = createTRPCRouter({
           commissionBps: r.commission_bps ?? fallback,
           ownCommission: r.commission_bps !== null,
         })),
-        next: rows.length > input.limit ? { at: iso(last.created_at)!, id: last.id } : null,
       }
     }),
 

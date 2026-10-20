@@ -1,12 +1,13 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { ledgerEntries, organisations, payouts, platformSettings, sql } from '@readtraining/db'
+import { ledgerEntries, organisations, payouts, platformSettings, sql, type SQL } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { payable } from '../../lib/money.mjs'
+import { orderBy, paging, total, window } from '../../lib/paging.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
 import { DEFAULT_FEES, FEES_KEY, fees, newRef } from './money.mjs'
 
@@ -24,21 +25,27 @@ const who = (alias: string) => sql.raw(`(select nullif(trim(concat_ws(' ', p.fir
 const p = (n: number) => n / 100
 
 // every provider with money in the ledger: balance up to the day, held back, already waiting in unsent payouts, and payable now
+// the provider's share of open amounts on their orders (what they would lose if each went against them): open refund
+// requests, or open disputes. Each order's own split is used, so a Klarna order's 6% fee and a card order's 3% both count.
+const heldFrom = (open: SQL) => sql`(select coalesce(sum(round(x.amount_pence::numeric * lp.provider_pence / nullif(lp.gross_pence, 0))), 0)
+  from (${open}) x
+  join public.orders o on o.id = x.order_id
+  join ${ledgerEntries} lp on lp.order_id = o.id and lp.type = 'purchase'
+  where o.provider_id = g.id)::int`
 async function owed(db: typeof Db, periodEnd: string) {
-  const rows = await db.execute<{ id: string; name: string; slug: string; status: string; balance: number; held: number; waiting: number }>(sql`
+  const rows = await db.execute<{ id: string; name: string; slug: string; status: string; balance: number; held_refunds: number; held_disputes: number; waiting: number }>(sql`
     select g.id, g.name, g.slug, g.status,
       (select coalesce(sum(l.provider_pence), 0) from ${ledgerEntries} l where l.provider_id = g.id and l.at < ${endOf(periodEnd)})::int balance,
-      (select coalesce(sum(round(x.amount_pence::numeric * lp.provider_pence / nullif(lp.gross_pence, 0))), 0)
-         from (select r.order_id, r.amount_pence from public.refunds r where r.status = 'requested'
-               union all select d.order_id, d.amount_pence from public.disputes d where d.status = 'open') x
-         join public.orders o on o.id = x.order_id
-         join ${ledgerEntries} lp on lp.order_id = o.id and lp.type = 'purchase'
-         where o.provider_id = g.id)::int held,
+      ${heldFrom(sql`select r.order_id, r.amount_pence from public.refunds r where r.status = 'requested'`)} held_refunds,
+      ${heldFrom(sql`select d.order_id, d.amount_pence from public.disputes d where d.status = 'open'`)} held_disputes,
       (select coalesce(sum(amount_pence), 0) from ${payouts} w where w.provider_id = g.id and w.status <> 'sent')::int waiting
     from ${organisations} g
     where g.type = 'provider' and exists (select 1 from ${ledgerEntries} l where l.provider_id = g.id)
     order by g.name`)
-  return rows.map((r) => ({ ...r, payable: payable(r.balance - r.waiting, r.held) }))
+  return rows.map((r) => {
+    const held = r.held_refunds + r.held_disputes
+    return { ...r, held, payable: payable(r.balance - r.waiting, held) }
+  })
 }
 
 const STATUS = ['draft', 'approved', 'held', 'sent'] as const
@@ -55,7 +62,7 @@ export const payoutsRouter = createTRPCRouter({
     .input(z.object({ periodEnd: day }))
     .query(async ({ ctx, input }) => {
       const list = await owed(ctx.db, input.periodEnd)
-      return list.map((r) => ({ providerId: r.id, name: r.name, slug: r.slug, status: r.status, balance: p(r.balance), held: p(r.held), waiting: p(r.waiting), payable: p(r.payable) }))
+      return list.map((r) => ({ providerId: r.id, name: r.name, slug: r.slug, status: r.status, balance: p(r.balance), held: p(r.held), heldRefunds: p(r.held_refunds), heldDisputes: p(r.held_disputes), waiting: p(r.waiting), payable: p(r.payable) }))
     }),
 
   list: adminProcedure('admin.orders.view')
@@ -90,7 +97,7 @@ export const payoutsRouter = createTRPCRouter({
       const entries = await ctx.db.execute<{ id: number; at: string; type: string; gross_pence: number; provider_pence: number; note: string | null; ref: string | null }>(sql`
         select l.id, l.at, l.type, l.gross_pence, l.provider_pence, l.note, o.ref from ${ledgerEntries} l left join public.orders o on o.id = l.order_id
         where l.provider_id = ${w.provider_id}::uuid and l.type <> 'payout' and l.at < ${endOf(w.period_end)} ${prev?.period_end ? sql`and l.at >= ${endOf(prev.period_end)}` : sql``}
-        order by l.id`)
+        order by l.at, l.id`)
       return { id: w.id, ref: w.ref, provider: w.provider, periodEnd: w.period_end, amount: p(w.amount_pence), status: w.status, entries: entries.map((e) => ({ id: Number(e.id), at: new Date(e.at).toISOString(), type: e.type, gross: p(e.gross_pence), provider: p(e.provider_pence), note: e.note, ref: e.ref })) }
     }),
 
@@ -170,27 +177,31 @@ export const payoutsRouter = createTRPCRouter({
 
 const TYPES = ['purchase', 'refund', 'cancel', 'dispute', 'charge', 'adjust', 'payout'] as const
 export const ledgerRouter = createTRPCRouter({
-  // Every entry, newest first, a page at a time; by provider and type. Totals for what is shown.
+  // Every entry in numbered pages, newest or oldest first by date (an entry can be dated earlier than it was saved, like a
+  // payout up to a past day); by provider and type. Totals for everything that matches, and how many of each type.
   list: adminProcedure('admin.orders.view')
-    .input(z.object({ providerId: z.string().uuid().optional(), type: z.enum(TYPES).optional(), before: z.number().int().positive().optional(), limit: z.number().int().min(1).max(200).default(100) }))
+    .input(z.object({ providerId: z.string().uuid().optional(), type: z.enum(TYPES).optional(), ...paging }))
     .query(async ({ ctx, input }) => {
       const where = [sql`true`]
       if (input.providerId) where.push(sql`l.provider_id = ${input.providerId}::uuid`)
       if (input.type) where.push(sql`l.type = ${input.type}`)
       const totalsWhere = sql.join(where, sql` and `)
-      if (input.before) where.push(sql`l.id < ${input.before}`)
-      const rows = await ctx.db.execute<{ id: number; at: string; type: string; gross_pence: number; fee_pence: number; commission_pence: number; provider_pence: number; note: string | null; ref: string | null; payout_ref: string | null; provider: string | null; by: string | null }>(sql`
-        select l.id, l.at, l.type, l.gross_pence, l.fee_pence, l.commission_pence, l.provider_pence, l.note, o.ref, w.ref payout_ref, g.name provider, ${who('l.created_by')} as "by"
+      const rows = await ctx.db.execute<{ id: number; total: number; at: string; type: string; gross_pence: number; fee_pence: number; commission_pence: number; provider_pence: number; note: string | null; ref: string | null; payout_ref: string | null; provider: string | null; by: string | null }>(sql`
+        select l.id, ${total} total, l.at, l.type, l.gross_pence, l.fee_pence, l.commission_pence, l.provider_pence, l.note, o.ref, w.ref payout_ref, g.name provider, ${who('l.created_by')} as "by"
         from ${ledgerEntries} l left join public.orders o on o.id = l.order_id left join ${payouts} w on w.id = l.payout_id left join ${organisations} g on g.id = l.provider_id
-        where ${sql.join(where, sql` and `)} order by l.id desc limit ${input.limit + 1}`)
+        where ${sql.join(where, sql` and `)} order by ${orderBy(sql`l.at`, input.dir, sql`l.id`)} ${window(input.page, input.limit)}`)
       const [t] = await ctx.db.execute<{ gross: number; fee: number; commission: number; provider: number }>(sql`
         select coalesce(sum(gross_pence), 0)::int gross, coalesce(sum(fee_pence), 0)::int fee, coalesce(sum(commission_pence), 0)::int commission, coalesce(sum(provider_pence), 0)::int provider
         from ${ledgerEntries} l where ${totalsWhere}`)
-      const page = rows.slice(0, input.limit)
+      const byType = await ctx.db.execute<{ type: (typeof TYPES)[number]; n: number }>(sql`
+        select l.type, count(*)::int n from ${ledgerEntries} l where ${input.providerId ? sql`l.provider_id = ${input.providerId}::uuid` : sql`true`} group by l.type`)
+      const counts: Record<(typeof TYPES)[number] | 'all', number> = { all: 0, purchase: 0, refund: 0, cancel: 0, dispute: 0, charge: 0, adjust: 0, payout: 0 }
+      for (const r of byType) (counts[r.type] = r.n), (counts.all += r.n)
       return {
+        counts,
+        total: rows[0]?.total ?? 0,
         totals: { gross: p(t.gross), fee: p(t.fee), commission: p(t.commission), provider: p(t.provider) },
-        entries: page.map((e) => ({ id: Number(e.id), at: new Date(e.at).toISOString(), type: e.type, gross: p(e.gross_pence), fee: p(e.fee_pence), commission: p(e.commission_pence), provider: p(e.provider_pence), note: e.note, orderRef: e.ref, payoutRef: e.payout_ref, providerName: e.provider, by: e.by })),
-        next: rows.length > input.limit ? Number(page[page.length - 1].id) : null,
+        entries: rows.map((e) => ({ id: Number(e.id), at: new Date(e.at).toISOString(), type: e.type, gross: p(e.gross_pence), fee: p(e.fee_pence), commission: p(e.commission_pence), provider: p(e.provider_pence), note: e.note, orderRef: e.ref, payoutRef: e.payout_ref, providerName: e.provider, by: e.by })),
       }
     }),
 

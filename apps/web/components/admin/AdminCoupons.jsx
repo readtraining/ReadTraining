@@ -12,13 +12,14 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, Said, Search, TableSkeleton, Tabs } from "./adminParts";
+import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery } from "./adminParts";
 import { describedBy, field } from "./contentParts";
+import DateField from "./DateField";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.coupons;
 const f = copy.fields;
 const TABS = Object.keys(copy.tabs);
-const TONE = { live: "ok", scheduled: "info", ended: "muted", off: "muted" };
 const BLANK = { code: "", kind: "percent", value: "", startsOn: "", endsOn: "", usageLimit: "", scope: "all", categories: [], courses: [] };
 
 export const discountText = (c) => (c.kind === "percent" ? `${c.value}% off` : `${formatPrice(c.value)} off`);
@@ -32,6 +33,9 @@ const datesText = (c) =>
     : c.endsOn ? copy.until.replace("{date}", formatDate(c.endsOn))
     : copy.always;
 
+// what each sortable column sorts by
+const COUPON_SORT = { code: (x) => x.code, discount: (x) => (x.kind === "percent" ? x.value : x.value / 1000), dates: (x) => x.endsOn || x.startsOn, used: (x) => x.used, status: (x) => x.status };
+
 // Coupons (Part B, B3): the real list (API admin.coupons), by status with counts, searchable by code. With the "coupons" switch an
 // admin creates one, edits it, or turns it off and on again (never deletes it). Checkout (still demo) applies them once payments
 // are real, so "Used" stays at 0 until then.
@@ -43,8 +47,14 @@ export default function AdminCoupons() {
   const [search, setSearch] = useState("");
   const [sheet, setSheet] = useState(null); // null, or { coupon } (undefined coupon = a new one)
   const [said, setSaid] = useState("");
+  const sorter = useSort();
   const utils = api.useUtils();
   const setActive = api.admin.coupons.setActive.useMutation();
+  // a coupon opened from the admin search arrives with its code (?q=)
+  useEffect(() => {
+    const code = getQuery("q");
+    if (code) setQ(code);
+  }, []);
   useEffect(() => {
     const t = setTimeout(() => setSearch(q.trim()), 250);
     return () => clearTimeout(t);
@@ -63,7 +73,7 @@ export default function AdminCoupons() {
   };
   const counts = list.data?.counts;
   const total = counts ? counts.live + counts.scheduled + counts.ended + counts.off : undefined;
-  const rows = list.data?.coupons ?? [];
+  const rows = sorter.apply(list.data?.coupons ?? [], COUPON_SORT);
   const c = copy.columns;
 
   return (
@@ -85,16 +95,16 @@ export default function AdminCoupons() {
       ) : rows.length ? (
         <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">{c.code}</th><th scope="col">{c.discount}</th><th scope="col">{c.applies}</th><th scope="col">{c.dates}</th><th scope="col">{c.used}</th><th scope="col">{c.status}</th>{canEdit && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
+            <thead><tr><SortTh label={c.code} col="code" sorter={sorter} /><SortTh label={c.discount} col="discount" sorter={sorter} numeric /><th scope="col">{c.applies}</th><SortTh label={c.dates} col="dates" sorter={sorter} /><SortTh label={c.used} col="used" sorter={sorter} numeric /><SortTh label={c.status} col="status" sorter={sorter} />{canEdit && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
             <tbody>
               {rows.map((x) => (
                 <tr key={x.id}>
-                  <td data-label={c.code}><span className="rt-adm-coupon">{x.code}</span>{x.createdBy && <small>{x.createdBy}</small>}</td>
+                  <td data-label={c.code}><AdminTag code>{x.code}</AdminTag>{x.createdBy && <small>{x.createdBy}</small>}</td>
                   <td data-label={c.discount}>{discountText(x)}</td>
                   <td data-label={c.applies}>{appliesText(x)}</td>
                   <td data-label={c.dates}>{datesText(x)}</td>
                   <td data-label={c.used}>{x.usageLimit ? copy.of.replace("{used}", x.used).replace("{limit}", x.usageLimit) : copy.unlimited.replace("{used}", x.used)}</td>
-                  <td data-label={c.status}><Pill tone={TONE[x.status]}>{copy.statuses[x.status]}</Pill></td>
+                  <td data-label={c.status}><AdminStatus kind="coupon" status={x.status}>{copy.statuses[x.status]}</AdminStatus></td>
                   {canEdit && (
                     <td data-label="Actions">
                       <RowMenu label={`Actions for ${x.code}`} items={[{ label: copy.edit, onClick: () => setSheet({ coupon: x }) }, { label: x.status === "off" ? copy.turnOn : copy.turnOff, onClick: () => toggle(x), danger: x.status !== "off" }]} />
@@ -178,8 +188,8 @@ function CouponForm({ coupon, onDone }) {
         <input id="rt-cp-value" type="text" inputMode="decimal" className="rt-adm-num" value={v.value} onChange={set("value")} aria-invalid={errors.value ? true : undefined} aria-describedby={describedBy("rt-cp-value", true, errors.value)} />
       ))}
       <div className="rt-adm-couponform__two">
-        {field("rt-cp-startsOn", f.startsOn.label, f.startsOn.hint, errors.startsOn, input("startsOn", { type: "date" }))}
-        {field("rt-cp-endsOn", f.endsOn.label, f.endsOn.hint, errors.endsOn, input("endsOn", { type: "date", min: v.startsOn || undefined }))}
+        {field("rt-cp-startsOn", f.startsOn.label, f.startsOn.hint, errors.startsOn, <DateField id="rt-cp-startsOn" clearable value={v.startsOn} onChange={(d) => setV((x) => ({ ...x, startsOn: d }))} invalid={Boolean(errors.startsOn)} describedBy={describedBy("rt-cp-startsOn", f.startsOn.hint, errors.startsOn)} />)}
+        {field("rt-cp-endsOn", f.endsOn.label, f.endsOn.hint, errors.endsOn, <DateField id="rt-cp-endsOn" clearable min={v.startsOn || undefined} value={v.endsOn} onChange={(d) => setV((x) => ({ ...x, endsOn: d }))} invalid={Boolean(errors.endsOn)} describedBy={describedBy("rt-cp-endsOn", f.endsOn.hint, errors.endsOn)} />)}
       </div>
       {field("rt-cp-usageLimit", f.usageLimit.label, f.usageLimit.hint, errors.usageLimit, input("usageLimit", { type: "text", inputMode: "numeric", className: "rt-adm-num" }))}
       <Choice name="rt-cp-scope" legend={f.scope.label} value={v.scope} onChange={(k) => setV((x) => ({ ...x, scope: k }))} options={["all", "categories", "courses"].map((k) => ({ value: k, label: f.scope[k] }))} />

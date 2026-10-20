@@ -9,8 +9,9 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { SITE_URL } from "@/lib/seo";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, TableSkeleton } from "./adminParts";
+import { TableSkeleton } from "./adminParts";
 import { SaveRow, describedBy, field, useSave } from "./contentParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.platform;
 const LIMITS = { homeTitle: [10, 70], homeDescription: [50, 160], siteDescription: [50, 160] };
@@ -115,7 +116,7 @@ function Services({ list }) {
               <small>{s.used === "now" ? c.now : c.later}</small>
               {!s.connected && <small className="rt-adm-svc__vars">{c.settings} {s.missing.map((m) => <code key={m}>{m}</code>)}</small>}
             </div>
-            <Pill tone={s.connected ? "ok" : s.used === "now" ? "late" : "muted"}>{s.connected ? c.connected : c.missing}</Pill>
+            <AdminStatus kind="service" status={s.connected ? "connected" : s.used === "now" ? "needed" : "missing"}>{s.connected ? c.connected : c.missing}</AdminStatus>
           </li>
         ))}
       </ul>

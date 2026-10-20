@@ -9,6 +9,7 @@ import { can } from '@readtraining/permissions'
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { reversalOf, splitOf, type Split } from '../../lib/money.mjs'
+import { orderBy, paging, total, window } from '../../lib/paging.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
 import { defaultCommission } from './commission.mjs'
 
@@ -78,6 +79,7 @@ async function giveBack(tx: Tx, o: OrderRow, type: 'refund' | 'cancel' | 'disput
 }
 
 const ORDER_STATUS = ['paid', 'part_refunded', 'refunded', 'cancelled'] as const
+const ORDER_SORT = { booked: sql`o.created_at`, ref: sql`o.ref`, buyer: sql`lower(o.buyer_name)`, total: sql`o.gross_pence`, status: sql`o.status::text` }
 const who = (alias: string) => sql.raw(`(select nullif(trim(concat_ws(' ', p.first_name, p.last_name)), '') from public.profiles p where p.id = ${alias})`)
 
 export const ordersRouter = createTRPCRouter({
@@ -88,34 +90,31 @@ export const ordersRouter = createTRPCRouter({
         q: z.string().trim().max(120).optional(),
         status: z.enum(ORDER_STATUS).optional(),
         providerId: z.string().uuid().optional(),
-        cursor: z.object({ at: z.string().datetime({ offset: true }), id: z.string().uuid() }).optional(),
-        limit: z.number().int().min(1).max(100).default(50),
+        sort: z.enum(['booked', 'ref', 'buyer', 'total', 'status']).default('booked'),
+        ...paging,
       }),
     )
     .query(async ({ ctx, input }) => {
       const where = [sql`true`]
       if (input.status) where.push(sql`o.status = ${input.status}`)
       if (input.providerId) where.push(sql`o.provider_id = ${input.providerId}::uuid`)
-      if (input.cursor) where.push(sql`(o.created_at, o.id) < (${input.cursor.at}::timestamptz, ${input.cursor.id}::uuid)`)
       if (input.q) {
         const like = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(sql`(o.ref ilike ${like} or o.buyer_name ilike ${like} or o.buyer_email ilike ${like} or o.course_title ilike ${like} or coalesce(o.buyer_company, '') ilike ${like})`)
       }
-      const rows = await ctx.db.execute<{ id: string; ref: string; buyer_name: string; buyer_email: string; buyer_company: string | null; course_title: string; starts_on: string | null; quantity: number; gross_pence: number; method: string; status: string; created_at: string; provider: string; booked_by: string | null }>(sql`
-        select o.id, o.ref, o.buyer_name, o.buyer_email, o.buyer_company, o.course_title, to_char(o.starts_on, 'YYYY-MM-DD') starts_on, o.quantity,
+      const rows = await ctx.db.execute<{ id: string; ref: string; total: number; buyer_name: string; buyer_email: string; buyer_company: string | null; course_title: string; starts_on: string | null; quantity: number; gross_pence: number; method: string; status: string; created_at: string; provider: string; booked_by: string | null }>(sql`
+        select o.id, o.ref, ${total} total, o.buyer_name, o.buyer_email, o.buyer_company, o.course_title, to_char(o.starts_on, 'YYYY-MM-DD') starts_on, o.quantity,
                o.gross_pence, o.method, o.status, o.created_at, g.name provider, ${who('o.booked_by')} booked_by
         from ${orders} o join ${organisations} g on g.id = o.provider_id
         where ${sql.join(where, sql` and `)}
-        order by o.created_at desc, o.id desc limit ${input.limit + 1}`)
+        order by ${orderBy(ORDER_SORT[input.sort], input.dir, sql`o.id`)} ${window(input.page, input.limit)}`)
       const [counts] = await ctx.db.execute<Record<(typeof ORDER_STATUS)[number] | 'all', number>>(sql`
         select count(*)::int "all", count(*) filter (where status = 'paid')::int paid, count(*) filter (where status = 'part_refunded')::int part_refunded,
                count(*) filter (where status = 'refunded')::int refunded, count(*) filter (where status = 'cancelled')::int cancelled from ${orders}`)
-      const page = rows.slice(0, input.limit)
-      const last = page[page.length - 1]
       return {
         counts,
-        orders: page.map((r) => ({ id: r.id, ref: r.ref, buyer: { name: r.buyer_name, email: r.buyer_email, company: r.buyer_company }, course: r.course_title, startsOn: r.starts_on, quantity: r.quantity, gross: r.gross_pence / 100, method: r.method, status: r.status, at: new Date(r.created_at).toISOString(), provider: r.provider, bookedBy: r.booked_by })),
-        next: rows.length > input.limit ? { at: new Date(last.created_at).toISOString(), id: last.id } : null,
+        total: rows[0]?.total ?? 0,
+        orders: rows.map((r) => ({ id: r.id, ref: r.ref, buyer: { name: r.buyer_name, email: r.buyer_email, company: r.buyer_company }, course: r.course_title, startsOn: r.starts_on, quantity: r.quantity, gross: r.gross_pence / 100, method: r.method, status: r.status, at: new Date(r.created_at).toISOString(), provider: r.provider, bookedBy: r.booked_by })),
       }
     }),
 
@@ -142,7 +141,7 @@ export const ordersRouter = createTRPCRouter({
       const m = await moneyOf(ctx.db, o)
       const ledger = await ctx.db.execute<{ id: number; at: string; type: string; gross_pence: number; fee_pence: number; commission_pence: number; provider_pence: number; note: string | null; by: string | null }>(sql`
         select l.id, l.at, l.type, l.gross_pence, l.fee_pence, l.commission_pence, l.provider_pence, l.note, ${who('l.created_by')} as "by"
-        from ${ledgerEntries} l where l.order_id = ${o.id}::uuid order by l.id`)
+        from ${ledgerEntries} l where l.order_id = ${o.id}::uuid order by l.at, l.id`)
       const refundRows = await ctx.db.execute<{ id: string; amount_pence: number; reason: string; status: string; created_at: string; decided_at: string | null; decision_note: string | null; requested_by_id: string | null; requested_by: string | null; decided_by: string | null }>(sql`
         select r.id, r.amount_pence, r.reason, r.status, r.created_at, r.decided_at, r.decision_note, r.requested_by requested_by_id, ${who('r.requested_by')} requested_by, ${who('r.decided_by')} decided_by
         from ${refunds} r where r.order_id = ${o.id}::uuid order by r.created_at desc`)

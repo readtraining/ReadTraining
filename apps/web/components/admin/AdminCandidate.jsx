@@ -7,10 +7,10 @@ import { useAdmin } from "@/lib/admin";
 import { addCandidateNote, moveIntro, offerRole, recordConsent, setCandidateStatus } from "@/lib/adminWork";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Pill, formatWhen, Said } from "./adminParts";
-import { CANDIDATE_TONE } from "./AdminJobs";
+import { formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = W.jobs;
 const d = copy.detail;
@@ -31,7 +31,7 @@ export default function AdminCandidate({ reference }) {
   const offerRef = useRef(null);
   const consentRef = useRef(null);
   const noteRef = useRef(null);
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const c = data.candidates.find((x) => x.ref === reference);
   if (!c) return <EmptyState title="This candidate was not found." action={{ href: "/admin/jobs", label: d.back }} />;
 
@@ -82,7 +82,7 @@ export default function AdminCandidate({ reference }) {
       <section className="rt-acc__card rt-adm-hero" aria-label="Candidate">
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone={CANDIDATE_TONE[c.status] || "info"}>{copy.statuses[c.status]}</Pill>
+            <AdminStatus kind="candidate" status={c.status}>{copy.statuses[c.status]}</AdminStatus>
             <span className="rt-adm-item__when">Applied {formatWhen(c.at)}</span>
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name">{c.name}</h1>
@@ -134,7 +134,7 @@ export default function AdminCandidate({ reference }) {
                     <small>{i.consent ? `Said yes ${formatWhen(i.consent.at)} · ${i.consent.how}` : "No yes recorded yet"}</small>
                   </div>
                   <div className="rt-adm-intro__side">
-                    <Pill tone={i.status === "started" ? "ok" : i.status === "asked" ? "warn" : "info"}>{copy.introStatuses[i.status]}</Pill>
+                    <AdminStatus kind="intro" status={i.status}>{copy.introStatuses[i.status]}</AdminStatus>
                     {i.status === "asked" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setConsentFor(i.role); setErrors({}); }}>{d.consentSave}</button>}
                     {n && <button type="button" className="button -sm -purple-1 text-white" onClick={() => { moveIntro(c, i.role, n[0]); setSaid(n[1]); }}>{n[1]}</button>}
                     {i.status === "asked" && <span className="rt-adm-locked"><i className="fa fa-lock" aria-hidden="true"></i>{d.introBlocked}</span>}

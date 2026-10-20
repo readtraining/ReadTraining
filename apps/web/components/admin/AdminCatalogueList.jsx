@@ -9,7 +9,8 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, RowMenu, Said, TableSkeleton } from "./adminParts";
+import { RowMenu, Said, TableSkeleton } from "./adminParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.catalogue.list;
 const RENAMEABLE = new Set(["category", "subcategory", "topic"]);
@@ -71,7 +72,7 @@ export default function AdminCatalogueList() {
   const label = (row) => (
     <span className="rt-adm-cat__name">
       <span className="rt-adm-strong">{row.name}</span>
-      {!row.active && <Pill tone="muted">{copy.retired}</Pill>}
+      {!row.active && <AdminStatus kind="catalogue" status="retired">{copy.retired}</AdminStatus>}
       <small>{row.slug}</small>
     </span>
   );

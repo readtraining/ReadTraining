@@ -12,13 +12,16 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, Said, TableSkeleton, Tabs, formatWhen } from "./adminParts";
+import { Said, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
-import { PAYOUT_TONE, toPence, useMoneyRefresh } from "./moneyParts";
+import { toPence, useMoneyRefresh } from "./moneyParts";
+import DateField from "./DateField";
+import { AdminStatus } from "./AdminStatus";
 
 const P = A.payouts;
 const L = A.ledger;
+const OWED_SORT = { provider: (r) => r.name, balance: (r) => r.balance, held: (r) => r.held, waiting: (r) => r.waiting, payable: (r) => r.payable };
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 
 // Payouts (Part B, B4; API admin.payouts): what each provider is owed up to a day (their ledger balance less holds and payouts
@@ -32,6 +35,7 @@ export function AdminPayouts() {
   const [said, setSaid] = useState("");
   const [holding, setHolding] = useState(null);
   const [viewing, setViewing] = useState(null);
+  const sorter = useSort();
   const owed = api.admin.payouts.preview.useQuery({ periodEnd: day });
   const list = api.admin.payouts.list.useQuery({ status: tab });
   const run = api.admin.payouts.run.useMutation();
@@ -60,23 +64,24 @@ export function AdminPayouts() {
         <div className="rt-acc__cardhead">
           <h2 className="rt-acc__h2" id="rt-po-owed-h">{P.owed}</h2>
           <div className="rt-adm-toolbar__end">
-            <div className="rt-adm-inline">
+            <div className="rt-adm-labelled">
               <label htmlFor="rt-po-day">{P.upTo}</label>
-              <input id="rt-po-day" type="date" max={today()} value={day} onChange={(e) => e.target.value && setDay(e.target.value)} />
+              <DateField id="rt-po-day" compact max={today()} value={day} onChange={(v) => v && setDay(v)} />
             </div>
             {perms.includes("payouts") && <button type="button" className="button -md -purple-1 text-white" disabled={run.isPending || !payable} onClick={() => act(async () => { const r = await run.mutateAsync({ periodEnd: day }); if (!r.created) throw new Error(P.runNone); setTab("draft"); return r; }, P.runDone.replace("{n}", owed.data.filter((r) => r.payable > 0).length))}>{P.run}{payable ? ` (${formatPrice(payable)})` : ""}</button>}
           </div>
         </div>
+        {perms.includes("payouts") && owed.data && !payable && <p className="rt-adm-item__hint">{P.nothingPayable}</p>}
         <p className="rt-acc__note rt-adm-cardnote">{P.owedNote}</p>
         {owed.error ? <ErrorState inCard onRetry={() => owed.refetch()} /> : owed.isLoading ? <TableSkeleton rows={3} /> : owed.data.length ? (
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">{c.provider}</th><th scope="col">{c.balance}</th><th scope="col">{c.held}</th><th scope="col">{c.waiting}</th><th scope="col">{c.payable}</th></tr></thead>
+            <thead><tr><SortTh label={c.provider} col="provider" sorter={sorter} /><SortTh label={c.balance} col="balance" sorter={sorter} numeric /><SortTh label={c.held} col="held" sorter={sorter} numeric /><SortTh label={c.waiting} col="waiting" sorter={sorter} numeric /><SortTh label={c.payable} col="payable" sorter={sorter} numeric /></tr></thead>
             <tbody>
-              {owed.data.map((r) => (
+              {sorter.apply(owed.data, OWED_SORT).map((r) => (
                 <tr key={r.providerId}>
                   <td data-label={c.provider}><Link href={`/admin/providers/${r.slug}`} className="rt-adm-strong">{r.name}</Link>{r.status !== "active" && <small>{A.providers.statuses[r.status]}</small>}</td>
                   <td data-label={c.balance} className="rt-adm-num-cell">{formatPrice(r.balance)}</td>
-                  <td data-label={c.held} className="rt-adm-num-cell">{r.held ? formatPrice(r.held) : "–"}</td>
+                  <td data-label={c.held} className="rt-adm-num-cell">{r.held ? <>{formatPrice(r.held)}<small>{[r.heldRefunds && P.heldRefunds.replace("{n}", formatPrice(r.heldRefunds)), r.heldDisputes && P.heldDisputes.replace("{n}", formatPrice(r.heldDisputes))].filter(Boolean).join(" · ")}</small></> : "–"}</td>
                   <td data-label={c.waiting} className="rt-adm-num-cell">{r.waiting ? formatPrice(r.waiting) : "–"}</td>
                   <td data-label={c.payable} className="rt-adm-num-cell"><strong>{formatPrice(r.payable)}</strong></td>
                 </tr>
@@ -93,7 +98,7 @@ export function AdminPayouts() {
             <li key={w.id} className="rt-acc__card rt-adm-item">
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
-                  <Pill tone={PAYOUT_TONE[w.status]}>{P.statuses[w.status]}</Pill>
+                  <AdminStatus kind="payout" status={w.status}>{P.statuses[w.status]}</AdminStatus>
                   <span className="rt-adm-item__when">{w.ref} · {c.period} {formatDate(w.periodEnd)}</span>
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{formatPrice(w.amount)} <span className="rt-adm-muted">to {w.provider}</span></p>
@@ -104,7 +109,7 @@ export function AdminPayouts() {
                   {w.heldBack > 0 && ` · ${formatPrice(w.heldBack)} held back`}
                 </p>
                 {w.holdReason && <p className="rt-adm-item__block"><strong>Held:</strong> {w.holdReason}</p>}
-                <button type="button" className="rt-cd__link" onClick={() => setViewing(w)}>{P.covers}</button>
+                <button type="button" className="fb-textlink" onClick={() => setViewing(w)}>{P.coversLink}<i className="icon-arrow-right text-12" aria-hidden="true"></i></button>
               </div>
               <div className="rt-adm-item__actions">
                 {w.status === "draft" && perms.includes("payouts") && (w.mine ? <p className="rt-adm-item__hint">{P.yours}</p> : <button type="button" className="button -sm -purple-1 text-white" onClick={() => act(() => approve.mutateAsync({ id: w.id }), P.approved)} disabled={approve.isPending}>{P.approve}</button>)}
@@ -116,7 +121,7 @@ export function AdminPayouts() {
             </li>
           ))}
         </ul>
-      ) : <EmptyState title={P.none} />}
+      ) : <EmptyState title={P.emptyTabs[tab][0]} text={P.emptyTabs[tab][1]} />}
 
       <Sheet open={Boolean(holding)} onClose={() => setHolding(null)} title={P.holdTitle} closeLabel="Close">
         {holding && <HoldForm payout={holding} onDone={(m) => { setHolding(null); setSaid(m); }} />}
@@ -164,7 +169,7 @@ function Covered({ id }) {
   return <div className="rt-biz__tablecard"><LedgerTable entries={q.data.entries.map((e) => ({ ...e, orderRef: e.ref, fee: 0, commission: 0 }))} showOrder /></div>;
 }
 
-// Transactions (API admin.ledger): the whole ledger, newest first, by provider and type, with totals; "Adjust a balance" (the
+// Transactions (API admin.ledger): the whole ledger in numbered pages, newest or oldest first, by provider and type, with totals; "Adjust a balance" (the
 // "adjustments" switch) adds an adjustment or a commission charge with a note.
 export function AdminTransactions() {
   const me = useAdminAccess();
@@ -173,18 +178,28 @@ export function AdminTransactions() {
   const [providerId, setProviderId] = useState("");
   const [adjusting, setAdjusting] = useState(false);
   const [said, setSaid] = useState("");
-  const providers = api.admin.providers.list.useQuery({ limit: 100 });
-  const list = api.admin.ledger.list.useInfiniteQuery({ type: type === "all" ? undefined : type, providerId: providerId || undefined, limit: 100 }, { getNextPageParam: (p) => p.next ?? undefined, placeholderData: (prev) => prev });
-  const entries = list.data?.pages.flatMap((p) => p.entries) ?? [];
-  const totals = list.data?.pages[0]?.totals;
+  const paging = usePaging({ key: "when", dir: -1 });
+  const providers = api.admin.providers.list.useQuery({ limit: 100, sort: "name", dir: "asc" });
+  const { sort, ...pageInput } = paging.input; // the ledger sorts by date only
+  const list = api.admin.ledger.list.useQuery({ type: type === "all" ? undefined : type, providerId: providerId || undefined, ...pageInput }, { enabled: paging.ready, placeholderData: (prev) => prev });
+  const entries = list.data?.entries ?? [];
+  const totals = list.data?.totals;
+  const pickType = (t) => {
+    setType(t);
+    paging.restart();
+  };
+  const pickProvider = (id) => {
+    setProviderId(id);
+    paging.restart();
+  };
   const options = [{ value: "", label: L.allProviders }, ...(providers.data?.providers ?? []).map((p) => ({ value: p.id, label: p.name }))];
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
       <div className="rt-adm-toolbar">
-        <Tabs tabs={[{ key: "all", label: L.all }, ...Object.keys(L.types).map((key) => ({ key, label: L.types[key] }))]} value={type} onChange={setType} label="Show transactions of this type" />
+        <Tabs tabs={[{ key: "all", label: L.all, count: list.data?.counts?.all }, ...Object.keys(L.types).map((key) => ({ key, label: L.types[key], count: list.data?.counts?.[key] }))]} value={type} onChange={pickType} label="Show transactions of this type" />
         <div className="rt-adm-toolbar__end">
-          <div className="rt-adm-select"><FieldSelect id="rt-lg-provider" label={L.provider} value={providerId} onChange={setProviderId} options={options} compact /></div>
+          <div className="rt-adm-select"><FieldSelect id="rt-lg-provider" label={L.provider} value={providerId} onChange={pickProvider} options={options} compact /></div>
           {canAdjust && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setAdjusting(true)}>{L.adjust}</button>}
         </div>
       </div>
@@ -196,10 +211,10 @@ export function AdminTransactions() {
           <div><dt>{L.columns.share}</dt><dd>{formatPrice(totals.provider)}</dd></div>
         </dl>
       )}
-      {list.error ? <ErrorState onRetry={() => list.refetch()} /> : list.isLoading ? <TableSkeleton /> : entries.length ? (
+      {list.error ? <ErrorState onRetry={() => list.refetch()} /> : list.isPending ? <TableSkeleton /> : entries.length ? (
         <>
-          <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}><LedgerTable entries={entries} showOrder /></div>
-          {list.hasNextPage && <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-adm-activity__older" onClick={() => list.fetchNextPage()} disabled={list.isFetchingNextPage}>{L.more}</button>}
+          <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}><LedgerTable entries={entries} showOrder sorter={paging.sorter} /></div>
+          <Pager paging={paging} total={list.data.total} label="transactions" />
         </>
       ) : <EmptyState title={L.empty} />}
 

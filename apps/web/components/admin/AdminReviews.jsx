@@ -11,7 +11,8 @@ import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { hideReview, keepReview, showReview } from "@/lib/adminReviews";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Pill, Said, Search, TableSkeleton, Tabs, formatWhen } from "./adminParts";
+import { Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging } from "./adminParts";
+import { AdminStatus } from "./AdminStatus";
 
 const copy = A.reviews;
 const TABS = Object.keys(copy.tabs);
@@ -29,6 +30,7 @@ export default function AdminReviews() {
   const [q, setQ] = useState("");
   const [hiding, setHiding] = useState(null);
   const [said, setSaid] = useState("");
+  const pages = usePaging({ key: "", dir: -1 });
   if (!data) return <TableSkeleton rows={5} />;
 
   const needle = q.trim().toLowerCase();
@@ -41,36 +43,36 @@ export default function AdminReviews() {
   const list = data.reviews
     .filter((r) => inTab[tab](r) && (stars === "0" || r.rating === Number(stars)) && (!needle || `${r.course} ${r.provider} ${r.learner}`.toLowerCase().includes(needle)))
     .sort((a, b) => Boolean(b.challenge) - Boolean(a.challenge) || b.at - a.at);
-  const clear = () => { setTab("all"); setStars("0"); setQ(""); };
+  const clear = () => { setTab("all"); setStars("0"); setQ(""); pages.restart(); };
 
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
       <div className="rt-adm-toolbar">
-        <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: data.reviews.filter(inTab[key]).length }))} value={tab} onChange={setTab} label="Show reviews" />
+        <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: data.reviews.filter(inTab[key]).length }))} value={tab} onChange={(k) => { setTab(k); pages.restart(); }} label="Show reviews" />
         <div className="rt-adm-toolbar__end">
-          <div className="rt-adm-select -inline"><FieldSelect id="rt-adm-rv-stars" label={copy.stars} value={stars} onChange={setStars} options={STARS.map((s) => ({ value: s, label: copy.starOptions[s] }))} compact /></div>
-          <Search value={q} onChange={setQ} label={copy.search} />
+          <div className="rt-adm-select -inline"><FieldSelect id="rt-adm-rv-stars" label={copy.stars} value={stars} onChange={(v) => { setStars(v); pages.restart(); }} options={STARS.map((s) => ({ value: s, label: copy.starOptions[s] }))} compact /></div>
+          <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
         </div>
       </div>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
 
       {list.length ? (
         <ul className="rt-adm-items">
-          {list.map((r) => (
+          {list.slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((r) => (
             <li key={r.id} className={`rt-acc__card rt-adm-item rt-adm-review${r.hidden ? " is-hidden" : ""}`}>
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
                   <span className="rt-adm-stars" aria-label={copy.rating.replace("{n}", r.rating)}>{"★".repeat(r.rating)}<span aria-hidden="true">{"★".repeat(5 - r.rating)}</span></span>
-                  {r.challenge && <Pill tone="late">{copy.challenge}</Pill>}
-                  {r.hidden && <Pill tone="muted">{copy.hiddenTag}</Pill>}
+                  {r.challenge && <AdminStatus kind="review" status="challenge">{copy.challenge}</AdminStatus>}
+                  {r.hidden && <AdminStatus kind="review" status="hidden">{copy.hiddenTag}</AdminStatus>}
                   <span className="rt-adm-item__when">{r.learner} · {formatWhen(r.at)}</span>
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{r.title}</p>
                 <p className="rt-adm-review__text">{r.text}</p>
                 <p className="rt-acc__note"><Link href={courseHref(r.courseId)} className="rt-adm-strong">{r.course}</Link> · {r.provider}</p>
                 {r.reply ? <p className="rt-adm-item__reason"><strong>{copy.reply}:</strong> {r.reply}</p> : !r.hidden && <p className="rt-acc__note">{copy.noReply}</p>}
-                {r.challenge && <p className="rt-adm-item__block"><strong>{copy.challenge}:</strong> {r.challenge}</p>}
+                {r.challenge && <p className="rt-adm-item__reason"><strong>{copy.providerNote}</strong> {r.challenge}</p>}
                 {r.hidden && <p className="rt-acc__note">{copy.hiddenNote.replace("{who}", r.hidden.by || "an admin").replace("{reason}", r.hidden.reason)}</p>}
               </div>
               {canEdit && (
@@ -80,7 +82,7 @@ export default function AdminReviews() {
                   ) : (
                     <>
                       {r.challenge && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { keepReview(r); setSaid(copy.kept); }}>{copy.keep}</button>}
-                      <button type="button" className={r.challenge ? "button -sm -purple-1 text-white" : "rt-cd__link rt-adm-danger"} onClick={() => setHiding(r)}>{copy.hide}</button>
+                      <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setHiding(r)}>{copy.hide}</button>
                     </>
                   )}
                 </div>
@@ -91,6 +93,7 @@ export default function AdminReviews() {
       ) : (
         <EmptyState title={copy.none} action={{ label: copy.clear, onClick: clear }} />
       )}
+      {list.length > 0 && <Pager paging={pages} total={list.length} label="reviews" />}
 
       <Sheet open={Boolean(hiding)} onClose={() => setHiding(null)} title={copy.hideTitle} closeLabel="Close">
         {hiding && <HideForm review={hiding} onDone={() => { setHiding(null); setSaid(copy.hiddenDone); }} />}

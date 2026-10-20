@@ -4,11 +4,12 @@ import React, { useEffect, useState } from "react";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Pill, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import DateField from "./DateField";
+import { AdminTag } from "./AdminStatus";
 
 const copy = A.activity;
 const KINDS = Object.keys(copy.kinds);
-const IDENTITY_TONE = { student: "muted", provider: "info", business: "info", admin: "warn", system: "muted" };
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 // a change to the catalogue list is about an entry: show its name rather than its id
 const CATALOGUE = new Set(["category", "subcategory", "topic", "method", "level"]);
@@ -32,7 +33,7 @@ const facts = (e) =>
 
 // The activity log viewer: the real, append-only log (API admin.activity), newest first. Search by a person's name or email, or
 // any reference; filter by kind of action and by dates (UK days, both included). Clicking a person shows only what they did or
-// what was done to them. The filters stay in the address, so a view can be shared; older entries load a page at a time.
+// what was done to them. The filters stay in the address, so a view can be shared; entries come in numbered pages, newest or oldest first.
 export default function AdminActivity() {
   const [q, setQ] = useState("");
   const [search, setSearch] = useState(""); // what the list asks for, a moment after typing stops
@@ -40,6 +41,7 @@ export default function AdminActivity() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [ready, setReady] = useState(false);
+  const paging = usePaging({ key: "when", dir: -1 });
 
   useEffect(() => {
     const k = getQuery("kind");
@@ -63,10 +65,12 @@ export default function AdminActivity() {
     setQuery("to", to);
   }, [ready, search, kind, from, to]);
 
-  const input = { q: search || undefined, kind: kind === "all" ? undefined : kind, from: from || undefined, to: to || undefined, limit: 50 };
-  const list = api.admin.activity.list.useInfiniteQuery(input, { enabled: ready, getNextPageParam: (page) => page.next ?? undefined, placeholderData: (prev) => prev });
+  const { sort, ...pageInput } = paging.input; // the log sorts by date only
+  const input = { q: search || undefined, kind: kind === "all" ? undefined : kind, from: from || undefined, to: to || undefined, ...pageInput };
+  const list = api.admin.activity.list.useQuery(input, { enabled: ready && paging.ready, placeholderData: (prev) => prev });
   const filtered = Boolean(search || kind !== "all" || from || to);
   const clear = () => {
+    paging.restart();
     setQ("");
     setSearch("");
     setKind("all");
@@ -74,37 +78,38 @@ export default function AdminActivity() {
     setTo("");
   };
   const show = (who) => {
+    paging.restart();
     setQ(who);
     setSearch(who);
   };
 
-  const entries = list.data?.pages.flatMap((p) => p.entries) ?? [];
+  const entries = list.data?.entries ?? [];
   const c = copy.columns;
 
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Search value={q} onChange={setQ} label={copy.search} />
+        <Tabs tabs={KINDS.map((key) => ({ key, label: copy.kinds[key] }))} value={kind} onChange={(k) => { setKind(k); paging.restart(); }} label="Show actions of this kind" />
+        <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
         <div className="rt-adm-activity__dates">
           <div className="rt-field">
             <label htmlFor="rt-adm-a-from">{copy.from}</label>
-            <input id="rt-adm-a-from" type="date" max={to || today()} value={from} onChange={(e) => setFrom(e.target.value)} />
+            <DateField id="rt-adm-a-from" compact clearable placeholder="Any day" max={to || today()} value={from} onChange={(v) => { setFrom(v); paging.restart(); }} />
           </div>
           <div className="rt-field">
             <label htmlFor="rt-adm-a-to">{copy.to}</label>
-            <input id="rt-adm-a-to" type="date" min={from || undefined} max={today()} value={to} onChange={(e) => setTo(e.target.value)} />
+            <DateField id="rt-adm-a-to" compact clearable placeholder="Any day" min={from || undefined} max={today()} value={to} onChange={(v) => { setTo(v); paging.restart(); }} />
           </div>
         </div>
       </div>
-      <Tabs tabs={KINDS.map((key) => ({ key, label: copy.kinds[key] }))} value={kind} onChange={setKind} label="Show actions of this kind" />
 
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />
-      ) : !ready || list.isLoading ? <TableSkeleton /> : entries.length ? (
+      ) : list.isPending ? <TableSkeleton /> : entries.length ? (
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
-              <thead><tr><th scope="col">{c.when}</th><th scope="col">{c.who}</th><th scope="col">{c.what}</th><th scope="col">{c.on}</th></tr></thead>
+              <thead><tr><SortTh label={c.when} col="when" sorter={paging.sorter} numeric /><th scope="col">{c.who}</th><th scope="col">{c.what}</th><th scope="col">{c.on}</th></tr></thead>
               <tbody>
                 {entries.map((e) => {
                   const more = facts(e);
@@ -118,7 +123,7 @@ export default function AdminActivity() {
                             {e.actor.email && <small>{e.actor.email}</small>}
                           </button>
                         ) : <span className="rt-adm-strong">{copy.system}</span>}
-                        <Pill tone={IDENTITY_TONE[e.identity]}>{copy.identities[e.identity]}</Pill>
+                        <span className="rt-adm-activity__as" title={copy.identityNote}><AdminTag>{copy.identities[e.identity]}</AdminTag></span>
                       </td>
                       <td data-label={c.what}>
                         <span className="rt-adm-strong">{copy.actions[e.action] ?? e.action}</span>
@@ -139,9 +144,7 @@ export default function AdminActivity() {
               </tbody>
             </table>
           </div>
-          {list.hasNextPage && (
-            <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-adm-activity__older" onClick={() => list.fetchNextPage()} disabled={list.isFetchingNextPage}>{copy.more}</button>
-          )}
+          <Pager paging={paging} total={list.data.total} label="activity" />
         </>
       ) : (
         <EmptyState title={filtered ? copy.none : copy.empty} action={filtered ? { label: copy.clear, onClick: clear } : undefined} />

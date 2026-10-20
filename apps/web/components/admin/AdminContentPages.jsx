@@ -6,6 +6,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { blocksToText, textToBlocks } from "@/lib/legalText";
 import { errorsFrom } from "@/lib/useMe";
 import { SaveRow, describedBy, field, newRowId, useSave } from "./contentParts";
+import DateField from "./DateField";
 
 const copy = A.content;
 
@@ -157,11 +158,11 @@ export function LegalForm({ contentKey, doc, value, canEdit }) {
         <div className="rt-adm-fees__grid">
           {field("rt-adm-lg-updated", c.updated, doc.key === "page:provider-terms" ? c.updatedHintProvider : c.updatedHint, errors.updated, (
             <div className="rt-adm-inline__row">
-              <input id="rt-adm-lg-updated" type="date" value={v.updated} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, updated: e.target.value }))} aria-invalid={errors.updated ? true : undefined} aria-describedby={describedBy("rt-adm-lg-updated", "x", errors.updated)} className="rt-ck__short" />
+              <DateField id="rt-adm-lg-updated" value={v.updated} disabled={!canEdit} onChange={(d) => setV((x) => ({ ...x, updated: d }))} invalid={Boolean(errors.updated)} describedBy={describedBy("rt-adm-lg-updated", "x", errors.updated)} />
               {canEdit && v.updated !== today && <button type="button" className="rt-cd__link" onClick={() => setV((x) => ({ ...x, updated: today, effective: x.effective < today ? today : x.effective }))}>Today</button>}
             </div>
           ))}
-          {field("rt-adm-lg-effective", c.effective, "", errors.effective, <input id="rt-adm-lg-effective" type="date" value={v.effective} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, effective: e.target.value }))} aria-invalid={errors.effective ? true : undefined} aria-describedby={describedBy("rt-adm-lg-effective", "", errors.effective)} className="rt-ck__short" />)}
+          {field("rt-adm-lg-effective", c.effective, "", errors.effective, <DateField id="rt-adm-lg-effective" value={v.effective} disabled={!canEdit} onChange={(d) => setV((x) => ({ ...x, effective: d }))} invalid={Boolean(errors.effective)} describedBy={describedBy("rt-adm-lg-effective", "", errors.effective)} />)}
         </div>
         <label className="rt-bk__check rt-adm-mt" htmlFor="rt-adm-lg-draft">
           <input id="rt-adm-lg-draft" type="checkbox" checked={v.draft} disabled={!canEdit} onChange={(e) => setV((x) => ({ ...x, draft: e.target.checked }))} aria-describedby="rt-adm-lg-draft-hint" />

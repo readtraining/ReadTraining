@@ -10,6 +10,7 @@ import { DAY, HOUR, addWorkingDays, update } from "@/lib/adminStore";
 const R = W.requests;
 const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 const say = (event) => ({ at: Date.now(), text: event });
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 // ---- requests ------------------------------------------------------------------------------------------------------------------
 const centreName = (slug) => testCentres.find((c) => c.slug === slug)?.town;
@@ -17,11 +18,11 @@ const fromInbox = (x) => {
   const d = x.data || {};
   const name = d.name || [d.firstName, d.lastName].filter(Boolean).join(" ");
   const base = { ref: x.reference, name, email: d.email || "", phone: d.phone || "", company: d.company || "", at: x.at, status: "new", live: true };
-  if (x.kind === "quote") return { ...base, kind: "quote", title: `Group quote${d.course ? `: ${d.course}` : ""}`, details: [["Course", d.course || "Not given"], ["People", d.people || "Not given"], ["Message", d.message || ""]] };
-  if (x.kind === "licence") return { ...base, kind: "licence", title: `${d.type || "Licence"} application`, details: [["What they need", d.type], ["Application", d.application], ["Notes", d.notes]], docs: ["Proof of the qualification for the card or licence", "Photo ID"], price: null };
-  if (x.kind === "training") return { ...base, kind: "training", title: `Training request: ${d.licence || "forklift"}`, details: [["Truck", d.truck], ["Experience", d.experience], ["People", d.people], ["Postcode", d.postcode]] };
-  if (x.kind === "test") return { ...base, kind: "test", title: `CITB HS&E test booking (${d.type || "test"})`, price: 41.99, details: [["Test", d.type], ["Centre", centreName(d.centre) ? `${centreName(d.centre)} Test Centre` : "Not chosen yet"], ["When", d.when], ["Notes", d.notes]] };
-  if (x.kind === "contact") return { ...base, kind: "contact", title: `Contact: ${d.topic || "message"}`, details: [["Topic", d.topic], ["Booking", d.reference], ["Message", d.message]] };
+  if (x.kind === "quote") return { ...base, kind: "quote", title: d.course || "Course not given", details: [["Course", d.course || "Not given"], ["People", d.people || "Not given"], ["Message", d.message || ""]] };
+  if (x.kind === "licence") return { ...base, kind: "licence", title: d.type || "Licence", details: [["What they need", d.type], ["Application", d.application], ["Notes", d.notes]], docs: ["Proof of the qualification for the card or licence", "Photo ID"], price: null };
+  if (x.kind === "training") return { ...base, kind: "training", title: cap(d.licence || "forklift"), details: [["Truck", d.truck], ["Experience", d.experience], ["People", d.people], ["Postcode", d.postcode]] };
+  if (x.kind === "test") return { ...base, kind: "test", title: `CITB ${d.type || "test"}`, price: 41.99, details: [["Test", d.type], ["Centre", centreName(d.centre) ? `${centreName(d.centre)} Test Centre` : "Not chosen yet"], ["When", d.when], ["Notes", d.notes]] };
+  if (x.kind === "contact") return { ...base, kind: "contact", title: cap(d.topic || "message"), details: [["Topic", d.topic], ["Booking", d.reference], ["Message", d.message]] };
   return null;
 };
 

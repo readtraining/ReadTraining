@@ -8,8 +8,9 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pill, Said, TableSkeleton, Tabs, formatWhen } from "./adminParts";
-import { DISPUTE_TONE, REFUND_TONE, RefundDecision, useMoneyRefresh } from "./moneyParts";
+import { Said, TableSkeleton, Tabs, formatWhen } from "./adminParts";
+import { RefundDecision, useMoneyRefresh } from "./moneyParts";
+import { AdminStatus } from "./AdminStatus";
 
 // Refunds (Part B, B4; API admin.refunds): every refund asked for, the ones to decide first. Each shows the order, who asked and
 // why; Approve and Decline appear only where this admin may decide (not their own request, within their limit), and say why
@@ -25,9 +26,8 @@ export function AdminRefunds() {
       <Said text={said} />
       <div className="rt-adm-toolbar">
         <Tabs tabs={Object.keys(c.tabs).map((key) => ({ key, label: c.tabs[key], count: list.data?.counts?.[key] }))} value={tab} onChange={setTab} label="Show refunds" />
-        {list.data && <p className="rt-acc__note">{limit === null ? c.noLimit : c.yourLimit.replace("{limit}", formatPrice((limit ?? 0) / 100))}</p>}
       </div>
-      <p className="rt-acc__notice">{A.recordOnly}</p>
+      <p className="rt-acc__notice">{A.recordOnly}{list.data && ` ${limit === null ? c.noLimit : c.yourLimit.replace("{limit}", formatPrice((limit ?? 0) / 100))}`}</p>
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />
       ) : list.isLoading ? (
@@ -38,7 +38,7 @@ export function AdminRefunds() {
             <li key={r.id} className="rt-acc__card rt-adm-item">
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
-                  <Pill tone={REFUND_TONE[r.status]}>{c.statuses[r.status]}</Pill>
+                  <AdminStatus kind="refund" status={r.status}>{c.statuses[r.status]}</AdminStatus>
                   <span className="rt-adm-item__when">{c.by.replace("{name}", r.requestedBy || "an admin")} · {formatWhen(Date.parse(r.at))}</span>
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{formatPrice(r.amount)} <span className="rt-adm-muted">of {formatPrice(r.order.gross)}</span></p>
@@ -51,7 +51,7 @@ export function AdminRefunds() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={tab === "requested" ? c.empty : c.none} />
+        <EmptyState title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
       )}
     </div>
   );
@@ -92,8 +92,8 @@ export function AdminDisputes() {
             <li key={x.id} className="rt-acc__card rt-adm-item">
               <div className="rt-adm-item__body">
                 <div className="rt-adm-item__top">
-                  <Pill tone={DISPUTE_TONE[x.status]}>{c.statuses[x.status]}</Pill>
-                  {x.status === "open" && <span className={`rt-adm-due -${x.evidenceDue < today ? "late" : "warn"}`}>{c.columns.due}: {formatDate(x.evidenceDue)}</span>}
+                  <AdminStatus kind="dispute" status={x.status}>{c.statuses[x.status]}</AdminStatus>
+                  {x.status === "open" && <AdminStatus kind="due" status={x.evidenceDue < today ? "late" : "warn"}>{c.columns.due}: {formatDate(x.evidenceDue)}</AdminStatus>}
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{formatPrice(x.amount)}</p>
                 <p className="rt-acc__note"><Link href={`/admin/orders/${x.order.ref}`} className="rt-adm-strong">{x.order.ref}</Link> · {x.order.buyer} · {x.order.course} · {x.provider}</p>
@@ -110,7 +110,7 @@ export function AdminDisputes() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={tab === "open" ? c.empty : c.none} />
+        <EmptyState title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
       )}
     </div>
   );

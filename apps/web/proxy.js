@@ -101,11 +101,12 @@ export async function proxy(request) {
     if (!signedIn) return toLogin(request, AUTH_ROUTES.adminLogin);
     if (prefetch) return response;
     const token = await accessToken();
-    const { status, data: admin } = token ? await askApi(request, "admin.open", { path }, token) : { status: 401, data: null };
-    if (status !== 200 || !admin) {
-      const back = `?next=${encodeURIComponent(path + request.nextUrl.search)}${status === 503 || status >= 500 ? "&unavailable=1" : ""}`;
-      return withCookies(redirectTo(request, AUTH_ROUTES.adminLogin, back), response);
-    }
+    let { status, data: admin } = token ? await askApi(request, "admin.open", { path }, token) : { status: 401, data: null };
+    // the API didn't answer in time (not a refusal): ask once more, then show "we couldn't check your access" on this address
+    // instead of signing the admin out
+    if (status >= 500) ({ status, data: admin } = await askApi(request, "admin.open", { path }, token));
+    if (status >= 500) return withCookies(NextResponse.rewrite(new URL("/no-access/admin?unavailable=1", request.url)), response);
+    if (status !== 200 || !admin) return withCookies(redirectTo(request, AUTH_ROUTES.adminLogin, `?next=${encodeURIComponent(path + request.nextUrl.search)}`), response);
     headers.set(ADMIN_HEADER, encodeURIComponent(JSON.stringify(admin)));
     return withCookies(NextResponse.next({ request: { headers } }), response);
   }

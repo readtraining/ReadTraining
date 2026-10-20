@@ -8,10 +8,10 @@ import { addRequestNote, advanceRequest, assignRequest, cancelRequest, nextLabel
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { Due, Pill, formatWhen, Said } from "./adminParts";
-import { REQUEST_TONE } from "./AdminRequests";
+import { formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import { AdminStatus, AdminDue } from "./AdminStatus";
 
 const copy = W.requests;
 const d = copy.detail;
@@ -32,7 +32,7 @@ export default function AdminRequest({ reference }) {
   const quoteRef = useRef(null);
   const cancelRef = useRef(null);
   const noteRef = useRef(null);
-  if (!data) return null;
+  if (!data) return <DetailSkeleton />;
   const r = data.requests.find((x) => x.ref === reference);
   if (!r) return <EmptyState title="This request was not found." action={{ href: "/admin/requests", label: d.back }} />;
 
@@ -89,9 +89,9 @@ export default function AdminRequest({ reference }) {
       <section className="rt-acc__card rt-adm-hero" aria-label="Request">
         <div>
           <div className="rt-adm-item__top">
-            <Pill tone={REQUEST_TONE[r.status] || "info"}>{copy.statuses[r.status]}</Pill>
+            <AdminStatus kind="request" status={r.status}>{copy.statuses[r.status]}</AdminStatus>
             <span className="rt-adm-item__when">{copy.kinds[r.kind]} · {formatWhen(r.at)}</span>
-            {r.status === "new" && <Due due={r.due} now={data.now} />}
+            {r.status === "new" && <AdminDue due={r.due} now={data.now} />}
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name">{r.ref}</h1>
           <p className="rt-acc__note">{r.title}{r.price ? ` · ${formatPrice(r.price)}` : ""}{r.amount ? ` · Quoted ${formatPrice(r.amount)}` : ""}</p>

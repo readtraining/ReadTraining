@@ -9,15 +9,12 @@ import { formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
 import { describedBy, field } from "./contentParts";
+import DateField from "./DateField";
 
 // Shared parts of the money screens (Part B, B4): the status tones, the refund decision (with the limit and own-request rules
 // shown before anyone clicks), and the forms to ask for a refund and to record a dispute. All real (API admin.refunds /
 // admin.disputes); every change reads the money lists again.
 
-export const ORDER_TONE = { paid: "ok", part_refunded: "warn", refunded: "muted", cancelled: "muted" };
-export const REFUND_TONE = { requested: "warn", approved: "ok", declined: "muted" };
-export const DISPUTE_TONE = { open: "late", won: "ok", lost: "muted" };
-export const PAYOUT_TONE = { draft: "warn", approved: "info", held: "late", sent: "ok" };
 
 // pounds typed in a box → whole pence, or null
 export const toPence = (v) => (/^\d+(\.\d{1,2})?$/.test(String(v).trim()) ? Math.round(Number(v) * 100) : null);
@@ -151,7 +148,7 @@ export function DisputeForm({ order, onDone }) {
     <form className="rt-q__form rt-biz__sheetform" ref={ref} noValidate onSubmit={submit}>
       {field("rt-dp-amount", c.amount, null, errors.amountPence, <input id="rt-dp-amount" type="text" inputMode="decimal" className="rt-adm-num" value={v.amount} onChange={(e) => setV((x) => ({ ...x, amount: e.target.value }))} aria-invalid={errors.amountPence ? true : undefined} aria-describedby={describedBy("rt-dp-amount", null, errors.amountPence)} />)}
       {field("rt-dp-reason", c.reason, null, errors.reason, <textarea id="rt-dp-reason" rows={3} maxLength={500} value={v.reason} onChange={(e) => setV((x) => ({ ...x, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={describedBy("rt-dp-reason", null, errors.reason)} />)}
-      {field("rt-dp-due", c.due, c.dueHint, errors.evidenceDue, <input id="rt-dp-due" type="date" value={v.due} onChange={(e) => setV((x) => ({ ...x, due: e.target.value }))} aria-invalid={errors.evidenceDue ? true : undefined} aria-describedby={describedBy("rt-dp-due", c.dueHint, errors.evidenceDue)} />)}
+      {field("rt-dp-due", c.due, c.dueHint, errors.evidenceDue, <DateField id="rt-dp-due" value={v.due} onChange={(d) => setV((x) => ({ ...x, due: d }))} invalid={Boolean(errors.evidenceDue)} describedBy={describedBy("rt-dp-due", c.dueHint, errors.evidenceDue)} />)}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={open.isPending}>{c.openTitle}</button>
     </form>
   );
