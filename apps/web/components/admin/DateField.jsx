@@ -15,7 +15,8 @@ const local = (iso) => {
   return new Date(y, m - 1, d);
 };
 
-export default function DateField({ id, value, onChange, min, max, invalid = false, describedBy, disabled = false, clearable = false, placeholder = "Choose a date", compact = false }) {
+// `startView` "decade" opens on the years around 30 years ago (a date of birth), when no date is chosen yet.
+export default function DateField({ id, value, onChange, min, max, invalid = false, describedBy, disabled = false, clearable = false, placeholder = "Choose a date", compact = false, startView }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef(null);
   const btn = useRef(null);
@@ -56,6 +57,8 @@ export default function DateField({ id, value, onChange, min, max, invalid = fal
             minDate={min ? local(min) : undefined}
             maxDate={max ? local(max) : undefined}
             minDetail="decade"
+            defaultView={!value && startView ? startView : undefined}
+            defaultActiveStartDate={!value && startView ? new Date(new Date().getFullYear() - 30, 0, 1) : undefined}
             next2Label={null}
             prev2Label={null}
           />

@@ -131,7 +131,7 @@ export default function LoginForm() {
 
   return (
     <AuthPage
-      title="Log in to your ReadTraining account"
+      title="Log in to your account"
       lead="Access your courses, bookings and dashboard."
       footer={
         <>
@@ -189,7 +189,7 @@ export default function LoginForm() {
         </button>
       </form>
 
-      <SocialSignIn onSocial={handleSocial} disabled={busy} />
+      <SocialSignIn onSocial={handleSocial} disabled={busy} onError={setFormError} />
     </AuthPage>
   );
 }

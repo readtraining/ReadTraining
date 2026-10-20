@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
 import { addLearner, getBusiness } from "@/lib/businessAccount";
-import { formatDate } from "@/lib/format";
+import { formatDay } from "@/lib/format";
 import { Avatar } from "@/components/marketing/parts";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -18,7 +18,7 @@ const FILTERS = ["all", "renewal", "unbooked", "invited"];
 const certState = (l) => (l.certificates.some((c) => c.state === "expired") ? "expired" : l.certificates.some((c) => c.state === "renew") ? "renew" : l.certificates.length ? "valid" : null);
 
 // Learner management: everyone on the account, searchable and filtered (renewal due, no training booked, invited), with their next
-// course, certificate state and status (the /for-business page's learner list, as a table; cards on phones). A name opens the
+// course (and how many more are booked), certificate state, and Invited beside the name of anyone who has not accepted yet (the /for-business page's learner list, as a table; cards on phones). A name opens the
 // learner's training and certificates; "Add learner" (also ?add=1 from the dashboard) invites someone, who shows as Invited.
 export default function BizLearners() {
   const [data, setData] = useState(null);
@@ -113,15 +113,17 @@ export default function BizLearners() {
                       <div className="rt-biz__who">
                         <Avatar name={l.name} />
                         <div className="fb-list__main">
-                          <button type="button" className="rt-biz__name" aria-haspopup="dialog" onClick={() => setOpen(l.id)}>{l.name}</button>
+                          <span className="rt-biz__namerow">
+                            <button type="button" className="rt-biz__name" aria-haspopup="dialog" onClick={() => setOpen(l.id)}>{l.name}</button>
+                            {l.status === "invited" && <span className="rt-pill rt-acc__status -confirmed">{copy.status.invited}</span>}
+                          </span>
                           <span>{l.email}</span>
                         </div>
                       </div>
                     </td>
                     <td data-label={copy.columns[1]}>{l.job || "Not given"}</td>
-                    <td data-label={copy.columns[2]}>{next ? <>{next.title}<small>{formatDate(next.date)}</small></> : <span className="rt-biz__muted">No training booked</span>}</td>
+                    <td data-label={copy.columns[2]}>{next ? <>{next.title}<small>{formatDay(next.date)}{l.upcoming.length > 1 ? ` · ${copy.more(l.upcoming.length - 1)}` : ""}</small></> : <span className="rt-biz__muted">No training booked</span>}</td>
                     <td data-label={copy.columns[3]}>{cs ? <CertPill state={cs} /> : <span className="rt-biz__muted">None yet</span>}</td>
-                    <td data-label={copy.columns[4]}><span className={`rt-pill rt-acc__status -${l.status === "active" ? "completed" : "cancelled"}`}>{copy.status[l.status]}</span></td>
                   </tr>
                 );
               })}
@@ -150,7 +152,7 @@ export default function BizLearners() {
             {learner.training.length ? (
               <ul className="rt-acc__certs">
                 {learner.training.map((p) => (
-                  <li key={p.id}><div><b>{p.title}</b><span>{formatDate(p.date)} · {p.venue ? p.city : "Live online"}</span></div><span className={`rt-pill rt-acc__status -${p.state === "upcoming" ? "confirmed" : "completed"}`}>{p.state === "upcoming" ? "Booked" : "Completed"}</span></li>
+                  <li key={p.id}><div><b>{p.title}</b><span>{formatDay(p.date)} · {p.venue ? p.city : "Live online"}</span></div><span className={`rt-pill rt-acc__status -${p.state === "upcoming" ? "confirmed" : "completed"}`}>{p.state === "upcoming" ? "Booked" : "Completed"}</span></li>
                 ))}
               </ul>
             ) : <EmptyState inCard title={copy.detail.none} />}

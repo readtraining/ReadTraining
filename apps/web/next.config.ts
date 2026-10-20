@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
+    // Google's sign-in button needs the Google Cloud client ID in the browser (public by design; the secret stays in Supabase)
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? '',
+    // the address Google's button is allowed on (besides localhost): the site's own, or the live Vercel address
+    NEXT_PUBLIC_GOOGLE_ORIGIN: process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : ''),
     // where proxy.js and server pages reach the API (local: http://localhost:4000; on Vercel empty, so the site's own address)
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? '',
     // made-up demo records: off on the live site (a production build on Vercel), on everywhere else (lib/demo.js)

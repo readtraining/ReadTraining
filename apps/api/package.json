@@ -12,7 +12,9 @@
     "start": "tsx --env-file-if-exists=../../.env src/index.mts",
     "typecheck": "tsc --noEmit",
     "admin:grant": "tsx --env-file-if-exists=../../.env src/scripts/admin-grant.mts",
-    "seed:money": "tsx --env-file-if-exists=../../.env src/scripts/seed-money.mts"
+    "seed:money": "tsx --env-file-if-exists=../../.env src/scripts/seed-money.mts",
+    "seed:demo": "tsx --env-file-if-exists=../../.env src/scripts/seed-demo.mts",
+    "clean:dev": "tsx --env-file-if-exists=../../.env src/scripts/clean-dev.mts"
   },
   "dependencies": {
     "@readtraining/db": "workspace:*",

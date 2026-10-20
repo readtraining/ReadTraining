@@ -4032,7 +4032,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* ---------- CUSTOMER ACCOUNT (/account): the basket's page head, then the account menu beside the content; cards as the basket
    lines and checkout (white, light border, 16px radius), the site's fields, pills, filter chips and key facts ---------- */
 .rt-acc__eyebrow { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: var(--rt-eyebrow-ls); text-transform: uppercase; color: var(--color-purple-1); }
-.rt-acc__lead { margin: 8px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.55; color: var(--color-light-1); }
+.rt-acc__lead { margin: 8px 0 0; max-width: 72ch; text-wrap: pretty; font-size: 16px; line-height: 1.55; color: var(--color-light-1); }
 .rt-acc__layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 28px; padding-bottom: 96px; }
 @media (min-width: 992px) { .rt-acc__layout { grid-template-columns: 260px minmax(0, 1fr); gap: 32px; align-items: start; padding-top: 36px; } }
 .rt-acc__main { min-width: 0; }
@@ -4141,6 +4141,12 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__helplinks { display: grid; gap: 4px 24px; margin: 0; }
 @media (min-width: 768px) { .rt-acc__helplinks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-acc__helplinks li { list-style: none; }
+/* dashboard: the help links beside the certificates, one per line (the card is half the width), each on its own row */
+@media (min-width: 768px) { .rt-acc__helplinks.rt-acc__helplist { grid-template-columns: minmax(0, 1fr); } }
+.rt-acc__helplist { align-content: start; margin-top: 14px; }
+.rt-acc__helplist li { padding: 12px 0; border-top: 1px solid var(--rt-c-line); }
+/* My learning: a certificate's line with its Download */
+.rt-acc__certline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
 .rt-acc__eyebrowrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 6px; }
 .rt-acc__eyebrowrow .rt-acc__eyebrow { margin-bottom: 0; }
 /* status pills */
@@ -4282,6 +4288,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__name:hover { color: var(--color-purple-1); text-decoration: underline; text-underline-offset: 3px; }
 .rt-biz__name:focus-visible, .rt-biz__linkbtn:focus-visible, .rt-biz__remove:focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; border-radius: 4px; }
 .rt-biz__act { text-align: right; }
+.rt-biz__namerow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .rt-biz__linkbtn { padding: 0; border: 0; background: none; cursor: pointer; }
 @media (max-width: 767px) {
   .rt-biz__tablecard { padding: 4px 16px; }
@@ -4317,9 +4324,8 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__found { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-biz__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .rt-biz__tag { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; line-height: 18px; color: var(--rt-c-text); }
-/* dashboard: the two lists side by side keep their own height; the certificates table gives the learner and course the room;
+/* dashboard: the two lists side by side are cards of the same height (at most four rows each); the certificates table gives the learner and course the room;
    the credit's numbers in one row with Pay balance */
-.rt-biz__duo { align-items: start; }
 .rt-biz__rows li > div:first-child { gap: 2px; }
 .rt-biz__certtable th:nth-child(3), .rt-biz__certtable th:nth-child(4) { width: 112px; }
 .rt-biz__certtable td small, .rt-biz__certtable td:nth-child(3), .rt-biz__certtable td:nth-child(4) { white-space: nowrap; } /* IDs and dates never break */
@@ -4353,17 +4359,19 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .fb-page .rt-biz__places .fb-list__row:last-child { border-bottom: 0; }
 .rt-biz__remove { flex: none; padding: 6px 0; border: 0; background: none; font-size: 13px; color: var(--color-light-1); cursor: pointer; }
 .rt-biz__remove:hover { color: var(--color-dark-1); text-decoration: underline; }
-.rt-biz__assign { display: flex; flex: none; align-items: center; gap: 8px; }
-.rt-biz__assign .rt-cat-dd__trigger { width: 200px; }
-.rt-biz__assign .button { height: 44px; }
-@media (max-width: 767px) {
-  .fb-page .rt-biz__freeslot { flex-wrap: wrap; }
-  .rt-biz__assign { width: 100%; }
-  .rt-biz__assign .rt-field { flex: 1 1 auto; min-width: 0; }
-  .rt-biz__assign .rt-field-dd, .rt-biz__assign .rt-cat-dd__trigger { width: 100%; min-width: 0; }
-  .rt-biz__assign .rt-cat-dd__trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rt-biz__assign .button { flex: none; }
-}
+/* the free places row (its Assign learners button) and the list to tick learners in its pop-up */
+.fb-page .rt-biz__freeslot .button { flex: none; }
+@media (max-width: 575px) { .fb-page .rt-biz__freeslot { flex-wrap: wrap; } .fb-page .rt-biz__freeslot .button { width: 100%; } }
+.fb-page .rt-biz__foldrow { justify-content: flex-start; padding-left: 52px; }
+.rt-biz__picklist { display: grid; gap: 8px; max-height: min(50vh, 420px); margin: 0; padding: 0; overflow-y: auto; border: 0; }
+.rt-biz__pick { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); cursor: pointer; }
+.rt-biz__pick:hover { border-color: var(--rt-c-brand); }
+.rt-biz__pick.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
+.rt-biz__pick.is-full { opacity: 0.55; cursor: not-allowed; }
+.rt-biz__pick:focus-within { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-biz__pick > span { display: grid; min-width: 0; }
+.rt-biz__pick b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-biz__pick small { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* billing: the credit account */
 .rt-biz__creditnums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
 .rt-biz__creditnums div { padding: 14px 16px; border-radius: 12px; background: var(--color-light-4); }
@@ -6595,26 +6603,28 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
    AUTH PAGES (/login, /signup, /forgot-password, /reset-password; components/auth/authParts.jsx): one card on the page tint,
    .rt-field inputs with the message above, the catalogue's checkbox. Tokens only (DESIGN-SYSTEM.md).
    ===================================================================== */
-.rt-auth { --fp-text: var(--rt-c-text); --fp-muted: var(--rt-c-muted); --fp-border: var(--rt-c-line); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--rt-c-brand); --fp-surface: var(--rt-c-surface); display: flex; align-items: center; justify-content: center; min-height: 100dvh; padding: 32px 16px; background: var(--rt-c-soft); color: var(--rt-c-text); }
+.rt-auth { --fp-text: var(--rt-c-text); --fp-muted: var(--rt-c-muted); --fp-border: var(--rt-c-line); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--rt-c-brand); --fp-surface: var(--rt-c-surface); display: flex; align-items: safe center; justify-content: center; min-height: 100dvh; padding: 24px 16px; background: var(--rt-c-soft); color: var(--rt-c-text); }
 .rt-auth :focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-auth__card { width: 100%; max-width: 440px; padding: 32px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); box-shadow: var(--rt-shadow-raised); }
-.rt-auth__logo { display: flex; justify-content: center; margin-bottom: 24px; }
+.rt-auth__logo { display: flex; justify-content: center; margin-bottom: 16px; }
 .rt-auth__logo img { width: 150px; height: auto; }
-.rt-auth__h1 { margin: 0; font-size: var(--rt-page-h2-size); line-height: 1.2; font-weight: var(--rt-heading-weight); text-align: center; text-wrap: balance; color: var(--rt-c-text); }
-.rt-auth__lead { margin: 8px 0 0; font-size: var(--rt-text-sm); line-height: 1.5; text-align: center; color: var(--rt-c-muted); overflow-wrap: anywhere; }
+.rt-auth__h1 { margin: 0; font-size: 24px; line-height: 1.25; font-weight: var(--rt-heading-weight); text-align: center; text-wrap: balance; color: var(--rt-c-text); }
+.rt-auth__lead { margin: 4px 0 0; font-size: var(--rt-text-sm); line-height: 1.5; text-align: center; color: var(--rt-c-muted); overflow-wrap: anywhere; }
 .rt-auth__lead b, .rt-auth__done b { font-weight: 600; color: var(--rt-c-text); }
-.rt-auth__form { display: grid; gap: 16px; margin-top: 24px; }
+.rt-auth__form { display: grid; gap: 12px; margin-top: 20px; }
+/* the sign-in fields are 44px (the site's forms are 52px), the label 6px above */
+.rt-auth .rt-field input:not([type="checkbox"]) { height: 44px; }
 .rt-auth__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .rt-auth__field { margin: 0; }
 .rt-auth__labelrow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
 .rt-auth__labelrow label { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-auth__aside { font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-brand) !important; }
-.rt-auth__hint { margin: 0; font-size: var(--rt-text-xs); line-height: 1.5; color: var(--rt-c-muted); }
+.rt-auth__hint { margin: -2px 0 0; font-size: var(--rt-text-xs); line-height: 1.4; color: var(--rt-c-muted); } /* under the input, 4px below it */
 .rt-auth__control { position: relative; }
 .rt-auth__control.-icon input { padding-left: 44px; }
 .rt-auth__control.-trailing input { padding-right: 52px; }
 .rt-auth__icon { position: absolute; left: 16px; top: 50%; display: flex; transform: translateY(-50%); color: var(--rt-c-muted); pointer-events: none; }
-.rt-auth__toggle { position: absolute; right: 4px; top: 50%; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); transform: translateY(-50%); cursor: pointer; }
+.rt-auth__toggle { position: absolute; right: 2px; top: 50%; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); transform: translateY(-50%); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .rt-auth__toggle:hover { color: var(--rt-c-brand); } }
 .rt-auth__notice { padding: 12px 14px; border-radius: var(--rt-radius-control); font-size: var(--rt-text-sm); line-height: 1.5; overflow-wrap: anywhere; }
 .rt-auth__notice.-error { background: var(--color-red-2); color: var(--rt-c-error); }
@@ -6622,14 +6632,24 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-auth__notice.-info { background: var(--rt-c-soft); color: var(--rt-c-text); }
 .rt-auth__noticeaction { display: block; margin-top: 6px; }
 .rt-auth__linkbtn { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; }
-.rt-auth__check { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-.rt-auth__or { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-auth__check { margin: 0; font-size: var(--rt-text-sm); line-height: 1.4; color: var(--rt-c-text); }
+.rt-auth__or { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-auth__or::before, .rt-auth__or::after { content: ""; flex: 1; border-top: 1px solid var(--rt-c-line); }
+/* Google and Facebook side by side (one row keeps the card short) */
 .rt-auth__social { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.rt-auth__social .button { gap: 10px; }
+/* our Facebook button (and our own Google button where Google's cannot be used) in the look of Google's own button beside it:
+   white, a thin grey border, small corners, 40px high, dark medium text */
+.rt-auth__socialbtn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--rt-c-line), var(--color-border-strong) 25%); border-radius: 4px; background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.rt-auth__socialbtn:hover:not(:disabled) { border-color: var(--color-border-strong); background: var(--rt-c-soft); }
+.rt-auth__socialbtn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-auth__socialbtn:disabled { opacity: 0.6; cursor: default; }
+.rt-auth__socialbtn svg { flex: none; width: 18px; height: 18px; }
+/* Google's own button (GoogleButton.jsx) in Google's cell: centred, the cell's height while it loads, dimmed while signing in */
+.rt-auth__google { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 40px; }
+.rt-auth__google.is-busy { opacity: 0.6; pointer-events: none; }
 .rt-auth__done { margin: 20px 0 0; font-size: 15px; line-height: 1.6; text-align: center; overflow-wrap: anywhere; color: var(--rt-c-muted); }
 .rt-auth__done + .button { margin-top: 20px; }
-.rt-auth__foot { display: grid; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--rt-c-line); font-size: var(--rt-text-sm); line-height: 1.5; text-align: center; color: var(--rt-c-muted); }
+.rt-auth__foot { display: grid; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rt-c-line); font-size: var(--rt-text-sm); line-height: 1.5; text-align: center; color: var(--rt-c-muted); }
 .rt-auth__foot p { margin: 0; }
 .rt-auth__foot a { font-weight: 600; color: var(--rt-c-brand) !important; }
 .rt-auth__partner > span { display: block; margin-top: 4px; }
@@ -6648,9 +6668,12 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-adm-auth__other { margin: 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-muted); }
 .rt-adm-auth__other a { font-weight: 600; color: var(--rt-c-brand) !important; }
 @media (max-width: 575px) {
-  .rt-auth { align-items: flex-start; padding: 16px; }
+  .rt-auth { padding: 16px; }
   .rt-auth__card { padding: 24px 20px; }
-  .rt-auth__pair, .rt-auth__social { grid-template-columns: minmax(0, 1fr); }
+  .rt-auth__pair { grid-template-columns: minmax(0, 1fr); }
+  /* Google's button is never narrower than about 200px: on phones the two buttons sit one above the other */
+  .rt-auth__social { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .rt-auth__small { line-height: 1.4; }
 }
 /* end AUTH PAGES */
 

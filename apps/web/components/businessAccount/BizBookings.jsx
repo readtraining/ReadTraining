@@ -33,7 +33,7 @@ export default function BizBookings() {
       window.history.replaceState(window.history.state, "", url);
     } catch {}
   };
-  const sub = (p) => [`${p.places} ${p.places === 1 ? "place" : "places"}${p.state === "upcoming" ? ` · ${p.assigned.length} assigned` : ""}`, `Booked by ${p.bookedBy}`, p.po && p.po, p.invoice].filter(Boolean).join(" · ");
+  const sub = (p) => [`${p.places} ${p.places === 1 ? "place" : "places"}${p.state === "upcoming" ? ` · ${p.assigned.length} assigned` : ""}`, `Booked by ${p.bookedByName}`, p.po && p.po, p.invoice].filter(Boolean).join(" · ");
 
   return (
     <div className="rt-acc__stack">

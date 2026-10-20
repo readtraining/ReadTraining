@@ -5,17 +5,17 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { bookingState, calendarFile, firstDate, getBookings, getCertificates } from "@/lib/account";
 import { useMe } from "@/lib/useMe";
-import { getCoursesByIds } from "@/lib/courses";
 import { courseHref } from "@/data/courseSlugs";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDay } from "@/lib/format";
 import { savedCourseIds } from "@/lib/wishlist";
-import { CATALOGUE_HREF } from "@/lib/routes";
 import BookingRow, { placeOf, whenOf } from "./BookingRow";
 import { Stats } from "@/components/admin/adminParts";
 import { EmptyState } from "@/components/states/States";
+import { CertPill } from "@/components/businessAccount/bizParts";
+import { DownloadCertificate, useCertificateDownload } from "@/components/businessAccount/BizCertificate";
 
 const copy = account.dashboard;
-const CERT_LABEL = { valid: "Valid", renew: "Renew soon", expired: "Expired" };
+const Arrow = () => <i className="icon-arrow-right text-12" aria-hidden="true"></i>;
 
 // The dashboard's heading: "Hello, Sam" (the saved profile's first name, or the sign-in record's while it loads).
 export function Greeting() {
@@ -24,10 +24,14 @@ export function Greeting() {
   return <>{name ? copy.greeting.replace("{name}", name) : account.title}</>;
 }
 
-// The account home, in the order people come for (Baymard: checking what is coming up first): the next course with its practical
-// details and actions, four counts, the upcoming bookings, certificates with renewal reminders, saved courses and quick help.
+// The account home (Find a course is in the page head), in the order people come for (Baymard: what is coming up first): the next
+// course with its practical details and actions; four numbers that link to their pages, each with a short line; the courses after
+// that one (never the next one again); the certificates (renew the ones that are due, download any) beside quick help.
 export default function AccountDashboard() {
   const [data, setData] = useState(null);
+  const { person, data: me } = useMe();
+  const myName = me ? `${me.profile.firstName} ${me.profile.lastName}`.trim() : person?.name || "";
+  const cert = useCertificateDownload();
   useEffect(() => {
     const bookings = getBookings();
     const upcoming = bookings.filter((b) => bookingState(b) === "upcoming" || bookingState(b) === "requested").sort((a, b) => (firstDate(a) < firstDate(b) ? -1 : 1));
@@ -35,18 +39,21 @@ export default function AccountDashboard() {
       upcoming,
       completed: bookings.filter((b) => bookingState(b) === "past").length,
       certificates: getCertificates(),
-      saved: getCoursesByIds(savedCourseIds()),
+      saved: savedCourseIds().length,
     });
   }, []);
   if (!data) return null;
 
   const next = data.upcoming.find((b) => bookingState(b) === "upcoming");
   const nextLine = next && [...next.lines].sort((a, b) => (a.date < b.date ? -1 : 1))[0];
+  const later = data.upcoming.filter((b) => b !== next);
+  const renew = data.certificates.filter((c) => c.state !== "valid").length;
+  const s = copy.stats;
   const stats = [
-    [copy.stats.upcoming, data.upcoming.length, "icon-calendar"],
-    [copy.stats.completed, data.completed, "icon-check"],
-    [copy.stats.certificates, data.certificates.length, "icon-badge"],
-    [copy.stats.saved, data.saved.length, "icon-bookmark"],
+    { label: s.upcoming.label, value: data.upcoming.length, icon: "icon-calendar", href: "/account/learning", hint: s.upcoming.hint(nextLine && nextLine.mode !== "ondemand" ? formatDay(nextLine.date) : "") },
+    { label: s.completed.label, value: data.completed, icon: "icon-check", href: "/account/learning?tab=completed", hint: s.completed.hint },
+    { label: s.certificates.label, value: data.certificates.length, icon: "icon-badge", href: "#rt-acc-cert-h", hint: s.certificates.hint(renew) },
+    { label: s.saved.label, value: data.saved, icon: "icon-bookmark", href: "/account/saved", hint: s.saved.hint(data.saved) },
   ];
 
   return (
@@ -67,7 +74,7 @@ export default function AccountDashboard() {
             <div className="rt-acc__actions">
               <Link href={`/account/bookings/${next.reference}`} className="button -md -purple-1 text-white">{account.bookings.view}</Link>
               {nextLine.mode !== "ondemand" && <a href={calendarFile(next, nextLine)} download={`${next.reference}.ics`} className="button -md -outline-purple-1 text-purple-1">{account.detail.actions.calendar}</a>}
-              {nextLine.postcode && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextLine.postcode)}`} target="_blank" rel="noopener" className="fb-textlink">{account.detail.actions.map}<i className="icon-arrow-right text-12" aria-hidden="true"></i></a>}
+              {nextLine.postcode && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextLine.postcode)}`} target="_blank" rel="noopener" className="fb-textlink">{account.detail.actions.map}<Arrow /></a>}
             </div>
           </div>
         ) : (
@@ -75,35 +82,35 @@ export default function AccountDashboard() {
         )}
       </section>
 
-      <Stats items={stats.map(([label, value, icon]) => ({ label, value, icon }))} iconSize={18} />
+      <Stats items={stats} iconSize={18} />
 
-      <section className="rt-acc__card" aria-labelledby="rt-acc-up-h">
-        <div className="rt-acc__cardhead">
-          <h2 className="rt-acc__h2" id="rt-acc-up-h">{copy.upcoming.title}</h2>
-          <Link href="/account/learning" className="fb-textlink">{copy.upcoming.all}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
-        </div>
-        {data.upcoming.length ? (
-          <div className="rt-acc__rows">{data.upcoming.slice(0, 3).map((b) => <BookingRow key={b.reference} booking={b} />)}</div>
-        ) : (
-          <EmptyState inCard title={copy.next.none} />
-        )}
-      </section>
+      {later.length > 0 && (
+        <section className="rt-acc__card" aria-labelledby="rt-acc-up-h">
+          <div className="rt-acc__cardhead">
+            <h2 className="rt-acc__h2" id="rt-acc-up-h">{copy.upcoming.title}</h2>
+            <Link href="/account/learning" className="fb-textlink">{copy.upcoming.all}<Arrow /></Link>
+          </div>
+          <div className="rt-acc__rows">{later.slice(0, 3).map((b) => <BookingRow key={b.reference} booking={b} />)}</div>
+        </section>
+      )}
 
       <div className="rt-acc__duo">
         <section className="rt-acc__card" aria-labelledby="rt-acc-cert-h">
           <h2 className="rt-acc__h2" id="rt-acc-cert-h">{copy.certificates.title}</h2>
           <p className="rt-acc__note">{copy.certificates.text}</p>
           {data.certificates.length ? (
-            <ul className="rt-acc__certs">
+            <ul className="rt-acc__certs rt-biz__rows">
               {data.certificates.map((c) => (
                 <li key={c.number}>
                   <div>
                     <b>{c.title}</b>
-                    <span>{c.number} · {c.state === "expired" ? "Expired" : "Expires"} {formatDate(c.expires)}</span>
+                    <span>{c.number}</span>
+                    <span>{c.state === "expired" ? "Expired" : "Expires"} {formatDay(c.expires)}</span>
+                    <DownloadCertificate cert={{ ...c, learner: myName }} onDownload={cert.download} />
                   </div>
                   <div className="rt-acc__certside">
-                    <span className={`rt-pill rt-acc__status -${c.state === "valid" ? "completed" : c.state === "renew" ? "requested" : "cancelled"}`}>{CERT_LABEL[c.state]}</span>
-                    {c.state !== "valid" && <Link href={courseHref(c.courseId)} className="fb-textlink">{copy.certificates.renew}<span className="rt-sr"> {c.title}</span><i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
+                    <CertPill state={c.state} />
+                    {c.state !== "valid" && <Link href={courseHref(c.courseId)} className="fb-textlink">{copy.certificates.renew}<span className="rt-sr"> {c.title}</span><Arrow /></Link>}
                   </div>
                 </li>
               ))}
@@ -113,34 +120,16 @@ export default function AccountDashboard() {
           )}
         </section>
 
-        <section className="rt-acc__card" aria-labelledby="rt-acc-saved-h">
-          <div className="rt-acc__cardhead">
-            <h2 className="rt-acc__h2" id="rt-acc-saved-h">{copy.saved.title}</h2>
-            {data.saved.length > 0 && <Link href="/account/saved" className="fb-textlink">{copy.saved.all}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
-          </div>
-          {data.saved.length ? (
-            <ul className="rt-acc__saved">
-              {data.saved.slice(0, 3).map((c) => (
-                <li key={c.id}>
-                  <Link href={c.detailsHref || courseHref(c.id)}>{c.title}</Link>
-                  <span>From {formatPrice(c.price)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState inCard icon="icon-bookmark" title={copy.saved.none} text={copy.saved.noneText} action={{ label: copy.saved.browse, href: CATALOGUE_HREF }} />
-          )}
+        <section className="rt-acc__card" aria-labelledby="rt-acc-help-h">
+          <h2 className="rt-acc__h2" id="rt-acc-help-h">{copy.help.title}</h2>
+          <ul className="rt-acc__helplinks rt-acc__helplist">
+            {copy.help.items.map((h) => (
+              <li key={h.href}><Link href={h.href} className="fb-textlink">{h.label}<Arrow /></Link></li>
+            ))}
+          </ul>
         </section>
       </div>
-
-      <section className="rt-acc__card" aria-labelledby="rt-acc-help-h">
-        <h2 className="rt-acc__h2" id="rt-acc-help-h">{copy.help.title}</h2>
-        <ul className="rt-acc__helplinks">
-          {copy.help.items.map((h) => (
-            <li key={h.href}><Link href={h.href} className="fb-textlink">{h.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link></li>
-          ))}
-        </ul>
-      </section>
+      {cert.page}
     </div>
   );
 }
