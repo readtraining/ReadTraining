@@ -11,6 +11,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
 import { AdminTag } from "./AdminStatus";
+import { SHOW_DEMO } from "@/lib/demo";
 
 const copy = A.catalogue;
 const TABS = ["courses", "list", "packages"];
@@ -22,14 +23,14 @@ const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.offerings.leng
 // AdminCatalogueList) and Packages and add-ons (the basket's Saver / Flexi packages and the first aid add-on, as the basket applies them). Tabs in the address.
 export default function AdminCatalogue() {
   const data = useAdmin();
-  const [tab, setTab] = useState("courses");
+  const [tab, setTab] = useState(SHOW_DEMO ? "courses" : "list");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const pages = usePaging({ key: "", dir: -1 });
   const sorter = useSort();
   useEffect(() => {
     const t = getQuery("tab");
-    if (TABS.includes(t)) setTab(t);
+    if (TABS.includes(t) && (SHOW_DEMO || t === "list")) setTab(t);
     const c = getQuery("category");
     if (c) setCat(c);
   }, []);
@@ -43,11 +44,12 @@ export default function AdminCatalogue() {
   const needle = q.trim().toLowerCase();
   const list = catalogue.filter((c) => (cat === "all" || c.subject === cat) && (!needle || c.title.toLowerCase().includes(needle)));
   const cols = copy.columns;
-  const tabs = [
+  // the course list and packages are DEMO: on the live site only the real catalogue settings (lib/demo.js)
+  const tabs = SHOW_DEMO ? [
     { key: "courses", label: copy.tabs.courses, count: catalogue.length },
     { key: "list", label: copy.tabs.list },
     { key: "packages", label: copy.tabs.packages },
-  ];
+  ] : [{ key: "list", label: copy.tabs.list }];
   const pickCat = (k) => {
     setCat(k);
     pages.restart();
