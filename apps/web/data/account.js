@@ -51,6 +51,7 @@ export const account = {
       heading: "We couldn't check your access",
       text: "This is usually brief. Please try again in a moment.",
       cta: null,
+      retry: "Try again",
     },
   },
 
