@@ -4032,7 +4032,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* ---------- CUSTOMER ACCOUNT (/account): the basket's page head, then the account menu beside the content; cards as the basket
    lines and checkout (white, light border, 16px radius), the site's fields, pills, filter chips and key facts ---------- */
 .rt-acc__eyebrow { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: var(--rt-eyebrow-ls); text-transform: uppercase; color: var(--color-purple-1); }
-.rt-acc__lead { margin: 8px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.55; color: var(--color-light-1); }
+.rt-acc__lead { margin: 8px 0 0; max-width: 72ch; text-wrap: pretty; font-size: 16px; line-height: 1.55; color: var(--color-light-1); }
 .rt-acc__layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 28px; padding-bottom: 96px; }
 @media (min-width: 992px) { .rt-acc__layout { grid-template-columns: 260px minmax(0, 1fr); gap: 32px; align-items: start; padding-top: 36px; } }
 .rt-acc__main { min-width: 0; }
@@ -4282,6 +4282,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__name:hover { color: var(--color-purple-1); text-decoration: underline; text-underline-offset: 3px; }
 .rt-biz__name:focus-visible, .rt-biz__linkbtn:focus-visible, .rt-biz__remove:focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; border-radius: 4px; }
 .rt-biz__act { text-align: right; }
+.rt-biz__namerow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .rt-biz__linkbtn { padding: 0; border: 0; background: none; cursor: pointer; }
 @media (max-width: 767px) {
   .rt-biz__tablecard { padding: 4px 16px; }
@@ -4317,9 +4318,8 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__found { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-biz__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .rt-biz__tag { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; line-height: 18px; color: var(--rt-c-text); }
-/* dashboard: the two lists side by side keep their own height; the certificates table gives the learner and course the room;
+/* dashboard: the two lists side by side are cards of the same height (at most four rows each); the certificates table gives the learner and course the room;
    the credit's numbers in one row with Pay balance */
-.rt-biz__duo { align-items: start; }
 .rt-biz__rows li > div:first-child { gap: 2px; }
 .rt-biz__certtable th:nth-child(3), .rt-biz__certtable th:nth-child(4) { width: 112px; }
 .rt-biz__certtable td small, .rt-biz__certtable td:nth-child(3), .rt-biz__certtable td:nth-child(4) { white-space: nowrap; } /* IDs and dates never break */
@@ -4353,17 +4353,19 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .fb-page .rt-biz__places .fb-list__row:last-child { border-bottom: 0; }
 .rt-biz__remove { flex: none; padding: 6px 0; border: 0; background: none; font-size: 13px; color: var(--color-light-1); cursor: pointer; }
 .rt-biz__remove:hover { color: var(--color-dark-1); text-decoration: underline; }
-.rt-biz__assign { display: flex; flex: none; align-items: center; gap: 8px; }
-.rt-biz__assign .rt-cat-dd__trigger { width: 200px; }
-.rt-biz__assign .button { height: 44px; }
-@media (max-width: 767px) {
-  .fb-page .rt-biz__freeslot { flex-wrap: wrap; }
-  .rt-biz__assign { width: 100%; }
-  .rt-biz__assign .rt-field { flex: 1 1 auto; min-width: 0; }
-  .rt-biz__assign .rt-field-dd, .rt-biz__assign .rt-cat-dd__trigger { width: 100%; min-width: 0; }
-  .rt-biz__assign .rt-cat-dd__trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rt-biz__assign .button { flex: none; }
-}
+/* the free places row (its Assign learners button) and the list to tick learners in its pop-up */
+.fb-page .rt-biz__freeslot .button { flex: none; }
+@media (max-width: 575px) { .fb-page .rt-biz__freeslot { flex-wrap: wrap; } .fb-page .rt-biz__freeslot .button { width: 100%; } }
+.fb-page .rt-biz__foldrow { justify-content: flex-start; padding-left: 52px; }
+.rt-biz__picklist { display: grid; gap: 8px; max-height: min(50vh, 420px); margin: 0; padding: 0; overflow-y: auto; border: 0; }
+.rt-biz__pick { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); cursor: pointer; }
+.rt-biz__pick:hover { border-color: var(--rt-c-brand); }
+.rt-biz__pick.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
+.rt-biz__pick.is-full { opacity: 0.55; cursor: not-allowed; }
+.rt-biz__pick:focus-within { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-biz__pick > span { display: grid; min-width: 0; }
+.rt-biz__pick b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-biz__pick small { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* billing: the credit account */
 .rt-biz__creditnums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
 .rt-biz__creditnums div { padding: 14px 16px; border-radius: 12px; background: var(--color-light-4); }

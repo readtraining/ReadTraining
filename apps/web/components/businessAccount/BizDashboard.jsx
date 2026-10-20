@@ -29,12 +29,14 @@ export default function BizDashboard() {
   const renewals = data.certificates.filter((c) => c.state !== "valid");
   const expired = renewals.filter((c) => c.state === "expired").length;
   const valid = data.certificates.filter((c) => c.state === "valid").sort((a, b) => (a.issued < b.issued ? 1 : -1));
+  // a certificate that expires soon is still valid today, so the number counts it too
+  const current = data.certificates.filter((c) => c.state !== "expired").length;
   const invited = data.learners.filter((l) => l.status === "invited").length;
   const s = copy.stats;
   const stats = [
     { label: s.learners.label, value: data.learners.length, icon: "icon-person-3", href: "/business/learners", hint: s.learners.hint(data.learners.length - invited, invited) },
     { label: s.unassigned.label, value: toAssign, icon: "icon-list", href: "/business/assignments", hint: s.unassigned.hint(toAssign) },
-    { label: s.certificates.label, value: valid.length, icon: "icon-badge", href: "#rt-biz-certs-h", hint: s.certificates.hint },
+    { label: s.certificates.label, value: current, icon: "icon-badge", href: "#rt-biz-certs-h", hint: s.certificates.hint },
     { label: s.renewals.label, value: renewals.length, icon: "icon-calendar", href: "#rt-biz-renew-h", hint: s.renewals.hint(expired, renewals.length - expired) },
   ];
   const usedPct = Math.min(100, (data.credit.used / data.credit.limit) * 100);
@@ -53,7 +55,7 @@ export default function BizDashboard() {
           <dl className="rt-biz__creditnums">
             <div><dt>{biz.billing.credit.available}</dt><dd className="-ok">{formatPrice(data.credit.available)}</dd></div>
             <div><dt>{biz.billing.credit.used}</dt><dd>{formatPrice(data.credit.used)} <small>of {formatPrice(data.credit.limit)}</small></dd></div>
-            <div><dt>{biz.billing.credit.due}</dt><dd>{formatPrice(data.credit.due)}{data.credit.due > 0 && <small>Next due {formatDay(data.credit.dueDate)}</small>}</dd></div>
+            <div><dt>{biz.billing.credit.due}</dt><dd>{formatPrice(data.credit.due)}{data.credit.due > 0 && <small>{biz.billing.credit.next(formatPrice(data.credit.nextAmount), formatDay(data.credit.dueDate))}</small>}</dd></div>
           </dl>
           {data.credit.due > 0 && <Link href="/business/billing" className="button -md -purple-1 text-white">{copy.billing.pay}</Link>}
         </div>
@@ -92,7 +94,7 @@ export default function BizDashboard() {
           <h2 className="rt-acc__h2" id="rt-biz-renew-h">{copy.renewals.title}</h2>
           {renewals.length ? (
             <ul className="rt-acc__certs rt-biz__rows">
-              {renewals.map((c) => (
+              {renewals.slice(0, 4).map((c) => (
                 <li key={c.number}>
                   <div>
                     <b>{c.learner}</b>
@@ -115,7 +117,7 @@ export default function BizDashboard() {
           <h2 className="rt-acc__h2" id="rt-biz-res-h">{copy.results.title}</h2>
           {data.results.length ? (
             <ul className="rt-acc__certs rt-biz__rows">
-              {data.results.slice(0, 5).map((r) => (
+              {data.results.slice(0, 4).map((r) => (
                 <li key={`${r.learnerId}-${r.courseId}-${r.date}`}>
                   <div>
                     <b>{r.learner}</b>
