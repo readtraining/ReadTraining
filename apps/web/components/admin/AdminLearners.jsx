@@ -12,6 +12,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
+import { SHOW_DEMO } from "@/lib/demo";
 
 const copy = A.learners;
 export const CertPill = ({ cert, now }) => {
@@ -34,7 +35,7 @@ export default function AdminLearners() {
   const [said, setSaid] = useState("");
   const formRef = useRef(null);
   useEffect(() => {
-    if (getQuery("tab") === "certificates") setTab("certificates");
+    if (SHOW_DEMO && getQuery("tab") === "certificates") setTab("certificates");
   }, []);
   if (!data) return <TableSkeleton />;
 
@@ -78,7 +79,7 @@ export default function AdminLearners() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Tabs tabs={[{ key: "learners", label: copy.tabs.learners }, { key: "certificates", label: copy.tabs.certificates, count: certificates.length }]} value={tab} onChange={(t) => { setTab(t); setQ(""); setQuery("tab", t === "certificates" ? t : ""); setQuery("q", ""); setQuery("show", ""); }} label="Show" />
+        <Tabs tabs={[{ key: "learners", label: copy.tabs.learners }, ...(SHOW_DEMO ? [{ key: "certificates", label: copy.tabs.certificates, count: certificates.length }] : [])]} value={tab} onChange={(t) => { setTab(t); setQ(""); setQuery("tab", t === "certificates" ? t : ""); setQuery("q", ""); setQuery("show", ""); }} label="Show" />
         {tab === "certificates" && <div className="rt-adm-toolbar__end">
           <Search value={q} onChange={setQ} label={copy.certSearch} />
           <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setIssuing(true); setErrors({}); setForm({ holder: "", courseId: "", issued: today() }); }}>{copy.issue}</button>

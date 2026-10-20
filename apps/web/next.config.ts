@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
     // where proxy.js and server pages reach the API (local: http://localhost:4000; on Vercel empty, so the site's own address)
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? '',
+    // made-up demo records: off on the live site (a production build on Vercel), on everywhere else (lib/demo.js)
+    NEXT_PUBLIC_SHOW_DEMO: process.env.SHOW_DEMO ?? (process.env.VERCEL_ENV === 'production' ? 'off' : 'on'),
   },
   images: { unoptimized: true },
   // the test copy (Vercel preview deployments) can be opened by anyone with the link, but search engines never index it

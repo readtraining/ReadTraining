@@ -15,6 +15,8 @@ import { actAsAdmin } from "@/lib/adminStore";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { getSupabase } from "@/lib/supabase/client";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { SHOW_DEMO } from "@/lib/demo";
+import { EmptyState } from "@/components/states/States";
 
 const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 const FOLDED_KEY = "rt-adm-nav-folded";
@@ -77,12 +79,14 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const providers = api.admin.providers.counts.useQuery(undefined, { staleTime: 30000 });
   // refunds to decide, open disputes and payouts to approve are real too (for admins who can see orders)
   const money = api.admin.orders.summary.useQuery(undefined, { staleTime: 30000, retry: false, enabled: Boolean(me?.permissions?.includes("orders.view")) });
-  const counts = { ...(data?.counts || {}), applications: providers.data?.applications ?? 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0 };
+  const counts = { ...(SHOW_DEMO ? data?.counts || {} : {}), applications: providers.data?.applications ?? 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0 };
   // pages behind an admin switch are listed only for admins who have it
   const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => !x.permission || me?.permissions?.includes(x.permission)) })).filter((g) => g.items.length);
   const items = nav.flatMap((g) => g.items);
   const page = items.find((x) => x.key === current);
-  const demo = page?.demo ? A.demo[page.demo === true ? "all" : page.demo] : null;
+  const demo = SHOW_DEMO && page?.demo ? A.demo[page.demo === true ? "all" : page.demo] : null;
+  // on the live site a page made only of demo records shows an honest empty state instead (lib/demo.js)
+  const demoOff = !SHOW_DEMO && page?.demo === true ? A.demoOff[current] : null;
   const demoTag = demo && <span className="rt-demo-tag" title={demo.note}>{demo.label}<span className="rt-sr">: {demo.note}</span></span>;
   const signOut = async () => {
     setLeaving(true);
@@ -197,7 +201,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
               {actions}
             </div>
           )}
-          {children}
+          {demoOff ? <EmptyState title={demoOff[0]} text={demoOff[1]} /> : children}
         </main>
       </div>
     </div>

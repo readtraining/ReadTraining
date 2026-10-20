@@ -10,6 +10,7 @@ import { Stats, formatWhen, DetailSkeleton } from "./adminParts";
 import { useAdminAccess } from "@/lib/adminContext";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { AdminStatus } from "./AdminStatus";
+import { SHOW_DEMO } from "@/lib/demo";
 
 const copy = A.dashboard;
 const demoTag = <span className="rt-demo-tag" title={A.demo.all.note}>{copy.demoTag}</span>;
@@ -75,14 +76,16 @@ export default function AdminDashboard() {
   ];
   const queues = [
     ...(m ? [{ key: "refunds", n: m.refunds, overdue: 0 }, { key: "disputes", n: m.disputes, overdue: m.disputesOverdue }, { key: "payouts", n: m.payoutsToApprove, overdue: 0 }] : []),
-    { key: "approvals", n: pending.length, overdue: pending.filter((a) => a.due < now).length },
     { key: "applications", n: providers.data?.applications ?? 0, overdue: 0 },
-    { key: "changes", n: open.length, overdue: open.filter((c) => c.due < now).length },
-    // Phase 2 queues (lib/adminWork.js)
-    { key: "requests", n: data.counts.requests, overdue: data.counts.requestsOverdue },
-    { key: "credit", n: data.counts.credit, overdue: 0 },
-    { key: "debt", n: data.counts.debt, overdue: 0 },
-    { key: "candidates", n: data.counts.candidates, overdue: 0 },
+    // DEMO queues (lib/admin.js, lib/adminWork.js): development and the test copy only (lib/demo.js)
+    ...(SHOW_DEMO ? [
+      { key: "approvals", n: pending.length, overdue: pending.filter((a) => a.due < now).length },
+      { key: "changes", n: open.length, overdue: open.filter((c) => c.due < now).length },
+      { key: "requests", n: data.counts.requests, overdue: data.counts.requestsOverdue },
+      { key: "credit", n: data.counts.credit, overdue: 0 },
+      { key: "debt", n: data.counts.debt, overdue: 0 },
+      { key: "candidates", n: data.counts.candidates, overdue: 0 },
+    ] : []),
   ];
   // the same sessions as Sessions and venues > Next 7 days
   const soon = data.sessions.filter((s) => !s.cancelled && s.daysAway <= 7 && !s.joiningSent);
@@ -111,6 +114,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="rt-adm-grid2">
+        {SHOW_DEMO && (
         <section className="rt-acc__card" aria-labelledby="rt-adm-risk-h">
           <div className="rt-acc__cardhead">
             <h2 className="rt-acc__h2" id="rt-adm-risk-h">{copy.atRisk}</h2>
@@ -134,6 +138,7 @@ export default function AdminDashboard() {
           )}
           {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
         </section>
+        )}
 
         {seesMoney && (
           <section className="rt-acc__card" aria-labelledby="rt-adm-latest-h">
