@@ -59,7 +59,7 @@ export default function AdminRequests() {
                   <td data-label={c.who}>{r.name}<small>{r.company || r.email}</small></td>
                   <td data-label={c.kind}>{copy.kinds[r.kind]}<small>{r.title}</small></td>
                   <td data-label={c.status}><AdminStatus kind="request" status={r.status}>{copy.statuses[r.status]}</AdminStatus><small>{r.assignee || copy.unassigned}</small></td>
-                  <td data-label={c.due}>{r.status === "new" ? <AdminDue due={r.due} now={data.now} /> : <span className="rt-acc__note">—</span>}</td>
+                  <td data-label={c.due}>{r.status === "new" ? <AdminDue due={r.due} now={data.now} /> : <span className="rt-adm-muted">–</span>}</td>
                 </tr>
               ))}
             </tbody>

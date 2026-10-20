@@ -81,7 +81,7 @@ export default function AdminCatalogue() {
                       <td data-label={cols.providers}>{c.offerings.length}{c.offerings.some((o) => o.status === "paused") && <small>{c.offerings.filter((o) => o.status === "paused").length} paused</small>}</td>
                       <td data-label={cols.sessions}>{c.upcoming}</td>
                       <td data-label={cols.from}>{formatPrice(c.from)}</td>
-                      <td data-label={cols.flags}>{c.preCourse ? <AdminTag>{copy.preCourse}</AdminTag> : <span className="rt-adm-muted">None</span>}</td>
+                      <td data-label={cols.flags}>{c.preCourse ? <AdminTag>{copy.preCourse}</AdminTag> : <span className="rt-adm-muted">–</span>}</td>
                     </tr>
                   ))}
                 </tbody>

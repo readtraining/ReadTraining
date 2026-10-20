@@ -5140,8 +5140,22 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm--platform .rt-adm-activity__as { display: block; margin-top: 4px; }
 /* rows-per-page dropdown opens upwards so its options are not cut off at the bottom of the page */
 .rt-adm--platform .rt-adm-pager .rt-cat-dd .rt-cat-dd__panel { top: auto; bottom: calc(100% + 8px); }
-/* toolbar search keeps enough width for its full placeholder */
-@media (min-width: 768px) { .rt-adm--platform .rt-adm-toolbar__end .rt-adm-search { flex: 0 0 340px; } }
+/* one toolbar on every list page: the tabs fill the first row, then the search on the left and any filters and buttons on the
+   right. A toolbar with no search keeps its filters and buttons on the right; one with neither tabs nor search is left as is. */
+.rt-adm--platform .rt-adm-toolbar > .rt-acc__tabs { flex: 1 1 100%; order: 0; }
+.rt-adm--platform .rt-adm-toolbar__end:has(.rt-adm-search) { display: contents; }
+.rt-adm--platform .rt-adm-toolbar .rt-adm-search { order: 1; margin-right: auto; }
+.rt-adm--platform .rt-adm-toolbar > :not(.rt-acc__tabs):not(.rt-adm-search),
+.rt-adm--platform .rt-adm-toolbar__end:has(.rt-adm-search) > :not(.rt-adm-search) { order: 2; }
+.rt-adm--platform .rt-adm-toolbar:has(> .rt-acc__tabs):not(:has(.rt-adm-search)) { justify-content: flex-end; }
+.rt-adm--platform .rt-adm-toolbar:has(.rt-adm-activity__dates) { align-items: flex-end; }
+/* the search keeps enough width for its full placeholder; on a phone it takes the whole row */
+@media (min-width: 576px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 0 1 340px; min-width: 260px; } }
+@media (max-width: 575px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 1 1 100%; margin-right: 0; } }
+/* a button that can't be used yet looks it (e.g. "Approve selected" with nothing ticked) */
+.rt-adm--platform .button:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+/* the page never shifts sideways when a scrollbar appears or goes */
+html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* recent activity: long record ids are cut short so each line stays on one row */
 .rt-adm--platform .rt-adm-feed p .rt-adm-muted { display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 /* ---------- end PLATFORM ADMIN ---------- */

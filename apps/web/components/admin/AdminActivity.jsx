@@ -89,6 +89,7 @@ export default function AdminActivity() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
+        <Tabs tabs={KINDS.map((key) => ({ key, label: copy.kinds[key] }))} value={kind} onChange={(k) => { setKind(k); paging.restart(); }} label="Show actions of this kind" />
         <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
         <div className="rt-adm-activity__dates">
           <div className="rt-field">
@@ -101,7 +102,6 @@ export default function AdminActivity() {
           </div>
         </div>
       </div>
-      <Tabs tabs={KINDS.map((key) => ({ key, label: copy.kinds[key] }))} value={kind} onChange={(k) => { setKind(k); paging.restart(); }} label="Show actions of this kind" />
 
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />

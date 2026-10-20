@@ -50,7 +50,7 @@ export default function AdminBusinesses() {
                   <td data-label={c.places}>{b.places.assigned} of {b.places.bought}<small>{b.places.bought - b.places.assigned} not assigned</small></td>
                   <td data-label={c.credit}><AdminStatus kind="credit" status={b.credit}>{copy.credit[b.credit]}</AdminStatus>{b.limit > 0 && <small>Limit {formatPrice(b.limit)}</small>}{b.eligible && <small>Eligible for credit</small>}</td>
                   <td data-label={c.owed}>{formatPrice(b.owed)}</td>
-                  <td data-label={c.overdue}>{b.overdue > 0 ? <span className="rt-adm-money-late">{formatPrice(b.overdue)}</span> : <span className="rt-acc__note">None</span>}</td>
+                  <td data-label={c.overdue}>{b.overdue > 0 ? <span className="rt-adm-money-late">{formatPrice(b.overdue)}</span> : <span className="rt-adm-muted">–</span>}</td>
                 </tr>
               ))}
             </tbody>
