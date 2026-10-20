@@ -33,7 +33,7 @@ export default function AccountNav({ area = "account", current }) {
   // the business this page belongs to (from the server check in the Business layout)
   const workspace = useWorkspace();
   const name = area === "business" ? workspace?.name || "" : me ? `${me.firstName || ""} ${me.lastName || ""}`.trim() || me.email : "";
-  const sub = area === "business" ? businessAccount.title : me?.email || "";
+  const sub = area === "business" ? businessAccount.title : copy.switchAccount.student.label;
   const initials = name ? name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() : "";
   const switcher = useSwitchAccount(area === "business" ? { kind: "business", organisationId: workspace?.id } : { kind: "student" });
   const others = switcher.entries.filter((e) => !e.current);

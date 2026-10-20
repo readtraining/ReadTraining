@@ -68,10 +68,18 @@ export const account = {
     greeting: "Hello, {name}",
     lead: "Your courses, bookings and certificates in one place.",
     next: { title: "Your next course", none: "You have no upcoming courses.", cta: { label: "Find a course", href: CATALOGUE_HREF } },
-    stats: { upcoming: "Upcoming courses", completed: "Completed courses", certificates: "Certificates", saved: "Saved courses" },
-    upcoming: { title: "Upcoming courses", all: "View my learning" },
+    // the page head's main button
+    action: { label: "Find a course", href: CATALOGUE_HREF },
+    // each number links to its page, with a short line saying what it means
+    stats: {
+      upcoming: { label: "Upcoming courses", hint: (next) => (next ? `Next on ${next}` : "Nothing booked yet") },
+      completed: { label: "Completed courses", hint: "See them in My learning" },
+      certificates: { label: "Certificates", hint: (renew) => (renew ? `${renew} to renew soon` : "All up to date") },
+      saved: { label: "Saved courses", hint: (n) => (n ? "Ready to compare" : "Tap the heart on a course") },
+    },
+    // the courses after the next one (the next one has its own card above)
+    upcoming: { title: "Also coming up", all: "View my learning" },
     certificates: { title: "Certificates and renewals", text: "Your training provider issues certificates after the course. Renew before the expiry date to stay qualified.", renew: "Renew", none: "Certificates from completed courses show here." },
-    saved: { title: "Saved courses", all: "View saved courses", none: "No saved courses yet", noneText: "Tap the heart on any course to keep it here and compare later.", browse: "Browse courses" },
     help: {
       title: "Need to change something?",
       items: [
@@ -103,6 +111,8 @@ export const account = {
     lead: "Every order, what you paid and how, and any refund.",
     columns: ["Order", "Date", "Courses", "Paid", "Status"],
     view: "View",
+    // Receipt opens the booking with the print window, where "Save as PDF" downloads it
+    receipt: "Receipt",
     status: { paid: "Paid", refunded: "Refunded", requested: "Cancellation requested" },
     paidWith: { card: "Card", klarna: "Klarna", wallet: "Wallet" },
     empty: { title: "No purchases yet", text: "Orders you place show here with their receipts." },
@@ -237,10 +247,10 @@ export const account = {
   ],
   // dates are days from today, so the demo always has upcoming and past courses; `courseId` is the catalogue course
   demoBookings: [
-    { reference: "RT-2026-104512", bookedDaysAgo: 18, method: "card", status: "confirmed", lines: [{ courseId: 1, mode: "classroom", startIn: 12, days: 6, time: "09:30 to 17:00", venue: "Manchester Training Centre", city: "Manchester", postcode: "M1 1AE", provider: "ClearView Learning", unit: 193.02, delegates: ["Sam Carter"] }] },
-    { reference: "RT-2026-098731", bookedDaysAgo: 9, method: "klarna", status: "confirmed", lines: [{ courseId: 5, mode: "online", startIn: 33, days: 1, time: "10:00 to 16:00", venue: "", city: "", postcode: "", provider: "Pinnacle Compliance Training", unit: 63.2, delegates: ["Sam Carter", "Jo Patel"] }] },
-    { reference: "RT-2026-071204", bookedDaysAgo: 75, method: "card", status: "confirmed", lines: [{ courseId: 20, mode: "ondemand", startIn: -70, days: 1, time: "Start any time", venue: "", city: "", postcode: "", provider: "Beacon Training Services", unit: 19.99, delegates: ["Sam Carter"], certificate: { number: "RT-2026-004815", expiresInDays: 1025 } }] },
-    { reference: "RT-2023-530118", bookedDaysAgo: 1140, method: "card", status: "confirmed", lines: [{ courseId: 16, mode: "classroom", startIn: -1110, days: 1, time: "09:30 to 16:30", venue: "Manchester Training Centre", city: "Manchester", postcode: "M1 1AE", provider: "Northstar Training", unit: 29.99, delegates: ["Sam Carter"], certificate: { number: "RT-2023-001992", expiresInDays: 40 } }] },
-    { reference: "RT-2026-066420", bookedDaysAgo: 96, method: "card", status: "cancelled", cancelledDaysAgo: 88, refund: 295, lines: [{ courseId: 13, mode: "classroom", startIn: -60, days: 4, time: "09:00 to 17:00", venue: "Leeds Training Centre", city: "Leeds", postcode: "LS1 4AP", provider: "Pinnacle Compliance Training", unit: 295, delegates: ["Sam Carter"] }] },
+    { reference: "RT-2026-104512", bookedDaysAgo: 18, method: "card", status: "confirmed", lines: [{ courseId: 1, mode: "classroom", startIn: 12, days: 6, time: "09:30 to 17:00", venue: "Manchester Training Centre", city: "Manchester", postcode: "M1 1AE", provider: "ClearView Learning", unit: 193.02, delegates: ["You"] }] },
+    { reference: "RT-2026-098731", bookedDaysAgo: 9, method: "klarna", status: "confirmed", lines: [{ courseId: 5, mode: "online", startIn: 33, days: 1, time: "10:00 to 16:00", venue: "", city: "", postcode: "", provider: "Pinnacle Compliance Training", unit: 63.2, delegates: ["You", "Jo Patel"] }] },
+    { reference: "RT-2026-071204", bookedDaysAgo: 75, method: "card", status: "confirmed", lines: [{ courseId: 20, mode: "ondemand", startIn: -70, days: 1, time: "Start any time", venue: "", city: "", postcode: "", provider: "Beacon Training Services", unit: 19.99, delegates: ["You"], certificate: { number: "RT-2026-004815", expiresInDays: 1025 } }] },
+    { reference: "RT-2023-530118", bookedDaysAgo: 1140, method: "card", status: "confirmed", lines: [{ courseId: 16, mode: "classroom", startIn: -1110, days: 1, time: "09:30 to 16:30", venue: "Manchester Training Centre", city: "Manchester", postcode: "M1 1AE", provider: "Northstar Training", unit: 29.99, delegates: ["You"], certificate: { number: "RT-2023-001992", expiresInDays: 40 } }] },
+    { reference: "RT-2026-066420", bookedDaysAgo: 96, method: "card", status: "cancelled", cancelledDaysAgo: 88, refund: 295, lines: [{ courseId: 13, mode: "classroom", startIn: -60, days: 4, time: "09:00 to 17:00", venue: "Leeds Training Centre", city: "Leeds", postcode: "LS1 4AP", provider: "Pinnacle Compliance Training", unit: 295, delegates: ["You"] }] },
   ],
 };

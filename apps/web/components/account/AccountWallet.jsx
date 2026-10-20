@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { account } from "@/data/account";
 import { getWallet } from "@/lib/account";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDay, formatPrice } from "@/lib/format";
 import { EmptyState } from "@/components/states/States";
 
 const copy = account.wallet;
@@ -36,7 +36,7 @@ export default function AccountWallet() {
             <tbody>
               {wallet.transactions.map((t) => (
                 <tr key={t.id}>
-                  <td data-label={copy.columns[0]}>{formatDate(t.date)}</td>
+                  <td data-label={copy.columns[0]}>{formatDay(t.date)}</td>
                   <td data-label={copy.columns[1]}>{t.label}</td>
                   <td data-label={copy.columns[2]}><b className={t.amount > 0 ? "rt-acc__credit" : undefined}>{t.amount > 0 ? "+" : "−"}{formatPrice(Math.abs(t.amount))}</b></td>
                   <td data-label={copy.columns[3]}>{formatPrice(t.balance)}</td>

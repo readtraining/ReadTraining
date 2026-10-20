@@ -6,7 +6,7 @@ import { account } from "@/data/account";
 import { topBar } from "@/data/home";
 import { bookingState, calendarFile, cancellableLines, getBooking } from "@/lib/account";
 import { courseHref } from "@/data/courseSlugs";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDay, formatPrice } from "@/lib/format";
 import { StatusPill, placeOf, whenOf } from "./BookingRow";
 import { EmptyState } from "@/components/states/States";
 
@@ -15,9 +15,18 @@ const copy = account.detail;
 // One booking: its status and reference, a state banner (cancellation requested / cancelled with the refund), each course with when,
 // where (directions), the provider, who attends, joining instructions and Add to calendar, the payment, and the booking's actions:
 // print a receipt, request a date change (the contact form with the reference filled in) and cancel (only while something can be).
+// ?print=1 (Receipt in Purchase history) opens the print window straight away, where "Save as PDF" downloads the receipt.
 export default function BookingDetail({ reference }) {
   const [booking, setBooking] = useState(undefined);
   useEffect(() => setBooking(getBooking(reference)), [reference]);
+  useEffect(() => {
+    if (!booking || new URLSearchParams(window.location.search).get("print") !== "1") return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("print");
+    window.history.replaceState(window.history.state, "", url);
+    const frame = requestAnimationFrame(() => window.print());
+    return () => cancelAnimationFrame(frame);
+  }, [booking]);
   if (booking === undefined) return null;
   if (!booking) {
     return (
@@ -36,13 +45,13 @@ export default function BookingDetail({ reference }) {
 
       <section className="rt-acc__card rt-acc__summary" aria-label="Booking summary">
         <div className="rt-acc__sumtop">
-          <p className="rt-acc__ref">{copy.booked.replace("{date}", formatDate(booking.bookedAt))}{booking.company ? ` · ${booking.company}` : ""}</p>
+          <p className="rt-acc__ref">{copy.booked.replace("{date}", formatDay(booking.bookedAt))}{booking.company ? ` · ${booking.company}` : ""}</p>
           <StatusPill booking={booking} />
         </div>
         {state === "requested" && <p className="rt-acc__banner -requested" role="status">{copy.requested.replace("{ref}", booking.cancellation.reference)}</p>}
         {state === "cancelled" && (
           <p className="rt-acc__banner -cancelled">
-            {copy.cancelled.replace("{date}", formatDate(booking.cancelledAt))}{booking.refund ? ` ${copy.refunded.replace("{amount}", formatPrice(booking.refund))}` : ""}
+            {copy.cancelled.replace("{date}", formatDay(booking.cancelledAt))}{booking.refund ? ` ${copy.refunded.replace("{amount}", formatPrice(booking.refund))}` : ""}
           </p>
         )}
       </section>
@@ -69,7 +78,7 @@ export default function BookingDetail({ reference }) {
                   {l.postcode && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.postcode)}`} target="_blank" rel="noopener" className="fb-textlink">{copy.actions.map}<span className="rt-sr"> to {l.venue}</span></a>}
                 </div>
               )}
-              {l.certificate && <p className="rt-acc__note">Certificate {l.certificate.number}, valid until {formatDate(l.certificate.expires)}.</p>}
+              {l.certificate && <p className="rt-acc__note">Certificate {l.certificate.number}, valid until {formatDay(l.certificate.expires)}.</p>}
             </article>
           ))}
         </div>

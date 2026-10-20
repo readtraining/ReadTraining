@@ -54,7 +54,7 @@ function demoBookings() {
         unit: l.unit,
         total: Math.round(l.unit * l.delegates.length * 100) / 100,
         delegates: l.delegates,
-        certificate: l.certificate ? { number: l.certificate.number, expires: isoDay(now + l.certificate.expiresInDays * DAY) } : undefined,
+        certificate: l.certificate ? { number: l.certificate.number, issued: isoDay(start + (l.days - 1) * DAY), expires: isoDay(now + l.certificate.expiresInDays * DAY), provider: l.provider } : undefined,
       };
     });
     return {

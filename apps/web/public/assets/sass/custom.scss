@@ -4141,6 +4141,12 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__helplinks { display: grid; gap: 4px 24px; margin: 0; }
 @media (min-width: 768px) { .rt-acc__helplinks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-acc__helplinks li { list-style: none; }
+/* dashboard: the help links beside the certificates, one per line (the card is half the width), each on its own row */
+@media (min-width: 768px) { .rt-acc__helplinks.rt-acc__helplist { grid-template-columns: minmax(0, 1fr); } }
+.rt-acc__helplist { align-content: start; margin-top: 14px; }
+.rt-acc__helplist li { padding: 12px 0; border-top: 1px solid var(--rt-c-line); }
+/* My learning: a certificate's line with its Download */
+.rt-acc__certline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
 .rt-acc__eyebrowrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 6px; }
 .rt-acc__eyebrowrow .rt-acc__eyebrow { margin-bottom: 0; }
 /* status pills */

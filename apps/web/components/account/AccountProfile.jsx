@@ -10,6 +10,7 @@ import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { ErrorState } from "@/components/states/States";
+import DateField from "@/components/admin/DateField";
 
 const copy = account.profile;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -149,7 +150,11 @@ function BasicSection({ me }) {
         <Field id="rt-pf-last" label="Last name" error={s.errors.lastName} type="text" autoComplete="family-name" value={s.values.lastName} onChange={s.set("lastName")} />
       </div>
       <div className="rt-contact__pair">
-        <Field id="rt-pf-dob" label="Date of birth" error={s.errors.dateOfBirth} type="date" autoComplete="bday" min="1900-01-01" max={today()} value={s.values.dateOfBirth} onChange={s.set("dateOfBirth")} />
+        <div className="rt-field">
+          <label htmlFor="rt-pf-dob">Date of birth</label>
+          {s.errors.dateOfBirth && <p className="rt-q__err" id="rt-pf-dob-e"><span className="rt-sr">Error: </span>{s.errors.dateOfBirth}</p>}
+          <DateField id="rt-pf-dob" value={s.values.dateOfBirth} onChange={(v) => s.set("dateOfBirth")({ target: { value: v } })} min="1900-01-01" max={today()} invalid={Boolean(s.errors.dateOfBirth)} describedBy={s.errors.dateOfBirth ? "rt-pf-dob-e" : undefined} placeholder="Choose your date of birth" startView="decade" />
+        </div>
         <Field id="rt-pf-phone" label="Contact number" error={s.errors.phone} type="tel" autoComplete="tel" value={s.values.phone} onChange={s.set("phone")} />
       </div>
       <Foot busy={s.busy} label={copy.save} saved={s.saved} general={s.general} />
