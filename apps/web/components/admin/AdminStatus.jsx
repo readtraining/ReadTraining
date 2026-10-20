@@ -4,10 +4,10 @@ import { dueState } from "@/lib/admin";
 // The platform admin's status system (docs/admin-ui-audit.md): one shape, five tones, and a neutral tag for anything that is not
 // a status (types, roles, triggers, codes). Admin screens only: the provider workspace keeps the shared Pill (adminParts).
 //   success  done and good
-//   info     in progress, waiting on someone else
+//   info     in progress, waiting on someone else (blue, never the button purple)
 //   warning  needs an admin, or due today or within a day
 //   danger   late, blocked, failed, or money at risk
-//   neutral  closed, inactive, not started, or due in 2 days or more
+//   neutral  closed, inactive, not started ("New": how urgent it is shows in its deadline), or due in 2 days or more
 // Every status maps to its tone here, once: adminTone("order", "paid") is "success".
 const TONES = {
   order: { paid: "success", part_refunded: "neutral", refunded: "neutral", cancelled: "neutral" },
@@ -26,8 +26,8 @@ const TONES = {
   credit: { none: "neutral", approved: "success", suspended: "danger" },
   invoice: { paid: "success", due: "neutral", overdue: "danger" },
   check: { yes: "success", no: "neutral" },
-  request: { new: "warning", documents: "info", payment: "info", paid: "success", submitted: "info", quoted: "info", accepted: "warning", booked: "success", replied: "info", done: "success", cancelled: "neutral" },
-  candidate: { new: "warning", screening: "info", shortlisted: "info", introduced: "info", interview: "info", started: "success", unsuitable: "neutral", withdrawn: "neutral" },
+  request: { new: "neutral", documents: "info", payment: "info", paid: "success", submitted: "info", quoted: "info", accepted: "warning", booked: "success", replied: "info", done: "success", cancelled: "neutral" },
+  candidate: { new: "neutral", screening: "info", shortlisted: "info", introduced: "info", interview: "info", started: "success", unsuitable: "neutral", withdrawn: "neutral" },
   intro: { asked: "info", consent: "warning", introduced: "info", interview: "info", offer: "info", started: "success", declined: "neutral" },
   email: { live: "info" },
   twoStep: { on: "success", next: "warning", off: "neutral" },

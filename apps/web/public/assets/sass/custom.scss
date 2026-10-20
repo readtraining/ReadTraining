@@ -5117,10 +5117,12 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
      success  done and good                      info     in progress, waiting on someone else
      warning  needs an admin, due within a day   danger   late, blocked, failed, or money at risk
      neutral  closed, inactive, not started, due in 2 days or more
-   Brand green is never a status here. The colours are set once on the admin root; every text colour passes WCAG AA at 12px. */
+   Brand green is never a status here, and info is blue so it never looks like a button or the chosen menu item. The colours are set once on the admin root; every text colour passes WCAG AA at 12px. */
 .rt-adm--platform {
   --rt-adm-success-bg: #e3f6ec;
   --rt-adm-success: #0f7a4a;
+  --rt-adm-info-bg: #e7f0fb;
+  --rt-adm-info: #1f5aa6;
   --rt-adm-warning: #9a4a0b;
   --rt-adm-danger: #b3261e;
   --rt-adm-neutral-bg: #eef0f4;
@@ -5129,7 +5131,7 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 }
 .rt-adm--platform .rt-adm-status { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; white-space: nowrap; }
 .rt-adm--platform .rt-adm-status.-success { background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
-.rt-adm--platform .rt-adm-status.-info { background: var(--color-purple-3); color: var(--color-purple-1); }
+.rt-adm--platform .rt-adm-status.-info { background: var(--rt-adm-info-bg); color: var(--rt-adm-info); }
 .rt-adm--platform .rt-adm-status.-warning { background: var(--color-orange-7); color: var(--rt-adm-warning); }
 .rt-adm--platform .rt-adm-status.-danger { background: var(--color-red-2); color: var(--rt-adm-danger); }
 .rt-adm--platform .rt-adm-status.-neutral { background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
