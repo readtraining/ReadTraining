@@ -81,12 +81,24 @@ export default function ReviewsSection() {
   const [stars, setStars] = useState(0);
   const [query, setQuery] = useState("");
   const dialogRef = useRef(null);
+  const bodyRef = useRef(null);
+  const downOutside = useRef(false);
+  // lines under the title (reviews scrolled under it) and over the foot (more reviews below)
+  const [edges, setEdges] = useState({ top: false, more: false });
+  const measure = () => {
+    const el = bodyRef.current;
+    if (el) setEdges({ top: el.scrollTop > 0, more: el.scrollTop + el.clientHeight < el.scrollHeight - 1 });
+  };
   const toggle = (k) => setHelpful((h) => ({ ...h, [k]: !h[k] }));
 
   useEffect(() => {
     const d = dialogRef.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      if (bodyRef.current) bodyRef.current.scrollTop = 0;
+      measure();
+    }
     if (!open && d.open) d.close();
   }, [open]);
 
@@ -94,6 +106,13 @@ export default function ReviewsSection() {
     const q = query.trim().toLowerCase();
     return course.reviews.filter((r) => (!stars || r.rating === stars) && (!q || `${r.name} ${r.title || ""} ${r.body || ""}`.toLowerCase().includes(q)));
   }, [course.reviews, stars, query]);
+  useEffect(measure, [filtered]);
+
+  // a press and release outside the pop-up's box (on the dimmed backdrop) closes it
+  const outside = (e) => {
+    const r = dialogRef.current.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  };
 
   // Only ratings that have at least one written review can be filtered on (the bars show every rating, written or not).
   const written = useMemo(() => course.reviews.reduce((o, r) => ({ ...o, [r.rating]: (o[r.rating] || 0) + 1 }), {}), [course.reviews]);
@@ -117,11 +136,22 @@ export default function ReviewsSection() {
 
       <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-cd__more" onClick={() => setOpen(true)}>See all reviews</button>
 
-      <dialog ref={dialogRef} className="rt-cd__dialog rt-cd__dialog--wide rt-pill-scroll" aria-labelledby="rt-cd-allrev-h" onClose={() => setOpen(false)}>
-        <div className="rt-cd__dialog-head">
+      {/* The title and the close button stay put while the reviews under them scroll; clicking the backdrop closes it. */}
+      <dialog
+        ref={dialogRef}
+        className="rt-cd__dialog rt-cd__dialog--wide"
+        aria-labelledby="rt-cd-allrev-h"
+        onClose={() => setOpen(false)}
+        onPointerDown={(e) => (downOutside.current = e.target === e.currentTarget && outside(e))}
+        onClick={(e) => {
+          if (downOutside.current && e.target === e.currentTarget && outside(e)) setOpen(false);
+        }}
+      >
+        <div className={`rt-cd__dialog-head${edges.top ? " is-scrolled" : ""}`}>
           <h2 id="rt-cd-allrev-h">Hear from our past customers</h2>
           <button type="button" className="rt-icon-btn rt-cd__x" aria-label="Close" onClick={() => setOpen(false)}><Icon name="close" /></button>
         </div>
+        <div ref={bodyRef} className={`rt-cd__dialog-body rt-pill-scroll${edges.more ? " has-more" : ""}`} onScroll={measure}>
         {summary}
 
         <ul className="rt-cd__bars" aria-label="Filter by rating">
@@ -149,7 +179,8 @@ export default function ReviewsSection() {
             {filtered.map((r) => <ReviewCard key={keyOf(r)} r={r} helpful={helpful} toggle={toggle} wide />)}
           </ul>
         )}
-        <FilterScrollPill scrollRef={dialogRef} />
+        <FilterScrollPill scrollRef={bodyRef} />
+        </div>
       </dialog>
     </section>
   );
