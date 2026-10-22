@@ -8,7 +8,9 @@ import { businessMenu } from "@/data/home/menu";
 // Slim utility strip above the navbar: contact on the left, audience links on the right.
 // The link for the current page is shown as active (not a link), and "For learners" always leads home.
 export default function HomeTopBar() {
-  const path = usePathname() || "/";
+  // a home page Vercel rebuilds in the background reports "/index" on the server; the browser says "/", and the two must match
+  const raw = usePathname() || "/";
+  const path = raw === "/index" ? "/" : raw;
   const audiences = [{ label: "For learners", href: "/" }, ...businessMenu.map((b) => ({ label: b.label, href: b.href }))];
   const isActive = (href) => (href === "/" ? path === "/" : path.startsWith(href.split("#")[0]));
   return (
