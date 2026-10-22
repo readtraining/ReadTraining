@@ -36,7 +36,9 @@ const readRaw = () => {
     const saved = JSON.parse(window.localStorage.getItem(KEY) || "null");
     if (saved && saved.version === VERSION) return saved;
   } catch {}
-  const fresh = SHOW_DEMO ? seedProvider(Date.now()) : emptyProvider(Date.now());
+  // stamped with this file's VERSION (the sample records carry an older number), or every read would start again from scratch
+  // and nothing made in the workspace (a new course, an edit) would be kept
+  const fresh = SHOW_DEMO ? { ...seedProvider(Date.now()), version: VERSION } : emptyProvider(Date.now());
   write(fresh);
   return fresh;
 };
