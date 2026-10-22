@@ -1,23 +1,42 @@
 import { useEffect, useState } from "react";
 import { pw, seedProvider } from "@/data/providerWorkspace";
 import { formatPrice } from "@/lib/format";
+import { SHOW_DEMO } from "@/lib/demo";
 
 // The provider workspace's reads and writes. There is no provider API yet (front end only), so the records start from
 // seedProvider() and every change made in the workspace is kept in this browser (localStorage `rt-provider`), with an event so
 // every open page reads again. DEMO: swap read/update for API calls later; the pages only depend on the shapes useProvider()
 // returns and on the actions below. Browser-only: call from effects and handlers.
 
-const KEY = "rt-provider";
+// On the live site the made-up records are off (lib/demo.js): the workspace starts empty, under its own key, so a browser that
+// saw the sample records before starts clean too.
+const KEY = SHOW_DEMO ? "rt-provider" : "rt-provider-live";
 export const PROVIDER_EVENT = "rt-provider-change";
 export const DAY = 86400000;
 const VERSION = 4; // 4: categories, sub-categories, topics and methods as catalogue slugs (3: refund booking reference; 2: Hurak setup fields)
+
+// The workspace with none of the sample records: no courses, dates, venues, orders, learners or reviews, and a blank profile.
+// The provider's name and the signed-in person are filled in by actAs().
+const emptyProvider = (now) => {
+  const s = seedProvider(now);
+  const me = { ...s.me, name: "", email: "" };
+  const own = s.team.find((t) => t.id === me.id);
+  return {
+    ...s,
+    version: VERSION,
+    org: { ...Object.fromEntries(Object.keys(s.org).map((k) => [k, ""])), vat: { registered: false, number: "" }, emails: { refund: "", dispute: "", order: "" } },
+    me,
+    team: own ? [{ ...own, name: "", email: "" }] : [],
+    courses: [], cohorts: [], venues: [], faqs: [], packages: [], learners: [], orders: [], enrolments: [], reviews: [], leads: [], refunds: [], qa: [], notifications: [],
+  };
+};
 
 const readRaw = () => {
   try {
     const saved = JSON.parse(window.localStorage.getItem(KEY) || "null");
     if (saved && saved.version === VERSION) return saved;
   } catch {}
-  const fresh = seedProvider(Date.now());
+  const fresh = SHOW_DEMO ? seedProvider(Date.now()) : emptyProvider(Date.now());
   write(fresh);
   return fresh;
 };
