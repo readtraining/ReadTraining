@@ -172,8 +172,9 @@ export const PROVIDER_ACTIONS = Object.keys(PROVIDER_RULES) as ProviderAction[]
 export const BUSINESS_ACTIONS = Object.keys(BUSINESS_RULES) as BusinessAction[]
 export const ADMIN_ACTIONS = Object.keys(ADMIN_RULES) as AdminAction[]
 
-// Two-step sign-in is required for Full admins (the brief) and for any admin who has set up an authenticator.
-export const needsTwoStep = (admin: AdminAccess) => admin.preset === 'full' || admin.twoStep === true
+// Two-step sign-in is required for any admin who has set up an authenticator. TEMPORARY (2026-10-22, the client's review):
+// Full admins no longer have to set one up; put `admin.preset === 'full' ||` back in front to require it again (the brief).
+export const needsTwoStep = (admin: AdminAccess) => admin.twoStep === true
 
 // The switches an admin actually holds: a preset's list, or the stored list for "custom".
 export function adminPermissions(admin: AdminAccess | null): AdminPermission[] {
