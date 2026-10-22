@@ -1887,7 +1887,7 @@ main#rt-cat-main { overflow: clip; }
 }
 
 /* ---------- Desktop (1025px and wider) ---------- */
-.rt-fp { --fp-text: var(--color-dark-1); --fp-muted: var(--color-dark-3); --fp-border: var(--color-light-5); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--color-purple-1); --fp-surface: var(--color-white); position: sticky; top: calc(var(--header-offset, 0px) + 16px); align-self: start; display: flex; flex-direction: column; width: 280px; max-height: 520px; }
+.rt-fp { --fp-text: var(--color-dark-1); --fp-muted: var(--color-dark-3); --fp-border: var(--color-light-5); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--color-purple-1); --fp-surface: var(--color-white); position: sticky; top: calc(var(--header-offset, 0px) + 16px); align-self: start; display: flex; flex-direction: column; width: 280px; max-height: min(680px, calc(100dvh - var(--header-offset, 0px) - 32px)); }
 .rt-fp__panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 20px; background: var(--fp-surface); border: 1px solid var(--fp-border); border-radius: 12px; }
 .rt-fp__backdrop, .rt-fp__handle, .rt-fp__close, .rt-fp__foot { display: none; }
 .rt-fp__head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; }
@@ -2223,7 +2223,20 @@ main#rt-cd-main { overflow: clip; }
 .rt-clamp__btn { margin-top: 4px; }
 
 /* ---------- Reviews dialog ---------- */
-.rt-cd__dialog--wide { width: 720px; max-height: calc(100dvh - 48px); overflow-y: auto; }
+/* the reviews pop-up, centred with a clear gap above and below (104px on a laptop, which keeps it 32px under the course's
+   72px bar; 16px on a phone or a short screen). The title and close button stay at its top, a white foot closes it at the
+   bottom, and only the reviews between them scroll: a thin line shows under the title once reviews pass under it, and over
+   the foot while there are more below. */
+.rt-cd__dialog--wide { --dlg-gap: 104px; width: 720px; max-height: calc(100dvh - 2 * var(--dlg-gap)); padding: 0 0 16px; overflow: hidden; }
+@media (max-width: 575px), (max-height: 640px) { .rt-cd__dialog--wide { --dlg-gap: 16px; } }
+.rt-cd__dialog--wide[open] { display: flex; flex-direction: column; }
+.rt-cd__dialog--wide .rt-cd__dialog-head { flex: none; margin: 0; padding: 20px 24px 12px; border-bottom: 1px solid transparent; transition: border-color 0.15s ease; }
+.rt-cd__dialog--wide .rt-cd__dialog-head.is-scrolled { border-bottom-color: var(--cd-border); }
+.rt-cd__dialog-body { position: relative; flex: 1 1 auto; min-height: 0; padding: 0 24px 8px; overflow-y: auto; overscroll-behavior: contain; border-bottom: 1px solid transparent; transition: border-color 0.15s ease; }
+.rt-cd__dialog-body.has-more { border-bottom-color: var(--cd-border); }
+/* while a course page pop-up is open the page behind it stays still: the wheel, a swipe or the backdrop never scroll it, and a
+   scroll that reaches the pop-up's end stops there. The scrollbar's room is kept, so nothing shifts sideways. */
+html:has(dialog.rt-cd__dialog[open]) { overflow: hidden; scrollbar-gutter: stable; }
 .rt-cd__bars { display: grid; gap: 8px; padding: 0; list-style: none; font-size: 13px; line-height: 20px; color: var(--cd-muted); margin: 8px 0 12px; }
 .rt-cd__bars li { grid-template-columns: 56px minmax(0, 1fr) 40px; align-items: center; gap: 12px; display: block; }
 .rt-cd__bars button { display: grid; grid-template-columns: 56px minmax(0, 1fr) 40px; align-items: center; gap: 12px; box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; background: none; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
@@ -3515,16 +3528,17 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 .rt-reviews-page main:focus { outline: none; }
 /* the featured story: its rating figures are left out (the facts strip shows them), so no empty row is drawn */
 .rt-reviews__featured .rt-vstory__stats:empty { display: none; }
-/* the reviews: filter pills centred over the cards in a grid of equal-size cards (every row as tall as the tallest review, the
-   reviewer pinned to the foot of each card), three from 992px, two from 576px */
+/* the reviews: filter pills centred over a grid of cards (three from 992px, two from 576px), each row as tall as its longest
+   review: the reviewer at the top over a thin line, then the whole review (the home cards cut it at four lines), so a short
+   review leaves its spare room at the foot of the card */
 .rt-reviews__filters { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 32px 0 0; }
-.rt-reviews__grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; gap: 16px; margin: 32px 0 0; padding: 0; list-style: none; }
+.rt-reviews__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 32px 0 0; padding: 0; list-style: none; }
 @media (min-width: 576px) { .rt-reviews__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 992px) { .rt-reviews__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .rt-reviews__grid li { min-width: 0; margin: 0; list-style: none; }
 .rt-reviews__grid .rt-review { margin: 0; }
-/* the whole review is shown (the home cards cut it at four lines) */
-.rt-reviews__grid .rt-review__quote { display: block; -webkit-line-clamp: unset; overflow: visible; margin: 0 0 16px; }
+.rt-reviews__grid .rt-review__who { align-items: flex-start; margin: 0 0 14px; padding: 0 0 14px; border-top: 0; border-bottom: 1px solid var(--color-light-5); }
+.rt-reviews__grid .rt-review__quote { flex: none; display: block; -webkit-line-clamp: unset; overflow: visible; margin: 0; }
 /* the closing call to action, spaced from the FAQ's tinted band */
 .rt-reviews__cta { padding-top: 64px; }
 

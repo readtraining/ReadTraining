@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { initials } from "@/components/marketing/parts";
 
 // The reviews, filterable by subject: the result page's filter pills (.rt-tr__filter, with a count each) above the home page's
-// review cards (.rt-review) showing the full text, the reviewer and their course and place. No star rating or source is shown:
-// the testimonials have neither. `list` is { title, allLabel, reviews: [{ id, name, course, place, subject, text }] }.
+// review cards (.rt-review). Here the reviewer comes first (initials, name, course and place, as the home card's foot), then the
+// full text, and each card is as tall as its review. No star rating or source is shown: the testimonials have neither. `list` is { title, allLabel, reviews: [{ id, name, course, place, subject, text }] }.
 export default function ReviewsList({ list }) {
   const [subject, setSubject] = useState("all");
   const subjects = useMemo(() => {
@@ -31,13 +32,14 @@ export default function ReviewsList({ list }) {
           {shown.map((r) => (
             <li key={r.id}>
               <figure className="rt-review">
-                <blockquote className="rt-review__quote">{r.text}</blockquote>
                 <figcaption className="rt-review__who">
+                  <span className="rt-review__avatar" aria-hidden="true">{initials(r.name)}</span>
                   <div>
                     <div className="rt-review__name">{r.name}</div>
                     <div className="rt-review__course">{[r.course, r.place].filter(Boolean).join(" · ")}</div>
                   </div>
                 </figcaption>
+                <blockquote className="rt-review__quote">{r.text}</blockquote>
               </figure>
             </li>
           ))}
