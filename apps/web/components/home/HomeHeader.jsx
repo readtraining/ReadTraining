@@ -11,14 +11,22 @@ import HomeMobileMenu from "./HomeMobileMenu";
 import { topBar } from "@/data/home";
 import HomeTopBar from "./HomeTopBar";
 import HeaderAuth from "./HeaderAuth";
+import NavCard from "@/components/header/NavCard";
+import { useNavMenu } from "@/components/header/useNavMenu";
+import { useHeaderBottom } from "@/components/header/useHeaderBottom";
+import { headerNav } from "@/data/headerNav";
 
 export default function HomeHeader() {
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
+  // the four menus: the open one's card shows under the header, with the page dimmed behind it
+  const menu = useNavMenu();
+  const section = headerNav.sections.find((s) => s.id === menu.open);
+  const dimTop = useHeaderBottom(Boolean(section));
 
   return (
     <>
       <HomeTopBar />
-      <header className="header -type-1 " style={{ position: "sticky", top: 0 }}>
+      <header className="header -type-1 " style={{ position: "sticky", top: 0 }} data-rt-nav>
         <div className="header__container">
           <div className="row justify-between items-center">
             <div className="col-auto">
@@ -37,7 +45,7 @@ export default function HomeHeader() {
               </div>
             </div>
 
-            <HomeMenu allClasses={"menu__nav text-white -is-active"} />
+            <HomeMenu allClasses={"menu__nav text-white -is-active"} menu={menu} />
             <HomeMobileMenu
               setActiveMobileMenu={setActiveMobileMenu}
               activeMobileMenu={activeMobileMenu}
@@ -77,6 +85,12 @@ export default function HomeHeader() {
             </div>
           </div>
         </div>
+        {section && (
+          <>
+            <button type="button" className="rt-nav-dim" style={{ top: dimTop }} aria-label={headerNav.menu.close} tabIndex={-1} onClick={() => menu.close()}></button>
+            <NavCard section={section} trigger={menu.trigger} cardProps={menu.cardProps} />
+          </>
+        )}
       </header>
     </>
   );
