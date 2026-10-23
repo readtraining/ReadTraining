@@ -2,7 +2,7 @@
 
 import { footer, topBar } from "@/data/home";
 
-import { homeMenuList as menuList } from "@/data/home/menu";
+import { mobileMenuList as menuList } from "@/data/headerNav";
 
 import Link from "next/link";
 import HeaderAuth from "./HeaderAuth";

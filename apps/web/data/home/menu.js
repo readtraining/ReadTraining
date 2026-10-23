@@ -1,6 +1,6 @@
-// Navigation data mirrored from the client's current site (hurak.com), September 2026.
-// Structure: Courses (12 subjects + popular per subject), Licences & Cards, Locations, Resources.
-// Hrefs point at our template pages for now; `slug` keeps the original path for when real pages exist.
+// Course data for the site header (data/headerNav.js), the header search and the course-in-a-town pages: the 12 subjects
+// with their courses, the study methods, and the popular courses with a page in each town. `slug` keeps the client's
+// original path for when real pages exist.
 
 import { placesByCourse } from "./locationPlaces";
 import { courseLink } from "@/data/courseSlugs";
@@ -13,8 +13,8 @@ const img = (n) => `/assets/img/coursesCards/${n}.png`;
 
 export const studyMethods = [
   { label: "Classroom", text: "Face-to-face at a venue near you", icon: "icon-online-learning-4", href: "/courses/classroom", slug: "/courses/classroom" },
-  { label: "Live online", text: "Tutor-led over video, from home", icon: "icon-online-learning-2", href: "/courses/virtual", slug: "/courses/virtual" },
-  { label: "Online self-paced", text: "Start today, learn at your own pace", icon: "icon-time-management", href: "/courses/online", slug: "/courses/online" },
+  { label: "Live online", text: "Tutor-led over video, from home", icon: "icon-online-learning-2", href: "/courses/live-online", slug: "/courses/virtual" },
+  { label: "Online self-paced", text: "Start today, learn at your own pace", icon: "icon-time-management", href: "/courses/self-paced", slug: "/courses/online" },
 ];
 
 export const subjects = [
@@ -105,32 +105,6 @@ export const subjects = [
   return { ...s, href, count: s.courses.length, courses: s.courses.map((c) => ({ ...c, href })) };
 });
 
-// Licences & Cards menu, as the client's (hurak.com): the same four groups, names, order and guides. A group opens its main guide
-// (Security opens the hub filtered to SIA licences).
-const lic = (slug) => `/licences/${slug}`;
-const licenceText = "Explore the training and qualification routes for this licence or card.";
-export const licenceGroups = [
-  { label: "Construction", img: img(3), href: lic("forklift-licence"), text: licenceText, routes: [{ label: "Forklift Licence", href: lic("forklift-licence") }] },
-  { label: "CSCS Card", img: img(9), href: lic("cscs-cards"), text: licenceText, routes: [{ label: "CSCS Card Application", href: lic("cscs-cards") }] },
-  {
-    label: "Personal Licence", img: img(7), href: lic("personal-licence"), text: licenceText,
-    routes: [
-      { label: "APLH Personal Licence Application", href: lic("personal-licence") },
-      { label: "Occasional Licence", href: lic("occasional-licence") },
-      { label: "Premises Licence", href: lic("premises-licence") },
-    ],
-  },
-  {
-    label: "Security Licence", img: img(11), href: "/licences?industry=security", text: licenceText,
-    routes: [
-      { label: "CCTV Licence", href: lic("sia-cctv-licence") },
-      { label: "SIA Close Protection Licence", href: lic("sia-close-protection-licence") },
-      { label: "SIA Door Supervisor Licence", href: lic("sia-door-supervisor-licence") },
-      { label: "SIA Security Guard Licence", href: lic("sia-security-guard-licence") },
-    ],
-  },
-];
-
 // Locations menu, as the client's (hurak.com): a list of popular courses and, for the course you point at, every town and city.
 // A course opens its page; a city opens the course finder for that course at that town (?location=). Our catalogue has venues
 // in a few cities only, so the finder shows what runs there (and the online courses, which run anywhere). `id` is the course's
@@ -191,108 +165,6 @@ export const locationCourses = [
 // site); one that is not in the catalogue yet opens the nearest course page filtered to the town. The course-in-a-city page
 // sends a town with no venue for the course to the course finder (locationFinderHref), so no link is a dead end.
 export const locationFinderHref = (course, city) => `${course.results}${course.results.includes("?") ? "&" : "?"}location=${encodeURIComponent(city)}`;
-export const locationHref = (course, city) => course.cityHref ? course.cityHref(city) : (course.id ? `/course-locations/${course.locationSlug}-in-${slugify(city)}` : locationFinderHref(course, city));
 export const cityHref = (city) => `${FINDER}?location=${encodeURIComponent(city)}`;
 
-export const cities = [
-  "Aberdeen", "Aberystwyth", "Aldershot", "Alness", "Annan", "Ashford", "Ashington", "Barking", "Barnet", "Barnsley", "Basildon", "Basingstoke", "Bexley", "Birmingham", "Blackburn", "Blackpool", "Bolton", "Bournemouth", "Brentwood", "Brighton", "Cambridge", "Canary Wharf", "Cardiff", "Chorley", "Colchester", "Coventry", "Croydon", "Dartford", "Derby", "Devon", "Doncaster", "Dundee", "Durham", "Edinburgh", "Essex", "Exeter", "Finchley", "Glasgow", "Gravesend", "Harlow", "Harrow", "Hemel Hempstead", "Hertfordshire", "Hounslow", "Hull", "Ilford", "Inverness", "Ipswich", "Kingston", "Lancashire", "Leeds", "Leicester", "Lewisham", "Leyland", "Leytonstone", "Lincoln", "London", "Luton", "Maidstone", "Manchester", "Milton Keynes", "Newcastle", "Newcastle upon Tyne", "Norfolk", "Northampton", "Northamptonshire", "Northfleet", "Northumberland", "Norwich", "Nottingham", "Nottinghamshire", "Oxfordshire", "Peterborough", "Plymouth", "Portsmouth", "Rainham", "Reading", "Romford", "Salford", "Sheffield", "Slough", "Solihull", "Somerset", "Southampton", "Southend", "Stafford", "Staffordshire", "Stratford", "Surrey", "Swansea", "Swindon", "Trafford Park", "Uxbridge", "Wakefield", "Wales", "Walsall", "West Lothian", "West Midlands", "West Sussex", "Wigan", "Wirral", "Wolverhampton", "Worthing",
-];
-
-// The card beside the cities: a town that is not listed is found with the course finder's location box.
-export const locationFeature = {
-  img: img(5),
-  eyebrow: "Any town or postcode",
-  title: "Search by postcode",
-  text: "Enter your town or postcode in the course finder to see the venues and dates nearest you.",
-  link: { label: "Open the course finder", href: FINDER },
-};
-
 export const popularByLocation = locationCourses.slice(0, 12);
-
-export const resources = {
-  prepare: [
-    { label: "Test Prep & Mock Exams", text: "Practice mock tests and revision tools for SIA & CSCS exams.", icon: "icon-book", href: "/test-prep", slug: "/test-prep" },
-    { label: "Blog & Industry Guides", text: "Training insights, regulatory updates and career advice.", icon: "icon-document", href: "/blog", slug: "/blog" },
-  ],
-  prepareLink: { label: "Explore Test Prep & Revision", href: "/test-prep" },
-  help: [
-    { label: "Help Centre & FAQs", icon: "icon-message", href: "/help-centre" },
-    { label: "Certificate Verification", icon: "icon-check", href: "/certificate-checker", slug: "/certificate-checker" },
-  ],
-  company: [
-    { label: "About ReadTraining", icon: "icon-person", href: "/about-us" },
-    { label: "Contact Us", icon: "icon-email", href: "/contact-us" },
-  ],
-  helpLink: { label: "Visit Help Centre", href: "/help-centre" },
-  featured: {
-    tag: "SIA guide",
-    img: img(11),
-    title: "How to renew your SIA licence",
-    text: "Understand the refresher training requirements and renewal timeline before your licence expires.",
-    link: { label: "Read guide", href: "/blog/how-to-renew-your-sia-licence" },
-  },
-  footer: [
-    { label: "Test Prep", href: "/test-prep" },
-    { label: "Blog & Guides", href: "/blog" },
-    { label: "Verify Certificate", href: "/certificate-checker" },
-    { label: "Help Centre", href: "/help-centre" },
-  ],
-};
-
-export const menuFooters = {
-  courses: {
-    links: [
-      { label: "All courses", href: CATALOGUE_HREF },
-      { label: "Classroom", href: "/courses/classroom" },
-      { label: "Live online", href: "/courses/virtual" },
-      { label: "Online self-paced", href: "/courses/online" },
-    ],
-    action: { label: "Course Finder", icon: "icon-search", href: CATALOGUE_HREF },
-  },
-  licences: {
-    links: [
-      { label: "SIA Licence", href: "/licences?industry=security" },
-      { label: "CSCS Cards", href: lic("cscs-cards") },
-      { label: "Personal Licence", href: lic("personal-licence") },
-    ],
-    action: { label: "Verify a certificate", icon: "icon-check", href: "/certificate-checker" },
-  },
-  locations: {
-    links: [
-      { label: "All courses", href: FINDER },
-      { label: "Classroom courses", href: "/courses/classroom" },
-      { label: "Live online", href: "/courses/virtual" },
-    ],
-    action: { label: "Search by postcode", icon: "icon-location", href: FINDER },
-  },
-  resources: {
-    links: resources.footer,
-    action: { label: "Contact us", icon: "icon-email", href: "/contact-us" },
-  },
-};
-
-// Flat structure used by the mobile menu (same shape as the template's menuList).
-export const businessMenu = [
-  { label: "Book for your team", text: "Group bookings, one invoice, your venue or ours.", href: "/for-business", icon: "icon-person-3" },
-  { label: "List your courses", text: "Reach learners across the UK. Free to list.", href: "/for-providers", icon: "icon-list" },
-];
-
-export const homeMenuList = [
-  {
-    title: "Courses",
-    links: [
-      { title: "Browse by subject", links: subjects.map((s) => ({ label: s.label, href: s.href })) },
-      { title: "Study method", links: studyMethods.map((m) => ({ label: m.label, href: m.href })) },
-      { href: CATALOGUE_HREF, label: "View all courses" },
-    ],
-  },
-  { title: "Licences & Cards", links: licenceGroups.map((g) => ({ label: g.label, href: g.href })) },
-  {
-    title: "Locations",
-    links: [
-      { title: "Popular training", links: locationCourses.map((c) => ({ label: c.label, href: c.href })) },
-      { title: "Towns and cities", links: cities.map((city) => ({ label: city, href: cityHref(city) })) },
-    ],
-  },
-  { title: "Resources", links: [...resources.prepare, ...resources.help, ...resources.company].map((r) => ({ label: r.label, href: r.href })) },
-];
