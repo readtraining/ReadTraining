@@ -116,9 +116,15 @@ export async function signOut() {
 export const toPerson = (user) => {
   if (!user) return null;
   const m = user.user_metadata || {};
-  const firstName = m.first_name || "";
-  const lastName = m.last_name || "";
-  return { id: user.id, email: user.email, firstName, lastName, name: [firstName, lastName].filter(Boolean).join(" ") || user.email };
+  // email sign-up (and Account settings) save first_name / last_name; Google and Facebook send one full name, split as the
+  // database splits it for the profile (first word, then the rest)
+  const full = String(m.full_name || m.name || "").trim();
+  const space = full.indexOf(" ");
+  const firstName = m.first_name || (space > 0 ? full.slice(0, space) : full);
+  const lastName = m.first_name ? m.last_name || "" : space > 0 ? full.slice(space + 1).trim() : "";
+  // Google's photo comes with the sign-in, so account cards can show it before the saved profile has loaded
+  const avatarUrl = m.avatar_url || m.picture || "";
+  return { id: user.id, email: user.email, firstName, lastName, avatarUrl, name: [firstName, lastName].filter(Boolean).join(" ") || user.email };
 };
 export function useAuthUser() {
   const [person, setPerson] = useState(undefined);

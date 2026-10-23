@@ -202,7 +202,7 @@ export function Search({ value, onChange, label }) {
 // `items`: [{ label, onClick } | { label, href }], `danger` for a destructive item. A real menu: arrow keys move between items,
 // Esc closes it and puts focus back on the button, a click outside closes it. Looks like the site's dropdown panel.
 // The provider's account menu uses it too: `trigger` replaces the dots, `head` goes above the items, and { group } items label
-// the ones after them. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
+// the ones after them. An item's `icon` (an icon class) goes before its label. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
 export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null }) {
   const [open, setOpen] = React.useState(false);
   const wrap = React.useRef(null);
@@ -242,8 +242,8 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
           {items.map((item) => (
             <li key={item.key || item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>
               {item.group ? item.group : item.href
-                ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)}>{item.label}</Link>
-                : <button type="button" role="menuitem" className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => pick(item)}>{item.label}</button>}
+                ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)}>{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</Link>
+                : <button type="button" role="menuitem" className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => pick(item)}>{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</button>}
             </li>
           ))}
         </ul>
