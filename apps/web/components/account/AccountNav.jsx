@@ -28,21 +28,26 @@ export default function AccountNav({ area = "account", current }) {
   // the signed-in person: the saved profile (API), or the sign-in record's name while that loads
   const { person, data } = useMe();
   const me = data ? { firstName: data.profile.firstName, lastName: data.profile.lastName, email: data.email } : person;
-  const photo = area === "business" ? null : data?.profile.photoUrl;
+  // the saved photo, or Google's from the sign-in while the profile loads (so the initials don't flash first)
+  const photo = area === "business" ? null : data ? data.profile.photoUrl : person?.avatarUrl || null;
   const menu = area === "business" ? businessAccount : copy;
   // the business this page belongs to (from the server check in the Business layout)
   const workspace = useWorkspace();
   const name = area === "business" ? workspace?.name || "" : me ? `${me.firstName || ""} ${me.lastName || ""}`.trim() || me.email : "";
+  // a person's first two names on the card (the full name shows on hover); a business keeps its whole name
+  const shortName = area === "business" || name.includes("@") ? name : name.split(" ").filter(Boolean).slice(0, 2).join(" ");
   const sub = area === "business" ? businessAccount.title : copy.switchAccount.student.label;
   const initials = name ? name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() : "";
   const switcher = useSwitchAccount(area === "business" ? { kind: "business", organisationId: workspace?.id } : { kind: "student" });
   const others = switcher.entries.filter((e) => !e.current);
-  const switchItems = [{ group: switcher.title }, ...others.map((e) => ({ key: e.key, label: e.kind === "provider" ? `${e.label} (provider)` : e.kind === "business" ? `${e.label} (business)` : e.label, onClick: () => switcher.go(e) }))];
+  // the same rows as the header's account menu: an icon for each kind of account, then its name
+  const icon = (e) => (e.kind === "student" ? "icon-person" : e.kind === "provider" || e.key === "add-provider" ? "icon-online-learning-4" : "icon-friend");
+  const switchItems = [{ group: switcher.title }, ...others.map((e) => ({ key: e.key, icon: icon(e), label: e.label, onClick: () => switcher.go(e) }))];
   const who = (
     <>
       {photo ? <img className="rt-acc__avatar rt-acc__photoimg" src={photo} alt="" width="44" height="44" /> : <span className="rt-acc__avatar" aria-hidden="true">{initials}</span>}
       <span className="rt-acc__mewho">
-        <strong>{name || " "}</strong>
+        <strong title={name || undefined}>{shortName || " "}</strong>
         <span>{sub || " "}</span>
       </span>
     </>
@@ -60,6 +65,9 @@ export default function AccountNav({ area = "account", current }) {
           <div className="rt-acc__switch">
             <RowMenu label={switcher.title} triggerClass="rt-acc__me" trigger={<>{who}<i className="icon-chevron-down text-12 rt-acc__mechev" aria-hidden="true"></i></>} items={switchItems} />
           </div>
+        ) : !switcher.ready ? (
+          // while the accounts load: the same card and arrow as the menu button, so nothing jumps when it arrives
+          <div className="rt-acc__switch"><div className="rt-rowmenu"><div className="rt-acc__me">{who}<i className="icon-chevron-down text-12 rt-acc__mechev" aria-hidden="true"></i></div></div></div>
         ) : (
           <div className="rt-acc__me">{who}</div>
         )}

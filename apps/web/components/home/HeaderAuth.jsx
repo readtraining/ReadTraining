@@ -18,13 +18,14 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
   const person = useAuthUser();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false); // Switch account opens like a dropdown inside the menu, closed each time
   const boxRef = useRef(null);
   const btnRef = useRef(null);
   const switcher = useSwitchAccount({ kind: "student" });
   const provider = switcher.entries.find((e) => e.kind === "provider");
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return setSwitchOpen(false);
     const onDown = (e) => !boxRef.current?.contains(e.target) && setOpen(false);
     const onKey = (e) => {
       if (e.key === "Escape") {
@@ -75,15 +76,14 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
 
   return (
     <div className="rt-hauth" ref={boxRef}>
-      <button type="button" ref={btnRef} className="rt-hauth__btn" aria-expanded={open} aria-controls="rt-hauth-menu" onClick={() => setOpen((v) => !v)}>
+      {/* just the initials circle, like the provider workspace; the name and email are inside the menu */}
+      <button type="button" ref={btnRef} className="rt-hauth__btn" aria-expanded={open} aria-controls="rt-hauth-menu" aria-label={`Account menu, ${person.name}`} title={person.name} onClick={() => setOpen((v) => !v)}>
         <span className="rt-hauth__avatar" aria-hidden="true">{initials(person)}</span>
-        <span className="rt-hauth__name">{person.firstName || "My account"}</span>
-        <i className="icon-chevron-down text-11" aria-hidden="true"></i>
       </button>
       {open && (
         <div className="rt-hauth__menu" id="rt-hauth-menu">
-          <div className="rt-hauth__who">
-            <strong>{person.name}</strong>
+          <div className="rt-hauth__who" title={person.email}>
+            {(person.firstName || person.lastName) && <strong>{person.name}</strong>}
             <span>{person.email}</span>
           </div>
           <ul>
@@ -94,9 +94,13 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
             ))}
           </ul>
           {switcher.ready && (
-            <>
-              <p className="rt-hauth__group">{switcher.title}</p>
-              <ul>
+            <div className="rt-hauth__switch">
+              <button type="button" className="rt-hauth__switchBtn" aria-expanded={switchOpen} aria-controls="rt-hauth-switch" onClick={() => setSwitchOpen((v) => !v)}>
+                <i className="icon-friend text-14" aria-hidden="true"></i>
+                {switcher.title}
+                <i className="icon-chevron-down text-11 rt-hauth__chev" aria-hidden="true"></i>
+              </button>
+              <ul id="rt-hauth-switch" hidden={!switchOpen}>
                 {switcher.entries.filter((e) => !e.current).map((e) => (
                   <li key={e.key}>
                     <Link href={e.href} onClick={(ev) => { ev.preventDefault(); setOpen(false); switcher.go(e); }}>
@@ -105,7 +109,7 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
                   </li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
           <button type="button" className="rt-hauth__signout" onClick={leave}>{account.signOut}</button>
         </div>

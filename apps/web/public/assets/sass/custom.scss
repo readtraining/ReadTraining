@@ -4071,13 +4071,15 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* who is signed in as the Switch account button: the whole row opens the menu of the other accounts, under it at its full width */
 .rt-acc__switch { margin-bottom: 12px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-acc__switch .rt-rowmenu { display: flex; padding-bottom: 12px; }
-.rt-acc__switch button.rt-acc__me { width: 100%; margin: 0; padding: 8px; border: 0; border-radius: var(--rt-radius-control); background: none; text-align: left; cursor: pointer; transition: background-color 0.15s ease; }
+/* the button, and the same card while the accounts load (a div), so nothing moves when the button arrives */
+.rt-acc__switch :is(button, div).rt-acc__me { width: 100%; margin: 0; padding: 8px; border: 0; border-radius: var(--rt-radius-control); background: none; text-align: left; cursor: pointer; transition: background-color 0.15s ease; }
 .rt-acc__switch button.rt-acc__me:hover, .rt-acc__switch .is-open button.rt-acc__me { background: var(--rt-c-soft); }
 .rt-acc__switch button.rt-acc__me:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-acc__mechev { flex: none; margin-left: auto; color: var(--rt-c-muted); transition: transform 0.15s ease; }
 .rt-acc__switch .is-open .rt-acc__mechev { transform: rotate(180deg); }
 .rt-acc__switch .rt-rowmenu__list { top: calc(100% - 6px); left: 0; right: auto; min-width: 100%; width: max-content; max-width: 320px; }
-.rt-acc__mewho strong { font-size: 15px; color: var(--color-dark-1); }
+/* the name stays on one line ("…" when too long), like every other account menu */
+.rt-acc__mewho strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; color: var(--color-dark-1); }
 .rt-acc__mewho span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--color-light-1); }
 .rt-acc__links { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .rt-acc__links li { list-style: none; }
@@ -4242,6 +4244,8 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__formerr { flex-basis: 100%; margin: 0; }
 .rt-acc__photo { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
 .rt-acc__photoimg { flex: none; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; font-size: 20px; }
+/* in the account card the photo is the same 44px circle as the initials, so the card doesn't grow when it loads */
+.rt-acc__me .rt-acc__photoimg { width: 44px; height: 44px; }
 .rt-acc__photobody { display: grid; gap: 2px; min-width: 0; }
 .rt-acc__photobody strong { font-size: var(--rt-text); color: var(--rt-c-text); }
 .rt-acc__photobody .rt-acc__note { margin: 0; }
@@ -5247,18 +5251,26 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* ---------- HEADER ACCOUNT MENU (components/home/HeaderAuth): signed in, the person's initials and first name open their account's
    pages and Sign out; signed out, Log in and Sign up as before ---------- */
 .rt-hauth { position: relative; display: flex; align-items: center; min-width: 150px; justify-content: flex-end; }
-.rt-hauth__btn { display: inline-flex; align-items: center; gap: 10px; padding: 4px 10px 4px 4px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px; background: none; color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.rt-hauth__btn { display: inline-flex; align-items: center; gap: 10px; padding: 3px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px; background: none; color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
 .rt-hauth__btn:hover, .rt-hauth__btn[aria-expanded="true"] { border-color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.08); }
 .rt-hauth__btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .rt-hauth__avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--color-purple-3); font-size: 13px; font-weight: 700; color: var(--color-purple-1); }
-.rt-hauth__name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-hauth__menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 100; width: 260px; padding: 8px; border: 1px solid var(--color-light-5); border-radius: 14px; background: #fff; box-shadow: 0 16px 40px rgba(20, 3, 66, 0.16); transform-origin: top right; animation: rt-hauth-in 160ms cubic-bezier(0.23, 1, 0.32, 1); }
 @keyframes rt-hauth-in { from { opacity: 0; transform: scale(0.97) translateY(-4px); } }
 .rt-hauth__who { padding: 10px 12px 12px; border-bottom: 1px solid var(--color-light-5); }
-.rt-hauth__who strong { display: block; font-size: 15px; color: var(--color-dark-1); }
-.rt-hauth__who span { display: block; overflow: hidden; font-size: 13px; color: var(--color-light-1); text-overflow: ellipsis; white-space: nowrap; }
+/* one line each: a long name or email ends in "…" inside the box (the full email shows on hover) */
+.rt-hauth__who strong, .rt-hauth__who span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-hauth__who strong { font-size: 15px; color: var(--color-dark-1); }
+.rt-hauth__who span { font-size: 13px; color: var(--color-light-1); }
 .rt-hauth__menu ul { margin: 6px 0; padding: 0; list-style: none; }
-.rt-hauth__group { margin: 6px 0 0; padding: 10px 12px 0; border-top: 1px solid var(--rt-c-line); font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rt-c-muted); }
+/* Switch account: one row that opens the identities below it, like a dropdown */
+.rt-hauth__switch { margin: 0 0 6px; padding: 6px 0 0; border-top: 1px solid var(--color-light-5); }
+.rt-hauth__switchBtn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-radius: 8px; background: none; font-size: 14px; text-align: left; color: var(--color-dark-1); cursor: pointer; }
+.rt-hauth__switchBtn > i:first-child { color: var(--color-light-1); }
+.rt-hauth__switchBtn:hover, .rt-hauth__switchBtn[aria-expanded="true"] { background: var(--color-light-4); }
+.rt-hauth__chev { margin-left: auto; color: var(--color-light-1); transition: transform 160ms ease; }
+.rt-hauth__switchBtn[aria-expanded="true"] .rt-hauth__chev { transform: rotate(180deg); }
+.rt-hauth__switch ul { margin: 2px 0 0; padding: 0 0 0 22px; }
 .rt-hauth__menu li { list-style: none; }
 .rt-hauth__menu a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 14px; color: var(--color-dark-1) !important; text-decoration: none; }
 .rt-hauth__menu a i { color: var(--color-light-1); }
@@ -5518,10 +5530,15 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws__avatar .rt-acc__avatar { width: 36px; height: 36px; font-size: 13px; }
 .rt-adm__top .rt-rowmenu__list { min-width: 240px; }
 .rt-rowmenu__head { display: grid; gap: 2px; margin: 0 0 6px; padding: 8px 12px 12px; border-bottom: 1px solid var(--rt-c-line); }
+/* an account menu with a person at the top (the provider workspace's avatar): the same 260px as the site header's menu, and the
+   name, email and account each on one line, ending in "…" when too long (never broken over two lines) */
+.rt-rowmenu__list:has(> .rt-rowmenu__head) { width: 260px; }
+.rt-rowmenu__head > * { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-rowmenu__head strong { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-.rt-rowmenu__head span { font-size: var(--rt-text-xs); color: var(--rt-c-muted); overflow-wrap: anywhere; }
+.rt-rowmenu__head span { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-rowmenu__head small { justify-self: start; margin-top: 6px; padding: 2px 8px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); }
 .rt-rowmenu__group { margin: 6px 0 2px; padding: 8px 12px 2px; border-top: 1px solid var(--rt-c-line); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
+.rt-rowmenu__list > .rt-rowmenu__group:first-child { margin-top: 0; padding-top: 4px; border-top: 0; }
 @media (max-width: 767px) {
   .rt-adm__topside { gap: 4px; }
   .rt-pws__new { display: none; }
@@ -5932,6 +5949,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-rowmenu__list li { list-style: none; }
 .rt-rowmenu__list :is(a, button) { display: flex; align-items: center; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; text-align: left; text-decoration: none; color: var(--rt-c-text) !important; cursor: pointer; }
 .rt-rowmenu__list :is(a, button):hover, .rt-rowmenu__list :is(a, button):focus-visible { outline: none; background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; }
+.rt-rowmenu__list :is(a, button) > i { flex: none; margin-right: 10px; color: var(--rt-c-muted); }
 .rt-rowmenu__list .-danger { color: var(--rt-c-error) !important; }
 .rt-rowmenu__list .-danger:hover, .rt-rowmenu__list .-danger:focus-visible { background: var(--rt-c-soft); color: var(--rt-c-error) !important; }
 
