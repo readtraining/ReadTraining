@@ -10,11 +10,6 @@ export const topBar = {
   phone: "0333 344 1293",
   email: "hello@readtraining.co.uk",
   hours: "Mon to Fri, 9:00am to 5:30pm",
-  audiences: [
-    { href: "/", label: "For Individuals" },
-    { href: "/for-business", label: "For Businesses" },
-    { href: "/for-providers", label: "For Training Providers" },
-  ],
 };
 
 export const menu = [

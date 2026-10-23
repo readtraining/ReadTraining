@@ -7,7 +7,7 @@ import { subjects, popularByLocation } from "@/data/home/menu";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
 // Navbar search: the icon toggles an inline input (click again to close). A panel under the
-// input shows popular courses when empty and live matches as you type, like Hurak's search.
+// input shows live matches as you type (nothing while it is empty).
 
 const allCourses = (() => {
   const seen = new Set();
@@ -43,9 +43,6 @@ const allCourses = (() => {
   return out;
 })();
 
-const popular = ["SIA Door Supervisor", "Emergency First Aid at Work", "Fire Marshal", "Traffic Marshal Course"]
-  .map((l) => allCourses.find((c) => c.label === l))
-  .filter(Boolean);
 
 function highlight(text, q) {
   if (!q) return text;
@@ -185,7 +182,7 @@ export default function HomeSearch() {
         <i className="text-20 icon icon-search"></i>
       </button>
 
-      {open && focused && (
+      {open && focused && query && (
         <div
           className="bg-white"
           onMouseDown={(e) => e.preventDefault()}
@@ -202,14 +199,6 @@ export default function HomeSearch() {
           }}
         >
           <div style={{ maxHeight: 320, overflowY: "auto", overscrollBehavior: "contain", padding: 8 }}>
-          {!query && (
-            <>
-              {popular.map((c) => (
-                <Row key={c.label} href={c.href} img={c.img} title={c.label} subject={c.subject} />
-              ))}
-            </>
-          )}
-
           {query && (
             <>
               {results.courses.map((c) => (
