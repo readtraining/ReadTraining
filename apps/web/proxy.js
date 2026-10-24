@@ -70,7 +70,7 @@ export async function proxy(request) {
   const isAdminLogin = path === AUTH_ROUTES.adminLogin;
   // without the Supabase settings nobody can be signed in: account areas and the panel go to log in, everything else opens
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    if (isAdmin && !isAdminLogin) return toLogin(request, AUTH_ROUTES.adminLogin);
+    if (isAdmin && !isAdminLogin && path !== AUTH_ROUTES.adminWelcome) return toLogin(request, AUTH_ROUTES.adminLogin);
     return isProtected(path) ? toLogin(request) : response;
   }
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
@@ -90,6 +90,8 @@ export async function proxy(request) {
   const accessToken = async () => (await supabase.auth.getSession()).data.session?.access_token;
 
   if (isAdmin) {
+    // the invite page: the person signed in from their invite link but isn't an admin yet (the page checks the invite itself)
+    if (path === AUTH_ROUTES.adminWelcome) return response;
     if (isAdminLogin) {
       if (!signedIn || prefetch) return response;
       const token = await accessToken();

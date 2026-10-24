@@ -1,10 +1,13 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { sql } from '@readtraining/db'
+import { adminUsers, eq, profiles, sql } from '@readtraining/db'
 import { adminPermissions, can, needsTwoStep } from '@readtraining/permissions'
 
 import { logActivity, logDenied } from '../../lib/activity.mjs'
+import { inviteExpired, ROLE_LABEL } from '../../lib/adminInvite.mjs'
+import { newPassword, personName } from '../../lib/rules.mjs'
+import { supabase } from '../../lib/supabase.mjs'
 import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
 import { activityRouter } from './activity.mjs'
 import { catalogueAdminRouter } from './catalogue.mjs'
@@ -19,7 +22,8 @@ import { studentsRouter } from './students.mjs'
 import { teamRouter } from './team.mjs'
 
 // The admin sign-in (/admin/login) and the check behind every /admin page. Admins are people with an active admin_users row
-// (added with the admin:grant script; there is no sign-up). Full admins, and any admin who has set up an authenticator,
+// whose invite (if they were invited) has been accepted: there is no sign-up; the first super admin comes from
+// pnpm admin:bootstrap and everyone else from an invite in Admin › Team. Full admins, and any admin who has set up an authenticator,
 // must finish two-step sign-in (Supabase MFA, aal2) before the panel opens.
 
 export const adminRouter = createTRPCRouter({
@@ -76,6 +80,41 @@ export const adminRouter = createTRPCRouter({
       isSuper: admin!.isSuper === true,
     }
   }),
+
+  // The "Set your password" page (/admin/welcome), opened from an invite link: is there an invite waiting for this login?
+  invite: protectedProcedure.query(async ({ ctx }) => {
+    const [r] = await ctx.db.execute<{ email: string; first_name: string | null; last_name: string | null; preset: keyof typeof ROLE_LABEL; is_super: boolean; invited_at: string }>(sql`
+      select u.email, p.first_name, p.last_name, a.preset, a.is_super, a.invited_at
+      from public.admin_users a join auth.users u on u.id = a.user_id left join public.profiles p on p.id = a.user_id
+      where a.user_id = ${ctx.user.id}::uuid and a.active and a.invited_at is not null and a.accepted_at is null`)
+    if (!r) return { pending: false as const }
+    return { pending: true as const, email: r.email, firstName: r.first_name ?? '', lastName: r.last_name ?? '', role: r.is_super ? 'super admin' : ROLE_LABEL[r.preset], expired: inviteExpired(r.invited_at) }
+  }),
+
+  // Accept the invite: their name and password are saved and their admin access starts. The password is set with the service
+  // role (the account has none yet), which ends this sign-in, so the page then signs in with the new password.
+  acceptInvite: protectedProcedure
+    .input(z.object({ firstName: personName('first name'), lastName: personName('last name'), password: newPassword }))
+    .mutation(async ({ ctx, input }) => {
+      const [row] = await ctx.db.execute<{ email: string; invited_at: string }>(sql`
+        select u.email, a.invited_at from public.admin_users a join auth.users u on u.id = a.user_id
+        where a.user_id = ${ctx.user.id}::uuid and a.active and a.invited_at is not null and a.accepted_at is null`)
+      if (!row) throw new TRPCError({ code: 'CONFLICT', message: 'There’s no invite waiting for this account. It may have been cancelled or already used.' })
+      if (inviteExpired(row.invited_at)) throw new TRPCError({ code: 'FORBIDDEN', message: 'This invite has expired. Ask the person who invited you to send a new one.' })
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Your password couldn’t be saved just now. Please try again in a moment.' })
+      const { error } = await supabase.auth.admin.updateUserById(ctx.user.id, { password: input.password })
+      if (error) {
+        const weak = /weak|password/i.test(error.message)
+        const message = weak ? 'Choose a stronger password: at least 8 characters, with letters and numbers.' : 'Your password couldn’t be saved just now. Please try again in a moment.'
+        throw new TRPCError({ code: weak ? 'BAD_REQUEST' : 'INTERNAL_SERVER_ERROR', message, cause: weak ? Object.assign(new Error(message), { field: 'password' }) : undefined })
+      }
+      await ctx.db.transaction(async (tx) => {
+        await tx.update(profiles).set({ firstName: input.firstName, lastName: input.lastName }).where(eq(profiles.id, ctx.user.id))
+        await tx.update(adminUsers).set({ acceptedAt: new Date() }).where(eq(adminUsers.userId, ctx.user.id))
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.invite_accepted', targetType: 'account', targetId: ctx.user.id, metadata: {}, ip: ctx.ip })
+      })
+      return { email: row.email }
+    }),
 
   // Sign-in finished (password, and the code when needed): one admin.login entry, noting a newly set-up authenticator.
   signedIn: protectedProcedure.input(z.object({ enrolled: z.boolean() })).mutation(async ({ ctx, input }) => {

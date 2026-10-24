@@ -1,5 +1,5 @@
-// Adds, changes or removes a platform admin. There is no admin sign-up, so the first admin is made here; later admins are
-// managed in the admin panel (Part B). The person must already have a ReadTraining account (sign up on the site first).
+// Changes the admin role of an EXISTING ReadTraining login from the command line (support and recovery). New admins are invited
+// instead, and need no account first: the first super admin with pnpm admin:bootstrap <email>, everyone else from Admin › Team.
 //
 //   pnpm admin:grant <email>                       make them a Full admin (two-step sign-in is set up at their first admin login)
 //   pnpm admin:grant <email> --preset support      Full, Support or Finance (see packages/permissions)
@@ -49,7 +49,7 @@ async function main() {
 
   if (!email) stop('Give the email of an existing account, for example: pnpm admin:grant name@example.com')
   const [user] = await db.execute<{ id: string }>(sql`select id from auth.users where lower(email) = ${email} and deleted_at is null`)
-  if (!user) stop(`No account uses ${email}. Ask them to sign up on the site first, then run this again.`)
+  if (!user) stop(`No login uses ${email}. Invite them instead: from Admin › Team, or pnpm admin:bootstrap ${email} for the first super admin.`)
 
   if (flag('revoke')) {
     const done = await db.update(adminUsers).set({ active: false }).where(eq(adminUsers.userId, user.id)).returning({ userId: adminUsers.userId })

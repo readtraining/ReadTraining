@@ -19,7 +19,8 @@ pnpm db:migrate   # apply migrations to Supabase
 pnpm db:push      # push schema directly, no migration
 pnpm db:studio
 
-pnpm admin:grant <email> [--preset support|finance|--revoke|--reset-two-step|--list]   # admins (no sign-up)
+pnpm admin:bootstrap <email> [--resend]   # invite the FIRST super admin (no account needed); everyone else: Admin › Team › Invite
+pnpm admin:grant <email> [--preset support|finance|--super|--revoke|--reset-two-step|--list]   # change an existing login's admin role
 pnpm live <command>     # run a command against the live project (LIVE_* in .env), e.g. pnpm live db:migrate
 ```
 
@@ -81,7 +82,7 @@ The schema is built on a development Supabase project and replayed later on the 
 One login can hold several identities:
 - Student: every account.
 - Business and Provider: an `organisations` row with `organisation_members`.
-- Admin: an `admin_users` row, signed in at `/admin/login`, with no public sign-up.
+- Admin: an `admin_users` row, signed in at `/admin/login`, with no public sign-up. Admins are invited (`apps/api/src/lib/adminInvite.mts`): someone without an account gets a staff-only login (`admin_only`, kept out of Learners) and an email to `/admin/welcome` to set their name and password; access starts only when the invite is accepted.
 
 Roles:
 - Provider roles follow Hurak: owner, admin, tutor, course_editor, support, sales, accounts, marketing, assistant.

@@ -19,6 +19,8 @@ export const AUTH_ROUTES = {
   privacy: "/privacy-policy",
   admin: "/admin",
   adminLogin: "/admin/login",
+  // where an admin invite link lands: set your name and password (no admin access until then)
+  adminWelcome: "/admin/welcome",
 };
 
 // The CITB HS&E test (the "CSCS test"): the test page, the test centre directory and a centre's page (the client's URLs).

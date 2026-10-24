@@ -37,6 +37,8 @@ still set in the dashboard.
 - [ ] **Secure email change**: on (both the old and the new address must confirm).
 - [ ] **Secure password change**: on, and **Require current password when updating**: on.
 - [ ] Minimum password length **8**.
+- [ ] **Email OTP Expiration**: `86400` seconds (24 hours). Email links, including admin invites (`INVITE_HOURS` in
+  `apps/api/src/lib/adminInvite.mts`), stop working after this.
 - [ ] Google: on, with the project's Google Client ID and secret (Google Cloud → Credentials). Facebook: off until Meta has
       verified the business.
 

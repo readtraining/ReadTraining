@@ -144,6 +144,12 @@ export const adminUsers = pgTable(
   refundLimitPence: integer('refund_limit_pence').notNull().default(10000),
   // the super admin: the platform's owner, a Full admin nobody else can change or remove; at most one (index below)
   isSuper: boolean('is_super').notNull().default(false),
+  // an invited admin (Admin › Team or pnpm admin:bootstrap): invited_at is when the latest invite went out, accepted_at when
+  // they set their password. While invited and not accepted, the row gives no access. admin_only: the account was made by the
+  // invite (no public sign-up), so it is a staff login only and stays out of the learner lists.
+  invitedAt: timestamp('invited_at', { withTimezone: true }),
+  acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+  adminOnly: boolean('admin_only').notNull().default(false),
   createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),

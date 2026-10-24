@@ -16,12 +16,12 @@ import { button, escape, page, quote } from './layout.mjs'
 export type Words = { subject: string; heading: string; body: string; button: string }
 type Template = {
   name: string
-  audience: 'Learner' | 'Provider' | 'Business' | 'Everyone'
+  audience: 'Learner' | 'Provider' | 'Business' | 'Admin' | 'Everyone'
   trigger: string
   status: 'live' | 'later' | 'auth'
   placeholders: string[] // the ones these words may use
   required?: string[] // ones the words must keep
-  link?: (siteUrl: string) => string // the button's address (no link, no button)
+  link?: (siteUrl: string, vars: Record<string, string>) => string // the button's address (no link, no button)
   footer: string
   words: Words
   sample: Record<string, string>
@@ -258,6 +258,39 @@ export const TEMPLATES: Record<string, Template> = {
     },
     sample: { ...PROVIDER, total: '£4,812.40', reference: 'PO-2026-11' },
   },
+  'admin-invite': {
+    name: 'Admin invite',
+    audience: 'Admin',
+    trigger: 'When someone without a ReadTraining account is invited to the admin team (Admin › Team, or the first super admin).',
+    status: 'live',
+    placeholders: ['firstName', 'invitedBy', 'role', 'hours'],
+    // the personal, single-use link to set a password (made when the email is sent)
+    link: (s, v) => v.link || `${s}/admin/login`,
+    footer: 'You are receiving this because you were invited to the ReadTraining admin team.',
+    words: {
+      subject: 'You’re invited to the ReadTraining admin',
+      heading: 'Join the ReadTraining admin team',
+      body: 'Hi {firstName},\n\n{invitedBy} has invited you to the ReadTraining admin panel as a {role} admin.\n\nSet your password to finish. The link works once and expires in {hours} hours. If it has expired, ask {invitedBy} to send you a new invite.\n\nIf you weren’t expecting this email, you can ignore it.',
+      button: 'Set your password',
+    },
+    sample: { firstName: '', invitedBy: 'Alex Morgan', role: 'Support', hours: '24' },
+  },
+  'admin-added': {
+    name: 'Added to the admin team',
+    audience: 'Admin',
+    trigger: 'When someone who already has a ReadTraining account is added to the admin team.',
+    status: 'live',
+    placeholders: ['firstName', 'invitedBy', 'role'],
+    link: (s) => `${s}/admin/login`,
+    footer: 'You are receiving this because you were added to the ReadTraining admin team.',
+    words: {
+      subject: 'You’ve been added to the ReadTraining admin team',
+      heading: 'Welcome to the admin team',
+      body: 'Hi {firstName},\n\n{invitedBy} has added you to the ReadTraining admin panel as a {role} admin.\n\nSign in at the admin sign-in page with your usual ReadTraining email and password.\n\nIf you weren’t expecting this email, please reply and let us know.',
+      button: 'Go to the admin sign-in',
+    },
+    sample: { firstName: 'Sam', invitedBy: 'Alex Morgan', role: 'Finance' },
+  },
   'auth-confirm': {
     name: 'Confirm your email',
     audience: 'Everyone',
@@ -331,7 +364,7 @@ export function renderEmail(key: string, words: Words, vars: Record<string, stri
   const fill = (s: string) => s.replace(PLACEHOLDER, (_, name: string) => vars[name] ?? '')
   const body = vars.firstName?.trim() ? words.body : words.body.replace(/^(Hi|Hello|Dear) \{firstName\},/m, 'Hello,')
   const blocks = body.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean)
-  const href = t.link?.(siteUrl)
+  const href = t.link?.(siteUrl, vars)
   const html = blocks
     .map((b) => {
       if (b === '{message}') return vars.message ? quote(vars.message) : ''

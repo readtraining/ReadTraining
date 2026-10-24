@@ -20,6 +20,8 @@ const STATUS = {
   providers: sql`exists (select 1 from public.organisation_members m join public.organisations o on o.id = m.organisation_id where m.user_id = u.id and o.type = 'provider')`,
   businesses: sql`exists (select 1 from public.organisation_members m join public.organisations o on o.id = m.organisation_id where m.user_id = u.id and o.type = 'business')`,
 } as const
+// staff-only logins (made by an admin invite, never signed up on the site) are not learners: kept out of these lists
+const NOT_STAFF_ONLY = sql`not exists (select 1 from public.admin_users s where s.user_id = u.id and s.admin_only)`
 const id = z.object({ userId: z.string().uuid() })
 const iso = (t: string | null) => (t ? new Date(t).toISOString() : null)
 
@@ -31,7 +33,7 @@ const statusOf = (r: { banned: boolean; email_confirmed_at: string | null }) => 
 async function person(db: typeof Db, userId: string) {
   const [row] = await db.execute<{ banned: boolean; admin: boolean }>(sql`
     select coalesce(u.banned_until > now(), false) banned, exists (select 1 from public.admin_users a where a.user_id = u.id and a.active) admin
-    from auth.users u where u.id = ${userId}::uuid and u.deleted_at is null`)
+    from auth.users u where u.id = ${userId}::uuid and u.deleted_at is null and ${NOT_STAFF_ONLY}`)
   if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'This account no longer exists.' })
   return row
 }
@@ -50,7 +52,7 @@ export const studentsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const where = [sql`u.deleted_at is null`]
+      const where = [sql`u.deleted_at is null`, NOT_STAFF_ONLY]
       if (input.status) where.push(STATUS[input.status])
       if (input.q) {
         const like = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
@@ -113,7 +115,7 @@ export const studentsRouter = createTRPCRouter({
                p.marketing_opt_in, p.marketing_opt_in_at,
                (select a.preset::text from public.admin_users a where a.user_id = u.id and a.active) admin_preset
         from auth.users u left join public.profiles p on p.id = u.id
-        where u.id = ${input.userId}::uuid and u.deleted_at is null`)
+        where u.id = ${input.userId}::uuid and u.deleted_at is null and ${NOT_STAFF_ONLY}`)
       if (!r) throw new TRPCError({ code: 'NOT_FOUND', message: 'This account no longer exists.' })
       const orgs = await ctx.db.execute<{ id: string; type: 'provider' | 'business'; name: string; status: string; role: string; job_title: string | null; joined_at: string }>(sql`
         select o.id, o.type, o.name, o.status, m.role, m.job_title, m.created_at joined_at

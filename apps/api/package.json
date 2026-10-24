@@ -11,6 +11,7 @@
     "build": "tsc --noEmit && node build.mjs",
     "start": "tsx --env-file-if-exists=../../.env src/index.mts",
     "typecheck": "tsc --noEmit",
+    "admin:bootstrap": "tsx --env-file-if-exists=../../.env src/scripts/admin-bootstrap.mts",
     "admin:grant": "tsx --env-file-if-exists=../../.env src/scripts/admin-grant.mts",
     "seed:money": "tsx --env-file-if-exists=../../.env src/scripts/seed-money.mts",
     "seed:demo": "tsx --env-file-if-exists=../../.env src/scripts/seed-demo.mts",

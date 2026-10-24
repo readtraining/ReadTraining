@@ -3,13 +3,14 @@ import { randomUUID } from 'node:crypto'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { and, eq, inArray, isNull, organisations, profiles, sql } from '@readtraining/db'
+import { adminUsers, and, eq, inArray, isNull, organisations, profiles, sql } from '@readtraining/db'
 import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
 import { sendEmail } from '../../lib/email.mjs'
+import { newPassword, personName } from '../../lib/rules.mjs'
 import { AVATARS, requestEmailChange, signedPhotoUrl, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
 import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
 
@@ -18,13 +19,7 @@ import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
 
 const PHOTO_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as const
 
-const name = (label: string) =>
-  z
-    .string()
-    .trim()
-    .min(1, `Enter your ${label}.`)
-    .max(50, `Your ${label} must be 50 characters or fewer.`)
-    .regex(/^[\p{L}][\p{L}\p{M} '’.-]*$/u, `Your ${label} can only use letters, spaces, hyphens and apostrophes.`)
+const name = personName
 
 const dateOfBirth = z
   .string()
@@ -44,12 +39,6 @@ const postcode = z
   .trim()
   .regex(/^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i, 'Enter a real postcode, like SW1A 1AA.')
   .transform((v) => v.toUpperCase().replace(/\s+/g, '').replace(/^(.+)(\d[A-Z]{2})$/, '$1 $2'))
-
-const newPassword = z
-  .string()
-  .min(8, 'Enter a new password of at least 8 characters, with a letter and a number.')
-  .max(72, 'Use a password of 72 characters or fewer.')
-  .refine((v) => /[a-z]/i.test(v) && /\d/.test(v), 'Enter a new password of at least 8 characters, with a letter and a number.')
 
 // A wrong current password, as a field error the form can show under the right field.
 const fieldError = (field: string, message: string, code: 'BAD_REQUEST' | 'TOO_MANY_REQUESTS' = 'BAD_REQUEST') =>
@@ -207,6 +196,9 @@ export const meRouter = createTRPCRouter({
     const [auth] = await ctx.db.execute<{ email: string; confirmed: boolean }>(sql`
       select email, email_confirmed_at is not null as confirmed from auth.users where id = ${ctx.user.id}::uuid`)
     if (!auth?.confirmed) return { sent: false }
+    // a staff-only login made by an admin invite gets the invite, not the learner welcome
+    const [staff] = await ctx.db.select({ adminOnly: adminUsers.adminOnly }).from(adminUsers).where(eq(adminUsers.userId, ctx.user.id))
+    if (staff?.adminOnly) return { sent: false }
     const [claimed] = await ctx.db
       .update(profiles)
       .set({ welcomeSentAt: new Date() })

@@ -31,6 +31,7 @@ const TONES = {
   intro: { asked: "info", consent: "warning", introduced: "info", interview: "info", offer: "info", started: "success", declined: "neutral" },
   email: { live: "info" },
   twoStep: { on: "success", next: "warning", off: "neutral" },
+  invite: { sent: "info", expired: "warning" },
   service: { connected: "success", missing: "neutral", needed: "danger" },
   queue: { overdue: "danger", noJoining: "warning" },
   due: { late: "danger", warn: "warning", ok: "neutral" },
