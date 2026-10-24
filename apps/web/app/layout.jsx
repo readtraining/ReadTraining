@@ -2,6 +2,9 @@ import "@/public/assets/sass/styles.scss";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import "react-calendar/dist/Calendar.css";
 import "aos/dist/aos.css";
+// the site's font, DM Sans (the one the template's stylesheet names): every weight in one file, served from this site
+import "@fontsource-variable/dm-sans/index.css";
+import "@fontsource-variable/dm-sans/wght-italic.css";
 import Providers from "./Providers";
 import { SITE_URL } from "@/lib/seo";
 import { browserContent, seoSettings } from "@/lib/siteContent";

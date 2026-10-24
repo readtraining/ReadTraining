@@ -552,6 +552,11 @@
    never hex values or one-off sizes. Older pages move onto them later.
    =========================================================================== */
 :root {
+  /* the site font: DM Sans, loaded once in app/layout.jsx (@fontsource-variable/dm-sans, served from this site). The template
+     names "DM Sans" but never loaded it, so pages showed Arial until this pointed the template's --font-primary at the loaded
+     font ("DM Sans Variable": every weight from 100 to 1000 in one file). */
+  --font-primary: "DM Sans Variable", "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
   /* colour: what each colour is for */
   --rt-c-text: var(--color-dark-1);        /* headings, body text on white */
   --rt-c-muted: var(--color-light-1);      /* secondary text, hints, meta lines */
