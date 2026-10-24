@@ -26,6 +26,7 @@ export function catalogueFilterGroups(t = getTaxonomy()) {
 
 export const sortOptions = [
   { value: "popular", label: "Most popular" },
+  { value: "newest", label: "Newest" },
   { value: "price-asc", label: "Price: low to high" },
   { value: "price-desc", label: "Price: high to low" },
   { value: "name", label: "Name: A to Z" },
@@ -187,6 +188,8 @@ const sorters = {
   "price-asc": (a, b) => a.price - b.price,
   "price-desc": (a, b) => b.price - a.price,
   popular: (a, b) => b.popularity - a.popularity,
+  // most recently added first (addedAt is an ISO date); same day: the more popular first
+  newest: (a, b) => (b.addedAt || "").localeCompare(a.addedAt || "") || b.popularity - a.popularity,
   name: (a, b) => a.title.localeCompare(b.title, "en-GB", { sensitivity: "base" }),
 };
 

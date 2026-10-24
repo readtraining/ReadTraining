@@ -326,6 +326,7 @@ export const footer = {
     { href: "/privacy-policy", label: "Privacy Policy" },
     { href: "/cookie-policy", label: "Cookie Policy" },
     { href: "/accessibility-statement", label: "Accessibility" },
+    { href: "/provider-terms", label: "Provider Terms" },
   ],
 };
 

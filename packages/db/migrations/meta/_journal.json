@@ -141,6 +141,20 @@
       "when": 1792840425211,
       "tag": "0019_admin_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792846979976,
+      "tag": "0020_courses",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792847001564,
+      "tag": "0021_course_media_bucket",
+      "breakpoints": true
     }
   ]
 }

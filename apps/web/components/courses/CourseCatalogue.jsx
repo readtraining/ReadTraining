@@ -141,8 +141,9 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
 
   const results = useMemo(() => sortCourses(filterCourses(courses, state), state.sort, state.location, courses), [courses, state]);
   const noMatches = results.length === 0;
-  // With zero matches the count says "0 courses found" but the full list stays on screen so the page is not empty.
-  const displayed = useMemo(() => (noMatches ? sortCourses(courses, state.sort, state.location) : results), [noMatches, courses, results, state.sort, state.location]);
+  // Only what matches: with zero matches the page says so plainly and offers to loosen the filters; it never fills the space
+  // with courses that don't match (Milestone 2's rule for an empty filter).
+  const displayed = results;
 
   const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE));
   const page = Math.min(state.page, totalPages);
@@ -445,9 +446,12 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
 
             <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} />
 
-            {noMatches && (
-              <EmptyState live title="No courses match your filters" text="Try removing a filter or choosing a different price range." secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
-            )}
+            {noMatches &&
+              (hasFilters ? (
+                <EmptyState live title="No courses match your search" text="Nothing matches all of these filters. Try removing one, or search a wider area." secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
+              ) : (
+                <EmptyState live title="No courses here yet" text="New courses are added as training providers join. Check back soon, or contact us and we'll help you find one." action={{ label: "Contact us", href: "/contact-us" }} />
+              ))}
 
             <div className="rt-res__list" id="rt-res-list" tabIndex={-1}>
               {pageItems.map((course, i) => (

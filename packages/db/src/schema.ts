@@ -1,9 +1,11 @@
 import { sql } from 'drizzle-orm'
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -89,6 +91,16 @@ export const organisations = pgTable(
     commissionBps: integer('commission_bps'),
     termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
     termsVersion: text('terms_version'),
+    // a provider's public profile (Milestone 2): shown on /providers/[slug] once they are approved. logo_path is a file in the
+    // public course-media bucket; socials = { facebook?, linkedin?, youtube? } (https links); booking_terms and
+    // cancellation_policy are the provider's own terms, shown on their profile and their courses.
+    logoPath: text('logo_path'),
+    headline: text('headline'),
+    bio: text('bio'),
+    city: text('city'),
+    socials: jsonb('socials').$type<{ facebook?: string; linkedin?: string; youtube?: string }>().notNull().default({}),
+    bookingTerms: text('booking_terms'),
+    cancellationPolicy: text('cancellation_policy'),
     createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -299,6 +311,234 @@ export const courseLevels = pgTable(
     active: boolean('active').notNull().default(true),
   },
   (t) => [check('course_levels_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`)],
+).enableRLS()
+
+// ---- courses (Milestone 2) ------------------------------------------------------------------------------------------------
+// One table for every course, in two kinds (the shared-listing model, as on Hurak):
+// - shared: a public course page written by ReadTraining staff (for example "SIA Door Supervisor"). No provider of its own;
+//   providers' courses join it, and the page lists them with their dates and the number of providers.
+// - provider: a provider's own course, with their content, price and terms. Under a shared page (parent_id) or on its own
+//   (parent_id null: it has its own public page). The provider writes it; an admin approves it before it shows.
+// A course's id is a whole number from 1000 (orders.course_id, coupons.courses, the home page's featured courses and saved
+// baskets hold these numbers; the sample courses before Milestone 2 used 1–52, so the two never mix). Every table here has RLS
+// on and no policy: the public site and the workspaces read and write only through the API.
+// Status: draft → pending (sent for approval) → live, or changes (asked for changes) → pending again; live ↔ paused. A
+// content edit to a live course waits in course_revisions while the live version stays up; prices and dates change at once.
+export const courseKind = pgEnum('course_kind', ['shared', 'provider'])
+export const courseStatus = pgEnum('course_status', ['draft', 'pending', 'changes', 'live', 'paused'])
+export const courseModel = pgEnum('course_model', ['bookings', 'enquiries'])
+export const courses = pgTable(
+  'courses',
+  {
+    id: integer('id').primaryKey().generatedByDefaultAsIdentity({ startWith: 1000 }),
+    kind: courseKind('kind').notNull(),
+    // a provider course under a shared page; null = a shared page itself, or a provider course with its own page
+    parentId: integer('parent_id').references((): AnyPgColumn => courses.id, { onDelete: 'restrict' }),
+    organisationId: uuid('organisation_id').references(() => organisations.id, { onDelete: 'restrict' }),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    summary: text('summary'), // the short description under the title (the editor's subtitle)
+    description: text('description'), // the long description; a blank line starts a new paragraph
+    audience: text('audience'), // who it's for
+    entryRequirements: text('entry_requirements'),
+    outcomes: text('outcomes').array().notNull().default(sql`'{}'::text[]`), // what you'll learn
+    features: text('features').array().notNull().default(sql`'{}'::text[]`),
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'restrict' }),
+    subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'restrict' }),
+    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'restrict' }),
+    level: text('level').references(() => courseLevels.slug, { onDelete: 'restrict' }),
+    // how a provider course is taught: classroom and live-online have dates (cohorts); self-paced is "start any time" at price_pence
+    method: text('method').references(() => deliveryMethods.slug, { onDelete: 'restrict' }),
+    model: courseModel('model').notNull().default('bookings'),
+    skillSaver: boolean('skill_saver').notNull().default(false),
+    // false = only people with the link can book (the editor's "private"); listed = shown on ReadTraining's search and pages
+    isPublic: boolean('is_public').notNull().default(true),
+    listed: boolean('listed').notNull().default(true),
+    pricePence: integer('price_pence'), // self-paced price, including VAT; classroom and live-online prices are on each cohort
+    videoUrl: text('video_url'),
+    seoTitle: text('seo_title'),
+    seoDescription: text('seo_description'),
+    seoKeywords: text('seo_keywords').array().notNull().default(sql`'{}'::text[]`),
+    status: courseStatus('status').notNull().default('draft'),
+    statusNote: text('status_note'), // the admin's reason when they ask for changes or pause a course; the provider sees it
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decidedBy: uuid('decided_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    publishedAt: timestamp('published_at', { withTimezone: true }), // first time it went live ("Newest" sorts by this)
+    createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('courses_slug_key').on(t.slug),
+    index('courses_parent_idx').on(t.parentId),
+    index('courses_organisation_idx').on(t.organisationId),
+    index('courses_status_idx').on(t.status),
+    index('courses_category_idx').on(t.categoryId),
+    index('courses_subcategory_idx').on(t.subcategoryId),
+    index('courses_topic_idx').on(t.topicId),
+    index('courses_level_idx').on(t.level),
+    index('courses_method_idx').on(t.method),
+    index('courses_decided_by_idx').on(t.decidedBy),
+    index('courses_created_by_idx').on(t.createdBy),
+    check('courses_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+    // a shared page belongs to no provider and sits under nothing; a provider course always has its provider
+    check('courses_kind_shape', sql`(${t.kind} = 'shared' and ${t.organisationId} is null and ${t.parentId} is null) or (${t.kind} = 'provider' and ${t.organisationId} is not null)`),
+    check('courses_price_range', sql`${t.pricePence} is null or ${t.pricePence} between 0 and 10000000`),
+  ],
+).enableRLS()
+
+// A content edit to a live course, waiting for an admin (at most one per course). `content` holds the edited fields as the
+// editor saved them (title, summary, description, units, exams, FAQs…); approving copies them onto the course.
+export const courseRevisionStatus = pgEnum('course_revision_status', ['pending', 'approved', 'rejected'])
+export const courseRevisions = pgTable(
+  'course_revisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    courseId: integer('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    content: jsonb('content').notNull(),
+    status: courseRevisionStatus('status').notNull().default('pending'),
+    note: text('note'),
+    submittedBy: uuid('submitted_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+    decidedBy: uuid('decided_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('course_revisions_course_idx').on(t.courseId),
+    index('course_revisions_submitted_by_idx').on(t.submittedBy),
+    index('course_revisions_decided_by_idx').on(t.decidedBy),
+    uniqueIndex('course_revisions_one_pending').on(t.courseId).where(sql`${t.status} = 'pending'`),
+  ],
+).enableRLS()
+
+// A course's syllabus, in order: each unit a title and its text (one topic per line).
+export const courseUnits = pgTable(
+  'course_units',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    courseId: integer('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    title: text('title').notNull(),
+    body: text('body'),
+  },
+  (t) => [index('course_units_course_idx').on(t.courseId, t.position)],
+).enableRLS()
+
+// The exam or assessment table, where a course has one: a row per unit with its pass mark and duration (as written).
+export const courseExams = pgTable(
+  'course_exams',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    courseId: integer('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    unit: text('unit').notNull(),
+    passMark: text('pass_mark'),
+    duration: text('duration'),
+  },
+  (t) => [index('course_exams_course_idx').on(t.courseId, t.position)],
+).enableRLS()
+
+// A course's own FAQs, written for that course only (never shared between courses).
+export const courseFaqs = pgTable(
+  'course_faqs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    courseId: integer('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    question: text('question').notNull(),
+    answer: text('answer').notNull(),
+  },
+  (t) => [index('course_faqs_course_idx').on(t.courseId, t.position)],
+).enableRLS()
+
+// A course's images, in order (the first is the cover): files in the public course-media bucket.
+export const courseImages = pgTable(
+  'course_images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    courseId: integer('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    path: text('path').notNull(),
+    alt: text('alt'),
+  },
+  (t) => [index('course_images_course_idx').on(t.courseId, t.position)],
+).enableRLS()
+
+// A provider's venues. lat/lng come from the postcode when the venue is saved, so search can sort by real distance.
+export const venues = pgTable(
+  'venues',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organisationId: uuid('organisation_id')
+      .notNull()
+      .references(() => organisations.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    street: text('street').notNull(),
+    city: text('city').notNull(),
+    postcode: text('postcode'),
+    lat: doublePrecision('lat'),
+    lng: doublePrecision('lng'),
+    active: boolean('active').notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('venues_organisation_idx').on(t.organisationId), index('venues_city_idx').on(t.city)],
+).enableRLS()
+
+// One bookable run of a provider course (classroom or live online; self-paced has none). `sessions` = the days, in order:
+// [{ date: 'YYYY-MM-DD', end: 'YYYY-MM-DD', from: 'HH:MM', to: 'HH:MM' }]; starts_on/ends_on are the first and last day, for
+// search. Classroom needs a venue; live online has a join link (it can be added after the cohort is made). Price includes VAT.
+export const cohorts = pgTable(
+  'cohorts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    courseId: integer('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    method: text('method')
+      .notNull()
+      .references(() => deliveryMethods.slug, { onDelete: 'restrict' }),
+    venueId: uuid('venue_id').references(() => venues.id, { onDelete: 'restrict' }),
+    joinUrl: text('join_url'),
+    sessions: jsonb('sessions').$type<{ date: string; end: string; from: string; to: string }[]>().notNull(),
+    startsOn: date('starts_on').notNull(),
+    endsOn: date('ends_on').notNull(),
+    capacity: integer('capacity').notNull(),
+    pricePence: integer('price_pence').notNull(),
+    wasPricePence: integer('was_price_pence'),
+    details: text('details'), // the cohort's structure, shown to learners under the dates
+    tutorUserId: uuid('tutor_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
+    bookable: boolean('bookable').notNull().default(true), // the provider can stop new bookings without cancelling
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    cancelReason: text('cancel_reason'),
+    createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('cohorts_course_idx').on(t.courseId),
+    index('cohorts_method_idx').on(t.method),
+    index('cohorts_venue_idx').on(t.venueId),
+    index('cohorts_starts_idx').on(t.startsOn),
+    index('cohorts_tutor_idx').on(t.tutorUserId),
+    index('cohorts_created_by_idx').on(t.createdBy),
+    check('cohorts_method_dated', sql`${t.method} in ('classroom', 'live-online')`),
+    check('cohorts_classroom_venue', sql`${t.method} <> 'classroom' or ${t.venueId} is not null`),
+    check('cohorts_dates_order', sql`${t.endsOn} >= ${t.startsOn}`),
+    check('cohorts_capacity_range', sql`${t.capacity} between 1 and 200`),
+    check('cohorts_price_range', sql`${t.pricePence} between 1 and 10000000 and (${t.wasPricePence} is null or ${t.wasPricePence} > ${t.pricePence})`),
+  ],
 ).enableRLS()
 
 // ---- coupons (Part B, B3) -------------------------------------------------------------------------------------------------
@@ -512,6 +752,9 @@ export type ActivityLogEntry = typeof activityLog.$inferSelect
 export type NewActivityLogEntry = typeof activityLog.$inferInsert
 export type Category = typeof categories.$inferSelect
 export type DeliveryMethod = typeof deliveryMethods.$inferSelect
+export type Course = typeof courses.$inferSelect
+export type Cohort = typeof cohorts.$inferSelect
+export type Venue = typeof venues.$inferSelect
 export type Coupon = typeof coupons.$inferSelect
 export type Order = typeof orders.$inferSelect
 export type LedgerEntry = typeof ledgerEntries.$inferSelect
