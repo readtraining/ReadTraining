@@ -48,7 +48,7 @@ const slugRef = z.string().trim().max(80).regex(/^[a-z0-9-]*$/)
 // the content an admin checks before it shows on a live course
 export const REVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'units', 'exams', 'faqs'] as const
 
-const content = {
+export const content = {
   title: line(80, 'title').min(3, 'Enter a title of at least 3 characters.'),
   summary: text(300, 'short description'),
   description: text(10000, 'description'),
@@ -71,7 +71,7 @@ const content = {
   exams: z.array(z.object({ unit: line(120, 'exam unit').min(1, 'Name every exam row.'), passMark: text(40, 'pass mark'), duration: text(40, 'duration') })).max(20, 'Add up to 20 exam rows.'),
   faqs: z.array(z.object({ question: line(160, 'question').min(1, 'Write every question.'), answer: line(1200, 'answer').min(1, 'Write every answer.') })).max(30, 'Add up to 30 FAQs.'),
 }
-const settings = {
+export const settings = {
   seoTitle: text(60, 'search title'),
   seoDescription: text(320, 'search description'),
   seoKeywords: z.array(line(40, 'keyword').min(1)).max(20, 'Add up to 20 keywords.'),
@@ -86,8 +86,8 @@ const settings = {
 const PAGE_ONLY = new Set(['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'videoUrl', 'seoTitle', 'seoDescription', 'seoKeywords'])
 const PRICING = new Set(['pricePence', 'skillSaver'])
 
-const bad = (message: string, field?: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: field ? Object.assign(new Error(message), { field }) : undefined })
-const notFound = () => new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
+export const bad = (message: string, field?: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: field ? Object.assign(new Error(message), { field }) : undefined })
+export const notFound = () => new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
 
 /** The course, when it is this provider's own; NOT_FOUND otherwise (another provider's id is never revealed). */
 export async function ownCourse(db: Writer, organisationId: string, courseId: number) {
@@ -97,7 +97,7 @@ export async function ownCourse(db: Writer, organisationId: string, courseId: nu
 }
 
 /** Category, sub-category and topic slugs to ids, checked to belong together and to be in use; level and method checked too. */
-async function resolveCatalogue(db: Writer, input: { category?: string; subcategory?: string; topic?: string | null; level?: string; method?: string }) {
+export async function resolveCatalogue(db: Writer, input: { category?: string; subcategory?: string; topic?: string | null; level?: string; method?: string }) {
   const out: { categoryId?: string; subcategoryId?: string; topicId?: string | null; level?: string; method?: string } = {}
   if (input.category !== undefined) {
     const [cat] = await db.select({ id: categories.id }).from(categories).where(and(eq(categories.slug, input.category), eq(categories.active, true)))
@@ -128,7 +128,7 @@ async function resolveCatalogue(db: Writer, input: { category?: string; subcateg
 }
 
 /** A free web address for a course title. */
-async function courseSlug(db: Writer, title: string) {
+export async function courseSlug(db: Writer, title: string) {
   const base = slugify(title, 'course')
   const taken = await db.select({ slug: courses.slug }).from(courses).where(or(eq(courses.slug, base), like(courses.slug, `${base}-%`)))
   return freeSlug(base, taken.map((t) => t.slug))
@@ -165,8 +165,8 @@ export async function applyContent(tx: Tx, courseId: number, c: Partial<Record<(
   await writeLists(tx, courseId, c as Parameters<typeof writeLists>[2])
 }
 
-// what's missing before a course can be sent for approval (the editor shows the same list)
-async function missing(db: Writer, course: typeof courses.$inferSelect) {
+// what's missing before a course can be sent for approval, or a shared page published (the editors show the same list)
+export async function missing(db: Writer, course: typeof courses.$inferSelect) {
   const [[img], [units]] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, course.id)),
     db.select({ n: sql<number>`count(*)::int` }).from(courseUnits).where(eq(courseUnits.courseId, course.id)),
@@ -176,7 +176,7 @@ async function missing(db: Writer, course: typeof courses.$inferSelect) {
   if (!course.description) gaps.push('a description')
   if (!course.categoryId || !course.subcategoryId) gaps.push('a category and sub-category')
   if (!course.level) gaps.push('a level')
-  if (!course.method) gaps.push('how it is taught')
+  if (course.kind === 'provider' && !course.method) gaps.push('how it is taught')
   if (course.outcomes.length < 4) gaps.push('at least 4 things learners will learn')
   if (!units.n) gaps.push('the syllabus (at least one unit)')
   if (!img.n) gaps.push('at least one image')
@@ -184,9 +184,10 @@ async function missing(db: Writer, course: typeof courses.$inferSelect) {
   return gaps
 }
 
-// a course as the workspace shows it: the course, its lists and images, its shared page, and any change waiting for approval
-async function full(db: Writer, course: typeof courses.$inferSelect) {
-  const [units, exams, faqs, images, [revision], [parent], cat, [dates]] = await Promise.all([
+// a course as the editors show it: the course, its lists and images, its shared page, any change waiting for approval, and the
+// last decided change (so the provider sees why one was turned down)
+export async function courseDetail(db: Writer, course: typeof courses.$inferSelect) {
+  const [units, exams, faqs, images, [revision], [parent], cat, [dates], [last]] = await Promise.all([
     db.select().from(courseUnits).where(eq(courseUnits.courseId, course.id)).orderBy(asc(courseUnits.position)),
     db.select().from(courseExams).where(eq(courseExams.courseId, course.id)).orderBy(asc(courseExams.position)),
     db.select().from(courseFaqs).where(eq(courseFaqs.courseId, course.id)).orderBy(asc(courseFaqs.position)),
@@ -198,6 +199,12 @@ async function full(db: Writer, course: typeof courses.$inferSelect) {
              (select slug from public.subcategories where id = ${course.subcategoryId}) subcategory,
              (select slug from public.topics where id = ${course.topicId}) topic`),
     db.execute<{ upcoming: number; total: number }>(sql`select count(*) filter (where cancelled_at is null and ends_on >= current_date)::int upcoming, count(*)::int total from public.cohorts where course_id = ${course.id}`),
+    db
+      .select({ status: courseRevisions.status, note: courseRevisions.note, decidedAt: courseRevisions.decidedAt })
+      .from(courseRevisions)
+      .where(and(eq(courseRevisions.courseId, course.id), sql`${courseRevisions.status} <> 'pending'`))
+      .orderBy(sql`${courseRevisions.decidedAt} desc nulls last`)
+      .limit(1),
   ])
   const { categoryId, subcategoryId, topicId, ...rest } = course
   void categoryId
@@ -214,10 +221,65 @@ async function full(db: Writer, course: typeof courses.$inferSelect) {
     images: images.map((i) => ({ id: i.id, url: mediaUrl(i.path), alt: i.alt ?? '' })),
     parent: parent ?? null,
     pendingChanges: revision ? { content: revision.content, since: revision.submittedAt } : null,
+    lastChange: last ?? null,
     upcomingCohorts: dates?.upcoming ?? 0,
     cohortCount: dates?.total ?? 0,
     missing: await missing(db, course),
   }
+}
+
+// ---- images, deleting: shared with the admin's shared course pages (modules/admin/courses.mts) ----
+
+type Course = typeof courses.$inferSelect
+type OnLog = (tx: Tx, metadata?: Record<string, unknown>) => Promise<void>
+
+// a provider course's files sit in its provider's folder; a shared page's in shared/
+export const imageFolder = (course: Course) => (course.kind === 'shared' ? `shared/courses/${course.id}` : `${course.organisationId}/courses/${course.id}`)
+
+export async function courseImageUploadUrl(course: Course, contentType: keyof typeof IMAGE_TYPES) {
+  const up = await mediaUploadUrl(imageFolder(course), contentType)
+  if (!up) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'We couldn’t prepare the upload. Please try again.' })
+  return up
+}
+
+export async function addCourseImage(db: typeof Db, course: Course, path: string, alt: string | undefined, onLog: OnLog) {
+  if (!path.startsWith(`${imageFolder(course)}/`)) throw new TRPCError({ code: 'FORBIDDEN' })
+  if (!(await mediaExists(path))) throw bad('The image did not upload. Please try again.')
+  const [n] = await db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, course.id))
+  if (n.n >= 10) throw bad('A course can have up to 10 images.')
+  return db.transaction(async (tx) => {
+    const [img] = await tx.insert(courseImages).values({ courseId: course.id, position: n.n, path, alt: alt || null }).returning({ id: courseImages.id })
+    await onLog(tx)
+    return { id: img.id, url: mediaUrl(path) }
+  })
+}
+
+// keeps, orders and labels a course's images (the first is the cover) and deletes the ones left out
+export async function setCourseImages(db: typeof Db, course: Course, images: { id: string; alt: string }[], onLog: OnLog) {
+  const now = await db.select().from(courseImages).where(eq(courseImages.courseId, course.id))
+  const known = new Set(now.map((i) => i.id))
+  if (images.some((i) => !known.has(i.id))) throw bad('That image is no longer on this course. Refresh and try again.')
+  const keep = new Set(images.map((i) => i.id))
+  const removed = now.filter((i) => !keep.has(i.id))
+  await db.transaction(async (tx) => {
+    if (removed.length) await tx.delete(courseImages).where(inArray(courseImages.id, removed.map((i) => i.id)))
+    for (const [i, img] of images.entries()) await tx.update(courseImages).set({ position: i, alt: img.alt || null }).where(eq(courseImages.id, img.id))
+    await onLog(tx, { kept: images.length, removed: removed.length })
+  })
+  await removeMedia(removed.map((i) => i.path))
+  return { ok: true }
+}
+
+// deletes a course that has never been live, with its dates, lists and images
+export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog) {
+  if (course.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
+  const images = await db.select({ path: courseImages.path }).from(courseImages).where(eq(courseImages.courseId, course.id))
+  await db.transaction(async (tx) => {
+    await tx.delete(courses).where(eq(courses.id, course.id))
+    await onLog(tx, { title: course.title })
+  })
+  await removeMedia(images.map((i) => i.path))
+  return { ok: true }
 }
 
 const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, courseId: number, metadata: Record<string, unknown> = {}) =>
@@ -242,7 +304,7 @@ export const providerCoursesRouter = createTRPCRouter({
 
   get: orgProcedure('provider.courses.view')
     .input(z.object({ courseId: id }))
-    .query(async ({ ctx, input }) => full(ctx.db, await ownCourse(ctx.db, input.organisationId, input.courseId))),
+    .query(async ({ ctx, input }) => courseDetail(ctx.db, await ownCourse(ctx.db, input.organisationId, input.courseId))),
 
   // The shared course pages a provider can put a course under (live ones), A to Z, optionally searched.
   sharedPages: orgProcedure('provider.courses.view')
@@ -360,44 +422,20 @@ export const providerCoursesRouter = createTRPCRouter({
   // cover) and deletes the ones left out.
   imageUploadUrl: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, contentType: z.enum(Object.keys(IMAGE_TYPES) as [keyof typeof IMAGE_TYPES, ...(keyof typeof IMAGE_TYPES)[]]) }))
-    .mutation(async ({ ctx, input }) => {
-      await ownCourse(ctx.db, input.organisationId, input.courseId)
-      const up = await mediaUploadUrl(`${input.organisationId}/courses/${input.courseId}`, input.contentType)
-      if (!up) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'We couldn’t prepare the upload. Please try again.' })
-      return up
-    }),
+    .mutation(async ({ ctx, input }) => courseImageUploadUrl(await ownCourse(ctx.db, input.organisationId, input.courseId), input.contentType)),
 
   addImage: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: line(140, 'image description').optional() }))
     .mutation(async ({ ctx, input }) => {
-      await ownCourse(ctx.db, input.organisationId, input.courseId)
-      if (!input.path.startsWith(`${input.organisationId}/courses/${input.courseId}/`)) throw new TRPCError({ code: 'FORBIDDEN' })
-      if (!(await mediaExists(input.path))) throw bad('The image did not upload. Please try again.')
-      const [n] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, input.courseId))
-      if (n.n >= 10) throw bad('A course can have up to 10 images.')
-      return ctx.db.transaction(async (tx) => {
-        const [img] = await tx.insert(courseImages).values({ courseId: input.courseId, position: n.n, path: input.path, alt: input.alt || null }).returning({ id: courseImages.id })
-        await log(tx, ctx, input.organisationId, 'course.image_added', input.courseId)
-        return { id: img.id, url: mediaUrl(input.path) }
-      })
+      const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
+      return addCourseImage(ctx.db, course, input.path, input.alt, (tx) => log(tx, ctx, input.organisationId, 'course.image_added', course.id))
     }),
 
   setImages: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: line(140, 'image description') })).max(10) }))
     .mutation(async ({ ctx, input }) => {
-      await ownCourse(ctx.db, input.organisationId, input.courseId)
-      const now = await ctx.db.select().from(courseImages).where(eq(courseImages.courseId, input.courseId))
-      const known = new Set(now.map((i) => i.id))
-      if (input.images.some((i) => !known.has(i.id))) throw bad('That image is no longer on this course. Refresh and try again.')
-      const keep = new Set(input.images.map((i) => i.id))
-      const removed = now.filter((i) => !keep.has(i.id))
-      await ctx.db.transaction(async (tx) => {
-        if (removed.length) await tx.delete(courseImages).where(inArray(courseImages.id, removed.map((i) => i.id)))
-        for (const [i, img] of input.images.entries()) await tx.update(courseImages).set({ position: i, alt: img.alt || null }).where(eq(courseImages.id, img.id))
-        await log(tx, ctx, input.organisationId, 'course.images_changed', input.courseId, { kept: input.images.length, removed: removed.length })
-      })
-      await removeMedia(removed.map((i) => i.path))
-      return { ok: true }
+      const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
+      return setCourseImages(ctx.db, course, input.images, (tx, m) => log(tx, ctx, input.organisationId, 'course.images_changed', course.id, m))
     }),
 
   // Send a draft (or a course an admin asked to change) for approval, once nothing required is missing.
@@ -422,6 +460,8 @@ export const providerCoursesRouter = createTRPCRouter({
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const from = input.paused ? 'live' : 'paused'
       if (course.status !== from) throw new TRPCError({ code: 'CONFLICT', message: input.paused ? 'Only a live course can be paused.' : 'This course isn’t paused.' })
+      // a course our team paused (it has their reason) goes back live only through them
+      if (!input.paused && course.statusNote) throw new TRPCError({ code: 'FORBIDDEN', message: 'Our team paused this course. Contact us to put it back live.' })
       return ctx.db.transaction(async (tx) => {
         await tx.update(courses).set({ status: input.paused ? 'paused' : 'live', updatedAt: new Date() }).where(eq(courses.id, course.id))
         await log(tx, ctx, input.organisationId, input.paused ? 'course.paused' : 'course.resumed', course.id)
@@ -435,13 +475,6 @@ export const providerCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      if (course.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
-      const images = await ctx.db.select({ path: courseImages.path }).from(courseImages).where(eq(courseImages.courseId, course.id))
-      await ctx.db.transaction(async (tx) => {
-        await tx.delete(courses).where(eq(courses.id, course.id))
-        await log(tx, ctx, input.organisationId, 'course.deleted', course.id, { title: course.title })
-      })
-      await removeMedia(images.map((i) => i.path))
-      return { ok: true }
+      return deleteCourse(ctx.db, course, (tx, m) => log(tx, ctx, input.organisationId, 'course.deleted', course.id, m))
     }),
 })

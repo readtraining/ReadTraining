@@ -7,11 +7,12 @@ import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { CourseEndpoints, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
-import { CourseGear, SeoPanel } from "./CourseSettings";
+import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
 import { CohortForm } from "./ProviderCohorts";
 import { COURSE_TONE, CardChoice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -29,6 +30,8 @@ const SECTIONS = [
   { key: "mode", label: "Mode of study" },
   { key: "seo", label: "SEO settings", optional: true },
 ];
+// a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
+const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "pricing", "mode"];
 const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
 const MAX_IMAGE = 2 * 1024 * 1024; // the course-media bucket's limit
@@ -41,6 +44,11 @@ const STATUS_NOTES = {
   changes: "Our team has asked for changes. Make them, then send the course for approval again.",
   live: "This course is live. Changes to its wording are checked by our team before learners see them; prices, dates and settings change straight away.",
   paused: "This course is paused, so it doesn't show on ReadTraining. Put it back live from the course settings (the gear).",
+};
+const SHARED_NOTES = {
+  draft: "This shared course page is a draft: nobody outside the team can see it, and providers can't list their courses on it yet. Publish it when it is complete.",
+  live: "This shared course page is live. Changes you save show on it straight away. Providers can list their courses on it.",
+  paused: "This shared course page is off the site. Providers' courses on it don't show until it is published again.",
 };
 // fields only the page's wording (the "page" roles: course editor, marketing) may change; the rest need full course editing
 const PAGE_FIELDS = ["title", "summary", "description", "audience", "entryRequirements", "outcomes", "features", "videoUrl"];
@@ -92,15 +100,13 @@ function changes(draft, base, access) {
 // ?tab=), the section on the right. The sections' fields are one draft saved with "Save"; images and SEO save themselves. The
 // header shows the status and performance model, with Preview and the gear (course settings). "Send for approval" sends a draft
 // once nothing required is missing. Leaving with unsaved changes asks first. Course data comes from the API.
-export default function ProviderCourseEditor({ courseId }) {
-  const { organisationId, can } = useProviderAccess();
+// scope "admin": the same editor for a shared course page in the admin (lib/courseEditorApi.js): no pricing or mode of study,
+// changes go live on Save, and the page is published from here instead of sent for approval.
+export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const id = /^\d+$/.test(String(courseId)) ? Number(courseId) : 0;
-  const query = api.provider.courses.get.useQuery({ organisationId, courseId: id }, { enabled: Boolean(organisationId && id), retry: false });
+  const ep = useCourseEndpoints(scope, id);
+  const query = ep.query;
   const course = query.data;
-  const utils = api.useUtils();
-  const update = api.provider.courses.update.useMutation();
-  const submitMut = api.provider.courses.submit.useMutation();
-  const discard = api.provider.courses.discardChange.useMutation();
   const [tab, setTab] = useState("landing");
   const [draft, setDraft] = useState(null);
   const [base, setBase] = useState(null);
@@ -114,12 +120,14 @@ export default function ProviderCourseEditor({ courseId }) {
   const loadedFor = useRef(null);
   const clearToast = useCallback(() => setToast(null), []);
   const saved = useCallback((message) => setToast({ message }), []);
-  const access = { full: can("provider.courses.edit"), page: can("provider.courses.editPage"), pricing: can("provider.pricing.edit") };
+  const access = ep.access;
+  const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS;
+  const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: "/provider/courses" };
 
   useEffect(() => {
     const t = getQuery("tab");
-    if (SECTIONS.some((x) => x.key === t)) setTab(t);
-  }, []);
+    if (sections.some((x) => x.key === t)) setTab(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- read the address once
 
   useEffect(() => {
     if (course && loadedFor.current !== course.id) {
@@ -141,17 +149,14 @@ export default function ProviderCourseEditor({ courseId }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  if (!id || query.error?.data?.code === "NOT_FOUND") return <EmptyState title="This course was not found" text="It may have been deleted, or it belongs to another provider." action={{ label: "Back to courses", href: "/provider/courses" }} />;
+  if (!id || query.error?.data?.code === "NOT_FOUND" || (ep.admin && course && course.kind !== "shared")) return <EmptyState title="This course was not found" text={ep.admin ? "It may have been deleted. Only shared course pages are edited here." : "It may have been deleted, or it belongs to another provider."} action={back} />;
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!course || !draft) return <Loading rows={3} />;
 
-  const canSubmit = access.full && (course.status === "draft" || course.status === "changes");
+  const canSubmit = access.full && (ep.admin ? course.status !== "live" : course.status === "draft" || course.status === "changes");
   const isLive = course.status === "live" || course.status === "paused";
-  const ticks = SECTIONS.map((x) => ({ ...x, ok: sectionOk(draft, course, x.key) }));
-  const refresh = () => {
-    utils.provider.courses.get.invalidate({ organisationId, courseId: id });
-    utils.provider.courses.list.invalidate({ organisationId });
-  };
+  const ticks = sections.map((x) => ({ ...x, ok: sectionOk(draft, course, x.key) }));
+  const refresh = ep.refresh;
 
   // checks what the API would refuse, so the provider is shown the field, then saves what changed
   const save = async () => {
@@ -174,11 +179,11 @@ export default function ProviderCourseEditor({ courseId }) {
       return true;
     }
     try {
-      const r = await update.mutateAsync({ organisationId, courseId: id, ...patch });
+      const r = await ep.update(patch);
       setDraft(clean);
       setBase(clean);
       refresh();
-      const message = r.pendingChange ? "Saved. Your changes go live once our team has checked them." : "Course saved.";
+      const message = r.pendingChange ? "Saved. Your changes go live once our team has checked them." : ep.admin && course.status === "live" ? "Saved. The page shows the changes now." : "Course saved.";
       setSaid(message);
       setToast({ message });
       return true;
@@ -191,58 +196,56 @@ export default function ProviderCourseEditor({ courseId }) {
       return false;
     }
   };
+  // send for approval (a provider's course) or publish (a shared page), saving first if needed
   const submit = async () => {
     if (dirty && !(await save())) return;
-    submitMut.mutate(
-      { organisationId, courseId: id },
-      {
-        onSuccess: () => {
-          refresh();
-          setToast({ message: "Sent for approval. We'll email you within 2 working days." });
-        },
-        onError: (error) => {
-          setSaid(errorsFrom(error).general);
-          navRef.current?.focus();
-        },
-      },
-    );
-  };
-  const withdraw = () => discard.mutate({ organisationId, courseId: id }, {
-    onSuccess: async () => {
-      const fresh = await utils.provider.courses.get.fetch({ organisationId, courseId: id });
-      const d = draftOf(fresh);
-      setDraft(d);
-      setBase(d);
+    try {
+      if (ep.admin) await ep.setStatus("live");
+      else await ep.submit();
       refresh();
-      setToast({ message: "Your changes were withdrawn. The live version stays as it is." });
-    },
-  });
+      setToast({ message: ep.admin ? "Published. The page is live and providers can list their courses on it." : "Sent for approval. We'll email you within 2 working days." });
+    } catch (error) {
+      setSaid(errorsFrom(error).general);
+      navRef.current?.focus();
+    }
+  };
+  const withdraw = async () => {
+    await ep.discard();
+    const d = draftOf(await ep.fetch());
+    setDraft(d);
+    setBase(d);
+    refresh();
+    setToast({ message: "Your changes were withdrawn. The live version stays as it is." });
+  };
   function changeTab(t) {
     setTab(t);
     setErrors({});
     setQuery("tab", t === "landing" ? "" : t);
   }
   const lastSaved = course.updatedAt ? formatWhen(new Date(course.updatedAt).getTime()) : "";
-  const busy = update.isPending || submitMut.isPending;
+  const busy = ep.updating || ep.submitting;
   const sectionProps = { course, draft, setDraft, errors, access };
 
   return (
+    <CourseEndpoints.Provider value={ep}>
     <div className="rt-acc__stack">
       <p className="rt-sr" aria-live="polite">{said}</p>
       <section className="rt-acc__card rt-adm-hero" aria-label="Course">
         <div className="rt-pws-course-herotext">
           <div className="rt-adm-item__top">
             <Pill tone={COURSE_TONE[course.status]}>{pw.courseStatuses[course.status]}</Pill>
-            <span className="rt-adm-item__when">Performance model: {pw.models[course.model]?.label}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
+            <span className="rt-adm-item__when">{ep.admin ? "Shared course page" : `Performance model: ${pw.models[course.model]?.label}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
           </div>
           <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>
-          <p className="rt-acc__note">{STATUS_NOTES[course.status]}</p>
+          <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[course.status]}</p>
           {course.status === "changes" && course.statusNote && <p className="rt-adm-item__block"><b>What to change:</b> {course.statusNote}</p>}
           {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
+          {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-adm-item__block"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
+          {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-adm-item__block"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
         </div>
         <div className="rt-adm-hero__actions">
           {FORM_SECTIONS.includes(tab) && dirty && <span className="rt-pws-course-unsaved"><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
-          {FORM_SECTIONS.includes(tab) && access.page && <button type="button" className="button -sm -purple-1 text-white" onClick={save} disabled={busy} aria-busy={update.isPending || undefined}>{update.isPending ? "Saving…" : "Save"}</button>}
+          {FORM_SECTIONS.includes(tab) && access.page && <button type="button" className="button -sm -purple-1 text-white" onClick={save} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save"}</button>}
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setPreview(true)}>Preview</button>
           <button type="button" className="rt-pws-ce__gear" onClick={() => setGear(true)} aria-label="Course settings"><i className="icon-setting text-16" aria-hidden="true"></i></button>
         </div>
@@ -251,15 +254,15 @@ export default function ProviderCourseEditor({ courseId }) {
       {course.pendingChanges && (
         <section className="rt-acc__card rt-pws-ce__pending" aria-label="Changes waiting for approval">
           <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {formatWhen(new Date(course.pendingChanges.since).getTime())}). You can keep editing: new changes join the same request.</p>
-          {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={withdraw} disabled={discard.isPending}>Withdraw changes</button>}
+          {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={withdraw} disabled={ep.discarding}>Withdraw changes</button>}
         </section>
       )}
-      {!access.page && <p className="rt-adm-item__block">Your role can see this course but not change it.</p>}
-      {access.page && !access.full && <p className="rt-adm-item__block">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
+      {!access.page && <p className="rt-adm-item__block">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : "Your role can see this course but not change it."}</p>}
+      {!ep.admin && access.page && !access.full && <p className="rt-adm-item__block">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
 
       <div className="rt-pws-ce">
         <nav className="rt-acc__card rt-pws-ce__nav" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>
-          <h2 className="rt-adm-h3" id="rt-pws-ce-nav-h">Publish your course</h2>
+          <h2 className="rt-adm-h3" id="rt-pws-ce-nav-h">{ep.admin ? "Publish the page" : "Publish your course"}</h2>
           <ol className="rt-pws-ce__steps">
             {ticks.map((x) => (
               <li key={x.key}>
@@ -272,7 +275,7 @@ export default function ProviderCourseEditor({ courseId }) {
           </ol>
           {canSubmit ? (
             <>
-              <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={busy} aria-busy={submitMut.isPending || undefined}>{submitMut.isPending ? "Sending…" : "Send for approval"}</button>
+              <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={busy} aria-busy={ep.submitting || undefined}>{ep.admin ? (ep.submitting ? "Publishing…" : "Publish") : ep.submitting ? "Sending…" : "Send for approval"}</button>
               {course.missing.length > 0 && <p className="rt-acc__note rt-pws-ce__need">Still needed: {course.missing.join("; ")}.</p>}
             </>
           ) : <p className="rt-pws-ce__status"><Pill tone={COURSE_TONE[course.status]}>{pw.courseStatuses[course.status]}</Pill></p>}
@@ -280,12 +283,12 @@ export default function ProviderCourseEditor({ courseId }) {
 
         <div className="rt-pws-ce__main" ref={formRef}>
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
-          {tab === "landing" && <LandingSection {...sectionProps} onSaved={saved} />}
+          {tab === "landing" && <LandingSection {...sectionProps} shared={ep.admin} onSaved={saved} />}
           {tab === "info" && <InfoSection {...sectionProps} />}
           {tab === "syllabus" && <SyllabusSection {...sectionProps} />}
           {tab === "faqs" && <FaqSection {...sectionProps} />}
-          {tab === "pricing" && <PricingSection {...sectionProps} />}
-          {tab === "mode" && <ModeSection {...sectionProps} isLive={isLive} onSaved={saved} />}
+          {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} />}
+          {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} isLive={isLive} onSaved={saved} />}
           {tab === "seo" && (
             <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-seo-h">
               <h2 className="rt-acc__h2" id="rt-pws-ce-seo-h">SEO settings</h2>
@@ -296,10 +299,11 @@ export default function ProviderCourseEditor({ courseId }) {
         </div>
       </div>
 
-      <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} />
+      {ep.admin ? <SharedGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} /> : <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} />}
       <PreviewSheet open={preview} onClose={() => setPreview(false)} course={course} draft={draft} />
       <Toast toast={toast} onDone={clearToast} />
     </div>
+    </CourseEndpoints.Provider>
   );
 }
 
@@ -392,7 +396,7 @@ function LineList({ id, label, hint, items, onChange, max, placeholder, ordered 
 
 // ---- Course landing page ---------------------------------------------------------------------------------------------------
 
-function LandingSection({ course, draft, setDraft, errors, access, onSaved }) {
+function LandingSection({ course, draft, setDraft, errors, access, shared = false, onSaved }) {
   const set = useSet(setDraft);
   const subs = subcategoryOptions(draft.category);
   const topics = topicOptions(draft.category, draft.subcategory);
@@ -403,8 +407,8 @@ function LandingSection({ course, draft, setDraft, errors, access, onSaved }) {
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-basics-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-basics-h">Course landing page</h2>
-        <CardChoice name="rt-pws-ce-model" legend="Performance model" value={draft.model} onChange={(v) => !full && set("model")(v)}
-          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: full && value !== draft.model }))} />
+        {!shared && <CardChoice name="rt-pws-ce-model" legend="Performance model" value={draft.model} onChange={(v) => !full && set("model")(v)}
+          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: full && value !== draft.model }))} />}
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-title">Course title</label>
           <FieldErr id="rt-pws-ce-title" text={errors.title} />
@@ -463,21 +467,14 @@ function LandingSection({ course, draft, setDraft, errors, access, onSaved }) {
 
 // The course's images: uploaded straight away (not part of the draft), shown in order; the first is the cover in search results.
 function ImagesCard({ course, disabled, onSaved }) {
-  const { organisationId } = useProviderAccess();
-  const utils = api.useUtils();
-  const uploadUrl = api.provider.courses.imageUploadUrl.useMutation();
-  const addImage = api.provider.courses.addImage.useMutation();
-  const setImages = api.provider.courses.setImages.useMutation();
+  const ep = useEndpoints();
   const [list, setList] = useState(course.images);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef(null);
   useEffect(() => setList(course.images), [course.images]);
   const changed = !same(list.map((i) => [i.id, i.alt]), course.images.map((i) => [i.id, i.alt]));
-  const refresh = () => {
-    utils.provider.courses.get.invalidate({ organisationId, courseId: course.id });
-    utils.provider.courses.list.invalidate({ organisationId });
-  };
+  const refresh = ep.refresh;
 
   const onFile = async (e) => {
     const file = e.target.files?.[0];
@@ -489,10 +486,10 @@ function ImagesCard({ course, disabled, onSaved }) {
     setError("");
     setBusy(true);
     try {
-      const { path, token } = await uploadUrl.mutateAsync({ organisationId, courseId: course.id, contentType: file.type });
+      const { path, token } = await ep.uploadUrl(file.type);
       const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, file, { contentType: file.type });
       if (upError) throw new Error("The picture didn't upload. Please try again.");
-      await addImage.mutateAsync({ organisationId, courseId: course.id, path });
+      await ep.addImage(path);
       refresh();
       onSaved("Image added");
     } catch (err) {
@@ -501,14 +498,19 @@ function ImagesCard({ course, disabled, onSaved }) {
       setBusy(false);
     }
   };
-  const saveList = (next, message) => {
+  const saveList = async (next, message) => {
     setError("");
     setBusy(true);
-    setImages.mutate({ organisationId, courseId: course.id, images: next.map((i) => ({ id: i.id, alt: i.alt || "" })) }, {
-      onSuccess: () => { refresh(); onSaved(message); },
-      onError: (err) => { setError(errorsFrom(err).general); setList(course.images); },
-      onSettled: () => setBusy(false),
-    });
+    try {
+      await ep.setImages(next.map((i) => ({ id: i.id, alt: i.alt || "" })));
+      refresh();
+      onSaved(message);
+    } catch (err) {
+      setError(errorsFrom(err).general);
+      setList(course.images);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

@@ -60,12 +60,12 @@ export default function AdminDashboard() {
   const me = useAdminAccess();
   const seesMoney = Boolean(me?.permissions?.includes("orders.view"));
   const providers = api.admin.providers.counts.useQuery();
+  const courses = api.admin.courses.counts.useQuery();
   const money = api.admin.orders.summary.useQuery(undefined, { enabled: seesMoney });
   const latestOrders = api.admin.orders.list.useQuery({ limit: 5 }, { enabled: seesMoney });
   if (!data) return <DetailSkeleton />;
-  const { now, approvals, changes } = data;
+  const { now, changes } = data;
   const m = money.data;
-  const pending = approvals.filter((a) => a.status === "pending");
   const open = changes.filter((c) => c.open);
   // real: orders and sales in the last 7 days, refunds to decide, payouts to approve
   const stats = [
@@ -77,9 +77,9 @@ export default function AdminDashboard() {
   const queues = [
     ...(m ? [{ key: "refunds", n: m.refunds, overdue: 0 }, { key: "disputes", n: m.disputes, overdue: m.disputesOverdue }, { key: "payouts", n: m.payoutsToApprove, overdue: 0 }] : []),
     { key: "applications", n: providers.data?.applications ?? 0, overdue: 0 },
+    { key: "approvals", n: courses.data?.waiting ?? 0, overdue: courses.data?.overdue ?? 0 },
     // DEMO queues (lib/admin.js, lib/adminWork.js): development and the test copy only (lib/demo.js)
     ...(SHOW_DEMO ? [
-      { key: "approvals", n: pending.length, overdue: pending.filter((a) => a.due < now).length },
       { key: "changes", n: open.length, overdue: open.filter((c) => c.due < now).length },
       { key: "requests", n: data.counts.requests, overdue: data.counts.requestsOverdue },
       { key: "credit", n: data.counts.credit, overdue: 0 },

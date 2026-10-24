@@ -13,6 +13,7 @@ import { activityRouter } from './activity.mjs'
 import { catalogueAdminRouter } from './catalogue.mjs'
 import { commissionRouter } from './commission.mjs'
 import { couponsRouter } from './coupons.mjs'
+import { adminCoursesRouter } from './courses.mjs'
 import { emailsRouter } from './emails.mjs'
 import { disputesRouter, ordersRouter, refundsRouter } from './money.mjs'
 import { feesRouter, ledgerRouter, payoutsRouter } from './payouts.mjs'
@@ -31,6 +32,7 @@ export const adminRouter = createTRPCRouter({
   activity: activityRouter,
   students: studentsRouter,
   providers: providersRouter,
+  courses: adminCoursesRouter,
   commission: commissionRouter,
   catalogue: catalogueAdminRouter,
   emails: emailsRouter,

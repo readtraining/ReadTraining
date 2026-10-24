@@ -17,6 +17,8 @@ const TONES = {
   coupon: { live: "success", scheduled: "neutral", ended: "neutral", off: "neutral" },
   provider: { pending: "warning", changes_requested: "info", active: "success", suspended: "danger", rejected: "neutral", invited: "info" },
   offering: { live: "success", paused: "neutral" },
+  course: { draft: "neutral", pending: "warning", changes: "info", live: "success", paused: "neutral" },
+  decision: { approved: "success", changes: "info", rejected: "neutral" },
   catalogue: { retired: "neutral" },
   session: { sent: "success", notSent: "warning", notSentLater: "neutral", cancelled: "neutral" },
   change: { provider: "info", approved: "warning", evidence: "warning", refunded: "success", moved: "success", rejected: "neutral", won: "success", lost: "neutral" },

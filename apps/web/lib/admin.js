@@ -4,7 +4,6 @@ import { catalogueCourses } from "@/data/courseCatalogue";
 import { categoryName } from "@/lib/taxonomy";
 import { certificates as seedCertificates } from "@/data/certificates";
 import { getCourseBySlug } from "@/lib/courses";
-import { getProviders } from "@/lib/providers";
 import { ADMIN_EVENT, DAY, HOUR, addWorkingDays, currentAdmin, read, update } from "@/lib/adminStore";
 import { buildWork } from "@/lib/adminWork";
 import { buildReviews } from "@/lib/adminReviews";
@@ -45,33 +44,6 @@ export function ago(ms, now = Date.now()) {
 
 
 // ---- the records ------------------------------------------------------------------------------------------------------------
-
-// DEMO: what providers sent for review (course listings, dates, prices) until courses are real. Provider applications are
-// real and decided on the Providers page.
-function buildApprovals(saved, now) {
-  const bySlug = Object.fromEntries(getProviders().map((p) => [p.slug, p]));
-  const items = [
-    ...A.submissions.map((x) => {
-      const course = getCourseBySlug(x.courseId);
-      return {
-        id: x.id,
-        type: x.type,
-        title: course?.title || "Course",
-        provider: bySlug[x.provider]?.name || x.provider,
-        providerSlug: x.provider,
-        detail: x.detail,
-        submitted: now - x.hoursAgo * HOUR,
-        baseStatus: "pending",
-      };
-    }),
-  ];
-  return items
-    .map((it) => {
-      const d = saved.decisions?.[it.id];
-      return { ...it, status: d?.status || it.baseStatus, reason: d?.reason || "", decidedAt: d?.at, due: addWorkingDays(it.submitted, A.sla.approval) };
-    })
-    .sort((a, b) => a.submitted - b.submitted);
-}
 
 const providerFor = (course) => {
   const s = course.sessions.find((x) => x.mode === "classroom") || course.sessions[0];
@@ -291,10 +263,8 @@ export function getAdmin() {
   const saved = read();
   const now = Date.now();
   const fees = A.feeDefaults; // the demo reports use the default card fee
-  const approvals = buildApprovals(saved, now);
   const orders = buildOrders(saved, now);
   const changes = buildChanges(saved, orders, now);
-  const pending = approvals.filter((a) => a.status === "pending");
   const openChanges = changes.filter((c) => c.open);
   const catalogue = buildCatalogue(saved, isoDay(now));
   const sessions = buildSessions(saved, catalogue, now);
@@ -304,7 +274,6 @@ export function getAdmin() {
   return {
     now,
     ...work,
-    approvals,
     orders,
     changes,
     catalogue,
@@ -315,9 +284,8 @@ export function getAdmin() {
     staff: staffNames(),
     fees,
     counts: {
-      approvals: pending.length,
       changes: openChanges.length,
-      overdue: pending.filter((a) => a.due < now).length + openChanges.filter((c) => c.due < now).length + work.workCounts.requestsOverdue,
+      overdue: openChanges.filter((c) => c.due < now).length + work.workCounts.requestsOverdue,
       ...work.workCounts,
       reviews: reviews.filter((r) => r.challenge).length,
     },
@@ -326,12 +294,6 @@ export function getAdmin() {
 
 // ---- the writes ---------------------------------------------------------------------------------------------------------------
 
-
-export function decideApproval(item, status, reason = "") {
-  update((s) => {
-    s.decisions = { ...(s.decisions || {}), [item.id]: { status, reason, at: Date.now() } };
-  });
-}
 
 const orderEvent = (s, ref, text) => {
   const cur = s.orders?.[ref] || {};
@@ -368,14 +330,6 @@ export function actOnChange(change, action) {
 }
 
 // ---- part 2 writes ----------------------------------------------------------------------------------------------------------
-export const setPreCourse = (course, on) =>
-  update((s) => {
-    s.preCourse = { ...(s.preCourse || {}), [course.id]: on };
-  });
-export const setOfferingStatus = (course, offering, status) =>
-  update((s) => {
-    s.offerings = { ...(s.offerings || {}), [`${course.id}:${offering.provider}`]: status };
-  });
 const setSession = (session, patch) =>
   update((s) => {
     s.sessions = { ...(s.sessions || {}), [session.id]: { ...(s.sessions?.[session.id] || {}), ...patch } };

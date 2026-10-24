@@ -4,7 +4,8 @@ import { supabase } from './supabase.mjs'
 
 // Course images and provider logos: the public course-media bucket (migration 0021). Anyone can view a file by its address;
 // only the API uploads, through one-time signed upload addresses, after checking the person may edit that course or provider.
-// Every file lives under its provider's folder: <organisation id>/courses/<course id>/… or <organisation id>/logo/….
+// Every file lives under its provider's folder: <organisation id>/courses/<course id>/… or <organisation id>/logo/…; the shared
+// course pages ReadTraining's team writes keep theirs under shared/courses/<course id>/….
 
 export const COURSE_MEDIA = 'course-media'
 export const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' } as const
@@ -38,5 +39,6 @@ export async function removeMedia(paths: string[]) {
   if (error) console.error('course-media: could not remove files', error.message)
 }
 
-// a stored path the API made: <uuid>/courses/<id>/<uuid>.<ext> or <uuid>/logo/<uuid>.<ext>
-export const MEDIA_PATH = /^[0-9a-f-]{36}\/(courses\/\d+|logo)\/[0-9a-f-]{36}\.(jpg|png|webp|gif)$/
+// a stored path the API made: <organisation uuid>/courses/<id>/<uuid>.<ext>, <organisation uuid>/logo/<uuid>.<ext>, or a shared
+// course page's shared/courses/<id>/<uuid>.<ext>
+export const MEDIA_PATH = /^([0-9a-f-]{36}\/(courses\/\d+|logo)|shared\/courses\/\d+)\/[0-9a-f-]{36}\.(jpg|png|webp|gif)$/

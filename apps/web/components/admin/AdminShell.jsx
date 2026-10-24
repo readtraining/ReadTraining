@@ -28,8 +28,9 @@ const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0])
 // the sidebar is a menu drawer opened from the top bar. `current` marks the page. The top bar's search (Ctrl+K) reaches
 // every page and the real learners and providers. A page that still shows made-up records says so beside its title (the nav's
 // `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a breadcrumb back to the list and
-// the record's own card carries the page's h1.
-export default function AdminShell({ current, title, lead, actions = null, detail = null, children }) {
+// the record's own card carries the page's h1. `real`: a page of real records inside a section that is partly demo (a course in
+// the catalogue) drops the section's demo label.
+export default function AdminShell({ current, title, lead, actions = null, detail = null, real = false, children }) {
   const sideRef = useRef(null);
   const router = useRouter();
   const me = useAdminAccess();
@@ -39,16 +40,17 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
-  // the waiting provider applications and the money badges are real; the other badges are still DEMO counts
+  // the waiting provider applications, course approvals and the money badges are real; the other badges are still DEMO counts
   const providers = api.admin.providers.counts.useQuery(undefined, { staleTime: 30000 });
+  const courses = api.admin.courses.counts.useQuery(undefined, { staleTime: 30000 });
   // refunds to decide, open disputes and payouts to approve are real too (for admins who can see orders)
   const money = api.admin.orders.summary.useQuery(undefined, { staleTime: 30000, retry: false, enabled: Boolean(me?.permissions?.includes("orders.view")) });
-  const counts = { ...(SHOW_DEMO ? data?.counts || {} : {}), applications: providers.data?.applications ?? 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0 };
+  const counts = { ...(SHOW_DEMO ? data?.counts || {} : {}), applications: providers.data?.applications ?? 0, approvals: courses.data?.waiting ?? 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0 };
   // pages behind an admin switch are listed only for admins who have it
   const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => !x.permission || me?.permissions?.includes(x.permission)) })).filter((g) => g.items.length);
   const items = nav.flatMap((g) => g.items);
   const page = items.find((x) => x.key === current);
-  const demo = SHOW_DEMO && page?.demo ? A.demo[page.demo === true ? "all" : page.demo] : null;
+  const demo = SHOW_DEMO && page?.demo && !real ? A.demo[page.demo === true ? "all" : page.demo] : null;
   // on the live site a page made only of demo records shows an honest empty state instead (lib/demo.js)
   const demoOff = !SHOW_DEMO && page?.demo === true ? A.demoOff[current] : null;
   const demoTag = demo && <span className="rt-demo-tag" title={demo.note}>{demo.label}<span className="rt-sr">: {demo.note}</span></span>;

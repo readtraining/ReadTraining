@@ -30,7 +30,7 @@ export const admin = {
   nav: [
     { group: "Overview", items: [
       { key: "dashboard", label: "Dashboard", href: "/admin", demo: "partly" },
-      { key: "approvals", label: "Approvals", href: "/admin/approvals", badge: "approvals", demo: true },
+      { key: "approvals", label: "Approvals", href: "/admin/approvals", badge: "approvals" },
       { key: "reports", label: "Reports", href: "/admin/reports", demo: true },
     ] },
     { group: "Marketplace", items: [
@@ -235,7 +235,7 @@ export const admin = {
   },
 
   // proposed deadlines (working days), as the plan; the client confirms them
-  sla: { approval: 2, provider: 3, refund: 3, dispute: 5 },
+  sla: { provider: 3, refund: 3, dispute: 5 },
 
   dashboard: {
     title: "Dashboard",
@@ -267,18 +267,25 @@ export const admin = {
     demoTag: "Demo",
   },
 
+  // course approvals (real, API admin.courses): new courses and changes to live courses
   approvals: {
     title: "Approvals",
-    lead: "Everything a provider has sent for review. Approve, ask for changes, or reject with a reason.",
-    tabs: { pending: "Waiting", approved: "Approved", changes: "Changes asked", rejected: "Rejected" },
-    types: { offering: "New course listing", dates: "New dates", price: "Price change" },
+    lead: "New courses and changes to live courses that providers sent for review, oldest first. Open one to check it, then approve it or say what to change.",
+    tabs: { waiting: "Waiting", changes: "Changes asked", decided: "Decided" },
+    types: { new: "New course", change: "Change to a live course" },
+    outcomes: { approved: "Approved", changes: "Changes asked", rejected: "Not approved" },
     filterAll: "All types",
+    review: "Review",
     approve: "Approve",
-    reject: "Reject",
+    approveChange: "Approve change",
+    rejectChange: "Turn down change",
     requestChanges: "Ask for changes",
-    reasonLabel: "Reason (shown to the provider)",
-    reasonError: "Enter a reason, so the provider knows what to fix.",
-    empty: "Nothing here.",
+    pause: "Pause course",
+    resume: "Put back live",
+    reasonLabel: "Your note (the provider sees it, and it is emailed to them)",
+    providerNotActive: "The provider isn't approved yet. Decide on the provider first.",
+    dueDays: 2,
+    empty: { waiting: "Nothing waiting. New courses and changes providers send show here.", changes: "No courses are waiting on their provider.", decided: "Nothing decided yet." },
   },
 
   providers: {
@@ -642,22 +649,29 @@ export const admin = {
 
   catalogue: {
     title: "Catalogue",
-    lead: "Every course on the marketplace, the providers who offer it, and its packages and add-ons.",
+    lead: "Every course on the marketplace: the shared course pages our team writes, and each provider's own courses.",
     tabs: { courses: "Courses", list: "Categories and filters", packages: "Packages and add-ons" },
-    search: "Search courses",
-    columns: { course: "Course", category: "Category", providers: "Providers", sessions: "Upcoming dates", from: "From", flags: "Flags" },
-    preCourse: "Pre-course e-learning",
-    preCourseNote: "Learners must finish online work before the first day. Shown on the course page, in the confirmation and in session readiness.",
+    search: "Search by course, provider or number",
+    kinds: { all: "All courses", shared: "Shared pages", provider: "Providers' courses" },
+    kind: { shared: "Shared page", provider: "Provider course" },
+    statuses: { draft: "Draft", pending: "Waiting for approval", changes: "Changes asked", live: "Live", paused: "Paused" },
+    columns: { course: "Course", status: "Status", providers: "Providers", sessions: "Upcoming dates", from: "From" },
+    newShared: "New shared page",
+    newSharedNote: "A page on ReadTraining that lists every provider running one course, so learners can compare dates and prices. Write it here; providers then list their own courses on it.",
+    empty: "No courses match.",
     detail: {
       back: "All courses",
-      about: "Course",
-      offerings: "Offerings",
-      offeringsNote: "Each provider's version of this course. A paused offering stays visible to the provider but cannot be booked.",
-      pause: "Pause",
-      resume: "Resume",
-      live: "Live",
-      paused: "Paused",
+      edit: "Edit page",
       publicPage: "Public page",
+      provider: "Provider",
+      sharedPage: "Shared page",
+      children: "Providers' courses on this page",
+      childrenNone: "No provider has listed a course on this page yet.",
+      change: "Waiting change",
+      changeNote: "What the provider changed, against the live version. Approving it makes it the live version.",
+      now: "Live now",
+      proposed: "Proposed",
+      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
     },
     packagesNote: "These apply in the basket to classroom courses in the listed categories. Prices change with the backend.",
     // the catalogue's one list (real, API admin.catalogue): what the site's filters and menus and the provider's course form use
@@ -963,19 +977,6 @@ export const admin = {
     ["Emily", "Ward"], ["Kwame", "Mensah"], ["Lucy", "Price"], ["Tom", "Fletcher"], ["Aisha", "Begum"], ["Callum", "Reid"],
   ],
   companies: ["Brightwell Facilities Ltd", "Northern Site Services", "Harbourside Hotels", "Cityguard Security"],
-
-  // items sent for approval: courseId from the catalogue, provider by slug
-  submissions: [
-    { id: "ap-o1", type: "offering", provider: "apex-training", courseId: 46, hoursAgo: 5, detail: "Classroom, London, £99 per delegate" },
-    { id: "ap-o2", type: "offering", provider: "kestrel-safety-training", courseId: 16, hoursAgo: 30, detail: "Classroom and live online, from £79" },
-    { id: "ap-o3", type: "offering", provider: "beacon-training-services", courseId: 20, hoursAgo: 52, detail: "Self-paced, £24.99" },
-    { id: "ap-d1", type: "dates", provider: "northstar-training", courseId: 1, hoursAgo: 2, detail: "4 new dates in Liverpool, Nov to Dec" },
-    { id: "ap-d2", type: "dates", provider: "clearview-learning", courseId: 5, hoursAgo: 20, detail: "6 new dates in Glasgow, Nov" },
-    { id: "ap-d3", type: "dates", provider: "harbour-training-group", courseId: 9, hoursAgo: 44, detail: "2 new dates in Bristol, Nov" },
-    { id: "ap-d4", type: "dates", provider: "northgate-learning", courseId: 13, hoursAgo: 70, detail: "3 new live online dates" },
-    { id: "ap-p1", type: "price", provider: "apex-training", courseId: 1, hoursAgo: 8, detail: "£198.99 to £219.99 on 3 live dates (+10.6%)" },
-    { id: "ap-p2", type: "price", provider: "summit-skills", courseId: 26, hoursAgo: 26, detail: "£286.15 to £269.00 on 2 live dates (-6.0%)" },
-  ],
 
   // orders: [buyer index, company index or null, courseId, inDays (course start; negative = past), quantity, method, extra]
   orderSeeds: [
