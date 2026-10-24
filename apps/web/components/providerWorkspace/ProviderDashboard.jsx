@@ -7,18 +7,21 @@ import { DAY, customerName, useProvider } from "@/lib/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { COURSE_TONE, Loading, ORDER_TONE, Pill, formatWhen } from "./providerParts";
 import { Delta, Sparkline, money } from "./charts";
-import { Seats, dayRange } from "./ProviderCohorts";
+import { Seats, dayRange, useSchedule } from "./ProviderCohorts";
 
 // Our dashboard (Hurak has none; everything on it opens the Hurak-style page it comes from). First what needs the provider today
 // (refund requests, disputes, unpaid orders, reviews and questions to answer, new leads, cohorts with no tutor, courses sent back),
 // then the last 30 days against the 30 before (revenue, enrolments, orders, rating), then the next cohorts, the latest orders and
-// the courses by status.
+// the courses by status. Courses and cohorts come from the API; orders, refunds, reviews and leads are still DEMO records.
 const greet = (h) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
 
 export default function ProviderDashboard() {
   const { person, data: meData } = useMe();
   const data = useProvider();
-  if (!data) return <Loading stats rows={3} />;
+  const schedule = useSchedule("upcoming");
+  if (!data || !schedule.cohorts.data || !schedule.courses.data) return <Loading stats rows={3} />;
+  const courses = schedule.courses.data;
+  const tutorName = (id) => schedule.tutors.data?.find((t) => t.userId === id)?.name;
 
   const now = Date.now();
   const from = now - 30 * DAY;
@@ -36,9 +39,10 @@ export default function ProviderDashboard() {
   const refunds = data.refunds.filter((r) => r.status === "open");
   const disputes = data.orders.filter((o) => o.status === "dispute");
   const unpaid = data.orders.filter((o) => o.status === "incomplete");
-  const upcoming = data.cohorts.filter((k) => k.status === "upcoming" && !k.cancelled).sort((a, b) => a.first.localeCompare(b.first));
-  const noTutor = upcoming.filter((k) => !k.tutorId);
-  const sentBack = data.courses.filter((c) => c.status === "changes");
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = schedule.cohorts.data.filter((k) => !k.cancelledAt && k.startsOn > today);
+  const noTutor = upcoming.filter((k) => !k.tutorUserId);
+  const sentBack = courses.filter((c) => c.status === "changes");
   const todo = [
     ...refunds.map((r) => ({ key: r.id, tone: "warn", text: `Refund request: ${money(r.amount)} on order ${r.orderRef}`, href: `/provider/orders/${r.orderRef}`, cta: "Reply" })),
     ...disputes.map((o) => ({ key: o.ref, tone: "late", text: `Order ${o.ref} is in dispute. Send your evidence within 7 days.`, href: `/provider/orders/${o.ref}`, cta: "Send evidence" })),
@@ -46,8 +50,8 @@ export default function ProviderDashboard() {
     ...(data.counts.reviews ? [{ key: "reviews", tone: "info", text: `${data.counts.reviews} ${data.counts.reviews === 1 ? "review needs" : "reviews need"} a reply`, href: "/provider/performance?tab=reviews", cta: "Reply" }] : []),
     ...(data.counts.questions ? [{ key: "qa", tone: "info", text: `${data.counts.questions} learner ${data.counts.questions === 1 ? "question" : "questions"} to answer`, href: "/provider/settings?tab=qa", cta: "Answer" }] : []),
     ...(data.counts.leads ? [{ key: "leads", tone: "info", text: `${data.counts.leads} new ${data.counts.leads === 1 ? "lead" : "leads"}`, href: "/provider/performance?tab=leads", cta: "View" }] : []),
-    ...noTutor.slice(0, 3).map((k) => ({ key: k.id, tone: "muted", text: `No tutor yet for ${k.course?.title}, ${dayRange(k.first, k.last)}`, href: `/provider/cohorts/${k.id}`, cta: "Assign" })),
-    ...sentBack.map((c) => ({ key: c.id, tone: "late", text: `Changes requested on ${c.title || "a course"}`, href: `/provider/courses/${c.id}`, cta: "Edit" })),
+    ...noTutor.slice(0, 3).map((k) => ({ key: k.id, tone: "muted", text: `No tutor yet for ${k.courseTitle}, ${dayRange(k.startsOn, k.endsOn)}`, href: `/provider/cohorts/${k.id}`, cta: "Assign" })),
+    ...sentBack.map((c) => ({ key: c.id, tone: "late", text: `Changes requested on ${c.title}`, href: `/provider/courses/${c.id}`, cta: "Edit" })),
   ];
 
   const kpis = [
@@ -57,7 +61,7 @@ export default function ProviderDashboard() {
     { label: "Average rating", value: rating(0, now + 1) ? rating(0, now + 1).toFixed(1) : "—", now: rating(from, now + 1), before: rating(prev, from), spark: weeks.map(([a, b]) => rating(a, b)), href: "/provider/performance?tab=reviews" },
   ];
   const recent = [...data.orders].sort((a, b) => b.at - a.at).slice(0, 5);
-  const statuses = Object.keys(pw.courseStatuses).map((k) => ({ k, n: data.courses.filter((c) => c.status === k).length }));
+  const statuses = Object.keys(pw.courseStatuses).map((k) => ({ k, n: courses.filter((c) => c.status === k).length }));
   // the visitor's own clock (a provider in Lahore at 2:51pm sees "Good afternoon"), and the signed-in person's own first name
   const hour = new Date(now).getHours();
   const firstName = meData?.profile?.firstName || person?.name?.split(" ")[0] || "";
@@ -67,7 +71,7 @@ export default function ProviderDashboard() {
       <section className="rt-dash__hello" aria-labelledby="rt-dash-hi">
         <div>
           <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}{firstName ? `, ${firstName}` : ""}</h2>
-          <p className="rt-dash__sub">{todo.length ? `${todo.length} ${todo.length === 1 ? "thing needs" : "things need"} you today.` : "You're all caught up."} {upcoming.length ? `Next cohort: ${upcoming[0].course?.title}, ${dayRange(upcoming[0].first, upcoming[0].last)}.` : ""}</p>
+          <p className="rt-dash__sub">{todo.length ? `${todo.length} ${todo.length === 1 ? "thing needs" : "things need"} you today.` : "You're all caught up."} {upcoming.length ? `Next cohort: ${upcoming[0].courseTitle}, ${dayRange(upcoming[0].startsOn, upcoming[0].endsOn)}.` : ""}</p>
         </div>
         <div className="rt-dash__quick">
           <Link href="/provider/orders/new" className="button -sm -outline-purple-1 text-purple-1">Create order</Link>
@@ -128,12 +132,12 @@ export default function ProviderDashboard() {
             <ul className="rt-dash__cohorts">
               {upcoming.slice(0, 5).map((k) => (
                 <li key={k.id}>
-                  <span className={`rt-dash__date -c-${k.colour || "purple"}`} aria-hidden="true"><small>{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${k.first}T00:00:00Z`))}</small><b>{Number(k.first.slice(8))}</b></span>
+                  <span className={`rt-dash__date -c-${k.method === "live-online" ? "blue" : "purple"}`} aria-hidden="true"><small>{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${k.startsOn}T00:00:00Z`))}</small><b>{Number(k.startsOn.slice(8))}</b></span>
                   <span className="rt-dash__cmeta">
-                    <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.course?.title}</Link>
-                    <small>{k.venue ? k.venue.name : "Online"} · {k.tutor ? k.tutor.name : "No tutor yet"}</small>
+                    <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>
+                    <small>{k.venue ? k.venue.name : "Online"} · {tutorName(k.tutorUserId) || "No tutor yet"}</small>
                   </span>
-                  <Seats booked={k.booked} max={k.max} />
+                  <Seats booked={0} max={k.capacity} />
                 </li>
               ))}
             </ul>

@@ -5839,6 +5839,19 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-mediabody .rt-field { width: 100%; }
 @media (max-width: 575px) { .rt-pws-course-mediaitem { flex-direction: column; } .rt-pws-course-mediaitem img { width: 100%; height: auto; aspect-ratio: 16 / 10; } }
 .rt-pws-course-library { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+/* course editor: a change waiting for approval, optional steps, syllabus units and the exam table */
+.rt-pws-ce__pending { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
+.rt-pws-ce__pending .rt-acc__note { flex: 1 1 320px; margin: 0; }
+.rt-pws-ce__opt { font-weight: 400; color: var(--rt-c-muted); }
+.rt-pws-ce__unitbody { white-space: pre-line; }
+.rt-pws-ce__iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); cursor: pointer; }
+.rt-pws-ce__iconbtn:hover:not(:disabled) { background: var(--rt-c-soft); color: var(--rt-c-text); }
+.rt-pws-ce__iconbtn:disabled { opacity: 0.35; cursor: default; }
+.rt-pws-ce__exams { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.rt-pws-ce__exam { display: grid; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); list-style: none; }
+@media (min-width: 768px) { .rt-pws-ce__exam { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; } .rt-pws-ce__exam .rt-pws-course-linkbtn { margin-bottom: 12px; } }
+/* course list: a note under the status pill */
+.rt-cx-note { display: block; margin-top: 4px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-pws-course-library li { list-style: none; }
 .rt-pws-course-library button { display: grid; gap: 4px; width: 100%; padding: 8px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); text-align: left; cursor: pointer; transition: border-color 150ms ease; }
 .rt-pws-course-library button:hover { border-color: var(--rt-c-brand); }

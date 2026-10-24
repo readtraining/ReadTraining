@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SHOW_DEMO: process.env.SHOW_DEMO ?? (process.env.VERCEL_ENV === 'production' ? 'off' : 'on'),
   },
   images: { unoptimized: true },
+  // the shared permission table is TypeScript source (packages/permissions); the browser uses it only to hide buttons
+  transpilePackages: ['@readtraining/permissions'],
   // the test copy (Vercel preview deployments) can be opened by anyone with the link, but search engines never index it
   async headers() {
     return process.env.VERCEL_ENV === 'preview' ? [{ source: '/(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }] : []

@@ -4,6 +4,7 @@ import { contentRouter } from '../modules/content/content.router.mjs'
 import { meRouter } from '../modules/me/me.router.mjs'
 import { organisationsRouter } from '../modules/organisations/organisations.router.mjs'
 import { postsRouter } from '../modules/posts/posts.router.mjs'
+import { providerRouter } from '../modules/provider/provider.router.mjs'
 import { createTRPCRouter, publicProcedure } from './trpc.mjs'
 
 export const appRouter = createTRPCRouter({
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   me: meRouter,
   organisations: organisationsRouter,
   posts: postsRouter,
+  provider: providerRouter,
 })
 
 export type AppRouter = typeof appRouter

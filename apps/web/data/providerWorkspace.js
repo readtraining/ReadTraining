@@ -80,7 +80,7 @@ export const pw = {
     { key: "live-online", label: "Live online", icon: "icon-online-learning-2", text: "For live, tutor-led training by video, one to one or in groups.", more: "Run sessions by video on dates you choose. Learners get the joining link in their joining instructions before each session." },
     { key: "self-paced", label: "Self-paced", icon: "icon-time-management", text: "For recorded lessons and self-paced e-learning.", more: "Build the course from lessons (text, video, quizzes and downloads). Learners start straight after booking and work at their own pace." },
   ],
-  courseStatuses: { draft: "Draft", pending: "Waiting for approval", approved: "Approved", changes: "Changes requested" },
+  courseStatuses: { draft: "Draft", pending: "Waiting for approval", changes: "Changes requested", live: "Live", paused: "Paused" },
 
   // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
@@ -159,10 +159,10 @@ export const pw = {
     { key: "info", label: "Provider information" },
     { key: "logo", label: "Company logo" },
     { key: "terms", label: "Terms" },
+    { key: "venues", label: "Venues" },
     { key: "vat", label: "VAT" },
     { key: "affiliate", label: "Affiliate" },
     { key: "emails", label: "Emails" },
-    { key: "faqs", label: "FAQs" },
     { key: "qa", label: "Q&A" },
     { key: "integrations", label: "Integrations" },
   ],

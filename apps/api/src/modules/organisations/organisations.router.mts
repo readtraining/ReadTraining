@@ -5,6 +5,7 @@ import { and, eq, like, or, organisationMembers, organisations } from '@readtrai
 import { can } from '@readtraining/permissions'
 
 import { logActivity, logDenied } from '../../lib/activity.mjs'
+import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
 import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
 
@@ -16,16 +17,7 @@ import { providerTermsVersion } from '../content/content.router.mjs'
 // saved the provider terms in the admin it is their date (providerTermsVersion); until then this built-in one.
 export const PROVIDER_TERMS_VERSION = '2026-10-16'
 
-const slugify = (s: string) =>
-  s
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
-    .replace(/-+$/g, '') || 'provider'
+const slugify = (s: string) => slugifyText(s, 'provider')
 
 const phone = z
   .string()
@@ -82,9 +74,7 @@ export const organisationsRouter = createTRPCRouter({
         .select({ slug: organisations.slug })
         .from(organisations)
         .where(or(eq(organisations.slug, base), like(organisations.slug, `${base}-%`)))
-      const used = new Set(taken.map((t) => t.slug))
-      let slug = base
-      for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`
+      const slug = freeSlug(base, taken.map((t) => t.slug))
       const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
       const org = await ctx.db.transaction(async (tx) => {
         const [created] = await tx
@@ -115,9 +105,7 @@ export const organisationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'CONFLICT', message: 'You already have a business account. Use Switch account to open it.' })
       const base = slugify(input.companyName)
       const taken = await ctx.db.select({ slug: organisations.slug }).from(organisations).where(or(eq(organisations.slug, base), like(organisations.slug, `${base}-%`)))
-      const used = new Set(taken.map((t) => t.slug))
-      let slug = base
-      for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`
+      const slug = freeSlug(base, taken.map((t) => t.slug))
       return ctx.db.transaction(async (tx) => {
         const [created] = await tx
           .insert(organisations)

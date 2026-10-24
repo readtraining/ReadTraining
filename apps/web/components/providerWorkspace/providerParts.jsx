@@ -11,7 +11,7 @@ export { Pill, Tabs, Search, Stats, RowMenu, setQuery, getQuery, formatWhen } fr
 
 // The status tones, as the admin's (components/admin/AdminStatus.jsx), seen by the provider: ok green (done), info blue (waiting on
 // someone else), warn amber (the provider must act), late red (at risk), muted grey (closed or not started).
-export const COURSE_TONE = { draft: "muted", pending: "info", approved: "ok", changes: "warn" };
+export const COURSE_TONE = { draft: "muted", pending: "info", changes: "warn", live: "ok", paused: "muted" };
 export const COHORT_TONE = { upcoming: "muted", progress: "info", completed: "warn", partial: "warn", certificated: "ok", cancelled: "muted" };
 export const ORDER_TONE = { paid: "ok", incomplete: "warn", cancelled: "muted", refunded: "muted", partial: "muted", dispute: "late", lost: "muted" };
 
