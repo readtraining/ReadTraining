@@ -29,13 +29,18 @@ const day = z
 
 // ---- the fixed keys -------------------------------------------------------------------------------------------------------
 const FIXED = {
-  // the trust numbers every page quotes: the average rating, how many verified reviews, customers and courses
-  trust: z.object({
-    rating: z.number({ required_error: 'Enter a rating from 1 to 5.', invalid_type_error: 'Enter a rating from 1 to 5.' }).min(1, 'Enter a rating from 1 to 5.').max(5, 'Enter a rating from 1 to 5.').refine((n) => Math.round(n * 10) === n * 10, 'Use one decimal place, like 4.9.'),
-    reviews: count,
-    customers: count,
-    courses: count,
-  }),
+  // the trust numbers pages quote: the average rating, how many verified reviews, customers and courses. Each may be empty
+  // (null): the site then leaves it out. A rating is only shown with its number of reviews, so they are set together.
+  trust: z
+    .object({
+      rating: z.number({ invalid_type_error: 'Enter a rating from 1 to 5.' }).min(1, 'Enter a rating from 1 to 5.').max(5, 'Enter a rating from 1 to 5.').refine((n) => Math.round(n * 10) === n * 10, 'Use one decimal place, like 4.9.').nullable(),
+      reviews: count.nullable(),
+      customers: count.nullable(),
+      courses: count.nullable(),
+    })
+    .superRefine((d, ctx) => {
+      if ((d.rating === null) !== (d.reviews === null)) ctx.addIssue({ code: 'custom', path: [d.rating === null ? 'rating' : 'reviews'], message: 'Enter both the rating and the number of reviews, or leave both empty.' })
+    }),
   // the homepage's "Popular courses and qualifications": tabs, each with up to four courses (by course number)
   featured: z.object({
     groups: z

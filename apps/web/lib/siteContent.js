@@ -25,23 +25,30 @@ export const siteContent = () => current;
 
 const plus = (n) => `${n.toLocaleString("en-GB")}+`;
 
-// The trust numbers as the site words them: "4.9 / 5", "4.9 out of 5", "12,450+", "250,000+", "1,000+".
+// The trust numbers as the site words them: "4.9 / 5", "4.9 out of 5", "12,450+", "250,000+", "1,000+". A number an admin hasn't
+// entered is null, and the pages leave it out (a rating always comes with its number of reviews).
 export function trustFigures() {
   const t = current.trust;
-  const rating = t.rating.toFixed(1);
-  return { rating, ratingSlash: `${rating} / 5`, ratingOutOf: `${rating} out of 5`, reviews: plus(t.reviews), customers: plus(t.customers), courses: plus(t.courses) };
+  const rating = t.rating == null ? null : t.rating.toFixed(1);
+  const n = (x) => (x == null ? null : plus(x));
+  return { rating, ratingSlash: rating && `${rating} / 5`, ratingOutOf: rating && `${rating} out of 5`, reviews: n(t.reviews), customers: n(t.customers), courses: n(t.courses) };
 }
 
 // Text with trust placeholders filled in: "{rating}" 4.9, "{ratingSlash}" 4.9 / 5, "{ratingOutOf}" 4.9 out of 5, "{reviews}",
-// "{customers}", "{courses}". Lets an FAQ answer quote a number without it going out of date.
+// "{customers}", "{courses}". Lets an FAQ answer quote a number without it going out of date. Null when the text quotes a
+// number that isn't entered (the FAQ then leaves that question out).
+const PLACEHOLDER = /\{(rating|ratingSlash|ratingOutOf|reviews|customers|courses)\}/g;
 export const withTrust = (text) => {
   const f = trustFigures();
-  return text.replace(/\{(rating|ratingSlash|ratingOutOf|reviews|customers|courses)\}/g, (_, k) => f[k]);
+  if ([...text.matchAll(PLACEHOLDER)].some((m) => f[m[1]] == null)) return null;
+  return text.replace(PLACEHOLDER, (_, k) => f[k]);
 };
 
 // One page's FAQ list: the one an admin saved for it, else the page's own built-in list (`defaults`). `key` is the page's set
-// (data/faqSets.js lists them). Call after loadSiteContent() on the server.
-export const faqItems = (key, defaults) => (current[`faq:${key}`]?.items ?? defaults).map(({ q, a }) => ({ q: withTrust(q), a: withTrust(a) }));
+// (data/faqSets.js lists them). Call after loadSiteContent() on the server. A question quoting a trust number that isn't
+// entered is left out.
+export const faqItems = (key, defaults) =>
+  (current[`faq:${key}`]?.items ?? defaults).map(({ q, a }) => ({ q: withTrust(q), a: withTrust(a) })).filter((x) => x.q !== null && x.a !== null);
 
 export const featuredGroups = () => current.featured.groups;
 export const testimonials = () => current.testimonials;

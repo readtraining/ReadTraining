@@ -5,7 +5,7 @@
 // strip, the roles), then what employers check, how it works, the consent promise, where the work can lead, and the application,
 // which starts with the eligibility questions. Training for people not licensed yet comes after it.
 
-import { courseLink } from "@/data/courseSlugs";
+import { TOPICS, courseSearch } from "@/data/courseTopics";
 
 export const securityJobs = {
   title: "Security jobs | ReadTraining",
@@ -127,9 +127,9 @@ export const securityJobs = {
     ],
     addTitle: "Add a licence, widen your options",
     adds: [
-      { label: "CCTV Operator", href: courseLink(3) },
-      { label: "Door Supervisor", href: courseLink(1) },
-      { label: "Close Protection", href: courseLink(4) },
+      { label: "CCTV Operator", href: courseSearch("CCTV Operator") },
+      { label: "Door Supervisor", href: courseSearch("Door Supervisor") },
+      { label: "Close Protection", href: courseSearch("Close Protection") },
     ],
   },
 
@@ -188,7 +188,7 @@ export const securityJobs = {
       { title: "Apply for your licence", text: "Pass your exams, then apply to the SIA for your licence." },
       { title: "Apply for a role", text: "Send your application here once your licence arrives." },
     ],
-    courses: [1, 2, 3, 4], // catalogue ids: Door Supervisor, Security Guard, CCTV Operator, Close Protection
+    picks: [TOPICS.doorSupervisor, TOPICS.securityOfficer, TOPICS.cctv, TOPICS.closeProtection],
     all: { label: "All security courses", href: "/courses/security" },
   },
 

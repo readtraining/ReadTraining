@@ -245,7 +245,7 @@ export const account = {
     { id: "w1", daysAgo: 88, label: "Welcome credit for your first booking", amount: 25 },
     { id: "w2", daysAgo: 40, label: "Goodwill credit from our team", amount: 15 },
   ],
-  // dates are days from today, so the demo always has upcoming and past courses; `courseId` is the catalogue course
+  // dates are days from today, so the demo always has upcoming and past courses; `courseId` is a demo course (data/demoCourses.js)
   demoBookings: [
     { reference: "RT-2026-104512", bookedDaysAgo: 18, method: "card", status: "confirmed", lines: [{ courseId: 1, mode: "classroom", startIn: 12, days: 6, time: "09:30 to 17:00", venue: "Manchester Training Centre", city: "Manchester", postcode: "M1 1AE", provider: "ClearView Learning", unit: 193.02, delegates: ["You"] }] },
     { reference: "RT-2026-098731", bookedDaysAgo: 9, method: "klarna", status: "confirmed", lines: [{ courseId: 5, mode: "online", startIn: 33, days: 1, time: "10:00 to 16:00", venue: "", city: "", postcode: "", provider: "Pinnacle Compliance Training", unit: 63.2, delegates: ["You", "Jo Patel"] }] },

@@ -5,7 +5,6 @@ import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
-import { courseHref } from "@/data/courseSlugs";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
@@ -82,7 +81,7 @@ export default function AdminOrder({ reference }) {
         <section className="rt-acc__card" aria-labelledby="rt-ord-who-h">
           <h2 className="rt-acc__h2" id="rt-ord-who-h">{d.course}</h2>
           <dl className="rt-adm-dl">
-            <div><dt>{d.course}</dt><dd><Link href={courseHref(o.course.id)} className="rt-adm-strong">{o.course.title}</Link>{o.course.startsOn && <small className="rt-adm-dl__sub">{formatDate(o.course.startsOn)}</small>}</dd></div>
+            <div><dt>{d.course}</dt><dd>{o.course.found ? <Link href={`/admin/catalogue/${o.course.id}`} className="rt-adm-strong">{o.course.title}</Link> : o.course.title}{o.course.startsOn && <small className="rt-adm-dl__sub">{formatDate(o.course.startsOn)}</small>}</dd></div>
             <div><dt>Places</dt><dd>{d.places.replace("{n}", o.quantity).replace("{price}", formatPrice(o.unit))}</dd></div>
             <div><dt>Provider</dt><dd><Link href={`/admin/providers/${o.provider.slug}`} className="rt-adm-strong">{o.provider.name}</Link></dd></div>
             <div><dt>{d.buyer}</dt><dd>{o.buyer.accountId ? <Link href={`/admin/learners/${o.buyer.accountId}`} className="rt-adm-strong">{o.buyer.name}</Link> : o.buyer.name}<small className="rt-adm-dl__sub">{o.buyer.email}{o.buyer.company ? ` · ${o.buyer.company}` : ""}</small></dd></div>

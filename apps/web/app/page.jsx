@@ -12,7 +12,9 @@ import HomeTeamBooking from "@/components/home/HomeTeamBooking";
 import HomeProviders from "@/components/home/HomeProviders";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
-import { getCoursesByIds, toCourseCard } from "@/lib/courses";
+import { toCourseCard } from "@/lib/courses";
+import { pickCourses } from "@/lib/catalogueData";
+import { loadCatalogue } from "@/lib/catalogueServer";
 import { featuredGroups, seoSettings } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
@@ -24,11 +26,15 @@ export async function generateMetadata() {
   return { title: homeTitle, description: homeDescription };
 }
 
-// The featured courses (an admin picks them; lib/siteContent.js) as course cards, read from the catalogue on the server so the
-// catalogue never reaches the browser. The first card in each tab is marked "Most booked".
+// The featured courses as course cards, from the live courses on the server: the ones an admin picked (lib/siteContent.js; a
+// course no longer live is skipped), or each tab's subjects' most popular. A tab with no live course is left out, and the
+// section with it when none has one. The first card in each tab is marked "Most booked".
 export default async function HomePage() {
-  await Promise.all([loadTaxonomy(), loadSiteContent()]);
-  const featured = featuredGroups().map((g) => ({ name: g.name, cards: getCoursesByIds(g.courses).map((c, i) => ({ ...toCourseCard(c), popular: i === 0 })) }));
+  const [, , courses] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadCatalogue()]);
+  const byId = new Map(courses.map((c) => [c.id, c]));
+  const featured = featuredGroups()
+    .map((g) => ({ name: g.name, cards: (g.courses ? g.courses.map((id) => byId.get(id)).filter(Boolean) : pickCourses(courses, g.picks)).map((c, i) => ({ ...toCourseCard(c), popular: i === 0 })) }))
+    .filter((g) => g.cards.length);
   return (
     <div className="main-content rt-home">
       <Preloader />
@@ -36,7 +42,7 @@ export default async function HomePage() {
       <div className="content-wrapper js-content-wrapper overflow-hidden">
         <HomeHero />
         <HomeSearchBand />
-        <HomeCourses groups={featured} />
+        {featured.length > 0 && <HomeCourses groups={featured} />}
         <HomeBookingOptions />
         <HomeSubjects />
         <HomeRoles />

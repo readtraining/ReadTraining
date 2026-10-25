@@ -2,7 +2,6 @@ import React from "react";
 import BookNow from "./BookNow";
 import Crumbs from "./Crumbs";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
-import { isSkillSaverCourse } from "@/lib/skillSaver";
 import { formatPrice, getSubjectLabel, getSubLabel, savePercent } from "@/lib/courses";
 import Link from "next/link";
 import { CATALOGUE_HREF, coursePath } from "@/lib/routes";
@@ -28,7 +27,7 @@ export default function CourseHero({ course }) {
           ].filter(Boolean)}
         />
 
-        {(course.skillSaver || isSkillSaverCourse(course.id)) && <SaverBadge href="/skill-saver" className="rt-cd__saver" />}
+        {course.skillSaver && <SaverBadge href="/skill-saver" className="rt-cd__saver" />}
         <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
 

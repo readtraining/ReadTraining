@@ -5,12 +5,11 @@ import { useContextElement } from "@/context/Context";
 import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
-import { bookableModes, defaultMode, firstSession, formatShortDate, getCourseBySlug } from "@/lib/courses";
+import { bookableModes, defaultMode, firstSession, formatShortDate } from "@/lib/courses";
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
-import { isSkillSaverCourse } from "@/lib/skillSaver";
 import { api } from "@/lib/trpc/react";
 import { toCourseDetail } from "@/lib/catalogueData";
 
@@ -71,13 +70,11 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
   const addToBasket = async () => {
     if (status === "loading" || status === "added" || inBasket) return; // no double add
     let detail = null;
-    if (course.real) {
-      setStatus("loading");
-      try {
-        detail = toCourseDetail(await utils.catalogue.course.fetch({ slug: course.slug }));
-      } catch {}
-      setStatus("idle");
-    } else detail = getCourseBySlug(course.id); // DEMO: the sample catalogue
+    setStatus("loading");
+    try {
+      detail = toCourseDetail(await utils.catalogue.course.fetch({ slug: course.slug }));
+    } catch {}
+    setStatus("idle");
     const modes = detail ? bookableModes(detail) : [];
     if (!modes.length) return onNotify?.({ message: "We could not load the dates for this course. Please try again." });
     if (modes.length === 1 && modes[0] === "ondemand") return add(detail, firstSession(detail, "ondemand"));
@@ -114,7 +111,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
             {thumb}
           </div>
         )}
-        {(course.skillSaver || isSkillSaverCourse(course.id)) && <SaverBadge className="-onImage" />}
+        {course.skillSaver && <SaverBadge className="-onImage" />}
         <button
           type="button"
           className={`rt-card__heart${wished ? " is-saved" : ""}`}

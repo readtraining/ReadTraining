@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { PRICE_BOUNDS, buildCatalogueQuery, defaultSort, parseCatalogueParams } from "@/data/courseCatalogue";
+import { PRICE_BOUNDS, buildCatalogueQuery, defaultSort, parseCatalogueParams } from "@/lib/catalogueFilters";
 import { subcategoriesOf } from "@/lib/taxonomy";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 

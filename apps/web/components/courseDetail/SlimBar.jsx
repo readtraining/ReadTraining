@@ -2,11 +2,9 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useBooking } from "./BookingProvider";
-import Stars from "@/components/home/HomeStars";
-import { formatNumber } from "@/lib/format";
 
 // The slim bar: fixed under the header, shown only while the page title (#rt-cd-title, the H1) is out of view.
-// It carries the course title, badge, rating and students on the left and the page's section links on the right
+// It carries the course title, badge, providers and dates on the left and the page's section links on the right
 // (scrollspy: the current section is underlined). Links are hidden under 1200px. While it is showing, the booking
 // card collapses its image (BookingCard reads barOn). There is no other sticky bar on the page.
 export default function SlimBar({ sections }) {
@@ -70,19 +68,8 @@ export default function SlimBar({ sections }) {
           <strong className="rt-cd__slim-title">{course.title}</strong>
           <div className="rt-cd__slim-meta">
             {course.badge && <span className="rt-pill -accent">{course.badge}</span>}
-            {course.rating ? (
-              <>
-                <span className="rt-cd__slim-rate">
-                  <strong>{course.rating.toFixed(1)}</strong>
-                  <Stars rating={course.rating} size="md" />
-                  <a href="#reviews">({formatNumber(course.reviewCount)} ratings)</a>
-                </span>
-                <span className="rt-cd__slim-students">{formatNumber(course.learnerCount)} students enrolled</span>
-              </>
-            ) : (
-              // no ratings yet: its providers and upcoming dates, as the stats card shows
-              <span className="rt-cd__slim-students">{course.providerCount} {course.providerCount === 1 ? "provider" : "providers"} · {course.upcoming ?? 0} upcoming {course.upcoming === 1 ? "date" : "dates"}</span>
-            )}
+            {/* its providers and upcoming dates, as the stats card shows */}
+            <span className="rt-cd__slim-students">{course.providerCount} {course.providerCount === 1 ? "provider" : "providers"} · {course.upcoming ?? 0} upcoming {course.upcoming === 1 ? "date" : "dates"}</span>
           </div>
         </div>
         <nav className="rt-cd__slim-nav" aria-label="On this page">

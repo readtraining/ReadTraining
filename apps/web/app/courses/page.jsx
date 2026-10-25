@@ -10,8 +10,7 @@ import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
-import { loadListings } from "@/lib/catalogueServer";
-import { toCatalogueCourse } from "@/lib/catalogueData";
+import { loadCatalogue } from "@/lib/catalogueServer";
 
 // Static metadata on purpose: reading searchParams here would make the server re-render the page (and show any
 // loading UI) on every filter change. Filtering is handled entirely in the browser, on every live course (API
@@ -32,8 +31,7 @@ const breadcrumbLd = {
 };
 
 export default async function page() {
-  const [, listings] = await Promise.all([loadSiteContent(), loadListings()]);
-  const courses = listings.map(toCatalogueCourse);
+  const [, courses] = await Promise.all([loadSiteContent(), loadCatalogue()]);
   return (
     <div className="main-content rt-home rt-cat-page">
       <a className="rt-skip" href="#rt-res-list">Skip to courses</a>

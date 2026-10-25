@@ -7,6 +7,8 @@
 // DEMO until confirmed by the client: our booking price and what it includes, and the centre list (taken from the client's
 // directory, which lists Pearson VUE centres; check against CITB's own finder before launch).
 
+import { TOPICS } from "@/data/courseTopics";
+
 export const HSE_PRICE = 41.99; // our price: the test booked for you plus the revision book
 export const CITB_FEE = 23.5; // booking it yourself with CITB
 
@@ -106,7 +108,7 @@ export const hseTest = {
     title: "Training for your CSCS card",
     text: "Most cards need a qualification as well as the test. The green card course is the usual first step.",
     all: { label: "All construction courses", href: "/courses?subject=construction" },
-    ids: [9, 10, 11],
+    picks: [TOPICS.cscsGreen, TOPICS.smsts, TOPICS.sssts],
   },
   faqs: [
     { q: "Do I need the HS&E test for every CSCS card?", a: "For most of them. The Apprentice card is one of the few that doesn't need it. Our CSCS card guide lists what each card needs." },

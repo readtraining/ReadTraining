@@ -12,6 +12,7 @@ import { sendEmail } from '../../lib/email.mjs'
 import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
+import { loadListings } from '../catalogue/listings.mjs'
 import {
   addCourseImage,
   applyContent,
@@ -125,6 +126,22 @@ export const adminCoursesRouter = createTRPCRouter({
     }),
 
   // Every course, newest change first: shared pages and providers' courses, with search and filters.
+  // Every live course, for the admin's pickers: a staff booking (a provider's own course), a coupon's courses and the home page's
+  // featured courses (`listed`: it has its own place in the public listings). `fromPence`: the lowest price of a bookable
+  // upcoming date, or the self-paced price.
+  options: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+    const [rows, listed] = await Promise.all([
+      ctx.db.execute<{ id: number; title: string; kind: 'shared' | 'provider'; provider_id: string | null; provider: string | null; parent: string | null; from_pence: number | null }>(sql`
+        select c.id, c.title, c.kind, c.organisation_id provider_id, o.name provider, (select p.title from public.courses p where p.id = c.parent_id) parent,
+               coalesce(c.price_pence, (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date)) from_pence
+        from public.courses c left join public.organisations o on o.id = c.organisation_id
+        where c.status = 'live' and (c.kind = 'shared' or o.status = 'active')
+        order by c.title, o.name`),
+      loadListings(ctx.db),
+    ])
+    const ids = new Set(listed.map((l) => l.id))
+    return rows.map((r) => ({ id: r.id, title: r.title, kind: r.kind, providerId: r.provider_id, provider: r.provider, parent: r.parent, fromPence: r.from_pence, listed: ids.has(r.id) }))
+  }),
   list: adminProcedure('admin.panel.open')
     .input(z.object({ kind: z.enum(['all', 'shared', 'provider']).default('all'), status: z.enum(['all', 'draft', 'pending', 'changes', 'live', 'paused']).default('all'), q: z.string().trim().max(80).optional() }))
     .query(async ({ ctx, input }) => {

@@ -20,7 +20,6 @@ const allCourses = (() => {
           label: c.label,
           href: c.href,
           subject: s.label,
-          providers: Math.max(6, Math.round(s.count / 4)),
           img: `/assets/img/coursesCards/${(out.length % 12) + 1}.png`,
           desc: `${s.label} · accredited, with classroom and online dates UK-wide.`,
         });
@@ -34,7 +33,6 @@ const allCourses = (() => {
         label: c.label,
         href: c.href,
         subject: /first aid/i.test(c.label) ? "First Aid" : /door|security|cctv/i.test(c.label) ? "Security" : /licence/i.test(c.label) ? "Hospitality" : /fire/i.test(c.label) ? "Health and Safety" : "Construction",
-        providers: 12,
         img: `/assets/img/coursesCards/${(out.length % 12) + 1}.png`,
         desc: "Popular course · book a date near you.",
       });
@@ -202,10 +200,10 @@ export default function HomeSearch() {
           {query && (
             <>
               {results.courses.map((c) => (
-                <Row key={c.label} href={c.href} img={c.img} title={highlight(c.label, query)} subject={c.subject} provider={`${c.providers} Course providers`} />
+                <Row key={c.label} href={c.href} img={c.img} title={highlight(c.label, query)} subject={c.subject} />
               ))}
               {results.subs.map((s) => (
-                <Row key={s.label} href={s.href} img={`/assets/img/coursesCards/${(s.count % 12) + 1}.png`} title={highlight(s.label, query)} kind="Subject" subject={s.label} provider={`${s.count} courses`} />
+                <Row key={s.label} href={s.href} img={`/assets/img/coursesCards/${(s.count % 12) + 1}.png`} title={highlight(s.label, query)} kind="Subject" subject={s.label} />
               ))}
               {results.courses.length === 0 && results.subs.length === 0 && (
                 <div className="text-13 text-light-1 px-12 py-15">No matches for “{query}”. Try a course name like “first aid” or a subject like “security”.</div>

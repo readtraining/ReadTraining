@@ -13,6 +13,7 @@ import { resolveTests, subjectExam, subjectLead } from "@/lib/testPrep";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { courseCards } from "@/lib/catalogueServer";
 
 export const metadata = {
   title: testPrepPage.title,
@@ -24,7 +25,8 @@ export const metadata = {
 // row (/for-business), the full test list, home's course cards, the FAQ accordion and the dark CTA band.
 // `fb-page` turns on the business/provider section styles that StepsSection uses.
 export default async function TestPrepPage(props) {
-  await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
+  // catalogue names (categories, methods), the site's content and the live courses with a mock test here, on the server
+  const [, , courses] = await Promise.all([loadTaxonomy(), loadSiteContent(), courseCards(testPrepPage.courses.picks)]);
   const query = (await props.searchParams) || {};
   const { resources, resourcesCta, steps, faq } = testPrepPage;
   // each card shows the subject page's own lead and exam numbers, so the hub and the subject page agree
@@ -39,7 +41,7 @@ export default async function TestPrepPage(props) {
             <StepsSection workflow={steps} tone="lavender" />
           </TestPrepHub>
 
-          <TestPrepCourses />
+          <TestPrepCourses courses={courses} />
 
           <FaqSection eyebrow={faq.eyebrow} title={faq.title} items={faqItems("test-prep", faq.items)} idPrefix="tp-faq" className="layout-pt-lg layout-pb-lg rt-tp__faq" />
 

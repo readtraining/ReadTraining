@@ -1,5 +1,7 @@
 import "server-only";
 import { cache } from "react";
+import { pickCourses, toCatalogueCourse } from "@/lib/catalogueData";
+import { toCourseCard } from "@/lib/courses";
 
 // Server side: the real catalogue from the API (catalogue.listings, catalogue.course), saved by Next for a minute under the tag
 // "courses", so a course an admin approves (or a date a provider adds) shows on the site within a minute; an admin's decision
@@ -42,3 +44,12 @@ export const loadCourseMenu = cache(async () => {
     return {};
   }
 });
+
+// Every listing as a catalogue course (lib/catalogueData.js toCatalogueCourse), for the pages that pick some of them.
+export const loadCatalogue = cache(async () => (await loadListings()).map(toCatalogueCourse));
+
+// The course cards a marketing or help page shows: the live courses under its picks (data/courseTopics.js), most popular
+// first, as the home page's cards (HomeCourseCard). [] when none is live yet: the page then leaves the cards out.
+export async function courseCards(picks, limit = 4) {
+  return pickCourses(await loadCatalogue(), picks, limit).map(toCourseCard);
+}

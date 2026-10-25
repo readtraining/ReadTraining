@@ -1,5 +1,4 @@
 import { SITE_URL } from "@/lib/seo";
-import { courseLink } from "@/data/courseSlugs";
 import { getPostSlugs } from "@/lib/blog";
 import { getCoursePageSlugs, getCourseTownParams } from "@/lib/coursePages";
 import { getHelpArticleSlugs, getHelpTopicSlugs } from "@/lib/help";
@@ -7,11 +6,7 @@ import { getLicenceSlugs } from "@/lib/licences";
 import { getProviderDirectory } from "@/lib/publicProvider";
 import { getSubjectSlugs } from "@/lib/testPrep";
 import { centreParams } from "@/lib/hseTest";
-import { locationCourses, slugify } from "@/data/home/menu";
-import { getCourseLocation } from "@/lib/courseLocations";
-import { catalogueCourses } from "@/data/courseCatalogue";
-import { loadListings } from "@/lib/catalogueServer";
-import { toCatalogueCourse } from "@/lib/catalogueData";
+import { loadCatalogue } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 import { coursePath } from "@/lib/routes";
 
@@ -26,18 +21,12 @@ const STATIC = [
 
 export default async function sitemap() {
   await loadTaxonomy();
-  const listings = await loadListings();
-  const courses = listings.map(toCatalogueCourse);
+  const courses = await loadCatalogue();
   const paths = [
     ...STATIC,
-    ...listings.map((l) => coursePath(l.slug)),
-    ...catalogueCourses.map((c) => courseLink(c.id)), // DEMO: the sample courses, until they are removed
+    ...courses.map((c) => coursePath(c.slug)),
     ...getCoursePageSlugs().map((s) => `/courses/${s}`),
     ...getCourseTownParams(courses).map((p) => `/courses/${p.slug}/${p.town}`),
-    // a course in a town only when it has a venue there (the others redirect to the course finder)
-    ...locationCourses.filter((c) => c.id).flatMap((c) => (c.places || []).map((city) => `${c.locationSlug}-in-${slugify(city)}`))
-      .filter((slug) => getCourseLocation(slug)?.venues.length)
-      .map((slug) => `/course-locations/${slug}`),
     ...getLicenceSlugs().map((s) => `/licences/${s}`),
     ...getSubjectSlugs().map((s) => `/test-prep/${s}`),
     ...centreParams().map((s) => `/tests-locations/${s}`),

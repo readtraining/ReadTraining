@@ -14,7 +14,7 @@ import { BASKET_HREF, QUOTE_HREF } from "@/lib/routes";
 const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
 export const IN_HOUSE_NOTE = TEAM.note;
-export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.id}`;
+export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 
 // Shared booking state for the whole detail page: delivery mode, location filter and the selected session.
 // BookingCard, DatesSection and MobileBuyBar all read this one source. It is mirrored to the URL (?mode=&session=)

@@ -783,12 +783,8 @@
 .rt-review__name { font-size: 14px; font-weight: 700; color: var(--color-dark-1); }
 .rt-review__course { font-size: 12px; color: var(--color-light-1); }
 /* review card parts used where reviews have a title, initials instead of a photo, "More" and a Helpful button (course page) */
-.rt-review__body { flex: 1; }
-.rt-review .rt-review__title { margin: 12px 0 0; font-size: 15px; line-height: 1.4; font-weight: 700; color: var(--color-dark-1); }
 .rt-review__quote.is-open { display: block; -webkit-line-clamp: unset; overflow: visible; }
-.rt-review__more { min-height: 0 !important; margin-top: 6px; }
 .rt-review__avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--color-purple-3); color: var(--color-purple-1); font-size: 13px; font-weight: 700; }
-.rt-review__helpful { margin-left: auto; }
 
 /* video story: portrait player in a white card, details below */
 .rt-vstory { height: 100%; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--color-light-5); border-radius: 20px; overflow: hidden; }
@@ -1930,7 +1926,7 @@ main#rt-cd-main { overflow: clip; }
 
 /* ---------- Sections ---------- */
 
-.rt-cd__sec h2, .rt-cd__dialog h2 { margin: 0 0 16px; color: var(--cd-text); }
+.rt-cd__sec h2 { margin: 0 0 16px; color: var(--cd-text); }
 .rt-cd__sec h3 { margin: 0 0 8px; font-size: 16px; line-height: 24px; font-weight: 700; color: var(--cd-text); }
 
 /* Check lists: short lists (.is-one) are a plain column; longer lists are two grid columns whose rows take their own height. */
@@ -1948,16 +1944,8 @@ main#rt-cd-main { overflow: clip; }
 
 /* Reviews */
 
-.rt-cd__bar-track { display: block; height: 8px; border-radius: 999px; background: var(--cd-star-off); overflow: hidden; }
-.rt-cd__bar-fill { display: block; height: 8px; border-radius: 999px; background: var(--cd-star); fill: none; }
-.rt-cd__bar-pct { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Review dialog */
-.rt-cd__dialog { box-sizing: border-box; width: 520px; max-width: calc(100vw - 32px); padding: 24px; border: 0; border-radius: 16px; background: var(--cd-surface); color: var(--cd-text); }
-.rt-cd__dialog::backdrop { background: color-mix(in srgb, var(--color-dark-1) 40%, transparent); } /* same backdrop as the dates pop-up */
-.rt-cd__dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.rt-cd__dialog-head h2 { margin: 0; }
-.rt-cd__x { margin-right: -10px; }
 
 /* ---------- Mobile buy bar (1023px and under) ---------- */
 .rt-cd__bar { display: none; }
@@ -1973,33 +1961,21 @@ main#rt-cd-main { overflow: clip; }
 
 /* ---------- Selling content: in-house option, trust list, feature chips, assessment, funding, extras ---------- */
 
-.rt-cd__defs { margin: 0; border: 1px solid var(--cd-border); border-radius: 12px; overflow: hidden; }
-.rt-cd__def { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--cd-border); }
-.rt-cd__def:last-child { border-bottom: 0; }
-.rt-cd__def dt { font-size: 14px; line-height: 22px; font-weight: 600; color: var(--cd-muted); }
-.rt-cd__def dd { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--cd-text); }
 
-@media (max-width: 575px) { .rt-cd__def { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 
 /* ---------- Course detail: Hurak structure (hero side image, learning option cards, article, trust points, related) ---------- */
 
 .rt-cd__prose p, .rt-cd__sec > p { margin: 0 0 12px; font-size: 16px; line-height: 26px; color: var(--cd-text); }
 .rt-cd__sec .rt-cd__h3 { margin: 24px 0 8px; font-size: 20px; line-height: 28px; font-weight: 700; }
-.rt-cd__note { padding: 12px 14px; border-radius: 10px; background: var(--cd-brand-subtle); font-weight: 600; }
 .rt-cd__list { display: grid; gap: 8px; margin: 0; padding-left: 20px; list-style: disc; font-size: 15px; line-height: 22px; margin-bottom: 12px; }
 .rt-cd__table { width: 100%; margin: 4px 0 16px; border-collapse: separate; border-spacing: 0; border: 1px solid var(--cd-border); border-radius: 12px; overflow: hidden; table-layout: fixed; }
 .rt-cd__table th { padding: 12px 14px; background: var(--cd-brand-subtle); text-align: left; font-size: 14px; line-height: 20px; font-weight: 700; }
 .rt-cd__table th:nth-child(2), .rt-cd__table th:nth-child(3) { width: 120px; }
 .rt-cd__table td { padding: 12px 14px; border-top: 1px solid var(--cd-border); font-size: 14px; line-height: 20px; vertical-align: top; }
-.rt-cd__steps { display: grid; gap: 10px; margin: 0 0 16px; padding: 0; list-style: none; counter-reset: rt-step; }
-.rt-cd__steps li { position: relative; padding-left: 40px; font-size: 16px; line-height: 26px; counter-increment: rt-step; }
-.rt-cd__steps li::before { content: counter(rt-step); position: absolute; left: 0; top: 1px; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--cd-brand-subtle); color: var(--cd-brand); font-size: 14px; font-weight: 700; }
 
 .rt-cd__learn h2 { margin-bottom: 16px; }
 #learn.rt-cd__sec { border-bottom: 0; padding-bottom: 8px; }
 
-.rt-cd__rline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; font-size: 15px; line-height: 22px; color: var(--cd-muted); }
-.rt-cd__rline strong { color: var(--cd-text); }
 
 /* = .rt-ucard:hover */
 
@@ -2025,12 +2001,6 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__staff .rt-cd__link { min-height: 36px; }
 
 /* Article blocks (per-course sections) */
-.rt-cd__sub { margin-top: 8px; }
-.rt-cd__sub .rt-cd__h3 { margin-top: 20px; }
-.rt-cd__links { display: grid; gap: 10px; margin: 0 0 12px; padding: 0; list-style: none; }
-.rt-cd__links li { display: grid; gap: 2px; }
-.rt-cd__links .rt-cd__link { min-height: 0; font-size: 16px; line-height: 24px; }
-.rt-cd__links span { font-size: 14px; line-height: 20px; color: var(--cd-muted); }
 
 /* ===================================================================================================
    COURSE DETAIL RESTYLE (style and layout only; no content changes)
@@ -2060,8 +2030,6 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__slim-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; line-height: 22px; font-weight: 700; }
 .rt-cd__slim-meta { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; font-size: 14px; line-height: 20px; white-space: nowrap; }
 
-.rt-cd__slim-rate { display: inline-flex; flex: none; align-items: center; gap: 6px; font-size: 14px; }
-.rt-cd__slim-rate a { color: var(--color-white) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cd__slim-students { flex: none; font-size: 13px; color: color-mix(in srgb, var(--color-white) 72%, transparent); }
 
 .rt-cd__slim-nav a { display: block; padding: 6px 0; border-bottom: 2px solid transparent; color: color-mix(in srgb, var(--color-white) 72%, transparent) !important; font-size: 14px; line-height: 20px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: color 0.15s ease; }
@@ -2070,7 +2038,6 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__slim-nav { flex: none; }
 .rt-cd__slim-nav ul { display: flex; gap: 16px; margin: 0; padding: 0; list-style: none; }
 @media (min-width: 1200px) { .rt-cd__slim-students { display: none; } } /* beside the links there is room for the rating only */
-@media (min-width: 1200px) and (max-width: 1359px) { .rt-cd__slim-rate .rt-stars { display: none; } }
 @media (max-width: 1199px) { .rt-cd__slim-nav { display: none; } }
 @media (max-width: 991px) { .rt-cd__slim-meta { display: none; } }
 @media (prefers-reduced-motion: reduce) { .rt-cd__slim, .rt-cd__slim.is-on { transition: none; } }
@@ -2134,21 +2101,8 @@ main#rt-cd-main { overflow: clip; }
    72px bar; 16px on a phone or a short screen). The title and close button stay at its top, a white foot closes it at the
    bottom, and only the reviews between them scroll: a thin line shows under the title once reviews pass under it, and over
    the foot while there are more below. */
-.rt-cd__dialog--wide { --dlg-gap: 104px; width: 720px; max-height: calc(100dvh - 2 * var(--dlg-gap)); padding: 0 0 16px; overflow: hidden; }
-@media (max-width: 575px), (max-height: 640px) { .rt-cd__dialog--wide { --dlg-gap: 16px; } }
-.rt-cd__dialog--wide[open] { display: flex; flex-direction: column; }
-.rt-cd__dialog--wide .rt-cd__dialog-head { flex: none; margin: 0; padding: 20px 24px 12px; border-bottom: 1px solid transparent; transition: border-color 0.15s ease; }
-.rt-cd__dialog--wide .rt-cd__dialog-head.is-scrolled { border-bottom-color: var(--cd-border); }
-.rt-cd__dialog-body { position: relative; flex: 1 1 auto; min-height: 0; padding: 0 24px 8px; overflow-y: auto; overscroll-behavior: contain; border-bottom: 1px solid transparent; transition: border-color 0.15s ease; }
-.rt-cd__dialog-body.has-more { border-bottom-color: var(--cd-border); }
 /* while a course page pop-up is open the page behind it stays still: the wheel, a swipe or the backdrop never scroll it, and a
    scroll that reaches the pop-up's end stops there. The scrollbar's room is kept, so nothing shifts sideways. */
-html:has(dialog.rt-cd__dialog[open]) { overflow: hidden; scrollbar-gutter: stable; }
-.rt-cd__bars { display: grid; gap: 8px; padding: 0; list-style: none; font-size: 13px; line-height: 20px; color: var(--cd-muted); margin: 8px 0 12px; }
-.rt-cd__bars li { grid-template-columns: 56px minmax(0, 1fr) 40px; align-items: center; gap: 12px; display: block; }
-.rt-cd__bars button { display: grid; grid-template-columns: 56px minmax(0, 1fr) 40px; align-items: center; gap: 12px; box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; background: none; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
-.rt-cd__bars button:hover { background: var(--cd-band); }
-.rt-cd__bars button[aria-pressed="true"] { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
 
 /* booking card: tighter inner spacing so the full card stays within its height limit */
 
@@ -2188,24 +2142,14 @@ html:has(dialog.rt-cd__dialog[open]) { overflow: hidden; scrollbar-gutter: stabl
 .rt-stats { position: relative; z-index: 1; display: flex; align-items: stretch; box-sizing: border-box; height: 88px; margin-top: -44px; overflow: hidden; background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: 8px; color: var(--cd-text); }
 .rt-stats > * { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; font-size: 14px; line-height: 20px; }
 .rt-stats > * + *::before { content: ""; position: absolute; left: 0; top: 16px; bottom: 16px; width: 1px; background: var(--cd-border); }
-.rt-stats__brand { flex: 0 0 80px; gap: 4px; background: var(--cd-brand); color: var(--color-white); font-weight: 700; }
-.rt-stats__brand + .rt-stats__text::before { display: none; }
-.rt-stats__text { flex: 1; align-items: flex-start; padding: 0 16px; }
-.rt-stats__text strong { font-weight: 700; }
-.rt-stats__rating { flex: 0 0 160px; gap: 2px; }
-.rt-stats__num { font-size: 22px; line-height: 28px; font-weight: 700; }
 .rt-stats a { color: var(--cd-text) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-stats__students { flex: 0 0 140px; gap: 2px; }
 .rt-stats__students strong { font-size: 16px; line-height: 22px; font-weight: 700; }
 .rt-stats__students .rt-cd__icon { font-size: 20px; color: var(--cd-muted); }
-.rt-stats__brand .rt-cd__icon { font-size: 20px; }
 @media (max-width: 991px) { .rt-stats { margin-top: 24px; } }
 @media (max-width: 700px) {
   .rt-stats { flex-wrap: wrap; height: auto; }
-  .rt-stats__brand { flex: 1 1 100%; flex-direction: row; gap: 8px; height: 44px; }
-  .rt-stats__text { flex: 1 1 100%; padding: 12px 16px; border-bottom: 1px solid var(--cd-border); }
-  .rt-stats__text::before { display: none; }
-  .rt-stats__rating, .rt-stats__students { flex: 1 1 50%; padding: 12px 8px; }
+  .rt-stats__students { flex: 1 1 50%; padding: 12px 8px; }
 }
 
 /* ---------- Course features box ---------- */
@@ -2455,15 +2399,10 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-utility__hours { color: color-mix(in srgb, var(--color-white) 72%, transparent); }
 .header button:focus-visible, .header a:focus-visible, .rt-utility a:focus-visible { outline: 2px solid var(--color-white); outline-offset: 2px; }
 
-.rt-cd__rlist, .rt-cd__benefits { padding: 0; list-style: none; } /* .rt-cd__rlist is a .row: keep its side margins */
-.rt-cd__rlist { margin-top: 4px; margin-bottom: 0; }
+.rt-cd__benefits { padding: 0; list-style: none; }
 .rt-cd__benefits { margin: 0; }
-.rt-cd__rsearch { margin-top: 16px; }
 
 /* Reviews dialog: ratings with no written review cannot be filtered; the count line explains how many are written. */
-.rt-cd__bars button:disabled { opacity: 0.5; cursor: not-allowed; }
-.rt-cd__bars button:disabled:hover { background: none; }
-.rt-cd__rcount { margin: 12px 0; color: var(--cd-muted); font-size: 14px; line-height: 20px; }
 
 /* Narrow phones: the buy bar's place line may wrap instead of being cut. */
 @media (max-width: 400px) { .rt-cd__bar-info span { white-space: normal; } }
@@ -2489,7 +2428,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-cd #rt-cd-title, .rt-cd h1 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h1-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h1-ls); }
 .rt-cd .rt-cd__sec h2, .rt-cd .rt-cd__mod-head h2, .rt-cd__sec > h2 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h2-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h2-ls); }
 .rt-cd h3, .rt-cd .rt-cd__h3, .rt-cd .rt-lo__h { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
-.rt-cd__prose p, .rt-cd__sec > p, .rt-cd .rt-cd__list li, .rt-cd__checks li, .rt-cd .rt-clamp p, .bz-acc__inner p, .rt-cd__mod-topics li, .rt-cd__defs dd, .rt-cd__table td { font-size: 15px; line-height: 1.7; font-weight: 400; color: var(--color-light-1); }
+.rt-cd__prose p, .rt-cd__sec > p, .rt-cd .rt-cd__list li, .rt-cd__checks li, .rt-cd .rt-clamp p, .bz-acc__inner p, .rt-cd__mod-topics li, .rt-cd__table td { font-size: 15px; line-height: 1.7; font-weight: 400; color: var(--color-light-1); }
 .rt-cd .rt-cd__acc .bz-acc__btn { font-size: 17px; font-weight: 600; }
 
 /* Course features: ONE line of badges. Badges that do not fit on the line are clipped away whole (the row is exactly one badge high),
@@ -2526,9 +2465,9 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-cd, .rt-dd { --cd-brand: var(--color-purple-1); --cd-brand-subtle: var(--color-purple-3); --cd-text: var(--color-dark-1); --cd-muted: var(--color-light-1); --cd-border: var(--color-light-5); --cd-border-strong: var(--color-border-strong); --cd-surface: var(--color-white); --cd-band: var(--color-light-4); --cd-success: var(--color-success); --cd-star: var(--rt-star); --cd-star-off: var(--color-light-8); color: var(--cd-text); font-size: 16px; line-height: 24px; --cd-card-radius: 14px; --cd-card-border: color-mix(in srgb, var(--color-purple-1) 15%, var(--color-white)); }
 /* the course page's surface; not .rt-dd, whose backdrop must stay clear until it fades to the tint */
 .rt-cd { background: var(--cd-surface); }
-.rt-cd .rt-cd__fcard, .rt-cd .rt-stats, .rt-cd .rt-cd__defs, .rt-cd .rt-bk { border-radius: var(--cd-card-radius); border-color: var(--cd-card-border); }
+.rt-cd .rt-cd__fcard, .rt-cd .rt-stats, .rt-cd .rt-bk { border-radius: var(--cd-card-radius); border-color: var(--cd-card-border); }
 .rt-cd .rt-lc__card, .rt-cd .rt-ds, .rt-cd .rt-cd__staff { border-radius: var(--cd-card-radius); }
-.rt-cd .rt-stats, .rt-cd .rt-cd__defs, .rt-cd .rt-bk { overflow: hidden; }
+.rt-cd .rt-stats, .rt-cd .rt-bk { overflow: hidden; }
 
 /* TEST PREP HUB (/test-prep). Built from the site's own parts: the catalogue hero (.rt-cat__hero, .rt-cat-search,
    .rt-cat-popular), home's section title and tabs (.sectionTitle__*, .rt-tabs), home's course card (.rt-ucard with .rt-pill)

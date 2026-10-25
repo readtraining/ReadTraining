@@ -1,5 +1,5 @@
 import { businessAccount as biz } from "@/data/businessAccount";
-import { getCourseBySlug } from "@/lib/courses";
+import { demoCourse } from "@/data/demoCourses";
 
 // The Business account's reads and writes. There are no business endpoints in apps/api yet, so the demo company from
 // data/businessAccount.js is the starting point and every change made on the pages (a learner added, a place assigned or freed,
@@ -33,7 +33,7 @@ export function getBusiness() {
   const byId = Object.fromEntries(learners.map((l) => [l.id, l]));
 
   const purchases = biz.purchases.map((p) => {
-    const course = getCourseBySlug(p.courseId);
+    const course = demoCourse(p.courseId);
     const start = now + p.startIn * DAY;
     const assigned = (saved.assigned?.[p.id] ?? p.assigned).filter((id) => byId[id]);
     const date = isoDay(start);
@@ -42,7 +42,6 @@ export function getBusiness() {
     return {
       ...p,
       title: course?.title || "Course",
-      slug: course?.slug,
       date,
       endDate,
       bookedAt: isoDay(now - p.bookedDaysAgo * DAY),
@@ -60,14 +59,14 @@ export function getBusiness() {
     .filter((c) => byId[c.learnerId])
     .map((c) => {
       const expires = isoDay(now + c.expiresInDays * DAY);
-      return { ...c, learner: byId[c.learnerId].name, title: getCourseBySlug(c.courseId)?.title || "Course", issued: isoDay(now - c.issuedDaysAgo * DAY), expires, state: expires < today ? "expired" : expires <= soon ? "renew" : "valid" };
+      return { ...c, learner: byId[c.learnerId].name, title: demoCourse(c.courseId)?.title || "Course", issued: isoDay(now - c.issuedDaysAgo * DAY), expires, state: expires < today ? "expired" : expires <= soon ? "renew" : "valid" };
     })
     .sort((a, b) => (a.expires < b.expires ? -1 : 1));
 
   // newest first
   const results = biz.results
     .filter((r) => byId[r.learnerId])
-    .map((r) => ({ ...r, learner: byId[r.learnerId].name, title: getCourseBySlug(r.courseId)?.title || "Course", date: isoDay(now - r.daysAgo * DAY) }))
+    .map((r) => ({ ...r, learner: byId[r.learnerId].name, title: demoCourse(r.courseId)?.title || "Course", date: isoDay(now - r.daysAgo * DAY) }))
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const paid = new Set(saved.paid || []);

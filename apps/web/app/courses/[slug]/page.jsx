@@ -17,11 +17,10 @@ import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
-import { loadListings } from "@/lib/catalogueServer";
-import { toCatalogueCourse } from "@/lib/catalogueData";
+import { loadCatalogue } from "@/lib/catalogueServer";
 
 // the real catalogue (every live listing), as the pages read it
-const realCourses = async () => (await loadListings()).map(toCatalogueCourse);
+const realCourses = loadCatalogue;
 
 // A course page (/courses/<slug>: a study method, a subject or a set of courses, from the footer's "Find a course"): the course
 // catalogue scoped to the page (its title and intro in the hero, links to the other course pages, the same search, filters,

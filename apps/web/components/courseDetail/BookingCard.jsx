@@ -23,10 +23,7 @@ export function trustItems(course) {
   return [
     t.noBookingFee && "No booking fee",
     t.approvedProviders && "Approved providers only",
-    t.invoice && "Pay by invoice for businesses",
-    t.instalments && "Pay in 3 interest-free instalments with Klarna",
-    t.trustpilot && `${t.trustpilot} on Trustpilot`,
-  ].filter(Boolean).slice(0, 5);
+  ].filter(Boolean);
 }
 
 // Collapses to nothing in 200ms. While collapsed it is inert: nothing inside it can be focused. It stays in the DOM.

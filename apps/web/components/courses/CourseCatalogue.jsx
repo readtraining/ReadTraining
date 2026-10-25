@@ -12,7 +12,7 @@ import {
   catalogueFilterGroups,
   sortCourses,
   sortOptions,
-} from "@/data/courseCatalogue";
+} from "@/lib/catalogueFilters";
 import { subcategoryOptions } from "@/lib/taxonomy";
 import { trackEvent, toItem } from "@/lib/analytics";
 import { useFocusTrap } from "@/lib/useFocusTrap";

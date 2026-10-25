@@ -2,9 +2,9 @@ import React from "react";
 import HomeCourseCard from "@/components/home/HomeCourseCard";
 import { toCourseCard } from "@/lib/courses";
 
-// Courses to look at next: home's course card (.rt-ucard), three in a row. "Students also bought" only for the sample courses: a
-// real course shows more courses from its category (`title`) until there are bookings to say what students bought.
-export default function RelatedCourses({ courses, title = "Students also bought" }) {
+// Courses to look at next: home's course card (.rt-ucard), three in a row: more courses from the course's category (`title`),
+// until there are bookings to say what students bought.
+export default function RelatedCourses({ courses, title }) {
   if (!courses.length) return null;
   return (
     <section className="rt-cd__sec" id="related" aria-labelledby="rt-cd-related-h">

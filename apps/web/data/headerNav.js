@@ -36,8 +36,8 @@ const courseSubjects = subjects.map((s) => {
   };
 });
 
-// the courses with their own page, for "Popular courses" and the Near you course list
-const withPage = locationCourses.filter((c) => c.id);
+// the courses the finder can search for, for "Popular courses" and the Near you course list
+const withPage = locationCourses.filter((c) => c.q);
 const byLabel = (label) => withPage.find((c) => c.label === label);
 const POPULAR = [
   ["Door Supervisor Course", "Security"],

@@ -25,7 +25,3 @@ export function skillSaverStatus(completedDates, signedIn, now = new Date()) {
   return { ...current, next, completed: dates.length };
 }
 
-// DEMO: which SAMPLE courses (numbers below 1000, data/courseCatalogue.js) are in Skill Saver. A real course carries its own
-// field (skillSaver, set by its provider), which the badges read first; real course numbers start at 1000, so this rule never
-// marks one. Goes when the sample catalogue does.
-export const isSkillSaverCourse = (id) => Number(id) < 1000 && Number(id) % 3 !== 0;

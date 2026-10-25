@@ -2,8 +2,7 @@ import { coursePath } from "@/lib/routes";
 
 // The real catalogue (API catalogue.listings / catalogue.course) in the shapes the public pages read: the listing card and the
 // filters (toCatalogueCourse), and the course page (toCourseDetail). Prices arrive in pence and include VAT; the pages work in
-// pounds. Anything the courses don't have yet (ratings, reviews, learner numbers) is left empty, never made up: the pages hide
-// what is empty. Plain functions, safe in the browser and on the server.
+// pounds. Nothing the courses don't have yet (ratings, reviews, learner numbers) is made up. Plain functions, safe in the browser and on the server.
 
 const pounds = (p) => (p == null ? null : p / 100);
 const paragraphs = (text) => (text || "").split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
@@ -36,11 +35,9 @@ export function toCatalogueCourse(l) {
     addedAt: (l.publishedAt || "").slice(0, 10),
     imageSrc: l.imageUrl || "",
     detailsHref: coursePath(l.slug),
-    rating: null,
     nextDate: l.nextDate,
     skillSaver: l.skillSaver,
     badge: isNew(l.publishedAt) ? "New" : "",
-    real: true,
   };
 }
 
@@ -60,7 +57,7 @@ export function toCourseDetail(page, related = []) {
     if (o.method === "self-paced" && o.selfPacedPence != null) {
       sessions.push({
         id: `sp-${o.courseId}`, mode: "ondemand", date: today(), endDate: today(), time: "Start any time", location: "Online", city: "", venue: "", address: "", postcode: "",
-        provider: o.provider.name, providerSlug: o.provider.slug, courseId: o.courseId, courseSlug: o.slug, price: pounds(o.selfPacedPence), wasPrice: null,
+        provider: o.provider.name, providerSlug: o.provider.slug, courseId: o.courseId, courseSlug: o.slug, price: pounds(o.selfPacedPence), wasPrice: null, skillSaver: o.skillSaver,
       });
     }
     for (const d of o.dates) {
@@ -87,6 +84,7 @@ export function toCourseDetail(page, related = []) {
         details: d.details,
         price: pounds(d.pricePence),
         wasPrice: pounds(d.wasPricePence),
+        skillSaver: o.skillSaver, // the provider's course is in Skill Saver (its discount applies in the basket)
       });
     }
   }
@@ -143,15 +141,25 @@ export function toCourseDetail(page, related = []) {
     seoDescription: page.seoDescription,
     updatedAt: page.updatedAt,
     badge: isNew(page.publishedAt) ? "New" : "",
-    // not collected yet (reviews and learner numbers come with bookings): the page hides them
-    rating: null,
-    reviewCount: 0,
-    reviews: [],
-    ratingBreakdown: null,
-    learnerCount: null,
-    mockTest: null,
+    mockTest: null, // its free mock test, set on the server (lib/testPrep.js mockTestFor)
     trust: { noBookingFee: true, approvedProviders: true },
     related: related.map(toCatalogueCourse),
-    real: true,
   };
+}
+
+// Whether a course (catalogue course or course page: subject, sub, topic) sits under a pick ("category/sub-category/topic").
+export function matchesPick(course, pick) {
+  const [subject, sub, topic] = pick.split("/");
+  return course.subject === subject && (!sub || course.sub === sub) && (!topic || course.topic === topic);
+}
+
+// The courses filed under a page's picks (data/courseTopics.js: "category/sub-category/topic"), from catalogue courses
+// (toCatalogueCourse): each pick's courses most popular first, in the order of the picks, each course once, at most `limit`.
+export function pickCourses(courses, picks, limit = 4) {
+  const out = [];
+  for (const pick of picks) {
+    const found = courses.filter((c) => matchesPick(c, pick)).sort((a, b) => b.popularity - a.popularity);
+    for (const c of found) if (!out.includes(c)) out.push(c);
+  }
+  return out.slice(0, limit);
 }

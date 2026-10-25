@@ -17,6 +17,7 @@ import SubjectReviews from "@/components/testPrep/subject/SubjectReviews";
 import { TESTS_ID } from "@/components/testPrep/subject/scrollToTests";
 import { testPrepPage } from "@/data/testPrep";
 import { bookHref, getSubject, getSubjectCourses, getSubjectSlugs, moreSubjects, resolveTests, subjectHref } from "@/lib/testPrep";
+import { loadCatalogue } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Test prep subject page (/test-prep/<slug>): one template for every subject, driven by data/testPrepSubjects.js.
@@ -67,7 +68,7 @@ export default async function TestPrepSubjectPage(props) {
   const t = testPrepPage.subject;
   const path = subjectHref(slug);
   const crumbs = [{ label: "Home", href: "/" }, { label: "Test Prep", href: "/test-prep" }, { label: s.title }];
-  const courses = getSubjectCourses(slug);
+  const courses = getSubjectCourses(slug, await loadCatalogue());
   const faqs = s.faqs || [];
   // The key facts strip: tests, questions (a "+" when some tests have no count yet, so it is never overstated), pass mark
   // (a range when the tests differ) and time (the longest when they differ).

@@ -12,43 +12,28 @@ import CourseFeatures from "@/components/courseDetail/CourseFeatures";
 import LearningSection from "@/components/courseDetail/LearningSection";
 import ClampBlock from "@/components/courseDetail/ClampBlock";
 import ModulesAccordion from "@/components/courseDetail/ModulesAccordion";
-import ReviewsSection from "@/components/courseDetail/ReviewsSection";
 import TrustBoxes from "@/components/courseDetail/TrustBoxes";
 import RelatedCourses from "@/components/courseDetail/RelatedCourses";
 import MobileBuyBar from "@/components/courseDetail/MobileBuyBar";
-import ArticleBlocks from "@/components/courseDetail/ArticleBlocks";
 import CourseFaqs from "@/components/courseDetail/CourseFaqs";
 import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
-import VenuesSection from "@/components/courseDetail/VenuesSection";
 import CourseProviders from "@/components/courseDetail/CourseProviders";
-import { getRelatedCourses, getSubjectLabel } from "@/lib/courses";
+import { getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
 // Same sections, in the same order, as the live Hurak course page, in our own design:
-// features > learning options > study options > overview > requirements > exams > what you will learn > course content >
-// reviews > trust points > FAQs > students also bought > need help > footer. The booking card is sticky on the right.
-// `path` is the page's own address (canonical and structured data); `query` is its search params (?mode=&session=). `local` is
-// { city, venues } on a course-in-a-city page (/course-locations/...): the course's dates are already limited to that city, and
-// its venues are listed under the learning options. A real course (course.real, lib/catalogueData.js) also shows its overview
-// video, its training providers (a shared page) or its provider and their terms (a provider's own page); what it doesn't have
-// yet (ratings, reviews) is left out.
-export default function CourseDetail({ course, query = {}, path, local = null }) {
-  const related = course.related ?? getRelatedCourses(course);
+// features > learning options > training providers > overview > what you will learn > course content > requirements > exams >
+// who it's for > trust points > the provider's terms > FAQs > more courses > need help > footer. The booking card is sticky on
+// the right. `course`: a live course (lib/catalogueData.js toCourseDetail); a section it has nothing for is left out, and
+// nothing it doesn't have yet (ratings, reviews) is shown. `path` is the page's own address (canonical and structured data);
+// `query` is its search params (?mode=&session=).
+export default function CourseDetail({ course, query = {}, path }) {
   const subject = getSubjectLabel(course);
   const prices = course.sessions.map((s) => s.price);
-  const { workAreas, requirements, exams, comparison, apply, article } = course;
-
-  // Assessment and certificate data, as a two-column table. A row with no data is left out.
-  const a = course.assessment || {};
-  const c = course.certificate || {};
-  const defRows = [
-    ["Exam format", a.format], ["Number of questions", a.questions], ["Pass mark", a.passMark], ["Exam duration", a.duration],
-    ["Open or closed book", a.openBook], ["Resit rules", a.resits],
-    ["Certificate", c.name], ["Certificate validity", c.validityText], ["How to renew", c.renewal],
-  ].filter(([, v]) => v !== undefined && v !== null && v !== "");
+  const { requirements, exams } = course;
 
   const navSections = [
     { id: "learning-options", label: "Learning options" },
@@ -72,7 +57,6 @@ export default function CourseDetail({ course, query = {}, path, local = null })
       ...(x.mode === "ondemand" ? {} : { startDate: x.date, endDate: x.endDate }),
       ...(x.mode === "classroom" ? { location: { "@type": "Place", name: x.address, address: { "@type": "PostalAddress", addressLocality: x.city, postalCode: x.postcode, addressCountry: "GB" } } } : {}),
     })),
-    ...(course.rating ? { aggregateRating: { "@type": "AggregateRating", ratingValue: course.rating, reviewCount: course.reviewCount } } : {}),
   };
   const crumbLd = {
     "@context": "https://schema.org",
@@ -114,27 +98,21 @@ export default function CourseDetail({ course, query = {}, path, local = null })
 
                   <LearningSection />
 
-                  {local && <VenuesSection city={local.city} venues={local.venues} course={course} />}
+                  <CourseProviders course={course} />
 
-                  {course.real && <CourseProviders course={course} />}
-
-                  {article ? (
-                    <ArticleBlocks blocks={article} part="intro" />
-                  ) : (
-                    <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
-                      <h2 id="rt-cd-overview-h">{course.title}</h2>
-                      {course.video && (
-                        <div className="rt-cd__video">
-                          <iframe src={course.video} title={`Video: ${course.title}`} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
-                        </div>
-                      )}
-                      <ClampBlock>
-                        <div className="rt-cd__prose">
-                          {course.description.map((p) => <p key={p}>{p}</p>)}
-                        </div>
-                      </ClampBlock>
-                    </section>
-                  )}
+                  <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
+                    <h2 id="rt-cd-overview-h">{course.title}</h2>
+                    {course.video && (
+                      <div className="rt-cd__video">
+                        <iframe src={course.video} title={`Video: ${course.title}`} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
+                      </div>
+                    )}
+                    <ClampBlock>
+                      <div className="rt-cd__prose">
+                        {course.description.map((p) => <p key={p}>{p}</p>)}
+                      </div>
+                    </ClampBlock>
+                  </section>
 
                   <MockTestBanner test={course.mockTest} />
 
@@ -155,48 +133,17 @@ export default function CourseDetail({ course, query = {}, path, local = null })
                   </section>
                   )}
 
-                  {article ? (
-                    <ArticleBlocks blocks={article} part="rest" />
-                  ) : (
-                    <>
-                  {workAreas && (
-                    <section className="rt-cd__sec" id="work-areas" aria-labelledby="rt-cd-work-h">
-                      <h3 className="rt-cd__h3" id="rt-cd-work-h">{workAreas.title}</h3>
-                      <LongBody>
-                        <p>{workAreas.intro}</p>
-                        <ul className="rt-cd__list">
-                          {workAreas.items.map(([name, text]) => <li key={name}><strong>{name}</strong>: {text}</li>)}
-                        </ul>
-                        {workAreas.note && <p className="rt-cd__note">{workAreas.note}</p>}
-                      </LongBody>
-                    </section>
-                  )}
-
                   <section className="rt-cd__sec" id="requirements" aria-labelledby="rt-cd-req-h">
                     <h2 id="rt-cd-req-h">{requirements.title}</h2>
-                      <LongBody>
-                    <div className="rt-cd__prose">
-                      {requirements.paragraphs.map((p) => <p key={p}>{p}</p>)}
-                    </div>
-                    {requirements.list?.length > 0 && (
-                      <ul className="rt-cd__list">{requirements.list.map((r) => <li key={r}>{r}</li>)}</ul>
-                    )}
-                      </LongBody>
+                    <LongBody>
+                      <div className="rt-cd__prose">
+                        {requirements.paragraphs.map((p) => <p key={p}>{p}</p>)}
+                      </div>
+                      {requirements.list?.length > 0 && (
+                        <ul className="rt-cd__list">{requirements.list.map((r) => <li key={r}>{r}</li>)}</ul>
+                      )}
+                    </LongBody>
                   </section>
-
-                  {!apply && defRows.length > 0 && (
-                    <section className="rt-cd__sec" aria-labelledby="rt-cd-assess-h">
-                      <h2 id="rt-cd-assess-h">Assessment and certificate</h2>
-                      <dl className="rt-cd__defs">
-                        {defRows.map(([label, value]) => (
-                          <div key={label} className="rt-cd__def">
-                            <dt>{label}</dt>
-                            <dd>{value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </section>
-                  )}
 
                   {exams && (
                     <section className="rt-cd__sec" aria-labelledby="rt-cd-exams-h">
@@ -224,36 +171,6 @@ export default function CourseDetail({ course, query = {}, path, local = null })
                     </section>
                   )}
 
-                  {comparison && (
-                    <section className="rt-cd__sec" aria-labelledby="rt-cd-cmp-h">
-                      <h2 id="rt-cd-cmp-h">{comparison.title}</h2>
-                      <LongBody>
-                      <div className="rt-cd__prose">
-                        {comparison.paragraphs.map((p) => <p key={p}>{p}</p>)}
-                      </div>
-                      </LongBody>
-                    </section>
-                  )}
-
-                  {apply && (
-                    <section className="rt-cd__sec" aria-labelledby="rt-cd-apply-h">
-                      <h2 id="rt-cd-apply-h">{apply.title}</h2>
-                      <LongBody>
-                      <p>{apply.intro}</p>
-                      <ol className="rt-cd__steps">
-                        {apply.steps.map((s) => <li key={s}>{s}</li>)}
-                      </ol>
-                      <div className="rt-cd__prose">
-                        {apply.notes.map((n) => <p key={n}>{n}</p>)}
-                      </div>
-                      </LongBody>
-                    </section>
-                  )}
-
-                  {course.sections?.length > 0 && <ArticleBlocks blocks={course.sections} part="rest" />}
-                    </>
-                  )}
-
                   {course.showAudience && course.audience?.length > 0 && (
                     <section className="rt-cd__sec" aria-labelledby="rt-cd-aud-h">
                       <div className="rt-cd__learn">
@@ -265,7 +182,6 @@ export default function CourseDetail({ course, query = {}, path, local = null })
                     </section>
                   )}
 
-                  <ReviewsSection />
                   <TrustBoxes />
 
                   {course.provider && (course.provider.bookingTerms || course.provider.cancellationPolicy) && (
@@ -287,7 +203,7 @@ export default function CourseDetail({ course, query = {}, path, local = null })
                   </section>
                   )}
 
-                  <RelatedCourses courses={related} title={course.real ? (subject ? `More ${subject.toLowerCase()} courses` : "More courses") : undefined} />
+                  <RelatedCourses courses={course.related} title={subject ? `More ${subject.toLowerCase()} courses` : "More courses"} />
                 </div>
               </div>
             </div>

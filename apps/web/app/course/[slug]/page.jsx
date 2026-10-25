@@ -1,22 +1,21 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import CourseDetail from "@/components/courseDetail/CourseDetail";
-import { getCourseBySlug } from "@/lib/courses";
 import { toCourseDetail } from "@/lib/catalogueData";
 import { loadCoursePage, loadListings } from "@/lib/catalogueServer";
 import { coursePath } from "@/lib/routes";
 import { SITE_URL } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { mockTestFor } from "@/lib/testPrep";
 
-// The course details page (/course/<slug>): a real course (API catalogue.course, with up to three more courses from its
-// category), or, until the sample catalogue is removed, one of the sample courses (data/courseCatalogue.js; an old numeric link
-// such as /course/1 is sent on to its slug, keeping the query).
+// The course details page (/course/<slug>): a live course (API catalogue.course), with up to three more courses from its
+// category and its free mock test when it has one (lib/testPrep.js). An old numeric link (/course/1012) is sent on to its
+// address, keeping the query.
 async function findCourse(slug) {
   const page = await loadCoursePage(slug);
-  if (page) {
-    const related = (await loadListings()).filter((l) => l.slug !== page.slug && l.slug !== page.parent?.slug && l.category && l.category === page.category).slice(0, 3);
-    return toCourseDetail(page, related);
-  }
-  return getCourseBySlug(slug); // DEMO
+  if (!page) return null;
+  const related = (await loadListings()).filter((l) => l.slug !== page.slug && l.slug !== page.parent?.slug && l.category && l.category === page.category).slice(0, 3);
+  const course = toCourseDetail(page, related);
+  return { ...course, mockTest: mockTestFor(course) };
 }
 
 export async function generateMetadata(props) {

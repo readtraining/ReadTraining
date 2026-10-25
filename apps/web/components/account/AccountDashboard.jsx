@@ -5,7 +5,7 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { bookingState, calendarFile, firstDate, getBookings, getCertificates } from "@/lib/account";
 import { useMe } from "@/lib/useMe";
-import { courseHref } from "@/data/courseSlugs";
+import { demoCourseHref } from "@/data/demoCourses";
 import { formatDay } from "@/lib/format";
 import { savedCourseIds } from "@/lib/wishlist";
 import BookingRow, { placeOf, whenOf } from "./BookingRow";
@@ -110,7 +110,7 @@ export default function AccountDashboard() {
                   </div>
                   <div className="rt-acc__certside">
                     <CertPill state={c.state} />
-                    {c.state !== "valid" && <Link href={courseHref(c.courseId)} className="fb-textlink">{copy.certificates.renew}<span className="rt-sr"> {c.title}</span><Arrow /></Link>}
+                    {c.state !== "valid" && <Link href={demoCourseHref(c.courseId)} className="fb-textlink">{copy.certificates.renew}<span className="rt-sr"> {c.title}</span><Arrow /></Link>}
                   </div>
                 </li>
               ))}

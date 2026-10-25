@@ -129,8 +129,10 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
 
 // One course page by its address: the course as written, its images and lists, and its offerings with their providers and dates.
 // A shared page's offerings are the providers' courses on it; a provider course's page shows its own dates (and names the shared
-// page it is on). Null when there is no such live page.
+// page it is on). Null when there is no such live page. A course number (an old numeric link, /course/1012) finds its course too;
+// the page then sends the visitor on to its address.
 export async function loadCoursePage(db: typeof Db, slug: string) {
+  const id = /^\d{1,9}$/.test(slug) ? Number(slug) : null
   const [c] = await db.execute<Row & { id: number; kind: 'shared' | 'provider'; parent_id: number | null; organisation_id: string | null; method: string | null; price_pence: number | null }>(sql`
     select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.method, c.model,
            c.price_pence, c.skill_saver, c.video_url, c.seo_title, c.seo_description, c.seo_keywords, c.published_at, c.updated_at, c.parent_id, c.organisation_id, c.is_public, c.listed,
@@ -138,7 +140,7 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
            (select slug from public.topics where id = c.topic_id) topic
     from public.courses c
-    where c.slug = ${slug} and c.status = 'live'
+    where ${id === null ? sql`c.slug = ${slug}` : sql`c.id = ${id}`} and c.status = 'live'
       and (c.kind = 'shared' or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.status = 'active'))`)
   if (!c) return null
   const [units, exams, faqs, images] = await Promise.all([

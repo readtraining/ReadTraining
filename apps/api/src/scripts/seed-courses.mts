@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { categories, cohorts, courseExams, courseFaqs, courseImages, courses, courseUnits, eq, inArray, organisations, sql, subcategories, venues } from '@readtraining/db'
+import { categories, cohorts, courseExams, courseFaqs, courseImages, courses, courseUnits, eq, inArray, organisations, sql, subcategories, topics, venues } from '@readtraining/db'
 
 import { db } from '../lib/db.mjs'
 import { COURSE_MEDIA } from '../lib/media.mjs'
@@ -65,11 +65,13 @@ if (provRows.length) {
 }
 
 // ---- catalogue places ---------------------------------------------------------------------------------------------------
-const place = async (cat: string, sub: string) => {
+const place = async (cat: string, sub: string, topic?: string) => {
   const [c] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, cat))
   const [s] = c ? await db.select({ id: subcategories.id }).from(subcategories).where(sql`${subcategories.slug} = ${sub} and ${subcategories.categoryId} = ${c.id}`) : []
   if (!c || !s) throw new Error(`The catalogue list has no ${cat} › ${sub}. Run the catalogue migrations first.`)
-  return { categoryId: c.id, subcategoryId: s.id }
+  const [tp] = topic ? await db.select({ id: topics.id }).from(topics).where(sql`${topics.slug} = ${topic} and ${topics.subcategoryId} = ${s.id}`) : []
+  if (topic && !tp) throw new Error(`The catalogue list has no ${cat} › ${sub} › ${topic}.`)
+  return { categoryId: c.id, subcategoryId: s.id, topicId: tp?.id ?? null }
 }
 
 // ---- pictures: the template's sample cards, uploaded to the course's folder -----------------------------------------------
@@ -132,9 +134,9 @@ const V = {
 }
 
 // ---- the shared pages ----------------------------------------------------------------------------------------------------
-const SHARED: { slug: string; title: string; cat: string; sub: string; level: string; img: number; content: Content }[] = [
+const SHARED: { slug: string; title: string; cat: string; sub: string; topic?: string; level: string; img: number; content: Content }[] = [
   {
-    slug: 'sia-door-supervisor', title: 'SIA Door Supervisor', cat: 'security', sub: 'sia-licence-training', level: 'beginner', img: 1,
+    slug: 'sia-door-supervisor', title: 'SIA Door Supervisor', cat: 'security', sub: 'sia-licence-training', topic: 'door-supervisor', level: 'beginner', img: 1,
     content: {
       summary: 'The Level 2 qualification you need to apply for an SIA door supervisor licence, with first aid included.',
       description: 'This course leads to the Level 2 Award for Door Supervisors in the Private Security Industry, the qualification the SIA asks for before it issues a door supervisor licence.\n\nYou learn how the private security industry works, how to keep yourself and others safe, how to manage conflict, and how to search, detain and use physical intervention lawfully. The course includes the Emergency First Aid at Work qualification the SIA also requires.',
@@ -148,7 +150,7 @@ const SHARED: { slug: string; title: string; cat: string; sub: string; level: st
     },
   },
   {
-    slug: 'emergency-first-aid-at-work', title: 'Emergency First Aid at Work', cat: 'first-aid', sub: 'workplace-first-aid', level: 'beginner', img: 5,
+    slug: 'emergency-first-aid-at-work', title: 'Emergency First Aid at Work', cat: 'first-aid', sub: 'workplace-first-aid', topic: 'emergency-first-aid-at-work', level: 'beginner', img: 5,
     content: {
       summary: 'A one-day course that qualifies you as an emergency first aider at work, valid for three years.',
       description: 'Emergency First Aid at Work (EFAW) teaches what to do in the first minutes of an emergency at work, until help arrives.\n\nYou practise CPR on manikins, use a defibrillator, and learn to deal with bleeding, choking, burns and shock. It meets the Health and Safety Executive guidance for workplaces with lower risks.',
@@ -162,7 +164,7 @@ const SHARED: { slug: string; title: string; cat: string; sub: string; level: st
     },
   },
   {
-    slug: 'cscs-green-card', title: 'CSCS Green Card (Level 1 Health and Safety)', cat: 'construction', sub: 'cscs-cards', level: 'beginner', img: 9,
+    slug: 'cscs-green-card', title: 'CSCS Green Card (Level 1 Health and Safety)', cat: 'construction', sub: 'cscs-cards', topic: 'labourer', level: 'beginner', img: 9,
     content: {
       summary: 'The Level 1 health and safety award you need for a CSCS Labourer (Green) card, in one day.',
       description: 'This course leads to the Level 1 Award in Health and Safety in a Construction Environment. With it, and a pass in the CITB Health, Safety and Environment test, you can apply for the CSCS Labourer card.\n\nYou learn the main risks on a building site and how to work safely.',
@@ -176,7 +178,7 @@ const SHARED: { slug: string; title: string; cat: string; sub: string; level: st
     },
   },
   {
-    slug: 'iosh-managing-safely', title: 'IOSH Managing Safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', level: 'intermediate', img: 3,
+    slug: 'iosh-managing-safely', title: 'IOSH Managing Safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', img: 3,
     content: {
       summary: 'The leading health and safety certificate for managers and supervisors, over four days or live online.',
       description: 'IOSH Managing Safely gives managers what they need to handle health and safety in their team: assessing risks, controlling them, investigating incidents and measuring how well things work.\n\nThe course ends with a short exam and a workplace risk assessment project.',
@@ -190,7 +192,7 @@ const SHARED: { slug: string; title: string; cat: string; sub: string; level: st
     },
   },
   {
-    slug: 'level-2-food-hygiene', title: 'Level 2 Food Hygiene and Safety', cat: 'hospitality', sub: 'food-safety', level: 'beginner', img: 8,
+    slug: 'level-2-food-hygiene', title: 'Level 2 Food Hygiene and Safety', cat: 'hospitality', sub: 'food-safety', topic: 'level-2-food-hygiene', level: 'beginner', img: 8,
     content: {
       summary: 'Food hygiene for anyone who handles food at work, online at your own pace.',
       description: 'This online course covers the food safety knowledge expected of food handlers in catering, retail and manufacturing.\n\nWork through it at your own pace and take the test online when you are ready.',
@@ -208,7 +210,7 @@ const sharedIds: Record<string, number> = {}
 for (const s of SHARED) {
   const [c] = await db
     .insert(courses)
-    .values({ kind: 'shared', slug: s.slug, title: s.title, ...(await place(s.cat, s.sub)), level: s.level, status: 'live', publishedAt: new Date(Date.now() - 30 * DAY), seoTitle: `${s.title} course`, seoDescription: s.content.summary })
+    .values({ kind: 'shared', slug: s.slug, title: s.title, ...(await place(s.cat, s.sub, s.topic)), level: s.level, status: 'live', publishedAt: new Date(Date.now() - 30 * DAY), seoTitle: `${s.title} course`, seoDescription: s.content.summary })
     .returning({ id: courses.id })
   sharedIds[s.slug] = c.id
   await writeContent(c.id, s.content)
@@ -216,30 +218,30 @@ for (const s of SHARED) {
 }
 
 // ---- providers' courses --------------------------------------------------------------------------------------------------
-type Offer = { org: string; title: string; slug: string; shared?: string; cat: string; sub: string; level: string; method: 'classroom' | 'live-online' | 'self-paced'; img: number; status?: 'live' | 'pending' | 'draft'; price?: number; dates?: { start: number; len: number; venue?: string; price: number; was?: number; cap?: number }[]; content?: Content; skillSaver?: boolean }
+type Offer = { org: string; title: string; slug: string; shared?: string; cat: string; sub: string; topic?: string; level: string; method: 'classroom' | 'live-online' | 'self-paced'; img: number; status?: 'live' | 'pending' | 'draft'; price?: number; dates?: { start: number; len: number; venue?: string; price: number; was?: number; cap?: number }[]; content?: Content; skillSaver?: boolean }
 const sharedContent = (slug: string) => SHARED.find((s) => s.slug === slug)!.content
 const OFFERS: Offer[] = [
-  { org: harbour, title: 'SIA Door Supervisor (Manchester and Liverpool)', slug: 'harbour-sia-door-supervisor', shared: 'sia-door-supervisor', cat: 'security', sub: 'sia-licence-training', level: 'beginner', method: 'classroom', img: 1, skillSaver: true, dates: [{ start: 7, len: 6, venue: V.man, price: 19900, was: 24900 }, { start: 21, len: 6, venue: V.liv, price: 18900 }, { start: 42, len: 6, venue: V.man, price: 19900 }] },
-  { org: kestrel, title: 'SIA Door Supervisor (Birmingham and London)', slug: 'kestrel-sia-door-supervisor', shared: 'sia-door-supervisor', cat: 'security', sub: 'sia-licence-training', level: 'beginner', method: 'classroom', img: 2, dates: [{ start: 10, len: 6, venue: V.bir, price: 20900 }, { start: 28, len: 6, venue: V.ldnK, price: 22900 }] },
-  { org: harbour, title: 'Emergency First Aid at Work', slug: 'harbour-emergency-first-aid-at-work', shared: 'emergency-first-aid-at-work', cat: 'first-aid', sub: 'workplace-first-aid', level: 'beginner', method: 'classroom', img: 5, dates: [{ start: 5, len: 1, venue: V.man, price: 7900, was: 9500 }, { start: 12, len: 1, venue: V.liv, price: 7500 }, { start: 26, len: 1, venue: V.man, price: 7900 }] },
-  { org: apex, title: 'Emergency First Aid at Work (live online)', slug: 'apex-emergency-first-aid-at-work-online', shared: 'emergency-first-aid-at-work', cat: 'first-aid', sub: 'workplace-first-aid', level: 'beginner', method: 'live-online', img: 6, dates: [{ start: 8, len: 1, price: 6900 }, { start: 22, len: 1, price: 6900 }] },
-  { org: kestrel, title: 'CSCS Green Card course', slug: 'kestrel-cscs-green-card', shared: 'cscs-green-card', cat: 'construction', sub: 'cscs-cards', level: 'beginner', method: 'classroom', img: 9, dates: [{ start: 6, len: 1, venue: V.bir, price: 9900 }, { start: 13, len: 1, venue: V.ldnK, price: 10900 }, { start: 34, len: 1, venue: V.bir, price: 9900 }] },
-  { org: kestrel, title: 'IOSH Managing Safely', slug: 'kestrel-iosh-managing-safely', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', level: 'intermediate', method: 'classroom', img: 3, dates: [{ start: 14, len: 4, venue: V.bir, price: 49500, was: 54500 }, { start: 49, len: 4, venue: V.ldnK, price: 52500 }] },
-  { org: apex, title: 'IOSH Managing Safely (live online)', slug: 'apex-iosh-managing-safely-online', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', level: 'intermediate', method: 'live-online', img: 4, dates: [{ start: 9, len: 4, price: 44900 }] },
-  { org: apex, title: 'Level 2 Food Hygiene and Safety (online)', slug: 'apex-level-2-food-hygiene', shared: 'level-2-food-hygiene', cat: 'hospitality', sub: 'food-safety', level: 'beginner', method: 'self-paced', img: 8, price: 1999 },
+  { org: harbour, title: 'SIA Door Supervisor (Manchester and Liverpool)', slug: 'harbour-sia-door-supervisor', shared: 'sia-door-supervisor', cat: 'security', sub: 'sia-licence-training', topic: 'door-supervisor', level: 'beginner', method: 'classroom', img: 1, skillSaver: true, dates: [{ start: 7, len: 6, venue: V.man, price: 19900, was: 24900 }, { start: 21, len: 6, venue: V.liv, price: 18900 }, { start: 42, len: 6, venue: V.man, price: 19900 }] },
+  { org: kestrel, title: 'SIA Door Supervisor (Birmingham and London)', slug: 'kestrel-sia-door-supervisor', shared: 'sia-door-supervisor', cat: 'security', sub: 'sia-licence-training', topic: 'door-supervisor', level: 'beginner', method: 'classroom', img: 2, dates: [{ start: 10, len: 6, venue: V.bir, price: 20900 }, { start: 28, len: 6, venue: V.ldnK, price: 22900 }] },
+  { org: harbour, title: 'Emergency First Aid at Work', slug: 'harbour-emergency-first-aid-at-work', shared: 'emergency-first-aid-at-work', cat: 'first-aid', sub: 'workplace-first-aid', topic: 'emergency-first-aid-at-work', level: 'beginner', method: 'classroom', img: 5, dates: [{ start: 5, len: 1, venue: V.man, price: 7900, was: 9500 }, { start: 12, len: 1, venue: V.liv, price: 7500 }, { start: 26, len: 1, venue: V.man, price: 7900 }] },
+  { org: apex, title: 'Emergency First Aid at Work (live online)', slug: 'apex-emergency-first-aid-at-work-online', shared: 'emergency-first-aid-at-work', cat: 'first-aid', sub: 'workplace-first-aid', topic: 'emergency-first-aid-at-work', level: 'beginner', method: 'live-online', img: 6, dates: [{ start: 8, len: 1, price: 6900 }, { start: 22, len: 1, price: 6900 }] },
+  { org: kestrel, title: 'CSCS Green Card course', slug: 'kestrel-cscs-green-card', shared: 'cscs-green-card', cat: 'construction', sub: 'cscs-cards', topic: 'labourer', level: 'beginner', method: 'classroom', img: 9, dates: [{ start: 6, len: 1, venue: V.bir, price: 9900 }, { start: 13, len: 1, venue: V.ldnK, price: 10900 }, { start: 34, len: 1, venue: V.bir, price: 9900 }] },
+  { org: kestrel, title: 'IOSH Managing Safely', slug: 'kestrel-iosh-managing-safely', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', method: 'classroom', img: 3, dates: [{ start: 14, len: 4, venue: V.bir, price: 49500, was: 54500 }, { start: 49, len: 4, venue: V.ldnK, price: 52500 }] },
+  { org: apex, title: 'IOSH Managing Safely (live online)', slug: 'apex-iosh-managing-safely-online', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', method: 'live-online', img: 4, dates: [{ start: 9, len: 4, price: 44900 }] },
+  { org: apex, title: 'Level 2 Food Hygiene and Safety (online)', slug: 'apex-level-2-food-hygiene', shared: 'level-2-food-hygiene', cat: 'hospitality', sub: 'food-safety', topic: 'level-2-food-hygiene', level: 'beginner', method: 'self-paced', img: 8, price: 1999 },
   // with their own page
   { org: apex, title: 'Barista Skills Masterclass', slug: 'barista-skills-masterclass', cat: 'hospitality', sub: 'barista-and-coffee', level: 'beginner', method: 'classroom', img: 11, dates: [{ start: 11, len: 1, venue: V.ldnA, price: 13500 }, { start: 25, len: 1, venue: V.lds, price: 12500 }], content: { summary: 'Hands-on espresso, milk texturing and latte art in one day.', description: 'Learn to pull a great espresso, steam milk properly and pour latte art, on commercial machines, in small groups.', audience: 'New baristas, café owners and coffee lovers.', entry: 'None.', outcomes: ['Dial in an espresso', 'Texture milk for different drinks', 'Pour a heart and a rosetta', 'Keep the machine clean'], features: ['1 day', 'Small groups'], units: [['Espresso', 'Grind, dose and extraction'], ['Milk', 'Steaming and texture'], ['Latte art', 'Hearts, tulips and rosettas']], faqs: [['Do I need my own equipment?', 'No. Everything is provided.']] } },
   { org: apex, title: 'Digital Marketing Essentials', slug: 'digital-marketing-essentials-live', cat: 'marketing', sub: 'digital-marketing', level: 'beginner', method: 'live-online', img: 12, dates: [{ start: 15, len: 2, price: 24900, was: 29900 }], content: { summary: 'Search, social media and email marketing for beginners, live online over two days.', description: 'A practical introduction to the main digital marketing channels, with a plan you can use straight away.', audience: 'Small business owners and new marketing assistants.', entry: 'None.', outcomes: ['Plan a simple digital marketing campaign', 'Improve how your site shows in search', 'Use social media to reach customers', 'Measure what works'], features: ['2 days', 'Live online'], units: [['Planning', ''], ['Search', ''], ['Social media', ''], ['Email and measuring', '']], faqs: [['What do I need?', 'A computer with a camera and a good internet connection.']] } },
   { org: harbour, title: 'Conflict Management for Security Staff', slug: 'conflict-management-for-security-staff', cat: 'security', sub: 'conflict-management', level: 'beginner', method: 'self-paced', img: 7, price: 3900, content: { summary: 'Reduce risk and calm confrontation in front-line security roles, online at your own pace.', description: 'An online course on recognising, reducing and managing conflict at work.', audience: 'Security officers, door supervisors and front-line staff.', entry: 'None.', outcomes: ['Recognise the signs of conflict', 'Calm a situation with words', 'Keep a safe distance', 'Report incidents'], features: ['Self-paced', 'About 3 hours'], units: [['Understanding conflict', ''], ['Reducing conflict', ''], ['After an incident', '']], faqs: [['Is this the SIA conflict unit?', 'No. It is a refresher, not part of an SIA licence qualification.']] } },
   // for the admin's approvals and the provider workspace
-  { org: kestrel, title: 'Asbestos Awareness (Category A)', slug: 'kestrel-asbestos-awareness', cat: 'construction', sub: 'site-safety', level: 'beginner', method: 'classroom', img: 10, status: 'pending', dates: [{ start: 18, len: 1, venue: V.bir, price: 5900 }], content: { summary: 'Spot materials that may contain asbestos and avoid disturbing them.', description: 'A half-day awareness course for anyone who could come across asbestos at work.', audience: 'Tradespeople and maintenance staff.', entry: 'None.', outcomes: ['Know where asbestos may be found', 'Understand the health risks', 'Know what to do if you find it', 'Follow the law'], features: ['Half a day'], units: [['What asbestos is', ''], ['Where it is found', ''], ['What to do', '']], faqs: [['Is this enough to remove asbestos?', 'No. Removal needs a licensed contractor.']] } },
+  { org: kestrel, title: 'Asbestos Awareness (Category A)', slug: 'kestrel-asbestos-awareness', cat: 'construction', sub: 'site-safety', topic: 'asbestos-awareness', level: 'beginner', method: 'classroom', img: 10, status: 'pending', dates: [{ start: 18, len: 1, venue: V.bir, price: 5900 }], content: { summary: 'Spot materials that may contain asbestos and avoid disturbing them.', description: 'A half-day awareness course for anyone who could come across asbestos at work.', audience: 'Tradespeople and maintenance staff.', entry: 'None.', outcomes: ['Know where asbestos may be found', 'Understand the health risks', 'Know what to do if you find it', 'Follow the law'], features: ['Half a day'], units: [['What asbestos is', ''], ['Where it is found', ''], ['What to do', '']], faqs: [['Is this enough to remove asbestos?', 'No. Removal needs a licensed contractor.']] } },
   { org: harbour, title: 'Paediatric First Aid (draft)', slug: 'harbour-paediatric-first-aid', cat: 'first-aid', sub: 'paediatric-first-aid', level: 'intermediate', method: 'classroom', img: 4, status: 'draft' },
 ]
 for (const o of OFFERS) {
   const status = o.status ?? 'live'
   const [c] = await db
     .insert(courses)
-    .values({ kind: 'provider', organisationId: o.org, parentId: o.shared ? sharedIds[o.shared] : null, slug: o.slug, title: o.title, ...(await place(o.cat, o.sub)), level: o.level, method: o.method, pricePence: o.price ?? null, skillSaver: o.skillSaver ?? false, status, submittedAt: status === 'draft' ? null : new Date(Date.now() - 3 * DAY), publishedAt: status === 'live' ? new Date(Date.now() - 20 * DAY) : null, decidedAt: status === 'live' ? new Date(Date.now() - 20 * DAY) : null })
+    .values({ kind: 'provider', organisationId: o.org, parentId: o.shared ? sharedIds[o.shared] : null, slug: o.slug, title: o.title, ...(await place(o.cat, o.sub, o.topic)), level: o.level, method: o.method, pricePence: o.price ?? null, skillSaver: o.skillSaver ?? false, status, submittedAt: status === 'draft' ? null : new Date(Date.now() - 3 * DAY), publishedAt: status === 'live' ? new Date(Date.now() - 20 * DAY) : null, decidedAt: status === 'live' ? new Date(Date.now() - 20 * DAY) : null })
     .returning({ id: courses.id })
   if (status !== 'draft') await writeContent(c.id, o.content ?? sharedContent(o.shared!))
   await picture(c.id, `${o.org}/courses/${c.id}`, o.img, o.title)

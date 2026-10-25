@@ -14,11 +14,10 @@ import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
-import { loadListings } from "@/lib/catalogueServer";
-import { toCatalogueCourse } from "@/lib/catalogueData";
+import { loadCatalogue } from "@/lib/catalogueServer";
 
 // the real catalogue (every live listing), as the pages read it
-const realCourses = async () => (await loadListings()).map(toCatalogueCourse);
+const realCourses = loadCatalogue;
 
 // A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds), as Hurak's course finder pages: the same
 // catalogue with the town as its location (courses with a venue there, closest first; the visitor can change the town), the

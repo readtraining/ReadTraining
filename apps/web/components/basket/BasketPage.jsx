@@ -6,7 +6,7 @@ import { useContextElement } from "@/context/Context";
 import { basket as copy } from "@/data/basket";
 import { basketIssues, basketTotals, isSelected, lineFor, lineKey, mergeLines, promoFor } from "@/lib/basket";
 import { useSkillSaver } from "@/lib/useSkillSaver";
-import { bookableModes, defaultMode, formatShortDate, getCourseBySlug } from "@/lib/courses";
+import { bookableModes, defaultMode, formatShortDate } from "@/lib/courses";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
 import { api } from "@/lib/trpc/react";
 import { toCourseDetail } from "@/lib/catalogueData";
@@ -61,15 +61,13 @@ export default function BasketPage({ recommended }) {
   const change = (key, patch) => setCartCourses((list) => mergeLines(list.map((i) => (lineKey(i) === key ? { ...i, ...patch } : i))));
 
   // the date pop-up opens on the line's own study method (the course page's first choice for a line without one); only the line's
-  // current date is marked "Selected", so nothing looks chosen that is not. A real course's dates are asked for (API
-  // catalogue.course, by the address the line keeps); a sample course's come from the sample catalogue.
+  // current date is marked "Selected", so nothing looks chosen that is not. The course's dates are asked for (API
+  // catalogue.course, by the address the line keeps).
   const openDates = async (item) => {
     let detail = null;
-    if (Number(item.id) >= 1000 && item.slug) {
-      try {
-        detail = toCourseDetail(await utils.catalogue.course.fetch({ slug: item.slug }));
-      } catch {}
-    } else detail = getCourseBySlug(item.id); // DEMO
+    try {
+      detail = toCourseDetail(await utils.catalogue.course.fetch({ slug: item.slug }));
+    } catch {}
     if (!detail || !bookableModes(detail).length) return;
     const mode = bookableModes(detail).includes(item.mode) ? item.mode : defaultMode(detail);
     setDates({ key: lineKey(item), detail, mode, line: { mode: item.mode, sessionId: item.sessionId } });

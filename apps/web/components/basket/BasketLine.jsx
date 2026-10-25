@@ -7,7 +7,6 @@ import { basket as copy } from "@/data/basket";
 import { MAX_DELEGATES, hasDate, hasPackages, isSelected, lineParts, modeLabel, needsFirstAid } from "@/lib/basket";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
-import { isSkillSaverCourse } from "@/lib/skillSaver";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
 
 // One course on one date. Top: the picture, the title, when and where it runs, and on the right the delegates counter, the line's
@@ -48,7 +47,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
               </ul>
               <div className="rt-bk__tags">
                 <span className="rt-pill">{modeLabel(item.mode)}</span>
-                {isSkillSaverCourse(item.id) && <SaverBadge />}
+                {item.skillSaver && <SaverBadge />}
                 <button type="button" className="fb-textlink rt-bk__change" aria-haspopup="dialog" onClick={onDates}>{copy.changeDate}<span className="rt-sr"> for {item.title}</span></button>
               </div>
             </>

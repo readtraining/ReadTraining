@@ -1,6 +1,5 @@
 import { blogAuthor, blogCategories, blogPosts } from "@/data/blogPosts";
 import { formatLongDate } from "@/lib/legal";
-import { getCoursesByIds } from "@/lib/courses";
 
 // All blog reads go through here (server side). Swap the bodies for a CMS or API call later; the pages only read these shapes.
 
@@ -50,7 +49,6 @@ export function getPost(slug) {
     ...toPostCard(p),
     author: blogAuthor,
     updatedDate: p.updated ? formatLongDate(p.updated) : null,
-    courses: getCoursesByIds(p.related || []),
   };
 }
 

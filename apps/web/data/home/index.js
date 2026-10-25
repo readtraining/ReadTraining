@@ -1,10 +1,11 @@
 // Home page content mirrored from the client's current site (hurak.com), September 2026.
 // Headline and brand are ours; categories, courses, options and lists match the existing site.
 
-import { courseLink } from "@/data/courseSlugs";
+import { courseSearch } from "@/data/courseTopics";
 import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 
-const course = (slug) => ({ slug, href: courseLink(1) });
+// a route opens the course finder searched for its words (`slug` keeps the client's original path)
+const course = (words, slug) => ({ slug, href: courseSearch(words) });
 
 export const topBar = {
   phone: "0333 344 1293",
@@ -36,9 +37,9 @@ export const hero = {
   coursePlaceholder: "Search for a course",
   locationPlaceholder: "Town or postcode",
   popular: [
-    { href: courseLink(1), label: "Door Supervisor", slug: "/course/sia-door-supervisor-training" },
-    { href: courseLink(1), label: "Emergency First Aid", slug: "/course/emergency-first-aid-at-work-training-1-day" },
-    { href: courseLink(1), label: "CSCS Green Card", slug: "/course/cscs-green-card-labourers-card-course" },
+    { href: courseSearch("Door Supervisor"), label: "Door Supervisor", slug: "/course/sia-door-supervisor-training" },
+    { href: courseSearch("Emergency First Aid"), label: "Emergency First Aid", slug: "/course/emergency-first-aid-at-work-training-1-day" },
+    { href: courseSearch("CSCS Green Card"), label: "CSCS Green Card", slug: "/course/cscs-green-card-labourers-card-course" },
   ],
 };
 
@@ -84,10 +85,10 @@ export const courseFinder = {
       label: "Get an SIA licence", text: "Find the training required for a new SIA licence.",
       panelTitle: "Which security role are you training for?", panelText: "Choose the licence route that matches the work you want to do.",
       routes: [
-        { title: "Door Supervisor", text: "Work in licensed premises, events and many public-facing security roles.", ...course("/course/sia-door-supervisor-training") },
-        { title: "Security Guard", text: "Work in guarding roles where licensed-premises duties are not required.", ...course("/course/sia-security-guard-training-course") },
-        { title: "CCTV Operator", text: "Monitor public space surveillance systems.", ...course("/course/sia-cctv-operator-training") },
-        { title: "Close Protection", text: "Train for specialist personal-protection work.", ...course("/course/close-protection") },
+        { title: "Door Supervisor", text: "Work in licensed premises, events and many public-facing security roles.", ...course("Door Supervisor", "/course/sia-door-supervisor-training") },
+        { title: "Security Guard", text: "Work in guarding roles where licensed-premises duties are not required.", ...course("Security Guard", "/course/sia-security-guard-training-course") },
+        { title: "CCTV Operator", text: "Monitor public space surveillance systems.", ...course("CCTV Operator", "/course/sia-cctv-operator-training") },
+        { title: "Close Protection", text: "Train for specialist personal-protection work.", ...course("Close Protection", "/course/close-protection") },
       ],
       allLabel: "Browse all SIA courses", allHref: CATALOGUE_HREF,
     },
@@ -95,9 +96,9 @@ export const courseFinder = {
       label: "Renew my SIA licence", text: "Find the correct refresher training.",
       panelTitle: "Which qualification do you need to renew?", panelText: "Select your current licence type to find the relevant refresher course.",
       routes: [
-        { title: "Door Supervisor Refresher", text: "2 days · Updated search procedures, terror threat awareness, vulnerability, spiking prevention and physical intervention.", ...course("/course/sia-top-up-refresher-training-door-supervisor") },
-        { title: "Security Guard Refresher", text: "1 day · Updated search procedures, vulnerability awareness, supporting vulnerable people and current terror threat response.", ...course("/course/sia-top-up-refresher-training-security-guard") },
-        { title: "Close Protection Refresher", text: "3 days · Incident analysis, threat management, protective cordons and ethical physical intervention techniques.", ...course("/course/sia-close-protection-top-up-course") },
+        { title: "Door Supervisor Refresher", text: "2 days · Updated search procedures, terror threat awareness, vulnerability, spiking prevention and physical intervention.", ...course("Door Supervisor Refresher", "/course/sia-top-up-refresher-training-door-supervisor") },
+        { title: "Security Guard Refresher", text: "1 day · Updated search procedures, vulnerability awareness, supporting vulnerable people and current terror threat response.", ...course("Security Guard Refresher", "/course/sia-top-up-refresher-training-security-guard") },
+        { title: "Close Protection Refresher", text: "3 days · Incident analysis, threat management, protective cordons and ethical physical intervention techniques.", ...course("Close Protection Refresher", "/course/sia-close-protection-top-up-course") },
       ],
       allLabel: "Browse all SIA refresher courses", allHref: CATALOGUE_HREF,
     },
@@ -105,10 +106,10 @@ export const courseFinder = {
       label: "Get a CSCS card", text: "Find the qualification route for the card you need.",
       panelTitle: "Which CSCS card or role are you working towards?", panelText: "Choose the route that best matches the work you want to do.",
       routes: [
-        { title: "Green Labourer Card", text: "For labouring roles requiring health and safety training and the relevant CITB test.", ...course("/course/cscs-green-card-labourers-card-course") },
-        { title: "Skilled Worker Card", text: "Usually requires an occupation-specific qualification or Level 2 NVQ.", ...course("/courses/cscs") },
-        { title: "Supervisor Card", text: "For site supervisors managing day-to-day operations on site.", ...course("/courses/cscs") },
-        { title: "Manager Card", text: "For site managers leading construction projects and teams.", ...course("/courses/cscs") },
+        { title: "Green Labourer Card", text: "For labouring roles requiring health and safety training and the relevant CITB test.", ...course("CSCS Green Card", "/course/cscs-green-card-labourers-card-course") },
+        { title: "Skilled Worker Card", text: "Usually requires an occupation-specific qualification or Level 2 NVQ.", ...course("CSCS", "/courses/cscs") },
+        { title: "Supervisor Card", text: "For site supervisors managing day-to-day operations on site.", ...course("CSCS", "/courses/cscs") },
+        { title: "Manager Card", text: "For site managers leading construction projects and teams.", ...course("CSCS", "/courses/cscs") },
       ],
       allLabel: "Browse all construction courses", allHref: CATALOGUE_HREF,
     },
@@ -116,10 +117,10 @@ export const courseFinder = {
       label: "Need an NVQ", text: "Search NVQs by occupation, trade or level.",
       panelTitle: "What occupation or trade is the NVQ for?", panelText: "Search by occupation, trade or qualification level to find a relevant route.",
       routes: [
-        { title: "Construction Site Supervision", text: "Level 4 NVQ Diploma", ...course("/course/level-4-nvq-diploma-in-construction-site-supervision") },
-        { title: "Occupational Work Supervision", text: "Level 3 NVQ Diploma", ...course("/course/level-3-nvq-diploma-in-occupational-work-supervision") },
-        { title: "Plant Operations", text: "Level 2 Diploma (Construction)", ...course("/course/level-2-diploma-in-plant-operations-construction") },
-        { title: "Senior Construction Management", text: "Level 7 NVQ Diploma", ...course("/course/level-7-nvq-diploma-in-construction-senior-management") },
+        { title: "Construction Site Supervision", text: "Level 4 NVQ Diploma", ...course("Construction Site Supervision", "/course/level-4-nvq-diploma-in-construction-site-supervision") },
+        { title: "Occupational Work Supervision", text: "Level 3 NVQ Diploma", ...course("Occupational Work Supervision", "/course/level-3-nvq-diploma-in-occupational-work-supervision") },
+        { title: "Plant Operations", text: "Level 2 Diploma (Construction)", ...course("Plant Operations", "/course/level-2-diploma-in-plant-operations-construction") },
+        { title: "Senior Construction Management", text: "Level 7 NVQ Diploma", ...course("Senior Construction Management", "/course/level-7-nvq-diploma-in-construction-senior-management") },
       ],
       allLabel: "Browse all NVQs", allHref: CATALOGUE_HREF,
     },
@@ -171,19 +172,21 @@ export const stories = {
 // The editable content's built-in values (Part B, B2): what the site shows for a key until an admin saves one in the admin
 // (API content.site). Same shapes as the API checks; lib/siteContent.js merges them.
 export const contentDefaults = {
-  trust: { rating: 4.9, reviews: 12450, customers: 250000, courses: 1000 },
+  // none until an admin enters numbers they can prove (UK law bans unverifiable review claims): the site leaves them out
+  trust: { rating: null, reviews: null, customers: null, courses: null },
   // the search-engine words (admin > Platform settings): the homepage's, and the description pages without their own use
   seo: {
     homeTitle: "ReadTraining | Accredited training courses across the UK",
     homeDescription: "Search vocational and compliance training from trusted UK training providers, explore dates and locations, and book with confidence.",
     siteDescription: "Find and book accredited training courses from trusted UK providers: compare dates, locations and prices in one place.",
   },
-  // "Popular courses and qualifications": tabs of up to four courses, by course number in the catalogue
+  // "Popular courses and qualifications": tabs of up to four courses. Until an admin picks the courses (by course number), each
+  // tab shows its subjects' most popular live courses (`picks`, data/courseTopics.js); a tab with no live course is left out.
   featured: {
     groups: [
-      { name: "Security & SIA", courses: [1, 3, 46, 2] },
-      { name: "First Aid & Health and Safety", courses: [5, 6, 16, 13] },
-      { name: "Construction", courses: [9, 10, 11, 12] },
+      { name: "Security & SIA", picks: ["security"] },
+      { name: "First Aid & Health and Safety", picks: ["first-aid", "health-and-safety"] },
+      { name: "Construction", picks: ["construction"] },
     ],
   },
   testimonials,
@@ -279,19 +282,19 @@ export const footer = {
     {
       title: "Popular courses",
       links: [
-        { href: courseLink(1), label: "Door Supervisor Course" },
-        { href: courseLink(46), label: "Door Supervisor Refresher" },
-        { href: courseLink(52), label: "Security Guard Refresher" },
-        { href: courseLink(5), label: "Emergency First Aid" },
-        { href: courseLink(6), label: "First Aid at Work" },
-        { href: courseLink(9), label: "CSCS Green Card Course" },
-        { href: courseLink(12), label: "Traffic Marshal" },
-        { href: courseLink(3), label: "SIA CCTV Operator" },
+        { href: courseSearch("Door Supervisor"), label: "Door Supervisor Course" },
+        { href: courseSearch("Door Supervisor Refresher"), label: "Door Supervisor Refresher" },
+        { href: courseSearch("Security Guard Refresher"), label: "Security Guard Refresher" },
+        { href: courseSearch("Emergency First Aid"), label: "Emergency First Aid" },
+        { href: courseSearch("First Aid at Work"), label: "First Aid at Work" },
+        { href: courseSearch("CSCS Green Card"), label: "CSCS Green Card Course" },
+        { href: courseSearch("Traffic Marshal"), label: "Traffic Marshal" },
+        { href: courseSearch("CCTV Operator"), label: "SIA CCTV Operator" },
         { href: CATALOGUE_HREF, label: "CSCS NVQs" },
-        { href: courseLink(23), label: "AET" },
-        { href: courseLink(11), label: "SSSTS" },
-        { href: courseLink(10), label: "SMSTS" },
-        { href: courseLink(21), label: "Personal Licence" },
+        { href: courseSearch("Education and Training"), label: "AET" },
+        { href: courseSearch("SSSTS"), label: "SSSTS" },
+        { href: courseSearch("SMSTS"), label: "SMSTS" },
+        { href: courseSearch("Personal Licence"), label: "Personal Licence" },
         { href: CATALOGUE_HREF, label: "IQA Training" },
         { href: CATALOGUE_HREF, label: "Assessor Training" },
       ],

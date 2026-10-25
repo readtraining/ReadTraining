@@ -2,16 +2,16 @@ import React from "react";
 import Link from "next/link";
 import ProductFrame from "@/components/marketing/ProductFrame";
 import { Eyebrow } from "@/components/marketing/parts";
-import { licenceCosts } from "@/lib/licences";
 import { RequestButton } from "./LicenceRequest";
 
 // "How to get it" (#route): the steps on the timeline (.fb-timeline, as /for-business's renewals), each with how long it takes;
 // beside them the costs in a product frame: each part (training from our catalogue's lowest price, the official fee, any test),
 // the estimated total, who is paid what, the source with the date it was checked, the main action and the free mock test.
-export default function LicenceRoute({ licence: l, copy }) {
+// `costs`: the rows and total (lib/licences.js licenceCosts).
+export default function LicenceRoute({ licence: l, costs, copy }) {
   const r = l.route;
   const k = l.costs;
-  const { rows, total } = licenceCosts(l);
+  const { rows, total } = costs;
   return (
     <section className="fb-section -white rt-lic__anchor" id="route" aria-labelledby="rt-lic-route-h">
       <div className="container">

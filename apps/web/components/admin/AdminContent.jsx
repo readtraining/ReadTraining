@@ -8,7 +8,6 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { faqGroups, faqSet, faqSets } from "@/data/faqSets";
 import { contentDefaults } from "@/data/home";
-import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { builtInLegal, getLegalList, legalContentKey } from "@/lib/legal";
@@ -159,7 +158,9 @@ function BuiltInNote({ contentKey }) {
 // ---- trust numbers -------------------------------------------------------------------------------------------------------
 function TrustForm({ value, canEdit }) {
   const save = useSave("trust");
-  const [v, setV] = useState(() => ({ rating: value.rating.toFixed(1), reviews: String(value.reviews), customers: String(value.customers), courses: String(value.courses) }));
+  // an empty field is a number not entered: the site leaves it out
+  const text = (n) => (n == null ? "" : String(n));
+  const [v, setV] = useState(() => ({ rating: value.rating == null ? "" : value.rating.toFixed(1), reviews: text(value.reviews), customers: text(value.customers), courses: text(value.courses) }));
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
@@ -168,20 +169,28 @@ function TrustForm({ value, canEdit }) {
   const c = copy.trust;
   const num = (t) => (/^\d{1,9}$/.test(t.trim()) ? Number(t.trim()) : null);
   const rating = /^[1-5](\.\d)?$/.test(v.rating.trim()) && Number(v.rating) <= 5 ? Number(v.rating) : null;
-  const shown = (n) => (n === null ? "…" : `${n.toLocaleString("en-GB")}+`);
+  const empty = (t) => !t.trim();
+  const shown = (n) => `${n.toLocaleString("en-GB")}+`;
+  // what the site will say: only the numbers entered (a rating with its reviews)
+  const preview = [
+    rating !== null && num(v.reviews) !== null && c.previewRating.replace("{rating}", rating.toFixed(1)).replace("{reviews}", shown(num(v.reviews))),
+    num(v.customers) !== null && c.previewCustomers.replace("{customers}", shown(num(v.customers))),
+    num(v.courses) !== null && c.previewCourses.replace("{courses}", shown(num(v.courses))),
+  ].filter(Boolean);
 
   const submit = async (e) => {
     e.preventDefault();
     setSaved(false);
     setGeneral("");
     const found = {};
-    if (rating === null) found.rating = "Enter a rating from 1 to 5, with one decimal place, like 4.9.";
-    for (const k of ["reviews", "customers", "courses"]) if (num(v[k]) === null) found[k] = "Enter a whole number, like 12450.";
+    if (!empty(v.rating) && rating === null) found.rating = "Enter a rating from 1 to 5, with one decimal place, like 4.9, or leave it empty.";
+    for (const k of ["reviews", "customers", "courses"]) if (!empty(v[k]) && num(v[k]) === null) found[k] = "Enter a whole number, like 12450, or leave it empty.";
+    if (!found.rating && !found.reviews && empty(v.rating) !== empty(v.reviews)) found[empty(v.rating) ? "rating" : "reviews"] = "Enter both the rating and the number of reviews, or leave both empty.";
     setErrors(found);
     if (Object.keys(found).length) return focusFirstError(ref.current);
     setSaving(true);
     try {
-      await save({ rating, reviews: num(v.reviews), customers: num(v.customers), courses: num(v.courses) });
+      await save({ rating: empty(v.rating) ? null : rating, reviews: num(v.reviews), customers: num(v.customers), courses: num(v.courses) });
       setSaved(true);
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
@@ -206,7 +215,7 @@ function TrustForm({ value, canEdit }) {
           </React.Fragment>
         ))}
       </div>
-      <p className="rt-acc__note rt-adm-content__preview" id="rt-adm-tr-preview">{c.preview.replace("{rating}", rating === null ? "…" : rating.toFixed(1)).replace("{reviews}", shown(num(v.reviews))).replace("{customers}", shown(num(v.customers))).replace("{courses}", shown(num(v.courses)))}</p>
+      <p className="rt-acc__note rt-adm-content__preview" id="rt-adm-tr-preview">{preview.length ? c.preview.replace("{text}", preview.join(" · ")) : c.previewNone}</p>
       <SaveRow canEdit={canEdit} saving={saving} error={general} saved={saved} />
     </form>
   );
@@ -215,16 +224,17 @@ function TrustForm({ value, canEdit }) {
 // ---- featured courses ----------------------------------------------------------------------------------------------------
 function FeaturedForm({ value, canEdit }) {
   const save = useSave("featured");
-  const data = useAdmin();
-  const [groups, setGroups] = useState(() => value.groups.map((g) => ({ name: g.name, courses: Array.from({ length: MAX_PER_TAB }, (_, i) => (g.courses[i] ? String(g.courses[i]) : "")) })));
+  const options = api.admin.courses.options.useQuery();
+  // the built-in tabs have no courses picked (the site shows each tab's most popular): their slots start empty
+  const [groups, setGroups] = useState(() => value.groups.map((g) => ({ name: g.name, courses: Array.from({ length: MAX_PER_TAB }, (_, i) => (g.courses?.[i] ? String(g.courses[i]) : "")) })));
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const ref = useRef(null);
   const c = copy.featured;
-  if (!data) return null;
-  const options = [{ value: "", label: c.none }, ...[...data.catalogue].sort((a, b) => a.title.localeCompare(b.title)).map((x) => ({ value: String(x.id), label: x.title }))];
+  if (!options.data) return null;
+  const choices = [{ value: "", label: c.none }, ...options.data.filter((x) => x.listed).map((x) => ({ value: String(x.id), label: x.kind === "provider" ? `${x.title} · ${x.provider}` : x.title }))];
   const edit = (i, patch) => setGroups((gs) => gs.map((g, j) => (j === i ? { ...g, ...patch } : g)));
   const setCourse = (i, slot, v) => edit(i, { courses: groups[i].courses.map((x, k) => (k === slot ? v : x)) });
 
@@ -271,7 +281,7 @@ function FeaturedForm({ value, canEdit }) {
             {g.courses.map((id, slot) => (
               <div key={slot} className="rt-field">
                 <label htmlFor={`rt-adm-fc-${i}-${slot}`}>{c.course.replace("{n}", slot + 1)}</label>
-                <FieldSelect id={`rt-adm-fc-${i}-${slot}`} label={c.course.replace("{n}", slot + 1)} value={id} onChange={(v) => setCourse(i, slot, v)} options={options} disabled={!canEdit} invalid={Boolean(errors[`courses${i}`])} describedBy={errors[`courses${i}`] ? `rt-adm-fc-${i}-e` : undefined} />
+                <FieldSelect id={`rt-adm-fc-${i}-${slot}`} label={c.course.replace("{n}", slot + 1)} value={id} onChange={(v) => setCourse(i, slot, v)} options={choices} disabled={!canEdit} invalid={Boolean(errors[`courses${i}`])} describedBy={errors[`courses${i}`] ? `rt-adm-fc-${i}-e` : undefined} />
               </div>
             ))}
           </div>

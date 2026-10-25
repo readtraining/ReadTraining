@@ -126,7 +126,7 @@ export default function AdminDashboard() {
               {soon.slice(0, 5).map((s) => (
                 <li key={s.id}>
                   <div>
-                    <Link href={`/admin/catalogue/${s.courseId}`} className="rt-adm-strong">{s.course}</Link>
+                    <span className="rt-adm-strong">{s.course}</span>
                     <small>{formatDate(s.date)} · {s.provider} · {s.city}</small>
                   </div>
                   <AdminStatus kind="queue" status="noJoining">{copy.noJoining}</AdminStatus>
