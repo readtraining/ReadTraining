@@ -17,20 +17,26 @@ import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { loadListings } from "@/lib/catalogueServer";
+import { toCatalogueCourse } from "@/lib/catalogueData";
+
+// the real catalogue (every live listing), as the pages read it
+const realCourses = async () => (await loadListings()).map(toCatalogueCourse);
 
 // A course page (/courses/<slug>: a study method, a subject or a set of courses, from the footer's "Find a course"): the course
 // catalogue scoped to the page (its title and intro in the hero, links to the other course pages, the same search, filters,
 // sorting and cards as All courses), then the towns with a venue (each with its own town page), the blog's guides on the topic, the page's FAQs, need help and the footer.
-// Copy: data/coursePages.js; reads: lib/coursePages.js.
+// Every category of the catalogue list has one. Copy: data/coursePages.js; reads: lib/coursePages.js, on the real courses.
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  await loadTaxonomy();
   return getCoursePageSlugs().map((slug) => ({ slug }));
 }
 
 export async function generateMetadata(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
-  const page = getCoursePage(slug);
+  const page = getCoursePage(slug, await realCourses());
   if (!page) return { title: "Courses not found | ReadTraining" };
   return pageMetadata({ title: `${page.title} | ReadTraining`, description: page.description, path: page.href });
 }
@@ -38,7 +44,8 @@ export async function generateMetadata(props) {
 export default async function CoursePage(props) {
   await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
   const { slug } = await props.params;
-  const page = getCoursePage(slug);
+  const courses = await realCourses();
+  const page = getCoursePage(slug, courses);
   if (!page) notFound();
   const faq = faqItems(`course-page-${slug}`, page.faq);
   const crumbs = [{ label: "Home", href: "/" }, { label: "All courses", href: CATALOGUE_HREF }, { label: page.label }];
@@ -54,7 +61,7 @@ export default async function CoursePage(props) {
           <Suspense fallback={<CourseListSkeleton />}>
             <CourseCatalogue courses={page.courses} scope={page.scope} />
           </Suspense>
-          <CourseTowns title={`Find ${page.label.replace(/ courses$/i, "").toLowerCase()} courses near you`} towns={getCourseTowns(page.slug)} />
+          <CourseTowns title={`Find ${page.label.replace(/ courses$/i, "").toLowerCase()} courses near you`} towns={getCourseTowns(page.slug, courses)} />
           {page.guides.length > 0 && (
             <section className="rt-cpage__guides layout-pt-lg" aria-labelledby="rt-cpage-guides-h">
               <div className="container">

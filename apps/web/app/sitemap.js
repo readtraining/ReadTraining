@@ -4,12 +4,16 @@ import { getPostSlugs } from "@/lib/blog";
 import { getCoursePageSlugs, getCourseTownParams } from "@/lib/coursePages";
 import { getHelpArticleSlugs, getHelpTopicSlugs } from "@/lib/help";
 import { getLicenceSlugs } from "@/lib/licences";
-import { getProviderSlugs } from "@/lib/providers";
+import { getProviderDirectory } from "@/lib/publicProvider";
 import { getSubjectSlugs } from "@/lib/testPrep";
 import { centreParams } from "@/lib/hseTest";
 import { locationCourses, slugify } from "@/data/home/menu";
 import { getCourseLocation } from "@/lib/courseLocations";
 import { catalogueCourses } from "@/data/courseCatalogue";
+import { loadListings } from "@/lib/catalogueServer";
+import { toCatalogueCourse } from "@/lib/catalogueData";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { coursePath } from "@/lib/routes";
 
 // /sitemap.xml: every public page (the same lists the pages build from), so search engines find them all. Private areas
 // (account, business, provider, admin, basket, checkout) and the template's demo pages are left out (see robots.js).
@@ -20,12 +24,16 @@ const STATIC = [
   "/accessibility-statement",
 ];
 
-export default function sitemap() {
+export default async function sitemap() {
+  await loadTaxonomy();
+  const listings = await loadListings();
+  const courses = listings.map(toCatalogueCourse);
   const paths = [
     ...STATIC,
-    ...catalogueCourses.map((c) => courseLink(c.id)),
+    ...listings.map((l) => coursePath(l.slug)),
+    ...catalogueCourses.map((c) => courseLink(c.id)), // DEMO: the sample courses, until they are removed
     ...getCoursePageSlugs().map((s) => `/courses/${s}`),
-    ...getCourseTownParams().map((p) => `/courses/${p.slug}/${p.town}`),
+    ...getCourseTownParams(courses).map((p) => `/courses/${p.slug}/${p.town}`),
     // a course in a town only when it has a venue there (the others redirect to the course finder)
     ...locationCourses.filter((c) => c.id).flatMap((c) => (c.places || []).map((city) => `${c.locationSlug}-in-${slugify(city)}`))
       .filter((slug) => getCourseLocation(slug)?.venues.length)
@@ -33,7 +41,7 @@ export default function sitemap() {
     ...getLicenceSlugs().map((s) => `/licences/${s}`),
     ...getSubjectSlugs().map((s) => `/test-prep/${s}`),
     ...centreParams().map((s) => `/tests-locations/${s}`),
-    ...getProviderSlugs().map((s) => `/providers/${s}`),
+    ...(await getProviderDirectory()).map((p) => `/providers/${p.slug}`),
     ...getPostSlugs().map((s) => `/blog/${s}`),
     ...getHelpTopicSlugs().map((p) => `/help-centre/${p.topic}`),
     ...getHelpArticleSlugs().map((p) => `/help-centre/${p.topic}/${p.article}`),

@@ -8,6 +8,8 @@ import { basketIssues, basketTotals, isSelected, lineFor, lineKey, mergeLines, p
 import { useSkillSaver } from "@/lib/useSkillSaver";
 import { bookableModes, defaultMode, formatShortDate, getCourseBySlug } from "@/lib/courses";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
+import { api } from "@/lib/trpc/react";
+import { toCourseDetail } from "@/lib/catalogueData";
 import BasketSteps from "./BasketSteps";
 import BasketLine from "./BasketLine";
 import { BasketBar, BasketSummary } from "./BasketSummary";
@@ -26,6 +28,7 @@ const UNDO_MS = 9000;
 // A date is chosen or changed in the date pop-up on this page; the line takes the new date (merging with a line already on it).
 export default function BasketPage({ recommended }) {
   const { cartCourses, setCartCourses } = useContextElement();
+  const utils = api.useUtils();
   const [ready, setReady] = useState(false);
   const [promo, setPromo] = useState(null);
   const [removed, setRemoved] = useState(null); // { item, index }
@@ -58,10 +61,16 @@ export default function BasketPage({ recommended }) {
   const change = (key, patch) => setCartCourses((list) => mergeLines(list.map((i) => (lineKey(i) === key ? { ...i, ...patch } : i))));
 
   // the date pop-up opens on the line's own study method (the course page's first choice for a line without one); only the line's
-  // current date is marked "Selected", so nothing looks chosen that is not
-  const openDates = (item) => {
-    const detail = getCourseBySlug(item.id);
-    if (!detail) return;
+  // current date is marked "Selected", so nothing looks chosen that is not. A real course's dates are asked for (API
+  // catalogue.course, by the address the line keeps); a sample course's come from the sample catalogue.
+  const openDates = async (item) => {
+    let detail = null;
+    if (Number(item.id) >= 1000 && item.slug) {
+      try {
+        detail = toCourseDetail(await utils.catalogue.course.fetch({ slug: item.slug }));
+      } catch {}
+    } else detail = getCourseBySlug(item.id); // DEMO
+    if (!detail || !bookableModes(detail).length) return;
     const mode = bookableModes(detail).includes(item.mode) ? item.mode : defaultMode(detail);
     setDates({ key: lineKey(item), detail, mode, line: { mode: item.mode, sessionId: item.sessionId } });
     setDatesOpen(true);

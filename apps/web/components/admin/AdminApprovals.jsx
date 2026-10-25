@@ -6,6 +6,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { ago } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
+import { refreshCourses } from "@/app/admin/actions";
 import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -87,6 +88,7 @@ export default function AdminApprovals() {
     setBusy(false);
     setPicked([]);
     refresh();
+    if (done) refreshCourses().catch(() => {});
     const verb = { approve: "Approved", approveChange: "Change approved on", changes: "Asked for changes on", rejectChange: "Change turned down on" }[decision];
     setSaid([done ? (list.length === 1 ? `${verb}: ${list[0].title}` : `${verb} ${done} courses`) : "", ...failed].filter(Boolean).join(". "));
     return failed;

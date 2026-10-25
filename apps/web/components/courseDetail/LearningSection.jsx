@@ -52,10 +52,21 @@ export default function LearningSection() {
 
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const rows = course.sessions.filter((s) => s.mode === mode);
+  const noDates = course.sessions.length === 0;
+
+  if (!modes.length) {
+    return (
+      <section className="rt-cd__sec rt-lo" id="learning-options" aria-labelledby="rt-cd-lo-h">
+        <h2 id="rt-cd-lo-h">Learning options</h2>
+        <EmptyState inCard title="New dates coming soon." text="No dates are open for booking yet. Save the course to come back to it." action={{ label: "Ask about this course", href: "/contact-us" }} />
+      </section>
+    );
+  }
 
   return (
     <section className="rt-cd__sec rt-lo" id="learning-options" aria-labelledby="rt-cd-lo-h">
       <h2 id="rt-cd-lo-h">Learning options</h2>
+      {noDates && <p className="rt-cd__lead">No public dates are open yet. Your team can still train together: ask for a quote below.</p>}
 
       <fieldset className="rt-lc__fs">
         <legend className="rt-cd__sr">How do you want to learn?</legend>

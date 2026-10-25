@@ -168,9 +168,19 @@ const matchesKeyword = (course, q) => {
   return [course.title, categoryName(course.subject), course.description].some((t) => (t || "").toLowerCase().includes(needle));
 };
 
+// Within this distance of where the learner is (a town or postcode found on the map), a classroom venue counts as near.
+export const NEAR_KM = 50;
+// A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM; one with no venue (online) is near anywhere.
+const nearPoint = (course, point) => course.venues.length === 0 || course.venues.some((v) => v.lat != null && distanceKm(point, v) <= NEAR_KM);
+
 // subject, sub, method and level are arrays of ticked values. Inside a group a course matches ANY ticked value (OR);
-// between groups every group must match (AND). An empty array means "no filter" for that group.
-export function filterCourses(courses, { subject = [], sub = [], method = [], level = [], location, min, max, q }) {
+// between groups every group must match (AND). An empty array means "no filter" for that group. The price slider's ends mean
+// "no limit" (a course dearer than the slider still shows until a top price is set); a course with no price yet (no dates)
+// shows unless a price range is set. `point`: where the typed location is on the map (catalogue.locate), when found; without it
+// the location matches a venue's town or postcode by its words.
+export function filterCourses(courses, { subject = [], sub = [], method = [], level = [], location, min, max, q }, point = null) {
+  const low = min !== undefined && min > PRICE_BOUNDS.min;
+  const high = max !== undefined && max < PRICE_BOUNDS.max;
   return courses.filter(
     (course) =>
       matchesKeyword(course, q) &&
@@ -178,15 +188,17 @@ export function filterCourses(courses, { subject = [], sub = [], method = [], le
       (!sub.length || sub.includes(course.sub)) &&
       (!method.length || course.methods.some((m) => method.includes(m))) &&
       (!level.length || level.includes(course.level)) &&
-      (min === undefined || course.price >= min) &&
-      (max === undefined || course.price <= max) &&
-      matchesLocation(course, location),
+      (!low || (course.price != null && course.price >= min)) &&
+      (!high || (course.price != null && course.price <= max)) &&
+      (point && location ? nearPoint(course, point) : matchesLocation(course, location)),
   );
 }
 
+// a course with no price yet goes last either way
+const priceOr = (c, none) => (c.price == null ? none : c.price);
 const sorters = {
-  "price-asc": (a, b) => a.price - b.price,
-  "price-desc": (a, b) => b.price - a.price,
+  "price-asc": (a, b) => priceOr(a, Infinity) - priceOr(b, Infinity),
+  "price-desc": (a, b) => priceOr(b, -Infinity) - priceOr(a, -Infinity),
   popular: (a, b) => b.popularity - a.popularity,
   // most recently added first (addedAt is an ISO date); same day: the more popular first
   newest: (a, b) => (b.addedAt || "").localeCompare(a.addedAt || "") || b.popularity - a.popularity,
@@ -209,11 +221,11 @@ function locationPoint(courses, location) {
   return null;
 }
 
-export function sortCourses(courses, sort, location = "", all = courses) {
+export function sortCourses(courses, sort, location = "", all = courses, found = null) {
   if (sort === "closest") {
-    const point = locationPoint(all, location);
+    const point = found || locationPoint(all, location);
     if (!point) return sorters.popular ? [...courses].sort(sorters.popular) : courses;
-    const dist = (c) => (c.venues.length ? Math.min(...c.venues.map((v) => distanceKm(point, v))) : Infinity);
+    const dist = (c) => (c.venues.some((v) => v.lat != null) ? Math.min(...c.venues.filter((v) => v.lat != null).map((v) => distanceKm(point, v))) : Infinity);
     return [...courses].sort((a, b) => dist(a) - dist(b) || b.popularity - a.popularity);
   }
   const fn = sorters[sort];

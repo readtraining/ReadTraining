@@ -7,7 +7,6 @@ import {
   PRICE_BOUNDS,
   PROJECT_NAME,
   buildCatalogueQuery,
-  catalogueCourses,
   closestSortOption,
   filterCourses,
   catalogueFilterGroups,
@@ -28,6 +27,7 @@ import { useCourseQuery } from "./useCourseQuery";
 import { EmptyState } from "@/components/states/States";
 import { ErrorState } from "@/components/states/States";
 import { useTaxonomy } from "@/lib/taxonomyContext";
+import { api } from "@/lib/trpc/react";
 
 // Quick links under the search: each applies the matching subject filter (no navigation).
 const popularSearches = [
@@ -46,7 +46,8 @@ const countLabel = (n) => `${n} ${n === 1 ? "course" : "courses"}`;
 // { title, lead, crumb, parent?: { label, href } (a town page's course page), location? (a town page's town), allHref, links: [{ label, href }], subject?, hide: ["method" | "subject"], filters: false for a short list, about: { title, text } }.
 // A subject page's `subject` replaces the Subject filter with its sub-subjects ("Course type").
 // The hero then shows the page's title and intro, and links to the other course pages instead of the popular searches.
-export default function CourseCatalogue({ courses = catalogueCourses, scope = null }) {
+// `courses`: the real listings (lib/catalogueData.js toCatalogueCourse), given by the page from the server.
+export default function CourseCatalogue({ courses, scope = null }) {
   const taxonomy = useTaxonomy();
   const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject, scope?.location);
   const [toast, setToast] = useState(null);
@@ -139,7 +140,11 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
     return () => clearTimeout(t);
   });
 
-  const results = useMemo(() => sortCourses(filterCourses(courses, state), state.sort, state.location, courses), [courses, state]);
+  // where the typed town or postcode is on the map (API catalogue.locate), so venues near it match, nearest first; until it is
+  // found (or if it isn't), the town or postcode is matched by its words
+  const located = api.catalogue.locate.useQuery({ q: state.location.trim() }, { enabled: state.location.trim().length >= 2, staleTime: Infinity, retry: false });
+  const point = state.location.trim().length >= 2 ? located.data ?? null : null;
+  const results = useMemo(() => sortCourses(filterCourses(courses, state, point), state.sort, state.location, courses, point), [courses, state, point]);
   const noMatches = results.length === 0;
   // Only what matches: with zero matches the page says so plainly and offers to loosen the filters; it never fills the space
   // with courses that don't match (Milestone 2's rule for an empty filter).
@@ -263,17 +268,17 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
     catalogueFilterGroups().forEach((g) => {
       out[g.key] = {};
       g.options.forEach((o) => {
-        out[g.key][o.value] = filterCourses(courses, { ...state, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }).length;
+        out[g.key][o.value] = filterCourses(courses, { ...state, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }, point).length;
       });
     });
     out.sub = {};
     [...new Set([...state.subject, ...(scope?.subject ? [scope.subject] : [])])].forEach((sv) =>
       subcategoryOptions(sv).forEach((o) => {
-        out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }).length;
+        out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }, point).length;
       }),
     );
     return out;
-  }, [courses, state]);
+  }, [courses, state, point]);
 
   const showingFrom = (page - 1) * PAGE_SIZE + 1;
   const showingTo = Math.min(page * PAGE_SIZE, results.length);

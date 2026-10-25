@@ -15,6 +15,7 @@
     "admin:grant": "tsx --env-file-if-exists=../../.env src/scripts/admin-grant.mts",
     "seed:money": "tsx --env-file-if-exists=../../.env src/scripts/seed-money.mts",
     "seed:demo": "tsx --env-file-if-exists=../../.env src/scripts/seed-demo.mts",
+    "seed:courses": "tsx --env-file-if-exists=../../.env src/scripts/seed-courses.mts",
     "clean:dev": "tsx --env-file-if-exists=../../.env src/scripts/clean-dev.mts",
     "prelaunch:clean": "tsx --env-file-if-exists=../../.env src/scripts/prelaunch-clean.mts"
   },

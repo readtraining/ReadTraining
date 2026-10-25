@@ -500,6 +500,7 @@
 .rt-ucard:hover { box-shadow: var(--rt-shadow-hover); transform: translateY(-2px); color: var(--color-dark-1); }
 .rt-ucard__image { border-radius: 8px; overflow: hidden; aspect-ratio: 16 / 9; }
 .rt-ucard__image img { width: 100%; height: 100%; object-fit: cover; }
+.rt-ucard__noimg { display: block; width: 100%; height: 100%; background: var(--rt-c-brand-soft); }
 .rt-ucard__title { margin-top: 14px; font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--color-dark-1); }
 .rt-ucard__meta { margin-top: 4px; font-size: 12px; color: var(--color-light-1); }
 .rt-ucard__pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
@@ -1667,6 +1668,7 @@ main#rt-cat-main { overflow: clip; }
 .rt-card__from { font-size: 13px; line-height: 16px; font-weight: 400; color: var(--rt-card-muted); }
 .rt-card__price-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .rt-card__current { font-size: 24px; line-height: 28px; font-weight: 700; color: var(--rt-card-text); }
+.rt-card__soon { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--rt-card-text); }
 .rt-card__was { font-size: 14px; line-height: 20px; font-weight: 400; color: var(--rt-card-muted); text-decoration: line-through; }
 .rt-card__save { display: block; min-height: 20px; margin-top: 4px; font-size: 13px; line-height: 20px; font-weight: 600; color: var(--rt-card-success); } /* plain text; the 20px row is always reserved */
 .rt-card__actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 12px; }
@@ -2004,6 +2006,22 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__staff { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: var(--cd-brand-subtle); }
 .rt-cd__staff strong { display: block; font-size: 15px; line-height: 22px; }
 .rt-cd__staff p { margin: 2px 0 0; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
+/* real courses: the lead line under a heading, the overview video, a shared page's training providers, no dates yet */
+.rt-cd__lead { margin: -4px 0 16px; font-size: 15px; line-height: 22px; color: var(--cd-muted); }
+.rt-cd__video { position: relative; margin: 0 0 20px; aspect-ratio: 16 / 9; border-radius: var(--cd-card-radius); overflow: hidden; background: var(--cd-band); }
+.rt-cd__video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.rt-cd__provs { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.rt-cd__prov { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--cd-card-border); border-radius: var(--cd-card-radius); background: var(--cd-surface); list-style: none; }
+.rt-cd__prov-logo { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 48px; height: 48px; overflow: hidden; border-radius: 10px; background: var(--cd-brand-subtle); font-size: 15px; font-weight: 700; color: var(--cd-brand); }
+.rt-cd__prov-logo img { width: 100%; height: 100%; object-fit: contain; background: var(--cd-surface); }
+.rt-cd__prov-text { display: grid; flex: 1; gap: 2px; min-width: 0; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+.rt-cd__prov-name { font-size: 16px; line-height: 22px; font-weight: 600; color: var(--cd-text); }
+.rt-cd__prov-name:hover { color: var(--cd-brand); }
+.rt-cd__prov-end { display: grid; flex: none; gap: 2px; justify-items: end; font-size: 14px; line-height: 20px; }
+.rt-cd__prov-end strong { font-size: 16px; color: var(--cd-text); font-variant-numeric: tabular-nums; }
+@media (max-width: 575px) { .rt-cd__prov { flex-wrap: wrap; } .rt-cd__prov-end { justify-items: start; width: 100%; padding-left: 62px; } }
+.rt-cd__providers a { color: var(--color-white) !important; text-decoration: underline; text-underline-offset: 3px; }
+.rt-cd__hprice-soon { color: var(--color-white); font-size: 20px; line-height: 1.2; font-weight: 700; }
 .rt-cd__staff .rt-cd__link { min-height: 36px; }
 
 /* Article blocks (per-course sections) */
@@ -3640,6 +3658,11 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-plogo.-lg { width: 72px; height: 72px; font-size: 26px; }
 /* provider card */
 .rt-pcard { padding: 0; overflow: hidden; }
+.rt-plogo.-img { overflow: hidden; padding: 6px; background: var(--color-white); }
+.rt-plogo.-img img { width: 100%; height: 100%; object-fit: contain; }
+.rt-pcard__band { display: block; width: 100%; height: 100%; background: var(--rt-c-brand-soft); }
+.rt-pcard__cover:has(.rt-pcard__band) { aspect-ratio: 16 / 4; }
+.rt-prov__search { max-width: 560px; margin: 0 0 24px; }
 .rt-pcard__cover { border-radius: 0; aspect-ratio: 16 / 8; }
 .rt-pcard__body { display: flex; flex: 1; flex-direction: column; padding: 0 24px 24px; }
 .rt-pcard .rt-plogo { position: relative; z-index: 2; margin-top: -32px; background: #fff; box-shadow: 0 4px 12px rgba(20, 3, 66, 0.10); }

@@ -22,6 +22,7 @@ import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
 import VenuesSection from "@/components/courseDetail/VenuesSection";
+import CourseProviders from "@/components/courseDetail/CourseProviders";
 import { getRelatedCourses, getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
@@ -31,9 +32,11 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 // reviews > trust points > FAQs > students also bought > need help > footer. The booking card is sticky on the right.
 // `path` is the page's own address (canonical and structured data); `query` is its search params (?mode=&session=). `local` is
 // { city, venues } on a course-in-a-city page (/course-locations/...): the course's dates are already limited to that city, and
-// its venues are listed under the learning options.
+// its venues are listed under the learning options. A real course (course.real, lib/catalogueData.js) also shows its overview
+// video, its training providers (a shared page) or its provider and their terms (a provider's own page); what it doesn't have
+// yet (ratings, reviews) is left out.
 export default function CourseDetail({ course, query = {}, path, local = null }) {
-  const related = getRelatedCourses(course);
+  const related = course.related ?? getRelatedCourses(course);
   const subject = getSubjectLabel(course);
   const prices = course.sessions.map((s) => s.price);
   const { workAreas, requirements, exams, comparison, apply, article } = course;
@@ -50,9 +53,9 @@ export default function CourseDetail({ course, query = {}, path, local = null })
   const navSections = [
     { id: "learning-options", label: "Learning options" },
     { id: "overview", label: "Overview" },
-    { id: "content", label: "Course content" },
+    ...(course.modules.length ? [{ id: "content", label: "Course content" }] : []),
     { id: "requirements", label: "Requirements" },
-    { id: "faqs", label: "FAQs" },
+    ...(course.faqs.length ? [{ id: "faqs", label: "FAQs" }] : []),
   ];
 
   const courseLd = {
@@ -62,14 +65,14 @@ export default function CourseDetail({ course, query = {}, path, local = null })
     description: course.summary,
     provider: { "@type": "Organization", name: "ReadTraining" },
     url: abs(path),
-    offers: { "@type": "Offer", priceCurrency: "GBP", price: Math.min(...prices).toFixed(2), availability: "https://schema.org/InStock", url: abs(path) },
+    ...(prices.length ? { offers: { "@type": "Offer", priceCurrency: "GBP", price: Math.min(...prices).toFixed(2), availability: "https://schema.org/InStock", url: abs(path) } } : {}),
     hasCourseInstance: course.sessions.slice(0, 20).map((x) => ({
       "@type": "CourseInstance",
       courseMode: x.mode === "classroom" ? "Onsite" : "Online",
       ...(x.mode === "ondemand" ? {} : { startDate: x.date, endDate: x.endDate }),
       ...(x.mode === "classroom" ? { location: { "@type": "Place", name: x.address, address: { "@type": "PostalAddress", addressLocality: x.city, postalCode: x.postcode, addressCountry: "GB" } } } : {}),
     })),
-    aggregateRating: { "@type": "AggregateRating", ratingValue: course.rating, reviewCount: course.reviewCount },
+    ...(course.rating ? { aggregateRating: { "@type": "AggregateRating", ratingValue: course.rating, reviewCount: course.reviewCount } } : {}),
   };
   const crumbLd = {
     "@context": "https://schema.org",
@@ -113,11 +116,18 @@ export default function CourseDetail({ course, query = {}, path, local = null })
 
                   {local && <VenuesSection city={local.city} venues={local.venues} course={course} />}
 
+                  {course.real && <CourseProviders course={course} />}
+
                   {article ? (
                     <ArticleBlocks blocks={article} part="intro" />
                   ) : (
                     <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
                       <h2 id="rt-cd-overview-h">{course.title}</h2>
+                      {course.video && (
+                        <div className="rt-cd__video">
+                          <iframe src={course.video} title={`Video: ${course.title}`} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
+                        </div>
+                      )}
                       <ClampBlock>
                         <div className="rt-cd__prose">
                           {course.description.map((p) => <p key={p}>{p}</p>)}
@@ -139,9 +149,11 @@ export default function CourseDetail({ course, query = {}, path, local = null })
                   </section>
                   )}
 
+                  {course.modules.length > 0 && (
                   <section className="rt-cd__sec" id="content" aria-labelledby="rt-cd-content-h">
                     <ModulesAccordion modules={course.modules} title="Course content" titleId="rt-cd-content-h" />
                   </section>
+                  )}
 
                   {article ? (
                     <ArticleBlocks blocks={article} part="rest" />
@@ -256,13 +268,26 @@ export default function CourseDetail({ course, query = {}, path, local = null })
                   <ReviewsSection />
                   <TrustBoxes />
 
+                  {course.provider && (course.provider.bookingTerms || course.provider.cancellationPolicy) && (
+                    <section className="rt-cd__sec" id="terms" aria-labelledby="rt-cd-terms-h">
+                      <h2 id="rt-cd-terms-h">{course.provider.name}: booking terms</h2>
+                      <LongBody>
+                        <div className="rt-cd__prose">
+                          {course.provider.cancellationPolicy && <><h3 className="rt-cd__h3">Cancellation policy</h3>{course.provider.cancellationPolicy.split(/\n\s*\n/).map((p) => <p key={p}>{p}</p>)}</>}
+                          {course.provider.bookingTerms && <><h3 className="rt-cd__h3">Booking terms</h3>{course.provider.bookingTerms.split(/\n\s*\n/).map((p) => <p key={p}>{p}</p>)}</>}
+                        </div>
+                      </LongBody>
+                    </section>
+                  )}
+
+                  {course.faqs.length > 0 && (
                   <section className="rt-cd__sec" id="faqs" aria-labelledby="rt-cd-faqs-h">
                     <h2 id="rt-cd-faqs-h">Frequently asked questions</h2>
                     <CourseFaqs faqs={course.faqs} />
                   </section>
+                  )}
 
-
-                  <RelatedCourses courses={related} />
+                  <RelatedCourses courses={related} title={course.real ? (subject ? `More ${subject.toLowerCase()} courses` : "More courses") : undefined} />
                 </div>
               </div>
             </div>

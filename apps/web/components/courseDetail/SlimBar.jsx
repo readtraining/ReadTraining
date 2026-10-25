@@ -70,12 +70,19 @@ export default function SlimBar({ sections }) {
           <strong className="rt-cd__slim-title">{course.title}</strong>
           <div className="rt-cd__slim-meta">
             {course.badge && <span className="rt-pill -accent">{course.badge}</span>}
-            <span className="rt-cd__slim-rate">
-              <strong>{course.rating.toFixed(1)}</strong>
-              <Stars rating={course.rating} size="md" />
-              <a href="#reviews">({formatNumber(course.reviewCount)} ratings)</a>
-            </span>
-            <span className="rt-cd__slim-students">{formatNumber(course.learnerCount)} students enrolled</span>
+            {course.rating ? (
+              <>
+                <span className="rt-cd__slim-rate">
+                  <strong>{course.rating.toFixed(1)}</strong>
+                  <Stars rating={course.rating} size="md" />
+                  <a href="#reviews">({formatNumber(course.reviewCount)} ratings)</a>
+                </span>
+                <span className="rt-cd__slim-students">{formatNumber(course.learnerCount)} students enrolled</span>
+              </>
+            ) : (
+              // no ratings yet: its providers and upcoming dates, as the stats card shows
+              <span className="rt-cd__slim-students">{course.providerCount} {course.providerCount === 1 ? "provider" : "providers"} · {course.upcoming ?? 0} upcoming {course.upcoming === 1 ? "date" : "dates"}</span>
+            )}
           </div>
         </div>
         <nav className="rt-cd__slim-nav" aria-label="On this page">

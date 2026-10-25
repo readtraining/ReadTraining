@@ -294,5 +294,6 @@ export default function DatesDialog() {
     [selectSession, closeDates],
   );
   if (mode === "ondemand" || mode === "inhouse") return null;
+  if (!session) return null;
   return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={mode} selectedId={session.id} onPick={pick} />;
 }

@@ -7,6 +7,8 @@ import { can } from '@readtraining/permissions'
 import { logActivity, logDenied } from '../../lib/activity.mjs'
 import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
 import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
+import { mediaUrl } from '../../lib/media.mjs'
+import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
 
 // One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
@@ -206,11 +208,27 @@ export const organisationsRouter = createTRPCRouter({
   // A provider's public profile (/providers/[slug]). New providers have one straight away; it stays out of search engines
   // until the provider is approved. Rejected and suspended providers have none.
   providerProfile: publicProcedure.input(z.object({ slug: z.string().max(80) })).query(async ({ ctx, input }) => {
-    const [org] = await ctx.db
-      .select({ name: organisations.name, slug: organisations.slug, status: organisations.status, createdAt: organisations.createdAt })
-      .from(organisations)
-      .where(and(eq(organisations.type, 'provider'), eq(organisations.slug, input.slug)))
+    const [org] = await ctx.db.select().from(organisations).where(and(eq(organisations.type, 'provider'), eq(organisations.slug, input.slug)))
     if (!org || org.status === 'rejected' || org.status === 'suspended') throw new TRPCError({ code: 'NOT_FOUND' })
-    return { name: org.name, slug: org.slug, approved: org.status === 'active', since: org.createdAt }
+    const approved = org.status === 'active'
+    return {
+      name: org.name,
+      slug: org.slug,
+      approved,
+      since: org.createdAt,
+      headline: org.headline ?? '',
+      bio: org.bio ?? '',
+      city: org.city ?? '',
+      socials: org.socials,
+      logoUrl: mediaUrl(org.logoPath),
+      bookingTerms: org.bookingTerms ?? '',
+      cancellationPolicy: org.cancellationPolicy ?? '',
+      // only an approved provider's live courses show
+      courses: approved ? await loadProviderCourses(ctx.db, org.id) : [],
+    }
   }),
+
+  // The public directory of providers (/providers): every approved provider, A to Z, with its town, headline, logo, how many
+  // courses it runs and in which categories.
+  providerDirectory: publicProcedure.query(({ ctx }) => loadProviderDirectory(ctx.db)),
 })

@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 import { api } from "@/lib/trpc/react";
 import { useAdminAccess } from "@/lib/adminContext";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { refreshCourses } from "@/app/admin/actions";
 
 // The course editor (components/providerWorkspace/ProviderCourseEditor) is used twice: by a provider for their own course
 // (API provider.courses.*, with the provider's organisation) and by ReadTraining's team for a shared course page (API
@@ -60,6 +61,7 @@ export function useCourseEndpoints(scope, courseId) {
       if (admin) {
         utils.admin.courses.get.invalidate({ courseId });
         utils.admin.courses.list.invalidate();
+        refreshCourses().catch(() => {}); // the public pages show a shared page's changes at once
       } else {
         utils.provider.courses.get.invalidate({ organisationId, courseId });
         utils.provider.courses.list.invalidate({ organisationId });

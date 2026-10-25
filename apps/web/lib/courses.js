@@ -41,9 +41,11 @@ export const toCourseCard = (c) => ({
   duration: c.duration,
   method: c.methods.map(methodName).join(" • "),
   rating: c.rating,
-  ratingCount: c.popularity,
+  ratingCount: c.rating ? c.popularity : 0,
   price: c.price,
   wasPrice: c.wasPrice,
+  badge: c.badge || "",
+  skillSaver: Boolean(c.skillSaver),
 });
 
 // names from the catalogue list (server code awaits loadTaxonomy() first)

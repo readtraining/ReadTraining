@@ -6,6 +6,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
+import { refreshCourses } from "@/app/admin/actions";
 import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -55,6 +56,7 @@ export default function AdminCourse({ id }) {
     try {
       const r = await decide.mutateAsync({ courseId, decision, message });
       refresh();
+      refreshCourses().catch(() => {});
       const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the live version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
       setSaid(`${text}.${r.emailed ? " The provider was emailed." : decision === "resume" ? "" : " The email to the provider could not be sent."}`);
       return "";

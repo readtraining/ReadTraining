@@ -10,9 +10,12 @@ import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
+import { loadListings } from "@/lib/catalogueServer";
+import { toCatalogueCourse } from "@/lib/catalogueData";
 
 // Static metadata on purpose: reading searchParams here would make the server re-render the page (and show any
-// loading UI) on every filter change. Filtering is handled entirely in the browser.
+// loading UI) on every filter change. Filtering is handled entirely in the browser, on every live course (API
+// catalogue.listings, refreshed every minute: lib/catalogueServer.js).
 export const metadata = {
   title: "All courses | ReadTraining",
   description: "Compare accredited training from UK providers. Classroom, live online and on demand.",
@@ -29,7 +32,8 @@ const breadcrumbLd = {
 };
 
 export default async function page() {
-  await loadSiteContent();
+  const [, listings] = await Promise.all([loadSiteContent(), loadListings()]);
+  const courses = listings.map(toCatalogueCourse);
   return (
     <div className="main-content rt-home rt-cat-page">
       <a className="rt-skip" href="#rt-res-list">Skip to courses</a>
@@ -39,7 +43,7 @@ export default async function page() {
       <div className="content-wrapper js-content-wrapper">
         <main id="rt-cat-main">
           <Suspense fallback={<CourseListSkeleton />}>
-            <CourseCatalogue />
+            <CourseCatalogue courses={courses} />
           </Suspense>
         </main>
         <FaqSection eyebrow={courseFaqEyebrow} title={courseFaqTitle} items={faqItems("courses", courseFaq)} idPrefix="cfaq" />
