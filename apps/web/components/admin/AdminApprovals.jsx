@@ -53,7 +53,7 @@ export default function AdminApprovals() {
   const now = Date.now();
   const items = query.data.map((a) => ({ ...a, key: `${a.type}-${a.courseId}-${a.at}` }));
   const shown = items.filter((a) => type === "all" || a.type === type);
-  const pickable = tab === "waiting" ? shown.filter((a) => a.type === "new" && a.providerStatus === "active") : [];
+  const pickable = tab === "waiting" ? shown.filter((a) => a.type === "new" && a.providerStatus === "active" && !a.own) : [];
   const allPicked = pickable.length > 0 && pickable.every((a) => picked.includes(a.key));
   const refresh = () => {
     utils.admin.courses.queue.invalidate();
@@ -79,7 +79,8 @@ export default function AdminApprovals() {
     const failed = [];
     for (const it of list) {
       try {
-        await decide.mutateAsync({ courseId: it.courseId, decision, message });
+        // a change is decided on the version listed (sent at it.at); one the provider changed since is refused
+        await decide.mutateAsync({ courseId: it.courseId, decision, message, seen: it.type === "change" ? it.at : undefined });
         done += 1;
       } catch (e) {
         failed.push(`${it.title}: ${errorsFrom(e).general}`);
@@ -142,7 +143,7 @@ export default function AdminApprovals() {
             const providerReady = a.providerStatus === "active";
             return (
               <li key={a.key} className={`rt-acc__card rt-adm-item${picked.includes(a.key) ? " is-picked" : ""}`}>
-                {canDecide && tab === "waiting" && a.type === "new" && providerReady && (
+                {canDecide && tab === "waiting" && a.type === "new" && providerReady && !a.own && (
                   <label className="rt-adm-item__pick" htmlFor={`rt-adm-p-${a.key}`}>
                     <input id={`rt-adm-p-${a.key}`} type="checkbox" checked={picked.includes(a.key)} onChange={() => toggle(a.key)} />
                     <span className="rt-sr">Select {a.title}</span>
@@ -152,6 +153,7 @@ export default function AdminApprovals() {
                   <div className="rt-adm-item__top">
                     <AdminTag>{copy.types[a.type]}</AdminTag>
                     {tab === "decided" && a.outcome && <AdminStatus kind="decision" status={a.outcome}>{copy.outcomes[a.outcome]}</AdminStatus>}
+                    {tab === "waiting" && a.own && <AdminTag>{copy.ownQueue}</AdminTag>}
                     <span className="rt-adm-item__when">{tab === "waiting" ? "Sent" : "Decided"} {ago(at, now).replace(/^Just/, "just")}</span>
                     {tab === "waiting" && <AdminDue due={at + copy.dueDays * DAY} now={now} />}
                   </div>
@@ -159,16 +161,17 @@ export default function AdminApprovals() {
                   <p className="rt-acc__note">{[a.provider, methodName(a.method), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
                   {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive}</p>}
                   {a.note && <p className="rt-adm-item__reason"><strong>Note to the provider:</strong> {a.note}</p>}
+                  {canDecide && tab === "waiting" && a.own && <p className="rt-adm-item__reason">{a.soleApprover ? copy.ownQueueSole : copy.ownBlocked}</p>}
                 </div>
                 <div className="rt-adm-item__actions">
                   <Link href={`/admin/catalogue/${a.courseId}`} className="button -sm -outline-purple-1 text-purple-1">{copy.review}</Link>
-                  {canDecide && tab === "waiting" && a.type === "new" && (
+                  {canDecide && tab === "waiting" && a.type === "new" && !a.own && (
                     <>
                       {providerReady && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => run([a], "approve")}>{copy.approve}</button>}
                       <button type="button" className="rt-cd__link" disabled={busy} onClick={() => open(a, "changes")}>{copy.requestChanges}</button>
                     </>
                   )}
-                  {canDecide && tab === "waiting" && a.type === "change" && (
+                  {canDecide && tab === "waiting" && a.type === "change" && !a.own && (
                     <>
                       <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => run([a], "approveChange")}>{copy.approveChange}</button>
                       <button type="button" className="rt-cd__link rt-adm-danger" disabled={busy} onClick={() => open(a, "rejectChange")}>{copy.rejectChange}</button>

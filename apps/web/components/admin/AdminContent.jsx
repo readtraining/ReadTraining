@@ -221,12 +221,15 @@ function TrustForm({ value, canEdit }) {
   );
 }
 
+// real course numbers start at 1000: numbers saved before the sample courses were removed are left out
+const realIds = (ids) => (ids || []).filter((id) => Number(id) >= 1000);
+
 // ---- featured courses ----------------------------------------------------------------------------------------------------
 function FeaturedForm({ value, canEdit }) {
   const save = useSave("featured");
   const options = api.admin.courses.options.useQuery();
   // the built-in tabs have no courses picked (the site shows each tab's most popular): their slots start empty
-  const [groups, setGroups] = useState(() => value.groups.map((g) => ({ name: g.name, courses: Array.from({ length: MAX_PER_TAB }, (_, i) => (g.courses?.[i] ? String(g.courses[i]) : "")) })));
+  const [groups, setGroups] = useState(() => value.groups.map((g) => ({ name: g.name, courses: Array.from({ length: MAX_PER_TAB }, (_, i) => (realIds(g.courses)[i] ? String(realIds(g.courses)[i]) : "")) })));
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);

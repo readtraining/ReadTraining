@@ -289,21 +289,25 @@ export function VenuesTab({ say }) {
 }
 
 function VenueSheet({ open, venue, onClose, onSaved }) {
+  return (
+    <Sheet open={open} onClose={onClose} title={venue ? "Edit venue" : "Add venue"} closeLabel="Close">
+      {open && <VenueForm venue={venue} onSaved={onSaved} />}
+    </Sheet>
+  );
+}
+
+// A venue's fields and its Save, checked here as the API checks them. `venue` to edit one (null for a new one); onSaved(result,
+// isNew) with the API's { id, located }. `inline`: inside another form (Create cohort), so it isn't a <form> of its own: Save is a
+// plain button and Enter in a field saves the venue, not the outer form; `idPrefix` keeps its ids apart; onCancel shows Cancel.
+export function VenueForm({ venue = null, onSaved, onCancel, inline = false, idPrefix = "rt-set-v" }) {
   const { organisationId } = useProviderAccess();
   const save = api.provider.venues.save.useMutation();
-  const blank = { name: "", street: "", city: "", postcode: "" };
-  const [f, setF] = useState(blank);
+  const [f, setF] = useState(() => (venue ? { name: venue.name, street: venue.street, city: venue.city, postcode: venue.postcode || "" } : { name: "", street: "", city: "", postcode: "" }));
   const [errors, setErrors] = useState({});
   const ref = useRef(null);
-  React.useEffect(() => {
-    if (open) {
-      setF(venue ? { name: venue.name, street: venue.street, city: venue.city, postcode: venue.postcode || "" } : blank);
-      setErrors({});
-    }
-  }, [open, venue]); // eslint-disable-line react-hooks/exhaustive-deps -- blank is a constant
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const submit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     const err = {};
     if (f.name.trim().length < 2) err.name = "Enter the venue name.";
     if (f.street.trim().length < 3) err.street = "Enter the street address.";
@@ -316,26 +320,35 @@ function VenueSheet({ open, venue, onClose, onSaved }) {
       { onSuccess: (r) => onSaved(r, !venue), onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general }); } },
     );
   };
-  return (
-    <Sheet open={open} onClose={onClose} title={venue ? "Edit venue" : "Add venue"} closeLabel="Close">
-      <form className="rt-q__form" noValidate onSubmit={submit} ref={ref}>
-        <Field id="rt-set-vn" label="Venue name" error={errors.name}>
-          <input {...aria("rt-set-vn", errors.name)} maxLength={100} autoComplete="organization" placeholder="For example: Northfield Training Centre" value={f.name} onChange={set("name")} />
+  // inside another form, Enter in a field saves the venue instead of sending the outer form
+  const onKeyDown = inline ? (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); submit(); } } : undefined;
+  const id = (k) => `${idPrefix}${k}`;
+  const body = (
+    <>
+      <Field id={id("n")} label="Venue name" error={errors.name}>
+        <input {...aria(id("n"), errors.name)} maxLength={100} autoComplete="organization" placeholder="For example: Northfield Training Centre" value={f.name} onChange={set("name")} />
+      </Field>
+      <Field id={id("s")} label="Street address" error={errors.street}>
+        <input {...aria(id("s"), errors.street)} maxLength={160} autoComplete="street-address" value={f.street} onChange={set("street")} />
+      </Field>
+      <div className="rt-pws-course-grid2">
+        <Field id={id("c")} label="Town or city" error={errors.city}>
+          <input {...aria(id("c"), errors.city)} maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} />
         </Field>
-        <Field id="rt-set-vs" label="Street address" error={errors.street}>
-          <input {...aria("rt-set-vs", errors.street)} maxLength={160} autoComplete="street-address" value={f.street} onChange={set("street")} />
+        <Field id={id("p")} label="Postcode" hint="Used to place the venue on the map, so learners can search by distance." error={errors.postcode}>
+          <input {...aria(id("p"), errors.postcode, true)} maxLength={8} autoComplete="postal-code" value={f.postcode} onChange={set("postcode")} />
         </Field>
-        <div className="rt-pws-course-grid2">
-          <Field id="rt-set-vc" label="Town or city" error={errors.city}>
-            <input {...aria("rt-set-vc", errors.city)} maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} />
-          </Field>
-          <Field id="rt-set-vp" label="Postcode" hint="Used to place the venue on the map, so learners can search by distance." error={errors.postcode}>
-            <input {...aria("rt-set-vp", errors.postcode, true)} maxLength={8} autoComplete="postal-code" value={f.postcode} onChange={set("postcode")} />
-          </Field>
-        </div>
-        {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
-        <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save venue"}</button>
-      </form>
-    </Sheet>
+      </div>
+      {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
+      <div className={onCancel ? "rt-pws-venueform__actions" : undefined}>
+        <button type={inline ? "button" : "submit"} onClick={inline ? submit : undefined} className={`button -md -purple-1 text-white${onCancel ? "" : " rt-btn-block"}`} disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save venue"}</button>
+        {onCancel && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onCancel} disabled={save.isPending}>Cancel</button>}
+      </div>
+    </>
+  );
+  return inline ? (
+    <div className="rt-q__form rt-pws-venueform" role="group" aria-label="New venue" ref={ref} onKeyDown={onKeyDown}>{body}</div>
+  ) : (
+    <form className="rt-q__form" noValidate onSubmit={submit} ref={ref}>{body}</form>
   );
 }

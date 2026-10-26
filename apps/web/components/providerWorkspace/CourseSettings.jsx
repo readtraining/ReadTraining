@@ -11,6 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Choice, Toggle } from "./providerParts";
+import { pagesForSubject } from "@/lib/taxonomy";
 
 // The course editor's self-saving parts: SEO settings, and the gear's course settings (a provider's course, or a shared course
 // page in the admin). Each saves on its own (SEO with its button, the gear as you choose) and reports back through onSaved for the
@@ -139,8 +140,9 @@ export function CourseGear({ course, open, onClose, onSaved }) {
     onClose();
   };
   const busy = update.isPending || pause.isPending || remove.isPending;
-  const pages = shared.data || [];
+  const pages = pagesForSubject(shared.data || [], course); // only pages for this course's subject
   const parentOptions = [{ value: "", label: "None: the course has its own page" }, ...pages.map((p) => ({ value: String(p.id), label: p.title }))];
+  const wrongPage = course.parent && !course.parent.sameSubject;
   if (course.parent && !pages.some((p) => p.id === course.parent.id)) parentOptions.push({ value: String(course.parent.id), label: course.parent.title });
 
   return (
@@ -169,7 +171,8 @@ export function CourseGear({ course, open, onClose, onSaved }) {
           {(pages.length > 0 || course.parent) && (
             <div className="rt-field">
               <label htmlFor="rt-pws-gear-parent">Shared course page</label>
-              <p className="rt-field__hint" id="rt-pws-gear-parent-h">A page on ReadTraining that lists every provider running this course, so learners can compare dates and prices.</p>
+              <p className="rt-field__hint" id="rt-pws-gear-parent-h">A page on ReadTraining that lists every provider running this course, so learners can compare dates and prices. Only pages with this course's subject are offered.</p>
+              {wrongPage && <p className="rt-acc__notice -warn" role="status">“{course.parent.title}” is a page for a different course, so learners looking for this course won&apos;t find it there. Choose None to give it its own page.</p>}
               <FieldSelect id="rt-pws-gear-parent" label="Shared course page" value={course.parent ? String(course.parent.id) : ""} onChange={(v) => change({ parentId: v ? Number(v) : null }, v ? "Listed on the shared course page" : "The course now has its own page")} options={parentOptions} disabled={!edit || busy} describedBy="rt-pws-gear-parent-h" />
             </div>
           )}

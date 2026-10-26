@@ -40,7 +40,7 @@ const VIDEO_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
 const STATUS_NOTES = {
   draft: "This course is a draft. Only your team can see it.",
-  pending: "We're checking this course. You can still make changes.",
+  pending: "We're checking this course. If you change anything now, it comes back to you as a draft and you send it for approval again.",
   changes: "Our team has asked for changes. Make them, then send the course for approval again.",
   live: "This course is live. Changes to its wording are checked by our team before learners see them; prices, dates and settings change straight away.",
   paused: "This course is paused, so it doesn't show on ReadTraining. Put it back live from the course settings (the gear).",
@@ -82,6 +82,24 @@ function sectionOk(d, course, key) {
   return Boolean(course.seoTitle && course.seoDescription);
 }
 
+// What is still needed before the course can be sent for approval (or a shared page published): the same rules the API checks
+// (provider/courses.mts `missing`), worked out from the draft so typing an item ticks it off at once. Each item names the
+// section that holds it, so the list can take the provider straight there.
+function stillNeeded(d, course) {
+  const out = [];
+  const add = (section, text) => out.push({ section, text });
+  if (!d.summary.trim()) add("landing", "a short description");
+  if (!d.description.trim()) add("landing", "a description");
+  if (!d.category || !d.subcategory) add("landing", "a category and sub-category");
+  if (!d.level) add("landing", "a level");
+  if (!course.images.length) add("landing", "at least one picture");
+  if (d.outcomes.length < 4) add("info", `at least 4 things learners will learn (${d.outcomes.length} so far)`);
+  if (!d.units.length) add("syllabus", "at least one syllabus unit");
+  if (course.kind === "provider" && !d.method) add("mode", "how it is taught");
+  if (course.kind === "provider" && d.method === "self-paced" && d.price === "") add("pricing", "a price");
+  return out;
+}
+
 // What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together).
 function changes(draft, base, access) {
   const out = {};
@@ -113,6 +131,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState(null);
   const [said, setSaid] = useState("");
+  const [showNeed, setShowNeed] = useState(false); // "Send for approval" was pressed while something was missing
+  const [submitError, setSubmitError] = useState("");
+  // sent (or published) just now: the button gives way at once, without waiting for the course to load again
+  const [sent, setSent] = useState(false);
+  const needRef = useRef(null);
   const [gear, setGear] = useState(false);
   const [preview, setPreview] = useState(false);
   const formRef = useRef(null);
@@ -138,6 +161,9 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     }
   }, [course]);
 
+  // the course as loaded again has its new status: show that
+  useEffect(() => setSent(false), [course?.status]);
+
   const dirty = Boolean(draft && base && !same(draft, base));
   useEffect(() => {
     if (!dirty) return;
@@ -153,9 +179,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!course || !draft) return <Loading rows={3} />;
 
-  const canSubmit = access.full && (ep.admin ? course.status !== "live" : course.status === "draft" || course.status === "changes");
+  const status = sent ? (ep.admin ? "live" : "pending") : course.status;
+  const canSubmit = access.full && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
   const isLive = course.status === "live" || course.status === "paused";
   const ticks = sections.map((x) => ({ ...x, ok: sectionOk(draft, course, x.key) }));
+  const needed = stillNeeded(draft, course);
   const refresh = ep.refresh;
 
   // checks what the API would refuse, so the provider is shown the field, then saves what changed
@@ -183,7 +211,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       setDraft(clean);
       setBase(clean);
       refresh();
-      const message = r.pendingChange ? "Saved. Your changes go live once our team has checked them." : ep.admin && course.status === "live" ? "Saved. The page shows the changes now." : "Course saved.";
+      const message = r.pendingChange ? "Saved. Your changes go live once our team has checked them." : r.backToDraft ? "Saved. The course is back with you as a draft: send it for approval again when you're ready." : ep.admin && course.status === "live" ? "Saved. The page shows the changes now." : "Course saved.";
       setSaid(message);
       setToast({ message });
       return true;
@@ -196,17 +224,34 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       return false;
     }
   };
-  // send for approval (a provider's course) or publish (a shared page), saving first if needed
+  // send for approval (a provider's course) or publish (a shared page), saving first if needed. Nothing is sent while something
+  // required is missing (or the provider isn't approved yet): the box under the button says what to do, and gets the focus.
   const submit = async () => {
+    setSubmitError("");
+    if (needed.length || ep.waiting) {
+      setShowNeed(true);
+      requestAnimationFrame(() => needRef.current?.focus());
+      return;
+    }
     if (dirty && !(await save())) return;
     try {
       if (ep.admin) await ep.setStatus("live");
       else await ep.submit();
+      setSent(true);
       refresh();
       setToast({ message: ep.admin ? "Published. The page is live and providers can list their courses on it." : "Sent for approval. We'll email you within 2 working days." });
     } catch (error) {
-      setSaid(errorsFrom(error).general);
-      navRef.current?.focus();
+      // already sent (from another tab, or before this page caught up): nothing went wrong, so say so and show it
+      if (!ep.admin && error?.data?.code === "CONFLICT" && /already waiting/i.test(error.message)) {
+        setSent(true);
+        refresh();
+        setToast({ message: "This course is already waiting for approval. We'll email you within 2 working days." });
+        return;
+      }
+      const message = errorsFrom(error).general || "We couldn't send it. Check your connection, then try again.";
+      setSubmitError(message);
+      setSaid(message);
+      requestAnimationFrame(() => needRef.current?.focus());
     }
   };
   const withdraw = async () => {
@@ -233,12 +278,12 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       <section className="rt-acc__card rt-adm-hero" aria-label="Course">
         <div className="rt-pws-course-herotext">
           <div className="rt-adm-item__top">
-            <Pill tone={COURSE_TONE[course.status]}>{pw.courseStatuses[course.status]}</Pill>
+            <Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill>
             <span className="rt-adm-item__when">{ep.admin ? "Shared course page" : `Performance model: ${pw.models[course.model]?.label}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
           </div>
           <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>
-          <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[course.status]}</p>
-          {course.status === "changes" && course.statusNote && <p className="rt-adm-item__block"><b>What to change:</b> {course.statusNote}</p>}
+          <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>
+          {status === "changes" && course.statusNote && <p className="rt-adm-item__block"><b>What to change:</b> {course.statusNote}</p>}
           {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
           {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-adm-item__block"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
           {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-adm-item__block"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
@@ -275,10 +320,29 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           </ol>
           {canSubmit ? (
             <>
-              <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={busy} aria-busy={ep.submitting || undefined}>{ep.admin ? (ep.submitting ? "Publishing…" : "Publish") : ep.submitting ? "Sending…" : "Send for approval"}</button>
-              {course.missing.length > 0 && <p className="rt-acc__note rt-pws-ce__need">Still needed: {course.missing.join("; ")}.</p>}
+              <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={busy} aria-describedby={ep.waiting || needed.length ? "rt-pws-ce-need" : undefined} aria-busy={ep.submitting || undefined}>{ep.admin ? (ep.submitting ? "Publishing…" : "Publish") : ep.submitting ? "Sending…" : "Send for approval"}</button>
+              {ep.waiting ? (
+                <div className={`rt-acc__notice -warn rt-pws-ce__need${showNeed ? " is-pressed" : ""}`} id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role={showNeed ? "alert" : undefined}>
+                  <b>Your provider account is waiting for approval</b>
+                  <p>You can build this course now. Once our team approves your account, you can send it for approval.</p>
+                </div>
+              ) : needed.length > 0 ? (
+                <div className={`rt-acc__notice -warn rt-pws-ce__need${showNeed ? " is-pressed" : ""}`} id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role={showNeed ? "alert" : undefined}>
+                  <b>{ep.admin ? "Before you can publish this page, add:" : "Before you can send it for approval, add:"}</b>
+                  <ul>
+                    {needed.map((n) => (
+                      <li key={n.text}>
+                        <button type="button" className="rt-cd__link" onClick={() => changeTab(n.section)}>{n.text.charAt(0).toUpperCase() + n.text.slice(1)}</button>
+                        <small>{sections.find((x) => x.key === n.section)?.label}</small>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : submitError ? (
+                <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>
+              ) : null}
             </>
-          ) : <p className="rt-pws-ce__status"><Pill tone={COURSE_TONE[course.status]}>{pw.courseStatuses[course.status]}</Pill></p>}
+          ) : <p className="rt-pws-ce__status"><Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill></p>}
         </nav>
 
         <div className="rt-pws-ce__main" ref={formRef}>

@@ -140,7 +140,7 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
            (select slug from public.topics where id = c.topic_id) topic
     from public.courses c
-    where ${id === null ? sql`c.slug = ${slug}` : sql`c.id = ${id}`} and c.status = 'live'
+    where ${id === null ? sql`c.slug = ${slug}` : sql`c.id = ${id} and c.is_public`} and c.status = 'live'
       and (c.kind = 'shared' or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.status = 'active'))`)
   if (!c) return null
   const [units, exams, faqs, images] = await Promise.all([

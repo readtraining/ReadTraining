@@ -36,7 +36,7 @@ function DateRow({ s, selected, onSelect, classroom }) {
     <li className={`rt-dd__date${selected ? " is-selected" : ""}`}>
       <div className="rt-dd__date-main">
         <strong>{whenLabel(s)}</strong>
-        <span>{s.mode === "ondemand" ? `Online, provided by ${s.provider}` : `${s.time}, provided by ${s.provider}`}</span>
+        <span>{s.mode === "ondemand" ? "Online" : s.time}</span>
       </div>
       <div className="rt-dd__date-price">{formatPrice(s.price)}</div>
       <button type="button" className={selected ? "button -sm -purple-1 text-white" : "button -sm -outline-purple-1 text-purple-1"} aria-pressed={selected} onClick={() => onSelect(s.id)}>

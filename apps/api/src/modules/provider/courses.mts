@@ -127,9 +127,27 @@ export async function resolveCatalogue(db: Writer, input: { category?: string; s
   return out
 }
 
-/** A free web address for a course title. */
+// A provider's course on a shared course page is the same course as the page, so their subjects must match: the same sub-category,
+// and the same topic when both have one. (A web development course can't be listed on the first aid page.)
+type Subject = { subcategoryId: string | null; topicId: string | null }
+export const sameSubject = (page: Subject, course: Subject) =>
+  page.subcategoryId !== null && page.subcategoryId === course.subcategoryId && (!page.topicId || !course.topicId || page.topicId === course.topicId)
+const OTHER_SUBJECT = (title: string) => `“${title}” is a page for a different course. A course can only go on a shared course page with the same subject, so choose a page that matches, or none.`
+
+// A live shared course page a provider may list a course on, with its subject.
+async function livePage(db: Writer, id: number) {
+  const [p] = await db
+    .select({ id: courses.id, title: courses.title, subcategoryId: courses.subcategoryId, topicId: courses.topicId })
+    .from(courses)
+    .where(and(eq(courses.id, id), eq(courses.kind, 'shared'), eq(courses.status, 'live')))
+  if (!p) throw bad('Choose a course page from the list.', 'parentId')
+  return p
+}
+
+/** A free web address for a course title. Never only digits: /course/1000 means course number 1000. */
 export async function courseSlug(db: Writer, title: string) {
-  const base = slugify(title, 'course')
+  const words = slugify(title, 'course')
+  const base = /^\d+$/.test(words) ? `course-${words}` : words
   const taken = await db.select({ slug: courses.slug }).from(courses).where(or(eq(courses.slug, base), like(courses.slug, `${base}-%`)))
   return freeSlug(base, taken.map((t) => t.slug))
 }
@@ -193,7 +211,7 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     db.select().from(courseFaqs).where(eq(courseFaqs.courseId, course.id)).orderBy(asc(courseFaqs.position)),
     db.select().from(courseImages).where(eq(courseImages.courseId, course.id)).orderBy(asc(courseImages.position)),
     db.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending'))),
-    course.parentId ? db.select({ id: courses.id, title: courses.title, slug: courses.slug }).from(courses).where(eq(courses.id, course.parentId)) : Promise.resolve([]),
+    course.parentId ? db.select({ id: courses.id, title: courses.title, slug: courses.slug, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, course.parentId)) : Promise.resolve([]),
     db.execute<{ category: string | null; subcategory: string | null; topic: string | null }>(sql`
       select (select slug from public.categories where id = ${course.categoryId}) category,
              (select slug from public.subcategories where id = ${course.subcategoryId}) subcategory,
@@ -219,7 +237,7 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     exams: exams.map((e) => ({ unit: e.unit, passMark: e.passMark ?? '', duration: e.duration ?? '' })),
     faqs: faqs.map((f) => ({ question: f.question, answer: f.answer })),
     images: images.map((i) => ({ id: i.id, url: mediaUrl(i.path), alt: i.alt ?? '' })),
-    parent: parent ?? null,
+    parent: parent ? { id: parent.id, title: parent.title, slug: parent.slug, sameSubject: sameSubject(parent, course) } : null,
     pendingChanges: revision ? { content: revision.content, since: revision.submittedAt } : null,
     lastChange: last ?? null,
     upcomingCohorts: dates?.upcoming ?? 0,
@@ -285,6 +303,15 @@ export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog) 
 const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, courseId: number, metadata: Record<string, unknown> = {}) =>
   logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId, action, targetType: 'course', targetId: String(courseId), metadata, ip: ctx.ip })
 
+// A provider's change to a course that is waiting for review takes it out of review (back to a draft, to be sent again), so our
+// team never approves a version they haven't seen. Returns whether it did.
+async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, course: { id: number; status: string }) {
+  if (course.status !== 'pending') return false
+  await tx.update(courses).set({ status: 'draft', updatedAt: new Date() }).where(eq(courses.id, course.id))
+  await log(tx, ctx, organisationId, 'course.review_withdrawn', course.id)
+  return true
+}
+
 export const providerCoursesRouter = createTRPCRouter({
   // Every course of this provider, newest first, with what the course list shows.
   list: orgProcedure('provider.courses.view').query(async ({ ctx, input }) => {
@@ -306,13 +333,25 @@ export const providerCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => courseDetail(ctx.db, await ownCourse(ctx.db, input.organisationId, input.courseId))),
 
-  // The shared course pages a provider can put a course under (live ones), A to Z, optionally searched.
+  // The shared course pages a provider can put a course under (live ones), A to Z, optionally searched, each with its subject
+  // (sub-category and topic slugs): only a page with the course's subject can be chosen (sameSubject).
   sharedPages: orgProcedure('provider.courses.view')
     .input(z.object({ q: z.string().trim().max(80).optional() }))
     .query(async ({ ctx, input }) => {
       const where = [eq(courses.kind, 'shared'), eq(courses.status, 'live')]
       if (input.q) where.push(sql`${courses.title} ilike ${`%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`}`)
-      return ctx.db.select({ id: courses.id, title: courses.title, slug: courses.slug }).from(courses).where(and(...where)).orderBy(asc(courses.title)).limit(200)
+      return ctx.db
+        .select({
+          id: courses.id,
+          title: courses.title,
+          slug: courses.slug,
+          subcategory: sql<string | null>`(select s.slug from public.subcategories s where s.id = ${courses.subcategoryId})`,
+          topic: sql<string | null>`(select t.slug from public.topics t where t.id = ${courses.topicId})`,
+        })
+        .from(courses)
+        .where(and(...where))
+        .orderBy(asc(courses.title))
+        .limit(200)
     }),
 
   // The new-course wizard: a title, the catalogue place, how it is taught, the model, Skill Saver, and optionally the shared page
@@ -333,8 +372,8 @@ export const providerCoursesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
       if (input.parentId) {
-        const [p] = await ctx.db.select({ id: courses.id }).from(courses).where(and(eq(courses.id, input.parentId), eq(courses.kind, 'shared'), eq(courses.status, 'live')))
-        if (!p) throw bad('Choose a course page from the list.', 'parentId')
+        const p = await livePage(ctx.db, input.parentId)
+        if (!sameSubject(p, { subcategoryId: resolved.subcategoryId ?? null, topicId: resolved.topicId ?? null })) throw bad(OTHER_SUBJECT(p.title), 'parentId')
       }
       const slug = await courseSlug(ctx.db, input.title)
       return ctx.db.transaction(async (tx) => {
@@ -375,23 +414,31 @@ export const providerCoursesRouter = createTRPCRouter({
       const reviewed = Object.fromEntries(keys.filter((k) => (REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
       const direct = Object.fromEntries(keys.filter((k) => !(REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
       // check the catalogue choices now, so a pending change never holds an impossible one
-      if (Object.keys(reviewed).length) await resolveCatalogue(ctx.db, { category: reviewed.category as string | undefined, subcategory: reviewed.subcategory as string | undefined, topic: reviewed.topic as string | null | undefined, level: reviewed.level as string | undefined })
+      const subject = Object.keys(reviewed).length ? await resolveCatalogue(ctx.db, { category: reviewed.category as string | undefined, subcategory: reviewed.subcategory as string | undefined, topic: reviewed.topic as string | null | undefined, level: reviewed.level as string | undefined }) : {}
+      const subjectAfter = { subcategoryId: subject.subcategoryId ?? course.subcategoryId, topicId: subject.topicId !== undefined ? subject.topicId : course.topicId }
+      const subjectChanged = subjectAfter.subcategoryId !== course.subcategoryId || subjectAfter.topicId !== course.topicId
       const directSet: Partial<typeof courses.$inferInsert> = {}
       if (direct.method !== undefined) directSet.method = (await resolveCatalogue(ctx.db, { method: direct.method as string })).method
+      // only a self-paced course has a price of its own (classroom and live online are priced on their dates)
+      if (directSet.method !== undefined && directSet.method !== 'self-paced') directSet.pricePence = null
       for (const k of ['seoTitle', 'seoDescription'] as const) if (direct[k] !== undefined) directSet[k] = (direct[k] as string | null) || null
       if (direct.seoKeywords !== undefined) directSet.seoKeywords = [...new Set((direct.seoKeywords as string[]).map((w) => w.toLowerCase()))]
       for (const k of ['pricePence', 'skillSaver', 'isPublic', 'listed', 'model'] as const) if (direct[k] !== undefined) (directSet as Record<string, unknown>)[k] = direct[k]
       if (direct.parentId !== undefined) {
         if (direct.parentId !== null) {
-          const [p] = await ctx.db.select({ id: courses.id }).from(courses).where(and(eq(courses.id, direct.parentId as number), eq(courses.kind, 'shared'), eq(courses.status, 'live')))
-          if (!p) throw bad('Choose a course page from the list.', 'parentId')
+          const p = await livePage(ctx.db, direct.parentId as number)
+          if (!sameSubject(p, subjectAfter)) throw bad(OTHER_SUBJECT(p.title), 'parentId')
         }
         directSet.parentId = direct.parentId as number | null
+      } else if (course.parentId && subjectChanged) {
+        const [p] = await ctx.db.select({ title: courses.title, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, course.parentId))
+        if (p && !sameSubject(p, subjectAfter)) throw bad(`This course is on the shared course page “${p.title}”, so its subject has to stay the same as that page's. To change the subject, first set the shared course page to None in the course settings.`, 'subcategory')
       }
 
       const isLive = course.status === 'live' || course.status === 'paused'
       return ctx.db.transaction(async (tx) => {
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
+        const backToDraft = await leaveReview(tx, ctx, organisationId, course)
         let pendingChange = false
         if (Object.keys(reviewed).length) {
           if (isLive) {
@@ -402,7 +449,7 @@ export const providerCoursesRouter = createTRPCRouter({
           } else await applyContent(tx, courseId, reviewed)
         }
         await log(tx, ctx, organisationId, pendingChange ? 'course.change_submitted' : 'course.updated', courseId, { fields: keys })
-        return { ok: true, pendingChange }
+        return { ok: true, pendingChange, backToDraft }
       })
     }),
 
@@ -428,20 +475,29 @@ export const providerCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: line(140, 'image description').optional() }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      return addCourseImage(ctx.db, course, input.path, input.alt, (tx) => log(tx, ctx, input.organisationId, 'course.image_added', course.id))
+      return addCourseImage(ctx.db, course, input.path, input.alt, async (tx) => {
+        await leaveReview(tx, ctx, input.organisationId, course)
+        await log(tx, ctx, input.organisationId, 'course.image_added', course.id)
+      })
     }),
 
   setImages: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: line(140, 'image description') })).max(10) }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      return setCourseImages(ctx.db, course, input.images, (tx, m) => log(tx, ctx, input.organisationId, 'course.images_changed', course.id, m))
+      return setCourseImages(ctx.db, course, input.images, async (tx, m) => {
+        await leaveReview(tx, ctx, input.organisationId, course)
+        await log(tx, ctx, input.organisationId, 'course.images_changed', course.id, m)
+      })
     }),
 
-  // Send a draft (or a course an admin asked to change) for approval, once nothing required is missing.
+  // Send a draft (or a course an admin asked to change) for approval, once nothing required is missing. Only an approved provider
+  // sends: one still waiting for our approval can build its courses and dates, and sends them once it is approved.
   submit: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id }))
     .mutation(async ({ ctx, input }) => {
+      const org = ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)
+      if (org?.organisationStatus !== 'active') throw new TRPCError({ code: 'FORBIDDEN', message: 'Your provider account is waiting for our team’s approval. You can send courses for approval once it is approved.' })
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       if (course.status !== 'draft' && course.status !== 'changes') throw new TRPCError({ code: 'CONFLICT', message: course.status === 'pending' ? 'This course is already waiting for approval.' : 'This course is already live.' })
       const gaps = await missing(ctx.db, course)

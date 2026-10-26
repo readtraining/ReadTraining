@@ -16,7 +16,7 @@ export const useEndpoints = () => useContext(CourseEndpoints);
 
 export function useCourseEndpoints(scope, courseId) {
   const admin = scope === "admin";
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, status } = useProviderAccess();
   const adminAccess = useAdminAccess();
   const utils = api.useUtils();
   const ready = Boolean(courseId);
@@ -46,6 +46,8 @@ export function useCourseEndpoints(scope, courseId) {
     query: admin ? aGet : pGet,
     // what the person may change: the page wording, everything else, prices
     access: admin ? { page: writer, full: writer, pricing: false } : { full: can("provider.courses.edit"), page: can("provider.courses.editPage"), pricing: can("provider.pricing.edit") },
+    // a provider still waiting for our approval builds its courses but can't send them for approval yet
+    waiting: !admin && status !== "active",
     update: (patch) => (admin ? a.update : p.update).mutateAsync({ ...base, ...patch }),
     updating: p.update.isPending || a.update.isPending,
     submit: () => p.submit.mutateAsync(base),

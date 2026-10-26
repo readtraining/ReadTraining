@@ -19,7 +19,6 @@ import CourseFaqs from "@/components/courseDetail/CourseFaqs";
 import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
-import CourseProviders from "@/components/courseDetail/CourseProviders";
 import { getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
@@ -97,8 +96,6 @@ export default function CourseDetail({ course, query = {}, path }) {
                   <CourseFeatures features={course.features} />
 
                   <LearningSection />
-
-                  <CourseProviders course={course} />
 
                   <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
                     <h2 id="rt-cd-overview-h">{course.title}</h2>
@@ -186,7 +183,7 @@ export default function CourseDetail({ course, query = {}, path }) {
 
                   {course.provider && (course.provider.bookingTerms || course.provider.cancellationPolicy) && (
                     <section className="rt-cd__sec" id="terms" aria-labelledby="rt-cd-terms-h">
-                      <h2 id="rt-cd-terms-h">{course.provider.name}: booking terms</h2>
+                      <h2 id="rt-cd-terms-h">Booking and cancellation terms</h2>
                       <LongBody>
                         <div className="rt-cd__prose">
                           {course.provider.cancellationPolicy && <><h3 className="rt-cd__h3">Cancellation policy</h3>{course.provider.cancellationPolicy.split(/\n\s*\n/).map((p) => <p key={p}>{p}</p>)}</>}

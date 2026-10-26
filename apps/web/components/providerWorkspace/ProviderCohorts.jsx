@@ -16,6 +16,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
+import { VenueForm } from "./SettingsProfile";
 
 // Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
@@ -46,7 +47,8 @@ const monthShort = (iso) => monthShortFmt.format(new Date(`${iso}T00:00:00Z`));
 
 const toDate = (iso) => new Date(`${iso}T00:00:00Z`);
 const toIso = (d) => d.toISOString().slice(0, 10);
-export const todayIso = () => new Date().toISOString().slice(0, 10);
+// today in the UK (UTC would still be yesterday for an hour after midnight in summer)
+export const todayIso = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
 export const addDays = (iso, n) => {
   const d = toDate(iso);
   d.setUTCDate(d.getUTCDate() + n);
@@ -419,6 +421,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
+  // a venue being added from here (it saves as a normal venue, and the date picks it)
+  const [addingVenue, setAddingVenue] = useState(false);
+  const [venueAdded, setVenueAdded] = useState("");
   const [view, setView] = useState(() => monthStart(todayIso()));
   const [studyMode, setStudyMode] = useState("classroom");
   const on = { enabled: open && Boolean(organisationId) };
@@ -445,6 +450,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       setStudyMode(c?.method === "live-online" || (!c && mode === "live-online") ? "live-online" : "classroom");
     }
     setErrors({});
+    setAddingVenue(false);
+    setVenueAdded("");
   }, [open, Boolean(coursesQ.data)]); // eslint-disable-line react-hooks/exhaustive-deps -- fill once per opening
 
   const ready = Boolean(open && f && venuesQ.data);
@@ -452,6 +459,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const method = cohort ? cohort.method : course?.method || studyMode;
   const today = todayIso();
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  const venueSaved = async (r) => {
+    await venuesQ.refetch();
+    set({ venueId: r.id });
+    setAddingVenue(false);
+    setVenueAdded(r.located ? "Venue added and chosen for these dates." : "Venue added and chosen. We couldn't find its postcode on the map, so check it in Settings › Venues.");
+    setErrors((e) => ({ ...e, venueId: undefined }));
+  };
+  const venueForm = <VenueForm inline idPrefix="rt-cf-v" onSaved={venueSaved} onCancel={() => setAddingVenue(false)} />;
 
   // a day on the calendar: add a slot (copying the latest slot's times and length) or take it away
   const toggleDay = (iso) => {
@@ -544,6 +559,13 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           ) : (
             <p className="rt-acc__note rt-pws-coh__for">For <b>{cohort ? cohort.courseTitle : course?.title}</b> · {methodName(method)}</p>
           )}
+          {/* a classroom date needs a venue: say so first, before any dates are picked */}
+          {method === "classroom" && venues.length === 0 && (
+            <div className="rt-acc__notice -warn rt-pws-coh__novenue" role="status">
+              <p><b>Add a venue first.</b> Classroom dates take place at one of your venues, and you haven't added one yet. Add it here: it is saved to your venues, and these dates use it.</p>
+              {addingVenue ? venueForm : <button type="button" className="button -sm -purple-1 text-white" onClick={() => setAddingVenue(true)}>Add a venue</button>}
+            </div>
+          )}
 
           <div className="rt-pws-coh__dates">
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
@@ -602,7 +624,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   <label htmlFor="rt-cf-venueId">Venue</label>
                   {err("venueId")}
                   <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
-                  <Link href="/provider/settings?tab=venues" className="rt-pws-coh__hintlink">Add or change venues</Link>
+                  {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
+                  {venues.length > 0 && (addingVenue ? venueForm : <button type="button" className="rt-cd__link rt-pws-coh__hintlink" onClick={() => setAddingVenue(true)}>+ Add a new venue</button>)}
                 </div>
               )}
               {method === "live-online" && (

@@ -26,7 +26,8 @@ const DANGER = new Set(["reject", "suspend"]);
 // One provider (API admin.providers.get): its status and the decisions it allows (approve, ask for changes, don't approve,
 // suspend, reinstate; each confirmed in a pop-up, with a message where the provider needs one), why it has its status, its
 // details and team, its commission (its own rate or the platform default; changed with the "fees and commission" switch), and
-// its activity. An admin never decides on a provider account they opened themselves.
+// its activity. An admin doesn't decide on a provider account they opened themselves, unless no other admin can: a Full admin
+// then decides with a reason, recorded as their own request (soleApprover, API lib/soleApprover.mts).
 export default function AdminProvider({ slug }) {
   const me = useAdminAccess();
   const utils = api.useUtils();
@@ -41,8 +42,9 @@ export default function AdminProvider({ slug }) {
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const p = record.data;
   const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));
-  const decisions = p.ownRequest ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
+  const decisions = p.ownRequest && !p.soleApprover ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
   const blockedNote = NEXT[p.status].length && !decisions.length ? (p.ownRequest && NEXT[p.status].some((k) => SWITCH[k] === "approve") ? d.ownRequest : d.noSwitch) : "";
+  const soleNote = p.ownRequest && p.soleApprover && decisions.some((k) => SWITCH[k] === "approve") ? d.ownSole : "";
   const decided = (decision, emailed) => {
     setSaid(d.done[decision]);
     setWarning(emailed ? "" : d.notEmailed);
@@ -68,6 +70,7 @@ export default function AdminProvider({ slug }) {
             <button key={k} type="button" className={PRIMARY.has(k) ? "button -sm -purple-1 text-white" : DANGER.has(k) ? "rt-cd__link rt-adm-danger" : "button -sm -outline-purple-1 text-purple-1"} onClick={() => setDeciding(k)}>{d.actions[k]}</button>
           ))}
           {blockedNote && <p className="rt-acc__notice">{blockedNote}</p>}
+          {soleNote && <p className="rt-acc__notice -warn">{soleNote}</p>}
           {!["rejected", "suspended"].includes(p.status) && <Link href={`/providers/${p.slug}`} className="fb-textlink">{d.publicProfile}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>}
         </div>
       </section>
@@ -168,11 +171,17 @@ function DecisionSheet({ provider, decision, onClose, onDone }) {
   const decide = api.admin.providers.decide.useMutation();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState("");
+  // their own provider account (as the only admin who can decide it): a reason is needed
+  const own = Boolean(decision && provider.ownRequest && SWITCH[decision] === "approve");
   const [general, setGeneral] = useState("");
   const ref = useRef(null);
   const close = () => {
     setMessage("");
     setError("");
+    setReason("");
+    setReasonError("");
     setGeneral("");
     onClose();
   };
@@ -180,19 +189,20 @@ function DecisionSheet({ provider, decision, onClose, onDone }) {
   const submit = async (e) => {
     e.preventDefault();
     setGeneral("");
-    if (sheet.label && !message.trim()) {
-      setError(decision === "changes" ? "Enter what the provider needs to change." : decision === "reject" ? "Enter why the provider is not approved." : "Enter why the provider is suspended.");
-      return focusFirstError(ref.current);
-    }
-    setError("");
+    const msgError = sheet.label && !message.trim() ? (decision === "changes" ? "Enter what the provider needs to change." : decision === "reject" ? "Enter why the provider is not approved." : "Enter why the provider is suspended.") : "";
+    const ownError = own && reason.trim().length < 10 ? A.own.error : "";
+    setError(msgError);
+    setReasonError(ownError);
+    if (msgError || ownError) return focusFirstError(ref.current);
     try {
-      const res = await decide.mutateAsync({ organisationId: provider.id, decision, message: sheet.label ? message.trim() : undefined });
+      const res = await decide.mutateAsync({ organisationId: provider.id, decision, message: sheet.label ? message.trim() : undefined, ownReason: own ? reason.trim() : undefined });
       onDone(decision, res.emailed);
       close();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
-      if (fields.message) {
-        setError(fields.message);
+      if (fields.message || fields.ownReason) {
+        setError(fields.message || "");
+        setReasonError(fields.ownReason || "");
         focusFirstError(ref.current);
       } else setGeneral(g);
     }
@@ -209,6 +219,14 @@ function DecisionSheet({ provider, decision, onClose, onDone }) {
               <small className="rt-field__hint" id="rt-adm-pmsg-hint">{sheet.hint}</small>
               {error && <p className="rt-q__err" id="rt-adm-pmsg-e"><span className="rt-sr">Error: </span>{error}</p>}
               <textarea id="rt-adm-pmsg" rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-pmsg-hint${error ? " rt-adm-pmsg-e" : ""}`} />
+            </div>
+          )}
+          {own && (
+            <div className="rt-field">
+              <label htmlFor="rt-adm-pown">{A.own.label}</label>
+              <small className="rt-field__hint" id="rt-adm-pown-hint">{A.own.hint}</small>
+              {reasonError && <p className="rt-q__err" id="rt-adm-pown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
+              <textarea id="rt-adm-pown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-pown-hint${reasonError ? " rt-adm-pown-e" : ""}`} />
             </div>
           )}
           {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}

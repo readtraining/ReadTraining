@@ -154,13 +154,12 @@ export default function BookingCard() {
             ) : onDemand ? (
               <>
                 <li><Icon name="calendar" /><span>{session.time}</span></li>
-                <li><Icon name="person-3" /><span>{session.provider}</span></li>
                 <li><Icon name="coupon" /><span>All inc</span></li>
               </>
             ) : (
               <>
                 <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}</span></li>
-                <li><Icon name="location" /><span>{session.location}, {session.provider}</span></li>
+                <li><Icon name="location" /><span>{session.location}</span></li>
                 <li><Icon name="coupon" /><span>All inc</span></li>
               </>
             )}

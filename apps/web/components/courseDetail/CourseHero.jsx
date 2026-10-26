@@ -31,11 +31,8 @@ export default function CourseHero({ course }) {
         <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
 
-        {course.provider ? (
-          <p className="rt-cd__providers">Provided by <Link href={`/providers/${course.provider.slug}`} className="rt-cd__link"><strong>{course.provider.name}</strong></Link>{course.parent && <> · also see <Link href={coursePath(course.parent.slug)} className="rt-cd__link">every provider of {course.parent.title}</Link></>}</p>
-        ) : (
-          <p className="rt-cd__providers"><strong>{course.providerCount}</strong> {course.providerCount === 1 ? "course provider" : "course providers"}{course.real && course.upcoming ? <> · <strong>{course.upcoming}</strong> upcoming {course.upcoming === 1 ? "date" : "dates"}</> : null}</p>
-        )}
+        {/* the counts are in the bar under the hero; a provider's course on a shared page links to every date for that course */}
+        {course.parent && <p className="rt-cd__providers"><Link href={coursePath(course.parent.slug)} className="rt-cd__link">See every date for {course.parent.title}</Link></p>}
 
         <div className="rt-cd__hrow">
           {lowest ? (

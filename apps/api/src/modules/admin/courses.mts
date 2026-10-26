@@ -9,6 +9,7 @@ import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { sendEmail } from '../../lib/email.mjs'
+import { OWN_REASON_ERROR, ownReasonOk, soleApprover } from '../../lib/soleApprover.mjs'
 import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
@@ -86,6 +87,21 @@ async function changeView(db: typeof Db, detail: Awaited<ReturnType<typeof cours
   return { since: detail.pendingChanges!.since, fields: fields.map((k) => ({ key: k, now: (detail as Record<string, unknown>)[k] ?? null, proposed: proposed[k] })) }
 }
 
+// Who asked for a decision (so they don't decide on it themselves): for a new course, whoever created it and whoever last sent it;
+// for a change to a live course, everyone who worked on that change (since the course's last decided change).
+async function requesters(db: typeof Db, course: Course): Promise<{ course: Set<string>; change: Set<string> }> {
+  const [sent] = await db.execute<{ actor: string | null }>(sql`
+    select actor_user_id actor from public.activity_log where action = 'course.submitted' and target_type = 'course' and target_id = ${String(course.id)} order by at desc limit 1`)
+  const editors = await db.execute<{ actor: string }>(sql`
+    select distinct actor_user_id actor from public.activity_log
+    where action = 'course.change_submitted' and target_type = 'course' and target_id = ${String(course.id)} and actor_user_id is not null
+      and at > coalesce((select max(decided_at) from public.course_revisions r where r.course_id = ${course.id} and r.status <> 'pending'), 'epoch'::timestamptz)`)
+  return {
+    course: new Set([course.createdBy, sent?.actor].filter((x): x is string => Boolean(x))),
+    change: new Set(editors.map((e) => e.actor)),
+  }
+}
+
 export const adminCoursesRouter = createTRPCRouter({
   // How many are waiting (the menu badge and the dashboard), and how many courses there are in each state.
   counts: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
@@ -104,15 +120,20 @@ export const adminCoursesRouter = createTRPCRouter({
   queue: adminProcedure('admin.panel.open')
     .input(z.object({ tab: z.enum(['waiting', 'changes', 'decided']) }))
     .query(async ({ ctx, input }) => {
-      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; parent: string | null }
+      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; parent: string | null; requester: string | null }
       const base = sql`(select name from public.organisations o where o.id = c.organisation_id) provider, (select status from public.organisations o where o.id = c.organisation_id) provider_status, c.method, (select p.title from public.courses p where p.id = c.parent_id) parent`
       const rows =
         input.tab === 'waiting'
           ? await ctx.db.execute<Row>(sql`
               select * from (
-                select c.id course_id, c.title, 'new' as type, c.submitted_at at, null as note, null as outcome, ${base} from public.courses c where c.status = 'pending'
+                select c.id course_id, c.title, 'new' as type, c.submitted_at at, null as note, null as outcome, ${base},
+                       case when c.created_by = ${ctx.user.id}::uuid or (select l.actor_user_id from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text order by l.at desc limit 1) = ${ctx.user.id}::uuid then ${ctx.user.id}::uuid end requester
+                from public.courses c where c.status = 'pending'
                 union all
-                select c.id, c.title, 'change', r.submitted_at, null, null, ${base} from public.course_revisions r join public.courses c on c.id = r.course_id where r.status = 'pending'
+                select c.id, c.title, 'change', r.submitted_at, null, null, ${base},
+                       case when exists (select 1 from public.activity_log l where l.action = 'course.change_submitted' and l.target_type = 'course' and l.target_id = c.id::text and l.actor_user_id = ${ctx.user.id}::uuid
+                         and l.at > coalesce((select max(x.decided_at) from public.course_revisions x where x.course_id = c.id and x.status <> 'pending'), 'epoch'::timestamptz)) then ${ctx.user.id}::uuid end
+                from public.course_revisions r join public.courses c on c.id = r.course_id where r.status = 'pending'
               ) q order by at asc`)
           : input.tab === 'changes'
             ? await ctx.db.execute<Row>(sql`select c.id course_id, c.title, 'new' as type, c.decided_at at, c.status_note note, 'changes' as outcome, ${base} from public.courses c where c.status = 'changes' and c.kind = 'provider' order by c.decided_at desc nulls last`)
@@ -122,7 +143,9 @@ export const adminCoursesRouter = createTRPCRouter({
                   union all
                   select c.id, c.title, 'change', r.decided_at, r.note, r.status::text, ${base} from public.course_revisions r join public.courses c on c.id = r.course_id where r.status <> 'pending'
                 ) q order by at desc nulls last limit 100`)
-      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, parent: r.parent }))
+      // own: the admin asked for it themselves; soleApprover: they may still decide it, with a reason (lib/soleApprover.mts)
+      const sole = rows.some((r) => r.requester === ctx.user.id) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide'))
+      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
     }),
 
   // Every course, newest change first: shared pages and providers' courses, with search and filters.
@@ -133,7 +156,7 @@ export const adminCoursesRouter = createTRPCRouter({
     const [rows, listed] = await Promise.all([
       ctx.db.execute<{ id: number; title: string; kind: 'shared' | 'provider'; provider_id: string | null; provider: string | null; parent: string | null; from_pence: number | null }>(sql`
         select c.id, c.title, c.kind, c.organisation_id provider_id, o.name provider, (select p.title from public.courses p where p.id = c.parent_id) parent,
-               coalesce(c.price_pence, (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date)) from_pence
+               case when c.method = 'self-paced' then c.price_pence else (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date) end from_pence
         from public.courses c left join public.organisations o on o.id = c.organisation_id
         where c.status = 'live' and (c.kind = 'shared' or o.status = 'active')
         order by c.title, o.name`),
@@ -157,7 +180,7 @@ export const adminCoursesRouter = createTRPCRouter({
                (select name from public.organisations o where o.id = c.organisation_id) provider,
                (select p.title from public.courses p where p.id = c.parent_id) parent,
                (select count(*)::int from public.cohorts k where k.cancelled_at is null and k.ends_on >= current_date and (k.course_id = c.id or k.course_id in (select x.id from public.courses x where x.parent_id = c.id and x.status = 'live'))) upcoming,
-               coalesce(c.price_pence, (select min(k.price_pence) from public.cohorts k where k.cancelled_at is null and k.ends_on >= current_date and (k.course_id = c.id or k.course_id in (select x.id from public.courses x where x.parent_id = c.id and x.status = 'live')))) from_pence,
+               case when c.method = 'self-paced' then c.price_pence else (select min(k.price_pence) from public.cohorts k where k.cancelled_at is null and k.ends_on >= current_date and (k.course_id = c.id or k.course_id in (select x.id from public.courses x where x.parent_id = c.id and x.status = 'live'))) end from_pence,
                (select count(*)::int from public.courses x where x.parent_id = c.id and x.status = 'live') providers,
                exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
         from public.courses c where ${sql.join(where, sql` and `)}
@@ -182,13 +205,25 @@ export const adminCoursesRouter = createTRPCRouter({
                      (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming
               from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} order by o.name`)
           : []
-      return { ...detail, provider: provider ?? null, children, change: await changeView(ctx.db, detail) }
+      const asked = await requesters(ctx.db, course)
+      const ownCourse = asked.course.has(ctx.user.id)
+      const ownChange = Boolean(detail.pendingChanges) && asked.change.has(ctx.user.id)
+      return {
+        ...detail,
+        provider: provider ?? null,
+        children,
+        change: await changeView(ctx.db, detail),
+        // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver
+        ownCourse,
+        ownChange,
+        soleApprover: (ownCourse || ownChange) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide')),
+      }
     }),
 
   // A decision on a provider's course: approve it, ask for changes, approve or turn down a change to a live course, pause a live
   // course or put it back. The person who sent the course or the change can't decide on it.
   decide: adminProcedure('admin.panel.open')
-    .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional() }))
+    .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input, path }) => {
       const rule = DECISIONS[input.decision]
       const course = await findCourse(ctx.db, input.courseId)
@@ -196,11 +231,22 @@ export const adminCoursesRouter = createTRPCRouter({
       const isChange = input.decision === 'approveChange' || input.decision === 'rejectChange'
       const [revision] = isChange ? await ctx.db.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending'))) : []
       const action: AdminAction = 'admin.approvals.decide'
-      const createdBy = isChange ? revision?.submittedBy : course.createdBy
-      if (!can(ctx.actor, action, { createdBy: createdBy ?? undefined })) await refuse(ctx, action, course.organisationId, path)
+      // their own course or change (they created it, sent it, or worked on the change): only as the sole approver, with a reason
+      // (lib/soleApprover.mts)
+      const asked = await requesters(ctx.db, course)
+      const own = (isChange ? asked.change : asked.course).has(ctx.user.id)
+      if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, action)) : !can(ctx.actor, action)) await refuse(ctx, action, course.organisationId, path)
+      // a change is decided on the version the admin saw: one the provider changed since is refused
+      if (isChange && revision && (!input.seen || new Date(input.seen).getTime() !== new Date(revision.submittedAt).getTime())) throw new TRPCError({ code: 'CONFLICT', message: 'The provider changed this since you opened it. Reload the page to see the latest version.' })
+      if (own && !ownReasonOk(input.ownReason)) throw bad(OWN_REASON_ERROR, 'ownReason')
       if (!rule.from.includes(course.status) || (isChange && !revision)) throw new TRPCError({ code: 'CONFLICT', message: 'This course has changed since you opened it. Reload the page to see it.' })
       const message = input.message?.trim() || null
       if (rule.message && !message) throw bad(rule.messageError!, 'message')
+      // a course only goes live complete (the provider can't change it while it waits, but check anyway)
+      if (input.decision === 'approve') {
+        const gaps = await missing(ctx.db, course)
+        if (gaps.length) throw new TRPCError({ code: 'CONFLICT', message: `This course is missing ${gaps.join(', ')}. Ask the provider for changes.` })
+      }
       if (input.decision === 'approve' || input.decision === 'resume') {
         const [o] = await ctx.db.execute<{ status: string }>(sql`select status from public.organisations where id = ${course.organisationId}::uuid`)
         if (o?.status !== 'active') throw new TRPCError({ code: 'CONFLICT', message: 'This provider isn’t approved yet (or is suspended). Decide on the provider first, on the Providers page.' })
@@ -216,7 +262,9 @@ export const adminCoursesRouter = createTRPCRouter({
           await tx.update(courseRevisions).set({ status: 'approved', decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
         }
         if (input.decision === 'rejectChange') await tx.update(courseRevisions).set({ status: 'rejected', note: message, decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
-        await logFor(ctx, course, rule.log, { from: course.status, ...(message ? { message } : {}) })(tx)
+        await logFor(ctx, course, rule.log, { from: course.status, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })(tx)
+        // a decision on their own request gets its own line in the log, so it is never missed
+        if (own) await logFor(ctx, course, 'admin.own_request_decided', { decision: input.decision, reason: input.ownReason!.trim() })(tx)
       })
       const fresh = await findCourse(ctx.db, course.id)
       const emailed = rule.email ? await emailOwner(ctx.db, fresh, rule.email, message) : false

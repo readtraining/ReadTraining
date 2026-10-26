@@ -130,7 +130,6 @@ export function toCourseDetail(page, related = []) {
     inHouse: methods.some((m) => m === "classroom" || m === "live-online"),
     providerCount: providers.size,
     providers: providers.size,
-    offerings: page.offerings,
     provider: page.provider,
     parent: page.parent,
     price: cheapest?.price ?? null,

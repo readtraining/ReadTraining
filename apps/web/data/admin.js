@@ -214,6 +214,7 @@ export const admin = {
       "admin.account_unblocked": "Account unblocked",
       "admin.data_exported": "Downloaded the person's data",
       "admin.provider_approved": "Approved a provider",
+      "admin.own_request_decided": "Decided on their own request (as the only admin who could)",
       "admin.provider_changes_requested": "Asked a provider for changes",
       "admin.provider_rejected": "Didn't approve a provider",
       "admin.provider_suspended": "Suspended a provider",
@@ -236,6 +237,13 @@ export const admin = {
 
   // proposed deadlines (working days), as the plan; the client confirms them
   sla: { provider: 3, refund: 3, dispute: 5 },
+
+  // deciding on your own request as the only admin who can (providers and courses)
+  own: {
+    label: "Why are you deciding on your own request?",
+    hint: "No other admin can approve it. This is recorded in the activity log as your own request.",
+    error: "Say why you are deciding on your own request (at least 10 characters).",
+  },
 
   dashboard: {
     title: "Dashboard",
@@ -284,6 +292,10 @@ export const admin = {
     resume: "Put back live",
     reasonLabel: "Your note (the provider sees it, and it is emailed to them)",
     providerNotActive: "The provider isn't approved yet. Decide on the provider first.",
+    ownBlocked: "You sent this yourself, so another admin must decide on it.",
+    ownSole: "You sent this yourself. No other admin can approve it, so you can decide on it, with a reason. It is recorded in the activity log as your own request.",
+    ownQueue: "Sent by you",
+    ownQueueSole: "You sent this yourself. Open it to decide, with a reason.",
     dueDays: 2,
     empty: { waiting: "Nothing waiting. New courses and changes providers send show here.", changes: "No courses are waiting on their provider.", decided: "Nothing decided yet." },
   },
@@ -316,6 +328,7 @@ export const admin = {
       done: { approve: "Provider approved", changes: "Changes asked for", reject: "Provider not approved", suspend: "Provider suspended", reinstate: "Provider reinstated" },
       notEmailed: "The decision is saved, but the email to the owner couldn't be sent. Contact them another way.",
       ownRequest: "You opened this provider account yourself, so another admin must decide on it.",
+      ownSole: "You opened this provider account yourself. No other admin can approve it, so you can decide on it, with a reason. It is recorded in the activity log as your own request.",
       noSwitch: "Your admin access doesn't include decisions on providers.",
       noteFor: { changes_requested: "Changes asked for", rejected: "Reason not approved", suspended: "Reason suspended" },
       waiting: "The provider has made the changes and sent their account back for review.",
@@ -671,6 +684,7 @@ export const admin = {
       publicPage: "Public page",
       provider: "Provider",
       sharedPage: "Shared page",
+      otherSubject: (page) => `This course's subject doesn't match its shared page, “${page}”, so it is listed as a provider of a different course. Ask the provider to choose None (or a matching page) in the course settings before approving.`,
       children: "Providers' courses on this page",
       childrenNone: "No provider has listed a course on this page yet.",
       change: "Waiting change",

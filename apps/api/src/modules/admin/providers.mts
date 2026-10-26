@@ -8,6 +8,7 @@ import type { AdminAction } from '@readtraining/permissions'
 import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { logActivity } from '../../lib/activity.mjs'
 import { sendEmail } from '../../lib/email.mjs'
+import { OWN_REASON_ERROR, ownReasonOk, soleApprover } from '../../lib/soleApprover.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
 import { bps, defaultCommission, percent } from './commission.mjs'
 import { orderBy, paging, total, window } from '../../lib/paging.mjs'
@@ -133,8 +134,10 @@ export const providersRouter = createTRPCRouter({
         termsAcceptedAt: iso(o.terms_accepted_at),
         termsVersion: o.terms_version,
         appliedAt: iso(o.created_at)!,
-        // an admin never decides on a provider account they opened themselves
+        // an admin doesn't decide on a provider account they opened themselves, unless no other admin can (lib/soleApprover.mts:
+        // a Full admin, with a written reason)
         ownRequest: o.created_by === ctx.user.id,
+        soleApprover: o.created_by === ctx.user.id && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide')),
         team: team.map((m) => ({ userId: m.user_id, name: nameOf(m.first_name, m.last_name, m.email), email: m.email, role: m.role, status: m.status, joinedAt: iso(m.created_at)! })),
       }
     }),
@@ -142,13 +145,16 @@ export const providersRouter = createTRPCRouter({
   // Approve, ask for changes, reject, suspend or reinstate. The owner is emailed; an email that can't be sent doesn't undo
   // the decision (the answer says so).
   decide: adminProcedure('admin.panel.open')
-    .input(z.object({ organisationId: z.string().uuid(), decision: z.enum(['approve', 'changes', 'reject', 'suspend', 'reinstate']), message: z.string().trim().max(2000).optional() }))
+    .input(z.object({ organisationId: z.string().uuid(), decision: z.enum(['approve', 'changes', 'reject', 'suspend', 'reinstate']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional() }))
     .mutation(async ({ ctx, input, path }) => {
       const rule = DECISIONS[input.decision]
       const [o] = await ctx.db.execute<{ id: string; name: string; status: Status; created_by: string | null }>(sql`
         select id, name, status, created_by from public.organisations where id = ${input.organisationId}::uuid and type = 'provider'`)
       if (!o) throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider was not found.' })
-      if (!can(ctx.actor, rule.action, { createdBy: o.created_by ?? undefined })) await refuse(ctx, rule.action, o.id, path)
+      // their own request: only as the sole approver, with a reason (lib/soleApprover.mts)
+      const own = rule.action === 'admin.approvals.decide' && Boolean(o.created_by) && o.created_by === ctx.user.id
+      if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, rule.action)) : !can(ctx.actor, rule.action, { createdBy: o.created_by ?? undefined })) await refuse(ctx, rule.action, o.id, path)
+      if (own && !ownReasonOk(input.ownReason)) throw new TRPCError({ code: 'BAD_REQUEST', message: OWN_REASON_ERROR, cause: Object.assign(new Error(OWN_REASON_ERROR), { field: 'ownReason' }) })
       if (!rule.from.includes(o.status)) throw new TRPCError({ code: 'CONFLICT', message: 'This provider’s status has changed. Reload the page to see it.' })
       const message = input.message?.trim() || null
       if (rule.message && !message) throw new TRPCError({ code: 'BAD_REQUEST', message: MESSAGE_ERROR[input.decision]!, cause: Object.assign(new Error(MESSAGE_ERROR[input.decision]), { field: 'message' }) })
@@ -162,9 +168,11 @@ export const providersRouter = createTRPCRouter({
           action: rule.log,
           targetType: 'organisation',
           targetId: o.id,
-          metadata: { from: o.status, to: rule.to, ...(message ? { message } : {}) },
+          metadata: { from: o.status, to: rule.to, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) },
           ip: ctx.ip,
         })
+        // a decision on their own request gets its own line in the log, so it is never missed
+        if (own) await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: o.id, action: 'admin.own_request_decided', targetType: 'organisation', targetId: o.id, metadata: { decision: input.decision, reason: input.ownReason!.trim() }, ip: ctx.ip })
       })
 
       const [owner] = await ctx.db.execute<{ email: string | null; first_name: string | null }>(sql`

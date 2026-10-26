@@ -11,7 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { CardChoice, Choice, Loading } from "./providerParts";
 import { useTaxonomy } from "@/lib/taxonomyContext";
-import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
+import { categoryOptions, pagesForSubject, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { ErrorState } from "@/components/states/States";
 
 // A new course in Hurak's five steps: 1 working title, 2 category, sub-category and topic, 3 compliance or not (a compliance course
@@ -30,7 +30,9 @@ export default function ProviderNewCourse() {
   const [failed, setFailed] = useState("");
   const create = api.provider.courses.create.useMutation();
   const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
-  const pages = shared.data || [];
+  const pages = pagesForSubject(shared.data || [], f); // only pages for the subject chosen in step 2
+  const parentOk = pages.some((p) => String(p.id) === f.parentId);
+  const toPage = f.type === "compliance" && pages.length > 0 && f.sharedLanding === "yes";
   const ref = useRef(null);
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   const subs = subcategoryOptions(f.category);
@@ -46,7 +48,7 @@ export default function ProviderNewCourse() {
     if (step === 3) {
       if (!f.type) e.type = "Choose whether the course is compliance.";
       else if (f.type === "compliance" && !f.sharedLanding && pages.length) e.sharedLanding = "Choose Yes or No.";
-      else if (f.type === "compliance" && f.sharedLanding === "yes" && !f.parentId) e.parentId = "Choose the course page.";
+      else if (toPage && !parentOk) e.parentId = "Choose the course page.";
     }
     if (step === 4 && !f.model) e.model = "Choose a performance model.";
     if (step === 5 && !f.skillSaver) e.skillSaver = "Choose Yes or No.";
@@ -66,7 +68,7 @@ export default function ProviderNewCourse() {
     create.mutate(
       {
         organisationId, title: f.title.trim(), category: f.category, subcategory: f.subcategory, topic: f.topic || null, method: "classroom",
-        model: f.model, skillSaver: f.skillSaver === "yes", parentId: f.type === "compliance" && f.sharedLanding === "yes" ? Number(f.parentId) : null,
+        model: f.model, skillSaver: f.skillSaver === "yes", parentId: toPage && parentOk ? Number(f.parentId) : null,
       },
       {
         onSuccess: ({ id }) => router.push(`/provider/courses/${id}`),
@@ -138,14 +140,14 @@ export default function ProviderNewCourse() {
           {f.type === "compliance" && pages.length > 0 && (
             <Choice name="rt-pws-nc-shared" legend="Advertise it on one of our shared course pages?" hint="A page on ReadTraining that lists every provider running this course, so learners can compare dates and prices." value={f.sharedLanding} onChange={(v) => set({ sharedLanding: v, parentId: v === "yes" ? f.parentId : "" })} error={errors.sharedLanding} options={YES_NO} />
           )}
-          {f.type === "compliance" && f.sharedLanding === "yes" && (
+          {toPage && (
             <div className="rt-field">
               <label htmlFor="rt-pws-nc-parentId">Shared course page</label>
               <Err k="parentId" />
-              <FieldSelect id="rt-pws-nc-parentId" label="Shared course page" placeholder="Choose the course page" value={f.parentId} onChange={(v) => set({ parentId: v })} options={pages.map((p) => ({ value: String(p.id), label: p.title }))} invalid={Boolean(errors.parentId)} describedBy={errors.parentId ? "rt-pws-nc-parentId-e" : undefined} />
+              <FieldSelect id="rt-pws-nc-parentId" label="Shared course page" placeholder="Choose the course page" value={parentOk ? f.parentId : ""} onChange={(v) => set({ parentId: v })} options={pages.map((p) => ({ value: String(p.id), label: p.title }))} invalid={Boolean(errors.parentId)} describedBy={errors.parentId ? "rt-pws-nc-parentId-e" : undefined} />
             </div>
           )}
-          {f.type === "compliance" && shared.isSuccess && !pages.length && <p className="rt-acc__note">There are no shared course pages yet, so your course gets its own page. You can add it to a shared page later in the course settings.</p>}
+          {f.type === "compliance" && shared.isSuccess && !pages.length && <p className="rt-acc__note">There's no shared course page for this subject yet, so your course gets its own page. If one is added later, you can list your course on it in the course settings.</p>}
         </>
       )}
 

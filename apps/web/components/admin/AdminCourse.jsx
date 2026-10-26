@@ -19,6 +19,8 @@ import { AdminStatus, AdminTag } from "./AdminStatus";
 const copy = A.catalogue;
 const d = copy.detail;
 const ap = A.approvals;
+// the decisions that need a note for the provider (it is emailed to them)
+const NOTE = new Set(["changes", "rejectChange", "pause"]);
 
 // One course for the admin (API admin.courses.get): what the provider (or our team, for a shared page) wrote, laid out to check,
 // with its status, provider and shared page. A change waiting on a live course shows field by field, live against proposed. The
@@ -31,9 +33,11 @@ export default function AdminCourse({ id }) {
   const query = api.admin.courses.get.useQuery({ courseId }, { enabled: Boolean(courseId), retry: false });
   const utils = api.useUtils();
   const decide = api.admin.courses.decide.useMutation();
-  const [asking, setAsking] = useState(null); // "changes" | "rejectChange" | "pause"
+  const [asking, setAsking] = useState(null); // the decision being confirmed in the pop-up
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState("");
   const [said, setSaid] = useState("");
   const formRef = useRef(null);
   const c = query.data;
@@ -52,9 +56,14 @@ export default function AdminCourse({ id }) {
     utils.admin.courses.counts.invalidate();
     utils.admin.courses.list.invalidate();
   };
-  const run = async (decision, message) => {
+  // a decision on the admin's own course (or its change): only as the sole approver, with a reason (API lib/soleApprover.mts)
+  const ownFor = (decision) => (decision === "approveChange" || decision === "rejectChange" ? c.ownChange : c.ownCourse);
+  const allowedFor = (decision) => !ownFor(decision) || c.soleApprover;
+  const needsNote = (decision) => NOTE.has(decision);
+  const run = async (decision, message, ownReason) => {
     try {
-      const r = await decide.mutateAsync({ courseId, decision, message });
+      const seen = (decision === "approveChange" || decision === "rejectChange") && c.change?.since ? new Date(c.change.since).toISOString() : undefined; // the version on screen
+      const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen });
       refresh();
       refreshCourses().catch(() => {});
       const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the live version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
@@ -62,26 +71,32 @@ export default function AdminCourse({ id }) {
       return "";
     } catch (e) {
       const { fields, general } = errorsFrom(e);
-      return fields.message || general;
+      return fields.message || fields.ownReason || general;
     }
   };
   const open = (decision) => {
     setAsking(decision);
     setNote("");
     setError("");
+    setReason("");
+    setReasonError("");
   };
+  // a decision goes straight through, unless it needs a note for the provider or is on the admin's own request
+  const act = (decision) => (needsNote(decision) || ownFor(decision) ? open(decision) : run(decision));
   const send = async (e) => {
     e.preventDefault();
-    if (!note.trim()) {
-      setError({ changes: "Enter what the provider needs to change.", rejectChange: "Enter why the change is not approved.", pause: "Enter why the course is paused. The provider sees it." }[asking]);
-      return focusFirstError(formRef.current);
-    }
-    const failed = await run(asking, note.trim());
-    if (failed) setError(failed);
+    const noteError = needsNote(asking) && !note.trim() ? { changes: "Enter what the provider needs to change.", rejectChange: "Enter why the change is not approved.", pause: "Enter why the course is paused. The provider sees it." }[asking] : "";
+    const ownError = ownFor(asking) && reason.trim().length < 10 ? A.own.error : "";
+    setError(noteError);
+    setReasonError(ownError);
+    if (noteError || ownError) return focusFirstError(formRef.current);
+    const failed = await run(asking, needsNote(asking) ? note.trim() : undefined, ownFor(asking) ? reason.trim() : undefined);
+    if (failed) (ownFor(asking) && !needsNote(asking) ? setReasonError : setError)(failed);
     else setAsking(null);
   };
   const busy = decide.isPending;
-  const sheetTitle = { changes: ap.requestChanges, rejectChange: ap.rejectChange, pause: ap.pause }[asking] || "";
+  const sheetTitle = { approve: ap.approve, changes: ap.requestChanges, approveChange: ap.approveChange, rejectChange: ap.rejectChange, pause: ap.pause, resume: ap.resume }[asking] || "";
+  const own = Boolean(c.ownCourse || c.ownChange);
   const place = [categoryName(c.category), subcategoryName(c.category, c.subcategory), topicName(c.category, c.subcategory, c.topic)].filter(Boolean).join(" › ");
 
   return (
@@ -100,16 +115,18 @@ export default function AdminCourse({ id }) {
             {c.provider ? <>{d.provider}: <Link href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</Link>{!providerReady && " (not approved yet)"}</> : "Written by our team"}
             {c.parent && <> · {d.sharedPage}: <Link href={`/admin/catalogue/${c.parent.id}`}>{c.parent.title}</Link></>}
           </p>
+          {c.parent && !c.parent.sameSubject && <p className="rt-acc__notice -warn">{d.otherSubject(c.parent.title)}</p>}
           {c.statusNote && (c.status === "changes" || c.status === "paused") && <p className="rt-adm-item__reason"><strong>{c.status === "changes" ? "Note to the provider:" : "Why it is paused:"}</strong> {c.statusNote}</p>}
           {canDecide && c.status === "pending" && !providerReady && <p className="rt-adm-item__block">{ap.providerNotActive}</p>}
+          {canDecide && own && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownSole : ap.ownBlocked}</p>}
         </div>
         <div className="rt-adm-hero__actions">
-          {canDecide && c.status === "pending" && providerReady && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => run("approve")}>{ap.approve}</button>}
-          {canDecide && c.status === "pending" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => open("changes")}>{ap.requestChanges}</button>}
-          {canDecide && c.pendingChanges && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => run("approveChange")}>{ap.approveChange}</button>}
-          {canDecide && c.pendingChanges && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => open("rejectChange")}>{ap.rejectChange}</button>}
-          {canDecide && c.status === "live" && !c.pendingChanges && <button type="button" className="rt-cd__link rt-adm-danger" disabled={busy} onClick={() => open("pause")}>{ap.pause}</button>}
-          {canDecide && c.status === "paused" && c.statusNote && providerReady && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => run("resume")}>{ap.resume}</button>}
+          {canDecide && c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
+          {canDecide && c.status === "pending" && allowedFor("changes") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
+          {canDecide && c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
+          {canDecide && c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
+          {canDecide && c.status === "live" && !c.pendingChanges && allowedFor("pause") && <button type="button" className="rt-cd__link rt-adm-danger" disabled={busy} onClick={() => act("pause")}>{ap.pause}</button>}
+          {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>}
           {canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -sm -purple-1 text-white">{d.edit}</Link>}
           {c.status === "live" && <Link href={`/course/${c.slug}`} className="button -sm -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{d.publicPage}</Link>}
         </div>
@@ -205,11 +222,21 @@ export default function AdminCourse({ id }) {
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={`${sheetTitle}: ${c.title}`} closeLabel="Close">
         <form className="rt-q__form rt-biz__sheetform" onSubmit={send} noValidate ref={formRef}>
           <p className="rt-acc__note">{c.provider?.name}</p>
-          <div className="rt-field">
-            <label htmlFor="rt-adm-cnote">{ap.reasonLabel}</label>
-            {error && <p className="rt-q__err" id="rt-adm-cnote-e"><span className="rt-sr">Error: </span>{error}</p>}
-            <textarea id="rt-adm-cnote" rows={5} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cnote-e" : undefined} />
-          </div>
+          {asking && needsNote(asking) && (
+            <div className="rt-field">
+              <label htmlFor="rt-adm-cnote">{ap.reasonLabel}</label>
+              {error && <p className="rt-q__err" id="rt-adm-cnote-e"><span className="rt-sr">Error: </span>{error}</p>}
+              <textarea id="rt-adm-cnote" rows={5} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cnote-e" : undefined} />
+            </div>
+          )}
+          {asking && ownFor(asking) && (
+            <div className="rt-field">
+              <label htmlFor="rt-adm-cown">{A.own.label}</label>
+              <small className="rt-field__hint" id="rt-adm-cown-hint">{A.own.hint}</small>
+              {reasonError && <p className="rt-q__err" id="rt-adm-cown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
+              <textarea id="rt-adm-cown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-cown-hint${reasonError ? " rt-adm-cown-e" : ""}`} />
+            </div>
+          )}
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy || undefined}>{sheetTitle}</button>
         </form>
       </Sheet>

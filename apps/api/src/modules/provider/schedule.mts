@@ -13,7 +13,8 @@ import { ownCourse } from './courses.mjs'
 // away, without approval. A tutor sees only the cohorts they teach.
 
 const bad = (message: string) => new TRPCError({ code: 'BAD_REQUEST', message })
-const today = () => new Date().toISOString().slice(0, 10)
+// today's date in the UK (dates are UK days; UTC would still be yesterday for an hour after midnight in summer)
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
 
 const log = (tx: Parameters<typeof logActivity>[0], ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, targetType: string, targetId: string, metadata: Record<string, unknown> = {}) =>
   logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId, action, targetType, targetId, metadata, ip: ctx.ip })
@@ -88,7 +89,10 @@ export const providerVenuesRouter = createTRPCRouter({
 
 // ---- cohorts ------------------------------------------------------------------------------------------------------------
 
-const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date.').refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), 'Choose a date.')
+const day = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date.')
+  .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), 'Choose a real date.')
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a time, like 09:00.')
 const session = z
   .object({ date: day, end: day, from: time, to: time })
@@ -116,7 +120,8 @@ const cohortFields = z.object({
 type CohortInput = z.infer<typeof cohortFields>
 
 // checks a cohort against its course and provider; returns the values to save
-async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput) {
+// keepVenueId: the venue the dates already have (it stays allowed if it has since been archived)
+async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keepVenueId: string | null = null) {
   if (method !== 'classroom' && method !== 'live-online') throw bad('Only classroom and live online courses have dates. Self-paced courses start any time.')
   const sessions = [...input.sessions].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
   if (input.wasPricePence != null && input.wasPricePence <= input.pricePence) throw bad('The “was” price must be higher than the price.')
@@ -125,14 +130,15 @@ async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId:
     if (!input.venueId) throw bad('Choose the venue.')
     const [v] = await db.select({ id: venues.id, active: venues.active }).from(venues).where(and(eq(venues.id, input.venueId), eq(venues.organisationId, organisationId)))
     if (!v) throw bad('Choose one of your venues.')
+    if (!v.active && input.venueId !== keepVenueId) throw bad('This venue is archived. Choose another, or bring it back in Settings › Venues.')
     venueId = v.id
   }
   if (input.tutorUserId) {
     const [m] = await db
       .select({ userId: organisationMembers.userId })
       .from(organisationMembers)
-      .where(and(eq(organisationMembers.organisationId, organisationId), eq(organisationMembers.userId, input.tutorUserId)))
-    if (!m) throw bad('Choose a tutor from your team.')
+      .where(and(eq(organisationMembers.organisationId, organisationId), eq(organisationMembers.userId, input.tutorUserId), eq(organisationMembers.status, 'active')))
+    if (!m) throw bad('Choose a tutor from your team (someone who has joined).')
   }
   return {
     method,
@@ -257,7 +263,7 @@ export const providerCohortsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
-      const values = await cohortValues(ctx.db, input.organisationId, course.method, input)
+      const values = await cohortValues(ctx.db, input.organisationId, course.method, input, cohort.venueId)
       if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.')
       return ctx.db.transaction(async (tx) => {
         await tx.update(cohorts).set({ ...values, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
