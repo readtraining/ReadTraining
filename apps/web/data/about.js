@@ -56,8 +56,9 @@ export const about = {
   },
   mission: {
     eyebrow: "Our mission statement",
-    text: "To make accredited training easy to find, compare and book, for every learner and employer in the UK.",
-    marksLabel: "Courses lead to qualifications, licences and cards from",
+    // one phrase per line on a laptop; a phone wraps it normally
+    lines: ["To make accredited training", "easy to find, compare and book,", "for every learner and employer in the UK."],
+    marksLabel: "Our courses lead to recognised qualifications, licences and cards.",
     accreditations,
   },
   faq: {

@@ -126,9 +126,16 @@ export const toPerson = (user) => {
   const avatarUrl = m.avatar_url || m.picture || "";
   return { id: user.id, email: user.email, firstName, lastName, avatarUrl, name: [firstName, lastName].filter(Boolean).join(" ") || user.email };
 };
+// The last known answer, kept while the site is open: a page reached by a link starts with it, so the header doesn't blank and
+// shift on every page (a fresh page load still starts as "loading", the same as the server's copy of the page).
+let lastPerson;
 export function useAuthUser() {
-  const [person, setPerson] = useState(undefined);
+  const [person, setPersonState] = useState(() => lastPerson);
   useEffect(() => {
+    const setPerson = (p) => {
+      lastPerson = p;
+      setPersonState(p);
+    };
     // no Supabase settings (a deployment without them): nobody is signed in, and nothing throws
     if (!isSupabaseConfigured) {
       setPerson(null);
