@@ -165,7 +165,8 @@ export const organisationsRouter = createTRPCRouter({
         .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote })
         .from(organisations)
         .where(eq(organisations.id, chosen.organisationId))
-      return { ...org, type: input.type, role: chosen.role }
+      // userId: the browser's permission checks need it for "their own" rules (a tutor's own dates)
+      return { ...org, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and

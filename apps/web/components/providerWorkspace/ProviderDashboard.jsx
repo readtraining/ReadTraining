@@ -21,7 +21,8 @@ export default function ProviderDashboard() {
   const schedule = useSchedule("upcoming");
   if (!data || !schedule.cohorts.data || !schedule.courses.data) return <Loading stats rows={3} />;
   const courses = schedule.courses.data;
-  const tutorName = (id) => schedule.tutors.data?.find((t) => t.userId === id)?.name;
+  // the team list is for roles that see every date; a tutor sees only the dates they teach, so those are theirs
+  const tutorName = (id) => (schedule.may.team ? schedule.tutors.data?.find((t) => t.userId === id)?.name : id && "You");
 
   const now = Date.now();
   const from = now - 30 * DAY;
@@ -97,17 +98,19 @@ export default function ProviderDashboard() {
           )}
         </section>
 
-        <section className="rt-acc__card rt-dash__courses" aria-labelledby="rt-dash-courses">
-          <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-courses">Your courses</h2><Link href="/provider/courses" className="rt-cd__link">All courses</Link></div>
-          <ul className="rt-dash__status">
-            {statuses.map(({ k, n }) => (
-              <li key={k}>
-                <Link href={`/provider/courses?status=${k}`}><Pill tone={COURSE_TONE[k]}>{pw.courseStatuses[k]}</Pill><b>{n}</b></Link>
-              </li>
-            ))}
-          </ul>
-          <Link href="/provider/courses/new" className="button -sm -purple-1 text-white rt-btn-block">New course</Link>
-        </section>
+        {schedule.may.courses && (
+          <section className="rt-acc__card rt-dash__courses" aria-labelledby="rt-dash-courses">
+            <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-courses">Your courses</h2><Link href="/provider/courses" className="rt-cd__link">All courses</Link></div>
+            <ul className="rt-dash__status">
+              {statuses.map(({ k, n }) => (
+                <li key={k}>
+                  <Link href={`/provider/courses?status=${k}`}><Pill tone={COURSE_TONE[k]}>{pw.courseStatuses[k]}</Pill><b>{n}</b></Link>
+                </li>
+              ))}
+            </ul>
+            <Link href="/provider/courses/new" className="button -sm -purple-1 text-white rt-btn-block">New course</Link>
+          </section>
+        )}
       </div>
 
       <section aria-labelledby="rt-dash-30">
@@ -126,7 +129,7 @@ export default function ProviderDashboard() {
       </section>
 
       <div className="rt-dash__grid -even">
-        <section className="rt-acc__card" aria-labelledby="rt-dash-next">
+        {schedule.may.dates && <section className="rt-acc__card" aria-labelledby="rt-dash-next">
           <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-next">Coming up</h2><Link href="/provider/calendar" className="rt-cd__link">Calendar</Link></div>
           {upcoming.length ? (
             <ul className="rt-dash__cohorts">
@@ -142,7 +145,7 @@ export default function ProviderDashboard() {
               ))}
             </ul>
           ) : <p className="rt-acc__note">No cohorts coming up. <Link href="/provider/cohorts?new=1">Create one</Link>.</p>}
-        </section>
+        </section>}
 
         <section className="rt-acc__card" aria-labelledby="rt-dash-orders">
           <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-orders">Latest orders</h2><Link href="/provider/orders" className="rt-cd__link">All orders</Link></div>

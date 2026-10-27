@@ -80,16 +80,25 @@ const TIMES = [];
 for (let m = 6 * 60; m <= 22 * 60; m += 15) TIMES.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
 const DEFAULT_SLOT = { from: "09:30", to: "16:30" };
 
-// The provider's dates, courses, venues and team, from the API (shared by the list, the form and the calendar).
+// The provider's dates, courses, venues and team, from the API (shared by the list, the form and the calendar). Only what this
+// role may see is asked for (the API refuses the rest): a tutor gets the dates they teach and no venue list (only the date form,
+// which they can't open, needs it); roles without dates or courses get an empty list. `may` says which ones the role sees.
+const NONE = { data: [], isError: false, refetch: () => {} };
 export function useSchedule(when = "upcoming") {
-  const { organisationId } = useProviderAccess();
-  const on = { enabled: Boolean(organisationId) };
-  return {
-    cohorts: api.provider.cohorts.list.useQuery({ organisationId, when }, on),
-    courses: api.provider.courses.list.useQuery({ organisationId }, on),
-    venues: api.provider.venues.list.useQuery({ organisationId }, on),
-    tutors: api.provider.cohorts.tutors.useQuery({ organisationId }, { ...on, retry: false }),
+  const access = useProviderAccess();
+  const { organisationId } = access;
+  const may = {
+    dates: access.can("provider.cohorts.view") || access.can("provider.cohorts.view", { tutorUserId: access.userId }),
+    venues: access.can("provider.cohorts.view"),
+    team: access.can("provider.cohorts.view"),
+    courses: access.can("provider.courses.view"),
   };
+  const on = (ok) => ({ enabled: Boolean(organisationId) && ok });
+  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when }, on(may.dates));
+  const courses = api.provider.courses.list.useQuery({ organisationId }, on(may.courses));
+  const venues = api.provider.venues.list.useQuery({ organisationId }, on(may.venues));
+  const tutors = api.provider.cohorts.tutors.useQuery({ organisationId }, on(may.team));
+  return { may, cohorts: may.dates ? cohorts : NONE, courses: may.courses ? courses : NONE, venues: may.venues ? venues : NONE, tutors: may.team ? tutors : NONE };
 }
 
 // the full set of a cohort's values, as the API's update takes them (to change one thing, like the tutor, from the list)
@@ -145,6 +154,7 @@ export default function ProviderCohorts() {
   useEffect(() => setPage(1), [mode, course, venue, tutor, when, q, date]);
 
   const keep = (key, value, fallback = "") => setQuery(key, value === fallback ? "" : value);
+  if (!s.may.dates) return <EmptyState title="Dates aren't part of your role" text="Ask your provider's owner or an admin if you need to see the dates." />;
   const failed = [s.cohorts, s.courses, s.venues].find((x) => x.isError);
   if (failed) return <ErrorState title="We couldn't load your dates." text="Check your connection, then try again." onRetry={() => failed.refetch()} />;
   if (!s.cohorts.data || !s.courses.data || !s.venues.data) return <Loading rows={2} />;
@@ -153,7 +163,8 @@ export default function ProviderCohorts() {
   const courses = s.courses.data;
   const courseOf = Object.fromEntries(courses.map((c) => [c.id, c]));
   const tutors = s.tutors.data || [];
-  const tutorName = (id) => tutors.find((t) => t.userId === id)?.name;
+  // a tutor sees only the dates they teach (no team list), so a tutor on them is the tutor themselves
+  const tutorName = (id) => tutors.find((t) => t.userId === id)?.name ?? (!s.may.team && id ? "You" : undefined);
   const scoped = s.cohorts.data.map((k) => ({ ...k, status: cohortState(k, today), course: courseOf[k.courseId] }));
   const datedCourses = courses.filter((c) => c.method !== "self-paced");
   const onDemand = courses.filter((c) => c.method === "self-paced");
