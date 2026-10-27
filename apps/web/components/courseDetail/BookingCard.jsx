@@ -23,10 +23,7 @@ export function trustItems(course) {
   return [
     t.noBookingFee && "No booking fee",
     t.approvedProviders && "Approved providers only",
-    t.invoice && "Pay by invoice for businesses",
-    t.instalments && "Pay in 3 interest-free instalments with Klarna",
-    t.trustpilot && `${t.trustpilot} on Trustpilot`,
-  ].filter(Boolean).slice(0, 5);
+  ].filter(Boolean);
 }
 
 // Collapses to nothing in 200ms. While collapsed it is inert: nothing inside it can be focused. It stays in the DOM.
@@ -66,6 +63,27 @@ const IN_HOUSE_LINE = TEAM.line;
 // option the course offers (choosing a row selects it everywhere), then a grey footer with Save.
 // FULL (title visible): course image first, trust items under the button. COMPACT (desktop, title out of view): the image and
 // the trust items collapse; everything else stays. Tablet and mobile: always FULL.
+// The card for a course with nothing to book yet: no dates are open and team training isn't offered.
+function NoDatesCard({ course }) {
+  return (
+    <div className="rt-bk">
+      {course.imageSrc && (
+        <div className="rt-bk__img">
+          <Image src={course.imageSrc} alt="" width={440} height={248} style={{ width: "100%", height: "100%" }} priority />
+        </div>
+      )}
+      <div className="rt-bs">
+        <p className="rt-bs__name">New dates coming soon</p>
+        <p className="rt-bs__quote">No dates are open for booking yet. Save the course to come back to it, or ask us about it.</p>
+        <Link href="/contact-us" className="button -md -outline-purple-1 text-purple-1 rt-btn-block">Ask about this course</Link>
+      </div>
+      <div className="rt-bf">
+        <SaveButton />
+      </div>
+    </div>
+  );
+}
+
 export default function BookingCard() {
   const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates } = useBooking();
   const [desktop, setDesktop] = useState(false);
@@ -88,6 +106,8 @@ export default function BookingCard() {
   }, [flash]);
 
   const compact = barOn && desktop;
+  // nothing to book yet: no dates and no team training
+  if (!mode) return <NoDatesCard course={course} />;
   const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
   const save = isInHouse ? 0 : savePercent(session.price, session.wasPrice);
   const trust = trustItems(course);
@@ -134,13 +154,12 @@ export default function BookingCard() {
             ) : onDemand ? (
               <>
                 <li><Icon name="calendar" /><span>{session.time}</span></li>
-                <li><Icon name="person-3" /><span>{session.provider}</span></li>
                 <li><Icon name="coupon" /><span>All inc</span></li>
               </>
             ) : (
               <>
                 <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}</span></li>
-                <li><Icon name="location" /><span>{session.location}, {session.provider}</span></li>
+                <li><Icon name="location" /><span>{session.location}</span></li>
                 <li><Icon name="coupon" /><span>All inc</span></li>
               </>
             )}

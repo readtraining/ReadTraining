@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { account } from "@/data/account";
 import { calendarFile, getBookings, getLearning } from "@/lib/account";
-import { courseHref } from "@/data/courseSlugs";
+import { demoCourseHref } from "@/data/demoCourses";
 import { formatDay } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
 import { EmptyState } from "@/components/states/States";
@@ -64,7 +64,7 @@ export default function AccountLearning() {
                   {l.mode === "ondemand" ? <span className="-any">Any time</span> : <><b>{DAY.format(new Date(`${l.date}T00:00:00Z`))}</b><span>{MONTH.format(new Date(`${l.date}T00:00:00Z`))}</span></>}
                 </div>
                 <div className="rt-acc__rowmain">
-                  <h3 className="rt-acc__rowtitle" id={`rt-ln-${l.key}`}><Link href={courseHref(l.courseId)} className="rt-acc__plainlink">{l.title}</Link></h3>
+                  <h3 className="rt-acc__rowtitle" id={`rt-ln-${l.key}`}><Link href={demoCourseHref(l.courseId)} className="rt-acc__plainlink">{l.title}</Link></h3>
                   <p className="rt-acc__rowmeta">{whenOf(l)}{l.mode !== "ondemand" && l.time ? ` · ${l.time}` : ""}</p>
                   <p className="rt-acc__rowmeta">{placeOf(l)} · {l.provider}</p>
                   <p className="rt-acc__rowsub">{account.detail.attending}: {l.delegates.join(", ")}</p>

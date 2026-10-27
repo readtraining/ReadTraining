@@ -16,3 +16,15 @@ export function getSupabase() {
   if (!client) client = createBrowserClient(SB_URL, SB_KEY);
   return client;
 }
+
+// Which sign-in providers are switched on in this Supabase project ({ google: true, facebook: false, … }), from its public settings,
+// asked once per page load. A button for one that is off would end on Supabase's own error page, so such buttons wait for this.
+let providers;
+export function authProviders() {
+  if (!isSupabaseConfigured) return Promise.resolve({});
+  providers ??= fetch(`${SB_URL}/auth/v1/settings`, { headers: { apikey: SB_KEY } })
+    .then((r) => (r.ok ? r.json() : {}))
+    .then((s) => s.external ?? {})
+    .catch(() => ({}));
+  return providers;
+}

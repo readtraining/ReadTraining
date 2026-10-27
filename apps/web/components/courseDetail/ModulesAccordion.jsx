@@ -3,12 +3,14 @@
 import React, { useState } from "react";
 
 // Course content in the site's accordion (.bz-acc, the same divider list and plus/minus icon as the FAQs), with
-// Expand all / Collapse all. Any number of modules can be open. A closed module is inert, so it cannot be tabbed into.
+// Expand all / Collapse all once there are 4 or more units (fewer are quick to open one by one). Any number of modules can be
+// open. A closed module is inert, so it cannot be tabbed into.
 export default function ModulesAccordion({ modules, title, titleId }) {
   const [open, setOpen] = useState(() => modules.map((_, i) => i === 0));
   const [showAll, setShowAll] = useState(false);
   const allOpen = open.every(Boolean);
   const LIMIT = 5; // the syllabus lists 5 items, then "Show more"
+  const EXPAND_FROM = 4;
   const visible = showAll ? modules : modules.slice(0, LIMIT);
   const toggle = (i) => setOpen((cur) => cur.map((v, j) => (j === i ? !v : v)));
 
@@ -16,9 +18,11 @@ export default function ModulesAccordion({ modules, title, titleId }) {
     <>
       <div className="rt-cd__mod-head">
         <h2 id={titleId}>{title}</h2>
-        <button type="button" className="rt-cd__link" onClick={() => setOpen(modules.map(() => !allOpen))}>
-          {allOpen ? "Collapse all sections" : "Expand all sections"}
-        </button>
+        {modules.length >= EXPAND_FROM && (
+          <button type="button" className="rt-cd__link" onClick={() => setOpen(modules.map(() => !allOpen))}>
+            {allOpen ? "Collapse all sections" : "Expand all sections"}
+          </button>
+        )}
       </div>
       <div className="bz-acc rt-cd__acc">
         {visible.map((m, i) => (

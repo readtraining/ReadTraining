@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safeNext";
 import { mutateApiAsUser } from "@/lib/serverApi";
+import { AUTH_ROUTES } from "@/lib/routes";
 
 // Where Supabase's links land, then on to ?next= (a path on this site only):
 // - email links (confirm the account, reset the password, change the email): ?token_hash=…&type=… → verifyOtp. Works when the
@@ -10,10 +11,11 @@ import { mutateApiAsUser } from "@/lib/serverApi";
 // - Google's own button (components/auth/GoogleButton.jsx): ?via=google, the browser already signed in → the claims are checked.
 // A missing, expired or used link goes to log in with a message. After a successful sign-in the API is asked to send the
 // welcome email (it goes once per account, so later links do nothing); that never holds up or blocks the redirect.
+// Admin invite links (lib/adminInvite.mts in the API) go to /admin/welcome: no learner welcome, and a bad link is explained there.
 const EMAIL_TYPES = ["signup", "email", "recovery", "email_change", "invite", "magiclink"];
 
 async function signedIn(next, origin) {
-  await mutateApiAsUser("me.welcome").catch(() => {});
+  if (next.split("?")[0] !== AUTH_ROUTES.adminWelcome) await mutateApiAsUser("me.welcome").catch(() => {});
   return NextResponse.redirect(new URL(next, origin));
 }
 
@@ -38,5 +40,6 @@ export async function GET(request) {
       if (data?.claims?.sub) return signedIn(next, url.origin);
     }
   }
+  if (next.split("?")[0] === AUTH_ROUTES.adminWelcome) return NextResponse.redirect(new URL(`${AUTH_ROUTES.adminWelcome}?error=link`, url.origin));
   return NextResponse.redirect(new URL("/login?error=link", url.origin));
 }

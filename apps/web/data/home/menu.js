@@ -1,13 +1,13 @@
-// Course data for the site header (data/headerNav.js), the header search and the course-in-a-town pages: the 12 subjects
-// with their courses, the study methods, and the popular courses with a page in each town. `slug` keeps the client's
+// Course data for the site header (data/headerNav.js) and the header search: the 12 subjects with their courses, the study
+// methods, and the popular courses with the towns they run in. `slug` keeps the client's
 // original path for when real pages exist.
 
 import { placesByCourse } from "./locationPlaces";
-import { courseLink } from "@/data/courseSlugs";
+import { courseSearch } from "@/data/courseTopics";
 import { CATALOGUE_HREF, HSE_TEST_HREF, TEST_CENTRES_HREF, testCentreHref } from "@/lib/routes";
 import { testCentres } from "@/data/testCentres";
 
-const course = (label, slug) => ({ label, slug, href: courseLink(1) });
+const course = (label, slug) => ({ label, slug, href: CATALOGUE_HREF });
 const cat = (label, slug) => ({ label, slug, href: CATALOGUE_HREF });
 const img = (n) => `/assets/img/coursesCards/${n}.png`;
 
@@ -100,70 +100,66 @@ export const subjects = [
     ],
   },
 ].map((s) => {
-  // the catalogue's own subject value (data/courseCatalogue.js), e.g. "teaching-and-academics"
+  // the catalogue's own subject value (its slug), e.g. "teaching-and-academics"
   const href = `/courses?subject=${s.label.toLowerCase().replace(/ & /g, "-and-").replace(/\s+/g, "-")}`;
   return { ...s, href, count: s.courses.length, courses: s.courses.map((c) => ({ ...c, href })) };
 });
 
 // Locations menu, as the client's (hurak.com): a list of popular courses and, for the course you point at, every town and city.
-// A course opens its page; a city opens the course finder for that course at that town (?location=). Our catalogue has venues
-// in a few cities only, so the finder shows what runs there (and the online courses, which run anywhere). `id` is the course's
-// catalogue id and `q` the words that find it; a course our catalogue does not have yet opens the nearest course page
-// (`page`), where the location filter works the same. `slug` keeps the original path for when real pages exist.
+// A course opens the course finder searched for it (`q`, the words that find it); a city opens the finder for that course at
+// that town (?location=), which shows what runs there (and the online courses, which run anywhere). A course without `q` opens
+// the nearest course page (`page`), where the location filter works the same. `slug` keeps the original path.
 const FINDER = "/courses";
-export const slugify = (text) => text.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const slugify = (text) => text.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const testCentreCity = (city) => {
   const c = testCentres.find((x) => x.town.toLowerCase() === city.toLowerCase() || x.slug === slugify(city));
   return c ? testCentreHref(c.slug) : `${TEST_CENTRES_HREF}?q=${encodeURIComponent(city)}`;
 };
-const locationCourse = (label, slug, { id, q, page, related, cityHref }) => ({
+const locationCourse = (label, slug, { q, page, related, cityHref }) => ({
   label,
   slug,
-  id,
+  q,
   places: placesByCourse[label], // the towns it runs in (data/home/locationPlaces.js); a course with none shows `related` courses instead
   related,
   cityHref,
-  locationSlug: id ? slugify(label) : undefined, // "door-supervisor-course": the course's pages are /course-locations/<this>-in-<city>
-  href: id ? courseLink(id) : page,
-  results: id ? `${FINDER}?q=${encodeURIComponent(q)}` : page,
+  href: q ? courseSearch(q) : page,
+  results: q ? courseSearch(q) : page,
 });
 export const locationCourses = [
   locationCourse("Abrasive Wheel Course", "/course/abrasive-wheels", { page: "/courses/health-and-safety" }),
-  locationCourse("CCTV Operator Course", "/courses/cctv-operator", { id: 3, q: "CCTV Operator" }),
+  locationCourse("CCTV Operator Course", "/courses/cctv-operator", { q: "CCTV Operator" }),
   // a town with a test centre opens its page; any other town opens the directory searched for it (nearest centres first)
   locationCourse("CITB HS&E Test", HSE_TEST_HREF, { page: HSE_TEST_HREF, cityHref: testCentreCity }),
   locationCourse("CITB Site Safety Plus", "/courses/citb-site-safety-plus", {
     page: "/courses/citb-site-safety-plus",
     related: [
-      { label: "CITB SMSTS Course", href: courseLink(10) },
+      { label: "CITB SMSTS Course", href: courseSearch("SMSTS") },
       { label: "CITB SMSTS Refresher Course", href: "/courses/citb-site-safety-plus" },
-      { label: "CITB SSSTS Course", href: courseLink(11) },
+      { label: "CITB SSSTS Course", href: courseSearch("SSSTS") },
       { label: "CITB SSSTS Refresher Course", href: "/courses/citb-site-safety-plus" },
     ],
   }),
-  locationCourse("CSCS Green Card Course", "/course/cscs-green-card-labourers-card-course", { id: 9, q: "CSCS Green Card" }),
-  locationCourse("Door Supervisor Course", "/course/sia-door-supervisor-training", { id: 1, q: "SIA Door Supervisor Training" }),
-  locationCourse("Emergency First Aid at Work Course", "/courses/emergency-first-aid-at-work", { id: 5, q: "Emergency First Aid at Work" }),
-  locationCourse("Fire Marshal Course", "/course/fire-marshal-fire-warden-online", { id: 16, q: "Fire Marshal" }),
-  locationCourse("First Aid at Work Course", "/courses/first-aid-at-work", { id: 6, q: "First Aid at Work (3 Days)" }),
+  locationCourse("CSCS Green Card Course", "/course/cscs-green-card-labourers-card-course", { q: "CSCS Green Card" }),
+  locationCourse("Door Supervisor Course", "/course/sia-door-supervisor-training", { q: "SIA Door Supervisor Training" }),
+  locationCourse("Emergency First Aid at Work Course", "/courses/emergency-first-aid-at-work", { q: "Emergency First Aid at Work" }),
+  locationCourse("Fire Marshal Course", "/course/fire-marshal-fire-warden-online", { q: "Fire Marshal" }),
+  locationCourse("First Aid at Work Course", "/courses/first-aid-at-work", { q: "First Aid at Work (3 Days)" }),
   locationCourse("First Aid at Work Requalification Course", "/course/first-aid-at-work-requalification-course-fawr", { page: "/courses/first-aid" }),
   locationCourse("Level 1 Health and Safety in a Construction Environment", "/course/level-1-health-and-safety-in-a-construction-environment", { page: "/courses/health-and-safety" }),
-  locationCourse("Mental Health First Aid Course", "/course/mental-health-first-aid", { id: 8, q: "Mental Health First Aid" }),
-  locationCourse("Paediatric First Aid Course", "/course/level-3-paediatric-first-aid-training-2-days", { id: 7, q: "Paediatric First Aid" }),
-  locationCourse("Personal Licence Course", "/courses/personal-licence", { id: 21, q: "Personal Licence" }),
-  locationCourse("Refresher Course for Door Supervisors", "/course/sia-top-up-refresher-training-door-supervisor", { id: 46, q: "Door Supervisor Refresher" }),
-  locationCourse("Refresher Course for Security Guards", "/course/sia-top-up-refresher-training-security-guard", { id: 52, q: "Security Guard Refresher" }),
+  locationCourse("Mental Health First Aid Course", "/course/mental-health-first-aid", { q: "Mental Health First Aid" }),
+  locationCourse("Paediatric First Aid Course", "/course/level-3-paediatric-first-aid-training-2-days", { q: "Paediatric First Aid" }),
+  locationCourse("Personal Licence Course", "/courses/personal-licence", { q: "Personal Licence" }),
+  locationCourse("Refresher Course for Door Supervisors", "/course/sia-top-up-refresher-training-door-supervisor", { q: "Door Supervisor Refresher" }),
+  locationCourse("Refresher Course for Security Guards", "/course/sia-top-up-refresher-training-security-guard", { q: "Security Guard Refresher" }),
   locationCourse("Safety Harness Training", "/course/safety-harness-training", { page: "/courses/health-and-safety" }),
   locationCourse("Scottish Personal Licence Refresher Training", "/course/personal-licence-refresher-course-scotland-scplh-r", { page: "/courses/personal-licence" }),
   locationCourse("Scottish Personal Licence Training", "/course/scplh-scottish-certificate-for-personal-licence-holders", { page: "/courses/personal-licence" }),
-  locationCourse("Security Guard Course", "/course/sia-security-guard-training-course", { id: 2, q: "SIA Security Guard Training" }),
-  locationCourse("Traffic Banksman Course", "/course/traffic-banksman-traffic-marshal-training-course", { id: 12, q: "Traffic Marshal" }),
+  locationCourse("Security Guard Course", "/course/sia-security-guard-training-course", { q: "SIA Security Guard Training" }),
+  locationCourse("Traffic Banksman Course", "/course/traffic-banksman-traffic-marshal-training-course", { q: "Traffic Marshal" }),
   locationCourse("Working at Height Training", "/course/working-at-height-training", { page: "/courses/health-and-safety" }),
 ];
 
-// A course in the catalogue has a page per town or city (/course-locations/door-supervisor-course-in-london, as the client's
-// site); one that is not in the catalogue yet opens the nearest course page filtered to the town. The course-in-a-city page
-// sends a town with no venue for the course to the course finder (locationFinderHref), so no link is a dead end.
+// A course in a town: the course finder for that course, filtered to the town.
 export const locationFinderHref = (course, city) => `${course.results}${course.results.includes("?") ? "&" : "?"}location=${encodeURIComponent(city)}`;
 export const cityHref = (city) => `${FINDER}?location=${encodeURIComponent(city)}`;
 

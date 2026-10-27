@@ -4,22 +4,32 @@ import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
-import { useProvider } from "@/lib/providerWorkspace";
+import { api } from "@/lib/trpc/react";
+import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { COURSE_TONE, Loading, Pill, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
-import { EmptyState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
 
 const FILTERS = ["q", "format", "enrolment", "category", "model", "status"];
 const formatOf = (key) => pw.formats.find((f) => f.key === key) || pw.formats[0];
+const enrolmentOf = (c) => (c.isPublic ? "public" : "private");
+
+// The provider's courses, from the API.
+export const useProviderCourses = () => {
+  const { organisationId } = useProviderAccess();
+  return api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
+};
 
 // Every course the provider runs, with Hurak's filters (search, mode of study, enrolment type, and under Filters the category and
 // performance model; status as tabs with counts), all kept in the address. Our layout: the profile sits in the page head
 // (CoursesProfile below), then one card holding the status tabs, the filters and the courses as a compact table (one
-// course per row: image or "Upload course image", mode, category, status, enrolment, performance model, learners, upcoming cohorts,
-// rating, Edit / manage course), then Hurak's offer of a free sales and marketing consultation.
+// course per row: image or "Upload course image", mode, category, status, enrolment, performance model, upcoming dates,
+// Edit / manage course), then Hurak's offer of a free sales and marketing consultation.
 export default function ProviderCourses() {
-  const data = useProvider();
+  const { can } = useProviderAccess();
+  const query = useProviderCourses();
+  const courses = query.data;
   const [f, setF] = useState({ q: "", format: "", enrolment: "", category: "", model: "", status: "" });
   const [more, setMore] = useState(false);
 
@@ -34,12 +44,13 @@ export default function ProviderCourses() {
     if (next.category || next.model) setMore(true);
   }, []);
 
-  if (!data) return <Loading rows={4} />;
-  if (!data.courses.length) return <EmptyState title="No courses yet" text="Create your first course: describe it, set the price and send it to us for approval." action={{ label: "New course", href: "/provider/courses/new" }} />;
+  if (query.isError) return <ErrorState title="We couldn't load your courses." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
+  if (!courses) return <Loading rows={4} />;
+  if (!courses.length) return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", href: "/provider/courses/new" } : null} />;
 
   const needle = f.q.trim().toLowerCase();
-  const list = data.courses.filter((c) => (!needle || (c.title || "untitled course").toLowerCase().includes(needle))
-    && (!f.format || c.format === f.format) && (!f.enrolment || c.enrolment === f.enrolment) && (!f.category || c.category === f.category)
+  const list = courses.filter((c) => (!needle || c.title.toLowerCase().includes(needle))
+    && (!f.format || c.method === f.format) && (!f.enrolment || enrolmentOf(c) === f.enrolment) && (!f.category || c.category === f.category)
     && (!f.model || c.model === f.model) && (!f.status || c.status === f.status));
   const filtered = Object.values(f).some((v) => v.trim());
   const set = (k) => (v) => {
@@ -52,9 +63,7 @@ export default function ProviderCourses() {
   };
 
   const statusTabs = [{ key: "", label: "All" }, ...Object.entries(pw.courseStatuses).map(([key, label]) => ({ key, label }))]
-    .map((t) => ({ ...t, count: data.courses.filter((c) => (!t.key || c.status === t.key)).length }));
-  const learnersOf = (id) => new Set(data.enrolments.filter((e) => e.courseId === id && e.status !== "cancelled").map((e) => e.learnerId)).size;
-  const upcomingOf = (id) => data.cohorts.filter((k) => k.courseId === id && k.status === "upcoming" && !k.cancelled).length;
+    .map((t) => ({ ...t, count: courses.filter((c) => (!t.key || c.status === t.key)).length }));
   const catOf = (c) => [categoryName(c.category), subcategoryName(c.category, c.subcategory)].filter(Boolean).join(" › ");
 
   return (
@@ -92,35 +101,31 @@ export default function ProviderCourses() {
                 <th scope="col">Course status</th>
                 <th scope="col">Enrolment</th>
                 <th scope="col">Performance model</th>
-                <th scope="col" className="-num">Learners</th>
-                <th scope="col" className="-num">Upcoming</th>
-                <th scope="col" className="-num">Rating</th>
+                <th scope="col" className="-num">Upcoming dates</th>
                 <th scope="col"><span className="rt-sr">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {list.map((c) => {
-                const img = c.media.find((m) => m.type === "image");
-                const fm = formatOf(c.format);
+                const fm = formatOf(c.method);
                 const href = `/provider/courses/${c.id}`;
+                const meta = [methodName(fm.key), catOf(c)].filter(Boolean).join(" · ");
                 return (
                   <tr key={c.id}>
                     <td data-label="Course">
                       <span className="rt-cx-course">
-                        {img ? <img src={img.src} alt="" className="rt-cx-course__img" /> : <Link href={href} className="rt-cx-course__img -none" title="Upload course image"><i className="icon-cloud text-16" aria-hidden="true"></i><span className="rt-sr">Upload course image for {c.title || "untitled course"}</span></Link>}
+                        {c.coverUrl ? <img src={c.coverUrl} alt="" className="rt-cx-course__img" /> : <Link href={href} className="rt-cx-course__img -none" title="Upload course image"><i className="icon-cloud text-16" aria-hidden="true"></i><span className="rt-sr">Upload course image for {c.title}</span></Link>}
                         <span className="rt-cx-course__text">
-                          <Link href={href} className="rt-cx-course__title" title={c.title || "Untitled course"}>{c.title || "Untitled course"}</Link>
-                          <small title={[methodName(fm.key), catOf(c)].filter(Boolean).join(" · ")}>{[methodName(fm.key), catOf(c)].filter(Boolean).join(" · ")}</small>
+                          <Link href={href} className="rt-cx-course__title" title={c.title}>{c.title}</Link>
+                          <small title={meta}>{meta}</small>
                         </span>
                       </span>
                     </td>
-                    <td data-label="Course status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill></td>
-                    <td data-label="Enrolment">{pw.enrolment[c.enrolment]}</td>
+                    <td data-label="Course status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill>{c.pendingChange && <small className="rt-cx-note">Changes waiting for approval</small>}</td>
+                    <td data-label="Enrolment">{pw.enrolment[enrolmentOf(c)]}</td>
                     <td data-label="Performance model">{pw.models[c.model]?.label}</td>
-                    <td data-label="Learners" className="-num">{learnersOf(c.id)}</td>
-                    <td data-label="Upcoming" className="-num">{c.format === "self-paced" ? "—" : upcomingOf(c.id)}</td>
-                    <td data-label="Rating" className="-num">{c.rating ? <span className="rt-cx-rating"><i className="icon-star text-10" aria-hidden="true"></i>{c.rating.toFixed(1)}</span> : "—"}</td>
-                    <td data-label="Actions" className="-act"><Link href={href} className="rt-cx-manage" title="Edit / manage course"><span className="rt-cx-manage__text">Edit / manage course</span><span className="rt-sr">: {c.title || "untitled course"}</span><i className="icon-chevron-right text-12" aria-hidden="true"></i></Link></td>
+                    <td data-label="Upcoming dates" className="-num">{c.method === "self-paced" ? "—" : c.upcomingCohorts}</td>
+                    <td data-label="Actions" className="-act"><Link href={href} className="rt-cx-manage" title="Edit / manage course"><span className="rt-cx-manage__text">Edit / manage course</span><span className="rt-sr">: {c.title}</span><i className="icon-chevron-right text-12" aria-hidden="true"></i></Link></td>
                   </tr>
                 );
               })}
@@ -144,18 +149,16 @@ export default function ProviderCourses() {
 }
 
 // The provider's profile in the page head, beside "New course" (Hurak's profile card: view, edit, copy the profile address, total
-// courses and users), so the list starts straight under the title.
+// and live courses), so the list starts straight under the title.
 export function CoursesProfile() {
-  const data = useProvider();
   const workspace = useWorkspace();
+  const courses = useProviderCourses().data;
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
-  if (!data) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
-  const users = new Set(data.enrolments.map((e) => e.learnerId)).size;
-  // the real provider (the server check), not the demo records' one
-  const org = { name: workspace?.name || data.org.name, slug: workspace?.slug || data.org.slug };
-  const profileUrl = `https://readtraining.co.uk/providers/${org.slug}`;
+  if (!workspace) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
+  const org = { name: workspace.name, slug: workspace.slug };
   const copyProfile = async () => {
+    const profileUrl = `${window.location.origin}/providers/${org.slug}`;
     try {
       await navigator.clipboard.writeText(profileUrl);
       setToast({ message: "Profile URL copied" });
@@ -176,8 +179,8 @@ export function CoursesProfile() {
         </p>
       </div>
       <dl className="rt-cx-org__stats">
-        <div><dt>Total courses</dt><dd>{data.courses.length}</dd></div>
-        <div><dt>Total users</dt><dd>{users}</dd></div>
+        <div><dt>Total courses</dt><dd>{courses ? courses.length : "–"}</dd></div>
+        <div><dt>Live</dt><dd>{courses ? courses.filter((c) => c.status === "live").length : "–"}</dd></div>
       </dl>
       <Toast toast={toast} onDone={clearToast} />
     </section>

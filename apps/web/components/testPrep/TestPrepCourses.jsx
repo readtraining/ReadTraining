@@ -1,13 +1,12 @@
 import React from "react";
 import HomeCourseCard from "@/components/home/HomeCourseCard";
 import HomeTextLink from "@/components/home/HomeTextLink";
-import { getCoursesByIds, toCourseCard } from "@/lib/courses";
 import { testPrepPage } from "@/data/testPrep";
 
 // Courses that have a mock test on the hub: home's "Popular courses" layout (title left, text link right, four course cards).
-export default function TestPrepCourses() {
+// `courses`: the live ones as cards (lib/catalogueServer.js courseCards); nothing shows while there are none.
+export default function TestPrepCourses({ courses }) {
   const c = testPrepPage.courses;
-  const courses = getCoursesByIds(c.ids);
   if (!courses.length) return null;
   return (
     <section className="rt-tp__courses layout-pt-lg layout-pb-lg" aria-labelledby="rt-tp-courses-h">
@@ -23,9 +22,7 @@ export default function TestPrepCourses() {
           </div>
         </div>
         <div className="row y-gap-30 pt-30">
-          {courses.map((course) => (
-            <HomeCourseCard key={course.id} data={toCourseCard(course)} href={course.detailsHref} />
-          ))}
+          {courses.map((course) => <HomeCourseCard key={course.id} data={course} />)}
         </div>
       </div>
     </section>

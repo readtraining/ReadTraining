@@ -17,6 +17,7 @@ import JobsTraining from "@/components/securityJobs/JobsTraining";
 import { securityJobs as s } from "@/data/securityJobs";
 import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { courseCards } from "@/lib/catalogueServer";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 
@@ -35,6 +36,7 @@ export default async function SecurityJobsPage() {
   await loadSiteContent();
   const faq = faqItems("security-jobs", s.faq.items);
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
+  const courses = await courseCards(s.training.picks);
   return (
     <div className="main-content rt-home fb-page rt-jobs-page">
       <a href="#rt-jobs-main" className="rt-skip">Skip to main content</a>
@@ -52,7 +54,7 @@ export default async function SecurityJobsPage() {
           <JobsConsent consent={s.consent} />
           <JobsGrow grow={s.grow} />
           <JobsApplication />
-          <JobsTraining training={s.training} />
+          <JobsTraining training={s.training} courses={courses} />
           <FaqSection eyebrow={s.faq.eyebrow} title={s.faq.title} items={faq} idPrefix="jobs-faq" className="layout-pt-lg layout-pb-lg bg-light-4 rt-jobs__anchor" id="faqs" />
           <CtaBand cta={s.cta} id="rt-jobs-cta-h" />
         </main>

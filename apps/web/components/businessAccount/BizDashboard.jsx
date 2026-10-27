@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
 import { getBusiness } from "@/lib/businessAccount";
-import { courseHref } from "@/data/courseSlugs";
+import { demoCourseHref } from "@/data/demoCourses";
 import { formatDay, formatDateRange, formatPrice } from "@/lib/format";
 import { CertPill, PlacesBar, ResultPill } from "./bizParts";
 import { DownloadCertificate, useCertificateDownload } from "./BizCertificate";
@@ -103,7 +103,7 @@ export default function BizDashboard() {
                   </div>
                   <div className="rt-acc__certside">
                     <CertPill state={c.state} />
-                    <Link href={courseHref(c.courseId)} className="fb-textlink">{copy.renewals.cta}<span className="rt-sr"> for {c.learner}</span><Arrow /></Link>
+                    <Link href={demoCourseHref(c.courseId)} className="fb-textlink">{copy.renewals.cta}<span className="rt-sr"> for {c.learner}</span><Arrow /></Link>
                   </div>
                 </li>
               ))}
@@ -126,7 +126,7 @@ export default function BizDashboard() {
                   </div>
                   <div className="rt-acc__certside">
                     <ResultPill result={r} />
-                    {r.outcome === "failed" && <Link href={courseHref(r.courseId)} className="fb-textlink">{copy.results.rebook}<span className="rt-sr"> {r.title} for {r.learner}</span><Arrow /></Link>}
+                    {r.outcome === "failed" && <Link href={demoCourseHref(r.courseId)} className="fb-textlink">{copy.results.rebook}<span className="rt-sr"> {r.title} for {r.learner}</span><Arrow /></Link>}
                   </div>
                 </li>
               ))}

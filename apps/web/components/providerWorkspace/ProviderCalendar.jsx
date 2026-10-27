@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { todayIso, useProvider } from "@/lib/providerWorkspace";
+import { useProviderAccess } from "@/lib/providerAccess";
 import { Loading, Tabs, getQuery, setQuery, shortDay } from "./providerParts";
-import { addDays, longDay, monthLabel, weekday } from "./ProviderCohorts";
-import { EmptyState } from "@/components/states/States";
+import { addDays, longDay, monthLabel, todayIso, useSchedule, weekday } from "./ProviderCohorts";
+import { EmptyState, ErrorState } from "@/components/states/States";
 
 // The calendar: every session of every cohort by month, week or day (view and date kept in the address, ?view= and ?date=); the
-// List / Calendar switch above it goes back to the cohort list. Sessions show in their cohort's colour, past ones grey. Each session is a link to its cohort; cancelled cohorts stay visible, struck through. On phones the month becomes a
-// list of the days that have sessions.
+// List / Calendar switch above it goes back to the cohort list. Past sessions are grey. Each session is a link to its cohort; cancelled cohorts stay visible, struck through. On phones the month becomes a
+// list of the days that have sessions. Classroom sessions show in purple, live online ones in blue. The cohorts come from the API.
 
 const VIEWS = [
   { key: "month", label: "Month" },
@@ -34,7 +34,7 @@ function sessionsByDay(cohorts) {
   const map = {};
   cohorts.forEach((k) => k.sessions.forEach((s) => {
     for (let d = s.date; d <= (s.end || s.date); d = addDays(d, 1)) {
-      (map[d] ||= []).push({ key: `${k.id}-${s.date}-${d}`, cohort: k, from: s.from, to: s.to, title: k.course?.title || "Untitled course", where: k.venue ? k.venue.name : "Online", cancelled: k.cancelled });
+      (map[d] ||= []).push({ key: `${k.id}-${s.date}-${d}`, cohort: k, colour: k.method === "live-online" ? "blue" : "purple", from: s.from, to: s.to, title: k.courseTitle, where: k.venue ? k.venue.name : "Online", cancelled: Boolean(k.cancelledAt) });
     }
   }));
   Object.values(map).forEach((l) => l.sort((a, b) => a.from.localeCompare(b.from)));
@@ -42,7 +42,8 @@ function sessionsByDay(cohorts) {
 }
 
 export default function ProviderCalendar() {
-  const data = useProvider();
+  const { can } = useProviderAccess();
+  const { cohorts } = useSchedule("all");
   const [view, setView] = useState("month");
   const [date, setDate] = useState(() => todayIso());
 
@@ -62,11 +63,12 @@ export default function ProviderCalendar() {
     setQuery("view", v === "month" ? "" : v);
   };
 
-  if (!data) return <Loading rows={1} />;
-  if (!data.cohorts.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={{ label: "Add a cohort", href: "/provider/cohorts" }} />;
+  if (cohorts.isError) return <ErrorState title="We couldn't load your dates." text="Check your connection, then try again." onRetry={() => cohorts.refetch()} />;
+  if (!cohorts.data) return <Loading rows={1} />;
+  if (!cohorts.data.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={can("provider.cohorts.edit") ? { label: "Add a cohort", href: "/provider/cohorts?new=1" } : null} />;
 
-  const byDay = sessionsByDay(data.cohorts);
-  const today = data.today;
+  const byDay = sessionsByDay(cohorts.data);
+  const today = todayIso();
   const weekStart = addDays(date, -weekday(date));
   const step = { month: (n) => shiftMonth(date, n), week: (n) => addDays(date, 7 * n), day: (n) => addDays(date, n) }[view];
   const title = {
@@ -98,7 +100,7 @@ export default function ProviderCalendar() {
 function Chip({ e, short = false }) {
   const label = `${e.title}, ${e.from} to ${e.to}, ${e.where}${e.cancelled ? ", cancelled" : ""}`;
   return (
-    <Link href={`/provider/cohorts/${e.cohort.id}`} className={`rt-pws-cal__chip -c-${e.cohort.colour || "purple"}${e.cancelled ? " -cancelled" : e.cohort.last < todayIso() ? " -past" : ""}`} title={label}>
+    <Link href={`/provider/cohorts/${e.cohort.id}`} className={`rt-pws-cal__chip -c-${e.colour}${e.cancelled ? " -cancelled" : e.cohort.endsOn < todayIso() ? " -past" : ""}`} title={label}>
       <span aria-hidden="true"><b>{e.from}</b> {e.title}</span>
       {!short && <span className="rt-pws-cal__chipwhere" aria-hidden="true">{e.where}{e.cancelled ? " · Cancelled" : ""}</span>}
       <span className="rt-sr">{label}</span>
@@ -187,7 +189,7 @@ function DayList({ days, today, byDay, showEmpty = false, emptyText = "" }) {
                     <span className="rt-pws-cal__time">{e.from} to {e.to}</span>
                     <span className="rt-pws-cal__what">
                       <Link href={`/provider/cohorts/${e.cohort.id}`} className="rt-adm-strong">{e.title}</Link>
-                      <small>{e.where} · {e.cohort.booked}/{e.cohort.max} booked{e.cancelled ? " · Cancelled" : ""}</small>
+                      <small>{e.where} · 0/{e.cohort.capacity} booked{e.cancelled ? " · Cancelled" : ""}</small>
                     </span>
                   </li>
                 ))}

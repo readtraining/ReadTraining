@@ -51,7 +51,8 @@ export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Acto
         twoStep: sql<boolean>`exists (select 1 from auth.mfa_factors f where f.user_id = ${user.id}::uuid and f.status = 'verified')`,
       })
       .from(adminUsers)
-      .where(and(eq(adminUsers.userId, user.id), eq(adminUsers.active, true))),
+      // an invite not yet accepted (no password set) gives no access
+      .where(and(eq(adminUsers.userId, user.id), eq(adminUsers.active, true), sql`(${adminUsers.invitedAt} is null or ${adminUsers.acceptedAt} is not null)`)),
   ])
   return {
     userId: user.id,

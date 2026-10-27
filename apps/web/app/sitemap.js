@@ -1,18 +1,21 @@
 import { SITE_URL } from "@/lib/seo";
-import { courseLink } from "@/data/courseSlugs";
 import { getPostSlugs } from "@/lib/blog";
 import { getCoursePageSlugs, getCourseTownParams } from "@/lib/coursePages";
 import { getHelpArticleSlugs, getHelpTopicSlugs } from "@/lib/help";
 import { getLicenceSlugs } from "@/lib/licences";
-import { getProviderSlugs } from "@/lib/providers";
+import { getProviderDirectory } from "@/lib/publicProvider";
 import { getSubjectSlugs } from "@/lib/testPrep";
 import { centreParams } from "@/lib/hseTest";
-import { locationCourses, slugify } from "@/data/home/menu";
-import { getCourseLocation } from "@/lib/courseLocations";
-import { catalogueCourses } from "@/data/courseCatalogue";
+import { loadCatalogue } from "@/lib/catalogueServer";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { coursePath } from "@/lib/routes";
+import { getLegalDocument, getLegalList } from "@/lib/legal";
+import { loadSiteContent } from "@/lib/siteContentServer";
 
 // /sitemap.xml: every public page (the same lists the pages build from), so search engines find them all. Private areas
-// (account, business, provider, admin, basket, checkout) and the template's demo pages are left out (see robots.js).
+// (account, business, provider, admin, basket, checkout) and the template's demo pages are left out (see robots.js). A legal page
+// still marked as a draft (not yet reviewed by a solicitor) asks search engines not to index it, so it is left out too: listing
+// it would contradict that (Search Console reports "Submitted URL marked noindex").
 const STATIC = [
   "/", "/courses", "/for-business", "/for-providers", "/about-us", "/contact-us", "/customer-reviews", "/certificate-checker",
   "/security-jobs", "/skill-saver", "/provider-skill-saver", "/licences", "/test-prep", "/tests/citb-health-safety-and-environment-test",
@@ -20,23 +23,22 @@ const STATIC = [
   "/accessibility-statement",
 ];
 
-export default function sitemap() {
+export default async function sitemap() {
+  await Promise.all([loadTaxonomy(), loadSiteContent()]);
+  const courses = await loadCatalogue();
+  const drafts = new Set(getLegalList().filter((d) => getLegalDocument(d.slug)?.draft).map((d) => d.href));
   const paths = [
     ...STATIC,
-    ...catalogueCourses.map((c) => courseLink(c.id)),
+    ...courses.map((c) => coursePath(c.slug)),
     ...getCoursePageSlugs().map((s) => `/courses/${s}`),
-    ...getCourseTownParams().map((p) => `/courses/${p.slug}/${p.town}`),
-    // a course in a town only when it has a venue there (the others redirect to the course finder)
-    ...locationCourses.filter((c) => c.id).flatMap((c) => (c.places || []).map((city) => `${c.locationSlug}-in-${slugify(city)}`))
-      .filter((slug) => getCourseLocation(slug)?.venues.length)
-      .map((slug) => `/course-locations/${slug}`),
+    ...getCourseTownParams(courses).map((p) => `/courses/${p.slug}/${p.town}`),
     ...getLicenceSlugs().map((s) => `/licences/${s}`),
     ...getSubjectSlugs().map((s) => `/test-prep/${s}`),
     ...centreParams().map((s) => `/tests-locations/${s}`),
-    ...getProviderSlugs().map((s) => `/providers/${s}`),
+    ...(await getProviderDirectory()).map((p) => `/providers/${p.slug}`),
     ...getPostSlugs().map((s) => `/blog/${s}`),
     ...getHelpTopicSlugs().map((p) => `/help-centre/${p.topic}`),
     ...getHelpArticleSlugs().map((p) => `/help-centre/${p.topic}/${p.article}`),
   ];
-  return [...new Set(paths)].map((path) => ({ url: `${SITE_URL}${path}`, changeFrequency: path === "/" ? "daily" : "weekly", priority: path === "/" ? 1 : 0.7 }));
+  return [...new Set(paths)].filter((path) => !drafts.has(path)).map((path) => ({ url: `${SITE_URL}${path}`, changeFrequency: path === "/" ? "daily" : "weekly", priority: path === "/" ? 1 : 0.7 }));
 }

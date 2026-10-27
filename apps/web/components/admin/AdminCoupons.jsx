@@ -5,7 +5,6 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { Choice } from "@/components/providerWorkspace/providerParts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
-import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
@@ -131,7 +130,7 @@ export default function AdminCoupons() {
 
 function CouponForm({ coupon, onDone }) {
   const taxonomy = useTaxonomy();
-  const data = useAdmin();
+  const options = api.admin.courses.options.useQuery();
   const utils = api.useUtils();
   const create = api.admin.coupons.create.useMutation();
   const update = api.admin.coupons.update.useMutation();
@@ -142,7 +141,8 @@ function CouponForm({ coupon, onDone }) {
   const ref = useRef(null);
   const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value }));
   const pick = (k, item) => setV((x) => ({ ...x, [k]: x[k].includes(item) ? x[k].filter((y) => y !== item) : [...x[k], item] }));
-  const courses = data?.catalogue ?? [];
+  // every live course: the shared pages and each provider's own ("Title · Provider")
+  const courses = (options.data ?? []).map((x) => ({ id: x.id, title: x.provider ? `${x.title} · ${x.provider}` : x.title }));
   const needle = find.trim().toLowerCase();
   const shownCourses = courses.filter((x) => v.courses.includes(x.id) || (needle && x.title.toLowerCase().includes(needle))).slice(0, 40);
 

@@ -11,15 +11,15 @@ export default function ProviderCard({ provider: p, as: H = "h2" }) {
   return (
     <Link href={p.href} className="rt-ucard rt-pcard">
       <div className="rt-ucard__image rt-pcard__cover">
-        <Image width={500} height={300} src={p.imageSrc} alt="" />
+        {p.imageSrc ? <Image width={500} height={300} src={p.imageSrc} alt="" /> : <span className="rt-pcard__band" aria-hidden="true"></span>}
       </div>
       <div className="rt-pcard__body">
-        <ProviderLogo initials={p.initials} />
+        <ProviderLogo initials={p.initials} logoUrl={p.logoUrl} />
         <H className="rt-ucard__title rt-pcard__name">{p.name}</H>
         <p className="rt-ucard__meta rt-pcard__meta">
-          {p.city} · {p.courseCount} {p.courseCount === 1 ? "course" : "courses"}
+          {[p.city, `${p.courseCount} ${p.courseCount === 1 ? "course" : "courses"}`].filter(Boolean).join(" · ")}
         </p>
-        <p className="rt-pcard__subjects"><NameList items={p.subjects.slice(0, 3)} /></p>
+        {p.subjects.length > 0 ? <p className="rt-pcard__subjects"><NameList items={p.subjects.slice(0, 3)} /></p> : p.headline ? <p className="rt-pcard__subjects">{p.headline}</p> : null}
         <span className="fb-textlink rt-pcard__link">View provider<i className="icon-arrow-right text-12" aria-hidden="true"></i></span>
       </div>
     </Link>

@@ -7,15 +7,15 @@ import {
   PRICE_BOUNDS,
   PROJECT_NAME,
   buildCatalogueQuery,
-  catalogueCourses,
   closestSortOption,
   filterCourses,
   catalogueFilterGroups,
   sortCourses,
   sortOptions,
-} from "@/data/courseCatalogue";
+} from "@/lib/catalogueFilters";
 import { subcategoryOptions } from "@/lib/taxonomy";
 import { trackEvent, toItem } from "@/lib/analytics";
+import { jsonLd } from "@/lib/seo";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import ActiveFilters from "./ActiveFilters";
 import CatalogueCourseCard from "./CatalogueCourseCard";
@@ -28,6 +28,7 @@ import { useCourseQuery } from "./useCourseQuery";
 import { EmptyState } from "@/components/states/States";
 import { ErrorState } from "@/components/states/States";
 import { useTaxonomy } from "@/lib/taxonomyContext";
+import { api } from "@/lib/trpc/react";
 
 // Quick links under the search: each applies the matching subject filter (no navigation).
 const popularSearches = [
@@ -46,7 +47,8 @@ const countLabel = (n) => `${n} ${n === 1 ? "course" : "courses"}`;
 // { title, lead, crumb, parent?: { label, href } (a town page's course page), location? (a town page's town), allHref, links: [{ label, href }], subject?, hide: ["method" | "subject"], filters: false for a short list, about: { title, text } }.
 // A subject page's `subject` replaces the Subject filter with its sub-subjects ("Course type").
 // The hero then shows the page's title and intro, and links to the other course pages instead of the popular searches.
-export default function CourseCatalogue({ courses = catalogueCourses, scope = null }) {
+// `courses`: the real listings (lib/catalogueData.js toCatalogueCourse), given by the page from the server.
+export default function CourseCatalogue({ courses, scope = null }) {
   const taxonomy = useTaxonomy();
   const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject, scope?.location);
   const [toast, setToast] = useState(null);
@@ -139,10 +141,18 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
     return () => clearTimeout(t);
   });
 
-  const results = useMemo(() => sortCourses(filterCourses(courses, state), state.sort, state.location, courses), [courses, state]);
+  // where the typed town or postcode is on the map (API catalogue.locate), so venues near it match, nearest first; until it is
+  // found (or if it isn't), the town or postcode is matched by its words
+  const located = api.catalogue.locate.useQuery({ q: state.location.trim() }, { enabled: state.location.trim().length >= 2, staleTime: Infinity, retry: false });
+  const point = state.location.trim().length >= 2 ? located.data ?? null : null;
+  const results = useMemo(() => sortCourses(filterCourses(courses, state, point), state.sort, state.location, courses, point), [courses, state, point]);
+  // a town or postcode that isn't on the map and matches no venue: say so, rather than let the online courses (which run
+  // anywhere) look like courses near it
+  const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && !results.some((c) => c.venues.length);
   const noMatches = results.length === 0;
-  // With zero matches the count says "0 courses found" but the full list stays on screen so the page is not empty.
-  const displayed = useMemo(() => (noMatches ? sortCourses(courses, state.sort, state.location) : results), [noMatches, courses, results, state.sort, state.location]);
+  // Only what matches: with zero matches the page says so plainly and offers to loosen the filters; it never fills the space
+  // with courses that don't match (Milestone 2's rule for an empty filter).
+  const displayed = results;
 
   const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE));
   const page = Math.min(state.page, totalPages);
@@ -262,17 +272,17 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
     catalogueFilterGroups().forEach((g) => {
       out[g.key] = {};
       g.options.forEach((o) => {
-        out[g.key][o.value] = filterCourses(courses, { ...state, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }).length;
+        out[g.key][o.value] = filterCourses(courses, { ...state, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }, point).length;
       });
     });
     out.sub = {};
     [...new Set([...state.subject, ...(scope?.subject ? [scope.subject] : [])])].forEach((sv) =>
       subcategoryOptions(sv).forEach((o) => {
-        out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }).length;
+        out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }, point).length;
       }),
     );
     return out;
-  }, [courses, state]);
+  }, [courses, state, point]);
 
   const showingFrom = (page - 1) * PAGE_SIZE + 1;
   const showingTo = Math.min(page * PAGE_SIZE, results.length);
@@ -444,10 +454,18 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
             </div>
 
             <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} />
-
-            {noMatches && (
-              <EmptyState live title="No courses match your filters" text="Try removing a filter or choosing a different price range." secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
+            {placeUnknown && (
+              <p className="rt-res__place" role="status">
+                We couldn’t find “{state.location.trim()}”. Check the town or postcode.{results.length > 0 ? " The courses below are online, so you can take them from anywhere." : ""}
+              </p>
             )}
+
+            {noMatches &&
+              (hasFilters ? (
+                <EmptyState live title="No courses match your search" text="Nothing matches all of these filters. Try removing one, or search a wider area." secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
+              ) : (
+                <EmptyState live title="No courses here yet" text="New courses are added as training providers join. Check back soon, or contact us and we'll help you find one." action={{ label: "Contact us", href: "/contact-us" }} />
+              ))}
 
             <div className="rt-res__list" id="rt-res-list" tabIndex={-1}>
               {pageItems.map((course, i) => (
@@ -471,11 +489,11 @@ export default function CourseCatalogue({ courses = catalogueCourses, scope = nu
       <hr className="rt-cat__rule rt-cat__rule--full" />
 
       <Toast toast={toast} onDone={() => setToast(null)} />
-      {/* ItemList structured data for the courses on this page */}
+      {/* ItemList structured data for the courses on this page (jsonLd escapes "<": a title can never close the script tag) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: jsonLd({
             "@context": "https://schema.org",
             "@type": "ItemList",
             itemListElement: pageItems.map((c, i) => ({

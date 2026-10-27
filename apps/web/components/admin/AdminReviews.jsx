@@ -6,7 +6,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
-import { courseHref } from "@/data/courseSlugs";
+import { demoCourseHref } from "@/data/demoCourses";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { hideReview, keepReview, showReview } from "@/lib/adminReviews";
@@ -70,7 +70,7 @@ export default function AdminReviews() {
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{r.title}</p>
                 <p className="rt-adm-review__text">{r.text}</p>
-                <p className="rt-acc__note"><Link href={courseHref(r.courseId)} className="rt-adm-strong">{r.course}</Link> · {r.provider}</p>
+                <p className="rt-acc__note"><Link href={demoCourseHref(r.courseId)} className="rt-adm-strong">{r.course}</Link> · {r.provider}</p>
                 {r.reply ? <p className="rt-adm-item__reason"><strong>{copy.reply}:</strong> {r.reply}</p> : !r.hidden && <p className="rt-acc__note">{copy.noReply}</p>}
                 {r.challenge && <p className="rt-adm-item__reason"><strong>{copy.providerNote}</strong> {r.challenge}</p>}
                 {r.hidden && <p className="rt-acc__note">{copy.hiddenNote.replace("{who}", r.hidden.by || "an admin").replace("{reason}", r.hidden.reason)}</p>}

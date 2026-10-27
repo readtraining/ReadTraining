@@ -286,7 +286,8 @@ function EmailSection({ me }) {
       <h2 className="rt-acc__h2" id="rt-pf-email-h">{copy.email.title}</h2>
       <p className="rt-acc__note">{copy.email.lead}</p>
       {me.pendingEmail && <p className="rt-acc__notice" role="status">{(returned ? copy.email.oneMore : copy.email.pending).replace("{email}", me.pendingEmail)}</p>}
-      {!me.pendingEmail && returned && <p className="rt-acc__notice -ok" role="status">{copy.email.changed.replace("{email}", me.email)}</p>}
+      {!me.pendingEmail && me.lapsedEmail && <p className="rt-acc__notice" role="status">{copy.email.lapsed.replace("{email}", me.lapsedEmail)}</p>}
+      {!me.pendingEmail && !me.lapsedEmail && returned && <p className="rt-acc__notice -ok" role="status">{copy.email.changed.replace("{email}", me.email)}</p>}
       {me.hasPassword ? (
         <>
           <div className="rt-contact__pair">

@@ -21,7 +21,8 @@ import LicenceBand from "@/components/licences/LicenceBand";
 import LicenceCourses from "@/components/licences/LicenceCourses";
 import LicenceTiles from "@/components/licences/LicenceTiles";
 import { licencesHub as hub } from "@/data/licences";
-import { getGroup, getLicence, getLicenceSlugs, licenceCourses, licenceHref, relatedLicences } from "@/lib/licences";
+import { getGroup, getLicence, getLicenceSlugs, licenceCosts, licenceCourses, licenceHref, relatedLicences } from "@/lib/licences";
+import { loadCatalogue } from "@/lib/catalogueServer";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
@@ -50,6 +51,7 @@ export default async function LicencePage(props) {
   const l = getLicence(slug);
   if (!l) notFound();
   const faqs = faqItems(`licence-${slug}`, l.faqs);
+  const courses = await loadCatalogue(); // the live courses: this licence's training and its prices
 
   const t = hub.page;
   const path = licenceHref(slug);
@@ -80,7 +82,7 @@ export default async function LicencePage(props) {
 
             {l.finder && <CscsFinder finder={l.finder} cards={l.cards} service={l.service} />}
             {l.cardsSection && <CscsCards copy={l.cardsSection} labels={l.finder.labels} cards={l.cards} service={l.service} />}
-            <LicenceRoute licence={l} copy={t} />
+            <LicenceRoute licence={l} costs={licenceCosts(l, courses)} copy={t} />
             <LicenceEligibility licence={l} copy={t} />
             {l.guide?.length > 0 && (
               <section className="fb-section -white rt-lic__guide" aria-label={t.guideLabel}>
@@ -90,7 +92,7 @@ export default async function LicencePage(props) {
               </section>
             )}
             <LicenceBand band={l.band} />
-            <LicenceCourses courses={licenceCourses(l)} training={l.training} copy={t} />
+            <LicenceCourses courses={licenceCourses(l, courses)} training={l.training} copy={t} />
             {related.length > 0 && (
               <section className="fb-section -lavender" aria-labelledby="rt-lic-related-h">
                 <div className="container">

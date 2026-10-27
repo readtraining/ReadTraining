@@ -36,6 +36,7 @@ export default function MobileBuyBar() {
   }, [cardButtonRef, isInHouse]);
 
   const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
+  if (!mode || (!isInHouse && !session)) return null;
 
   return (
     <div className={`rt-cd__bar${visible ? " is-visible" : ""}`} aria-hidden={!visible} inert={!visible}>

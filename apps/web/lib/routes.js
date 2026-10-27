@@ -4,7 +4,7 @@ export const BASKET_HREF = "/basket";
 export const QUOTE_HREF = "/quote";
 export const CHECKOUT_HREF = "/checkout";
 
-// A course details page. Pass the course's slug; lib/courses.js `courseHref` also accepts a catalogue id.
+// A course details page. Pass the course's slug (a course number also opens it and is sent on to the slug).
 export const coursePath = (slug) => `/course/${slug}`;
 
 // The auth pages. Kept here, not in lib/auth/authClient.js: that file is "use client", so a server page importing from it gets nothing.
@@ -19,6 +19,8 @@ export const AUTH_ROUTES = {
   privacy: "/privacy-policy",
   admin: "/admin",
   adminLogin: "/admin/login",
+  // where an admin invite link lands: set your name and password (no admin access until then)
+  adminWelcome: "/admin/welcome",
 };
 
 // The CITB HS&E test (the "CSCS test"): the test page, the test centre directory and a centre's page (the client's URLs).

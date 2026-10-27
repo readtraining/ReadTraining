@@ -14,7 +14,7 @@ import { BASKET_HREF, QUOTE_HREF } from "@/lib/routes";
 const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
 export const IN_HOUSE_NOTE = TEAM.note;
-export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.id}`;
+export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 
 // Shared booking state for the whole detail page: delivery mode, location filter and the selected session.
 // BookingCard, DatesSection and MobileBuyBar all read this one source. It is mirrored to the URL (?mode=&session=)
@@ -27,14 +27,15 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const modes = useMemo(() => [...bookableModes(course), ...(course.inHouse ? ["inhouse"] : [])], [course]);
   // The first session of a mode and the default mode follow the shared rules in lib/courses.js (cheapest, most popular).
   const firstOf = useCallback((mode) => firstSession(course, mode), [course]);
-  const defaultMode = useMemo(() => defaultModeOf(course), [course]);
+  // a course with no dates yet has no dated mode: team training (if offered) is then the only option, or none at all (mode null)
+  const defaultMode = useMemo(() => defaultModeOf(course) ?? modes[0] ?? null, [course, modes]);
 
   // Initial state comes from the URL; invalid values fall back to the first session of the default mode.
   const [mode, setModeState] = useState(() => (modes.includes(initialMode) ? initialMode : defaultMode));
   const [sessionId, setSessionId] = useState(() => {
     const startMode = modes.includes(initialMode) && initialMode !== "inhouse" ? initialMode : defaultMode;
     const wanted = course.sessions.find((s) => s.id === initialSession);
-    return (wanted && wanted.mode === startMode ? wanted : firstOf(startMode))?.id;
+    return (wanted && wanted.mode === startMode ? wanted : startMode ? firstOf(startMode) : null)?.id;
   });
   const [city, setCity] = useState("");
   const [toast, setToast] = useState(null);
@@ -45,7 +46,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const notify = useCallback((t) => setToast(typeof t === "string" ? { message: t } : t), []);
 
   const isInHouse = mode === "inhouse";
-  const session = course.sessions.find((s) => s.id === sessionId) || firstOf(mode) || course.sessions[0];
+  const session = course.sessions.find((s) => s.id === sessionId) || (mode ? firstOf(mode) : null) || course.sessions[0] || null;
 
   const writeUrl = useCallback(
     (nextMode, nextSession) => {
@@ -72,6 +73,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
         return;
       }
       const target = session?.mode === next ? session : firstOf(next);
+      if (!target) return;
       setSessionId(target.id);
       writeUrl(next, target.id);
     },
@@ -187,7 +189,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   }, []);
 
   useEffect(() => {
-    trackEvent("view_item", { currency: "GBP", value: course.price, items: [toItem(course)] });
+    trackEvent("view_item", { currency: "GBP", value: course.price ?? 0, items: [toItem(course)] });
   }, [course]);
 
   const value = {

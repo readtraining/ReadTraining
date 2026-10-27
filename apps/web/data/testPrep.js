@@ -1,4 +1,5 @@
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { TOPICS } from "@/data/courseTopics";
 // Test prep hub content: one list for the hub page and (later) the individual test pages.
 // Titles and slugs follow the reference Hurak test prep hub; the brand name is ours. A card's description and facts come from
 // the subject page data (data/testPrepSubjects.js, read through lib/testPrep.js), so the hub and the subject page agree.
@@ -38,7 +39,7 @@ export const testPrepPage = {
     eyebrow: "Ready for the real thing?",
     title: "Book the course behind the test",
     text: "These courses each have a free mock test on this page, so you can practise before and after you book.",
-    ids: [9, 1, 10, 11],
+    picks: [TOPICS.cscsGreen, TOPICS.doorSupervisor, TOPICS.smsts, TOPICS.sssts],
     more: { label: "Browse all courses", href: CATALOGUE_HREF },
   },
   faq: {
@@ -212,15 +213,14 @@ export const tests = [
   { slug: "cscs-plumbing-mock-test", title: "CSCS Plumbing Mock Test", category: "Construction" },
 ].map((t) => ({ live: true, ...t, href: `/test-prep/${t.slug}` }));
 
-// Which course links to which test. Only courses that really have a mock test (checked on the reference site) are listed;
-// every other course shows nothing. To add one, add its course id here with the test slug.
-export const mockTestByCourse = {
-  1: "sia-mock-test", // SIA Door Supervisor Training
-  3: "sia-mock-test", // SIA CCTV Operator Training
-  9: "cscs-green-card-mock-test", // CSCS Green Card Course
-  10: "smsts-mock-test", // CITB SMSTS Course
-  11: "sssts-mock-test", // CITB SSSTS Course
-  21: "personal-licence-mock-exam", // Personal Licence (APLH)
-  46: "sia-top-up-mock-tests", // Door Supervisor Refresher
+// Which courses a mock test belongs to: the live courses under its picks (data/courseTopics.js) show its banner on their page and
+// are listed on the test's page; `words` find them in the course search for its "Book now". Only tests that really match a
+// course (checked on the reference site) are listed; every other test's "Book now" opens all courses.
+export const mockTestCourses = {
+  "sia-mock-test": { picks: [TOPICS.doorSupervisor, TOPICS.cctv], words: "SIA" },
+  "cscs-green-card-mock-test": { picks: [TOPICS.cscsGreen], words: "CSCS Green Card" },
+  "smsts-mock-test": { picks: [TOPICS.smsts], words: "SMSTS" },
+  "sssts-mock-test": { picks: [TOPICS.sssts], words: "SSSTS" },
+  "personal-licence-mock-exam": { picks: [TOPICS.personalLicence], words: "Personal Licence" },
+  "sia-top-up-mock-tests": { picks: [TOPICS.doorTopUp], words: "Door Supervisor" },
 };
-export const findMockTest = (courseId) => tests.find((t) => t.slug === mockTestByCourse[courseId]) || null;

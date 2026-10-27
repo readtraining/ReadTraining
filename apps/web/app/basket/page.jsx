@@ -4,8 +4,8 @@ import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 import BasketPage from "@/components/basket/BasketPage";
-import { catalogueCourses } from "@/data/courseCatalogue";
 import { toCourseCard } from "@/lib/courses";
+import { loadCatalogue } from "@/lib/catalogueServer";
 import { pageMetadata } from "@/lib/seo";
 import { BASKET_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
@@ -16,11 +16,10 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 export const metadata = pageMetadata({ title: "Your basket | ReadTraining", description: "Review the courses and dates in your basket before you pay.", path: BASKET_HREF, noindex: true });
 
-// the most booked courses; the page leaves out any already in the basket
-const recommended = [...catalogueCourses].sort((a, b) => b.popularity - a.popularity).slice(0, 8).map(toCourseCard);
-
 export default async function CourseCartPage() {
-  await loadTaxonomy(); // catalogue names (categories, methods) on the server
+  const [, courses] = await Promise.all([loadTaxonomy(), loadCatalogue()]); // catalogue names, and the live courses
+  // the most popular live courses (they come most popular first); the page leaves out any already in the basket
+  const recommended = courses.slice(0, 8).map(toCourseCard);
   return (
     <div className="main-content rt-home fb-page rt-bk-page">
       <a href="#rt-bk-main" className="rt-skip">Skip to main content</a>

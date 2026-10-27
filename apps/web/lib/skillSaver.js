@@ -25,6 +25,3 @@ export function skillSaverStatus(completedDates, signedIn, now = new Date()) {
   return { ...current, next, completed: dates.length };
 }
 
-// DEMO until the backend: which courses are in Skill Saver. Really it is a field on the course (set when its provider joins the
-// programme), read from the database; swap this function for that field. Every badge and the basket use it.
-export const isSkillSaverCourse = (id) => Number(id) % 3 !== 0;

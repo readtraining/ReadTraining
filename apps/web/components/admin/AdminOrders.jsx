@@ -8,7 +8,6 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { Choice } from "@/components/providerWorkspace/providerParts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
-import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
@@ -99,7 +98,7 @@ export default function AdminOrders() {
 function BookForm() {
   const me = useAdminAccess();
   const canFree = me?.permissions?.includes("orders.free");
-  const data = useAdmin();
+  const options = api.admin.courses.options.useQuery();
   const router = useRouter();
   const refresh = useMoneyRefresh();
   const providers = api.admin.providers.list.useQuery({ tab: "active", limit: 100, sort: "name", dir: "asc" });
@@ -110,10 +109,11 @@ function BookForm() {
   const ref = useRef(null);
   const b = copy.bookSheet;
   const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value }));
-  const courses = [...(data?.catalogue ?? [])].sort((x, y) => x.title.localeCompare(y.title));
+  // the chosen provider's live courses; picking one fills in its lowest price
+  const courses = (options.data ?? []).filter((x) => x.kind === "provider" && x.providerId === v.providerId);
   const pickCourse = (id) => {
     const course = courses.find((x) => String(x.id) === id);
-    setV((x) => ({ ...x, courseId: id, unit: x.method === "free" ? "0" : course ? String(course.from) : x.unit }));
+    setV((x) => ({ ...x, courseId: id, unit: x.method === "free" ? "0" : course?.fromPence != null ? (course.fromPence / 100).toFixed(2) : x.unit }));
   };
   const free = v.method === "free";
   const qty = /^\d+$/.test(v.quantity) ? Number(v.quantity) : 0;
@@ -134,7 +134,7 @@ function BookForm() {
     if (Object.keys(found).length) return focusFirstError(ref.current);
     const course = courses.find((x) => String(x.id) === v.courseId);
     try {
-      const r = await book.mutateAsync({ buyerName: v.buyerName.trim(), buyerEmail: v.buyerEmail.trim(), buyerCompany: v.buyerCompany.trim() || undefined, providerId: v.providerId, courseId: course.id, courseTitle: course.title, startsOn: v.startsOn || null, quantity: qty, unitPence: unit, method: v.method, note: v.note.trim() || undefined });
+      const r = await book.mutateAsync({ buyerName: v.buyerName.trim(), buyerEmail: v.buyerEmail.trim(), buyerCompany: v.buyerCompany.trim() || undefined, providerId: v.providerId, courseId: course.id, startsOn: v.startsOn || null, quantity: qty, unitPence: unit, method: v.method, note: v.note.trim() || undefined });
       await refresh();
       router.push(`/admin/orders/${r.ref}`);
     } catch (err) {
@@ -152,10 +152,10 @@ function BookForm() {
       {field("rt-bk-buyerEmail", b.buyerEmail, b.buyerEmailHint, errors.buyerEmail, input("buyerEmail", { type: "email", autoComplete: "off", hint: b.buyerEmailHint }))}
       {field("rt-bk-buyerCompany", b.buyerCompany, null, errors.buyerCompany, input("buyerCompany", { type: "text" }))}
       {field("rt-bk-providerId", b.provider, b.providerHint, errors.providerId, (
-        <FieldSelect id="rt-bk-providerId" label={b.provider} value={v.providerId} onChange={(id) => setV((x) => ({ ...x, providerId: id }))} options={(providers.data?.providers ?? []).map((p) => ({ value: p.id, label: p.name }))} invalid={Boolean(errors.providerId)} describedBy={describedBy("rt-bk-providerId", b.providerHint, errors.providerId)} />
+        <FieldSelect id="rt-bk-providerId" label={b.provider} value={v.providerId} onChange={(id) => setV((x) => ({ ...x, providerId: id, courseId: x.providerId === id ? x.courseId : "" }))} options={(providers.data?.providers ?? []).map((p) => ({ value: p.id, label: p.name }))} invalid={Boolean(errors.providerId)} describedBy={describedBy("rt-bk-providerId", b.providerHint, errors.providerId)} />
       ))}
-      {field("rt-bk-courseId", b.course, null, errors.courseId, (
-        <FieldSelect id="rt-bk-courseId" label={b.course} value={v.courseId} onChange={pickCourse} options={courses.map((x) => ({ value: String(x.id), label: x.title }))} invalid={Boolean(errors.courseId)} describedBy={describedBy("rt-bk-courseId", null, errors.courseId)} />
+      {field("rt-bk-courseId", b.course, v.providerId ? (courses.length ? null : b.noCourses) : b.courseFirst, errors.courseId, (
+        <FieldSelect id="rt-bk-courseId" label={b.course} value={v.courseId} onChange={pickCourse} options={courses.map((x) => ({ value: String(x.id), label: x.title }))} disabled={!courses.length} invalid={Boolean(errors.courseId)} describedBy={describedBy("rt-bk-courseId", v.providerId ? (courses.length ? null : b.noCourses) : b.courseFirst, errors.courseId)} />
       ))}
       {field("rt-bk-startsOn", b.startsOn, null, errors.startsOn, <DateField id="rt-bk-startsOn" clearable value={v.startsOn} onChange={(d) => setV((x) => ({ ...x, startsOn: d }))} />)}
       <Choice name="rt-bk-method" legend={b.method} value={v.method} onChange={(m) => setV((x) => ({ ...x, method: m, unit: m === "free" ? "0" : x.unit === "0" ? "" : x.unit }))} options={["invoice", "payment_link", ...(canFree ? ["free"] : [])].map((m) => ({ value: m, label: b.methods[m] }))} />

@@ -4,12 +4,12 @@ import HomeHeader from "@/components/home/HomeHeader";
 import HomeFooter from "@/components/home/HomeFooter";
 import MarketingHero from "@/components/marketing/MarketingHero";
 import QuoteForm from "@/components/courseDetail/QuoteForm";
-import { courseHref, getCourseBySlug } from "@/lib/courses";
-import { QUOTE_HREF } from "@/lib/routes";
+import { loadCoursePage } from "@/lib/catalogueServer";
+import { QUOTE_HREF, coursePath } from "@/lib/routes";
 import { pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
-// Group quote (/quote, ?course=<slug> from a course page): the Contact page's layout (marketing hero, then how it works beside
+// Group quote (/quote, ?course=<course address or number> from a course page or a basket line): the Contact page's layout (marketing hero, then how it works beside
 // the form in a frame), so it no longer stands out as a bare form. The form is QuoteForm (simulated sending: lib/quote.js).
 
 const copy = {
@@ -36,8 +36,8 @@ export const metadata = pageMetadata({
 export default async function QuotePage(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const query = (await props.searchParams) || {};
-  const course = query.course ? getCourseBySlug(String(query.course)) : null;
-  const backHref = course ? courseHref(course.slug) : "/";
+  const course = query.course ? await loadCoursePage(String(query.course)) : null; // a live course, or none
+  const backHref = course ? coursePath(course.slug) : "/";
   const hero = course ? { ...copy.hero, lead: `Training your team on ${course.title}? ${copy.hero.lead}` } : copy.hero;
 
   return (

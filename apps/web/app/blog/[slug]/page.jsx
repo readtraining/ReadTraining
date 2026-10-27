@@ -15,7 +15,7 @@ import BackToTop from "@/components/doc/BackToTop";
 import PostCard from "@/components/blog/PostCard";
 import { blogPage } from "@/data/blogPosts";
 import { BLOG_HREF, getMorePosts, getPost, getPostSlugs } from "@/lib/blog";
-import { toCourseCard } from "@/lib/courses";
+import { courseCards } from "@/lib/catalogueServer";
 import { abs, breadcrumbLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
@@ -43,6 +43,7 @@ export default async function BlogArticlePage(props) {
   if (!post) notFound();
   const a = blogPage.article;
   const more = getMorePosts(post);
+  const courses = await courseCards(post.related || [], 3); // the live courses this post is about
   const crumbs = [{ label: "Home", href: "/" }, { label: "Blog", href: BLOG_HREF }, { label: post.category.label, href: `${BLOG_HREF}?category=${post.category.key}` }, { label: post.title }];
   const toc = post.sections.map((s) => ({ id: s.id, label: s.title }));
   const meta = [
@@ -105,15 +106,13 @@ export default async function BlogArticlePage(props) {
           </div>
           <BackToTop targetId="rt-doc-title" />
 
-          {post.courses.length > 0 && (
+          {courses.length > 0 && (
             <section className="rt-blog__courses layout-pt-lg layout-pb-lg bg-light-4" aria-labelledby="rt-blog-courses-h">
               <div className="container">
                 <h2 className="sectionTitle__title" id="rt-blog-courses-h">{a.courses.title}</h2>
                 <p className="sectionTitle__text mt-5">{a.courses.text}</p>
                 <div className="row y-gap-20 pt-30">
-                  {post.courses.map((c) => (
-                    <HomeCourseCard key={c.id} data={toCourseCard(c)} href={c.detailsHref} className="col-lg-4 col-md-6" />
-                  ))}
+                  {courses.map((c) => <HomeCourseCard key={c.id} data={c} className="col-lg-4 col-md-6" />)}
                 </div>
               </div>
             </section>

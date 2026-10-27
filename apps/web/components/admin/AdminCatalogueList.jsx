@@ -132,6 +132,7 @@ export default function AdminCatalogueList() {
         {[["method", methods], ["level", levels]].map(([kind, rows]) => (
           <section key={kind} className="rt-acc__card" aria-labelledby={`rt-adm-cat-${kind}-h`}>
             <h2 className="rt-acc__h2" id={`rt-adm-cat-${kind}-h`}>{copy.sections[kind]}</h2>
+            {kind === "method" && <p className="rt-acc__note">{copy.methodsNote}</p>}
             <ul className="rt-adm-cat">
               {rows.map((r) => (
                 <li key={r.key} className={r.active ? undefined : "is-retired"}>

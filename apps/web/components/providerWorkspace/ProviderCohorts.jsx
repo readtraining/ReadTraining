@@ -3,25 +3,27 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { canDeleteCohort, cancelCohort, deleteCohort, moveCohort, saveCohort, setCohortEnabled, setCohortStatus, setCohortTutor, todayIso, toggleFavourite, useProvider } from "@/lib/providerWorkspace";
+import { api } from "@/lib/trpc/react";
+import { useProviderAccess } from "@/lib/providerAccess";
+import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, CardChoice, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
-import { EmptyState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
+import { VenueForm } from "./SettingsProfile";
 
-// Cohorts: every run of a course, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status (set here by
-// hand), its instructor (assigned here), students (booked of places, with enrolled / rescheduled / cancelled), whether it takes
-// bookings (Enabled / Disabled), a favourite star and a row menu (View, Move to another course, Edit, Delete). Filtered by delivery,
-// course, date, status, venue, tutor and when, with a search; 10 a page. Rows can be picked for bulk actions (email joining
-// instructions, cancel upcoming runs). Filters are kept in the address. The Self-paced tab lists the self-paced courses (they have
-// no dates: learners start when they book). CohortForm (named export) is the create and edit panel: dates picked on a two-month
-// calendar become session slots.
+// Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
+// its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
+// Filtered by delivery, course, date, venue, tutor and when, with a search; 10 a page; filters are kept in the address. The
+// Self-paced tab lists the self-paced courses (they have no dates). CohortForm (named export) is the create and edit panel: dates
+// picked on a two-month calendar become session slots. Everything comes from the API. Bookings arrive in a later milestone, so
+// places booked are 0 for now.
 
 const MODES = [
   { key: "all", label: "All" },
@@ -35,6 +37,7 @@ const WHEN = [
   { value: "past", label: "Past" },
   { value: "all", label: "Any date" },
 ];
+const STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
 const ONLINE = "Online";
 const PER_PAGE = 10;
 const monthShortFmt = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
@@ -44,6 +47,8 @@ const monthShort = (iso) => monthShortFmt.format(new Date(`${iso}T00:00:00Z`));
 
 const toDate = (iso) => new Date(`${iso}T00:00:00Z`);
 const toIso = (d) => d.toISOString().slice(0, 10);
+// today in the UK (UTC would still be yesterday for an hour after midnight in summer)
+export const todayIso = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
 export const addDays = (iso, n) => {
   const d = toDate(iso);
   d.setUTCDate(d.getUTCDate() + n);
@@ -65,47 +70,73 @@ export const weekday = (iso) => (toDate(iso).getUTCDay() + 6) % 7;
 
 // "Tue 20 Oct" or "Tue 20 Oct to Sun 25 Oct"
 export const dayRange = (first, last) => (first === last ? shortDay(first) : `${shortDay(first)} to ${shortDay(last)}`);
+// a cohort's status from its dates (cancelled ones stay cancelled)
+export const cohortState = (k, today = todayIso()) => (k.cancelledAt ? "cancelled" : k.endsOn < today ? "completed" : k.startsOn <= today ? "progress" : "upcoming");
+// "09:30 to 16:30"
+export const timeRange = (s) => `${s.from} to ${s.to}`;
 
 // times in 15-minute steps, 06:00 to 22:00
 const TIMES = [];
 for (let m = 6 * 60; m <= 22 * 60; m += 15) TIMES.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
-const DEFAULT_SLOT = { from: "10:00", to: "18:30" };
+const DEFAULT_SLOT = { from: "09:30", to: "16:30" };
+
+// The provider's dates, courses, venues and team, from the API (shared by the list, the form and the calendar). Only what this
+// role may see is asked for (the API refuses the rest): a tutor gets the dates they teach and no venue list (only the date form,
+// which they can't open, needs it); roles without dates or courses get an empty list. `may` says which ones the role sees.
+const NONE = { data: [], isError: false, refetch: () => {} };
+export function useSchedule(when = "upcoming") {
+  const access = useProviderAccess();
+  const { organisationId } = access;
+  const may = {
+    dates: access.can("provider.cohorts.view") || access.can("provider.cohorts.view", { tutorUserId: access.userId }),
+    venues: access.can("provider.cohorts.view"),
+    team: access.can("provider.cohorts.view"),
+    courses: access.can("provider.courses.view"),
+  };
+  const on = (ok) => ({ enabled: Boolean(organisationId) && ok });
+  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when }, on(may.dates));
+  const courses = api.provider.courses.list.useQuery({ organisationId }, on(may.courses));
+  const venues = api.provider.venues.list.useQuery({ organisationId }, on(may.venues));
+  const tutors = api.provider.cohorts.tutors.useQuery({ organisationId }, on(may.team));
+  return { may, cohorts: may.dates ? cohorts : NONE, courses: may.courses ? courses : NONE, venues: may.venues ? venues : NONE, tutors: may.team ? tutors : NONE };
+}
+
+// the full set of a cohort's values, as the API's update takes them (to change one thing, like the tutor, from the list)
+export const cohortInput = (k) => ({
+  sessions: k.sessions, venueId: k.venueId, joinUrl: k.joinUrl || "", capacity: k.capacity, pricePence: k.pricePence, wasPricePence: k.wasPricePence,
+  details: k.details || "", tutorUserId: k.tutorUserId, bookable: k.bookable,
+});
 
 // ---- the list --------------------------------------------------------------------------------------------------------------
 
 export default function ProviderCohorts() {
-  const data = useProvider();
+  const { organisationId, can } = useProviderAccess();
   const [mode, setMode] = useState("all");
   const [course, setCourse] = useState("");
-  const [status, setStatus] = useState("");
   const [venue, setVenue] = useState("");
   const [tutor, setTutor] = useState("");
   const [when, setWhen] = useState("upcoming");
   const [q, setQ] = useState("");
   const [date, setDate] = useState("");
-  // said under the filters when a status or a date set "When" to Any date, so the change is never silent
+  // said under the filters when a date set "When" to Any date, so the change is never silent
   const [whenNote, setWhenNote] = useState("");
   const [page, setPage] = useState(1);
-  const [moving, setMoving] = useState(null);
-  const [moveTo, setMoveTo] = useState("");
   const [editingK, setEditingK] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [cancelOne, setCancelOne] = useState(null);
-  const [picked, setPicked] = useState([]);
   const [formOpen, setFormOpen] = useState(false);
-  const [confirm, setConfirm] = useState(false);
   const [toast, setToast] = useState(null);
+  const s = useSchedule(when);
+  const utils = api.useUtils();
+  const update = api.provider.cohorts.update.useMutation();
+  const bookable = api.provider.cohorts.setBookable.useMutation();
+  const edit = can("provider.cohorts.edit");
 
   useEffect(() => {
     const m = METHOD_ALIASES[getQuery("mode")] || getQuery("mode"); // old ?mode=on-demand links
     if (MODES.some((x) => x.key === m)) setMode(m);
     const c = getQuery("course");
-    if (c) setCourse(c);
-    const s = getQuery("status");
-    if (s && pw.cohortStatuses[s]) {
-      setStatus(s);
-      setWhen("all");
-    }
+    if (/^\d+$/.test(c || "")) setCourse(c);
     const w = getQuery("when");
     if (WHEN.some((x) => x.value === w)) setWhen(w);
     const v = getQuery("venue");
@@ -120,46 +151,44 @@ export default function ProviderCohorts() {
   }, []);
 
   // any filter change starts again at page 1
-  useEffect(() => setPage(1), [mode, course, status, venue, tutor, when, q, date]);
+  useEffect(() => setPage(1), [mode, course, venue, tutor, when, q, date]);
 
   const keep = (key, value, fallback = "") => setQuery(key, value === fallback ? "" : value);
+  if (!s.may.dates) return <EmptyState title="Dates aren't part of your role" text="Ask your provider's owner or an admin if you need to see the dates." />;
+  const failed = [s.cohorts, s.courses, s.venues].find((x) => x.isError);
+  if (failed) return <ErrorState title="We couldn't load your dates." text="Check your connection, then try again." onRetry={() => failed.refetch()} />;
+  if (!s.cohorts.data || !s.courses.data || !s.venues.data) return <Loading rows={2} />;
 
-  if (!data) return <Loading rows={2} />;
-  const { byId, today } = data;
-  const scoped = data.cohorts;
-  const datedCourses = data.courses.filter((c) => c.format !== "self-paced");
-  const onDemand = data.courses.filter((c) => c.format === "self-paced");
+  const today = todayIso();
+  const courses = s.courses.data;
+  const courseOf = Object.fromEntries(courses.map((c) => [c.id, c]));
+  const tutors = s.tutors.data || [];
+  // a tutor sees only the dates they teach (no team list), so a tutor on them is the tutor themselves
+  const tutorName = (id) => tutors.find((t) => t.userId === id)?.name ?? (!s.may.team && id ? "You" : undefined);
+  const scoped = s.cohorts.data.map((k) => ({ ...k, status: cohortState(k, today), course: courseOf[k.courseId] }));
+  const datedCourses = courses.filter((c) => c.method !== "self-paced");
+  const onDemand = courses.filter((c) => c.method === "self-paced");
 
   const needle = q.trim().toLowerCase();
   const list = scoped
-    .filter((k) => mode === "all" || mode === "self-paced" || k.course?.format === mode)
-    .filter((k) => !course || k.courseId === course)
-    .filter((k) => !status || k.status === status)
+    .filter((k) => mode === "all" || mode === "self-paced" || k.method === mode)
+    .filter((k) => !course || String(k.courseId) === course)
     .filter((k) => !venue || (venue === "online" ? !k.venueId : k.venueId === venue))
-    .filter((k) => !tutor || (tutor === "none" ? !k.tutorId : k.tutorId === tutor))
-    .filter((k) => when === "all" || (when === "upcoming" ? k.last >= today : k.last < today))
-    .filter((k) => !date || (k.first <= date && k.last >= date))
-    .filter((k) => !needle || `${k.course?.title} ${k.venue?.name || ONLINE} ${k.venue?.city || ""} ${k.tutor?.name || ""}`.toLowerCase().includes(needle))
-    .sort((a, b) => (when === "past" ? b.first.localeCompare(a.first) : a.first.localeCompare(b.first)));
+    .filter((k) => !tutor || (tutor === "none" ? !k.tutorUserId : k.tutorUserId === tutor))
+    .filter((k) => !date || (k.startsOn <= date && k.endsOn >= date))
+    .filter((k) => !needle || `${k.courseTitle} ${k.venue?.name || ONLINE} ${k.venue?.city || ""} ${tutorName(k.tutorUserId) || ""}`.toLowerCase().includes(needle));
 
   // any filter set (the tab aside), for "Clear filters" under the filters
-  const filtersSet = Boolean(course || status || venue || tutor || date || needle || when !== "upcoming");
+  const filtersSet = Boolean(course || venue || tutor || date || needle || when !== "upcoming");
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const at = Math.min(page, pages);
   const pageRows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
-  const visibleIds = pageRows.map((k) => k.id);
-  const pickedHere = picked.filter((id) => visibleIds.includes(id));
-  const allPicked = list.length > 0 && pickedHere.length === list.length;
-  const pickedRows = pickedHere.map((id) => byId.cohort[id]);
-  const cancellable = pickedRows.filter((k) => k.status === "upcoming");
-  const learnersIn = (rows) => rows.filter((k) => !k.cancelled).reduce((n, k) => n + k.booked, 0);
-  const filtered = Boolean(status || venue || tutor || needle || date || course || mode !== "all" || when !== "upcoming");
+  const filtered = Boolean(venue || tutor || needle || date || course || mode !== "all" || when !== "upcoming");
 
   // back to the defaults; under the filters the tab stays (keepTab), from the empty state everything resets
   const clear = (keepTab = false) => {
     if (!keepTab) setMode("all");
     setCourse("");
-    setStatus("");
     setVenue("");
     setTutor("");
     setWhen("upcoming");
@@ -167,70 +196,54 @@ export default function ProviderCohorts() {
     setDate("");
     setPage(1);
     setWhenNote("");
-    [...(keepTab ? [] : ["mode"]), "course", "status", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
+    [...(keepTab ? [] : ["mode"]), "course", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
-  const togglePick = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const sendJoining = () => {
-    const n = learnersIn(pickedRows);
-    setToast({ message: n ? `Joining instructions sent to ${n} ${n === 1 ? "learner" : "learners"}` : "No learners booked on the cohorts you picked" });
-    setPicked([]);
+  const refresh = () => {
+    utils.provider.cohorts.list.invalidate();
+    utils.provider.courses.list.invalidate({ organisationId });
+    utils.provider.courses.get.invalidate();
   };
-  // the cohort status set by hand; Cancelled asks first (learners are told)
-  const changeStatus = (k, v) => {
-    if (v === k.status) return;
-    if (v === "cancelled") return setCancelOne(k);
-    setCohortStatus(k.id, v);
-    setToast({ message: `Cohort status changed to ${pw.cohortStatuses[v]}` });
-  };
-  const sameFormat = (k) => data.courses.filter((c) => c.id !== k.courseId && c.format === k.course?.format);
-  const doMove = () => {
-    moveCohort(moving.id, moveTo);
-    setToast({ message: `Cohort moved to ${byId.course[moveTo]?.title || "the other course"}` });
-    setMoving(null);
-  };
-  const doDelete = () => {
-    deleteCohort(deleting.id);
-    setDeleting(null);
-    setToast({ message: "Cohort deleted" });
-  };
-  const doCancel = () => {
-    cancellable.forEach((k) => cancelCohort(k.id));
-    setConfirm(false);
-    setPicked([]);
-    setToast({ message: `${cancellable.length} ${cancellable.length === 1 ? "cohort" : "cohorts"} cancelled. Learners were told.` });
-  };
+  const fail = (e) => setToast({ message: errorsFrom(e).general || "We couldn't save that. Please try again." });
+  const setTutorOf = (k, v) => update.mutate({ organisationId, cohortId: k.id, ...cohortInput(k), tutorUserId: v || null }, {
+    onSuccess: () => { refresh(); setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); },
+    onError: fail,
+  });
+  const toggleBookings = (k) => bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
+    onSuccess: () => { refresh(); setToast({ message: k.bookable ? "Bookings turned off" : "Bookings turned on" }); },
+    onError: fail,
+  });
 
-  const tutors = data.team.filter((t) => t.status === "active");
-  const create = <button type="button" className="button -md -purple-1 text-white" onClick={() => setFormOpen(true)} disabled={!datedCourses.length}>Create cohort</button>;
+  const create = edit && <button type="button" className="button -md -purple-1 text-white" onClick={() => setFormOpen(true)} disabled={!datedCourses.length}>Create cohort</button>;
+  const nothingYet = !scoped.length && when === "upcoming" && !filtered;
 
   return (
     <div className="rt-acc__stack">
-      {scoped.length === 0 ? (
+      {nothingYet && mode !== "self-paced" ? (
         <EmptyState
-          title="No cohorts yet"
-          text="A cohort is one run of a course on set dates. Add one to start taking bookings."
-          action={datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", href: "/provider/courses/new" }}
+          title="No upcoming dates"
+          text="A cohort is one run of a course on set dates. Add one so learners can book it once the course is live."
+          action={edit ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", href: "/provider/courses/new" }) : null}
         />
-      ) : (
+      ) : null}
+      {(!nothingYet || mode === "self-paced") && (
         <>
           <div className="rt-adm-toolbar">
-            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.course?.format === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
+            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
             {create}
           </div>
           {mode !== "self-paced" && (
             <div className="rt-pws-coh__filterbox">
               <div className="rt-pws-coh__filters">
                 <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
-                <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))]} />
+                <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: String(c.id), label: c.title }))]} />
                 <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setWhenNote(""); setPage(1); }} options={WHEN} />
                 <div className="rt-field rt-adm-select -inline rt-pws-coh__datefilter">
                   <label htmlFor="rt-coh-date" className="rt-sr">Cohorts running on this date</label>
                   <DateField id="rt-coh-date" compact clearable placeholder="Any day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date to show the cohorts running on the day you picked."); } setPage(1); }} />
                 </div>
-                <ToolSelect id="rt-coh-status" label="Status" value={status} onChange={(v) => { setStatus(v); keep("status", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date, so cohorts with this status show whatever their dates."); } }} options={[{ value: "", label: "All statuses" }, ...Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))]} />
                 {/* live online cohorts have no venue */}
-                {mode !== "live-online" && <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...data.venues.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />}
-                <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email })), { value: "none", label: "Not assigned" }]} />
+                {mode !== "live-online" && <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...s.venues.data.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />}
+                {tutors.length > 0 && <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.userId, label: t.name })), { value: "none", label: "Not assigned" }]} />}
               </div>
               <div className="rt-pws-coh__filtersum">
                 <b>{list.length} {list.length === 1 ? "cohort" : "cohorts"}</b>
@@ -240,35 +253,21 @@ export default function ProviderCohorts() {
             </div>
           )}
 
-          {pickedHere.length > 0 && (
-            <div className="rt-acc__card rt-pws-coh__bulk" role="region" aria-label="Picked cohorts">
-              <span className="rt-pws-coh__bulkn">{pickedHere.length} picked</span>
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={sendJoining}>Email joining instructions</button>
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setConfirm(true)} disabled={!cancellable.length}>Cancel cohorts</button>
-              <button type="button" className="rt-pws-coh__clear" onClick={() => setPicked([])}>Clear</button>
-            </div>
-          )}
-
           <p className="rt-sr" aria-live="polite">{mode === "self-paced" ? `${onDemand.length} self-paced ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}`}</p>
           {mode === "self-paced" ? (
             onDemand.length ? (
               <div className="rt-acc__card rt-biz__tablecard">
-                <p className="rt-acc__note">On-demand courses have no dates: learners start as soon as they book.</p>
+                <p className="rt-acc__note">Self-paced courses have no dates: learners start as soon as they book.</p>
                 <table className="rt-biz__table rt-adm-table">
-                  <thead><tr><th scope="col">Course</th><th scope="col">Students</th><th scope="col">Price</th><th scope="col">Course status</th><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
+                  <thead><tr><th scope="col">Course</th><th scope="col">Course status</th><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
                   <tbody>
-                    {onDemand.map((c) => {
-                      const students = new Set(data.enrolments.filter((e) => e.courseId === c.id && e.status !== "cancelled").map((e) => e.learnerId)).size;
-                      return (
-                        <tr key={c.id}>
-                          <td data-label="Course"><Link href={`/provider/courses/${c.id}`} className="rt-adm-strong">{c.title || "Untitled course"}</Link></td>
-                          <td data-label="Students">{students}</td>
-                          <td data-label="Price">{c.pricing.type === "free" ? "Free" : c.pricing.type === "tiered" ? `From ${formatPrice(byId.pack[c.pricing.packageId]?.tiers.saver.price || 0)}` : formatPrice(c.pricing.price || 0)}</td>
-                          <td data-label="Course status"><Pill tone={c.status === "approved" ? "ok" : c.status === "draft" ? "muted" : "warn"}>{pw.courseStatuses[c.status]}</Pill></td>
-                          <td data-label="Actions"><RowMenu label={`Actions for ${c.title || "untitled course"}`} items={[{ label: "Course activities", href: `/provider/courses/${c.id}?tab=activities` }, { label: "Course pricing", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
-                        </tr>
-                      );
-                    })}
+                    {onDemand.map((c) => (
+                      <tr key={c.id}>
+                        <td data-label="Course"><Link href={`/provider/courses/${c.id}`} className="rt-adm-strong">{c.title}</Link></td>
+                        <td data-label="Course status"><Pill tone={c.status === "live" ? "ok" : c.status === "changes" ? "warn" : "muted"}>{pw.courseStatuses[c.status]}</Pill></td>
+                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Course pricing", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -278,69 +277,54 @@ export default function ProviderCohorts() {
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
                 <thead>
                   <tr>
-                    <th scope="col" className="rt-pws-coh__pick">
-                      <label className="rt-pws-coh__check">
-                        <input type="checkbox" className="rt-fp__check" checked={allPicked} onChange={() => setPicked(allPicked ? picked.filter((id) => !visibleIds.includes(id)) : [...new Set([...picked, ...visibleIds])])} />
-                        <span className="rt-sr">Pick all cohorts shown</span>
-                      </label>
-                    </th>
                     <th scope="col">Cohorts</th>
                     <th scope="col">Status</th>
-                    <th scope="col">Instructor</th>
-                    <th scope="col">Students</th>
-                    <th scope="col"><span className="rt-sr">Favourite and actions</span></th>
+                    <th scope="col">Tutor</th>
+                    <th scope="col">Places</th>
+                    <th scope="col">Price</th>
+                    <th scope="col"><span className="rt-sr">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {pageRows.map((k) => {
                     const s0 = k.sessions[0];
-                    const title = k.course?.title || "Untitled course";
-                    const name = `${title}, ${dayRange(k.first, k.last)}`;
+                    const name = `${k.courseTitle}, ${dayRange(k.startsOn, k.endsOn)}`;
+                    const cancelled = Boolean(k.cancelledAt);
                     return (
-                      <tr key={k.id} className={picked.includes(k.id) ? "is-picked" : undefined}>
-                        <td data-label="Pick" className="rt-pws-coh__pick">
-                          <label className="rt-pws-coh__check">
-                            <input type="checkbox" className="rt-fp__check" checked={picked.includes(k.id)} onChange={() => togglePick(k.id)} />
-                            <span className="rt-sr">Pick {name}</span>
-                          </label>
-                        </td>
+                      <tr key={k.id}>
                         <td data-label="Cohort">
                           <div className="rt-pws-coh__cohort">
-                            <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.first)}</small><b>{k.first.slice(8)}</b></span>
+                            <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.startsOn)}</small><b>{k.startsOn.slice(8)}</b></span>
                             <div>
-                              <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{title}</Link>
-                              <small>{k.venue ? k.venue.name : ONLINE}</small>
-                              <small>{dayRange(k.first, k.last)}{s0 ? ` from ${s0.from} to ${s0.to}` : ""}{k.sessions.length > 1 ? ` · ${k.sessions.length} sessions` : ""}</small>
+                              <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>
+                              <small>{k.venue ? `${k.venue.name}, ${k.venue.city}` : ONLINE}</small>
+                              <small>{dayRange(k.startsOn, k.endsOn)}{s0 ? ` from ${s0.from} to ${s0.to}` : ""}{k.sessions.length > 1 ? ` · ${k.sessions.length} sessions` : ""}</small>
                             </div>
                           </div>
                         </td>
                         <td data-label="Status">
-                          {k.cancelled ? <Pill tone={COHORT_TONE.cancelled}>{pw.cohortStatuses.cancelled}</Pill> : (
+                          <Pill tone={COHORT_TONE[k.status]}>{STATUSES[k.status]}</Pill>
+                          {!k.bookable && !cancelled && <small>Bookings off</small>}
+                        </td>
+                        <td data-label="Tutor">
+                          {edit && !cancelled && tutors.length ? (
                             <div className="rt-field rt-adm-select -inline">
-                              <label htmlFor={`rt-coh-st-${k.id}`} className="rt-sr">Cohort status for {name}</label>
-                              <FieldSelect id={`rt-coh-st-${k.id}`} label={`Cohort status for ${name}`} value={k.status} onChange={(v) => changeStatus(k, v)} options={Object.entries(pw.cohortStatuses).map(([value, label]) => ({ value, label }))} compact />
+                              <label htmlFor={`rt-coh-tu-${k.id}`} className="rt-sr">Tutor for {name}</label>
+                              <FieldSelect id={`rt-coh-tu-${k.id}`} label={`Tutor for ${name}`} value={k.tutorUserId || ""} onChange={(v) => setTutorOf(k, v)} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.userId, label: t.name }))]} disabled={update.isPending} compact />
                             </div>
-                          )}
-                          {k.disabled && !k.cancelled && <small>Bookings off</small>}
+                          ) : (tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>)}
                         </td>
-                        <td data-label="Instructor">
-                          <div className="rt-field rt-adm-select -inline">
-                            <label htmlFor={`rt-coh-tu-${k.id}`} className="rt-sr">Instructor for {name}</label>
-                            <FieldSelect id={`rt-coh-tu-${k.id}`} label={`Instructor for ${name}`} value={k.tutorId || ""} onChange={(v) => { setCohortTutor(k.id, v); setToast({ message: v ? `${byId.member[v]?.name || "Instructor"} assigned` : "Instructor removed" }); }} options={[{ value: "", label: "Unassigned" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email }))]} disabled={k.cancelled} compact />
-                          </div>
-                        </td>
-                        <td data-label="Students">
-                          <Seats booked={k.booked} max={k.max} />
-                          <small className="rt-pws-coh__places">{`${k.places.enrolled} enrolled · ${k.places.rescheduled} rescheduled · ${k.places.cancelled} cancelled`}</small>
-                        </td>
+                        <td data-label="Places"><Seats booked={0} max={k.capacity} /></td>
+                        <td data-label="Price">{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
                         <td data-label="Actions" className="rt-pws-coh__end">
-                          <button type="button" className={`rt-pws-coh__fav${k.favourite ? " is-on" : ""}`} aria-pressed={Boolean(k.favourite)} onClick={() => toggleFavourite(k.id)}>
-                            <i className="icon-star" aria-hidden="true"></i><span className="rt-sr">Favourite: {name}</span>
-                          </button>
                           <RowMenu label={`Actions for ${name}`} items={[
                             { label: "View", href: `/provider/cohorts/${k.id}` },
-                            ...(k.cancelled ? [] : [{ label: "Move", onClick: () => setMoving(k) }, { label: "Edit", onClick: () => setEditingK(k) }, { label: k.disabled ? "Enable bookings" : "Disable bookings", onClick: () => { setCohortEnabled(k.id, k.disabled); setToast({ message: k.disabled ? "Bookings enabled" : "Bookings disabled" }); } }]),
-                            { label: "Delete", onClick: () => setDeleting(k), danger: true },
+                            ...(edit && !cancelled ? [
+                              { label: "Edit", onClick: () => setEditingK(k) },
+                              { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
+                              ...(k.endsOn >= today ? [{ label: "Cancel", onClick: () => setCancelOne(k) }] : []),
+                            ] : []),
+                            ...(edit ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
                           ]} />
                         </td>
                       </tr>
@@ -356,74 +340,10 @@ export default function ProviderCohorts() {
         </>
       )}
 
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => setToast({ message: "Cohort saved. Pick the dates for the next one." })} />
-      <CohortForm open={Boolean(editingK)} onClose={() => setEditingK(null)} cohort={editingK} onSaved={() => { setEditingK(null); setToast({ message: "Cohort saved" }); }} />
-
-      <Sheet open={Boolean(moving)} onClose={() => setMoving(null)} title="Move cohort" closeLabel="Close">
-        {moving && (
-          <div className="rt-q__form">
-            <p className="rt-acc__note">Move {moving.course?.title || "this cohort"}, {dayRange(moving.first, moving.last)}, and the {moving.booked} {moving.booked === 1 ? "learner" : "learners"} booked on it to another {methodName(moving.course?.format).toLowerCase()} course.</p>
-            {sameFormat(moving).length ? (
-              <>
-                <div className="rt-field">
-                  <label htmlFor="rt-coh-moveto">Select course</label>
-                  <FieldSelect id="rt-coh-moveto" label="Select course" placeholder="Select course" value={moveTo} onChange={setMoveTo} options={sameFormat(moving).map((c) => ({ value: c.id, label: c.title || "Untitled course" }))} />
-                </div>
-                <div className="rt-pws-coh__actions">
-                  <button type="button" className="button -md -purple-1 text-white" onClick={doMove} disabled={!moveTo}>Save changes</button>
-                  <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setMoving(null)}>Cancel</button>
-                </div>
-              </>
-            ) : <p className="rt-acc__note">You have no other course of this type to move it to.</p>}
-          </div>
-        )}
-      </Sheet>
-
-      <Sheet open={Boolean(deleting)} onClose={() => setDeleting(null)} title="Delete this cohort?" closeLabel="Close">
-        {deleting && (
-          <div className="rt-q__form">
-            {canDeleteCohort(data, deleting.id) ? (
-              <>
-                <p className="rt-acc__note">{deleting.course?.title}, {dayRange(deleting.first, deleting.last)}, is removed for good. Nobody is booked on it.</p>
-                <div className="rt-pws-coh__actions">
-                  <button type="button" className="button -md -purple-1 text-white" onClick={doDelete}>Delete cohort</button>
-                  <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setDeleting(null)}>Keep it</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="rt-acc__note">{deleting.booked} {deleting.booked === 1 ? "learner is" : "learners are"} booked on this cohort, so it can't be deleted. Set its status to Cancelled instead: they are told and offered another date or a refund.</p>
-                <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setDeleting(null)}>Close</button>
-              </>
-            )}
-          </div>
-        )}
-      </Sheet>
-
-      <Sheet open={Boolean(cancelOne)} onClose={() => setCancelOne(null)} title="Cancel this cohort?" closeLabel="Close">
-        {cancelOne && (
-          <div className="rt-q__form">
-            <p className="rt-acc__note">{cancelOne.booked ? `The ${cancelOne.booked} booked ${cancelOne.booked === 1 ? "learner is" : "learners are"} told straight away and offered another date or a full refund.` : "Nobody is booked yet, so nobody needs to be told."} This can't be undone.</p>
-            <div className="rt-pws-coh__actions">
-              <button type="button" className="button -md -purple-1 text-white" onClick={() => { cancelCohort(cancelOne.id); setCancelOne(null); setToast({ message: "Cohort cancelled" }); }}>Cancel cohort</button>
-              <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setCancelOne(null)}>Keep it</button>
-            </div>
-          </div>
-        )}
-      </Sheet>
-
-      <Sheet open={confirm} onClose={() => setConfirm(false)} title={`Cancel ${cancellable.length} ${cancellable.length === 1 ? "cohort" : "cohorts"}?`} closeLabel="Close">
-        <div className="rt-q__form">
-          <p className="rt-acc__note">Booked learners are told straight away and offered another date or a full refund. Only upcoming cohorts can be cancelled{pickedRows.length > cancellable.length ? `, so ${pickedRows.length - cancellable.length} of the cohorts you picked stay as they are` : ""}.</p>
-          <ul className="rt-adm-list">
-            {cancellable.map((k) => <li key={k.id}><div><b>{k.course?.title}</b><small>{dayRange(k.first, k.last)} · {k.booked} booked</small></div></li>)}
-          </ul>
-          <div className="rt-pws-coh__actions">
-            <button type="button" className="button -md -purple-1 text-white" onClick={doCancel}>Cancel {cancellable.length === 1 ? "cohort" : "cohorts"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)}>Keep them</button>
-          </div>
-        </div>
-      </Sheet>
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => { refresh(); setToast({ message: "Cohort saved. Pick the dates for the next one." }); }} />
+      <CohortForm open={Boolean(editingK)} onClose={() => setEditingK(null)} cohort={editingK} onSaved={() => { setEditingK(null); refresh(); setToast({ message: "Cohort saved" }); }} />
+      <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={() => { setCancelOne(null); refresh(); setToast({ message: "Cohort cancelled" }); }} />
+      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={() => { setDeleting(null); refresh(); setToast({ message: "Cohort deleted" }); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
@@ -440,53 +360,124 @@ export function Seats({ booked, max }) {
   );
 }
 
+// Cancel dates that haven't finished, with the reason (learners are told once bookings exist).
+export function CancelSheet({ cohort, onClose, onDone }) {
+  const { organisationId } = useProviderAccess();
+  const cancel = api.provider.cohorts.cancel.useMutation();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (cohort) {
+      setReason("");
+      setError("");
+    }
+  }, [cohort]);
+  const submit = (e) => {
+    e.preventDefault();
+    if (reason.trim().length < 3) {
+      setError("Say why the dates are cancelled.");
+      return document.getElementById("rt-coh-cancel-why")?.focus();
+    }
+    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]) });
+  };
+  return (
+    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close">
+      {cohort && (
+        <form className="rt-q__form" onSubmit={submit} noValidate>
+          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Nobody can book it after this, and it can&apos;t be undone.</p>
+          <div className="rt-field">
+            <label htmlFor="rt-coh-cancel-why">Reason</label>
+            {error && <p className="rt-q__err" id="rt-coh-cancel-why-e"><span className="rt-sr">Error: </span>{error}</p>}
+            <textarea id="rt-coh-cancel-why" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-coh-cancel-why-e" : undefined} autoComplete="off" />
+          </div>
+          <div className="rt-pws-coh__actions">
+            <button type="submit" className="button -md -purple-1 text-white" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep it</button>
+          </div>
+        </form>
+      )}
+    </Sheet>
+  );
+}
+
+export function DeleteSheet({ cohort, onClose, onDone }) {
+  const { organisationId } = useProviderAccess();
+  const remove = api.provider.cohorts.remove.useMutation();
+  const [error, setError] = useState("");
+  return (
+    <Sheet open={Boolean(cohort)} onClose={() => { setError(""); onClose(); }} title="Delete this cohort?" closeLabel="Close">
+      {cohort && (
+        <div className="rt-q__form">
+          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, is removed for good.</p>
+          {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+          <div className="rt-pws-coh__actions">
+            <button type="button" className="button -md -purple-1 text-white" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep it</button>
+          </div>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
 // ---- create and edit -------------------------------------------------------------------------------------------------------
 
-// The panel for one cohort. `cohort` (a derived cohort) edits it; otherwise it creates one, asking which course.
-// `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on, as Hurak has a form for each.
+const money = (pence) => (pence == null ? "" : (pence / 100).toFixed(2).replace(/\.00$/, ""));
+const PRICE_RE = /^\d+(\.\d{1,2})?$/;
+
+// The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
+// `suggestCourseId`). `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on.
 export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
-  const data = useProvider();
+  const { organisationId } = useProviderAccess();
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
+  // a venue being added from here (it saves as a normal venue, and the date picks it)
+  const [addingVenue, setAddingVenue] = useState(false);
+  const [venueAdded, setVenueAdded] = useState("");
   const [view, setView] = useState(() => monthStart(todayIso()));
   const [studyMode, setStudyMode] = useState("classroom");
+  const on = { enabled: open && Boolean(organisationId) };
+  const coursesQ = api.provider.courses.list.useQuery({ organisationId }, on);
+  const venuesQ = api.provider.venues.list.useQuery({ organisationId }, on);
+  const tutorsQ = api.provider.cohorts.tutors.useQuery({ organisationId }, { ...on, retry: false });
+  const create = api.provider.cohorts.create.useMutation();
+  const update = api.provider.cohorts.update.useMutation();
+  const courses = coursesQ.data || [];
+  const courseOf = (id) => courses.find((c) => String(c.id) === String(id));
 
-  // fill the form each time the panel opens
+  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", price: "", wasPrice: "", capacity: "12", details: "" });
+
+  // fill the form each time the panel opens (once the courses are in)
   useEffect(() => {
-    if (!open || !data) return;
-    const cid = cohort?.courseId || suggestCourseId || "";
-    const c = data.byId.course[cid];
+    if (!open || !coursesQ.data) return;
     if (cohort) {
-      setF({ courseId: cid, sessions: cohort.sessions.map((s) => ({ ...s })), tutorId: cohort.tutorId || "", venueId: cohort.venueId || "", pricing: cohort.packageId ? "package" : "flat", price: String(cohort.price ?? ""), packageId: cohort.packageId || "", max: String(cohort.max), details: cohort.details || "", colour: cohort.colour || "purple", lmsFrom: cohort.lmsFrom || "course" });
-      setView(monthStart(cohort.first || todayIso()));
+      setF({ courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", price: money(cohort.pricePence), wasPrice: money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" });
+      setView(monthStart(cohort.startsOn || todayIso()));
     } else {
-      setF(blankFor(c));
+      const c = courseOf(suggestCourseId);
+      setF(blankFor(c && c.method !== "self-paced" ? c : null));
       setView(monthStart(todayIso()));
-      setStudyMode(c?.format || (mode === "live-online" ? "live-online" : "classroom"));
+      setStudyMode(c?.method === "live-online" || (!c && mode === "live-online") ? "live-online" : "classroom");
     }
     setErrors({});
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- fill once per opening
+    setAddingVenue(false);
+    setVenueAdded("");
+  }, [open, Boolean(coursesQ.data)]); // eslint-disable-line react-hooks/exhaustive-deps -- fill once per opening
 
-  const blankFor = (c) => ({
-    courseId: c?.id || "",
-    sessions: [],
-    tutorId: "",
-    venueId: c?.format === "classroom" ? (c.venues.find((v) => data.byId.venue[v]?.active) || "") : "",
-    pricing: c?.pricing.type === "tiered" ? "package" : "flat",
-    price: c?.pricing.type === "flat" && c.pricing.price ? String(c.pricing.price) : "",
-    packageId: c?.pricing.type === "tiered" ? c.pricing.packageId : "",
-    max: "12",
-    details: "",
-    colour: "purple",
-    lmsFrom: "course",
-  });
-
-  const ready = Boolean(open && data && f);
-  const course = ready ? data.byId.course[f.courseId] : null;
-  const booked = cohort?.booked || 0;
+  const ready = Boolean(open && f && venuesQ.data);
+  const course = ready ? courseOf(f.courseId) : null;
+  const method = cohort ? cohort.method : course?.method || studyMode;
   const today = todayIso();
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  const venueSaved = async (r) => {
+    await venuesQ.refetch();
+    set({ venueId: r.id });
+    setAddingVenue(false);
+    setVenueAdded(r.located ? "Venue added and chosen for these dates." : "Venue added and chosen. We couldn't find its postcode on the map, so check it in Settings › Venues.");
+    setErrors((e) => ({ ...e, venueId: undefined }));
+  };
+  const venueForm = <VenueForm inline idPrefix="rt-cf-v" onSaved={venueSaved} onCancel={() => setAddingVenue(false)} />;
 
   // a day on the calendar: add a slot (copying the latest slot's times and length) or take it away
   const toggleDay = (iso) => {
@@ -503,79 +494,88 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const setSlot = (i, patch) => setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
 
   // "Save and create another" (Hurak's "Create another cohort"): the form stays open for the same course and settings
-  const save = (e, another = false) => {
+  const save = async (e, another = false) => {
     e.preventDefault();
     const err = {};
     if (!f.courseId) err.courseId = "Choose the course this cohort is for.";
     if (!f.sessions.length) err.sessions = "Pick at least one date on the calendar.";
+    const firstNow = cohort?.startsOn;
     f.sessions.forEach((s, i) => {
       if (!s.date) err[`d${i}`] = "Enter the start date.";
-      else if (!cohort && s.date < today) err[`d${i}`] = "The start date can't be in the past.";
+      else if (s.date < today && s.date !== firstNow && (!cohort || s.date < firstNow)) err[`d${i}`] = "The start date can't be in the past.";
       else if ((s.end || s.date) < s.date) err[`d${i}`] = "The end date can't be before the start date.";
       else if ((s.end || s.date) === s.date && s.to <= s.from) err[`d${i}`] = "The end time must be after the start time.";
     });
-    if (course?.format === "classroom" && !f.venueId) err.venueId = "Choose the venue.";
-    if (f.pricing === "flat") {
-      const p = Number(f.price);
-      if (f.price === "" || !Number.isFinite(p) || p < 1) err.price = "Enter the price per learner in pounds, like 95.";
-    } else if (!f.packageId) err.packageId = "Choose a price package.";
-    const m = Number(f.max);
-    if (!Number.isInteger(m) || m < 1 || m > 200) err.max = "Enter a whole number from 1 to 200.";
-    else if (m < booked) err.max = `${booked} learners are already booked, so the most you can set is no lower than ${booked}.`;
+    if (method === "classroom" && !f.venueId) err.venueId = "Choose the venue.";
+    if (method === "live-online" && f.joinUrl.trim() && !/^https:\/\/\S+$/.test(f.joinUrl.trim())) err.joinUrl = "Use the full https link, or leave it empty for now.";
+    if (!PRICE_RE.test(f.price) || Number(f.price) < 1) err.price = "Enter the price per learner in pounds, like 95.";
+    if (f.wasPrice && (!PRICE_RE.test(f.wasPrice) || Number(f.wasPrice) <= Number(f.price))) err.wasPrice = "Enter a “was” price higher than the price, or leave it empty.";
+    const m = Number(f.capacity);
+    if (!Number.isInteger(m) || m < 1 || m > 200) err.capacity = "Enter a whole number from 1 to 200.";
     setErrors(err);
     if (Object.keys(err).length) return focusFirstError(formRef.current);
-    const sessions = [...f.sessions].map((s) => ({ ...s, end: s.end || s.date })).sort((a, b) => a.date.localeCompare(b.date));
-    const pack = f.pricing === "package" ? data.byId.pack[f.packageId] : null;
-    const id = saveCohort({
-      ...(cohort ? { id: cohort.id } : {}),
-      courseId: f.courseId,
-      sessions,
-      tutorId: f.tutorId,
-      venueId: course?.format === "classroom" ? f.venueId : "",
-      price: pack ? pack.tiers.saver.price : Number(f.price),
-      packageId: pack ? pack.id : "",
-      max: m,
-      details: f.details.trim(),
-      colour: f.colour,
-      lmsFrom: f.lmsFrom,
-    });
-    if (another) {
-      setF((x) => ({ ...x, sessions: [] }));
-      setErrors({});
-      onAnother?.(id);
-      requestAnimationFrame(() => formRef.current?.querySelector("h3")?.scrollIntoView({ block: "start" }));
-      return;
+    const values = {
+      organisationId,
+      sessions: [...f.sessions].map((s) => ({ ...s, end: s.end || s.date })).sort((a, b) => a.date.localeCompare(b.date)),
+      venueId: method === "classroom" ? f.venueId : null,
+      joinUrl: method === "live-online" ? f.joinUrl.trim() : null,
+      capacity: m,
+      pricePence: Math.round(Number(f.price) * 100),
+      wasPricePence: f.wasPrice ? Math.round(Number(f.wasPrice) * 100) : null,
+      details: f.details.trim() || null,
+      tutorUserId: f.tutorUserId || null,
+      bookable: cohort ? cohort.bookable : true,
+    };
+    try {
+      const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
+      if (another) {
+        setF((x) => ({ ...x, sessions: [] }));
+        setErrors({});
+        onAnother?.(id);
+        requestAnimationFrame(() => formRef.current?.querySelector("h3")?.scrollIntoView({ block: "start" }));
+        return;
+      }
+      onSaved?.(id);
+    } catch (error) {
+      const { fields, general } = errorsFrom(error);
+      setErrors({ ...fields, form: general });
+      requestAnimationFrame(() => focusFirstError(formRef.current));
     }
-    onSaved?.(id);
   };
+  const busy = create.isPending || update.isPending;
 
   const err = (key) => errors[key] && <p className="rt-q__err" id={`rt-cf-${key}-e`}><span className="rt-sr">Error: </span>{errors[key]}</p>;
   const aria = (key) => ({ "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `rt-cf-${key}-e` : undefined });
 
-  const datedCourses = data ? data.courses.filter((c) => c.format === studyMode) : [];
-  const packages = data ? data.packages.filter((p) => p.active || p.id === f?.packageId) : [];
-  const canPackage = course?.pricing.type === "tiered" || packages.length > 0;
-  const tutors = data ? data.team.filter((t) => t.status === "active") : [];
-  const venues = data ? data.venues.filter((v) => v.active || v.id === f?.venueId) : [];
+  const datedCourses = courses.filter((c) => c.method === studyMode);
+  const tutors = tutorsQ.data || [];
+  const venues = ready ? venuesQ.data.filter((v) => v.active || v.id === f.venueId) : [];
   const ordered = ready ? f.sessions.map((s, i) => ({ s, i })).sort((a, b) => a.s.date.localeCompare(b.s.date)) : [];
-  const lmsCohorts = ready ? data.cohorts.filter((k) => k.courseId === f.courseId && k.id !== cohort?.id && !k.cancelled) : [];
 
   return (
     <Sheet open={open} onClose={onClose} title={cohort ? "Edit cohort" : "Create cohort"} closeLabel="Close" className="rt-pws-coh__sheet">
+      {open && !ready && <Loading rows={2} />}
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
-          {!cohort && (
+          {!cohort && !suggestCourseId && (
             <Choice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
               options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key) }))} />
           )}
-          {!cohort ? (
+          {!cohort && !(suggestCourseId && course) ? (
             <div className="rt-field">
-              <label htmlFor="rt-cf-course">Course</label>
+              <label htmlFor="rt-cf-courseId">Course</label>
               {err("courseId")}
-              <FieldSelect id="rt-cf-course" label="Course" value={f.courseId} onChange={(value) => { const c = data.byId.course[value]; setF((x) => ({ ...blankFor(c), sessions: x.sessions })); }} options={datedCourses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))} placeholder={datedCourses.length ? "Choose a course" : `No ${methodName(studyMode).toLowerCase()} courses yet`} invalid={Boolean(errors.courseId)} describedBy={aria("courseId")["aria-describedby"]} />
+              <FieldSelect id="rt-cf-courseId" label="Course" value={f.courseId} onChange={(value) => setF((x) => ({ ...blankFor(courseOf(value)), sessions: x.sessions }))} options={datedCourses.map((c) => ({ value: String(c.id), label: c.title }))} placeholder={datedCourses.length ? "Choose a course" : `No ${methodName(studyMode).toLowerCase()} courses yet`} invalid={Boolean(errors.courseId)} describedBy={aria("courseId")["aria-describedby"]} />
             </div>
           ) : (
-            <p className="rt-acc__note rt-pws-coh__for">For <b>{course?.title || "Untitled course"}</b> · {methodName(course?.format)}</p>
+            <p className="rt-acc__note rt-pws-coh__for">For <b>{cohort ? cohort.courseTitle : course?.title}</b> · {methodName(method)}</p>
+          )}
+          {/* a classroom date needs a venue: say so first, before any dates are picked */}
+          {method === "classroom" && venues.length === 0 && (
+            <div className="rt-acc__notice -warn rt-pws-coh__novenue" role="status">
+              <p><b>Add a venue first.</b> Classroom dates take place at one of your venues, and you haven't added one yet. Add it here: it is saved to your venues, and these dates use it.</p>
+              {addingVenue ? venueForm : <button type="button" className="button -sm -purple-1 text-white" onClick={() => setAddingVenue(true)}>Add a venue</button>}
+            </div>
           )}
 
           <div className="rt-pws-coh__dates">
@@ -623,61 +623,47 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           <section className="rt-pws-coh__settings" aria-labelledby="rt-cf-set-h">
             <h3 className="rt-pws-coh__h3" id="rt-cf-set-h">Cohort settings</h3>
             <div className="rt-pws-coh__setgrid">
-              <div className="rt-field">
-                <label htmlFor="rt-cf-tutor">Tutor</label>
-                <FieldSelect id="rt-cf-tutor" label="Tutor" value={f.tutorId} onChange={(value) => set({ tutorId: value })} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.id, label: t.name || t.email }))]} />
-              </div>
-              {course?.format === "classroom" && (
+              {tutors.length > 0 && (
+                <div className="rt-field">
+                  <label htmlFor="rt-cf-tutorUserId">Tutor</label>
+                  {err("tutorUserId")}
+                  <FieldSelect id="rt-cf-tutorUserId" label="Tutor" value={f.tutorUserId} onChange={(value) => set({ tutorUserId: value })} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.userId, label: t.name }))]} />
+                </div>
+              )}
+              {method === "classroom" && (
                 <div className="rt-field">
                   <label htmlFor="rt-cf-venueId">Venue</label>
                   {err("venueId")}
-                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder="Choose a venue" value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
-                  <Link href={`/provider/courses/${f.courseId}?tab=mode`} className="rt-pws-coh__hintlink">Add a venue to this course</Link>
+                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
+                  {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
+                  {venues.length > 0 && (addingVenue ? venueForm : <button type="button" className="rt-cd__link rt-pws-coh__hintlink" onClick={() => setAddingVenue(true)}>+ Add a new venue</button>)}
+                </div>
+              )}
+              {method === "live-online" && (
+                <div className="rt-field">
+                  <label htmlFor="rt-cf-joinUrl">Joining link (optional)</label>
+                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Meet link. You can add it later; learners get it before the first session.</p>
+                  {err("joinUrl")}
+                  <input id="rt-cf-joinUrl" type="url" inputMode="url" value={f.joinUrl} onChange={(e) => set({ joinUrl: e.target.value })} autoComplete="url" aria-invalid={errors.joinUrl ? true : undefined} aria-describedby={`rt-cf-joinUrl-h${errors.joinUrl ? " rt-cf-joinUrl-e" : ""}`} />
                 </div>
               )}
             </div>
-            {canPackage && (
-              <CardChoice name="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => set({ pricing: v })} options={[{ value: "flat", label: "One price", text: "Every learner pays the same price." }, { value: "package", label: "Price package", text: "Saver, Flexi and Premium options from one of your pricing plans." }]} />
-            )}
-            <div className="rt-pws-coh__setgrid">
-              {f.pricing === "flat" || !canPackage ? (
-                <div className="rt-field">
-                  <label htmlFor="rt-cf-price">Price per learner (£)</label>
-                  {err("price")}
-                  <input id="rt-cf-price" type="number" inputMode="decimal" min="1" step="1" value={f.price} onChange={(e) => set({ price: e.target.value })} autoComplete="off" {...aria("price")} />
-                </div>
-              ) : (
-                <div className="rt-field">
-                  <label htmlFor="rt-cf-packageId">Price package</label>
-                  {err("packageId")}
-                  <FieldSelect id="rt-cf-packageId" label="Price package" placeholder="Choose a package" value={f.packageId} onChange={(value) => set({ packageId: value })} options={packages.map((p) => ({ value: p.id, label: `${p.name || "Untitled package"} (from ${formatPrice(p.tiers.saver.price)})` }))} invalid={Boolean(errors.packageId)} describedBy={aria("packageId")["aria-describedby"]} />
-                </div>
-              )}
-              <div className="rt-field">
-                <label htmlFor="rt-cf-max">Most learners</label>
-                {err("max")}
-                <input id="rt-cf-max" type="number" inputMode="numeric" min={Math.max(1, booked)} max="200" step="1" value={f.max} onChange={(e) => set({ max: e.target.value })} autoComplete="off" {...aria("max")} />
-                {booked > 0 && <p className="rt-acc__note">{booked} already booked.</p>}
-              </div>
-            </div>
             <div className="rt-pws-coh__setgrid">
               <div className="rt-field">
-                <label htmlFor="rt-cf-lms">LMS clone</label>
-                <p className="rt-acc__note" id="rt-cf-lms-h">Which course activities learners on this cohort get.</p>
-                <FieldSelect id="rt-cf-lms" label="LMS clone" value={f.lmsFrom} onChange={(value) => set({ lmsFrom: value })} options={[{ value: "course", label: "The course's activities" }, ...lmsCohorts.map((k) => ({ value: k.id, label: `Copy from the cohort on ${dayRange(k.first, k.last)}` })), { value: "none", label: "No activities" }]} describedBy="rt-cf-lms-h" />
+                <label htmlFor="rt-cf-price">Price per learner, including VAT (£)</label>
+                {err("price")}
+                <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.trim() })} autoComplete="off" {...aria("price")} />
               </div>
-              <fieldset className="rt-field rt-pws-coh__colours">
-                <legend>Cohort colour</legend>
-                <p className="rt-acc__note">How it shows on the calendar.</p>
-                <div className="rt-pws-coh__swatches">
-                  {pw.cohortColours.map((c) => (
-                    <label key={c.key} className={`rt-pws-coh__swatch -c-${c.key}${f.colour === c.key ? " is-on" : ""}`}>
-                      <input type="radio" name="rt-cf-colour" className="rt-sr" value={c.key} checked={f.colour === c.key} onChange={() => set({ colour: c.key })} />
-                      <span aria-hidden="true"></span><span className="rt-sr">{c.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              <div className="rt-field">
+                <label htmlFor="rt-cf-wasPrice">“Was” price (optional, £)</label>
+                {err("wasPrice")}
+                <input id="rt-cf-wasPrice" type="text" inputMode="decimal" value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
+              </div>
+              <div className="rt-field">
+                <label htmlFor="rt-cf-capacity">Most learners</label>
+                {err("capacity")}
+                <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} autoComplete="off" {...aria("capacity")} />
+              </div>
             </div>
             <div className="rt-field">
               <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
@@ -685,9 +671,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-describedby="rt-cf-details-h" autoComplete="off" />
             </div>
           </section>
+          {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
           <div className="rt-pws-coh__formfoot">
-            <button type="submit" className="button -md -purple-1 text-white">{cohort ? "Save changes" : "Save cohort"}</button>
-            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={(e) => save(e, true)}>Save and create another</button>}
+            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : cohort ? "Save changes" : "Save cohort"}</button>
+            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={(e) => save(e, true)}>Save and create another</button>}
           </div>
         </form>
       )}

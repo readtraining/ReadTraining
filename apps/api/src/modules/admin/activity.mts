@@ -53,7 +53,7 @@ export const activityRouter = createTRPCRouter({
       if (input.from) where.push(sql`l.at >= (${input.from}::date)::timestamp at time zone 'Europe/London'`)
       if (input.to) where.push(sql`l.at < (${input.to}::date + 1)::timestamp at time zone 'Europe/London'`)
       if (input.q) {
-        const like = `%${input.q.replace(/[\%_]/g, (c) => `\${c}`)}%`
+        const like = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(sql`(au.email ilike ${like} or concat_ws(' ', ap.first_name, ap.last_name) ilike ${like} or tu.email ilike ${like}
           or o.name ilike ${like} or l.actor_user_id::text = ${input.q} or l.target_id = ${input.q} or l.organisation_id::text = ${input.q})`)
       }

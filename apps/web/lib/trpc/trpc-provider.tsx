@@ -23,8 +23,15 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000')
 
+// A refusal or a bad request (4xx: not signed in, not allowed, not found) gives the same answer every time, and each refusal
+// is written to the activity log, so only network and server errors are tried again (React Query's usual 3 times).
+const retryUnlessRefused = (failures: number, error: unknown) => {
+  const status = (error as { data?: { httpStatus?: number } } | null)?.data?.httpStatus
+  return !(status && status >= 400 && status < 500) && failures < 3
+}
+
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient())
+  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: retryUnlessRefused } } }))
   const [trpcClient] = useState(() =>
     api.createClient({
       links: [

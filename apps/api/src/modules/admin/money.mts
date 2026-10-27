@@ -134,8 +134,9 @@ export const ordersRouter = createTRPCRouter({
   get: adminProcedure('admin.orders.view')
     .input(z.object({ ref: z.string().max(40) }))
     .query(async ({ ctx, input }) => {
-      const [o] = await ctx.db.execute<OrderRow & { buyer_email: string; buyer_company: string | null; buyer_user_id: string | null; course_id: number; starts_on: string | null; quantity: number; unit_pence: number; note: string | null; created_at: string; provider: string; provider_slug: string; booked_by: string | null }>(sql`
-        select o.*, to_char(o.starts_on, 'YYYY-MM-DD') starts_on, g.name provider, g.slug provider_slug, ${who('o.booked_by')} booked_by
+      const [o] = await ctx.db.execute<OrderRow & { buyer_email: string; buyer_company: string | null; buyer_user_id: string | null; course_id: number; starts_on: string | null; quantity: number; unit_pence: number; note: string | null; created_at: string; provider: string; provider_slug: string; booked_by: string | null; course_found: boolean }>(sql`
+        select o.*, to_char(o.starts_on, 'YYYY-MM-DD') starts_on, g.name provider, g.slug provider_slug, ${who('o.booked_by')} booked_by,
+               exists (select 1 from public.courses c where c.id = o.course_id) course_found
         from ${orders} o join ${organisations} g on g.id = o.provider_id where o.ref = ${input.ref}`)
       if (!o) throw notFound('order')
       const m = await moneyOf(ctx.db, o)
@@ -155,7 +156,8 @@ export const ordersRouter = createTRPCRouter({
         method: o.method,
         at: new Date(o.created_at).toISOString(),
         buyer: { name: o.buyer_name, email: o.buyer_email, company: o.buyer_company, accountId: o.buyer_user_id },
-        course: { id: o.course_id, title: o.course_title, startsOn: o.starts_on },
+        // `found`: the course is still in the catalogue (its admin page opens); the order keeps its title either way
+        course: { id: o.course_id, title: o.course_title, startsOn: o.starts_on, found: o.course_found },
         provider: { id: o.provider_id, name: o.provider, slug: o.provider_slug },
         quantity: o.quantity,
         unit: p(o.unit_pence),
@@ -181,7 +183,6 @@ export const ordersRouter = createTRPCRouter({
         buyerCompany: z.string().trim().max(120).optional(),
         providerId: z.string().uuid('Choose a training provider.'),
         courseId: z.number().int().positive('Choose a course.'),
-        courseTitle: text(2, 200, 'the course'),
         startsOn: day.nullable(),
         quantity: z.number().int('Enter a whole number.').min(1, 'Enter 1 or more.').max(500, 'Enter 500 or fewer.'),
         unitPence: z.number().int().min(0).max(5_000_00, 'Enter £5,000 or less a place.'),
@@ -196,6 +197,9 @@ export const ordersRouter = createTRPCRouter({
       const [prov] = await ctx.db.execute<{ id: string; status: string; commission_bps: number | null }>(sql`select id, status, commission_bps from ${organisations} where id = ${input.providerId}::uuid and type = 'provider'`)
       if (!prov) throw fieldError('providerId', 'Choose a training provider.')
       if (prov.status !== 'active') throw fieldError('providerId', 'This provider is not active, so it can’t take bookings.')
+      // the course: one of this provider's live courses (its title is kept on the order as it is today)
+      const [course] = await ctx.db.execute<{ title: string }>(sql`select title from public.courses where id = ${input.courseId} and organisation_id = ${prov.id} and kind = 'provider' and status = 'live'`)
+      if (!course) throw fieldError('courseId', 'Choose one of this provider’s live courses.')
       const f = await fees(ctx.db)
       const commissionBps = prov.commission_bps ?? (await defaultCommission(ctx.db)).bps
       const feeBps = feeFor(input.method, f)
@@ -205,7 +209,7 @@ export const ordersRouter = createTRPCRouter({
       const id = await ctx.db.transaction(async (tx) => {
         const [row] = await tx
           .insert(orders)
-          .values({ ref, buyerUserId: buyer?.id ?? null, buyerName: input.buyerName, buyerEmail: input.buyerEmail, buyerCompany: input.buyerCompany || null, providerId: prov.id, courseId: input.courseId, courseTitle: input.courseTitle, startsOn: input.startsOn, quantity: input.quantity, unitPence: input.unitPence, grossPence: gross, method: input.method, feeBps, commissionBps, bookedBy: ctx.user.id, note: input.note || null })
+          .values({ ref, buyerUserId: buyer?.id ?? null, buyerName: input.buyerName, buyerEmail: input.buyerEmail, buyerCompany: input.buyerCompany || null, providerId: prov.id, courseId: input.courseId, courseTitle: course.title, startsOn: input.startsOn, quantity: input.quantity, unitPence: input.unitPence, grossPence: gross, method: input.method, feeBps, commissionBps, bookedBy: ctx.user.id, note: input.note || null })
           .returning({ id: orders.id })
         await tx.insert(ledgerEntries).values({ type: 'purchase', providerId: prov.id, orderId: row.id, ...splitOf(gross, feeBps, commissionBps), note: `Staff booking (${input.method.replace('_', ' ')})`, createdBy: ctx.user.id })
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: prov.id, action: 'admin.order_booked', targetType: 'order', targetId: ref, metadata: { pounds: (gross / 100).toFixed(2), method: input.method }, ip: ctx.ip })

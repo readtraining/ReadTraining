@@ -1,5 +1,4 @@
 import { basket as copy } from "@/data/basket";
-import { isSkillSaverCourse } from "@/lib/skillSaver";
 
 // The basket's rules and sums, in one place: the basket page, the checkout and the header all read these. A line is a course
 // on one date (`sessionId`); `quantity` is its delegates; `selected` false leaves it out of this booking. Every way in adds a date;
@@ -28,6 +27,7 @@ export const lineFor = (course, session) => ({
   city: session.city,
   postcode: session.postcode,
   provider: session.provider,
+  skillSaver: Boolean(session.skillSaver), // in Skill Saver: the learner's discount comes off this line
 });
 
 // One line per course and date: an undated line goes once the same course has a dated one, and the same course on the same date
@@ -91,8 +91,8 @@ export function basketTotals(items, promo = null, saver = null) {
   const parts = items.map(lineParts);
   const subtotal = parts.reduce((sum, p) => sum + p.total, 0);
   const saving = parts.reduce((sum, p) => sum + (p.was ? p.was - p.total : 0), 0);
-  const saverEligible = items.some((item) => isSkillSaverCourse(item.id));
-  const saverAmount = saver ? round2(items.reduce((sum, item, i) => sum + (isSkillSaverCourse(item.id) ? (parts[i].total * saver.discount) / 100 : 0), 0)) : 0;
+  const saverEligible = items.some((item) => item.skillSaver);
+  const saverAmount = saver ? round2(items.reduce((sum, item, i) => sum + (item.skillSaver ? (parts[i].total * saver.discount) / 100 : 0), 0)) : 0;
   const skillSaver = saverAmount > 0 ? { level: saver.level, percent: saver.discount, amount: saverAmount } : null;
   const afterSaver = round2(subtotal - saverAmount);
   const discount = promo ? Math.round(afterSaver * promo.percent) / 100 : 0;
