@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { EyeIcon, EyeOffIcon, FacebookIcon, GoogleIcon } from "@/components/others/authIcons";
+import { authProviders } from "@/lib/supabase/client";
 import GoogleButton, { useGoogleButton } from "./GoogleButton";
 
 // The one card every sign-in page uses (log in, sign up, forgot and reset password), built from the design system
@@ -71,21 +72,30 @@ export function AuthCheck({ id, label, ...input }) {
   );
 }
 
-// Google and Facebook. Where Google's own button can be used (the site's address and localhost) it takes Google's cell, so
-// Google names our site; elsewhere (Vercel previews) our own Google button goes through Supabase as before.
+// Google, and Facebook once it is switched on in Supabase (until then its button would end on Supabase's error page). Where
+// Google's own button can be used (the site's address and localhost) it takes Google's cell, so Google names our site; elsewhere
+// (Vercel previews) our own Google button goes through Supabase as before.
 export function SocialSignIn({ onSocial, disabled, onError, signingUp = false }) {
   const googleHere = useGoogleButton();
   const [googleFailed, setGoogleFailed] = useState(false);
+  const [facebook, setFacebook] = useState(false);
+  useEffect(() => {
+    let live = true;
+    authProviders().then((p) => live && setFacebook(p.facebook === true));
+    return () => {
+      live = false;
+    };
+  }, []);
   return (
     <>
       <p className="rt-auth__or"><span>Or continue with</span></p>
-      <div className="rt-auth__social">
+      <div className={`rt-auth__social${facebook ? "" : " -one"}`}>
         {googleHere && !googleFailed ? (
           <GoogleButton signingUp={signingUp} onError={onError} onUnavailable={() => setGoogleFailed(true)} />
         ) : (
           <button type="button" className="rt-auth__socialbtn" onClick={() => onSocial("google")} disabled={disabled}><GoogleIcon /> Google</button>
         )}
-        <button type="button" className="rt-auth__socialbtn" onClick={() => onSocial("facebook")} disabled={disabled}><FacebookIcon /> Facebook</button>
+        {facebook && <button type="button" className="rt-auth__socialbtn" onClick={() => onSocial("facebook")} disabled={disabled}><FacebookIcon /> Facebook</button>}
       </div>
     </>
   );

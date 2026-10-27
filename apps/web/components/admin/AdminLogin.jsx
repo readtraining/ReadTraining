@@ -28,7 +28,8 @@ const codeProblem = (error) => {
   return "That code didn't work. Enter the newest code from your authenticator app.";
 };
 
-function AdminAuthPage({ title, lead, children }) {
+// the dark admin sign-in frame, shared with the invite page (AdminWelcome)
+export function AdminAuthPage({ title, lead, children }) {
   return (
     <div className="rt-home rt-auth rt-adm-auth">
       <main className="rt-adm-auth__wrap" id="rt-adm-auth-main">
@@ -68,6 +69,7 @@ export default function AdminLogin() {
     const n = safeNext(q.get("next"), AUTH_ROUTES.admin);
     const path = n.split("?")[0];
     setNext((path === AUTH_ROUTES.admin || path.startsWith(`${AUTH_ROUTES.admin}/`)) && path !== AUTH_ROUTES.adminLogin ? n : AUTH_ROUTES.admin);
+    if (q.get("welcome") === "1") setInfo("Your password is saved. Sign in with your email and new password to continue.");
     if (q.get("ended") === "1") setInfo("You've been signed out of the admin. This happens if your password was changed, you signed out everywhere, or the account was closed. Sign in again to carry on.");
     (async () => {
       try {

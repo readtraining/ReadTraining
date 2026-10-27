@@ -1,7 +1,8 @@
 import { subjects } from "@/data/testPrepSubjects";
 import { questionIndex } from "@/data/testPrepQuestionIndex";
-import { mockTestByCourse, tests as hubTests } from "@/data/testPrep";
-import { getCoursesByIds } from "@/lib/courses";
+import { mockTestCourses, tests as hubTests } from "@/data/testPrep";
+import { courseSearch } from "@/data/courseTopics";
+import { matchesPick, pickCourses } from "@/lib/catalogueData";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
 // All reads for the test prep subject pages go through here (swap the bodies for API calls later).
@@ -103,16 +104,17 @@ export function getSubject(slug) {
 
 export const getSubjectSlugs = () => hubTests.filter((t) => subjects[t.slug]).map((t) => t.slug);
 
-// Courses linked to this subject's mock test (mockTestByCourse, read in reverse).
-export function getSubjectCourses(slug) {
-  const ids = Object.entries(mockTestByCourse).filter(([, s]) => s === slug).map(([id]) => Number(id));
-  return getCoursesByIds(ids);
-}
+// The live courses this subject's mock test belongs to (data/testPrep.js mockTestCourses), from `courses` (catalogue courses,
+// lib/catalogueServer.js loadCatalogue), most popular first.
+export const getSubjectCourses = (slug, courses) => pickCourses(courses, mockTestCourses[slug]?.picks || [], 3);
 
-// "Book now": the matching course, or the course catalogue when the subject has none.
-export function bookHref(slug) {
-  const [course] = getSubjectCourses(slug);
-  return course ? course.detailsHref : CATALOGUE_HREF;
+// "Book now": the course search for the subject's courses, or every course when the subject has none.
+export const bookHref = (slug) => (mockTestCourses[slug] ? courseSearch(mockTestCourses[slug].words) : CATALOGUE_HREF);
+
+// A course's own mock test (the banner on its page), or null: the first test whose picks the course sits under.
+export function mockTestFor(course) {
+  const slug = Object.keys(mockTestCourses).find((s) => mockTestCourses[s].picks.some((p) => matchesPick(course, p)));
+  return slug ? hubTests.find((t) => t.slug === slug) || null : null;
 }
 
 // "More Tests & Resources": the subject's own list, else other tests in the same category, else any others (up to 8).

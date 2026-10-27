@@ -12,6 +12,7 @@ import SubjectCourses from "@/components/testPrep/subject/SubjectCourses";
 import { testPrepPage } from "@/data/testPrep";
 import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, resolveTests, subjectHref } from "@/lib/testPrep";
 import { getPaper, getTest } from "@/lib/testPrepRunner";
+import { loadCatalogue } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A single mock test (/mock-exams-test/<subject>/<test>). A test with questions opens the test runner (the paper is sent
@@ -51,6 +52,7 @@ export default async function MockTestPage(props) {
   const { subject, test } = hit;
   const c = testPrepPage.comingSoon;
   const paper = test.ready ? getPaper(subject.slug, test.slug) : null;
+  const courses = getSubjectCourses(subject.slug, await loadCatalogue());
   const crumbs = [
     { label: "Home", href: "/" },
     { label: "Test Prep", href: "/test-prep" },
@@ -99,7 +101,7 @@ export default async function MockTestPage(props) {
 
             {/* under the test: hidden while the test runs (body.rt-tq-running), shown on the intro */}
             <div className="rt-tq__after">
-            <SubjectCourses courses={getSubjectCourses(subject.slug)} />
+            <SubjectCourses courses={courses} />
 
             <section className="rt-tq__ask layout-pb-lg" aria-labelledby="rt-tq-ask-h">
               <div className="container">

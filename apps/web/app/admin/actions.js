@@ -21,3 +21,12 @@ export async function refreshSiteContent() {
   updateTag("content");
   return { ok: true };
 }
+
+// The same for the public catalogue (lib/catalogueServer.js, tag "courses"), after an admin decides on a course or saves a
+// shared course page, so the change shows on the site at once instead of within a minute.
+export async function refreshCourses() {
+  const admin = await getAdminAccess();
+  if (!admin?.permissions?.some((p) => p === "approve" || p === "catalogue")) return { ok: false };
+  updateTag("courses");
+  return { ok: true };
+}

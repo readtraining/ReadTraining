@@ -183,6 +183,14 @@ export function adminPermissions(admin: AdminAccess | null): AdminPermission[] {
   return list.filter((p): p is AdminPermission => (ADMIN_PERMISSIONS as readonly string[]).includes(p))
 }
 
+// The switches this admin may give another admin (Admin team): the super admin any; anyone else only switches they hold
+// themselves, and never "admins", so managing the team stays with the super admin (as adding Full admins does).
+export function grantableAdminPermissions(admin: AdminAccess | null): AdminPermission[] {
+  if (!admin || !admin.active) return []
+  if (admin.isSuper) return [...ADMIN_PERMISSIONS]
+  return adminPermissions(admin).filter((p) => p !== 'admins')
+}
+
 const isViewAction = (action: string) => action.endsWith('.view') || action.endsWith('.open')
 
 // ---------------------------------------------------------------------------------------------------------------------------

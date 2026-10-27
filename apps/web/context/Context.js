@@ -22,7 +22,8 @@ export const useContextElement = () => {
         try {
             const saved = JSON.parse(window.localStorage.getItem(CART_KEY) || "null")
             if (saved) {
-                if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses))
+                // a line from the old sample catalogue (course numbers below 1000, no address) can't be booked: it is dropped
+                if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses.filter((c) => Number(c.id) >= 1000 && c.slug)))
                 if (Array.isArray(saved.products)) setCartProducts(saved.products)
                 if (Array.isArray(saved.events)) setCartEvents(saved.events)
             }

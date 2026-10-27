@@ -9,7 +9,7 @@ import { IconCheck } from "@/components/marketing/parts";
 // framed card (.fb-frame, as About's story) under a cover photo.
 export default function ProviderAbout({ provider: p, copy }) {
   const rows = [
-    { label: "Based in", value: [p.city] },
+    p.city && { label: "Based in", value: [p.city] },
     p.modes.length > 0 && { label: "Delivery", value: p.modes },
     p.subjects.length > 0 && { label: "Subjects", value: p.subjects },
     p.cities.length > 0 && { label: "Venue cities", value: p.cities },
@@ -25,10 +25,10 @@ export default function ProviderAbout({ provider: p, copy }) {
             <p className="rt-pabout__badge"><span className="fb-chip -ok"><IconCheck />{copy.badge}</span></p>
           </div>
           <div className="fb-frame">
-            <div className="rt-pabout__cover"><Image width={640} height={300} src={p.imageSrc} alt="" /></div>
+            {p.imageSrc && <div className="rt-pabout__cover"><Image width={640} height={300} src={p.imageSrc} alt="" /></div>}
             <div className="fb-frame__body rt-pabout__card">
               <div className="rt-pabout__head">
-                <ProviderLogo initials={p.initials} large />
+                <ProviderLogo initials={p.initials} logoUrl={p.logoUrl} large />
                 <div>
                   <span className="bz-card__label">{copy.detailsLabel}</span>
                   <b className="rt-pabout__name">{p.name}</b>

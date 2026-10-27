@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { PRICE_BOUNDS, PRICE_STEP, priceBands } from "@/data/courseCatalogue";
+import { PRICE_BOUNDS, PRICE_STEP, priceBands } from "@/lib/catalogueFilters";
 import { RadioRow } from "./RadioRow";
 
 // Price stays single-select: radio bands (Any price, Under £50, £50 to £200, Over £200) plus a custom Min / Max range.

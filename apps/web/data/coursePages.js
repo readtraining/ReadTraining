@@ -4,7 +4,8 @@
 // name (brief §4): /courses/classroom, /courses/live-online, /courses/self-paced (the old /courses/virtual and /courses/online
 // redirect there, next.config.ts).
 //
-// `select` picks the courses: { method } (a study method), { subject } or { ids } (catalogue course ids).
+// `select` picks the courses: { method } (a study method), { subject } (a category) or { subject, sub } (one sub-category).
+// Every other category gets a plain page of its own at its slug (lib/coursePages.js), so each subject in the menus has one.
 // `hide` lists the filter groups the page leaves out. `filters: false` drops the filter panel: only for a page with a
 // single course (Personal Licence), where there is nothing to filter; every other page has filters, so the pages look the same
 // whatever the number of courses. `blog` is a blog category whose guides the page links to.
@@ -73,7 +74,7 @@ export const coursePages = [
     title: "CITB Site Safety Plus courses",
     description: "Compare CITB Site Safety Plus courses: SMSTS for site managers, SSSTS for supervisors and the health and safety awareness course behind the CSCS card.",
     lead: "The CITB's site safety courses for operatives, supervisors and managers. Most UK sites ask for one of them.",
-    select: { ids: [10, 11, 9] },
+    select: { subject: "construction", sub: "site-safety" },
     hide: ["subject"],
     blog: "construction",
     about: {
@@ -93,7 +94,7 @@ export const coursePages = [
     title: "Personal licence courses",
     description: "Book the Level 2 Award for Personal Licence Holders (APLH), the qualification you need to apply for a personal licence to sell alcohol.",
     lead: "The Level 2 Award for Personal Licence Holders (APLH) is the qualification you need to apply for a personal licence to sell alcohol.",
-    select: { ids: [21] },
+    select: { subject: "hospitality", sub: "licensing" },
     filters: false,
     blog: "hospitality",
     about: {

@@ -5,21 +5,26 @@ import { useContextElement } from "@/context/Context";
 import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
-import { bookableModes, defaultMode, firstSession, formatShortDate, getCourseBySlug } from "@/lib/courses";
+import { bookableModes, defaultMode, firstSession, formatShortDate } from "@/lib/courses";
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
-import { isSkillSaverCourse } from "@/lib/skillSaver";
+import { api } from "@/lib/trpc/react";
+import { toCourseDetail } from "@/lib/catalogueData";
 
 const gbp = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatPrice = (n) => gbp.format(Number(n) || 0); // always two decimals: £295.00
 
 
-// One course row: image (with the save heart) | details | price + actions. Every field except title and price is
-// optional and simply not shown when missing. `onNotify({ message, href?, label? })` shows a toast.
+// One course row: image (with the save heart) | details | price + actions. Every field except the title is optional and simply
+// not shown when missing; a course with no dates yet says so where the price goes and links to its page instead of the basket.
+// A real course's dates are asked for (API catalogue.course) when Add to basket is pressed. `onNotify({ message, href?, label? })`
+// shows a toast.
 export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
+  const utils = api.useUtils();
+  const priced = course.price != null;
   const href = course.detailsHref;
   const inBasket = isAddedToCartCourses(course.id);
   const hasDiscount = course.wasPrice > course.price;
@@ -62,9 +67,14 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
       }
     }, 350);
   };
-  const addToBasket = () => {
+  const addToBasket = async () => {
     if (status === "loading" || status === "added" || inBasket) return; // no double add
-    const detail = getCourseBySlug(course.id);
+    let detail = null;
+    setStatus("loading");
+    try {
+      detail = toCourseDetail(await utils.catalogue.course.fetch({ slug: course.slug }));
+    } catch {}
+    setStatus("idle");
     const modes = detail ? bookableModes(detail) : [];
     if (!modes.length) return onNotify?.({ message: "We could not load the dates for this course. Please try again." });
     if (modes.length === 1 && modes[0] === "ondemand") return add(detail, firstSession(detail, "ondemand"));
@@ -78,7 +88,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
   const showInBasket = inBasket && status !== "added" && status !== "loading";
 
   // Meta row 1: short items only (Duration | Level | N providers). Meta row 2: delivery modes as plain text.
-  const metaItems = [course.duration, levelName(course.level), course.providers > 0 ? `${course.providers} providers` : ""].filter(Boolean);
+  const metaItems = [course.duration, levelName(course.level), course.providers > 0 ? `${course.providers} ${course.providers === 1 ? "provider" : "providers"}` : ""].filter(Boolean);
   const delivery = course.methods?.length ? course.methods.map(methodName).join(", ") : "";
 
   const thumb = course.imageSrc ? (
@@ -101,7 +111,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
             {thumb}
           </div>
         )}
-        {isSkillSaverCourse(course.id) && <SaverBadge className="-onImage" />}
+        {course.skillSaver && <SaverBadge className="-onImage" />}
         <button
           type="button"
           className={`rt-card__heart${wished ? " is-saved" : ""}`}
@@ -144,23 +154,29 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
       </div>
 
       <div className="rt-card__aside">
-        <div className="rt-card__price">
-          <span className="rt-card__from">From</span>
-          <div className="rt-card__price-row">
-            <strong className="rt-card__current">{formatPrice(course.price)}</strong>
-            {hasDiscount && (
-              <s className="rt-card__was">
-                <span className="rt-sr">was </span>
-                {formatPrice(course.wasPrice)}
-              </s>
-            )}
+        {priced ? (
+          <div className="rt-card__price">
+            <span className="rt-card__from">From</span>
+            <div className="rt-card__price-row">
+              <strong className="rt-card__current">{formatPrice(course.price)}</strong>
+              {hasDiscount && (
+                <s className="rt-card__was">
+                  <span className="rt-sr">was </span>
+                  {formatPrice(course.wasPrice)}
+                </s>
+              )}
+            </div>
+            <span className="rt-card__save">{hasDiscount ? `Save ${discount}%` : ""}</span>
+            <span className="rt-card__vat">inc. VAT</span>
           </div>
-          <span className="rt-card__save">{hasDiscount ? `Save ${discount}%` : ""}</span>
-          <span className="rt-card__vat">inc. VAT</span>
-        </div>
+        ) : (
+          <div className="rt-card__price">
+            <strong className="rt-card__soon">New dates coming soon</strong>
+          </div>
+        )}
 
         <div className="rt-card__actions">
-          {showInBasket ? (
+          {!priced ? null : showInBasket ? (
             <Link href={BASKET_HREF} className="rt-card__btn rt-card__btn--primary">
               In basket
             </Link>

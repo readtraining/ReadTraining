@@ -9,7 +9,7 @@ import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
 import { COHORT_TONE, Choice, Loading, ORDER_TONE, Pill, RowMenu, formatWhen } from "./providerParts";
-import { CohortForm, Seats, dayRange } from "./ProviderCohorts";
+import { Seats, dayRange } from "./ProviderCohorts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
@@ -53,7 +53,6 @@ export function CohortTitle({ cohortId, fallback }) {
 
 export default function ProviderCohort({ cohortId }) {
   const data = useProvider();
-  const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [record, setRecord] = useState(null);
   const [mail, setMail] = useState(null); // { ids: [...] }
@@ -159,7 +158,6 @@ export default function ProviderCohort({ cohortId }) {
         </dl>
         {!k.cancelled && (
           <div className="rt-pws-coh__heroactions">
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>
             {!k.disabled && k.left > 0 && <Link href={`/provider/orders/new?cohort=${k.id}`} className="button -sm -purple-1 text-white">Enroll student</Link>}
             {!k.disabled && k.left > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setBulk(true)}>Bulk enrolment</button>}
             {canCancel && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
@@ -290,7 +288,6 @@ export default function ProviderCohort({ cohortId }) {
         )}
       </section>
 
-      <CohortForm open={editing} onClose={() => setEditing(false)} cohort={k} onSaved={() => { setEditing(false); setToast({ message: "Cohort saved" }); }} />
       <RecordSheet enrolment={record} clr={clr} onClose={() => setRecord(null)} onSaved={() => { setRecord(null); setToast({ message: "Learner record saved" }); }} />
       <EmailSheet value={mail} people={people} cohort={k} orderOf={orderOf} onClose={() => setMail(null)} onSent={(n, to) => { setMail(null); setPicked([]); setToast({ message: to ? `Email sent to ${to}` : `Email sent to ${n} ${n === 1 ? "student" : "students"}` }); }} />
       <DetailsSheet enrolment={details} onClose={() => setDetails(null)} onSaved={(msg) => { setDetails(null); setToast({ message: msg }); }} />

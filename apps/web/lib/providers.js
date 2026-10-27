@@ -1,77 +1,58 @@
-import { providers } from "@/data/providers";
-import { getCourseBySlug, getSubjectLabel } from "@/lib/courses";
-import { catalogueCourses } from "@/data/courseCatalogue";
-import { MODE_METHOD, modeLabel } from "@/lib/courseModes";
-import { getTaxonomy } from "@/lib/taxonomy";
+import { categoryName, methodName } from "@/lib/taxonomy";
+import { coursePath } from "@/lib/routes";
 
-// All reads for the listed providers go through here. Swap the bodies for API calls later.
-// A provider's courses are the catalogue courses that have at least one session with that provider (the names on the course
-// pages' dates), so a provider page and the course pages always agree. Each course shows the provider's lowest session price.
+// The public provider pages (/providers and /providers/<slug>), from the real providers (API organisations.providerDirectory and
+// .providerProfile, read by lib/publicProvider.js): plain helpers that put them in the shapes the pages' cards and sections read.
+// Category and method names come from the catalogue list (await loadTaxonomy() first, on the server).
 
 export const PROVIDERS_HREF = "/providers";
 export const PROVIDERS_PAGE_SIZE = 6;
 export const providerHref = (slug) => `${PROVIDERS_HREF}/${slug}`;
 
-const MODE_ORDER = Object.keys(MODE_METHOD);
 const unique = (list) => [...new Set(list)];
+const pounds = (p) => (p == null ? null : p / 100);
 
-// "BrightPath Academy" -> "BA", the stand-in for a logo until providers upload one
-const providerInitials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+// "BrightPath Academy" -> "BA", shown when a provider has no logo yet
+export const providerInitials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
 
-// built once per catalogue list (names come from it), so a renamed category or method shows without a restart
-let index;
-let indexFor;
-function buildIndex() {
-  const byName = new Map(providers.map((p) => [p.name, []]));
-  for (const base of catalogueCourses) {
-    const detail = getCourseBySlug(base.id);
-    const byProvider = new Map();
-    for (const s of detail.sessions) {
-      if (!byName.has(s.provider)) continue;
-      if (!byProvider.has(s.provider)) byProvider.set(s.provider, []);
-      byProvider.get(s.provider).push(s);
-    }
-    for (const [name, sessions] of byProvider) {
-      const lowest = sessions.reduce((a, b) => (b.price < a.price ? b : a));
-      byName.get(name).push({
-        id: base.id,
-        title: base.title,
-        imageSrc: base.imageSrc,
-        href: base.detailsHref,
-        duration: base.duration,
-        subject: getSubjectLabel(base),
-        modes: MODE_ORDER.filter((m) => sessions.some((s) => s.mode === m)).map(modeLabel),
-        cities: unique(sessions.map((s) => s.city).filter(Boolean)),
-        price: lowest.price,
-        wasPrice: lowest.wasPrice,
-      });
-    }
-  }
-  return providers.map((p, i) => {
-    const courses = byName.get(p.name).sort((a, b) => a.title.localeCompare(b.title));
-    return {
-      ...p,
-      href: providerHref(p.slug),
-      initials: providerInitials(p.name),
-      imageSrc: `/assets/img/coursesCards/${(i % 12) + 1}.png`, // stand-in photo until providers upload one
-      courses,
-      subjects: unique(courses.map((c) => c.subject)),
-      modes: MODE_ORDER.map(modeLabel).filter((l) => courses.some((c) => c.modes.includes(l))),
-      cities: unique(courses.flatMap((c) => c.cities)).sort(),
-    };
-  });
+// A directory entry, as the directory's card reads it
+export const toProviderCard = (d) => ({
+  slug: d.slug,
+  name: d.name,
+  href: providerHref(d.slug),
+  initials: providerInitials(d.name),
+  logoUrl: d.logoUrl,
+  city: d.city,
+  headline: d.headline,
+  courseCount: d.courseCount,
+  subjects: d.categories.map(categoryName).filter(Boolean),
+});
+
+// A public profile with its courses, as the provider page reads it
+export function toProviderPage(r) {
+  const courses = r.courses.map((c) => ({
+    id: c.slug,
+    title: c.title,
+    imageSrc: c.imageUrl || "",
+    href: coursePath(c.slug),
+    duration: c.duration,
+    subject: categoryName(c.category),
+    modes: c.methods.map(methodName),
+    cities: c.cities,
+    price: pounds(c.fromPence),
+    wasPrice: pounds(c.wasPence),
+  }));
+  return {
+    ...r,
+    href: providerHref(r.slug),
+    initials: providerInitials(r.name),
+    about: r.bio || r.headline,
+    courses,
+    subjects: unique(courses.map((c) => c.subject).filter(Boolean)),
+    modes: unique(courses.flatMap((c) => c.modes)),
+    cities: unique(courses.flatMap((c) => c.cities)).sort(),
+  };
 }
-
-export function getProviders() {
-  if (indexFor !== getTaxonomy()) [index, indexFor] = [buildIndex(), getTaxonomy()];
-  return index;
-}
-
-export const getProvider = (slug) => getProviders().find((p) => p.slug === slug) || null;
-// What the directory's card needs (not the whole course list, which would be sent to the browser with the page)
-export const toProviderCard = (p) => ({ slug: p.slug, name: p.name, href: p.href, initials: p.initials, imageSrc: p.imageSrc, city: p.city, courseCount: p.courses.length, subjects: p.subjects });
-
-export const getProviderSlugs = () => providers.map((p) => p.slug);
 
 // "Security, First Aid and Health & Safety"
 export const joinList = (items) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0] || "");

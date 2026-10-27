@@ -19,11 +19,11 @@ export const customerReviews = () => {
   const t = trustFigures();
   return {
   title: "Customer reviews | ReadTraining",
-  description: `Read what learners say about courses booked through ReadTraining, rated ${t.ratingSlash} from ${t.reviews} verified reviews.`,
+  description: `Read what learners say about courses booked through ReadTraining${t.ratingSlash ? `, rated ${t.ratingSlash} from ${t.reviews} verified reviews` : ""}.`,
   hero: {
     eyebrow: "Customer reviews",
     title: ["What our learners say"],
-    lead: `Rated ${t.ratingOutOf} from ${t.reviews} verified reviews by learners and teams across the UK.`,
+    lead: t.ratingOutOf ? `Rated ${t.ratingOutOf} from ${t.reviews} verified reviews by learners and teams across the UK.` : "What learners and teams across the UK say about the training they booked through ReadTraining.",
     primary: { label: "Find courses", href: CATALOGUE_HREF },
   },
   facts: [

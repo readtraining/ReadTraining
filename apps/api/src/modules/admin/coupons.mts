@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { categories, coupons, sql } from '@readtraining/db'
+import { categories, coupons, courses, sql } from '@readtraining/db'
 
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
@@ -55,11 +55,16 @@ const STATUS = {
   off: sql`not c.active`,
 }
 
-// the checks that need the database: real category addresses, and a code no other coupon has
+// the checks that need the database: real category addresses, real course numbers, and a code no other coupon has
 async function check(db: typeof Db, d: Details, id: string | null) {
   if (d.scope === 'categories') {
     const known = await db.execute<{ slug: string }>(sql`select slug from ${categories} where slug = any(${textArray(d.categories)})`)
     if (known.length !== new Set(d.categories).size) throw fieldError('categories', 'Choose categories from the list.')
+  }
+  if (d.scope === 'courses') {
+    const known = new Set((await db.execute<{ id: number }>(sql`select id from ${courses} where id = any(${intArray(d.courses)})`)).map((r) => Number(r.id)))
+    const unknown = [...new Set(d.courses)].filter((n) => !known.has(n))
+    if (unknown.length) throw fieldError('courses', `No course has the number ${unknown.join(', ')}. Check the course numbers.`)
   }
   const [taken] = await db.execute<{ id: string }>(sql`select id from ${coupons} where code = ${d.code} ${id ? sql`and id <> ${id}::uuid` : sql``}`)
   if (taken) throw fieldError('code', 'Another coupon already uses this code.')

@@ -3,10 +3,11 @@ import { pw, seedProvider } from "@/data/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import { SHOW_DEMO } from "@/lib/demo";
 
-// The provider workspace's reads and writes. There is no provider API yet (front end only), so the records start from
-// seedProvider() and every change made in the workspace is kept in this browser (localStorage `rt-provider`), with an event so
-// every open page reads again. DEMO: swap read/update for API calls later; the pages only depend on the shapes useProvider()
-// returns and on the actions below. Browser-only: call from effects and handlers.
+// The provider workspace's DEMO records: orders, learners, bookings, refunds, reviews, leads, questions, price plans, the sample
+// cohorts they link to, and the settings that have no API yet (VAT, emails, integrations). Courses, real dates, venues, the profile,
+// logo and terms are the API's (provider.*). These records start from seedProvider() and every change is kept in this browser
+// (localStorage `rt-provider`), with an event so every open page reads again. Swap read/update for API calls as each part becomes
+// real; the pages only depend on the shapes useProvider() returns and on the actions below. Browser-only: call from effects and handlers.
 
 // On the live site the made-up records are off (lib/demo.js): the workspace starts empty, under its own key, so a browser that
 // saw the sample records before starts clean too.
@@ -140,8 +141,6 @@ export function cohortStatus(k, enrolments, today = todayIso()) {
   return "upcoming";
 }
 
-export const canDeleteCourse = (s, id) => !s.orders.some((o) => o.lines.some((l) => l.courseId === id)) && !s.enrolments.some((e) => e.courseId === id);
-export const canChangeFormat = (s, id) => !s.orders.some((o) => o.lines.some((l) => l.courseId === id));
 export const packageCourses = (s, id) => s.courses.filter((c) => c.pricing.type === "tiered" && c.pricing.packageId === id);
 
 // Everything the pages read, worked out once per change.
@@ -199,60 +198,8 @@ export function useProvider() {
   return data;
 }
 
-// ---- courses ---------------------------------------------------------------------------------------------------------------
+// ---- cohorts (DEMO: the sample cohorts only; real dates are the API's provider.cohorts) ---------------------------------
 
-// Hurak's 5-step wizard: working title, category / sub-category / topic, compliance (and the shared landing page), performance
-// model and Skill Saver. The course starts as a classroom draft; Mode of study changes that.
-export const createCourse = ({ title, category, subcategory, topic, type, sharedLanding, model, skillSaver }) => updateProvider((s) => {
-  const id = nextId("C", s.courses);
-  s.courses.unshift({
-    id, title, subtitle: "", details: "", format: "classroom", level: "beginner", category, subcategory, topic, type, sharedLanding, model, skillSaver, features: [], objectives: [], topics: [], faqs: [], venues: [], media: [],
-    status: "draft", enrolment: "public", pricing: { type: "flat", price: 0 }, curriculum: [],
-    settings: { modes: [], clr: { enabled: false, fields: ["name", "result"], custom: [] }, reschedule: { enabled: false, paid: false, fee: 0 }, resit: { exam: false, allowed: false, paid: false, title: "", price: 0 }, confirmation: "", seo: { title: "", description: "", keywords: [] }, marketplace: true, assignmentEmail: "" },
-    updated: Date.now(), rating: 0,
-  });
-  return id;
-});
-// replace top-level fields (title, objectives, pricing, curriculum…); a live course goes back to review when its page changes
-export const saveCourse = (id, patch) => updateProvider((s) => {
-  const c = s.courses.find((x) => x.id === id);
-  if (!c) return;
-  Object.assign(c, patch, { updated: Date.now() });
-});
-export const saveCourseSettings = (id, key, value) => updateProvider((s) => {
-  const c = s.courses.find((x) => x.id === id);
-  if (!c) return;
-  c.settings[key] = value;
-  c.updated = Date.now();
-});
-export const submitCourse = (id) => updateProvider((s) => {
-  const c = s.courses.find((x) => x.id === id);
-  if (!c) return;
-  c.status = "pending";
-  c.updated = Date.now();
-  notify(s, `${c.title || "Your course"} was sent for review`, `/provider/courses/${id}`);
-});
-export const deleteCourse = (id) => updateProvider((s) => {
-  if (!canDeleteCourse(s, id)) return false;
-  s.courses = s.courses.filter((c) => c.id !== id);
-  s.cohorts = s.cohorts.filter((k) => k.courseId !== id);
-  s.qa = s.qa.filter((q) => q.courseId !== id);
-  return true;
-});
-
-// ---- cohorts ---------------------------------------------------------------------------------------------------------------
-
-// add or change a run of a course; returns its id
-export const saveCohort = (k) => updateProvider((s) => {
-  if (k.id) {
-    const i = s.cohorts.findIndex((x) => x.id === k.id);
-    if (i >= 0) s.cohorts[i] = { ...s.cohorts[i], ...k };
-    return k.id;
-  }
-  const id = nextId("K", s.cohorts);
-  s.cohorts.push({ cancelled: false, details: "", tutorId: "", venueId: "", packageId: "", colour: "purple", lmsFrom: "course", ...k, id });
-  return id;
-});
 export const cancelCohort = (id) => updateProvider((s) => {
   const k = s.cohorts.find((x) => x.id === id);
   if (!k) return;
@@ -302,33 +249,10 @@ export const setCohortStatus = (id, status) => updateProvider((s) => {
   const k = s.cohorts.find((x) => x.id === id);
   if (k) k.statusOverride = status;
 });
-export const setCohortTutor = (id, tutorId) => updateProvider((s) => {
-  const k = s.cohorts.find((x) => x.id === id);
-  if (k) k.tutorId = tutorId;
-});
 // a disabled cohort stays on the list but takes no new bookings
 export const setCohortEnabled = (id, enabled) => updateProvider((s) => {
   const k = s.cohorts.find((x) => x.id === id);
   if (k) k.disabled = !enabled;
-});
-export const toggleFavourite = (id) => updateProvider((s) => {
-  const k = s.cohorts.find((x) => x.id === id);
-  if (k) k.favourite = !k.favourite;
-});
-// "Move cohort": the run (and everyone booked on it) moves to another course of the same format
-export const moveCohort = (id, courseId) => updateProvider((s) => {
-  const k = s.cohorts.find((x) => x.id === id);
-  if (!k) return;
-  k.courseId = courseId;
-  s.enrolments.filter((e) => e.cohortId === id).forEach((e) => { e.courseId = courseId; });
-});
-// only a cohort nobody is booked on can be deleted; a booked one is cancelled instead (learners are told)
-export const canDeleteCohort = (s, id) => !s.enrolments.some((e) => e.cohortId === id && e.status !== "cancelled");
-export const deleteCohort = (id) => updateProvider((s) => {
-  if (!canDeleteCohort(s, id)) return false;
-  s.cohorts = s.cohorts.filter((k) => k.id !== id);
-  s.enrolments = s.enrolments.filter((e) => e.cohortId !== id);
-  return true;
 });
 // session notes: the team's own notes on a cohort, never shown to learners
 export const addCohortNote = (id, text) => updateProvider((s) => {
@@ -561,31 +485,6 @@ export const deleteQuestion = (id) => updateProvider((s) => {
 
 export const saveOrg = (patch) => updateProvider((s) => {
   Object.assign(s.org, patch);
-});
-
-export const saveVenue = (v) => updateProvider((s) => {
-  if (v.id) {
-    const i = s.venues.findIndex((x) => x.id === v.id);
-    if (i >= 0) s.venues[i] = { ...s.venues[i], ...v };
-    return v.id;
-  }
-  const id = nextId("V", s.venues);
-  s.venues.push({ active: true, ...v, id });
-  return id;
-});
-export const saveFaq = (f) => updateProvider((s) => {
-  if (f.id) {
-    const i = s.faqs.findIndex((x) => x.id === f.id);
-    if (i >= 0) s.faqs[i] = { ...s.faqs[i], ...f };
-    return f.id;
-  }
-  const id = nextId("F", s.faqs);
-  s.faqs.push({ ...f, id });
-  return id;
-});
-export const deleteFaq = (id) => updateProvider((s) => {
-  s.faqs = s.faqs.filter((f) => f.id !== id);
-  s.courses.forEach((c) => (c.faqs = c.faqs.filter((x) => x !== id)));
 });
 
 const emptyTier = () => ({ price: 0, discount: 0, perks: [] });

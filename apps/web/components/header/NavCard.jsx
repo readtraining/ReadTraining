@@ -3,6 +3,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { headerNav as N } from "@/data/headerNav";
+import { api } from "@/lib/trpc/react";
+import { coursePath } from "@/lib/routes";
+import { methodName } from "@/lib/taxonomy";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { NavIcon } from "./navIcons";
 import { useNearYou } from "./useNearYou";
@@ -32,11 +35,15 @@ function More({ href, label }) {
 }
 
 // Explore courses: every subject on the left; the panel on the right shows the popular courses, or the courses of the subject
-// you click (click it again to go back). It changes only on a click, so moving the pointer across subjects never swaps it.
+// you click (click it again to go back). It changes only on a click, so moving the pointer across subjects never swaps it. A
+// subject's number of courses and its three most popular are the real catalogue's (API catalogue.menu, asked once a while).
 function CoursesPanel() {
   const C = N.courses;
   const [subjectId, setSubjectId] = useState(null);
   const sub = C.subjects.find((s) => s.id === subjectId);
+  const menu = api.catalogue.menu.useQuery(undefined, { staleTime: 5 * 60 * 1000, retry: 1 });
+  const live = sub && menu.data ? menu.data[sub.id] || { count: 0, top: [] } : null;
+  const top = live ? live.top.map((c) => ({ label: c.title, href: coursePath(c.slug), meta: [...new Set([c.duration, ...c.methods.map(methodName)])].filter(Boolean).join(" · ") })) : [];
   const rows = Math.ceil(C.subjects.length / 3);
   return (
     <div className="rt-nav-courses">
@@ -70,11 +77,12 @@ function CoursesPanel() {
                 <span className="rt-nav-tile -solid"><NavIcon name={sub.icon} size={18} /></span>
                 <span className="rt-nav-link__text">
                   <span className="rt-nav-preview__title">{sub.label}</span>
-                  <span className="rt-nav-link__meta">{sub.countLine}</span>
+                  <span className="rt-nav-link__meta">{live ? `${live.count} ${live.count === 1 ? "course" : "courses"}` : "\u00a0"}</span>
                 </span>
               </div>
-              <p className="rt-nav-eyebrow">{C.topTitle}</p>
-              <ul className="rt-nav-list -preview">{sub.top.map((c) => <Row key={c.href} {...c} />)}</ul>
+              {top.length > 0 && <p className="rt-nav-eyebrow">{C.topTitle}</p>}
+              {top.length > 0 && <ul className="rt-nav-list -preview">{top.map((c) => <Row key={c.href} {...c} />)}</ul>}
+              {live && !top.length && <p className="rt-nav-preview__hint">No courses here yet.</p>}
               <Link href={sub.href} className="button -sm -purple-1 text-white rt-nav-cta">
                 {sub.all}
                 <NavIcon name="arrowRight" size={14} strokeWidth={2.4} />

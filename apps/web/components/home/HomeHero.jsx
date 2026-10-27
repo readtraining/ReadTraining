@@ -132,6 +132,8 @@ const HomeHero = () => {
                   </Link>
                 </div>
 
+                {/* the rating, only once an admin has entered one with its number of reviews (admin > Site content) */}
+                {trust.ratingOutOf && (
                 <div
                   data-aos="fade-up"
                   data-aos-duration="300"
@@ -160,9 +162,10 @@ const HomeHero = () => {
                       </div>
                       <span className="text-14 fw-500 text-white lh-1">{trust.ratingOutOf}</span>
                     </div>
-                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>Based on {trust.reviews} verified reviews · {trust.customers} customers</div>
+                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>Based on {trust.reviews} verified reviews{trust.customers ? ` · ${trust.customers} customers` : ""}</div>
                   </div>
                 </div>
+                )}
               </div>
             </div>
 

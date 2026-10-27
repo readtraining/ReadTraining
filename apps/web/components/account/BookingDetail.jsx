@@ -5,7 +5,7 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { topBar } from "@/data/home";
 import { bookingState, calendarFile, cancellableLines, getBooking } from "@/lib/account";
-import { courseHref } from "@/data/courseSlugs";
+import { demoCourseHref } from "@/data/demoCourses";
 import { formatDay, formatPrice } from "@/lib/format";
 import { StatusPill, placeOf, whenOf } from "./BookingRow";
 import { EmptyState } from "@/components/states/States";
@@ -62,7 +62,7 @@ export default function BookingDetail({ reference }) {
           {booking.lines.map((l, i) => (
             <article key={`${l.courseId}-${i}`} className="rt-acc__line">
               <div className="rt-acc__linetop">
-                <h3 className="rt-acc__h3"><Link href={courseHref(l.courseId)}>{l.title}</Link></h3>
+                <h3 className="rt-acc__h3"><Link href={demoCourseHref(l.courseId)}>{l.title}</Link></h3>
                 <strong>{formatPrice(l.total)}</strong>
               </div>
               <ul className="rt-bk__facts">

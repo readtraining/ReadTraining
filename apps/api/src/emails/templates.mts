@@ -16,12 +16,12 @@ import { button, escape, page, quote } from './layout.mjs'
 export type Words = { subject: string; heading: string; body: string; button: string }
 type Template = {
   name: string
-  audience: 'Learner' | 'Provider' | 'Business' | 'Everyone'
+  audience: 'Learner' | 'Provider' | 'Business' | 'Admin' | 'Everyone'
   trigger: string
   status: 'live' | 'later' | 'auth'
   placeholders: string[] // the ones these words may use
   required?: string[] // ones the words must keep
-  link?: (siteUrl: string) => string // the button's address (no link, no button)
+  link?: (siteUrl: string, vars: Record<string, string>) => string // the button's address (no link, no button)
   footer: string
   words: Words
   sample: Record<string, string>
@@ -128,6 +128,89 @@ export const TEMPLATES: Record<string, Template> = {
       button: 'Open your provider workspace',
     },
     sample: PROVIDER,
+  },
+  'course-approved': {
+    name: 'Course approved',
+    audience: 'Provider',
+    trigger: 'When an admin approves a course a provider sent for approval.',
+    status: 'live',
+    placeholders: ['firstName', 'provider', 'course'],
+    link: (s, v) => `${s}/provider/courses/${v.courseId ?? ''}`,
+    footer: 'You are receiving this because you manage {provider} on ReadTraining.',
+    words: {
+      subject: '{course} is live on ReadTraining',
+      heading: 'Your course is live',
+      body: 'Hi {firstName},\n\nWe have checked {course} and it is now live on ReadTraining. Learners can find it in search, and book it on the dates you add.',
+      button: 'Open the course',
+    },
+    sample: { ...PROVIDER, course: 'Emergency First Aid at Work', courseId: '1000' },
+  },
+  'course-changes': {
+    name: 'Course: changes needed',
+    audience: 'Provider',
+    trigger: 'When an admin asks a provider to change a course before it goes live.',
+    status: 'live',
+    placeholders: ['firstName', 'provider', 'course', 'message'],
+    required: ['message'],
+    link: (s, v) => `${s}/provider/courses/${v.courseId ?? ''}`,
+    footer: 'You are receiving this because you manage {provider} on ReadTraining.',
+    words: {
+      subject: '{course}: changes needed before it goes live',
+      heading: 'A few changes before your course goes live',
+      body: 'Hi {firstName},\n\nWe have looked at {course} and need a few changes before it can go live:\n\n{message}\n\nMake the changes, then send the course for approval again.',
+      button: 'Make the changes',
+    },
+    sample: { ...PROVIDER, course: 'Emergency First Aid at Work', courseId: '1000', message: 'Please add the exam details: the pass mark and how long the assessment takes.' },
+  },
+  'course-change-approved': {
+    name: 'Course change approved',
+    audience: 'Provider',
+    trigger: 'When an admin approves a change to a live course.',
+    status: 'live',
+    placeholders: ['firstName', 'provider', 'course'],
+    link: (s, v) => `${s}/provider/courses/${v.courseId ?? ''}`,
+    footer: 'You are receiving this because you manage {provider} on ReadTraining.',
+    words: {
+      subject: 'Your changes to {course} are live',
+      heading: 'Your changes are live',
+      body: 'Hi {firstName},\n\nWe have checked your changes to {course}. Learners now see the new version.',
+      button: 'Open the course',
+    },
+    sample: { ...PROVIDER, course: 'Emergency First Aid at Work', courseId: '1000' },
+  },
+  'course-change-rejected': {
+    name: 'Course change not approved',
+    audience: 'Provider',
+    trigger: 'When an admin turns down a change to a live course.',
+    status: 'live',
+    placeholders: ['firstName', 'provider', 'course', 'message'],
+    required: ['message'],
+    link: (s, v) => `${s}/provider/courses/${v.courseId ?? ''}`,
+    footer: 'You are receiving this because you manage {provider} on ReadTraining.',
+    words: {
+      subject: 'Your changes to {course} were not approved',
+      heading: 'Your changes were not approved',
+      body: 'Hi {firstName},\n\nWe could not approve your changes to {course}, so learners still see the version that was live before:\n\n{message}\n\nYou can edit the course and send the changes again.',
+      button: 'Open the course',
+    },
+    sample: { ...PROVIDER, course: 'Emergency First Aid at Work', courseId: '1000', message: 'The new title names a qualification the course does not lead to.' },
+  },
+  'course-paused': {
+    name: 'Course paused by ReadTraining',
+    audience: 'Provider',
+    trigger: 'When an admin takes a live course off the site.',
+    status: 'live',
+    placeholders: ['firstName', 'provider', 'course', 'message'],
+    required: ['message'],
+    link: (s, v) => `${s}/provider/courses/${v.courseId ?? ''}`,
+    footer: 'You are receiving this because you manage {provider} on ReadTraining.',
+    words: {
+      subject: '{course} has been paused',
+      heading: 'Your course has been paused',
+      body: 'Hi {firstName},\n\nWe have taken {course} off ReadTraining for now. Its dates are kept, and learners who already booked keep their places.\n\n{message}\n\nReply to this email if you have any questions.',
+      button: 'Open the course',
+    },
+    sample: { ...PROVIDER, course: 'Emergency First Aid at Work', courseId: '1000', message: 'We have had complaints that the venue address is wrong. Please check it and contact us.' },
   },
   'booking-confirmed': {
     name: 'Booking confirmed',
@@ -258,6 +341,39 @@ export const TEMPLATES: Record<string, Template> = {
     },
     sample: { ...PROVIDER, total: '£4,812.40', reference: 'PO-2026-11' },
   },
+  'admin-invite': {
+    name: 'Admin invite',
+    audience: 'Admin',
+    trigger: 'When someone without a ReadTraining account is invited to the admin team (Admin › Team, or the first super admin).',
+    status: 'live',
+    placeholders: ['firstName', 'invitedBy', 'role', 'hours'],
+    // the personal, single-use link to set a password (made when the email is sent)
+    link: (s, v) => v.link || `${s}/admin/login`,
+    footer: 'You are receiving this because you were invited to the ReadTraining admin team.',
+    words: {
+      subject: 'You’re invited to the ReadTraining admin',
+      heading: 'Join the ReadTraining admin team',
+      body: 'Hi {firstName},\n\n{invitedBy} has invited you to the ReadTraining admin panel as a {role} admin.\n\nSet your password to finish. The link works once and expires in {hours} hours. If it has expired, ask {invitedBy} to send you a new invite.\n\nIf you weren’t expecting this email, you can ignore it.',
+      button: 'Set your password',
+    },
+    sample: { firstName: '', invitedBy: 'Alex Morgan', role: 'Support', hours: '24' },
+  },
+  'admin-added': {
+    name: 'Added to the admin team',
+    audience: 'Admin',
+    trigger: 'When someone who already has a ReadTraining account is added to the admin team.',
+    status: 'live',
+    placeholders: ['firstName', 'invitedBy', 'role'],
+    link: (s) => `${s}/admin/login`,
+    footer: 'You are receiving this because you were added to the ReadTraining admin team.',
+    words: {
+      subject: 'You’ve been added to the ReadTraining admin team',
+      heading: 'Welcome to the admin team',
+      body: 'Hi {firstName},\n\n{invitedBy} has added you to the ReadTraining admin panel as a {role} admin.\n\nSign in at the admin sign-in page with your usual ReadTraining email and password.\n\nIf you weren’t expecting this email, please reply and let us know.',
+      button: 'Go to the admin sign-in',
+    },
+    sample: { firstName: 'Sam', invitedBy: 'Alex Morgan', role: 'Finance' },
+  },
   'auth-confirm': {
     name: 'Confirm your email',
     audience: 'Everyone',
@@ -331,7 +447,7 @@ export function renderEmail(key: string, words: Words, vars: Record<string, stri
   const fill = (s: string) => s.replace(PLACEHOLDER, (_, name: string) => vars[name] ?? '')
   const body = vars.firstName?.trim() ? words.body : words.body.replace(/^(Hi|Hello|Dear) \{firstName\},/m, 'Hello,')
   const blocks = body.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean)
-  const href = t.link?.(siteUrl)
+  const href = t.link?.(siteUrl, vars)
   const html = blocks
     .map((b) => {
       if (b === '{message}') return vars.message ? quote(vars.message) : ''

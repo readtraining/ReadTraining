@@ -2,7 +2,7 @@
 // root .env (never committed). The command's own .env loading doesn't override these, because values already set win.
 //
 //   pnpm live db:migrate                     apply the migrations to live
-//   pnpm live admin:grant name@example.com   make the first live admin
+//   pnpm live admin:bootstrap name@example.com   invite the first live super admin
 //
 // Needs in .env: LIVE_SUPABASE_URL, LIVE_PUBLISHABLE_KEY, LIVE_SERVICE_ROLE_KEY, LIVE_DATABASE_URL (pooler, 6543) and
 // LIVE_DIRECT_URL (5432). Refuses to run if any is missing, or if a LIVE_ value points at the development project.
@@ -48,6 +48,8 @@ const result = spawnSync('pnpm', args, {
     SUPABASE_SERVICE_ROLE_KEY: env.LIVE_SERVICE_ROLE_KEY,
     DATABASE_URL: env.LIVE_DATABASE_URL,
     DIRECT_URL: env.LIVE_DIRECT_URL,
+    // links in emails the API writes (admin invites) point at the live site
+    NEXT_PUBLIC_SITE_URL: env.LIVE_SITE_URL || 'https://readtraining.vercel.app',
   },
 })
 process.exit(result.status ?? 1)

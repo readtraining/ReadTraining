@@ -6,13 +6,15 @@ import HomeFooter from "@/components/home/HomeFooter";
 import MarketingHero from "@/components/marketing/MarketingHero";
 import ProviderDirectory from "@/components/providers/ProviderDirectory";
 import { providerPages } from "@/data/providers";
-import { PROVIDERS_HREF, getProviders, toProviderCard } from "@/lib/providers";
+import { PROVIDERS_HREF, toProviderCard } from "@/lib/providers";
+import { getProviderDirectory } from "@/lib/publicProvider";
 import { abs, breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Listed training providers (/providers), the footer's "Listed Training Providers" link, in the marketing-page language of
-// /about-us and /blog: centred dark hero (Get started goes to /for-providers) > the providers as cards with the count, Show all
-// and page links (white band) > need help > footer. Copy: data/providers.js; reads: lib/providers.js.
+// /about-us and /blog: centred dark hero (Get started goes to /for-providers) > a search, the providers as cards with the count,
+// Show all and page links (white band) > need help > footer. Every approved provider (API organisations.providerDirectory).
+// Copy: data/providers.js; reads: lib/publicProvider.js, shaped by lib/providers.js.
 
 const p = providerPages.directory;
 const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training providers" }];
@@ -21,7 +23,7 @@ export const metadata = pageMetadata({ title: p.title, description: p.descriptio
 
 export default async function ProvidersPage() {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
-  const providers = getProviders();
+  const providers = (await getProviderDirectory()).map(toProviderCard);
   const listLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -39,7 +41,7 @@ export default async function ProvidersPage() {
           <section className="fb-section -white" aria-label="Providers">
             <div className="container">
               <Suspense fallback={null}>
-                <ProviderDirectory providers={providers.map(toProviderCard)} />
+                <ProviderDirectory providers={providers} />
               </Suspense>
             </div>
           </section>

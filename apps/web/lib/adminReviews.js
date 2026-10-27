@@ -1,11 +1,11 @@
-import { catalogueCourses } from "@/data/courseCatalogue";
+import { demoCourse } from "@/data/demoCourses";
 import { DAY, currentAdmin, update } from "@/lib/adminStore";
 
 // DEMO: the admin's review moderation (Part B, B3) until learners can leave reviews after real bookings. The reviews are the seeds
 // below; hiding, showing again and settling a provider's challenge are saved in this browser (lib/adminStore.js). lib/admin.js
 // getAdmin() adds them to the admin data. Swap for API calls with the reviews table.
 
-// [courseId, provider, learner, rating, days ago, title, text, provider reply, provider's challenge]
+// [courseId (data/demoCourses.js), provider, learner, rating, days ago, title, text, provider reply, provider's challenge]
 const SEEDS = [
   [1, "Apex Training", "Jordan Hayes", 5, 2, "Clear, practical and well run", "The trainer kept it practical and every scenario felt like real door work. Passed all four exams first time.", "Thank you Jordan, good luck with your licence application.", null],
   [5, "Harbour Training Group", "Priya Shah", 5, 3, "Great first aid day", "Lots of hands-on practice with the mannequins. I feel confident I could help someone now.", null, null],
@@ -21,8 +21,6 @@ const SEEDS = [
   [12, "Beacon Training Services", "Lucy Price", 5, 24, "Friendly and professional", "Friendly trainer, good facilities and a clear explanation of what happens after the course.", null, null],
 ];
 
-const course = (id) => catalogueCourses.find((c) => c.id === id);
-
 export function buildReviews(saved, now) {
   return SEEDS.map(([courseId, provider, learner, rating, daysAgo, title, text, reply, challenge], i) => {
     const id = `rv-${i + 1}`;
@@ -30,7 +28,7 @@ export function buildReviews(saved, now) {
     return {
       id,
       courseId,
-      course: course(courseId)?.title ?? "Course",
+      course: demoCourse(courseId)?.title ?? "Course",
       provider,
       learner,
       rating,

@@ -49,3 +49,7 @@ export const subcategoryOptions = (category) => asOptions(subcategoriesOf(catego
 export const topicOptions = (category, sub) => asOptions(topicsOf(category, sub));
 export const methodOptions = () => asOptions(current.methods);
 export const levelOptions = () => asOptions(current.levels);
+
+// The shared course pages (API provider.courses.sharedPages) a course can go on: only a page for the same course, so the same
+// sub-category, and the same topic when both have one (the API checks the same rule, sameSubject).
+export const pagesForSubject = (pages, { subcategory, topic }) => pages.filter((p) => p.subcategory === subcategory && (!p.topic || !topic || p.topic === topic));

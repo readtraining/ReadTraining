@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  postgres@3.4.9: 04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00
+
 importers:
 
   .:
@@ -75,6 +78,9 @@ importers:
       '@emotion/styled':
         specifier: ^11.14.0
         version: 11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(@types/react@19.3.0)(react@19.3.0)
+      '@fontsource-variable/dm-sans':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fortawesome/fontawesome-svg-core':
         specifier: ^6.7.2
         version: 6.7.2
@@ -105,6 +111,9 @@ importers:
       '@popperjs/core':
         specifier: ^2.11.8
         version: 2.11.8
+      '@readtraining/permissions':
+        specifier: workspace:*
+        version: link:../../packages/permissions
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.117.0)
@@ -192,10 +201,10 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.3
-        version: 0.45.3(postgres@3.4.9)
+        version: 0.45.3(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00))
       postgres:
         specifier: ^3.4.9
-        version: 3.4.9
+        version: 3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)
     devDependencies:
       '@types/node':
         specifier: ^22.18.0
@@ -774,6 +783,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource-variable/dm-sans@5.3.0':
+    resolution: {integrity: sha512-BpUG5bqePiDFMBM4ZtLSlPdAIOM990uB1dlXzIf4aw21yQR7BmykedLXXXMqGWsR18aMLOsbWccwJNh3ztTQaA==}
 
   '@fortawesome/fontawesome-common-types@6.7.2':
     resolution: {integrity: sha512-Zs+YeHUC5fkt7Mg1l6XTniei3k4bwG/yo3iFUtZWd/pMx9g3fdvkSK9E0FOC+++phXOka78uJcYb8JaFkW52Xg==}
@@ -2760,6 +2772,8 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
+  '@fontsource-variable/dm-sans@5.3.0': {}
+
   '@fortawesome/fontawesome-common-types@6.7.2': {}
 
   '@fortawesome/fontawesome-svg-core@6.7.2':
@@ -3584,9 +3598,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.3(postgres@3.4.9):
+  drizzle-orm@0.45.3(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)):
     optionalDependencies:
-      postgres: 3.4.9
+      postgres: 3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)
 
   dunder-proto@1.0.1:
     dependencies:
@@ -3968,7 +3982,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres@3.4.9: {}
+  postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00): {}
 
   preact@10.12.1: {}
 

@@ -8,7 +8,7 @@
 // Costs: a row with `course` takes the catalogue course's lowest price ("From"); `amount` is a fixed fee in pounds; rows with
 // `optional` are shown but left out of the estimated total (lib/licences.js works the sums out).
 
-import { courseLink } from "@/data/courseSlugs";
+import { TOPICS, courseSearch } from "@/data/courseTopics";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
 const CHECKED = "12 October 2026";
@@ -69,10 +69,11 @@ const siaFaqs = (licence) => [
   { q: "Do I need first aid training?", a: licence.firstAidFaq },
   { q: "Can I appeal if I am refused?", a: "Yes. The SIA's decision letter explains how to ask it to look again and how to appeal." },
 ];
-const siaCosts = (courseId, firstAid) => ({
+// a course row's price is the lowest of the live courses under its pick (data/courseTopics.js)
+const siaCosts = (course, firstAid) => ({
   rows: [
-    { label: "Licence-linked training", note: "From approved providers on ReadTraining", course: courseId },
-    ...(firstAid ? [{ label: "Emergency First Aid at Work", note: "If you do not have a current certificate", course: 5, optional: true }] : []),
+    { label: "Licence-linked training", note: "From approved providers on ReadTraining", course },
+    ...(firstAid ? [{ label: "Emergency First Aid at Work", note: "If you do not have a current certificate", course: TOPICS.efaw, optional: true }] : []),
     { label: "SIA licence fee", note: "Paid to the SIA when you apply", amount: 204 },
   ],
   checked: CHECKED,
@@ -116,7 +117,7 @@ export const licences = [
       { icon: "icon-wall-clock", value: "6 days", label: "Training, with self-study" },
       { icon: "icon-person", value: "18+", label: "Minimum age" },
     ],
-    primary: { label: "Book Door Supervisor training", href: courseLink(1) },
+    primary: { label: "Book Door Supervisor training", href: courseSearch("Door Supervisor") },
     route: {
       title: "How to get your Door Supervisor licence",
       text: "Five steps, from first aid to the licence in your hand.",
@@ -126,7 +127,7 @@ export const licences = [
         text: "The Level 2 Award for Working as a Door Supervisor in the Private Security Industry: 6 days with self-study, 7 without.",
       }),
     },
-    costs: siaCosts(1, true),
+    costs: siaCosts(TOPICS.doorSupervisor, true),
     eligibility: siaEligibility("The Level 2 Award for Working as a Door Supervisor in the Private Security Industry, or the Scottish SCQF Level 6 version."),
     documents: siaDocuments,
     guide: siaGuide({
@@ -142,7 +143,7 @@ export const licences = [
       panel: { label: "Security jobs", title: "Full-time roles across the UK", price: null, items: ["Permanent contracts, 40+ hours a week", "Free to apply, about 3 minutes", "Nothing shared without your yes"], cta: "See security jobs", href: "/security-jobs" },
     },
     training: { title: "Door Supervisor training", text: "Licence-linked courses from approved providers, with dates near you.", all: { label: "All security courses", href: "/courses/security" } },
-    courses: [1, 46, 5],
+    courses: [TOPICS.doorSupervisor, TOPICS.doorTopUp, TOPICS.efaw],
     mockTest: { label: "Practise with a free SIA mock test", href: "/test-prep/sia-mock-test" },
     related: ["sia-security-guard-licence", "sia-cctv-licence", "sia-close-protection-licence"],
     faqs: siaFaqs({ name: "Door Supervisor", firstAidFaq: "Yes. You need Emergency First Aid at Work or equivalent before your training starts, with at least 12 months left on the certificate." }),
@@ -164,7 +165,7 @@ export const licences = [
       { icon: "icon-wall-clock", value: "4 days", label: "Training, with self-study" },
       { icon: "icon-person", value: "18+", label: "Minimum age" },
     ],
-    primary: { label: "Book Security Guard training", href: courseLink(2) },
+    primary: { label: "Book Security Guard training", href: courseSearch("Security Guard") },
     route: {
       title: "How to get your Security Guard licence",
       text: "Five steps, from first aid to the licence in your hand.",
@@ -174,7 +175,7 @@ export const licences = [
         text: "The Level 2 Award for Working as a Security Officer in the Private Security Industry: 4 days with self-study, 5 without.",
       }),
     },
-    costs: siaCosts(2, true),
+    costs: siaCosts(TOPICS.securityOfficer, true),
     eligibility: siaEligibility("The Level 2 Award for Working as a Security Officer in the Private Security Industry, or the Scottish SCQF Level 6 version."),
     documents: siaDocuments,
     guide: siaGuide({
@@ -190,7 +191,7 @@ export const licences = [
       panel: { label: "Security jobs", title: "Full-time roles across the UK", price: null, items: ["Permanent contracts, 40+ hours a week", "Free to apply, about 3 minutes", "Nothing shared without your yes"], cta: "See security jobs", href: "/security-jobs" },
     },
     training: { title: "Security Guard training", text: "Licence-linked courses from approved providers, with dates near you.", all: { label: "All security courses", href: "/courses/security" } },
-    courses: [2, 52, 5],
+    courses: [TOPICS.securityOfficer, TOPICS.securityTopUp, TOPICS.efaw],
     mockTest: { label: "Practise with a free SIA mock test", href: "/test-prep/sia-mock-test" },
     related: ["sia-door-supervisor-licence", "sia-cctv-licence", "sia-close-protection-licence"],
     faqs: siaFaqs({ name: "Security Guard", firstAidFaq: "Yes. You need Emergency First Aid at Work or equivalent before your training starts, with at least 12 months left on the certificate." }),
@@ -212,13 +213,13 @@ export const licences = [
       { icon: "icon-wall-clock", value: "3 days", label: "Training, with self-study" },
       { icon: "icon-person", value: "18+", label: "Minimum age" },
     ],
-    primary: { label: "Book CCTV Operator training", href: courseLink(3) },
+    primary: { label: "Book CCTV Operator training", href: courseSearch("CCTV Operator") },
     route: {
       title: "How to get your CCTV Operator licence",
       text: "Four steps, from training to the licence in your hand. No first aid certificate is needed.",
       steps: siaSteps({ time: "3 to 4 days", text: "The Level 2 Award for Working as a CCTV Operator (Public Space Surveillance) within the Private Security Industry: 3 days with self-study, 4 without." }).slice(1),
     },
-    costs: siaCosts(3, false),
+    costs: siaCosts(TOPICS.cctv, false),
     eligibility: siaEligibility("The Level 2 Award for Working as a CCTV Operator (Public Space Surveillance) within the Private Security Industry, or the Scottish SCQF Level 6 version."),
     documents: siaDocuments,
     guide: siaGuide({
@@ -234,7 +235,7 @@ export const licences = [
       panel: { label: "Security jobs", title: "Full-time roles across the UK", price: null, items: ["Permanent contracts, 40+ hours a week", "Free to apply, about 3 minutes", "Nothing shared without your yes"], cta: "See security jobs", href: "/security-jobs" },
     },
     training: { title: "CCTV Operator training", text: "Licence-linked courses from approved providers, in the classroom or live online.", all: { label: "All security courses", href: "/courses/security" } },
-    courses: [3],
+    courses: [TOPICS.cctv],
     mockTest: { label: "Practise with a free SIA mock test", href: "/test-prep/sia-mock-test" },
     related: ["sia-security-guard-licence", "sia-door-supervisor-licence", "sia-close-protection-licence"],
     faqs: siaFaqs({ name: "CCTV Operator", firstAidFaq: "No first aid certificate is listed for the CCTV Operator licence. Door Supervisor, Security Guard and Close Protection need one." }),
@@ -256,7 +257,7 @@ export const licences = [
       { icon: "icon-wall-clock", value: "18 days", label: "Level 3 training" },
       { icon: "icon-person", value: "18+", label: "Minimum age" },
     ],
-    primary: { label: "Book Close Protection training", href: courseLink(4) },
+    primary: { label: "Book Close Protection training", href: courseSearch("Close Protection") },
     route: {
       title: "How to get your Close Protection licence",
       text: "Five steps, from Level 3 first aid to the licence in your hand.",
@@ -268,8 +269,8 @@ export const licences = [
     },
     costs: {
       rows: [
-        { label: "Licence-linked training", note: "From approved providers on ReadTraining", course: 4 },
-        { label: "First Aid at Work (3 days)", note: "If you do not have a Level 3 first aid certificate", course: 6, optional: true },
+        { label: "Licence-linked training", note: "From approved providers on ReadTraining", course: TOPICS.closeProtection },
+        { label: "First Aid at Work (3 days)", note: "If you do not have a Level 3 first aid certificate", course: TOPICS.faw, optional: true },
         { label: "SIA licence fee", note: "Paid to the SIA when you apply", amount: 204 },
       ],
       checked: CHECKED,
@@ -290,7 +291,7 @@ export const licences = [
       panel: { label: "Security jobs", title: "Full-time roles across the UK", price: null, items: ["Permanent contracts, 40+ hours a week", "Free to apply, about 3 minutes", "Nothing shared without your yes"], cta: "See security jobs", href: "/security-jobs" },
     },
     training: { title: "Close Protection training", text: "Level 3 courses from approved providers, with the first aid you need.", all: { label: "All security courses", href: "/courses/security" } },
-    courses: [4, 6],
+    courses: [TOPICS.closeProtection, TOPICS.faw],
     mockTest: { label: "Practise with a free SIA mock test", href: "/test-prep/sia-mock-test" },
     related: ["sia-door-supervisor-licence", "sia-security-guard-licence", "sia-cctv-licence"],
     faqs: siaFaqs({ name: "Close Protection", firstAidFaq: "Yes, at Level 3: First Aid at Work, FPOS or FREC, with at least 12 months left. Emergency First Aid at Work is not accepted." }),
@@ -416,7 +417,7 @@ export const licences = [
     },
     costs: {
       rows: [
-        { label: "Level 1 Award (green card course)", note: "From providers on ReadTraining", course: 9 },
+        { label: "Level 1 Award (green card course)", note: "From providers on ReadTraining", course: TOPICS.cscsGreen },
         { label: "CITB HS&E test (Operatives)", note: "Paid to CITB when you book", amount: 23.5 },
         { label: "CSCS card fee", note: "Paid to CSCS when you apply", amount: 36 },
       ],
@@ -453,7 +454,7 @@ export const licences = [
       panel: { label: "CSCS application service", title: "New, renewal or replacement", price: "£60", items: ["Card and documents checked first", "Application completed for you", "Updates until your card is approved"], cta: "Apply for me", action: "request", note: "Our service fee. Official fees are paid separately." },
     },
     training: { title: "Training for your card", text: "The green card course and the site safety courses that lead to other cards.", all: { label: "All construction courses", href: "/courses?subject=construction" } },
-    courses: [9, 11, 10],
+    courses: [TOPICS.cscsGreen, TOPICS.sssts, TOPICS.smsts],
     mockTest: { label: "Practise with a free CITB HS&E mock test", href: "/test-prep/citb-mock-test-50-questions" },
     related: ["forklift-licence", "sia-security-guard-licence", "personal-licence"],
     faqs: [
@@ -482,7 +483,7 @@ export const licences = [
       { icon: "icon-wall-clock", value: "1 day", label: "APLH course" },
       { icon: "icon-person", value: "18+", label: "Minimum age" },
     ],
-    primary: { label: "Book the APLH course", href: courseLink(21) },
+    primary: { label: "Book the APLH course", href: courseSearch("Personal Licence") },
     route: {
       title: "How to get your Personal Licence",
       text: "Four steps. Your council makes the decision.",
@@ -495,7 +496,7 @@ export const licences = [
     },
     costs: {
       rows: [
-        { label: "APLH course", note: "From providers on ReadTraining", course: 21 },
+        { label: "APLH course", note: "From providers on ReadTraining", course: TOPICS.personalLicence },
         { label: "Basic DBS check", note: "Paid to DBS (GOV.UK)", amount: 20 },
         { label: "Council application fee", note: "Statutory fee, paid to your council", amount: 37 },
       ],
@@ -541,7 +542,7 @@ export const licences = [
       formNote: "Tell us what you need. We check your documents, then email you a secure payment link and what to upload.",
     },
     training: { title: "APLH training", text: "The Level 2 Award for Personal Licence Holders and the food safety courses venues ask for.", all: { label: "All hospitality courses", href: "/courses?subject=hospitality" } },
-    courses: [21, 20, 49],
+    courses: [TOPICS.personalLicence, TOPICS.foodHygiene2, TOPICS.foodHygiene3],
     mockTest: { label: "Practise with a free Personal Licence mock exam", href: "/test-prep/personal-licence-mock-exam" },
     related: ["premises-licence", "occasional-licence", "sia-door-supervisor-licence"],
     faqs: [
@@ -570,7 +571,7 @@ export const licences = [
       { icon: "icon-wall-clock", value: "28 days", label: "Consultation period" },
       { icon: "icon-person-3", value: "DPS", label: "Needs a personal licence holder" },
     ],
-    primary: { label: "Book the APLH course", href: courseLink(21) },
+    primary: { label: "Book the APLH course", href: courseSearch("Personal Licence") },
     route: {
       title: "How to get a premises licence",
       text: "Four steps. Your council decides, and anyone can comment during the consultation.",
@@ -616,7 +617,7 @@ export const licences = [
       panel: { label: "Personal Licence", title: "The qualification your DPS needs", price: null, items: ["APLH course in 1 day", "Council fee £37", "No expiry in England and Wales"], cta: "Read the Personal Licence guide", href: "/licences/personal-licence" },
     },
     training: { title: "Training for licensed venues", text: "The APLH for your DPS and the food safety courses venues ask for.", all: { label: "All hospitality courses", href: "/courses?subject=hospitality" } },
-    courses: [21, 20, 49],
+    courses: [TOPICS.personalLicence, TOPICS.foodHygiene2, TOPICS.foodHygiene3],
     mockTest: { label: "Practise with a free Personal Licence mock exam", href: "/test-prep/personal-licence-mock-exam" },
     related: ["personal-licence", "occasional-licence", "sia-door-supervisor-licence"],
     faqs: [
@@ -644,7 +645,7 @@ export const licences = [
       { icon: "icon-location", value: "Scotland", label: "Licensing (Scotland) Act 2005" },
       { icon: "icon-person-3", value: "Licence holders", label: "Or voluntary organisations" },
     ],
-    primary: { label: "Book the APLH course", href: courseLink(21) },
+    primary: { label: "Book the APLH course", href: courseSearch("Personal Licence") },
     route: {
       title: "How to get an occasional licence",
       text: "Three steps. Apply early: Licensing Boards consult the police and licensing standards officers.",
@@ -684,7 +685,7 @@ export const licences = [
       panel: { label: "Temporary Event Notice", title: "England and Wales", price: "£21", items: ["Apply to your council online", "At least 10 clear working days' notice", "Personal licence holders can give more TENs"], cta: "TEN guidance on GOV.UK", href: "https://www.gov.uk/temporary-events-notice" },
     },
     training: { title: "Training for licence holders", text: "The APLH for a personal licence, and food safety for events.", all: { label: "All hospitality courses", href: "/courses?subject=hospitality" } },
-    courses: [21, 20],
+    courses: [TOPICS.personalLicence, TOPICS.foodHygiene2],
     mockTest: { label: "Practise with a free Personal Licence mock exam", href: "/test-prep/personal-licence-mock-exam" },
     related: ["premises-licence", "personal-licence", "sia-door-supervisor-licence"],
     faqs: [
@@ -767,7 +768,7 @@ export const licences = [
       trucks: ["Counterbalance", "Reach truck", "Telescopic handler", "Other or not sure"],
       experience: ["Novice (never trained)", "Experienced (no certificate)", "Refresher", "Conversion to another truck"],
     },
-    courses: [15, 12, 48],
+    courses: [TOPICS.manualHandling, TOPICS.trafficMarshal, TOPICS.asbestos],
     related: ["cscs-cards", "sia-security-guard-licence", "personal-licence"],
     faqs: [
       { q: "Is there an official forklift licence?", a: "No. The law requires operators to be trained, and the certificate from an accredited course is what employers ask for." },
@@ -863,6 +864,7 @@ export const licencesHub = {
     faqTitle: "Questions about",
     total: "Estimated total",
     from: "From",
+    noCourse: "Set by each provider",
   },
   // the request pop-up
   request: {

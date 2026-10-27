@@ -1,11 +1,15 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { and, eq, like, or, organisationMembers, organisations } from '@readtraining/db'
+import { and, eq, like, or, organisationMembers, organisations, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 
 import { logActivity, logDenied } from '../../lib/activity.mjs'
+import type { db as Db } from '../../lib/db.mjs'
+import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
 import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
+import { mediaUrl } from '../../lib/media.mjs'
+import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
 
 // One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
@@ -16,16 +20,20 @@ import { providerTermsVersion } from '../content/content.router.mjs'
 // saved the provider terms in the admin it is their date (providerTermsVersion); until then this built-in one.
 export const PROVIDER_TERMS_VERSION = '2026-10-16'
 
-const slugify = (s: string) =>
-  s
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
-    .replace(/-+$/g, '') || 'provider'
+const slugify = (s: string) => slugifyText(s, 'provider')
+
+type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
+// The account of this type the person owns, read under a lock held until the transaction ends: two "create" requests from the
+// same person at the same moment (a double click, two tabs) take turns, so the second finds the account the first one made.
+async function ownedUnderLock(tx: Tx, userId: string, type: 'provider' | 'business') {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`readtraining.org.create:${type}:${userId}`}))`)
+  const [row] = await tx
+    .select({ id: organisations.id, status: organisations.status })
+    .from(organisationMembers)
+    .innerJoin(organisations, eq(organisations.id, organisationMembers.organisationId))
+    .where(and(eq(organisationMembers.userId, userId), eq(organisationMembers.role, 'owner'), eq(organisationMembers.status, 'active'), eq(organisations.type, type)))
+  return row ?? null
+}
 
 const phone = z
   .string()
@@ -52,16 +60,16 @@ export const organisationsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const own = ctx.actor.memberships.find((m) => m.type === 'provider' && m.role === 'owner')
-      if (own && own.organisationStatus !== 'rejected')
-        throw new TRPCError({ code: 'CONFLICT', message: 'You already have a provider account. Use Switch account to open it.' })
-      if (own) {
-        const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
-        return ctx.db.transaction(async (tx) => {
+      const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
+      return ctx.db.transaction(async (tx) => {
+        // a double click (or two tabs) sends this twice at once: the second waits here, then finds the first one's account
+        const own = await ownedUnderLock(tx, ctx.user.id, 'provider')
+        if (own && own.status !== 'rejected') throw new TRPCError({ code: 'CONFLICT', message: 'You already have a provider account. Use Switch account to open it.' })
+        if (own) {
           const [reopened] = await tx
             .update(organisations)
             .set({ name: input.name, mobile: input.mobile, status: 'pending', statusNote: null, statusChangedAt: new Date(), termsAcceptedAt: new Date(), termsVersion })
-            .where(and(eq(organisations.id, own.organisationId), eq(organisations.type, 'provider'), eq(organisations.status, 'rejected')))
+            .where(and(eq(organisations.id, own.id), eq(organisations.type, 'provider'), eq(organisations.status, 'rejected')))
             .returning({ id: organisations.id, slug: organisations.slug, name: organisations.name })
           if (!reopened) throw new TRPCError({ code: 'CONFLICT', message: 'Your provider account has changed. Reload the page.' })
           await logActivity(tx, {
@@ -75,18 +83,13 @@ export const organisationsRouter = createTRPCRouter({
             ip: ctx.ip,
           })
           return reopened
-        })
-      }
-      const base = slugify(input.name)
-      const taken = await ctx.db
-        .select({ slug: organisations.slug })
-        .from(organisations)
-        .where(or(eq(organisations.slug, base), like(organisations.slug, `${base}-%`)))
-      const used = new Set(taken.map((t) => t.slug))
-      let slug = base
-      for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`
-      const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
-      const org = await ctx.db.transaction(async (tx) => {
+        }
+        const base = slugify(input.name)
+        const taken = await tx
+          .select({ slug: organisations.slug })
+          .from(organisations)
+          .where(or(eq(organisations.slug, base), like(organisations.slug, `${base}-%`)))
+        const slug = freeSlug(base, taken.map((t) => t.slug))
         const [created] = await tx
           .insert(organisations)
           .values({ type: 'provider', name: input.name, slug, mobile: input.mobile, status: 'pending', termsAcceptedAt: new Date(), termsVersion, createdBy: ctx.user.id })
@@ -104,21 +107,17 @@ export const organisationsRouter = createTRPCRouter({
         })
         return created
       })
-      return org
     }),
 
   // Create a business account (Hurak's "Create a Business Account"): company name, your role, phone. Ready straight away.
   createBusiness: protectedProcedure
     .input(z.object({ companyName: orgName('company name'), jobTitle: z.string().trim().min(2, 'Enter your role, like Operations Manager.').max(80, 'Your role must be 80 characters or fewer.'), phone }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.actor.memberships.some((m) => m.type === 'business' && m.role === 'owner'))
-        throw new TRPCError({ code: 'CONFLICT', message: 'You already have a business account. Use Switch account to open it.' })
-      const base = slugify(input.companyName)
-      const taken = await ctx.db.select({ slug: organisations.slug }).from(organisations).where(or(eq(organisations.slug, base), like(organisations.slug, `${base}-%`)))
-      const used = new Set(taken.map((t) => t.slug))
-      let slug = base
-      for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`
       return ctx.db.transaction(async (tx) => {
+        if (await ownedUnderLock(tx, ctx.user.id, 'business')) throw new TRPCError({ code: 'CONFLICT', message: 'You already have a business account. Use Switch account to open it.' })
+        const base = slugify(input.companyName)
+        const taken = await tx.select({ slug: organisations.slug }).from(organisations).where(or(eq(organisations.slug, base), like(organisations.slug, `${base}-%`)))
+        const slug = freeSlug(base, taken.map((t) => t.slug))
         const [created] = await tx
           .insert(organisations)
           .values({ type: 'business', name: input.companyName, slug, mobile: input.phone, status: 'active', createdBy: ctx.user.id })
@@ -166,7 +165,8 @@ export const organisationsRouter = createTRPCRouter({
         .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote })
         .from(organisations)
         .where(eq(organisations.id, chosen.organisationId))
-      return { ...org, type: input.type, role: chosen.role }
+      // userId: the browser's permission checks need it for "their own" rules (a tutor's own dates)
+      return { ...org, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and
@@ -218,11 +218,27 @@ export const organisationsRouter = createTRPCRouter({
   // A provider's public profile (/providers/[slug]). New providers have one straight away; it stays out of search engines
   // until the provider is approved. Rejected and suspended providers have none.
   providerProfile: publicProcedure.input(z.object({ slug: z.string().max(80) })).query(async ({ ctx, input }) => {
-    const [org] = await ctx.db
-      .select({ name: organisations.name, slug: organisations.slug, status: organisations.status, createdAt: organisations.createdAt })
-      .from(organisations)
-      .where(and(eq(organisations.type, 'provider'), eq(organisations.slug, input.slug)))
+    const [org] = await ctx.db.select().from(organisations).where(and(eq(organisations.type, 'provider'), eq(organisations.slug, input.slug)))
     if (!org || org.status === 'rejected' || org.status === 'suspended') throw new TRPCError({ code: 'NOT_FOUND' })
-    return { name: org.name, slug: org.slug, approved: org.status === 'active', since: org.createdAt }
+    const approved = org.status === 'active'
+    return {
+      name: org.name,
+      slug: org.slug,
+      approved,
+      since: org.createdAt,
+      headline: org.headline ?? '',
+      bio: org.bio ?? '',
+      city: org.city ?? '',
+      socials: org.socials,
+      logoUrl: mediaUrl(org.logoPath),
+      bookingTerms: org.bookingTerms ?? '',
+      cancellationPolicy: org.cancellationPolicy ?? '',
+      // only an approved provider's live courses show
+      courses: approved ? await loadProviderCourses(ctx.db, org.id) : [],
+    }
   }),
+
+  // The public directory of providers (/providers): every approved provider, A to Z, with its town, headline, logo, how many
+  // courses it runs and in which categories.
+  providerDirectory: publicProcedure.query(({ ctx }) => loadProviderDirectory(ctx.db)),
 })

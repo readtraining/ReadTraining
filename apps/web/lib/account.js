@@ -1,5 +1,5 @@
 import { account } from "@/data/account";
-import { getCourseBySlug } from "@/lib/courses";
+import { demoCourse, demoCourseImage } from "@/data/demoCourses";
 
 // The customer account's bookings, cancellations, cards and wallet. The profile is real (me.* in apps/api, lib/useMe.js); there are no
 // booking endpoints yet, so these live in this browser (localStorage): the demo bookings from data/account.js, plus every booking made at
@@ -30,18 +30,17 @@ const today = () => isoDay(Date.now());
 
 
 // ---- bookings ----
-// the demo bookings with real dates (days from today) and the catalogue course's title and picture
+// the demo bookings with real dates (days from today) and the demo course's title and picture (data/demoCourses.js)
 function demoBookings() {
   const now = Date.now();
   return account.demoBookings.map((b) => {
     const lines = b.lines.map((l) => {
-      const course = getCourseBySlug(l.courseId);
+      const course = demoCourse(l.courseId);
       const start = now + l.startIn * DAY;
       return {
         courseId: l.courseId,
         title: course?.title || "Course",
-        slug: course?.slug,
-        imageSrc: course?.imageSrc,
+        imageSrc: demoCourseImage(l.courseId),
         mode: l.mode,
         date: isoDay(start),
         endDate: isoDay(start + (l.days - 1) * DAY),
@@ -108,7 +107,7 @@ export function getCertificates() {
   const now = today();
   const soon = isoDay(Date.now() + 90 * DAY);
   return getBookings()
-    .flatMap((b) => b.lines.filter((l) => l.certificate).map((l) => ({ ...l.certificate, title: l.title, courseId: l.courseId, slug: l.slug })))
+    .flatMap((b) => b.lines.filter((l) => l.certificate).map((l) => ({ ...l.certificate, title: l.title, courseId: l.courseId })))
     .map((c) => ({ ...c, state: c.expires < now ? "expired" : c.expires <= soon ? "renew" : "valid" }))
     .sort((a, b) => (a.expires < b.expires ? -1 : 1));
 }

@@ -14,19 +14,24 @@ import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { loadCatalogue } from "@/lib/catalogueServer";
+
+// the real catalogue (every live listing), as the pages read it
+const realCourses = loadCatalogue;
 
 // A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds), as Hurak's course finder pages: the same
 // catalogue with the town as its location (courses with a venue there, closest first; the visitor can change the town), the
 // other towns, the page's FAQs. Reads: lib/coursePages.js (getCourseTownPage).
 
-export function generateStaticParams() {
-  return getCourseTownParams();
+export async function generateStaticParams() {
+  await loadTaxonomy();
+  return getCourseTownParams(await realCourses());
 }
 
 export async function generateMetadata(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug, town } = await props.params;
-  const page = getCourseTownPage(slug, town);
+  const page = getCourseTownPage(slug, town, await realCourses());
   if (!page) return { title: "Courses not found | ReadTraining" };
   return pageMetadata({ title: `${page.title} | ReadTraining`, description: page.description, path: page.href });
 }
@@ -34,7 +39,8 @@ export async function generateMetadata(props) {
 export default async function CourseTownPage(props) {
   await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
   const { slug, town } = await props.params;
-  const page = getCourseTownPage(slug, town);
+  const courses = await realCourses();
+  const page = getCourseTownPage(slug, town, courses);
   if (!page) notFound();
   const faq = faqItems(`course-page-${slug}`, page.faq); // the same list as the page this town belongs to
   const crumbs = [{ label: "Home", href: "/" }, { label: "All courses", href: CATALOGUE_HREF }, { label: page.label, href: page.scope.parent.href }, { label: page.city }];
@@ -49,7 +55,7 @@ export default async function CourseTownPage(props) {
           <Suspense fallback={<CourseListSkeleton />}>
             <CourseCatalogue courses={page.courses} scope={page.scope} />
           </Suspense>
-          <CourseTowns title={`${page.label.replace(/ courses$/i, "")} courses in other towns`} towns={getCourseTowns(slug)} current={town} />
+          <CourseTowns title={`${page.label.replace(/ courses$/i, "")} courses in other towns`} towns={getCourseTowns(slug, courses)} current={town} />
           <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`ctown-faq-${slug}`} />
         </main>
         <HomeHelp />

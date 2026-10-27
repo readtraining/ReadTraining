@@ -1,7 +1,6 @@
 import { hseTest } from "@/data/hseTest";
 import { testCentres } from "@/data/testCentres";
 import { getLicence } from "@/lib/licences";
-import { getCoursesByIds, toCourseCard } from "@/lib/courses";
 import { nearestTo } from "@/lib/testCentreSearch";
 
 // Reads for the CITB HS&E test pages (server side). Swap for API calls when the centre list comes from the backend.
@@ -16,4 +15,3 @@ export function cardsForTest(match) {
   return cards.filter((c) => c.test && c.test.includes(match)).map((c) => c.name);
 }
 
-export const testCourses = () => getCoursesByIds(hseTest.courses.ids).map(toCourseCard);

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { catalogueFilterGroups } from "@/data/courseCatalogue";
+import { catalogueFilterGroups } from "@/lib/catalogueFilters";
 import { subcategoryOptions } from "@/lib/taxonomy";
 import FilterGroup from "./FilterGroup";
 import PriceRange from "./PriceRange";

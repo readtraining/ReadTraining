@@ -2,7 +2,6 @@
 // data in data/home/menu.js, so every link points at a page that exists.
 import { subjects, studyMethods, locationCourses, locationFinderHref, cityHref } from "@/data/home/menu";
 import { CATALOGUE_HREF, HSE_TEST_HREF } from "@/lib/routes";
-import { courseLink } from "@/data/courseSlugs";
 
 const slug = (label) => label.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const lic = (s) => `/licences/${s}`;
@@ -24,39 +23,21 @@ const SUBJECT_ICONS = {
   security: "shield",
   "teaching-and-academics": "cap",
 };
-// Each subject's course count and its three most-booked courses (length and study methods under each), taken from the course
-// catalogue (data/courseCatalogue.js), which the header can't load itself (78 KB). Update this table when the catalogue changes.
-const CATALOGUE = {
-  "Accounting and Finance": { count: 3, top: [[29, "Bookkeeping Level 2", "Self-paced · Live online"], [30, "AAT Level 3 Accounting Technician", "12 weeks · Classroom · Live online"], [31, "ACCA Financial Reporting Prep", "Self-paced · Live online"]] },
-  "Business": { count: 3, top: [[26, "Project Management Fundamentals", "2 days · Classroom · Live online · Self-paced"], [27, "Human Resources Practitioner Course", "4 days · Live online · Self-paced"], [28, "Leadership and Management Level 5", "8 days · Classroom · Live online"]] },
-  "Construction": { count: 5, top: [[48, "Asbestos Awareness (Category A)", "2 hours · Live online · Self-paced"], [9, "CSCS Green Card Course", "1 day · Classroom · Live online · Self-paced"], [10, "CITB SMSTS Course", "5 days · Classroom"]] },
-  "First Aid": { count: 4, top: [[5, "Emergency First Aid at Work", "1 day · Classroom · Live online"], [6, "First Aid at Work (3 Days)", "3 days · Classroom"], [7, "Paediatric First Aid (2 Days)", "2 days · Classroom · Live online"]] },
-  "Health and Care": { count: 3, top: [[18, "Safeguarding Adults Level 2", "3 hours · Classroom · Live online · Self-paced"], [17, "Care Certificate Standards", "12 hours · Live online · Self-paced"], [19, "Medication Administration (Advanced)", "2 days · Classroom"]] },
-  "Health and Safety": { count: 4, top: [[13, "IOSH Managing Safely", "4 days · Classroom · Live online · Self-paced"], [16, "Fire Marshal Training", "3 hours · Classroom · Live online · Self-paced"], [14, "NEBOSH National General Certificate", "10 days · Classroom · Live online · Self-paced"]] },
-  "Hospitality": { count: 4, top: [[20, "Level 2 Food Hygiene", "3 hours · Live online · Self-paced"], [21, "Personal Licence (APLH)", "1 day · Classroom · Live online"], [49, "Level 3 Award in Supervising Food Safety in Catering (RQF) Online Course", "6 hours · Live online · Self-paced"]] },
-  "Lifestyle": { count: 2, top: [[36, "Nutrition and Wellbeing Level 3", "Self-paced · Live online"], [35, "Introduction to Yoga Teaching", "3 days · Classroom · Live online"]] },
-  "Marketing": { count: 3, top: [[37, "Digital Marketing Essentials", "Self-paced · Live online"], [38, "Social Media Strategy Workshop", "1 day · Classroom · Live online"], [39, "Advanced Paid Media and Analytics", "2 days · Live online"]] },
-  "Personal Development": { count: 3, top: [[40, "Time Management and Productivity", "3 hours · Live online · Self-paced"], [41, "Conflict Resolution Skills", "1 day · Classroom · Live online"], [42, "Executive Presence and Public Speaking", "2 days · Classroom"]] },
-  "Security": { count: 8, top: [[1, "SIA Door Supervisor Training", "6 days · Classroom"], [2, "SIA Security Guard Training", "5 days · Classroom"], [46, "Door Supervisor Refresher", "2 days · Classroom"]] },
-  "Teaching & Academics": { count: 3, top: [[23, "Level 3 Award in Education and Training (AET)", "5 days · Classroom · Live online"], [24, "Level 4 Internal Quality Assurance", "Self-paced · Live online"], [25, "Level 5 Diploma in Education and Training", "Self-paced · Live online"]] },
-};
-
+// each subject's number of courses and its three most popular come from the real catalogue (API catalogue.menu), read by the
+// menu card itself (components/header/NavCard.jsx) when it opens
 const courseSubjects = subjects.map((s) => {
   const id = slug(s.label);
-  const c = CATALOGUE[s.label] || { count: 0, top: [] };
   return {
     id,
     label: short(s.label),
     icon: SUBJECT_ICONS[id] || "book",
-    countLine: `${c.count} ${c.count === 1 ? "course" : "courses"}`,
-    top: c.top.map(([courseId, label, meta]) => ({ label, meta, href: courseLink(courseId) })),
     href: s.href,
     all: `All ${short(s.label)} courses`,
   };
 });
 
-// the courses with their own page, for "Popular courses" and the Near you course list
-const withPage = locationCourses.filter((c) => c.id);
+// the courses the finder can search for, for "Popular courses" and the Near you course list
+const withPage = locationCourses.filter((c) => c.q);
 const byLabel = (label) => withPage.find((c) => c.label === label);
 const POPULAR = [
   ["Door Supervisor Course", "Security"],

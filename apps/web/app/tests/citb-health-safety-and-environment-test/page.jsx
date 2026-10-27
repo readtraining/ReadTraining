@@ -15,7 +15,7 @@ import BookingBand from "@/components/hseTest/BookingBand";
 import CentreFinder from "@/components/hseTest/CentreFinder";
 import { HSE_PRICE, hseTest as t } from "@/data/hseTest";
 import { licencesHub } from "@/data/licences";
-import { testCourses } from "@/lib/hseTest";
+import { courseCards } from "@/lib/catalogueServer";
 import { HSE_TEST_HREF } from "@/lib/routes";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 
@@ -41,7 +41,8 @@ const faqLd = {
   mainEntity: t.faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
 };
 
-export default function HseTestPage() {
+export default async function HseTestPage() {
+  const courses = await courseCards(t.courses.picks, 3); // the live CSCS and site safety courses
   return (
     <div className="main-content rt-home fb-page rt-lic-page">
       <a href="#rt-ht-main" className="rt-skip">Skip to main content</a>
@@ -76,7 +77,7 @@ export default function HseTestPage() {
                 <CentreFinder limit={6} />
               </div>
             </section>
-            <LicenceCourses courses={testCourses()} training={t.courses} copy={licencesHub.page} />
+            <LicenceCourses courses={courses} training={t.courses} copy={licencesHub.page} />
             <FaqSection eyebrow="HS&E test" title="Frequently asked questions" items={t.faqs} idPrefix="ht-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
           </TestBooking>
         </main>

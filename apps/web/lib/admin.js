@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 import { admin as A } from "@/data/admin";
-import { catalogueCourses } from "@/data/courseCatalogue";
-import { categoryName } from "@/lib/taxonomy";
 import { certificates as seedCertificates } from "@/data/certificates";
-import { getCourseBySlug } from "@/lib/courses";
-import { getProviders } from "@/lib/providers";
+import { demoCourse, demoCourses } from "@/data/demoCourses";
 import { ADMIN_EVENT, DAY, HOUR, addWorkingDays, currentAdmin, read, update } from "@/lib/adminStore";
 import { buildWork } from "@/lib/adminWork";
 import { buildReviews } from "@/lib/adminReviews";
 
 // The admin's reads and writes. There is no admin API yet (front end only, see the admin plan's Scope), so the records come from
-// data/admin.js and the live catalogue, and every decision made on the admin pages (an approval, a suspension, a refund, a note)
+// data/admin.js and the demo courses (data/demoCourses.js), and every decision made on the admin pages (an approval, a suspension, a refund, a note)
 // is kept in this browser (localStorage). Swap the bodies for API calls later; the pages only depend on the
 // shapes getAdmin() returns. Browser-only: call from effects.
 
@@ -46,50 +43,23 @@ export function ago(ms, now = Date.now()) {
 
 // ---- the records ------------------------------------------------------------------------------------------------------------
 
-// DEMO: what providers sent for review (course listings, dates, prices) until courses are real. Provider applications are
-// real and decided on the Providers page.
-function buildApprovals(saved, now) {
-  const bySlug = Object.fromEntries(getProviders().map((p) => [p.slug, p]));
-  const items = [
-    ...A.submissions.map((x) => {
-      const course = getCourseBySlug(x.courseId);
-      return {
-        id: x.id,
-        type: x.type,
-        title: course?.title || "Course",
-        provider: bySlug[x.provider]?.name || x.provider,
-        providerSlug: x.provider,
-        detail: x.detail,
-        submitted: now - x.hoursAgo * HOUR,
-        baseStatus: "pending",
-      };
-    }),
-  ];
-  return items
-    .map((it) => {
-      const d = saved.decisions?.[it.id];
-      return { ...it, status: d?.status || it.baseStatus, reason: d?.reason || "", decidedAt: d?.at, due: addWorkingDays(it.submitted, A.sla.approval) };
-    })
-    .sort((a, b) => a.submitted - b.submitted);
-}
-
-const providerFor = (course) => {
-  const s = course.sessions.find((x) => x.mode === "classroom") || course.sessions[0];
-  return { name: s?.provider || "ReadTraining provider", city: s?.city || "Online", mode: s?.mode || "online" };
-};
-const days = (course) => (/day/i.test(course.duration) ? Math.max(1, Math.round(parseFloat(course.duration))) : 1);
+// The demo records' courses are the demo courses (data/demoCourses.js), run by these made-up providers.
+const DEMO_PROVIDERS = ["Apex Training", "Harbour Training Group", "Northstar Training", "Pinnacle Compliance Training", "Kestrel Safety Training", "ClearView Learning", "Summit Skills", "Beacon Training Services"];
+const POSTCODES = { London: "EC1A 1BB", Manchester: "M1 1AE", Birmingham: "B1 1AA", Leeds: "LS1 4AP", Glasgow: "G1 1XQ", Bristol: "BS1 4DJ", Cardiff: "CF10 1AA", Liverpool: "L1 8JQ", Nottingham: "NG1 5FS", Newcastle: "NE1 4ST" };
+const providerFor = (course, n = 0) => ({ name: DEMO_PROVIDERS[(course.id + n) % DEMO_PROVIDERS.length], city: course.city || "Online", mode: course.city ? "classroom" : "online" });
+const days = (course) => course.days;
 
 function buildOrders(saved, now) {
   const today = isoDay(now);
   return A.orderSeeds.map((o, i) => {
     const [who, company, courseId, inDays, qty, method, flag] = o;
-    const course = getCourseBySlug(courseId);
+    const course = demoCourse(courseId);
     const [first, last] = A.people[who];
     const prov = providerFor(course);
     const start = now + inDays * DAY;
     const date = isoDay(start);
     const endDate = isoDay(start + (days(course) - 1) * DAY);
-    const unit = Math.min(...course.sessions.map((s) => s.price));
+    const unit = course.price;
     const total = round(unit * qty);
     // booked before the course and never in the future; several in the last week
     const booked = Math.min(start - (14 + ((i * 5) % 20)) * DAY, now - ((i * 7) % 9) * DAY - ((i % 5) + 1) * HOUR);
@@ -160,59 +130,38 @@ function buildChanges(saved, orders, now) {
 
 const hash = (...n) => n.reduce((h, x) => (h * 31 + x) % 9973, 7);
 
-function buildCatalogue(saved, today) {
-  return catalogueCourses.map((c) => {
-    const course = getCourseBySlug(c.id);
-    const dated = course.sessions.filter((s) => s.mode === "ondemand" || s.date >= today);
-    const byProvider = {};
-    course.sessions.forEach((s) => {
-      const o = (byProvider[s.provider] ||= { provider: s.provider, modes: new Set(), from: Infinity, sessions: 0 });
-      o.modes.add(s.mode);
-      o.from = Math.min(o.from, s.price);
-      if (s.mode === "ondemand" || s.date >= today) o.sessions += 1;
-    });
-    const offerings = Object.values(byProvider).map((o) => ({ ...o, modes: [...o.modes], status: saved.offerings?.[`${c.id}:${o.provider}`] || "live" }));
-    return {
-      id: c.id,
-      title: c.title,
-      slug: course.slug,
-      subject: c.subject,
-      category: categoryName(c.subject) || c.subject,
-      duration: c.duration,
-      validity: c.validity,
-      level: c.level,
-      methods: c.methods,
-      from: Math.min(...course.sessions.map((s) => s.price)),
-      upcoming: dated.length,
-      offerings,
-      preCourse: saved.preCourse?.[c.id] ?? A.preCourse.includes(c.id),
-    };
-  });
+// the demo courses as the demo pages read them (reports, certificates, sessions)
+function buildCatalogue(saved) {
+  return demoCourses.map((c) => ({ ...c, from: c.price, preCourse: saved.preCourse?.[c.id] ?? A.preCourse.includes(c.id) }));
 }
 
+// three upcoming dates for each demo course, at its city's centre (or live online), with made-up places booked
 function buildSessions(saved, catalogue, now) {
   const today = isoDay(now);
   const out = [];
   catalogue.forEach((c) => {
-    getCourseBySlug(c.id).sessions.forEach((s, n) => {
-      if (s.mode === "ondemand" || s.date < today) return;
-      const id = `${c.id}-${s.id}`;
+    [4 + ((c.id * 3) % 10), 18 + ((c.id * 5) % 12), 39 + ((c.id * 7) % 15)].forEach((inDays, n) => {
+      const mode = c.city && !(n === 2 && c.methods.includes("live-online")) ? "classroom" : "online";
+      const start = Date.parse(`${today}T00:00:00Z`) + inDays * DAY;
+      const date = isoDay(start);
+      if (date < today) return;
+      const id = `${c.id}-s${n}`;
       const o = saved.sessions?.[id] || {};
-      const capacity = s.mode === "classroom" ? [12, 16, 20][hash(c.id, n) % 3] : 30;
+      const capacity = mode === "classroom" ? [12, 16, 20][hash(c.id, n) % 3] : 30;
       const booked = Math.min(capacity, hash(c.id, n, 3) % (capacity + 4));
-      const daysAway = Math.round((Date.parse(`${s.date}T09:00:00Z`) - now) / DAY);
-      return out.push({
+      const daysAway = Math.round((Date.parse(`${date}T09:00:00Z`) - now) / DAY);
+      out.push({
         id,
         courseId: c.id,
         course: c.title,
-        provider: s.provider,
-        mode: s.mode,
-        date: s.date,
-        endDate: s.endDate,
-        time: s.time,
-        city: s.city || "Live online",
-        venue: s.address || "Live online",
-        postcode: s.postcode || "",
+        provider: providerFor(c, n).name,
+        mode,
+        date,
+        endDate: isoDay(start + (c.days - 1) * DAY),
+        time: "09:30 to 16:30",
+        city: mode === "classroom" ? c.city : "Live online",
+        venue: mode === "classroom" ? `${c.city} Training Centre` : "Live online",
+        postcode: mode === "classroom" ? POSTCODES[c.city] || "" : "",
         capacity,
         booked: o.cancelled ? 0 : booked,
         daysAway,
@@ -291,12 +240,10 @@ export function getAdmin() {
   const saved = read();
   const now = Date.now();
   const fees = A.feeDefaults; // the demo reports use the default card fee
-  const approvals = buildApprovals(saved, now);
   const orders = buildOrders(saved, now);
   const changes = buildChanges(saved, orders, now);
-  const pending = approvals.filter((a) => a.status === "pending");
   const openChanges = changes.filter((c) => c.open);
-  const catalogue = buildCatalogue(saved, isoDay(now));
+  const catalogue = buildCatalogue(saved);
   const sessions = buildSessions(saved, catalogue, now);
   const certificates = buildCertificates(saved, orders, catalogue);
   const work = buildWork(saved, now); // Phase 2: requests, Security Jobs, business accounts (lib/adminWork.js)
@@ -304,7 +251,6 @@ export function getAdmin() {
   return {
     now,
     ...work,
-    approvals,
     orders,
     changes,
     catalogue,
@@ -315,9 +261,8 @@ export function getAdmin() {
     staff: staffNames(),
     fees,
     counts: {
-      approvals: pending.length,
       changes: openChanges.length,
-      overdue: pending.filter((a) => a.due < now).length + openChanges.filter((c) => c.due < now).length + work.workCounts.requestsOverdue,
+      overdue: openChanges.filter((c) => c.due < now).length + work.workCounts.requestsOverdue,
       ...work.workCounts,
       reviews: reviews.filter((r) => r.challenge).length,
     },
@@ -326,12 +271,6 @@ export function getAdmin() {
 
 // ---- the writes ---------------------------------------------------------------------------------------------------------------
 
-
-export function decideApproval(item, status, reason = "") {
-  update((s) => {
-    s.decisions = { ...(s.decisions || {}), [item.id]: { status, reason, at: Date.now() } };
-  });
-}
 
 const orderEvent = (s, ref, text) => {
   const cur = s.orders?.[ref] || {};
@@ -368,14 +307,6 @@ export function actOnChange(change, action) {
 }
 
 // ---- part 2 writes ----------------------------------------------------------------------------------------------------------
-export const setPreCourse = (course, on) =>
-  update((s) => {
-    s.preCourse = { ...(s.preCourse || {}), [course.id]: on };
-  });
-export const setOfferingStatus = (course, offering, status) =>
-  update((s) => {
-    s.offerings = { ...(s.offerings || {}), [`${course.id}:${offering.provider}`]: status };
-  });
 const setSession = (session, patch) =>
   update((s) => {
     s.sessions = { ...(s.sessions || {}), [session.id]: { ...(s.sessions?.[session.id] || {}), ...patch } };

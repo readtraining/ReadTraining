@@ -15,7 +15,7 @@ export default function HomeStories() {
     { value: trust.ratingSlash, label: "Average rating" },
     { value: trust.reviews, label: "Verified reviews" },
     { value: trust.customers, label: "Customers" },
-  ];
+  ].filter((s) => s.value); // a number not entered yet is left out
   return (
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">

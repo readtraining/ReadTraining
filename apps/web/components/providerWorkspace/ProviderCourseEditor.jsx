@@ -5,78 +5,137 @@ import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
-import { canChangeFormat, saveCourse, saveFaq, saveVenue, submitCourse, useProvider } from "@/lib/providerWorkspace";
+import { api } from "@/lib/trpc/react";
+import { useProviderAccess } from "@/lib/providerAccess";
+import { CourseEndpoints, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
+import { getSupabase } from "@/lib/supabase/client";
+import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
-import CourseCurriculum from "./CourseCurriculum";
-import { CourseGear, RecordsPanel, ResitPanel, SeoPanel } from "./CourseSettings";
-import PackageEditor from "./PackageEditor";
-import { COURSE_TONE, CardChoice, Choice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
+import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
+import { CohortForm } from "./ProviderCohorts";
+import { COURSE_TONE, CardChoice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryName, categoryOptions, levelOptions, methodName, subcategoryName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
-import { EmptyState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
 
-// Hurak's seven course sections, in its order, each ticked in the "Publish your course" list when it is complete
+// The course editor's sections, in Hurak's order, each ticked in the "Publish your course" list when it is complete. FAQs and SEO
+// are optional: they never stop a course being sent for approval.
 const SECTIONS = [
   { key: "landing", label: "Course landing page" },
   { key: "info", label: "Course information" },
+  { key: "syllabus", label: "Syllabus and exam" },
+  { key: "faqs", label: "FAQs", optional: true },
   { key: "pricing", label: "Course pricing" },
-  { key: "records", label: "Cohort learning records" },
   { key: "mode", label: "Mode of study" },
-  { key: "seo", label: "SEO settings" },
-  { key: "activities", label: "Course activities" },
+  { key: "seo", label: "SEO settings", optional: true },
 ];
-const FORM_SECTIONS = ["landing", "info", "pricing", "mode"];
-const LIMITS = { title: 80, subtitle: 300, feature: 70, objective: 160 };
-const MAX_IMAGE = 2 * 1024 * 1024; // DEMO: pictures are kept in this browser until uploads go to the API
-const VIDEO_RE = /^https:\/\/\S+\.\S+/;
+// a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
+const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
+const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "pricing", "mode"];
+const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
+const MAX_IMAGE = 2 * 1024 * 1024; // the course-media bucket's limit
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const VIDEO_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/\S+$/;
+const PRICE_RE = /^\d+(\.\d{1,2})?$/;
 const STATUS_NOTES = {
-  draft: "This course is a draft. Only you can see it.",
-  pending: "We're checking this course. You can still make changes.",
-  approved: "This course is live. Changes you save are checked by our team before learners see them.",
+  draft: "This course is a draft. Only your team can see it.",
+  pending: "We're checking this course. If you change anything now, it comes back to you as a draft and you send it for approval again.",
   changes: "Our team has asked for changes. Make them, then send the course for approval again.",
+  live: "This course is live. Changes to its wording are checked by our team before learners see them; prices, dates and settings change straight away.",
+  paused: "This course is paused, so it doesn't show on ReadTraining. Put it back live from the course settings (the gear).",
 };
+const SHARED_NOTES = {
+  draft: "This shared course page is a draft: nobody outside the team can see it, and providers can't list their courses on it yet. Publish it when it is complete.",
+  live: "This shared course page is live. Changes you save show on it straight away. Providers can list their courses on it.",
+  paused: "This shared course page is off the site. Providers' courses on it don't show until it is published again.",
+};
+// fields only the page's wording (the "page" roles: course editor, marketing) may change; the rest need full course editing
+const PAGE_FIELDS = ["title", "summary", "description", "audience", "entryRequirements", "outcomes", "features", "videoUrl"];
+const PRICE_FIELDS = ["price", "skillSaver"];
 
-const pickDescription = (c) => ({
-  title: c.title, subtitle: c.subtitle, details: c.details, level: c.level, category: c.category, subcategory: c.subcategory, topic: c.topic,
-  model: c.model, format: c.format, media: c.media, features: c.features, objectives: c.objectives, topics: c.topics, faqs: c.faqs, venues: c.venues,
-});
-const pickPricing = (c) => ({ type: c.pricing.type, price: c.pricing.type === "flat" ? String(c.pricing.price || "") : "", packageId: c.pricing.packageId || "", skillSaver: Boolean(c.skillSaver) });
-const toPricing = (p) => (p.type === "tiered" ? { type: "tiered", packageId: p.packageId } : p.type === "free" ? { type: "free", price: 0 } : { type: "flat", price: Number(p.price) || 0 });
+// The draft the editor works on: the saved course, with any change still waiting for approval on top (so the provider keeps
+// editing their latest version).
+const draftOf = (c) => {
+  const p = c.pendingChanges?.content || {};
+  const pick = (k) => (p[k] !== undefined ? p[k] : c[k]);
+  return {
+    model: c.model, method: c.method || "classroom", skillSaver: c.skillSaver, price: c.pricePence == null ? "" : (c.pricePence / 100).toFixed(2).replace(/\.00$/, ""),
+    title: pick("title") || "", summary: pick("summary") || "", description: pick("description") || "", audience: pick("audience") || "", entryRequirements: pick("entryRequirements") || "",
+    outcomes: pick("outcomes") || [], features: pick("features") || [], category: pick("category") || "", subcategory: pick("subcategory") || "", topic: pick("topic") || "", level: pick("level") || "",
+    videoUrl: pick("videoUrl") || "",
+    units: (pick("units") || []).map((u) => ({ title: u.title, body: u.body || "" })),
+    exams: (pick("exams") || []).map((e) => ({ unit: e.unit, passMark: e.passMark || "", duration: e.duration || "" })),
+    faqs: (pick("faqs") || []).map((f) => ({ question: f.question, answer: f.answer })),
+  };
+};
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// whether each section is complete, from the saved course
-function sectionOk(c, key) {
-  if (key === "landing") return Boolean(c.title.trim() && c.subtitle.trim() && c.category && c.subcategory && c.details.trim() && c.media.some((m) => m.type === "image"));
-  if (key === "info") return c.objectives.length >= 4;
-  if (key === "pricing") return c.pricing.type === "free" || (c.pricing.type === "tiered" ? Boolean(c.pricing.packageId) : Number(c.pricing.price) > 0);
-  if (key === "records") return !c.settings.clr.enabled || c.settings.clr.fields.length + c.settings.clr.custom.length > 0;
-  if (key === "mode") return c.format !== "classroom" || c.venues.length > 0;
-  if (key === "seo") return Boolean(c.settings.seo.title && c.settings.seo.description);
-  return c.format !== "self-paced" || c.curriculum.some((s) => s.lessons.length);
+// whether each section is complete, from the draft (and the saved images and dates)
+function sectionOk(d, course, key) {
+  if (key === "landing") return Boolean(d.title.trim() && d.summary.trim() && d.description.trim() && d.category && d.subcategory && d.level && course.images.length);
+  if (key === "info") return d.outcomes.length >= 4;
+  if (key === "syllabus") return d.units.length > 0;
+  if (key === "faqs") return d.faqs.length > 0;
+  if (key === "pricing") return d.method !== "self-paced" || d.price !== "";
+  if (key === "mode") return Boolean(d.method);
+  return Boolean(course.seoTitle && course.seoDescription);
 }
-const NEEDS = {
-  landing: "a title, subtitle, category, sub-category, course details and a course image",
-  info: "at least 4 learning objectives",
-  pricing: "a price, a pricing plan, or Free",
-  records: "at least one heading, or No",
-  mode: "a venue for classroom courses",
-  seo: "an SEO title and description",
-  activities: "at least one activity for self-paced courses",
-};
+
+// What is still needed before the course can be sent for approval (or a shared page published): the same rules the API checks
+// (provider/courses.mts `missing`), worked out from the draft so typing an item ticks it off at once. Each item names the
+// section that holds it, so the list can take the provider straight there.
+function stillNeeded(d, course) {
+  const out = [];
+  const add = (section, text) => out.push({ section, text });
+  if (!d.summary.trim()) add("landing", "a short description");
+  if (!d.description.trim()) add("landing", "a description");
+  if (!d.category || !d.subcategory) add("landing", "a category and sub-category");
+  if (!d.level) add("landing", "a level");
+  if (!course.images.length) add("landing", "at least one picture");
+  if (d.outcomes.length < 4) add("info", `at least 4 things learners will learn (${d.outcomes.length} so far)`);
+  if (!d.units.length) add("syllabus", "at least one syllabus unit");
+  if (course.kind === "provider" && !d.method) add("mode", "how it is taught");
+  if (course.kind === "provider" && d.method === "self-paced" && d.price === "") add("pricing", "a price");
+  return out;
+}
+
+// What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together).
+function changes(draft, base, access) {
+  const out = {};
+  const keys = Object.keys(draft).filter((k) => !same(draft[k], base[k]));
+  for (const k of keys) {
+    if (!access.full && !PAGE_FIELDS.includes(k)) continue;
+    if (!access.pricing && PRICE_FIELDS.includes(k)) continue;
+    if (k === "price") out.pricePence = draft.price === "" ? null : Math.round(Number(draft.price) * 100);
+    else if (["category", "subcategory", "topic"].includes(k)) Object.assign(out, { category: draft.category, subcategory: draft.subcategory, topic: draft.topic || null });
+    else out[k] = draft[k];
+  }
+  return out;
+}
 
 // One course, as Hurak's editor: the "Publish your course" list on the left (one item per section, ticked when complete, kept in
-// ?tab=), the section on the right. Landing page, information, pricing and mode of study are drafts saved with "Save"; learning
-// records, SEO and activities save themselves. The header shows the status and performance model, with Preview and the gear
-// (course settings). "Send for approval" sends a draft once every section is ticked. Leaving with unsaved changes asks first.
-export default function ProviderCourseEditor({ courseId }) {
-  const data = useProvider();
+// ?tab=), the section on the right. The sections' fields are one draft saved with "Save"; images and SEO save themselves. The
+// header shows the status and performance model, with Preview and the gear (course settings). "Send for approval" sends a draft
+// once nothing required is missing. Leaving with unsaved changes asks first. Course data comes from the API.
+// scope "admin": the same editor for a shared course page in the admin (lib/courseEditorApi.js): no pricing or mode of study,
+// changes go live on Save, and the page is published from here instead of sent for approval.
+export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
+  const id = /^\d+$/.test(String(courseId)) ? Number(courseId) : 0;
+  const ep = useCourseEndpoints(scope, id);
+  const query = ep.query;
+  const course = query.data;
   const [tab, setTab] = useState("landing");
-  const [desc, setDesc] = useState(null);
-  const [price, setPrice] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [base, setBase] = useState(null);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState(null);
   const [said, setSaid] = useState("");
+  const [showNeed, setShowNeed] = useState(false); // "Send for approval" was pressed while something was missing
+  const [submitError, setSubmitError] = useState("");
+  // sent (or published) just now: the button gives way at once, without waiting for the course to load again
+  const [sent, setSent] = useState(false);
+  const needRef = useRef(null);
   const [gear, setGear] = useState(false);
   const [preview, setPreview] = useState(false);
   const formRef = useRef(null);
@@ -84,22 +143,28 @@ export default function ProviderCourseEditor({ courseId }) {
   const loadedFor = useRef(null);
   const clearToast = useCallback(() => setToast(null), []);
   const saved = useCallback((message) => setToast({ message }), []);
+  const access = ep.access;
+  const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS;
+  const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: "/provider/courses" };
 
   useEffect(() => {
     const t = getQuery("tab");
-    if (SECTIONS.some((x) => x.key === t)) setTab(t);
-  }, []);
+    if (sections.some((x) => x.key === t)) setTab(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- read the address once
 
-  const course = data?.byId.course[courseId];
   useEffect(() => {
     if (course && loadedFor.current !== course.id) {
       loadedFor.current = course.id;
-      setDesc(pickDescription(course));
-      setPrice(pickPricing(course));
+      const d = draftOf(course);
+      setDraft(d);
+      setBase(d);
     }
   }, [course]);
 
-  const dirty = Boolean(course && desc && price && (!same(desc, pickDescription(course)) || !same(price, pickPricing(course))));
+  // the course as loaded again has its new status: show that
+  useEffect(() => setSent(false), [course?.status]);
+
+  const dirty = Boolean(draft && base && !same(draft, base));
   useEffect(() => {
     if (!dirty) return;
     const warn = (e) => {
@@ -110,694 +175,671 @@ export default function ProviderCourseEditor({ courseId }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  if (!data || (course && (!desc || !price))) return <Loading rows={3} />;
-  if (!course) return <EmptyState title="This course was not found" text="It may have been deleted." action={{ label: "Back to courses", href: "/provider/courses" }} />;
+  if (!id || query.error?.data?.code === "NOT_FOUND" || (ep.admin && course && course.kind !== "shared")) return <EmptyState title="This course was not found" text={ep.admin ? "It may have been deleted. Only shared course pages are edited here." : "It may have been deleted, or it belongs to another provider."} action={back} />;
+  if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
+  if (!course || !draft) return <Loading rows={3} />;
 
-  const canSubmit = course.status === "draft" || course.status === "changes";
-  const ticks = SECTIONS.map((x) => ({ ...x, ok: sectionOk(course, x.key) }));
-  const missing = ticks.filter((x) => !x.ok);
+  const status = sent ? (ep.admin ? "live" : "pending") : course.status;
+  const canSubmit = access.full && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
+  const isLive = course.status === "live" || course.status === "paused";
+  const ticks = sections.map((x) => ({ ...x, ok: sectionOk(draft, course, x.key) }));
+  const needed = stillNeeded(draft, course);
+  const refresh = ep.refresh;
 
-  const save = () => {
+  // checks what the API would refuse, so the provider is shown the field, then saves what changed
+  const save = async () => {
     const e = {};
-    if (price.type === "flat" && price.price !== "" && !(Number(price.price) >= 0)) e.price = "Enter the price as a number, like 95 or 95.50.";
-    if (price.type === "tiered" && !price.packageId && data.packages.some((p) => p.active)) e.package = "Choose a pricing plan, or create one.";
+    if (!draft.title.trim() || draft.title.trim().length < 3) e.title = "Enter a title of at least 3 characters.";
+    if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
+    if (draft.videoUrl.trim() && !VIDEO_RE.test(draft.videoUrl.trim())) e.videoUrl = "Use a YouTube or Vimeo link, starting https://";
     setErrors(e);
     if (Object.keys(e).length) {
-      if (tab !== "pricing") changeTab("pricing");
+      const where = e.price ? "pricing" : "landing";
+      if (tab !== where) changeTab(where);
       requestAnimationFrame(() => focusFirstError(formRef.current));
       return false;
     }
-    const clean = { ...desc, title: desc.title.trim(), subtitle: desc.subtitle.trim() };
-    saveCourse(course.id, { ...clean, pricing: toPricing(price), skillSaver: price.skillSaver });
-    // the drafts now match what was saved, so "Unsaved changes" clears
-    setDesc(clean);
-    setPrice(pickPricing({ pricing: toPricing(price), skillSaver: price.skillSaver }));
-    setSaid("Saved");
-    setToast({ message: "Course saved." });
-    return true;
+    const clean = { ...draft, title: draft.title.trim(), summary: draft.summary.trim(), videoUrl: draft.videoUrl.trim() };
+    const patch = changes(clean, base, access);
+    if (!Object.keys(patch).length) {
+      setDraft(clean);
+      setBase(clean);
+      return true;
+    }
+    try {
+      const r = await ep.update(patch);
+      setDraft(clean);
+      setBase(clean);
+      refresh();
+      const message = r.pendingChange ? "Saved. Your changes go live once our team has checked them." : r.backToDraft ? "Saved. The course is back with you as a draft: send it for approval again when you're ready." : ep.admin && course.status === "live" ? "Saved. The page shows the changes now." : "Course saved.";
+      setSaid(message);
+      setToast({ message });
+      return true;
+    } catch (error) {
+      const { fields, general } = errorsFrom(error);
+      setErrors({ ...fields, form: general });
+      if (fields.price || fields.pricePence) changeTab("pricing");
+      setSaid(general || Object.values(fields)[0] || "");
+      requestAnimationFrame(() => focusFirstError(formRef.current));
+      return false;
+    }
   };
-  const submit = () => {
-    if (dirty && !save()) return;
-    const after = dirty ? { ...course, ...desc, pricing: toPricing(price) } : course;
-    const left = SECTIONS.filter((x) => !sectionOk(after, x.key));
-    if (left.length) {
-      setSaid(`Complete ${left.map((x) => x.label).join(", ")} before you send the course for approval.`);
-      navRef.current?.focus();
+  // send for approval (a provider's course) or publish (a shared page), saving first if needed. Nothing is sent while something
+  // required is missing (or the provider isn't approved yet): the box under the button says what to do, and gets the focus.
+  const submit = async () => {
+    setSubmitError("");
+    if (needed.length || ep.waiting) {
+      setShowNeed(true);
+      requestAnimationFrame(() => needRef.current?.focus());
       return;
     }
-    submitCourse(course.id);
-    setToast({ message: "Sent for approval. We'll email you within 2 working days." });
+    if (dirty && !(await save())) return;
+    try {
+      if (ep.admin) await ep.setStatus("live");
+      else await ep.submit();
+      setSent(true);
+      refresh();
+      setToast({ message: ep.admin ? "Published. The page is live and providers can list their courses on it." : "Sent for approval. We'll email you within 2 working days." });
+    } catch (error) {
+      // already sent (from another tab, or before this page caught up): nothing went wrong, so say so and show it
+      if (!ep.admin && error?.data?.code === "CONFLICT" && /already waiting/i.test(error.message)) {
+        setSent(true);
+        refresh();
+        setToast({ message: "This course is already waiting for approval. We'll email you within 2 working days." });
+        return;
+      }
+      const message = errorsFrom(error).general || "We couldn't send it. Check your connection, then try again.";
+      setSubmitError(message);
+      setSaid(message);
+      requestAnimationFrame(() => needRef.current?.focus());
+    }
+  };
+  const withdraw = async () => {
+    await ep.discard();
+    const d = draftOf(await ep.fetch());
+    setDraft(d);
+    setBase(d);
+    refresh();
+    setToast({ message: "Your changes were withdrawn. The live version stays as it is." });
   };
   function changeTab(t) {
     setTab(t);
     setErrors({});
     setQuery("tab", t === "landing" ? "" : t);
   }
-  const lastSaved = course.updated ? formatWhen(course.updated) : "";
-  const formatLocked = !canChangeFormat(data, course.id);
+  const lastSaved = course.updatedAt ? formatWhen(new Date(course.updatedAt).getTime()) : "";
+  const busy = ep.updating || ep.submitting;
+  const sectionProps = { course, draft, setDraft, errors, access };
 
   return (
+    <CourseEndpoints.Provider value={ep}>
     <div className="rt-acc__stack">
       <p className="rt-sr" aria-live="polite">{said}</p>
       <section className="rt-acc__card rt-adm-hero" aria-label="Course">
         <div className="rt-pws-course-herotext">
           <div className="rt-adm-item__top">
-            <Pill tone={COURSE_TONE[course.status]}>{pw.courseStatuses[course.status]}</Pill>
-            <span className="rt-adm-item__when">Performance model: {pw.models[course.model]?.label}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
+            <Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill>
+            <span className="rt-adm-item__when">{ep.admin ? "Shared course page" : `Performance model: ${pw.models[course.model]?.label}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title || "Untitled course"}</h2>
-          <p className="rt-acc__note">{STATUS_NOTES[course.status]}</p>
+          <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>
+          <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>
+          {status === "changes" && course.statusNote && <p className="rt-adm-item__block"><b>What to change:</b> {course.statusNote}</p>}
+          {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
+          {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-adm-item__block"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
+          {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-adm-item__block"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
         </div>
         <div className="rt-adm-hero__actions">
           {FORM_SECTIONS.includes(tab) && dirty && <span className="rt-pws-course-unsaved"><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
-          {FORM_SECTIONS.includes(tab) && <button type="button" className="button -sm -purple-1 text-white" onClick={save}>Save</button>}
+          {FORM_SECTIONS.includes(tab) && access.page && <button type="button" className="button -sm -purple-1 text-white" onClick={save} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save"}</button>}
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setPreview(true)}>Preview</button>
           <button type="button" className="rt-pws-ce__gear" onClick={() => setGear(true)} aria-label="Course settings"><i className="icon-setting text-16" aria-hidden="true"></i></button>
         </div>
       </section>
 
+      {course.pendingChanges && (
+        <section className="rt-acc__card rt-pws-ce__pending" aria-label="Changes waiting for approval">
+          <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {formatWhen(new Date(course.pendingChanges.since).getTime())}). You can keep editing: new changes join the same request.</p>
+          {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={withdraw} disabled={ep.discarding}>Withdraw changes</button>}
+        </section>
+      )}
+      {!access.page && <p className="rt-adm-item__block">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : "Your role can see this course but not change it."}</p>}
+      {!ep.admin && access.page && !access.full && <p className="rt-adm-item__block">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
+
       <div className="rt-pws-ce">
         <nav className="rt-acc__card rt-pws-ce__nav" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>
-          <h2 className="rt-adm-h3" id="rt-pws-ce-nav-h">Publish your course</h2>
+          <h2 className="rt-adm-h3" id="rt-pws-ce-nav-h">{ep.admin ? "Publish the page" : "Publish your course"}</h2>
           <ol className="rt-pws-ce__steps">
             {ticks.map((x) => (
               <li key={x.key}>
                 <button type="button" className={`rt-pws-ce__step${tab === x.key ? " is-on" : ""}`} onClick={() => changeTab(x.key)} aria-current={tab === x.key ? "step" : undefined}>
                   <span className={`rt-pws-course-tick${x.ok ? " is-ok" : ""}`} aria-hidden="true">{x.ok ? <i className="icon-check text-10"></i> : null}</span>
-                  {x.label}<span className="rt-sr">{x.ok ? ": complete" : ": not complete"}</span>
+                  {x.label}{x.optional && <small className="rt-pws-ce__opt"> (optional)</small>}<span className="rt-sr">{x.ok ? ": complete" : ": not complete"}</span>
                 </button>
               </li>
             ))}
           </ol>
           {canSubmit ? (
             <>
-              <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit}>Send for approval</button>
-              {missing.length > 0 && <p className="rt-acc__note rt-pws-ce__need">Still needed: {missing.map((x) => NEEDS[x.key]).join("; ")}.</p>}
+              <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={busy} aria-describedby={ep.waiting || needed.length ? "rt-pws-ce-need" : undefined} aria-busy={ep.submitting || undefined}>{ep.admin ? (ep.submitting ? "Publishing…" : "Publish") : ep.submitting ? "Sending…" : "Send for approval"}</button>
+              {ep.waiting ? (
+                <div className={`rt-acc__notice -warn rt-pws-ce__need${showNeed ? " is-pressed" : ""}`} id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role={showNeed ? "alert" : undefined}>
+                  <b>Your provider account is waiting for approval</b>
+                  <p>You can build this course now. Once our team approves your account, you can send it for approval.</p>
+                </div>
+              ) : needed.length > 0 ? (
+                <div className={`rt-acc__notice -warn rt-pws-ce__need${showNeed ? " is-pressed" : ""}`} id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role={showNeed ? "alert" : undefined}>
+                  <b>{ep.admin ? "Before you can publish this page, add:" : "Before you can send it for approval, add:"}</b>
+                  <ul>
+                    {needed.map((n) => (
+                      <li key={n.text}>
+                        <button type="button" className="rt-cd__link" onClick={() => changeTab(n.section)}>{n.text.charAt(0).toUpperCase() + n.text.slice(1)}</button>
+                        <small>{sections.find((x) => x.key === n.section)?.label}</small>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : submitError ? (
+                <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>
+              ) : null}
             </>
-          ) : <p className="rt-pws-ce__status"><Pill tone={COURSE_TONE[course.status]}>{pw.courseStatuses[course.status]}</Pill></p>}
+          ) : <p className="rt-pws-ce__status"><Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill></p>}
         </nav>
 
         <div className="rt-pws-ce__main" ref={formRef}>
-          {tab === "landing" && <LandingSection data={data} desc={desc} setDesc={setDesc} />}
-          {tab === "info" && <InfoSection data={data} desc={desc} setDesc={setDesc} />}
-          {tab === "pricing" && <PricingTab data={data} price={price} setPrice={setPrice} errors={errors} />}
-          {tab === "records" && (
-            <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-rec-h">
-              <h2 className="rt-acc__h2" id="rt-pws-ce-rec-h">Cohort learning records</h2>
-              <p className="rt-acc__note">Store information about each student in a cohort, like their result or when their certificate was sent.</p>
-              <RecordsPanel course={course} onSaved={saved} />
-            </section>
-          )}
-          {tab === "mode" && <ModeSection course={course} data={data} desc={desc} setDesc={setDesc} locked={formatLocked} onSaved={saved} />}
+          {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
+          {tab === "landing" && <LandingSection {...sectionProps} shared={ep.admin} onSaved={saved} />}
+          {tab === "info" && <InfoSection {...sectionProps} />}
+          {tab === "syllabus" && <SyllabusSection {...sectionProps} />}
+          {tab === "faqs" && <FaqSection {...sectionProps} />}
+          {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} />}
+          {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} isLive={isLive} onSaved={saved} />}
           {tab === "seo" && (
             <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-seo-h">
               <h2 className="rt-acc__h2" id="rt-pws-ce-seo-h">SEO settings</h2>
-              <p className="rt-acc__note">How the course page shows in Google and other search results.</p>
+              <p className="rt-acc__note">How the course page shows in Google and other search results. Saved on its own, straight away.</p>
               <SeoPanel course={course} onSaved={saved} />
             </section>
           )}
-          {tab === "activities" && <CourseCurriculum course={course} />}
         </div>
       </div>
 
-      <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} />
-      <PreviewSheet open={preview} onClose={() => setPreview(false)} data={data} desc={desc} price={price} />
+      {ep.admin ? <SharedGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} /> : <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} />}
+      <PreviewSheet open={preview} onClose={() => setPreview(false)} course={course} draft={draft} />
       <Toast toast={toast} onDone={clearToast} />
     </div>
+    </CourseEndpoints.Provider>
   );
 }
 
 // ---- Preview ---------------------------------------------------------------------------------------------------------------
 
-// The course page as learners will see the top of it, from the unsaved drafts.
-function PreviewSheet({ open, onClose, data, desc, price }) {
-  const cover = desc.media.find((m) => m.type === "image");
-  const pack = price.type === "tiered" ? data.byId.pack[price.packageId] : null;
-  const cost = price.type === "free" ? "Free" : pack ? `From ${formatPrice(Math.min(...pw.tiers.map((t) => pack.tiers[t.key]?.price || Infinity)))}` : Number(price.price) > 0 ? formatPrice(Number(price.price)) : "";
+// The course page as learners will see the top of it, from the unsaved draft.
+function PreviewSheet({ open, onClose, course, draft }) {
+  const cover = course.images[0];
+  const cost = draft.method === "self-paced" && PRICE_RE.test(draft.price) ? formatPrice(Number(draft.price)) : "";
   return (
     <Sheet open={open} onClose={onClose} title="Preview" closeLabel="Close">
       <article className="rt-pws-ce__preview">
-        {cover ? <img src={cover.src} alt={cover.alt || ""} /> : <EmptyState inCard title="No course image yet." />}
-        <p className="rt-pws-ce__pcat">{[categoryName(desc.category), subcategoryName(desc.category, desc.subcategory)].filter(Boolean).join(" › ")}</p>
-        <h3>{desc.title || "Untitled course"}</h3>
-        {desc.subtitle && <p>{desc.subtitle}</p>}
+        {cover ? <img src={cover.url} alt={cover.alt || ""} /> : <EmptyState inCard title="No course image yet." />}
+        <p className="rt-pws-ce__pcat">{[categoryName(draft.category), subcategoryName(draft.category, draft.subcategory)].filter(Boolean).join(" › ")}</p>
+        <h3>{draft.title || "Untitled course"}</h3>
+        {draft.summary && <p>{draft.summary}</p>}
         {cost && <p className="rt-adm-price">{cost}</p>}
-        {desc.features.length > 0 && <ul className="rt-pws-course-tags">{desc.features.map((f) => <li key={f}><span>{f}</span></li>)}</ul>}
-        {desc.objectives.length > 0 && (
+        {draft.features.length > 0 && <ul className="rt-pws-course-tags">{draft.features.map((f) => <li key={f}><span>{f}</span></li>)}</ul>}
+        {draft.outcomes.length > 0 && (
           <>
             <h4>What you&apos;ll learn</h4>
-            <ul className="rt-pws-ce__learn">{desc.objectives.map((o) => <li key={o}><i className="icon-check text-10" aria-hidden="true"></i>{o}</li>)}</ul>
+            <ul className="rt-pws-ce__learn">{draft.outcomes.map((o) => <li key={o}><i className="icon-check text-10" aria-hidden="true"></i>{o}</li>)}</ul>
           </>
         )}
-        {desc.details && <><h4>Course details</h4><p className="rt-pws-ce__details">{desc.details}</p></>}
+        {draft.description && <><h4>Course details</h4><p className="rt-pws-ce__details">{draft.description}</p></>}
+        {draft.audience && <><h4>Who it&apos;s for</h4><p className="rt-pws-ce__details">{draft.audience}</p></>}
+        {draft.entryRequirements && <><h4>Entry requirements</h4><p className="rt-pws-ce__details">{draft.entryRequirements}</p></>}
       </article>
     </Sheet>
   );
 }
 
-// ---- Course landing page ---------------------------------------------------------------------------------------------------
+// ---- shared parts ----------------------------------------------------------------------------------------------------------
 
 function Counter({ value, max }) {
   return <span className="rt-field__hint rt-pws-course-count">{value.length} of {max}</span>;
 }
+const FieldErr = ({ id, text }) => (text ? <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{text}</p> : null);
+const useSet = (setDraft) => (key) => (value) => setDraft((d) => ({ ...d, [key]: value }));
 
-function LandingSection({ data, desc, setDesc }) {
-  const set = (key) => (value) => setDesc((d) => ({ ...d, [key]: value }));
-  const [library, setLibrary] = useState(false);
-  const [mediaTab, setMediaTab] = useState("images");
-  const [mediaErr, setMediaErr] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [videoErr, setVideoErr] = useState("");
-  const fileRef = useRef(null);
+// A list of short lines added one at a time (features, learning outcomes), with Enter or the Add button; outcomes can be reordered.
+function LineList({ id, label, hint, items, onChange, max, placeholder, ordered = false, commas = false, disabled }) {
+  const [value, setValue] = useState("");
+  const add = (text = value) => {
+    const parts = (commas ? text.split(",") : [text]).map((x) => x.trim().slice(0, max)).filter(Boolean);
+    if (parts.length) onChange([...items, ...parts.filter((p) => !items.includes(p))]);
+    setValue("");
+  };
+  const move = (i, by) => {
+    const next = [...items];
+    const [x] = next.splice(i, 1);
+    next.splice(i + by, 0, x);
+    onChange(next);
+  };
+  return (
+    <div className="rt-field">
+      <label htmlFor={id}>{label}</label>
+      <span className="rt-field__hint" id={`${id}-h`}>{hint}</span>
+      {!disabled && (
+        <div className="rt-pws-course-addrow">
+          <input id={id} value={value} maxLength={max} onChange={(e) => (commas && e.target.value.includes(",") ? add(e.target.value) : setValue(e.target.value))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder={placeholder} aria-describedby={`${id}-h`} autoComplete="off" />
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => add()}>Add</button>
+        </div>
+      )}
+      {items.length > 0 && (ordered ? (
+        <ol className="rt-pws-course-list">
+          {items.map((o, i) => (
+            <li key={o}>
+              <span className="rt-pws-course-list__text">{o}</span>
+              {!disabled && (
+                <span className="rt-pws-course-list__tools">
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move up: ${o}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} aria-label={`Move down: ${o}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
+                  <button type="button" onClick={() => onChange(items.filter((x) => x !== o))} aria-label={`Remove: ${o}`}><i className="icon-bin text-12" aria-hidden="true"></i></button>
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ul className="rt-pws-course-tags">
+          {items.map((f) => (
+            <li key={f}><span>{f}</span>{!disabled && <button type="button" onClick={() => onChange(items.filter((x) => x !== f))} aria-label={`Remove ${f}`}><i className="icon-close text-10" aria-hidden="true"></i></button>}</li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  );
+}
 
-  const images = desc.media.filter((m) => m.type === "image");
-  const videos = desc.media.filter((m) => m.type === "video");
-  const subs = subcategoryOptions(desc.category);
-  const topics = topicOptions(desc.category, desc.subcategory);
-  const withImage = (img) => setDesc((d) => ({ ...d, media: [...d.media.filter((m) => m.type === "image"), img, ...d.media.filter((m) => m.type === "video")] }));
+// ---- Course landing page ---------------------------------------------------------------------------------------------------
 
-  const onFile = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!/^image\/(jpeg|png|gif)$/.test(file.type)) return setMediaErr("Choose a JPG, PNG or GIF picture.");
-    if (file.size > MAX_IMAGE) return setMediaErr("Choose a picture under 2MB.");
-    const reader = new FileReader();
-    reader.onload = () => {
-      setMediaErr("");
-      withImage({ type: "image", src: String(reader.result), alt: "" });
-    };
-    reader.onerror = () => setMediaErr("That picture could not be read. Try another file.");
-    reader.readAsDataURL(file);
-  };
-  const updateMedia = (src, patch) => set("media")(desc.media.map((m) => (m.src === src ? { ...m, ...patch } : m)));
-  const removeMedia = (src) => set("media")(desc.media.filter((m) => m.src !== src));
-  const makeCover = (src) => {
-    const img = desc.media.find((m) => m.src === src);
-    set("media")([img, ...desc.media.filter((m) => m.src !== src)]);
-  };
-  const addVideo = () => {
-    const v = videoUrl.trim();
-    if (!VIDEO_RE.test(v)) {
-      setVideoErr("Enter the full video link, starting https://");
-      return document.getElementById("rt-pws-ce-video")?.focus();
-    }
-    if (videos.some((m) => m.src === v)) {
-      setVideoErr("This video is already on the course.");
-      return document.getElementById("rt-pws-ce-video")?.focus();
-    }
-    setVideoErr("");
-    setVideoUrl("");
-    set("media")([...desc.media, { type: "video", src: v }]);
-  };
+function LandingSection({ course, draft, setDraft, errors, access, shared = false, onSaved }) {
+  const set = useSet(setDraft);
+  const subs = subcategoryOptions(draft.category);
+  const topics = topicOptions(draft.category, draft.subcategory);
+  const full = !access.full;
+  const page = !access.page;
 
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-basics-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-basics-h">Course landing page</h2>
-        <CardChoice name="rt-pws-ce-model" legend="Performance model" value={desc.model} onChange={set("model")}
-          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text }))} />
+        {!shared && <CardChoice name="rt-pws-ce-model" legend="Performance model" value={draft.model} onChange={(v) => !full && set("model")(v)}
+          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: full && value !== draft.model }))} />}
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-title">Course title</label>
-          <input id="rt-pws-ce-title" value={desc.title} maxLength={LIMITS.title} onChange={(e) => set("title")(e.target.value)} placeholder="For example: Emergency First Aid at Work" autoComplete="off" />
-          <Counter value={desc.title} max={LIMITS.title} />
+          <FieldErr id="rt-pws-ce-title" text={errors.title} />
+          <input id="rt-pws-ce-title" value={draft.title} maxLength={LIMITS.title} onChange={(e) => set("title")(e.target.value)} disabled={page} placeholder="For example: Emergency First Aid at Work" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={errors.title ? "rt-pws-ce-title-e" : undefined} />
+          <Counter value={draft.title} max={LIMITS.title} />
         </div>
         <div className="rt-field">
-          <label htmlFor="rt-pws-ce-sub">Course subtitle</label>
+          <label htmlFor="rt-pws-ce-sub">Short description</label>
           <span className="rt-field__hint" id="rt-pws-ce-sub-h">One or two sentences under the title: who it is for and what they get.</span>
-          <textarea id="rt-pws-ce-sub" rows={2} value={desc.subtitle} maxLength={LIMITS.subtitle} onChange={(e) => set("subtitle")(e.target.value)} aria-describedby="rt-pws-ce-sub-h" autoComplete="off" />
-          <Counter value={desc.subtitle} max={LIMITS.subtitle} />
+          <FieldErr id="rt-pws-ce-sub" text={errors.summary} />
+          <textarea id="rt-pws-ce-sub" rows={2} value={draft.summary} maxLength={LIMITS.summary} onChange={(e) => set("summary")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-sub-h" autoComplete="off" />
+          <Counter value={draft.summary} max={LIMITS.summary} />
         </div>
         <div className="rt-pws-course-grid3">
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-level">Course level</label>
-            <FieldSelect id="rt-pws-ce-level" label="Course level" value={desc.level} onChange={set("level")} options={levelOptions()} />
+            <FieldErr id="rt-pws-ce-level" text={errors.level} />
+            <FieldSelect id="rt-pws-ce-level" label="Course level" placeholder="Choose a level" value={draft.level} onChange={set("level")} options={levelOptions()} disabled={full} invalid={Boolean(errors.level)} />
           </div>
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-cat">Course category</label>
-            <FieldSelect id="rt-pws-ce-cat" label="Course category" placeholder="Choose a category" value={desc.category} onChange={(v) => setDesc((d) => ({ ...d, category: v, subcategory: "", topic: "" }))} options={categoryOptions()} />
+            <FieldErr id="rt-pws-ce-cat" text={errors.category} />
+            <FieldSelect id="rt-pws-ce-cat" label="Course category" placeholder="Choose a category" value={draft.category} onChange={(v) => setDraft((d) => ({ ...d, category: v, subcategory: "", topic: "" }))} options={categoryOptions()} disabled={full} invalid={Boolean(errors.category)} />
           </div>
           <div className="rt-field">
-            <label htmlFor="rt-pws-ce-subcat">Course subcategory</label>
-            <FieldSelect id="rt-pws-ce-subcat" label="Course subcategory" placeholder={desc.category ? "Choose a sub-category" : "Choose a category first"} value={desc.subcategory} onChange={(v) => setDesc((d) => ({ ...d, subcategory: v, topic: "" }))} options={subs} disabled={!desc.category} />
+            <label htmlFor="rt-pws-ce-subcat">Course sub-category</label>
+            <FieldErr id="rt-pws-ce-subcat" text={errors.subcategory} />
+            <FieldSelect id="rt-pws-ce-subcat" label="Course sub-category" placeholder={draft.category ? "Choose a sub-category" : "Choose a category first"} value={draft.subcategory} onChange={(v) => setDraft((d) => ({ ...d, subcategory: v, topic: "" }))} options={subs} disabled={full || !draft.category} invalid={Boolean(errors.subcategory)} />
           </div>
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-topic">Course topic (optional)</label>
-            <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={topics.length ? "Choose a topic" : "No topics for this sub-category"} value={desc.topic} onChange={set("topic")} options={topics} disabled={!topics.length} />
+            <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} />
           </div>
         </div>
         <div className="rt-field">
-          <label htmlFor="rt-pws-ce-details">Course details</label>
-          <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed, and who it suits.</span>
-          <textarea id="rt-pws-ce-details" rows={8} value={desc.details} onChange={(e) => set("details")(e.target.value)} aria-describedby="rt-pws-ce-details-h" autoComplete="off" />
+          <label htmlFor="rt-pws-ce-details">Course description</label>
+          <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs.</span>
+          <textarea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-details-h" autoComplete="off" />
         </div>
       </section>
 
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-media-h">Course media</h2>
-        <p className="rt-acc__note">Add course images and videos. They show as a slideshow at the top of the course page; the first image is the cover in search results.</p>
-        <div className="rt-pws-ce__mtabs" role="group" aria-label="Media type">
-          {[["images", `Images (${images.length})`], ["videos", `Videos (${videos.length})`]].map(([k, l]) => (
-            <button key={k} type="button" className={`rt-pws-ce__mtab${mediaTab === k ? " is-on" : ""}`} aria-pressed={mediaTab === k} onClick={() => setMediaTab(k)}>{l}</button>
-          ))}
-        </div>
-        {mediaTab === "images" ? (
-          <>
-            {mediaErr && <p className="rt-q__err" id="rt-pws-ce-media-e" role="alert"><span className="rt-sr">Error: </span>{mediaErr}</p>}
-            <div className="rt-pws-course-mediabar">
-              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif" className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()}>Upload course image</button>
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setLibrary(true)}>Choose from your library</button>
-              <span className="rt-field__hint">500 × 300 pixels or larger. JPG, PNG or GIF, up to 2MB. No text on the image.</span>
-            </div>
-            {images.length ? (
-              <ul className="rt-pws-course-media">
-                {images.map((m, i) => (
-                  <li key={m.src} className="rt-pws-course-mediaitem">
-                    <img src={m.src} alt="" />
-                    <div className="rt-pws-course-mediabody">
-                      {i === 0 ? <Pill tone="info">Cover</Pill> : <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => makeCover(m.src)}>Make cover</button>}
-                      <div className="rt-field">
-                        <label htmlFor={`rt-pws-ce-alt-${i}`}>ALT text</label>
-                        <input id={`rt-pws-ce-alt-${i}`} value={m.alt || ""} maxLength={140} onChange={(e) => updateMedia(m.src, { alt: e.target.value })} placeholder="For example: learners practising CPR on a manikin" autoComplete="off" />
-                      </div>
-                      <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => removeMedia(m.src)}>Remove<span className="rt-sr"> image {i + 1}</span></button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : <EmptyState inCard title="No images yet. Upload one or choose from your library." />}
-          </>
-        ) : (
-          <>
-            <div className="rt-field">
-              <label htmlFor="rt-pws-ce-video">Video URL</label>
-              <span className="rt-field__hint" id="rt-pws-ce-video-h">A YouTube or Vimeo link. Copy it from the video&apos;s Share button.</span>
-              {videoErr && <p className="rt-q__err" id="rt-pws-ce-video-e"><span className="rt-sr">Error: </span>{videoErr}</p>}
-              <div className="rt-pws-course-addrow">
-                <input id="rt-pws-ce-video" type="url" inputMode="url" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVideo(); } }} placeholder="https://www.youtube.com/watch?v=…" aria-invalid={videoErr ? true : undefined} aria-describedby={`rt-pws-ce-video-h${videoErr ? " rt-pws-ce-video-e" : ""}`} autoComplete="url" />
-                <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={addVideo}>Add video</button>
-              </div>
-            </div>
-            {videos.length ? (
-              <ul className="rt-adm-list">
-                {videos.map((m) => (
-                  <li key={m.src}>
-                    <div><b className="rt-pws-ce__url">{m.src}</b></div>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => removeMedia(m.src)}>Remove<span className="rt-sr"> video {m.src}</span></button>
-                  </li>
-                ))}
-              </ul>
-            ) : <EmptyState inCard title="No videos yet." />}
-          </>
-        )}
-      </section>
+      <ImagesCard course={course} disabled={page} onSaved={onSaved} />
 
-      <MediaLibrary open={library} onClose={() => setLibrary(false)} data={data} current={images.map((m) => m.src)} onPick={(m) => { withImage({ type: "image", src: m.src, alt: m.alt || "" }); setLibrary(false); }} />
+      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-video-h">
+        <h2 className="rt-acc__h2" id="rt-pws-ce-video-h">Overview video (optional)</h2>
+        <div className="rt-field">
+          <label htmlFor="rt-pws-ce-video">Video link</label>
+          <span className="rt-field__hint" id="rt-pws-ce-video-h2">A YouTube or Vimeo link. Copy it from the video&apos;s Share button.</span>
+          <FieldErr id="rt-pws-ce-video" text={errors.videoUrl} />
+          <input id="rt-pws-ce-video" type="url" inputMode="url" value={draft.videoUrl} onChange={(e) => set("videoUrl")(e.target.value)} disabled={page} placeholder="https://www.youtube.com/watch?v=…" aria-invalid={errors.videoUrl ? true : undefined} aria-describedby={`rt-pws-ce-video-h2${errors.videoUrl ? " rt-pws-ce-video-e" : ""}`} autoComplete="url" />
+        </div>
+      </section>
     </form>
+  );
+}
+
+// The course's images: uploaded straight away (not part of the draft), shown in order; the first is the cover in search results.
+function ImagesCard({ course, disabled, onSaved }) {
+  const ep = useEndpoints();
+  const [list, setList] = useState(course.images);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const fileRef = useRef(null);
+  useEffect(() => setList(course.images), [course.images]);
+  const changed = !same(list.map((i) => [i.id, i.alt]), course.images.map((i) => [i.id, i.alt]));
+  const refresh = ep.refresh;
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!IMAGE_TYPES.includes(file.type)) return setError("Choose a JPG, PNG, WebP or GIF picture.");
+    if (file.size > MAX_IMAGE) return setError("Choose a picture under 2MB.");
+    if (course.images.length >= 10) return setError("A course can have up to 10 images. Remove one first.");
+    setError("");
+    setBusy(true);
+    try {
+      const { path, token } = await ep.uploadUrl(file.type);
+      const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, file, { contentType: file.type });
+      if (upError) throw new Error("The picture didn't upload. Please try again.");
+      await ep.addImage(path);
+      refresh();
+      onSaved("Image added");
+    } catch (err) {
+      setError(err?.data ? errorsFrom(err).general : err.message || "The picture didn't upload. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const saveList = async (next, message) => {
+    setError("");
+    setBusy(true);
+    try {
+      await ep.setImages(next.map((i) => ({ id: i.id, alt: i.alt || "" })));
+      refresh();
+      onSaved(message);
+    } catch (err) {
+      setError(errorsFrom(err).general);
+      setList(course.images);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
+      <h2 className="rt-acc__h2" id="rt-pws-ce-media-h">Course images</h2>
+      <p className="rt-acc__note">They show at the top of the course page; the first image is the cover in search results. Images are saved as soon as you add or change them.</p>
+      {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+      {!disabled && (
+        <div className="rt-pws-course-mediabar">
+          <input ref={fileRef} type="file" accept={IMAGE_TYPES.join(",")} className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Uploading…" : "Upload course image"}</button>
+          <span className="rt-field__hint">500 × 300 pixels or larger. JPG, PNG, WebP or GIF, up to 2MB. No text on the image.</span>
+        </div>
+      )}
+      {list.length ? (
+        <>
+          <ul className="rt-pws-course-media">
+            {list.map((m, i) => (
+              <li key={m.id} className="rt-pws-course-mediaitem">
+                <img src={m.url} alt="" />
+                <div className="rt-pws-course-mediabody">
+                  {i === 0 ? <Pill tone="info">Cover</Pill> : !disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={busy} onClick={() => saveList([m, ...list.filter((x) => x.id !== m.id)], "Cover image changed")}>Make cover</button>}
+                  <div className="rt-field">
+                    <label htmlFor={`rt-pws-ce-alt-${i}`}>ALT text</label>
+                    <input id={`rt-pws-ce-alt-${i}`} value={m.alt || ""} maxLength={140} disabled={disabled} onChange={(e) => setList(list.map((x) => (x.id === m.id ? { ...x, alt: e.target.value } : x)))} placeholder="For example: learners practising CPR on a manikin" autoComplete="off" />
+                  </div>
+                  {!disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" disabled={busy} onClick={() => saveList(list.filter((x) => x.id !== m.id), "Image removed")}>Remove<span className="rt-sr"> image {i + 1}</span></button>}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {changed && !disabled && <div><button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => saveList(list, "ALT text saved")}>Save ALT text</button></div>}
+        </>
+      ) : <EmptyState inCard title="No images yet. Upload one: a course needs an image before it can be sent for approval." />}
+    </section>
   );
 }
 
 // ---- Course information ----------------------------------------------------------------------------------------------------
 
-function InfoSection({ data, desc, setDesc }) {
-  const set = (key) => (value) => setDesc((d) => ({ ...d, [key]: value }));
-  const [sheet, setSheet] = useState(null);
-  const [feature, setFeature] = useState("");
-  const [objective, setObjective] = useState("");
-  const [editTopic, setEditTopic] = useState(null);
-
-  const addFeature = (value = feature) => {
-    const parts = value.split(",").map((x) => x.trim().slice(0, LIMITS.feature)).filter(Boolean);
-    if (parts.length) set("features")([...desc.features, ...parts.filter((p) => !desc.features.includes(p))]);
-    setFeature("");
-  };
-  const addObjective = () => {
-    const v = objective.trim();
-    if (v && !desc.objectives.includes(v)) set("objectives")([...desc.objectives, v]);
-    setObjective("");
-  };
-  const moveObjective = (i, by) => {
-    const next = [...desc.objectives];
-    const [x] = next.splice(i, 1);
-    next.splice(i + by, 0, x);
-    set("objectives")(next);
-  };
-  const linkedFaqs = desc.faqs.map((id) => data.faqs.find((f) => f.id === id)).filter(Boolean);
-
+function InfoSection({ draft, setDraft, access }) {
+  const set = useSet(setDraft);
+  const page = !access.page;
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-learn-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-learn-h">Course information</h2>
         <p className="rt-acc__note">These show on the public course page and help it perform in search.</p>
+        <LineList id="rt-pws-ce-feature" label="Course features" hint={'Short facts shown as tags, like "1 day" or "Certificate valid 3 years". Press Enter or type a comma to add.'} items={draft.features} onChange={set("features")} max={LIMITS.feature} commas disabled={page} />
+        <LineList id="rt-pws-ce-obj" label="What will learners learn?" hint={`Add at least 4, each starting with a verb. Press Enter to add. ${draft.outcomes.length} added${draft.outcomes.length < 4 ? `, ${4 - draft.outcomes.length} more to reach 4` : ""}.`} items={draft.outcomes} onChange={set("outcomes")} max={LIMITS.outcome} placeholder="For example: Give CPR to an adult" ordered disabled={page} />
         <div className="rt-field">
-          <label htmlFor="rt-pws-ce-feature">Course features</label>
-          <span className="rt-field__hint" id="rt-pws-ce-feature-h">Short facts shown as tags, like &quot;1 day&quot; or &quot;Certificate valid 3 years&quot;. Press Enter or type a comma to add.</span>
-          <div className="rt-pws-course-addrow">
-            <input id="rt-pws-ce-feature" value={feature} maxLength={LIMITS.feature} onChange={(e) => (e.target.value.includes(",") ? addFeature(e.target.value) : setFeature(e.target.value))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFeature(); } }} aria-describedby="rt-pws-ce-feature-h" autoComplete="off" />
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => addFeature()}>Add</button>
-          </div>
-          {desc.features.length > 0 && (
-            <ul className="rt-pws-course-tags">
-              {desc.features.map((f) => (
-                <li key={f}><span>{f}</span><button type="button" onClick={() => set("features")(desc.features.filter((x) => x !== f))} aria-label={`Remove ${f}`}><i className="icon-close text-10" aria-hidden="true"></i></button></li>
-              ))}
-            </ul>
-          )}
+          <label htmlFor="rt-pws-ce-aud">Who is it for? (optional)</label>
+          <span className="rt-field__hint" id="rt-pws-ce-aud-h">The people and jobs the course suits.</span>
+          <textarea id="rt-pws-ce-aud" rows={3} maxLength={2000} value={draft.audience} onChange={(e) => set("audience")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-aud-h" autoComplete="off" />
         </div>
-
         <div className="rt-field">
-          <label htmlFor="rt-pws-ce-obj">What will students learn?</label>
-          <span className="rt-field__hint" id="rt-pws-ce-obj-h">Aim to add at least 4 learning objectives, each starting with a verb. Press Enter to add.</span>
-          <div className="rt-pws-course-addrow">
-            <input id="rt-pws-ce-obj" value={objective} maxLength={LIMITS.objective} onChange={(e) => setObjective(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addObjective(); } }} placeholder="For example: Give CPR to an adult" aria-describedby="rt-pws-ce-obj-h rt-pws-ce-obj-n" autoComplete="off" />
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={addObjective}>Add</button>
-          </div>
-          <span className="rt-field__hint" id="rt-pws-ce-obj-n" aria-live="polite">{desc.objectives.length} {desc.objectives.length === 1 ? "objective" : "objectives"} added{desc.objectives.length < 4 ? `, ${4 - desc.objectives.length} more to reach 4` : ""}</span>
-          {desc.objectives.length > 0 && (
-            <ol className="rt-pws-course-list">
-              {desc.objectives.map((o, i) => (
-                <li key={o}>
-                  <span className="rt-pws-course-list__text">{o}</span>
-                  <span className="rt-pws-course-list__tools">
-                    <button type="button" onClick={() => moveObjective(i, -1)} disabled={i === 0} aria-label={`Move up: ${o}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
-                    <button type="button" onClick={() => moveObjective(i, 1)} disabled={i === desc.objectives.length - 1} aria-label={`Move down: ${o}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
-                    <button type="button" onClick={() => set("objectives")(desc.objectives.filter((x) => x !== o))} aria-label={`Remove: ${o}`}><i className="icon-bin text-12" aria-hidden="true"></i></button>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          )}
+          <label htmlFor="rt-pws-ce-req">Entry requirements (optional)</label>
+          <span className="rt-field__hint" id="rt-pws-ce-req-h">What learners need before they book, like an age, ID or an earlier qualification. Leave it empty if there are none.</span>
+          <textarea id="rt-pws-ce-req" rows={3} maxLength={2000} value={draft.entryRequirements} onChange={(e) => set("entryRequirements")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-req-h" autoComplete="off" />
         </div>
       </section>
+    </form>
+  );
+}
 
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-topics-h">
+// ---- Syllabus and exam -----------------------------------------------------------------------------------------------------
+
+function SyllabusSection({ draft, setDraft, access }) {
+  const set = useSet(setDraft);
+  const [sheet, setSheet] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const locked = !access.full;
+  const move = (i, by) => {
+    const next = [...draft.units];
+    const [x] = next.splice(i, 1);
+    next.splice(i + by, 0, x);
+    set("units")(next);
+  };
+  const setExam = (i, patch) => set("exams")(draft.exams.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+
+  return (
+    <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
+      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-units-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
-          <h2 className="rt-acc__h2" id="rt-pws-ce-topics-h">What topics will be covered?</h2>
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditTopic(null); setSheet("topic"); }}>Add topic</button>
+          <h2 className="rt-acc__h2" id="rt-pws-ce-units-h">Syllabus</h2>
+          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(null); setSheet(true); }}>Add unit</button>}
         </div>
-        <p className="rt-acc__note">A title for each topic and a short description of what it includes.</p>
-        {desc.topics.length ? (
-          <ul className="rt-adm-list">
-            {desc.topics.map((t, i) => (
-              <li key={`${t.title}-${i}`}>
-                <div><b>{t.title}</b><small>{t.text}</small></div>
-                <div className="rt-adm-list__side">
-                  <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => { setEditTopic(i); setSheet("topic"); }}>Edit<span className="rt-sr"> {t.title}</span></button>
-                  <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("topics")(desc.topics.filter((_, j) => j !== i))}>Remove<span className="rt-sr"> {t.title}</span></button>
-                </div>
+        <p className="rt-acc__note">The course&apos;s units, in order. Learners open each one on the course page to see what it covers.</p>
+        {draft.units.length ? (
+          <ol className="rt-adm-list">
+            {draft.units.map((u, i) => (
+              <li key={`${u.title}-${i}`}>
+                <div><b>{i + 1}. {u.title}</b>{u.body && <small className="rt-pws-ce__unitbody">{u.body}</small>}</div>
+                {!locked && (
+                  <div className="rt-adm-list__side">
+                    <button type="button" className="rt-pws-ce__iconbtn" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move up: ${u.title}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
+                    <button type="button" className="rt-pws-ce__iconbtn" onClick={() => move(i, 1)} disabled={i === draft.units.length - 1} aria-label={`Move down: ${u.title}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => { setEditing(i); setSheet(true); }}>Edit<span className="rt-sr"> {u.title}</span></button>
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("units")(draft.units.filter((_, j) => j !== i))}>Remove<span className="rt-sr"> {u.title}</span></button>
+                  </div>
+                )}
               </li>
             ))}
-          </ul>
-        ) : <EmptyState inCard title="No topics yet." />}
+          </ol>
+        ) : <EmptyState inCard title="No units yet. Add at least one: a course needs its syllabus before it can be sent for approval." />}
       </section>
 
+      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-exam-h">
+        <div className="rt-acc__cardhead rt-pws-course-cardhead">
+          <h2 className="rt-acc__h2" id="rt-pws-ce-exam-h">Exam and assessment (optional)</h2>
+          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => set("exams")([...draft.exams, { unit: "", passMark: "", duration: "" }])} disabled={draft.exams.length >= 20}>Add row</button>}
+        </div>
+        <p className="rt-acc__note">If the course ends with an exam, one row per paper or practical: what it covers, the pass mark and how long it takes. Leave it empty if there is no exam.</p>
+        {draft.exams.length ? (
+          <ol className="rt-pws-ce__exams">
+            {draft.exams.map((e, i) => (
+              <li key={i} className="rt-pws-ce__exam">
+                <div className="rt-field">
+                  <label htmlFor={`rt-pws-ce-ex-u${i}`}>Exam or unit</label>
+                  <input id={`rt-pws-ce-ex-u${i}`} value={e.unit} maxLength={120} onChange={(ev) => setExam(i, { unit: ev.target.value })} disabled={locked} placeholder="For example: Multiple choice paper" autoComplete="off" />
+                </div>
+                <div className="rt-field">
+                  <label htmlFor={`rt-pws-ce-ex-p${i}`}>Pass mark</label>
+                  <input id={`rt-pws-ce-ex-p${i}`} value={e.passMark} maxLength={40} onChange={(ev) => setExam(i, { passMark: ev.target.value })} disabled={locked} placeholder="For example: 70%" autoComplete="off" />
+                </div>
+                <div className="rt-field">
+                  <label htmlFor={`rt-pws-ce-ex-d${i}`}>Duration</label>
+                  <input id={`rt-pws-ce-ex-d${i}`} value={e.duration} maxLength={40} onChange={(ev) => setExam(i, { duration: ev.target.value })} disabled={locked} placeholder="For example: 45 minutes" autoComplete="off" />
+                </div>
+                {!locked && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("exams")(draft.exams.filter((_, j) => j !== i))}>Remove<span className="rt-sr"> exam row {i + 1}</span></button>}
+              </li>
+            ))}
+          </ol>
+        ) : <EmptyState inCard title="No exam on this course." />}
+      </section>
+
+      <UnitSheet open={sheet} onClose={() => setSheet(false)} unit={editing === null ? null : draft.units[editing]} onSave={(rows) => {
+        if (editing === null) set("units")([...draft.units, ...rows].slice(0, 40));
+        else set("units")(draft.units.map((u, i) => (i === editing ? rows[0] : u)));
+        setSheet(false);
+      }} />
+    </form>
+  );
+}
+
+// Add one or more units (a title and what it covers), or edit one.
+function UnitSheet({ open, onClose, unit, onSave }) {
+  const [rows, setRows] = useState([{ title: "", body: "" }]);
+  const [errors, setErrors] = useState({});
+  const ref = useRef(null);
+  useEffect(() => {
+    if (open) {
+      setRows([unit ? { ...unit } : { title: "", body: "" }]);
+      setErrors({});
+    }
+  }, [open, unit]);
+  const change = (i, key, v) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [key]: v } : x)));
+  const submit = (e) => {
+    e.preventDefault();
+    const err = {};
+    rows.forEach((r, i) => {
+      if (!r.title.trim()) err[`t${i}`] = "Enter the unit title.";
+    });
+    setErrors(err);
+    if (Object.keys(err).length) return focusFirstError(ref.current);
+    onSave(rows.map((r) => ({ title: r.title.trim(), body: r.body.trim() })));
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title={unit ? "Edit unit" : "Add units"} closeLabel="Close">
+      <form className="rt-q__form" noValidate onSubmit={submit} ref={ref}>
+        <p className="rt-acc__note">A title for each unit, and what it covers: one topic per line.</p>
+        {rows.map((r, i) => (
+          <fieldset key={i} className="rt-pws-course-repeat">
+            <legend>Unit {i + 1}</legend>
+            <div className="rt-field">
+              <label htmlFor={`rt-pws-cu-t${i}`}>Unit title</label>
+              {errors[`t${i}`] && <p className="rt-q__err" id={`rt-pws-cu-t${i}-e`}><span className="rt-sr">Error: </span>{errors[`t${i}`]}</p>}
+              <input id={`rt-pws-cu-t${i}`} value={r.title} maxLength={120} onChange={(e) => change(i, "title", e.target.value)} placeholder="For example: Life-saving skills" aria-invalid={errors[`t${i}`] ? true : undefined} aria-describedby={errors[`t${i}`] ? `rt-pws-cu-t${i}-e` : undefined} autoComplete="off" />
+            </div>
+            <div className="rt-field">
+              <label htmlFor={`rt-pws-cu-b${i}`}>What it covers (optional)</label>
+              <textarea id={`rt-pws-cu-b${i}`} rows={4} value={r.body} maxLength={2000} onChange={(e) => change(i, "body", e.target.value)} autoComplete="off" />
+            </div>
+            {rows.length > 1 && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>Remove unit {i + 1}</button>}
+          </fieldset>
+        ))}
+        {!unit && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setRows((x) => [...x, { title: "", body: "" }])}>Add another</button>}
+        <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{unit ? "Save unit" : "Add to course"}</button>
+      </form>
+    </Sheet>
+  );
+}
+
+// ---- FAQs ------------------------------------------------------------------------------------------------------------------
+
+// The course's own questions and answers, written for this course only (the brief: never one block copied across courses).
+function FaqSection({ draft, setDraft, access }) {
+  const set = useSet(setDraft);
+  const [editing, setEditing] = useState(undefined); // undefined = closed, null = a new one, a number = that FAQ
+  const locked = !access.full;
+  return (
+    <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-faqs-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
           <h2 className="rt-acc__h2" id="rt-pws-ce-faqs-h">FAQs</h2>
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setSheet("faqs")}>Add FAQs</button>
+          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(null)} disabled={draft.faqs.length >= 30}>Add FAQ</button>}
         </div>
-        <p className="rt-acc__note">Choose from your FAQs or write a new one. Your FAQs are kept in Settings › FAQs, so you can use the same answer on every course.</p>
-        {linkedFaqs.length ? (
+        <p className="rt-acc__note">Questions learners ask about this course, with your answers. They show on the course page.</p>
+        {draft.faqs.length ? (
           <ul className="rt-adm-list">
-            {linkedFaqs.map((f) => (
-              <li key={f.id}>
-                <div><b>{f.q}</b><small>{f.a}</small></div>
-                <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("faqs")(desc.faqs.filter((x) => x !== f.id))}>Remove<span className="rt-sr"> {f.q}</span></button>
+            {draft.faqs.map((f, i) => (
+              <li key={`${f.question}-${i}`}>
+                <div><b>{f.question}</b><small>{f.answer}</small></div>
+                {!locked && (
+                  <div className="rt-adm-list__side">
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => setEditing(i)}>Edit<span className="rt-sr"> {f.question}</span></button>
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("faqs")(draft.faqs.filter((_, j) => j !== i))}>Remove<span className="rt-sr"> {f.question}</span></button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         ) : <EmptyState inCard title="No FAQs on this course yet." />}
       </section>
-
-      <TopicSheet open={sheet === "topic"} onClose={() => setSheet(null)} topic={editTopic === null ? null : desc.topics[editTopic]} onSave={(rows) => {
-        if (editTopic === null) set("topics")([...desc.topics, ...rows]);
-        else set("topics")(desc.topics.map((t, i) => (i === editTopic ? rows[0] : t)));
-        setSheet(null);
+      <FaqSheet open={editing !== undefined} onClose={() => setEditing(undefined)} faq={typeof editing === "number" ? draft.faqs[editing] : null} onSave={(f) => {
+        set("faqs")(typeof editing === "number" ? draft.faqs.map((x, i) => (i === editing ? f : x)) : [...draft.faqs, f]);
+        setEditing(undefined);
       }} />
-      <FaqSheet open={sheet === "faqs"} onClose={() => setSheet(null)} faqs={data.faqs} linked={desc.faqs} onSave={(ids) => { set("faqs")(ids); setSheet(null); }} />
     </form>
   );
 }
 
-// ---- Mode of study ---------------------------------------------------------------------------------------------------------
-
-function ModeSection({ course, data, desc, setDesc, locked, onSaved }) {
-  const set = (key) => (value) => setDesc((d) => ({ ...d, [key]: value }));
-  const [venueSheet, setVenueSheet] = useState(false);
-  const [venuePick, setVenuePick] = useState("");
-  const linkedVenues = desc.venues.map((id) => data.byId.venue[id]).filter(Boolean);
-  const venueOptions = data.venues.filter((v) => v.active && !desc.venues.includes(v.id));
-
-  return (
-    <div className="rt-acc__stack">
-      <form className="rt-acc__card rt-pws-course-form" noValidate onSubmit={(e) => e.preventDefault()} aria-labelledby="rt-pws-ce-mode-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">Mode of study</h2>
-        {locked && <p className="rt-adm-item__block">This course has orders, so how it is delivered can&apos;t change. Create a new course for another mode of study.</p>}
-        <CardChoice name="rt-pws-ce-format" legend="How is the course content delivered to students?" value={desc.format} onChange={set("format")}
-          options={pw.formats.map((f) => ({ value: f.key, label: methodName(f.key), text: f.text, disabled: locked && f.key !== course.format }))} />
-      </form>
-
-      {desc.format === "classroom" && (
-        <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-venues-h">
-          <div className="rt-acc__cardhead rt-pws-course-cardhead">
-            <h2 className="rt-acc__h2" id="rt-pws-ce-venues-h">Venues</h2>
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setVenueSheet(true)}>Add venue</button>
-          </div>
-          <p className="rt-acc__note">Where this course runs. Each cohort picks one of these.</p>
-          {venueOptions.length > 0 && (
-            <div className="rt-pws-course-addrow">
-              <div className="rt-field">
-                <label htmlFor="rt-pws-ce-venue" className="rt-sr">Choose a venue</label>
-                <FieldSelect id="rt-pws-ce-venue" label="Choose a venue" placeholder="Choose one of your venues" value={venuePick} onChange={setVenuePick} options={venueOptions.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} />
-              </div>
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={!venuePick} onClick={() => { set("venues")([...desc.venues, venuePick]); setVenuePick(""); }}>Add to course</button>
-            </div>
-          )}
-          {linkedVenues.length ? (
-            <ul className="rt-adm-list">
-              {linkedVenues.map((v) => (
-                <li key={v.id}>
-                  <div><b>{v.name}</b><small>{[v.street, v.city, v.postcode].filter(Boolean).join(", ")}{v.active ? "" : " · Archived"}</small></div>
-                  <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("venues")(desc.venues.filter((x) => x !== v.id))}>Remove<span className="rt-sr"> {v.name}</span></button>
-                </li>
-              ))}
-            </ul>
-          ) : <EmptyState inCard title="No venues on this course yet." />}
-        </section>
-      )}
-
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-resit-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-resit-h">Exam resit</h2>
-        <p className="rt-acc__note">If the course ends with an exam, whether learners can resit it and what it costs. Saved on its own.</p>
-        <ResitPanel course={course} onSaved={onSaved} />
-      </section>
-
-      <VenueSheet open={venueSheet} onClose={() => setVenueSheet(false)} onSave={(ids) => { setDesc((d) => ({ ...d, venues: [...d.venues, ...ids] })); setVenueSheet(false); }} />
-    </div>
-  );
-}
-
-function MediaLibrary({ open, onClose, data, current, onPick }) {
-  const seen = new Set(current);
-  const pics = [];
-  data.courses.forEach((c) => c.media.forEach((m) => {
-    if (m.type === "image" && !seen.has(m.src)) {
-      seen.add(m.src);
-      pics.push({ ...m, from: c.title || "Untitled course" });
-    }
-  }));
-  return (
-    <Sheet open={open} onClose={onClose} title="Your media library" closeLabel="Close">
-      {pics.length ? (
-        <ul className="rt-pws-course-library">
-          {pics.map((m) => (
-            <li key={m.src}>
-              <button type="button" onClick={() => onPick(m)}>
-                <img src={m.src} alt="" />
-                <span>Use this picture<span className="rt-sr"> from {m.from}</span></span>
-                <small>From {m.from}</small>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : <EmptyState inCard title="No other pictures yet. Pictures you upload to any course appear here." />}
-    </Sheet>
-  );
-}
-
-// Add one or more topics (title and description each), or edit one.
-function TopicSheet({ open, onClose, topic, onSave }) {
-  const [rows, setRows] = useState([{ title: "", text: "" }]);
+function FaqSheet({ open, onClose, faq, onSave }) {
+  const [f, setF] = useState({ question: "", answer: "" });
   const [errors, setErrors] = useState({});
   const ref = useRef(null);
   useEffect(() => {
     if (open) {
-      setRows([topic ? { ...topic } : { title: "", text: "" }]);
+      setF(faq ? { ...faq } : { question: "", answer: "" });
       setErrors({});
     }
-  }, [open, topic]);
-  const change = (i, key, v) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [key]: v } : x)));
+  }, [open, faq]);
   const submit = (e) => {
     e.preventDefault();
     const err = {};
-    rows.forEach((r, i) => {
-      if (!r.title.trim()) err[`t${i}`] = "Enter the topic title.";
-      if (!r.text.trim()) err[`d${i}`] = "Describe what the topic includes.";
-    });
+    if (!f.question.trim()) err.q = "Enter the question.";
+    if (!f.answer.trim()) err.a = "Enter the answer.";
     setErrors(err);
     if (Object.keys(err).length) return focusFirstError(ref.current);
-    onSave(rows.map((r) => ({ title: r.title.trim(), text: r.text.trim() })));
+    onSave({ question: f.question.trim(), answer: f.answer.trim() });
   };
   return (
-    <Sheet open={open} onClose={onClose} title={topic ? "Edit topic" : "Add topics"} closeLabel="Close">
+    <Sheet open={open} onClose={onClose} title={faq ? "Edit FAQ" : "Add FAQ"} closeLabel="Close">
       <form className="rt-q__form" noValidate onSubmit={submit} ref={ref}>
-        <p className="rt-acc__note">List the topics the course covers. Add a heading for each, with a short description of what it includes.</p>
-        {rows.map((r, i) => (
-          <fieldset key={i} className="rt-pws-course-repeat">
-            <legend>Topic {i + 1}</legend>
-            <div className="rt-field">
-              <label htmlFor={`rt-pws-ct-t${i}`}>Topic title</label>
-              {errors[`t${i}`] && <p className="rt-q__err" id={`rt-pws-ct-t${i}-e`}><span className="rt-sr">Error: </span>{errors[`t${i}`]}</p>}
-              <input id={`rt-pws-ct-t${i}`} value={r.title} maxLength={80} onChange={(e) => change(i, "title", e.target.value)} placeholder="For example: Life-saving skills" aria-invalid={errors[`t${i}`] ? true : undefined} aria-describedby={errors[`t${i}`] ? `rt-pws-ct-t${i}-e` : undefined} autoComplete="off" />
-            </div>
-            <div className="rt-field">
-              <label htmlFor={`rt-pws-ct-d${i}`}>Topic description</label>
-              {errors[`d${i}`] && <p className="rt-q__err" id={`rt-pws-ct-d${i}-e`}><span className="rt-sr">Error: </span>{errors[`d${i}`]}</p>}
-              <textarea id={`rt-pws-ct-d${i}`} rows={3} value={r.text} maxLength={300} onChange={(e) => change(i, "text", e.target.value)} aria-invalid={errors[`d${i}`] ? true : undefined} aria-describedby={errors[`d${i}`] ? `rt-pws-ct-d${i}-e` : undefined} autoComplete="off" />
-            </div>
-            {rows.length > 1 && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>Remove topic {i + 1}</button>}
-          </fieldset>
-        ))}
-        {!topic && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setRows((x) => [...x, { title: "", text: "" }])}>Add another</button>}
-        <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{topic ? "Save topic" : "Add to course"}</button>
-      </form>
-    </Sheet>
-  );
-}
-
-// Tick FAQs from the library, or write new ones (saved to the library and ticked).
-function FaqSheet({ open, onClose, faqs, linked, onSave }) {
-  const [picked, setPicked] = useState([]);
-  const [rows, setRows] = useState([]);
-  const [errors, setErrors] = useState({});
-  const ref = useRef(null);
-  useEffect(() => {
-    if (open) {
-      setPicked(linked);
-      setRows([]);
-      setErrors({});
-    }
-  }, [open, linked]);
-  const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const change = (i, key, v) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [key]: v } : x)));
-  const submit = (e) => {
-    e.preventDefault();
-    const err = {};
-    rows.forEach((r, i) => {
-      if (!r.q.trim()) err[`q${i}`] = "Enter the question.";
-      if (!r.a.trim()) err[`a${i}`] = "Enter the answer.";
-    });
-    setErrors(err);
-    if (Object.keys(err).length) return focusFirstError(ref.current);
-    const added = rows.map((r) => saveFaq({ q: r.q.trim(), a: r.a.trim() }));
-    onSave([...picked, ...added]);
-  };
-  return (
-    <Sheet open={open} onClose={onClose} title="FAQs for this course" closeLabel="Close">
-      <form className="rt-q__form" noValidate onSubmit={submit} ref={ref}>
-        {faqs.length > 0 && (
-          <fieldset className="rt-pws-course-repeat -plain">
-            <legend>From your library</legend>
-            <div className="rt-adm-checks">
-              {faqs.map((f) => (
-                <label key={f.id} className="rt-fp__opt rt-pws-course-checkopt">
-                  <input type="checkbox" className="rt-fp__check" checked={picked.includes(f.id)} onChange={() => toggle(f.id)} />
-                  <span>{f.q}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
-        {rows.map((r, i) => (
-          <fieldset key={i} className="rt-pws-course-repeat">
-            <legend>New FAQ {i + 1}</legend>
-            <div className="rt-field">
-              <label htmlFor={`rt-pws-cf-q${i}`}>Question</label>
-              {errors[`q${i}`] && <p className="rt-q__err" id={`rt-pws-cf-q${i}-e`}><span className="rt-sr">Error: </span>{errors[`q${i}`]}</p>}
-              <input id={`rt-pws-cf-q${i}`} value={r.q} maxLength={160} onChange={(e) => change(i, "q", e.target.value)} aria-invalid={errors[`q${i}`] ? true : undefined} aria-describedby={errors[`q${i}`] ? `rt-pws-cf-q${i}-e` : undefined} autoComplete="off" />
-            </div>
-            <div className="rt-field">
-              <label htmlFor={`rt-pws-cf-a${i}`}>Answer</label>
-              {errors[`a${i}`] && <p className="rt-q__err" id={`rt-pws-cf-a${i}-e`}><span className="rt-sr">Error: </span>{errors[`a${i}`]}</p>}
-              <textarea id={`rt-pws-cf-a${i}`} rows={3} value={r.a} maxLength={1000} onChange={(e) => change(i, "a", e.target.value)} aria-invalid={errors[`a${i}`] ? true : undefined} aria-describedby={errors[`a${i}`] ? `rt-pws-cf-a${i}-e` : undefined} autoComplete="off" />
-            </div>
-            <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>Remove new FAQ {i + 1}</button>
-          </fieldset>
-        ))}
-        <p className="rt-acc__note">New FAQs are saved to your library, so you can use them on other courses too.</p>
-        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setRows((x) => [...x, { q: "", a: "" }])}>Write a new FAQ</button>
-        <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Save FAQs</button>
-      </form>
-    </Sheet>
-  );
-}
-
-// Create one or more venues (saved to the venue library) and add them to the course.
-function VenueSheet({ open, onClose, onSave }) {
-  const blank = { name: "", street: "", city: "", postcode: "" };
-  const [rows, setRows] = useState([blank]);
-  const [errors, setErrors] = useState({});
-  const ref = useRef(null);
-  useEffect(() => {
-    if (open) {
-      setRows([{ ...blank }]);
-      setErrors({});
-    }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- blank is a constant
-  const change = (i, key, v) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [key]: v } : x)));
-  const submit = (e) => {
-    e.preventDefault();
-    const err = {};
-    rows.forEach((r, i) => {
-      if (!r.name.trim()) err[`name${i}`] = "Enter the venue name.";
-      if (!r.street.trim()) err[`street${i}`] = "Enter the street address.";
-      if (!r.city.trim()) err[`city${i}`] = "Enter the town or city.";
-      if (r.postcode.trim() && !/^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/.test(r.postcode.trim())) err[`postcode${i}`] = "Enter a real UK postcode, like LS1 4DL.";
-    });
-    setErrors(err);
-    if (Object.keys(err).length) return focusFirstError(ref.current);
-    onSave(rows.map((r) => saveVenue({ name: r.name.trim(), street: r.street.trim(), city: r.city.trim(), postcode: r.postcode.trim().toUpperCase() })));
-  };
-  const field = (i, key, label, auto, extra = {}) => {
-    const id = `rt-pws-cv-${key}${i}`;
-    const err = errors[`${key}${i}`];
-    return (
-      <div className="rt-field">
-        <label htmlFor={id}>{label}</label>
-        {err && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{err}</p>}
-        <input id={id} value={rows[i][key]} onChange={(e) => change(i, key, e.target.value)} autoComplete={auto} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} {...extra} />
-      </div>
-    );
-  };
-  return (
-    <Sheet open={open} onClose={onClose} title="Create venues" closeLabel="Close">
-      <form className="rt-q__form" noValidate onSubmit={submit} ref={ref}>
-        <p className="rt-acc__note">Venues are saved to your library (Settings › Venues) and added to this course.</p>
-        {rows.map((r, i) => (
-          <fieldset key={i} className="rt-pws-course-repeat">
-            <legend>Venue {i + 1}</legend>
-            {field(i, "name", "Venue name", "organization", { maxLength: 80, placeholder: "For example: Northfield Training Centre" })}
-            {field(i, "street", "Street address", "street-address", { maxLength: 120 })}
-            <div className="rt-pws-course-grid2">
-              {field(i, "city", "Town or city", "address-level2", { maxLength: 60 })}
-              {field(i, "postcode", "Postcode (optional)", "postal-code", { maxLength: 8 })}
-            </div>
-            {rows.length > 1 && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>Remove venue {i + 1}</button>}
-          </fieldset>
-        ))}
-        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setRows((x) => [...x, { ...blank }])}>Add another</button>
-        <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Save venues</button>
+        <div className="rt-field">
+          <label htmlFor="rt-pws-cf-q">Question</label>
+          {errors.q && <p className="rt-q__err" id="rt-pws-cf-q-e"><span className="rt-sr">Error: </span>{errors.q}</p>}
+          <input id="rt-pws-cf-q" value={f.question} maxLength={160} onChange={(e) => setF({ ...f, question: e.target.value })} aria-invalid={errors.q ? true : undefined} aria-describedby={errors.q ? "rt-pws-cf-q-e" : undefined} autoComplete="off" />
+        </div>
+        <div className="rt-field">
+          <label htmlFor="rt-pws-cf-a">Answer</label>
+          {errors.a && <p className="rt-q__err" id="rt-pws-cf-a-e"><span className="rt-sr">Error: </span>{errors.a}</p>}
+          <textarea id="rt-pws-cf-a" rows={5} value={f.answer} maxLength={1200} onChange={(e) => setF({ ...f, answer: e.target.value })} aria-invalid={errors.a ? true : undefined} aria-describedby={errors.a ? "rt-pws-cf-a-e" : undefined} autoComplete="off" />
+        </div>
+        <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{faq ? "Save FAQ" : "Add to course"}</button>
       </form>
     </Sheet>
   );
@@ -805,69 +847,80 @@ function VenueSheet({ open, onClose, onSave }) {
 
 // ---- Course pricing --------------------------------------------------------------------------------------------------------
 
-// Hurak's pricing: the Skill Saver loyalty programme, then the structure: a flat rate, tiered (one of your pricing plans, shown as
-// a table of its Saver, Flexi and Premium prices) or free. Cohorts can still set their own price.
-function PricingTab({ data, price, setPrice, errors }) {
-  const [editor, setEditor] = useState(false);
-  const set = (patch) => setPrice((p) => ({ ...p, ...patch }));
-  const active = data.packages.filter((p) => p.active || p.id === price.packageId);
-  const pack = data.byId.pack[price.packageId];
-
+// Skill Saver, and the price: a self-paced course has one price; classroom and live online courses are priced on each date.
+// Prices include VAT and change straight away, even on a live course.
+function PricingSection({ draft, setDraft, errors, access, course }) {
+  const set = useSet(setDraft);
+  const locked = !access.pricing;
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-price-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-price-h">Course pricing</h2>
         <div className="rt-pws-ce__loyalty">
           <label className="rt-fp__opt">
-            <input type="checkbox" className="rt-fp__check" checked={price.skillSaver} onChange={(e) => set({ skillSaver: e.target.checked })} />
+            <input type="checkbox" className="rt-fp__check" checked={draft.skillSaver} disabled={locked} onChange={(e) => set("skillSaver")(e.target.checked)} />
             <span>Include this course in the Skill Saver loyalty programme</span>
           </label>
           <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link>
         </div>
-        <Choice name="rt-pws-ce-ptype" legend="Choose your pricing structure" hint="Don't worry, you can change this later when creating cohorts." value={price.type} onChange={(v) => set({ type: v })} options={[{ value: "flat", label: "Flat rate" }, { value: "tiered", label: "Tiered" }, { value: "free", label: "Free" }]} />
-        {price.type === "flat" && (
+        {draft.method === "self-paced" ? (
           <div className="rt-field rt-pws-course-price">
             <label htmlFor="rt-pws-ce-pricein">Price per learner, including VAT</label>
-            {errors.price && <p className="rt-q__err" id="rt-pws-ce-pricein-e"><span className="rt-sr">Error: </span>{errors.price}</p>}
+            <FieldErr id="rt-pws-ce-pricein" text={errors.price || errors.pricePence} />
             <div className="rt-pws-course-money">
               <span aria-hidden="true">£</span>
-              <input id="rt-pws-ce-pricein" type="number" inputMode="decimal" min="0" step="0.01" value={price.price} onChange={(e) => set({ price: e.target.value })} aria-invalid={errors.price ? true : undefined} aria-describedby={errors.price ? "rt-pws-ce-pricein-e" : undefined} autoComplete="off" />
+              <input id="rt-pws-ce-pricein" type="text" inputMode="decimal" value={draft.price} disabled={locked} onChange={(e) => set("price")(e.target.value.trim())} aria-invalid={errors.price ? true : undefined} aria-describedby={errors.price ? "rt-pws-ce-pricein-e" : undefined} autoComplete="off" />
             </div>
           </div>
-        )}
-        {price.type === "free" && <p className="rt-acc__note">Learners book this course for free. You can still charge for a cohort when you create it.</p>}
-        {price.type === "tiered" && (
-          <>
-            <p className="rt-acc__note">With tiered pricing you can offer 3 pricing plans: Saver, Flexi and Premium, each with its own perks.</p>
-            {active.length > 0 && (
-              <div className="rt-field">
-                <label htmlFor="rt-pws-ce-pack">Select pricing plan</label>
-                {errors.package && <p className="rt-q__err" id="rt-pws-ce-pack-e"><span className="rt-sr">Error: </span>{errors.package}</p>}
-                <FieldSelect id="rt-pws-ce-pack" label="Select pricing plan" placeholder="Choose a pricing plan" value={price.packageId} onChange={(value) => set({ packageId: value })} options={active.map((p) => ({ value: p.id, label: p.name || "Untitled plan" }))} invalid={Boolean(errors.package)} describedBy={errors.package ? "rt-pws-ce-pack-e" : undefined} />
-              </div>
-            )}
-            <div className="rt-pws-course-mediabar">
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditor(true)}>Create pricing plan</button>
-              <Link href="/provider/packages" className="rt-cd__link">Manage pricing plan</Link>
-            </div>
-            {pack && (
-              <div className="rt-biz__tablecard rt-pws-ce__plans">
-                <table className="rt-biz__table rt-adm-table">
-                  <thead><tr><th scope="col">Plan name</th>{pw.tiers.map((t) => <th scope="col" key={t.key}>{t.label} plan</th>)}</tr></thead>
-                  <tbody>
-                    <tr>
-                      <td data-label="Plan name" className="rt-adm-strong">{pack.name || "Untitled plan"}</td>
-                      {pw.tiers.map((t) => <td key={t.key} data-label={`${t.label} plan`}>{formatPrice(pack.tiers[t.key]?.price || 0)}</td>)}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
+        ) : (
+          <p className="rt-acc__note">Each date has its own price, set when you add the date: you can charge more for a Saturday or a busy month. {course.upcomingCohorts ? `This course has ${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}.` : "This course has no dates yet."} <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">See its dates</Link></p>
         )}
       </section>
-
-      <PackageEditor open={editor} onClose={() => setEditor(false)} packageId={null} onSaved={(id) => { set({ packageId: id }); setEditor(false); }} />
     </form>
+  );
+}
+
+// ---- Mode of study ---------------------------------------------------------------------------------------------------------
+
+function ModeSection({ course, draft, setDraft, access, onSaved }) {
+  const set = useSet(setDraft);
+  const [adding, setAdding] = useState(false);
+  const utils = api.useUtils();
+  const { organisationId, can } = useProviderAccess();
+  const locked = !access.full || course.cohortCount > 0;
+  const dated = course.method === "classroom" || course.method === "live-online";
+
+  return (
+    <div className="rt-acc__stack">
+      <form className="rt-acc__card rt-pws-course-form" noValidate onSubmit={(e) => e.preventDefault()} aria-labelledby="rt-pws-ce-mode-h">
+        <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">Mode of study</h2>
+        {course.cohortCount > 0 && <p className="rt-adm-item__block">This course has dates, so how it is taught can&apos;t change. Remove its dates first, or create a new course for another mode of study.</p>}
+        <CardChoice name="rt-pws-ce-format" legend="How is the course taught?" value={draft.method} onChange={(v) => !locked && set("method")(v)}
+          options={pw.formats.map((f) => ({ value: f.key, label: methodName(f.key), text: f.text, disabled: locked && f.key !== draft.method }))} />
+        {draft.method !== course.method && <p className="rt-acc__note">Save to change how the course is taught.</p>}
+      </form>
+
+      {dated && draft.method === course.method && (
+        <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-dates-h">
+          <div className="rt-acc__cardhead rt-pws-course-cardhead">
+            <h2 className="rt-acc__h2" id="rt-pws-ce-dates-h">Dates</h2>
+            {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Add dates</button>}
+          </div>
+          <p className="rt-acc__note">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}.` : "No upcoming dates yet."} Each date has its own {course.method === "classroom" ? "venue, " : "joining link, "}places and price. Learners can book once the course is live.</p>
+          <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>
+        </section>
+      )}
+      {draft.method === "self-paced" && draft.method === course.method && (
+        <section className="rt-acc__card rt-pws-course-form" aria-label="Self-paced">
+          <p className="rt-acc__note">Self-paced courses have no dates: learners start when they book. The course shows on ReadTraining with its price; lessons and online booking for self-paced courses come in a later update.</p>
+        </section>
+      )}
+
+      <CohortForm open={adding} onClose={() => setAdding(false)} suggestCourseId={course.id} onSaved={() => {
+        setAdding(false);
+        utils.provider.courses.get.invalidate({ organisationId, courseId: course.id });
+        onSaved("Dates added");
+      }} />
+    </div>
   );
 }
