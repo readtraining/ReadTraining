@@ -32,7 +32,8 @@ const heldFrom = (open: SQL) => sql`(select coalesce(sum(round(x.amount_pence::n
   join public.orders o on o.id = x.order_id
   join ${ledgerEntries} lp on lp.order_id = o.id and lp.type = 'purchase'
   where o.provider_id = g.id)::int`
-async function owed(db: typeof Db, periodEnd: string) {
+type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
+async function owed(db: typeof Db | Tx, periodEnd: string) {
   const rows = await db.execute<{ id: string; name: string; slug: string; status: string; balance: number; held_refunds: number; held_disputes: number; waiting: number }>(sql`
     select g.id, g.name, g.slug, g.status,
       (select coalesce(sum(l.provider_pence), 0) from ${ledgerEntries} l where l.provider_id = g.id and l.at < ${endOf(periodEnd)})::int balance,
@@ -50,7 +51,7 @@ async function owed(db: typeof Db, periodEnd: string) {
 
 const STATUS = ['draft', 'approved', 'held', 'sent'] as const
 type PayoutRow = { id: string; ref: string; provider_id: string; status: string; created_by: string | null; approved_by: string | null; amount_pence: number }
-const lockPayout = async (tx: Parameters<Parameters<typeof Db.transaction>[0]>[0], id: string) => {
+const lockPayout = async (tx: Tx, id: string) => {
   const [row] = await tx.execute<PayoutRow>(sql`select id, ref, provider_id, status, created_by, approved_by, amount_pence from ${payouts} where id = ${id}::uuid for update`)
   if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That payout no longer exists.' })
   return row
@@ -102,22 +103,24 @@ export const payoutsRouter = createTRPCRouter({
     }),
 
   // Draft payouts for every provider with something payable up to the day (none twice: what is already waiting is subtracted).
+  // One transaction behind a lock only payout runs take, so two runs at once (a double click, two admins) never both count the
+  // same money: the second waits, then sees the first run's drafts as waiting and makes none. A transaction lock, so it is
+  // released at commit, which the transaction pooler needs.
   run: adminProcedure('admin.payouts.manage')
     .input(z.object({ periodEnd: day }))
     .mutation(async ({ ctx, input }) => {
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
       if (input.periodEnd > today) throw fieldError('periodEnd', 'Choose today or an earlier day.')
-      const list = (await owed(ctx.db, input.periodEnd)).filter((r) => r.payable > 0 && r.status !== 'rejected')
-      const made: string[] = []
-      for (const r of list) {
-        const ref = await newRef(ctx.db, 'PO')
-        await ctx.db.transaction(async (tx) => {
+      return ctx.db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext('readtraining.payouts.run'))`)
+        const list = (await owed(tx, input.periodEnd)).filter((r) => r.payable > 0 && r.status !== 'rejected')
+        for (const r of list) {
+          const ref = await newRef(tx, 'PO')
           await tx.insert(payouts).values({ ref, providerId: r.id, periodEnd: input.periodEnd, amountPence: r.payable, heldBackPence: r.held, createdBy: ctx.user.id, status: r.status === 'suspended' ? 'held' : 'draft', holdReason: r.status === 'suspended' ? 'The provider is suspended.' : null })
           await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: r.id, action: 'admin.payout_created', targetType: 'payout', targetId: ref, metadata: { pounds: (r.payable / 100).toFixed(2) }, ip: ctx.ip })
-        })
-        made.push(ref)
-      }
-      return { created: made.length }
+        }
+        return { created: list.length }
+      })
     }),
 
   // The second admin's approval: never the admin who made the payout.
