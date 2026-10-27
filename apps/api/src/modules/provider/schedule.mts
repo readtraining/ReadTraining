@@ -94,13 +94,28 @@ const day = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date.')
   .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), 'Choose a real date.')
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a time, like 09:00.')
+const DAY_MS = 864e5
+const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / DAY_MS)
+// one session is a day or a short block (a residential week): never longer than a month; and dates at most 3 years ahead
+const MAX_SESSION_DAYS = 31
+const MAX_AHEAD_DAYS = 3 * 366
 const session = z
   .object({ date: day, end: day, from: time, to: time })
   .refine((s) => s.end >= s.date, { message: 'A session can’t end before it starts.', path: ['end'] })
   .refine((s) => s.end > s.date || s.to > s.from, { message: 'The finish time must be after the start time.', path: ['to'] })
+  .refine((s) => daysBetween(s.date, s.end) <= MAX_SESSION_DAYS, { message: `A session can last up to ${MAX_SESSION_DAYS} days. Add longer courses as several sessions.`, path: ['end'] })
+// two sessions of one run can't overlap (the same session twice, or one starting before the other ends)
+const overlapping = (list: z.infer<typeof session>[]) => {
+  const sorted = [...list].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
+  return sorted.some((s, i) => i > 0 && `${s.date} ${s.from}` < `${sorted[i - 1].end} ${sorted[i - 1].to}`)
+}
 
 const cohortFields = z.object({
-  sessions: z.array(session).min(1, 'Add at least one session.').max(60, 'Add up to 60 sessions.'),
+  sessions: z
+    .array(session)
+    .min(1, 'Add at least one session.')
+    .max(60, 'Add up to 60 sessions.')
+    .refine((list) => !overlapping(list), 'Two sessions overlap. Change the dates or times so each starts after the one before ends.'),
   venueId: z.string().uuid().nullable().optional(),
   joinUrl: z
     .string()
@@ -124,6 +139,7 @@ type CohortInput = z.infer<typeof cohortFields>
 async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keepVenueId: string | null = null) {
   if (method !== 'classroom' && method !== 'live-online') throw bad('Only classroom and live online courses have dates. Self-paced courses start any time.')
   const sessions = [...input.sessions].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
+  if (sessions.some((s) => daysBetween(today(), s.end) > MAX_AHEAD_DAYS)) throw bad('Dates can be up to 3 years ahead.')
   if (input.wasPricePence != null && input.wasPricePence <= input.pricePence) throw bad('The “was” price must be higher than the price.')
   let venueId: string | null = null
   if (method === 'classroom') {
