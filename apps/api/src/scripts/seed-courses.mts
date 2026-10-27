@@ -2,11 +2,13 @@
 // admin's approvals have real-looking records before providers type in their own (Milestone 2). It adds three sample providers
 // ("… (sample)", no logins), their venues, five shared course pages written as the team would, the providers' courses on them
 // (classroom, live online, self-paced) with dates over the next ten weeks, three courses with their own page, one course waiting
-// for approval and one draft. Images are the template's sample pictures. Never part of the migrations and refuses to run on
-// the live project.
+// for approval and one draft. Images are the template's sample pictures. Never part of the migrations. On the live project it
+// runs only with --live-review (the client's review of Milestone 2, decided 27 October 2026): then it adds just the ten popular
+// shared course pages and their providers' courses, no extra, waiting or draft examples. Remove them before a public launch.
 //
 //   pnpm --filter @readtraining/api seed:courses            add them (once; it stops if they are already there)
 //   pnpm --filter @readtraining/api seed:courses --remove   remove everything it added
+//   pnpm live --filter @readtraining/api seed:courses --live-review   the review set on the live project (--remove takes it out)
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -20,10 +22,12 @@ import { supabase } from '../lib/supabase.mjs'
 
 const env = process.env
 const live = !env.DATABASE_URL || env.DATABASE_URL === env.LIVE_DATABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL === env.LIVE_SUPABASE_URL || /readtraining-live/.test(env.DATABASE_URL) || env.VERCEL_ENV === 'production'
-if (live) {
-  console.error('seed:courses is for development and test databases only.')
+const review = process.argv.includes('--live-review')
+if (live && !review && !process.argv.includes('--remove')) {
+  console.error('seed:courses is for development and test databases only. For the client review on live, add --live-review.')
   process.exit(1)
 }
+if (live) console.log('LIVE project: sample courses for the review (remove them before a public launch with --remove).')
 if (!supabase) {
   console.error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are needed in .env (the sample pictures are uploaded).')
   process.exit(1)
@@ -34,29 +38,46 @@ const PROVIDERS = [
   { slug: 'kestrel-safety-training-sample', name: 'Kestrel Safety Training (sample)', headline: 'Construction and health and safety courses in the Midlands and London', city: 'Birmingham' },
   { slug: 'apex-skills-academy-sample', name: 'Apex Skills Academy (sample)', headline: 'Hospitality, business and online learning', city: 'London' },
 ]
-const SHARED_SLUGS = ['sia-door-supervisor', 'emergency-first-aid-at-work', 'cscs-green-card', 'iosh-managing-safely', 'level-2-food-hygiene']
+const SHARED_SLUGS = ['sia-door-supervisor', 'emergency-first-aid-at-work', 'cscs-green-card', 'iosh-managing-safely', 'level-2-food-hygiene', 'sia-door-supervisor-top-up', 'sia-cctv-operator', 'citb-smsts', 'citb-sssts', 'personal-licence-aplh']
 
 const remove = process.argv.includes('--remove')
 const provRows = await db.select({ id: organisations.id }).from(organisations).where(inArray(organisations.slug, PROVIDERS.map((p) => p.slug)))
+// every stored file under a folder of the course pictures (each course has its own folder)
+async function filesUnder(folder: string) {
+  const out: string[] = []
+  const { data } = await supabase!.storage.from(COURSE_MEDIA).list(folder, { limit: 1000 })
+  for (const f of data ?? []) {
+    if (f.id) out.push(`${folder}/${f.name}`)
+    else out.push(...(await filesUnder(`${folder}/${f.name}`)))
+  }
+  return out
+}
 if (remove) {
   const orgIds = provRows.map((p) => p.id)
-  const mine = await db.select({ id: courses.id }).from(courses).where(sql`${courses.slug} in ${SHARED_SLUGS} and ${courses.kind} = 'shared' or ${orgIds.length ? inArray(courses.organisationId, orgIds) : sql`false`}`)
-  for (const folder of [...orgIds.map((o) => `${o}/courses`), 'shared/courses']) {
-    const { data: dirs } = await supabase.storage.from(COURSE_MEDIA).list(folder, { limit: 1000 })
-    for (const d of dirs ?? []) {
-      if (folder === 'shared/courses' && !mine.some((m) => String(m.id) === d.name)) continue
-      const { data: files } = await supabase.storage.from(COURSE_MEDIA).list(`${folder}/${d.name}`, { limit: 1000 })
-      if (files?.length) await supabase.storage.from(COURSE_MEDIA).remove(files.map((f) => `${folder}/${d.name}/${f.name}`))
-    }
-  }
-  // providers' courses first (a shared page can't go while courses sit on it)
+  // the sample providers' own courses first (rows, then their pictures), so the shared pages are free to go
   if (orgIds.length) await db.delete(courses).where(inArray(courses.organisationId, orgIds))
-  await db.delete(courses).where(sql`${courses.slug} in ${SHARED_SLUGS} and ${courses.kind} = 'shared'`)
+  for (const o of orgIds) {
+    const files = await filesUnder(`${o}/courses`)
+    if (files.length) await supabase.storage.from(COURSE_MEDIA).remove(files)
+  }
+  // a sample shared page that someone else's course now sits on is kept (with its picture); the others go
+  const pages = await db.select({ id: courses.id, slug: courses.slug }).from(courses).where(sql`${courses.slug} in ${SHARED_SLUGS} and ${courses.kind} = 'shared'`)
+  const kept: string[] = []
+  for (const p of pages) {
+    const [used] = await db.select({ n: sql<number>`count(*)::int` }).from(courses).where(eq(courses.parentId, p.id))
+    if (used.n) {
+      kept.push(`${p.slug} (${used.n} other course${used.n === 1 ? '' : 's'} on it)`)
+      continue
+    }
+    await db.delete(courses).where(eq(courses.id, p.id))
+    const files = await filesUnder(`shared/courses/${p.id}`)
+    if (files.length) await supabase.storage.from(COURSE_MEDIA).remove(files)
+  }
   if (orgIds.length) {
     await db.delete(venues).where(inArray(venues.organisationId, orgIds))
     await db.delete(organisations).where(inArray(organisations.id, orgIds))
   }
-  console.log(`Removed the sample courses (${mine.length}) and providers.`)
+  console.log(`Removed the sample providers, their courses and ${pages.length - kept.length} shared course pages.${kept.length ? ` Kept: ${kept.join(', ')}.` : ''}`)
   process.exit(0)
 }
 if (provRows.length) {
@@ -79,7 +100,12 @@ const here = dirname(fileURLToPath(import.meta.url))
 const card = (n: number) => readFileSync(join(here, '../../../web/public/assets/img/coursesCards', `${n}.png`))
 async function picture(courseId: number, folder: string, n: number, alt: string) {
   const path = `${folder}/${randomUUID()}.png`
-  const { error } = await supabase!.storage.from(COURSE_MEDIA).upload(path, card(n), { contentType: 'image/png' })
+  // three tries: a slow connection can drop one upload
+  let error: { message: string } | null = null
+  for (let i = 0; i < 3; i++) {
+    ;({ error } = await supabase!.storage.from(COURSE_MEDIA).upload(path, card(n), { contentType: 'image/png', upsert: true }))
+    if (!error) break
+  }
   if (error) throw new Error(`Picture upload failed: ${error.message}`)
   await db.insert(courseImages).values({ courseId, position: 0, path, alt })
 }
@@ -117,7 +143,7 @@ const orgs: Record<string, string> = {}
 for (const p of PROVIDERS) {
   const [o] = await db
     .insert(organisations)
-    .values({ type: 'provider', name: p.name, slug: p.slug, status: 'active', headline: p.headline, city: p.city, bio: `${p.name.replace(' (sample)', '')} is a sample provider on the test site. Its courses show how real providers' courses look.`, bookingTerms: 'Pay in full when you book. Your place is confirmed by email.', cancellationPolicy: 'Cancel up to 14 days before the start for a full refund. After that, you can move to another date once for free.' })
+    .values({ type: 'provider', name: p.name, slug: p.slug, status: 'active', headline: p.headline, city: p.city, bio: `${p.name.replace(' (sample)', '')} is a sample provider. Its courses show how real providers' courses look while the site is being reviewed.`, bookingTerms: 'Pay in full when you book. Your place is confirmed by email.', cancellationPolicy: 'Cancel up to 14 days before the start for a full refund. After that, you can move to another date once for free.' })
     .returning({ id: organisations.id })
   orgs[p.slug] = o.id
 }
@@ -205,9 +231,91 @@ const SHARED: { slug: string; title: string; cat: string; sub: string; topic?: s
       faqs: [['How long do I have?', 'You can take as long as you need. Most learners finish in about three hours.']],
     },
   },
+  // the courses with a mock test on the site (data/testPrep.js mockTestCourses picks them by topic)
+  {
+    slug: 'sia-door-supervisor-top-up', title: 'SIA Door Supervisor Top-Up', cat: 'security', sub: 'sia-top-up', topic: 'door-supervisor-top-up', level: 'beginner', img: 2,
+    content: {
+      summary: 'The refresher training you need before you renew an SIA door supervisor licence.',
+      description: 'Door supervisors renewing their licence must complete top-up training first.\n\nThe course refreshes the law and good practice, covers terror threats and how to respond to them, and updates your physical intervention skills. You also need a valid first aid certificate.',
+      audience: 'Licensed door supervisors whose licence is due for renewal.',
+      entry: 'A current or recently expired SIA door supervisor licence, photo ID and a valid Emergency First Aid at Work certificate.',
+      outcomes: ['Apply the current law in your role', 'Recognise and respond to terror threats', 'Use physical intervention safely', 'Keep yourself and the public safe'],
+      features: ['Licence renewal', 'Physical intervention included'],
+      units: [['Principles of terror threat awareness', 'Threat levels\nSpotting hostile planning\nWhat to do'], ['Physical intervention refresher', 'Safe holds and escorts\nReducing the risk of harm']],
+      exams: [['Multiple-choice paper', '70%', '30 minutes'], ['Physical intervention (practical)', 'Pass', '45 minutes']],
+      faqs: [['Do I need a first aid certificate?', 'Yes. You need a valid Emergency First Aid at Work certificate before you can take the top-up.']],
+    },
+  },
+  {
+    slug: 'sia-cctv-operator', title: 'SIA CCTV Operator (Public Space Surveillance)', cat: 'security', sub: 'sia-licence-training', topic: 'cctv-operator', level: 'beginner', img: 10,
+    content: {
+      summary: 'The Level 2 qualification you need for an SIA public space surveillance (CCTV) licence.',
+      description: 'This course leads to the Level 2 Award for CCTV Operators (Public Space Surveillance), the qualification the SIA asks for before it issues a CCTV licence.\n\nYou learn how CCTV control rooms work, the laws on surveillance and privacy, and how to operate cameras and record incidents properly.',
+      audience: 'People who want to work in CCTV control rooms for councils, shopping centres, transport hubs and venues.',
+      entry: 'You must be 18 or over and bring photo ID on the first day.',
+      outcomes: ['Explain how the private security industry works', 'Use CCTV equipment correctly', 'Follow the law on surveillance and personal data', 'Record and report incidents', 'Work with the police and other services'],
+      features: ['SIA licence-linked', 'Practical assessment'],
+      units: [['Principles of working in the private security industry', ''], ['Principles and practices of working as a CCTV operator', ''], ['Practical operation of CCTV equipment', '']],
+      exams: [['Principles of working in the private security industry', '70%', '75 minutes'], ['Working as a CCTV operator', '70%', '60 minutes'], ['Practical CCTV assessment', 'Pass', '30 minutes']],
+      faqs: [['How long is the licence valid?', 'An SIA CCTV licence lasts three years.']],
+    },
+  },
+  {
+    slug: 'citb-smsts', title: 'CITB Site Management Safety Training Scheme (SMSTS)', cat: 'construction', sub: 'site-safety', topic: 'citb-smsts', level: 'advanced', img: 12,
+    content: {
+      summary: 'The five-day CITB course for site managers who plan, organise and control construction work safely.',
+      description: 'SMSTS covers the law and good practice a site manager needs to run a safe site.\n\nIt includes risk assessments, method statements, the Construction (Design and Management) Regulations and how to lead a site team safely, with an exam on the last day.',
+      audience: 'Site managers, project managers, supervisors moving into management, and construction business owners.',
+      entry: 'None, but you should already work in a supervisory role on site. Bring photo ID.',
+      outcomes: ['Apply the main construction health and safety law', 'Write and check risk assessments and method statements', 'Plan safe work on site', 'Lead and monitor your site team'],
+      features: ['5 days', 'CITB certificate valid 5 years'],
+      units: [['Health and safety law', ''], ['Managing risk', ''], ['The CDM Regulations', ''], ['Site hazards and controls', ''], ['Leading a safe site', '']],
+      exams: [['Multiple-choice and short-answer exam', 'Set by CITB', 'On the last day']],
+      faqs: [['How long is SMSTS valid?', 'Five years. You take a two-day refresher before it runs out.']],
+    },
+  },
+  {
+    slug: 'citb-sssts', title: 'CITB Site Supervisor Safety Training Scheme (SSSTS)', cat: 'construction', sub: 'site-safety', topic: 'citb-sssts', level: 'intermediate', img: 11,
+    content: {
+      summary: 'The two-day CITB course for supervisors who look after safety on site.',
+      description: 'SSSTS gives supervisors the knowledge to work safely and keep their team safe.\n\nYou learn the law, how to spot and control hazards and how to brief your team, with an exam at the end of the second day.',
+      audience: 'Supervisors, foremen and team leaders on construction sites.',
+      entry: 'None. Bring photo ID.',
+      outcomes: ['Understand your duties as a supervisor', 'Spot and control common site hazards', 'Run toolbox talks', 'Check that work is done safely'],
+      features: ['2 days', 'CITB certificate valid 5 years'],
+      units: [['Legal duties', ''], ['Hazards on site', ''], ['Briefing your team', '']],
+      exams: [['Multiple-choice exam', 'Set by CITB', 'End of day 2']],
+      faqs: [['How long is SSSTS valid?', 'Five years, then a one-day refresher.']],
+    },
+  },
+  {
+    slug: 'personal-licence-aplh', title: 'Personal Licence (Level 2 Award for Personal Licence Holders)', cat: 'hospitality', sub: 'licensing', topic: 'aplh', level: 'beginner', img: 7,
+    content: {
+      summary: 'The one-day qualification that is the first step to a personal licence to sell alcohol.',
+      description: 'In England and Wales you need a personal licence to authorise the sale of alcohol, and this qualification is the first step.\n\nYou learn the Licensing Act, the licensing objectives, the duties of a licence holder and the rules on selling to children. After passing, you apply to your local council.',
+      audience: 'Pub, bar, shop and restaurant managers, and anyone who will authorise alcohol sales.',
+      entry: 'You must be 18 or over and bring photo ID.',
+      outcomes: ['Explain the four licensing objectives', 'Know the duties of a personal licence holder', 'Refuse sales to children and drunk customers', 'Know the penalties for breaking the law'],
+      features: ['1 day', 'Exam on the day'],
+      units: [['Licensing law and the objectives', ''], ['Duties of a licence holder', ''], ['Protecting children and the public', '']],
+      exams: [['Multiple-choice exam', '28 of 40', '40 minutes']],
+      faqs: [['What happens after I pass?', 'You apply to your local council with your certificate, a basic criminal record check and photos.']],
+    },
+  },
 ]
 const sharedIds: Record<string, number> = {}
 for (const s of SHARED) {
+  const [kept] = await db.select({ id: courses.id }).from(courses).where(sql`${courses.slug} = ${s.slug} and ${courses.kind} = 'shared'`)
+  if (kept) {
+    // a page --remove kept (someone else's course sits on it): reuse it, and give it its picture back if the file is gone
+    sharedIds[s.slug] = kept.id
+    const imgs = await db.select({ id: courseImages.id, path: courseImages.path }).from(courseImages).where(eq(courseImages.courseId, kept.id))
+    const present = new Set(await filesUnder(`shared/courses/${kept.id}`))
+    const gone = imgs.filter((i) => !present.has(i.path))
+    if (gone.length) await db.delete(courseImages).where(inArray(courseImages.id, gone.map((i) => i.id)))
+    if (imgs.length === gone.length) await picture(kept.id, `shared/courses/${kept.id}`, s.img, s.title)
+    continue
+  }
   const [c] = await db
     .insert(courses)
     .values({ kind: 'shared', slug: s.slug, title: s.title, ...(await place(s.cat, s.sub, s.topic)), level: s.level, status: 'live', publishedAt: new Date(Date.now() - 30 * DAY), seoTitle: `${s.title} course`, seoDescription: s.content.summary })
@@ -229,6 +337,11 @@ const OFFERS: Offer[] = [
   { org: kestrel, title: 'IOSH Managing Safely', slug: 'kestrel-iosh-managing-safely', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', method: 'classroom', img: 3, dates: [{ start: 14, len: 4, venue: V.bir, price: 49500, was: 54500 }, { start: 49, len: 4, venue: V.ldnK, price: 52500 }] },
   { org: apex, title: 'IOSH Managing Safely (live online)', slug: 'apex-iosh-managing-safely-online', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', method: 'live-online', img: 4, dates: [{ start: 9, len: 4, price: 44900 }] },
   { org: apex, title: 'Level 2 Food Hygiene and Safety (online)', slug: 'apex-level-2-food-hygiene', shared: 'level-2-food-hygiene', cat: 'hospitality', sub: 'food-safety', topic: 'level-2-food-hygiene', level: 'beginner', method: 'self-paced', img: 8, price: 1999 },
+  { org: harbour, title: 'SIA Door Supervisor Top-Up', slug: 'harbour-sia-door-supervisor-top-up', shared: 'sia-door-supervisor-top-up', cat: 'security', sub: 'sia-top-up', topic: 'door-supervisor-top-up', level: 'beginner', method: 'classroom', img: 2, dates: [{ start: 9, len: 1, venue: V.man, price: 14900 }, { start: 30, len: 1, venue: V.liv, price: 13900 }] },
+  { org: harbour, title: 'SIA CCTV Operator', slug: 'harbour-sia-cctv-operator', shared: 'sia-cctv-operator', cat: 'security', sub: 'sia-licence-training', topic: 'cctv-operator', level: 'beginner', method: 'classroom', img: 10, dates: [{ start: 16, len: 4, venue: V.man, price: 19900 }, { start: 44, len: 4, venue: V.liv, price: 19900 }] },
+  { org: kestrel, title: 'CITB SMSTS', slug: 'kestrel-citb-smsts', shared: 'citb-smsts', cat: 'construction', sub: 'site-safety', topic: 'citb-smsts', level: 'advanced', method: 'classroom', img: 12, dates: [{ start: 20, len: 5, venue: V.bir, price: 54900 }, { start: 41, len: 5, venue: V.ldnK, price: 57900 }] },
+  { org: kestrel, title: 'CITB SSSTS', slug: 'kestrel-citb-sssts', shared: 'citb-sssts', cat: 'construction', sub: 'site-safety', topic: 'citb-sssts', level: 'intermediate', method: 'classroom', img: 11, dates: [{ start: 11, len: 2, venue: V.bir, price: 27900 }, { start: 32, len: 2, venue: V.ldnK, price: 29900 }] },
+  { org: apex, title: 'Personal Licence (APLH)', slug: 'apex-personal-licence-aplh', shared: 'personal-licence-aplh', cat: 'hospitality', sub: 'licensing', topic: 'aplh', level: 'beginner', method: 'classroom', img: 7, dates: [{ start: 7, len: 1, venue: V.ldnA, price: 12900 }, { start: 24, len: 1, venue: V.lds, price: 11900 }] },
   // with their own page
   { org: apex, title: 'Barista Skills Masterclass', slug: 'barista-skills-masterclass', cat: 'hospitality', sub: 'barista-and-coffee', level: 'beginner', method: 'classroom', img: 11, dates: [{ start: 11, len: 1, venue: V.ldnA, price: 13500 }, { start: 25, len: 1, venue: V.lds, price: 12500 }], content: { summary: 'Hands-on espresso, milk texturing and latte art in one day.', description: 'Learn to pull a great espresso, steam milk properly and pour latte art, on commercial machines, in small groups.', audience: 'New baristas, café owners and coffee lovers.', entry: 'None.', outcomes: ['Dial in an espresso', 'Texture milk for different drinks', 'Pour a heart and a rosetta', 'Keep the machine clean'], features: ['1 day', 'Small groups'], units: [['Espresso', 'Grind, dose and extraction'], ['Milk', 'Steaming and texture'], ['Latte art', 'Hearts, tulips and rosettas']], faqs: [['Do I need my own equipment?', 'No. Everything is provided.']] } },
   { org: apex, title: 'Digital Marketing Essentials', slug: 'digital-marketing-essentials-live', cat: 'marketing', sub: 'digital-marketing', level: 'beginner', method: 'live-online', img: 12, dates: [{ start: 15, len: 2, price: 24900, was: 29900 }], content: { summary: 'Search, social media and email marketing for beginners, live online over two days.', description: 'A practical introduction to the main digital marketing channels, with a plan you can use straight away.', audience: 'Small business owners and new marketing assistants.', entry: 'None.', outcomes: ['Plan a simple digital marketing campaign', 'Improve how your site shows in search', 'Use social media to reach customers', 'Measure what works'], features: ['2 days', 'Live online'], units: [['Planning', ''], ['Search', ''], ['Social media', ''], ['Email and measuring', '']], faqs: [['What do I need?', 'A computer with a camera and a good internet connection.']] } },
@@ -237,7 +350,9 @@ const OFFERS: Offer[] = [
   { org: kestrel, title: 'Asbestos Awareness (Category A)', slug: 'kestrel-asbestos-awareness', cat: 'construction', sub: 'site-safety', topic: 'asbestos-awareness', level: 'beginner', method: 'classroom', img: 10, status: 'pending', dates: [{ start: 18, len: 1, venue: V.bir, price: 5900 }], content: { summary: 'Spot materials that may contain asbestos and avoid disturbing them.', description: 'A half-day awareness course for anyone who could come across asbestos at work.', audience: 'Tradespeople and maintenance staff.', entry: 'None.', outcomes: ['Know where asbestos may be found', 'Understand the health risks', 'Know what to do if you find it', 'Follow the law'], features: ['Half a day'], units: [['What asbestos is', ''], ['Where it is found', ''], ['What to do', '']], faqs: [['Is this enough to remove asbestos?', 'No. Removal needs a licensed contractor.']] } },
   { org: harbour, title: 'Paediatric First Aid (draft)', slug: 'harbour-paediatric-first-aid', cat: 'first-aid', sub: 'paediatric-first-aid', level: 'intermediate', method: 'classroom', img: 4, status: 'draft' },
 ]
-for (const o of OFFERS) {
+// the live review gets only the providers' live courses on the ten shared pages (no extra, waiting or draft examples)
+const ADD = review ? OFFERS.filter((o) => o.shared && (o.status ?? 'live') === 'live') : OFFERS
+for (const o of ADD) {
   const status = o.status ?? 'live'
   const [c] = await db
     .insert(courses)
@@ -250,5 +365,5 @@ for (const o of OFFERS) {
     await db.insert(cohorts).values({ courseId: c.id, method: o.method, venueId: d.venue ?? null, joinUrl: o.method === 'live-online' ? 'https://zoom.us/j/0000000000' : null, sessions, startsOn: sessions[0].date, endsOn: sessions[sessions.length - 1].end, capacity: d.cap ?? 12, pricePence: d.price, wasPricePence: d.was ?? null })
   }
 }
-console.log(`Added ${PROVIDERS.length} sample providers, ${SHARED.length} shared course pages and ${OFFERS.length} providers' courses.`)
+console.log(`Added ${PROVIDERS.length} sample providers, ${SHARED.length} shared course pages and ${ADD.length} providers' courses.`)
 process.exit(0)
