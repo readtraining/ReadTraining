@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  postgres@3.4.9: 04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00
+
 importers:
 
   .:
@@ -198,10 +201,10 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.3
-        version: 0.45.3(postgres@3.4.9)
+        version: 0.45.3(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00))
       postgres:
         specifier: ^3.4.9
-        version: 3.4.9
+        version: 3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)
     devDependencies:
       '@types/node':
         specifier: ^22.18.0
@@ -3595,9 +3598,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.3(postgres@3.4.9):
+  drizzle-orm@0.45.3(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)):
     optionalDependencies:
-      postgres: 3.4.9
+      postgres: 3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)
 
   dunder-proto@1.0.1:
     dependencies:
@@ -3979,7 +3982,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres@3.4.9: {}
+  postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00): {}
 
   preact@10.12.1: {}
 
