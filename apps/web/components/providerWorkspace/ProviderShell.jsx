@@ -14,6 +14,7 @@ import { actAs, useProvider } from "@/lib/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { useProviderAccess } from "@/lib/providerAccess";
 import { api } from "@/lib/trpc/react";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 
@@ -32,6 +33,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const [search, setSearch] = useState("");
   const [folded, fold] = useFoldedGroups("rt-pws-nav-folded");
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
+  const access = useProviderAccess();
   useEffect(() => setSearch(window.location.search), [path]);
   // a group's page is current when its path matches and, for ?tab= / ?mode= pages, its query does too
   // a page opened from a notification goes back to the notifications; otherwise to its own list (`back`)
@@ -84,7 +86,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-adm__tag">{pw.tag}</span>
           </Link>
           <div className="rt-adm__topside">
-            <Link href="/provider/courses/new" className="button -sm -purple-1 text-white rt-pws__new">New course</Link>
+            {access.can("provider.courses.edit") && <Link href="/provider/courses/new" className="button -sm -purple-1 text-white rt-pws__new">New course</Link>}
             <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}><i className="icon-person text-16" aria-hidden="true"></i><span>Student</span></Link>
             <Link href="/provider/notifications" className="rt-pws__bell" aria-label={counts.unread ? `Notifications, ${counts.unread} unread` : "Notifications"}>
               <i className="icon-notification text-18" aria-hidden="true"></i>
