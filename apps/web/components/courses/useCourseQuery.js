@@ -74,17 +74,19 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
 
   const update = useCallback(
     (patch, { record = true, push = false, debounce = 0, afterCommit = null } = {}) => {
-      const base = stateRef.current;
-      const next = { ...base, page: 1, ...patch };
+      // `prev` is the search as it stands; `base` stays the page's own defaults (a town page's town, a subject page's subject),
+      // which the address leaves out
+      const prev = stateRef.current;
+      const next = { ...prev, page: 1, ...patch };
       // Entering a location switches to "Closest"; clearing it goes back to "Most popular".
-      if ("location" in patch && patch.location !== base.location) next.sort = defaultSort(next.location);
+      if ("location" in patch && patch.location !== prev.location) next.sort = defaultSort(next.location);
       // Sub-subjects only make sense under a ticked subject.
       if ("subject" in patch && !("sub" in patch)) {
         const allowed = new Set([...next.subject, ...(baseSubject ? [baseSubject] : [])].flatMap((sv) => subcategoriesOf(sv).map((x) => x.slug)));
         next.sub = next.sub.filter((v) => allowed.has(v));
       }
-      if (record && !sameFilters(base, next)) {
-        history.current.push(snapshot(base));
+      if (record && !sameFilters(prev, next)) {
+        history.current.push(snapshot(prev));
         setCanUndo(true);
       }
       setPending(next);
