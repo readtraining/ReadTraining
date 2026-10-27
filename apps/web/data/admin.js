@@ -698,6 +698,7 @@ export const admin = {
     list: {
       note: "This is the list the site's filters and menus and the provider's course form use. Changes show on the site within a few seconds.",
       sections: { category: "Categories", method: "Delivery methods", level: "Levels" },
+      methodsNote: "Providers can run courses as classroom, live online or self-paced. A method you add here names catalogue pages, but courses can't use it yet.",
       kinds: { category: "category", subcategory: "sub-category", topic: "topic", method: "delivery method", level: "level" },
       add: { category: "Add a category", subcategory: "Add a sub-category", topic: "Add a topic", method: "Add a delivery method", level: "Add a level" },
       name: "Name",

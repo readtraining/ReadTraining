@@ -71,6 +71,14 @@ export const content = {
   exams: z.array(z.object({ unit: line(120, 'exam unit').min(1, 'Name every exam row.'), passMark: text(40, 'pass mark'), duration: text(40, 'duration') })).max(20, 'Add up to 20 exam rows.'),
   faqs: z.array(z.object({ question: line(160, 'question').min(1, 'Write every question.'), answer: line(1200, 'answer').min(1, 'Write every answer.') })).max(30, 'Add up to 30 FAQs.'),
 }
+// The ways of teaching a provider course can use: booking only knows these (classroom and live online are priced on their dates,
+// self-paced has its own price). A method an admin adds in Catalogue settings names catalogue pages, but a provider course on it
+// could never have dates or a price, so it is refused until booking supports it.
+const TAUGHT = ['classroom', 'live-online', 'self-paced']
+const taughtOnly = (method: string | undefined) => {
+  if (method !== undefined && !TAUGHT.includes(method)) throw bad('Choose classroom, live online or self-paced.', 'method')
+}
+
 export const settings = {
   seoTitle: text(60, 'search title'),
   seoDescription: text(320, 'search description'),
@@ -378,6 +386,7 @@ export const providerCoursesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      taughtOnly(input.method)
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
       if (input.parentId) {
         const p = await livePage(ctx.db, input.parentId)
@@ -426,7 +435,10 @@ export const providerCoursesRouter = createTRPCRouter({
       const subjectAfter = { subcategoryId: subject.subcategoryId ?? course.subcategoryId, topicId: subject.topicId !== undefined ? subject.topicId : course.topicId }
       const subjectChanged = subjectAfter.subcategoryId !== course.subcategoryId || subjectAfter.topicId !== course.topicId
       const directSet: Partial<typeof courses.$inferInsert> = {}
-      if (direct.method !== undefined) directSet.method = (await resolveCatalogue(ctx.db, { method: direct.method as string })).method
+      if (direct.method !== undefined) {
+        taughtOnly(direct.method as string)
+        directSet.method = (await resolveCatalogue(ctx.db, { method: direct.method as string })).method
+      }
       // only a self-paced course has a price of its own (classroom and live online are priced on their dates)
       if (directSet.method !== undefined && directSet.method !== 'self-paced') directSet.pricePence = null
       for (const k of ['seoTitle', 'seoDescription'] as const) if (direct[k] !== undefined) directSet[k] = (direct[k] as string | null) || null
