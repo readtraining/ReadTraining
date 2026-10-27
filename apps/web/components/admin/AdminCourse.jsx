@@ -62,7 +62,9 @@ export default function AdminCourse({ id }) {
   const needsNote = (decision) => NOTE.has(decision);
   const run = async (decision, message, ownReason) => {
     try {
-      const seen = (decision === "approveChange" || decision === "rejectChange") && c.change?.since ? new Date(c.change.since).toISOString() : undefined; // the version on screen
+      // the version on screen: when the change, or the course itself, was sent (the API refuses a decision on a newer one)
+      const sent = decision === "approveChange" || decision === "rejectChange" ? c.change?.since : decision === "approve" || decision === "changes" ? c.submittedAt : null;
+      const seen = sent ? new Date(sent).toISOString() : undefined;
       const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen });
       refresh();
       refreshCourses().catch(() => {});

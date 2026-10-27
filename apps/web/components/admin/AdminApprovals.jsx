@@ -79,8 +79,8 @@ export default function AdminApprovals() {
     const failed = [];
     for (const it of list) {
       try {
-        // a change is decided on the version listed (sent at it.at); one the provider changed since is refused
-        await decide.mutateAsync({ courseId: it.courseId, decision, message, seen: it.type === "change" ? it.at : undefined });
+        // decided on the version listed (sent at it.at); a course or change the provider changed since is refused
+        await decide.mutateAsync({ courseId: it.courseId, decision, message, seen: it.at });
         done += 1;
       } catch (e) {
         failed.push(`${it.title}: ${errorsFrom(e).general}`);

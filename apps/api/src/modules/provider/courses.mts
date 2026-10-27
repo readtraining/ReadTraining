@@ -305,6 +305,14 @@ const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organ
 
 // A provider's change to a course that is waiting for review takes it out of review (back to a draft, to be sent again), so our
 // team never approves a version they haven't seen. Returns whether it did.
+// The course's status as it stands now, with the row locked until the transaction ends. An admin deciding on the course locks
+// the same row (modules/admin/courses.mts), so a provider's edit and an admin's decision at the same moment take turns: the edit
+// either lands first (the course leaves review and the decision is refused) or after (it goes in as a change to the live course).
+async function lockStatus(tx: Writer, courseId: number) {
+  const [row] = await tx.select({ status: courses.status }).from(courses).where(eq(courses.id, courseId)).for('update')
+  return row?.status ?? 'draft'
+}
+
 async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, course: { id: number; status: string }) {
   if (course.status !== 'pending') return false
   await tx.update(courses).set({ status: 'draft', updatedAt: new Date() }).where(eq(courses.id, course.id))
@@ -435,10 +443,11 @@ export const providerCoursesRouter = createTRPCRouter({
         if (p && !sameSubject(p, subjectAfter)) throw bad(`This course is on the shared course page “${p.title}”, so its subject has to stay the same as that page's. To change the subject, first set the shared course page to None in the course settings.`, 'subcategory')
       }
 
-      const isLive = course.status === 'live' || course.status === 'paused'
       return ctx.db.transaction(async (tx) => {
+        const status = await lockStatus(tx, courseId)
+        const isLive = status === 'live' || status === 'paused'
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
-        const backToDraft = await leaveReview(tx, ctx, organisationId, course)
+        const backToDraft = await leaveReview(tx, ctx, organisationId, { id: courseId, status })
         let pendingChange = false
         if (Object.keys(reviewed).length) {
           if (isLive) {
@@ -476,7 +485,7 @@ export const providerCoursesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       return addCourseImage(ctx.db, course, input.path, input.alt, async (tx) => {
-        await leaveReview(tx, ctx, input.organisationId, course)
+        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status: await lockStatus(tx, course.id) })
         await log(tx, ctx, input.organisationId, 'course.image_added', course.id)
       })
     }),
@@ -486,7 +495,7 @@ export const providerCoursesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       return setCourseImages(ctx.db, course, input.images, async (tx, m) => {
-        await leaveReview(tx, ctx, input.organisationId, course)
+        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status: await lockStatus(tx, course.id) })
         await log(tx, ctx, input.organisationId, 'course.images_changed', course.id, m)
       })
     }),
