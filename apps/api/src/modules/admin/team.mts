@@ -2,9 +2,10 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
 import { adminUsers, and, eq, sql } from '@readtraining/db'
-import { ADMIN_PERMISSIONS, ADMIN_PRESETS, adminPermissions } from '@readtraining/permissions'
+import { ADMIN_PERMISSIONS, ADMIN_PRESETS, adminPermissions, grantableAdminPermissions } from '@readtraining/permissions'
+import type { Actor, AdminPermission } from '@readtraining/permissions'
 
-import { logActivity } from '../../lib/activity.mjs'
+import { logActivity, logDenied } from '../../lib/activity.mjs'
 import { InviteError, inviteExpired, makeInviteLink, ROLE_LABEL, sendAddedEmail, sendInviteEmail } from '../../lib/adminInvite.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { supabase } from '../../lib/supabase.mjs'
@@ -15,7 +16,9 @@ import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 // locking itself out: nobody changes or removes their own access, and at least one active Full admin always remains.
 // The super admin is the platform's owner: a Full admin whom nobody else can change, remove or reset, and, once there is one,
 // the only person who can add, change or remove Full admins. They can hand the role to another Full admin (the first one is
-// made with pnpm admin:bootstrap).
+// made with pnpm admin:bootstrap). Once there is a super admin, nobody else gives more than they have: only switches they hold
+// themselves (never "admins"), a refund limit no higher than their own, and no changing, resetting or removing an admin who
+// holds a switch they couldn't give (otherwise Custom with every switch would be Full by another name).
 //
 // Adding an admin is an invite (lib/adminInvite.mts): someone without an account gets a staff-only login and an email to set
 // their password; their access starts when they do. Someone who already has an account is added at once and told by email.
@@ -73,12 +76,43 @@ async function nameOf(db: typeof Db, userId: string) {
 
 // one admin row with what the screen needs; NOT_FOUND when they aren't on the team
 async function member(db: typeof Db, userId: string) {
-  const [r] = await db.execute<{ email: string; preset: Preset; pending: boolean; admin_only: boolean }>(sql`
-    select u.email, a.preset, ${PENDING} pending, a.admin_only
+  const [r] = await db.execute<{ email: string; preset: Preset; permissions: string[]; pending: boolean; admin_only: boolean }>(sql`
+    select u.email, a.preset, a.permissions, ${PENDING} pending, a.admin_only
     from public.admin_users a join auth.users u on u.id = a.user_id
     where a.user_id = ${userId}::uuid and a.active`)
   if (!r) throw new TRPCError({ code: 'NOT_FOUND', message: 'This person is not on the admin team.' })
   return r
+}
+
+// ---- nobody gives more than they have (once there is a super admin, who can give anything) ----
+type TeamCtx = { db: typeof Db; ip: string | null; user: { id: string }; actor: Actor }
+const switchesOf = (preset: Preset, permissions: string[]) => adminPermissions({ active: true, preset, permissions, refundLimitPence: 0 })
+const limitedBy = (ctx: TeamCtx, owner: string | null) => Boolean(owner) && !ctx.actor.admin?.isSuper
+const notMine = (ctx: TeamCtx, switches: AdminPermission[]) => switches.filter((p) => !grantableAdminPermissions(ctx.actor.admin ?? null).includes(p))
+
+async function refuseTeam(ctx: TeamCtx, targetId: string | null, message: string, field: string | null, metadata: Record<string, unknown>): Promise<never> {
+  await logDenied(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', attempted: 'admin.admins.manage', targetType: 'account', targetId, metadata, ip: ctx.ip })
+  throw new TRPCError({ code: 'FORBIDDEN', message, cause: field ? Object.assign(new Error(message), { field }) : undefined })
+}
+// the access being given: only switches the giver could give, and a refund limit no higher than their own (Full: no limit)
+async function checkGiving(ctx: TeamCtx, owner: string | null, targetId: string | null, preset: Preset, permissions: string[], refundLimitPence: number) {
+  if (!limitedBy(ctx, owner)) return
+  const switches = switchesOf(preset, permissions)
+  const missing = notMine(ctx, switches)
+  if (missing.length) {
+    const others = missing.filter((p) => p !== 'admins')
+    const message = [others.length ? `You can only give access you have yourself. Not yours to give: ${others.join(', ')}.` : '', missing.includes('admins') ? 'Only the super admin can give the "admins" switch.' : '']
+    await refuseTeam(ctx, targetId, message.filter(Boolean).join(' '), preset === 'custom' ? 'permissions' : null, { preset, missing })
+  }
+  const me = ctx.actor.admin
+  if (me && me.preset !== 'full' && switches.some((p) => p === 'refunds' || p === 'wallet') && refundLimitPence > me.refundLimitPence)
+    await refuseTeam(ctx, targetId, `You can't give a refund limit above your own (£${me.refundLimitPence / 100}).`, 'refundLimit', { refundLimitPence })
+}
+// changing, resetting or removing someone: not when they hold a switch the person acting couldn't give
+async function checkTouching(ctx: TeamCtx, owner: string | null, targetId: string, before: { preset: Preset; permissions: string[] }) {
+  if (!limitedBy(ctx, owner)) return
+  const missing = notMine(ctx, switchesOf(before.preset, before.permissions))
+  if (missing.length) await refuseTeam(ctx, targetId, 'Only the super admin can change or remove an admin who has access you don’t have.', null, { missing })
 }
 
 export const teamRouter = createTRPCRouter({
@@ -90,10 +124,17 @@ export const teamRouter = createTRPCRouter({
       from public.admin_users a join auth.users u on u.id = a.user_id left join public.profiles p on p.id = a.user_id
       where a.active
       order by a.created_at`)
+    const hasSuper = rows.some((r) => r.is_super)
+    const me = ctx.actor.admin ?? null
+    const limited = hasSuper && !me?.isSuper
     return {
       me: ctx.user.id,
-      meSuper: ctx.actor.admin?.isSuper === true,
-      hasSuper: rows.some((r) => r.is_super),
+      meSuper: me?.isSuper === true,
+      hasSuper,
+      // what this admin may give others, and their own refund limit in pounds (null: no limit); the screen offers only these and
+      // the server checks again
+      grantable: limited ? grantableAdminPermissions(me) : [...ADMIN_PERMISSIONS],
+      myRefundLimit: limited && me && me.preset !== 'full' ? Math.round(me.refundLimitPence / 100) : null,
       switches: [...ADMIN_PERMISSIONS],
       presets: ADMIN_PRESETS,
       admins: rows.map((r) => {
@@ -122,11 +163,13 @@ export const teamRouter = createTRPCRouter({
   add: manage
     .input(z.object({ email: z.string().trim().toLowerCase().email('Enter a valid email address.'), preset, permissions: permissions.optional(), refundLimit: refundLimit.optional() }))
     .mutation(async ({ ctx, input }) => {
-      if (input.preset === 'full' && !ctx.actor.admin?.isSuper && (await superAdmin(ctx.db))) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
+      const owner = await superAdmin(ctx.db)
+      if (input.preset === 'full' && !ctx.actor.admin?.isSuper && owner) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
+      const values = { preset: input.preset, permissions: input.preset === 'custom' ? (input.permissions ?? []) : [], refundLimitPence: (input.refundLimit ?? 100) * 100, active: true }
+      await checkGiving(ctx, owner, null, values.preset, values.permissions, values.refundLimitPence)
       const [user] = await ctx.db.execute<{ id: string; first_name: string | null }>(sql`
         select u.id, p.first_name from auth.users u left join public.profiles p on p.id = u.id
         where lower(u.email) = ${input.email} and u.deleted_at is null`)
-      const values = { preset: input.preset, permissions: input.preset === 'custom' ? (input.permissions ?? []) : [], refundLimitPence: (input.refundLimit ?? 100) * 100, active: true }
       const invitedBy = await nameOf(ctx.db, ctx.user.id)
       const role = ROLE_LABEL[input.preset]
 
@@ -165,7 +208,9 @@ export const teamRouter = createTRPCRouter({
   resend: manage.input(z.object({ userId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
     const m = await member(ctx.db, input.userId)
     if (!m.pending) throw new TRPCError({ code: 'CONFLICT', message: 'This person has already accepted their invite.' })
-    if (m.preset === 'full' && !ctx.actor.admin?.isSuper && (await superAdmin(ctx.db))) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
+    const owner = await superAdmin(ctx.db)
+    if (m.preset === 'full' && !ctx.actor.admin?.isSuper && owner) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
+    await checkTouching(ctx, owner, input.userId, m)
     let link: string
     try {
       link = (await makeInviteLink(m.email)).link
@@ -187,6 +232,8 @@ export const teamRouter = createTRPCRouter({
       const owner = await superAdmin(ctx.db)
       if (owner === input.userId) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_PROTECTED })
       if (owner && !ctx.actor.admin?.isSuper && (before.preset === 'full' || input.preset === 'full')) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
+      await checkTouching(ctx, owner, input.userId, before)
+      await checkGiving(ctx, owner, input.userId, input.preset, input.preset === 'custom' ? (input.permissions ?? []) : [], input.refundLimit * 100)
       if (!before.pending && before.preset === 'full' && input.preset !== 'full' && (await fullAdminsLeft(ctx.db, input.userId)) === 0)
         throw new TRPCError({ code: 'CONFLICT', message: 'There must always be at least one Full admin.' })
       await ctx.db.transaction(async (tx) => {
@@ -207,6 +254,7 @@ export const teamRouter = createTRPCRouter({
     const owner = await superAdmin(ctx.db)
     if (owner === input.userId) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_PROTECTED })
     if (owner && !ctx.actor.admin?.isSuper && before.preset === 'full') throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
+    await checkTouching(ctx, owner, input.userId, before)
     if (!before.pending && before.preset === 'full' && (await fullAdminsLeft(ctx.db, input.userId)) === 0)
       throw new TRPCError({ code: 'CONFLICT', message: 'There must always be at least one Full admin.' })
     const action = before.pending ? 'admin.invite_cancelled' : 'admin.revoked'
@@ -239,7 +287,9 @@ export const teamRouter = createTRPCRouter({
   // A lost phone: remove the person's authenticator; they set up a new one at their next admin sign-in.
   resetTwoStep: manage.input(z.object({ userId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
     if (input.userId === ctx.user.id) throw new TRPCError({ code: 'FORBIDDEN', message: 'You can’t reset your own two-step sign-in. Ask another Full admin.' })
-    if ((await superAdmin(ctx.db)) === input.userId) throw new TRPCError({ code: 'FORBIDDEN', message: 'The super admin’s two-step sign-in can only be reset with pnpm admin:grant <email> --reset-two-step.' })
+    const owner = await superAdmin(ctx.db)
+    if (owner === input.userId) throw new TRPCError({ code: 'FORBIDDEN', message: 'The super admin’s two-step sign-in can only be reset with pnpm admin:grant <email> --reset-two-step.' })
+    await checkTouching(ctx, owner, input.userId, await member(ctx.db, input.userId))
     if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Two-step sign-in can’t be reset right now.' })
     const factors = await supabase.auth.admin.mfa.listFactors({ userId: input.userId })
     if (factors.error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Two-step sign-in can’t be reset right now.' })

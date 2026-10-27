@@ -43,9 +43,12 @@ export default function AdminTeam() {
 
   if (list.isLoading) return <TableSkeleton rows={4} />;
   if (list.error) return <ErrorState onRetry={() => list.refetch()} />;
-  const { me, meSuper, hasSuper, switches, presets, admins } = list.data;
-  // once there is a super admin, Full access is theirs to give and take
+  const { me, meSuper, hasSuper, grantable, myRefundLimit, switches, presets, admins } = list.data;
+  // once there is a super admin, Full access is theirs to give and take, and nobody else gives (or changes someone who has)
+  // more than they could give themselves
   const fullLocked = hasSuper && !meSuper;
+  const outOfReach = (a) => a.permissions.some((p) => !grantable.includes(p));
+  const firstPreset = ["support", "finance"].find((p) => presets[p].every((s) => grantable.includes(s))) ?? "custom";
   const c = copy.columns;
   const done = (text) => {
     setSaid(text);
@@ -56,7 +59,9 @@ export default function AdminTeam() {
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
         <p className="rt-acc__note rt-adm-team__count">{admins.length === 1 ? "1 admin" : `${admins.length} admins`}</p>
-        <button type="button" className="button -sm -purple-1 text-white" onClick={() => setForm({ mode: "add", email: "", preset: "support", permissions: [], refundLimit: "100" })}>{copy.add}</button>
+        {grantable.length ? (
+          <button type="button" className="button -sm -purple-1 text-white" onClick={() => setForm({ mode: "add", email: "", preset: firstPreset, permissions: [], refundLimit: "100" })}>{copy.add}</button>
+        ) : <p className="rt-acc__note">You can only give access you have yourself, so ask the super admin to invite people.</p>}
       </div>
       <Said text={said} />
 
@@ -85,7 +90,7 @@ export default function AdminTeam() {
                       {!mine && (
                         <RowMenu
                           label={`Actions for ${a.name}`}
-                          items={a.isSuper || (fullLocked && a.preset === "full") ? [
+                          items={a.isSuper || outOfReach(a) ? [
                             { label: "See their activity", href: `/admin/activity?q=${a.userId}` },
                           ] : a.invite ? [
                             { label: copy.resend, onClick: () => resendTo(a) },
@@ -109,7 +114,7 @@ export default function AdminTeam() {
         </div>
       ) : <EmptyState title={copy.empty} />}
 
-      <AccessSheet form={form} setForm={setForm} switches={switches} presets={presets} canGiveFull={!fullLocked} onDone={done} />
+      <AccessSheet form={form} setForm={setForm} switches={switches.filter((s) => grantable.includes(s))} presets={presets} canGiveFull={!fullLocked} grantable={grantable} limited={grantable.length < switches.length} maxLimit={myRefundLimit ?? 100000} onDone={done} />
       <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} onDone={done} />
     </div>
   );
@@ -117,7 +122,7 @@ export default function AdminTeam() {
 
 // Add an admin, or change one admin's access: preset cards; with Custom, the switches; the refund limit when they can refund
 // and aren't Full. Errors inline, focus on the first.
-function AccessSheet({ form, setForm, switches, presets, canGiveFull, onDone }) {
+function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable, limited, maxLimit, onDone }) {
   const add = api.admin.team.add.useMutation();
   const update = api.admin.team.update.useMutation();
   const [errors, setErrors] = useState({});
@@ -141,7 +146,7 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, onDone }) 
     const found = {};
     if (form.mode === "add" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) found.email = "Enter an email address in the correct format, like name@example.com.";
     if (form.preset === "custom" && !form.permissions.length) found.permissions = "Choose at least one switch.";
-    if (needsLimit && (!/^\d+$/.test(form.refundLimit.trim()) || Number(form.refundLimit) > 100000)) found.refundLimit = "Enter a whole number of pounds from 0 to 100000.";
+    if (needsLimit && (!/^\d+$/.test(form.refundLimit.trim()) || Number(form.refundLimit) > maxLimit)) found.refundLimit = `Enter a whole number of pounds from 0 to ${maxLimit}.`;
     setErrors(found);
     setGeneral("");
     if (Object.keys(found).length) return focusFirstError(ref.current);
@@ -179,11 +184,12 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, onDone }) 
           </div>
         ) : <p className="rt-acc__note">{form.email}</p>}
 
-        <CardChoice name="rt-adm-t-preset" legend="Access" value={form.preset} onChange={(preset) => set({ preset })} options={canGiveFull ? presetOptions : presetOptions.filter((o) => o.value !== "full")} />
+        <CardChoice name="rt-adm-t-preset" legend="Access" value={form.preset} onChange={(preset) => set({ preset })} options={presetOptions.filter((o) => (o.value === "full" ? canGiveFull : o.value === "custom" || presets[o.value].every((p) => grantable.includes(p))))} />
 
         {form.preset === "custom" && (
           <fieldset className="rt-field" aria-describedby={errors.permissions ? "rt-adm-t-permissions-e" : undefined}>
             <legend>Switches</legend>
+            {limited && <small className="rt-field__hint">Only the switches you have yourself. The super admin gives the rest, including managing the admin team.</small>}
             {err("permissions")}
             <div className="rt-adm-team__switches">
               {switches.map((s) => (
@@ -196,7 +202,7 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, onDone }) 
         {needsLimit && (
           <div className="rt-field">
             <label htmlFor="rt-adm-t-limit">Refund and credit limit (£)</label>
-            <small className="rt-field__hint" id="rt-adm-t-limit-hint">Above this, a Full or Finance admin decides.</small>
+            <small className="rt-field__hint" id="rt-adm-t-limit-hint">Above this, a Full or Finance admin decides.{maxLimit < 100000 && ` Up to £${maxLimit}, your own limit.`}</small>
             {err("refundLimit")}
             <input id="rt-adm-t-limit" type="text" inputMode="numeric" className="rt-adm-num" value={form.refundLimit} onChange={(e) => set({ refundLimit: e.target.value })} aria-invalid={errors.refundLimit ? true : undefined} aria-describedby={`rt-adm-t-limit-hint${errors.refundLimit ? " rt-adm-t-refundLimit-e" : ""}`} />
           </div>
