@@ -10,6 +10,7 @@ import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
+import { jsonLd } from "@/lib/seo";
 import { loadCatalogue } from "@/lib/catalogueServer";
 
 // Static metadata on purpose: reading searchParams here would make the server re-render the page (and show any
@@ -48,7 +49,7 @@ export default async function page() {
         <HomeHelp />
         <HomeFooter />
       </div>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd) }} />
     </div>
   );
 }

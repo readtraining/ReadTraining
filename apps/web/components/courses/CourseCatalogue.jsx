@@ -15,6 +15,7 @@ import {
 } from "@/lib/catalogueFilters";
 import { subcategoryOptions } from "@/lib/taxonomy";
 import { trackEvent, toItem } from "@/lib/analytics";
+import { jsonLd } from "@/lib/seo";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import ActiveFilters from "./ActiveFilters";
 import CatalogueCourseCard from "./CatalogueCourseCard";
@@ -488,11 +489,11 @@ export default function CourseCatalogue({ courses, scope = null }) {
       <hr className="rt-cat__rule rt-cat__rule--full" />
 
       <Toast toast={toast} onDone={() => setToast(null)} />
-      {/* ItemList structured data for the courses on this page */}
+      {/* ItemList structured data for the courses on this page (jsonLd escapes "<": a title can never close the script tag) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: jsonLd({
             "@context": "https://schema.org",
             "@type": "ItemList",
             itemListElement: pageItems.map((c, i) => ({
