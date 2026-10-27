@@ -6669,6 +6669,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 /* Google and Facebook side by side, the same width (one row keeps the card short). Google never draws its button narrower
    than about 200px, so the card is 480px wide: each half is 202px (Google draws its button 2px narrower than its cell) */
 .rt-auth__social { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rt-auth__social.-one { grid-template-columns: minmax(0, 1fr); } /* only Google until Facebook is switched on */
 /* our Facebook button (and our own Google button where Google's cannot be used) in the look of Google's own button beside it:
    white, a thin grey border, small corners, 40px high, dark medium text */
 .rt-auth__socialbtn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--rt-c-line), var(--color-border-strong) 25%); border-radius: 4px; background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease; }
