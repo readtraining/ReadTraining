@@ -215,6 +215,7 @@ export const account = {
       pending: "Waiting for you to confirm {email}. Open the links we sent to both addresses.",
       oneMore: "Thanks. Now open the link we sent to the other address to finish changing to {email}.",
       changed: "Your email address is now {email}.",
+      lapsed: "Your change to {email} didn't finish, and its links no longer work (they run out, and changing your password cancels them). Enter the new address again to get new links.",
     },
     password: {
       title: "Password",
