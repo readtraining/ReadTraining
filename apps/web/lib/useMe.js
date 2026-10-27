@@ -34,12 +34,26 @@ export function useMe() {
   return { person, ...query };
 }
 
+// The API's bare codes, said in words: a session that ended (signed out elsewhere, blocked, expired; useMe then sends the page to
+// log in, so the person is told to keep their text first), and a refusal with no message of its own.
+const PLAIN = {
+  UNAUTHORIZED: "You've been signed out, so this wasn't saved. Copy any text you want to keep, then log in again.",
+  FORBIDDEN: "You don't have permission to do that.",
+};
+
 // A failed save, as the form shows it: the message for each field that was refused, plus one general message.
 export function errorsFrom(error) {
   const data = error?.data ?? {};
   const fields = {};
   for (const [name, messages] of Object.entries(data.zodError?.fieldErrors ?? {})) if (messages?.length) fields[name] = messages[0];
   if (data.field) fields[data.field] = error.message;
-  const general = Object.keys(fields).length ? "" : error?.message && !/fetch|network/i.test(error.message) && data.code !== "INTERNAL_SERVER_ERROR" ? error.message : "We couldn't save that. Check your connection and try again.";
+  const bare = PLAIN[data.code] && (data.code === "UNAUTHORIZED" || error?.message === data.code);
+  const general = Object.keys(fields).length
+    ? ""
+    : bare
+      ? PLAIN[data.code]
+      : error?.message && !/fetch|network/i.test(error.message) && data.code !== "INTERNAL_SERVER_ERROR"
+        ? error.message
+        : "We couldn't save that. Check your connection and try again.";
   return { fields, general };
 }
