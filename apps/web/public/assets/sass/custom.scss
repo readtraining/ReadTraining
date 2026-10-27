@@ -3270,7 +3270,9 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 .rt-about__tiles .rt-teamtile__title, .rt-about__tiles .rt-teamtile__text { margin-bottom: 0; }
 .rt-about__tiles .fb-textlink { margin-top: auto; padding-top: 12px; }
 /* our mission: the quote wider than a section head, the marks centred under it */
-.rt-about__mission { max-width: 980px; }
+.fb-page .fb-head.-center.rt-about__mission { max-width: 980px; }
+.rt-about__mission .fb-lede { text-wrap: balance; }
+@media (min-width: 768px) { .rt-about__line { display: block; } }
 .rt-about__mission h2.rt-eyebrow { margin: 0; }
 .rt-about__mission blockquote { margin: 20px 0 0; }
 .rt-about__marks { justify-content: center; margin: 16px 0 0; padding: 0; list-style: none; }
