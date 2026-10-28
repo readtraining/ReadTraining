@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
 import NoAccess from "@/components/account/NoAccess";
+import { SideMenuProvider } from "@/components/admin/workNav";
+import { sideClosed } from "@/lib/sideMenu";
 import { getWorkspace } from "@/lib/workspace";
 import { WorkspaceProvider } from "@/lib/workspaceContext";
 
@@ -7,5 +10,10 @@ import { WorkspaceProvider } from "@/lib/workspaceContext";
 export default async function ProviderWorkspaceLayout({ children }) {
   const { workspace, unavailable } = await getWorkspace("provider");
   if (!workspace) return <NoAccess type="provider" unavailable={unavailable} />;
-  return <WorkspaceProvider value={workspace}>{children}</WorkspaceProvider>;
+  // the sidebar starts hidden when this browser left it that way
+  return (
+    <WorkspaceProvider value={workspace}>
+      <SideMenuProvider closed={sideClosed(await cookies())}>{children}</SideMenuProvider>
+    </WorkspaceProvider>
+  );
 }

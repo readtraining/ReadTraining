@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { RowMenu } from "@/components/admin/adminParts";
 import NavIcon from "@/components/admin/navIcons";
-import { DrawerHead, FoldChevron, MenuButton, useFoldedGroups, useWorkDrawer } from "@/components/admin/workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, useFoldedGroups, useSideMenu, useWorkDrawer } from "@/components/admin/workNav";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
 import { actAs, useProvider } from "@/lib/providerWorkspace";
@@ -24,7 +24,8 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // shell pattern"). The dark band: the logo and "Provider" tag, then New course, Student (the learner side), the bell with unread
 // notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
-// sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups and, below 992px, the menu drawer. Then the page head (title, intro, actions) and the page.
+// sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups, the button at its top right that hides it
+// and, below 992px, the menu drawer. Then the page head (title, intro, actions) and the page.
 // `current` marks the section; the page inside it is matched on the address.
 export default function ProviderShell({ current, title, lead, actions = null, back = null, children }) {
   const sideRef = useRef(null);
@@ -33,6 +34,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const [search, setSearch] = useState("");
   const [folded, fold] = useFoldedGroups("rt-pws-nav-folded");
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
+  const { closed: sideHidden } = useSideMenu(); // the sidebar hidden, from 992px
   const access = useProviderAccess();
   useEffect(() => setSearch(window.location.search), [path]);
   // a group's page is current when its path matches and, for ?tab= / ?mode= pages, its query does too
@@ -76,7 +78,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   };
 
   return (
-    <div className="rt-home rt-adm rt-pws">
+    <div className={`rt-home rt-adm rt-pws${sideHidden ? " is-sideclosed" : ""}`}>
       <a href="#rt-pws-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">
@@ -105,6 +107,9 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         {drawer.menuOpen && <div className="rt-adm__scrim" onClick={drawer.closeMenu} aria-hidden="true"></div>}
         <nav id="rt-pws-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Provider workspace" ref={sideRef}>
           <DrawerHead drawer={drawer} />
+          <div className="rt-adm__sidetools">
+            <SideMenuButton where="side" controls="rt-pws-side" />
+          </div>
           <div className="rt-pws__org">
             <span className="rt-pws__orgmark" aria-hidden="true">{org ? initials(org) : ""}</span>
             <span className="rt-pws__orgname"><strong>{org || " "}</strong><span>Training provider</span></span>
@@ -167,6 +172,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         </nav>
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
+          {sideHidden && <SideMenuButton where="page" controls="rt-pws-side" />}
           <ProviderAccountStatus />
           {backTo && <Link href={backTo.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backTo.label}</Link>}
           <div className="rt-adm__head">
