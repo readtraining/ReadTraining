@@ -9,6 +9,7 @@ import type { db as Db } from '../../lib/db.mjs'
 import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
 import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
+import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
 import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
 
@@ -61,7 +62,7 @@ export const organisationsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
-      return ctx.db.transaction(async (tx) => {
+      const { org, again } = await ctx.db.transaction(async (tx) => {
         // a double click (or two tabs) sends this twice at once: the second waits here, then finds the first one's account
         const own = await ownedUnderLock(tx, ctx.user.id, 'provider')
         if (own && own.status !== 'rejected') throw new TRPCError({ code: 'CONFLICT', message: 'You already have a provider account. Use Switch account to open it.' })
@@ -82,7 +83,7 @@ export const organisationsRouter = createTRPCRouter({
             metadata: { termsVersion },
             ip: ctx.ip,
           })
-          return reopened
+          return { org: reopened, again: true }
         }
         const base = slugify(input.name)
         const taken = await tx
@@ -105,15 +106,21 @@ export const organisationsRouter = createTRPCRouter({
           metadata: { termsVersion },
           ip: ctx.ip,
         })
-        return created
+        return { org: created, again: false }
       })
+      // the applicant is told it arrived, and the admins who approve are told it is waiting
+      const me = await personOf(ctx.db, ctx.user.id)
+      const target = { organisationId: org.id, targetType: 'organisation', targetId: org.id }
+      await notify(ctx.db, 'provider-received', me, { provider: org.name }, { ...target, action: 'email.application_received_sent' })
+      await notifyApprovers(ctx.db, again ? 'admin-provider-updated' : 'admin-new-provider', { provider: org.name, slug: org.slug, applicant: me?.label ?? '', message: '' }, { ...target, action: 'email.approvers_told' }, ctx.user.id)
+      return org
     }),
 
   // Create a business account (Hurak's "Create a Business Account"): company name, your role, phone. Ready straight away.
   createBusiness: protectedProcedure
     .input(z.object({ companyName: orgName('company name'), jobTitle: z.string().trim().min(2, 'Enter your role, like Operations Manager.').max(80, 'Your role must be 80 characters or fewer.'), phone }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.transaction(async (tx) => {
+      const created = await ctx.db.transaction(async (tx) => {
         if (await ownedUnderLock(tx, ctx.user.id, 'business')) throw new TRPCError({ code: 'CONFLICT', message: 'You already have a business account. Use Switch account to open it.' })
         const base = slugify(input.companyName)
         const taken = await tx.select({ slug: organisations.slug }).from(organisations).where(or(eq(organisations.slug, base), like(organisations.slug, `${base}-%`)))
@@ -126,6 +133,8 @@ export const organisationsRouter = createTRPCRouter({
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'student', organisationId: created.id, action: 'business.created', targetType: 'organisation', targetId: created.id, ip: ctx.ip })
         return created
       })
+      await notify(ctx.db, 'business-ready', await personOf(ctx.db, ctx.user.id), { business: created.name }, { organisationId: created.id, targetType: 'organisation', targetId: created.id, action: 'email.business_ready_sent' })
+      return created
     }),
 
   // The person's own provider application when it was not approved: its name and the team's reason, for the page that offers
@@ -162,11 +171,18 @@ export const organisationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN' })
       }
       const [org] = await ctx.db
-        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote })
+        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote, statusChangedAt: organisations.statusChangedAt })
         .from(organisations)
         .where(eq(organisations.id, chosen.organisationId))
+      // a provider made active in the last 30 days: approved, or back from a suspension (the workspace says so once)
+      let welcome: 'approved' | 'reinstated' | null = null
+      if (input.type === 'provider' && org.status === 'active' && org.statusChangedAt && Date.now() - new Date(org.statusChangedAt).getTime() < 30 * 86_400_000) {
+        const [last] = await ctx.db.execute<{ action: string }>(sql`
+          select action from public.activity_log where organisation_id = ${org.id}::uuid and action in ('admin.provider_approved', 'admin.provider_reinstated') order by at desc limit 1`)
+        welcome = last?.action === 'admin.provider_reinstated' ? 'reinstated' : last ? 'approved' : null
+      }
       // userId: the browser's permission checks need it for "their own" rules (a tutor's own dates)
-      return { ...org, type: input.type, role: chosen.role, userId: ctx.user.id }
+      return { ...org, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and
@@ -175,13 +191,13 @@ export const organisationsRouter = createTRPCRouter({
     .input(z.object({ organisationId: z.string().uuid(), reply: z.string().trim().max(1000, 'Keep your note to 1,000 characters or fewer.').optional() }))
     .mutation(async ({ ctx, input }) => {
       const reply = input.reply?.trim() || null
-      return ctx.db.transaction(async (tx) => {
-        const [updated] = await tx
+      const updated = await ctx.db.transaction(async (tx) => {
+        const [row] = await tx
           .update(organisations)
           .set({ status: 'pending', statusNote: null, statusChangedAt: new Date() })
           .where(and(eq(organisations.id, input.organisationId), eq(organisations.type, 'provider'), eq(organisations.status, 'changes_requested')))
-          .returning({ id: organisations.id })
-        if (!updated) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is not waiting for changes any more. Reload the page.' })
+          .returning({ id: organisations.id, name: organisations.name, slug: organisations.slug })
+        if (!row) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is not waiting for changes any more. Reload the page.' })
         await logActivity(tx, {
           actorUserId: ctx.user.id,
           actorIdentity: 'provider',
@@ -192,8 +208,11 @@ export const organisationsRouter = createTRPCRouter({
           metadata: reply ? { reply } : {},
           ip: ctx.ip,
         })
-        return { status: 'pending' as const }
+        return row
       })
+      const me = await personOf(ctx.db, ctx.user.id)
+      await notifyApprovers(ctx.db, 'admin-provider-updated', { provider: updated.name, slug: updated.slug, applicant: me?.label ?? '', message: reply ?? '' }, { organisationId: updated.id, targetType: 'organisation', targetId: updated.id, action: 'email.approvers_told' }, ctx.user.id)
+      return { status: 'pending' as const }
     }),
 
   // Switch account: logs which identity the person moved to (the page they land on checks access itself).

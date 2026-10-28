@@ -27,6 +27,7 @@ import { can } from '@readtraining/permissions'
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
+import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
@@ -455,23 +456,31 @@ export const providerCoursesRouter = createTRPCRouter({
         if (p && !sameSubject(p, subjectAfter)) throw bad(`This course is on the shared course page “${p.title}”, so its subject has to stay the same as that page's. To change the subject, first set the shared course page to None in the course settings.`, 'subcategory')
       }
 
-      return ctx.db.transaction(async (tx) => {
+      const result = await ctx.db.transaction(async (tx) => {
         const status = await lockStatus(tx, courseId)
         const isLive = status === 'live' || status === 'paused'
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
         const backToDraft = await leaveReview(tx, ctx, organisationId, { id: courseId, status })
         let pendingChange = false
+        let newChange = false
         if (Object.keys(reviewed).length) {
           if (isLive) {
             const [open] = await tx.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, courseId), eq(courseRevisions.status, 'pending')))
             if (open) await tx.update(courseRevisions).set({ content: { ...(open.content as object), ...reviewed }, submittedBy: ctx.user.id, submittedAt: new Date() }).where(eq(courseRevisions.id, open.id))
             else await tx.insert(courseRevisions).values({ courseId, content: reviewed, submittedBy: ctx.user.id })
             pendingChange = true
+            newChange = !open
           } else await applyContent(tx, courseId, reviewed)
         }
         await log(tx, ctx, organisationId, pendingChange ? 'course.change_submitted' : 'course.updated', courseId, { fields: keys })
-        return { ok: true, pendingChange, backToDraft }
+        return { ok: true, pendingChange, backToDraft, newChange }
       })
+      // a change to a live course: the admins who approve are told once, when it starts (later saves add to the same change)
+      if (result.newChange) {
+        const { provider } = await ownerOf(ctx.db, organisationId)
+        await notifyApprovers(ctx.db, 'admin-course-change', { provider, course: course.title, courseId: String(courseId) }, { organisationId, targetType: 'course', targetId: String(courseId), action: 'email.approvers_told' }, ctx.user.id)
+      }
+      return { ok: result.ok, pendingChange: result.pendingChange, backToDraft: result.backToDraft }
     }),
 
   // Withdraw a content change that is still waiting (the live course stays as it is).
@@ -523,11 +532,17 @@ export const providerCoursesRouter = createTRPCRouter({
       if (course.status !== 'draft' && course.status !== 'changes') throw new TRPCError({ code: 'CONFLICT', message: course.status === 'pending' ? 'This course is already waiting for approval.' : 'This course is already live.' })
       const gaps = await missing(ctx.db, course)
       if (gaps.length) throw bad(`Add ${gaps.join(', ')} before sending it for approval.`)
-      return ctx.db.transaction(async (tx) => {
+      await ctx.db.transaction(async (tx) => {
         await tx.update(courses).set({ status: 'pending', submittedAt: new Date(), statusNote: null, updatedAt: new Date() }).where(eq(courses.id, course.id))
         await log(tx, ctx, input.organisationId, 'course.submitted', course.id)
-        return { ok: true }
       })
+      // the provider's owner hears it arrived (as they hear the decision), and the admins who approve that it is waiting
+      const { to, provider } = await ownerOf(ctx.db, input.organisationId)
+      const vars = { provider, course: course.title, courseId: String(course.id) }
+      const target = { organisationId: input.organisationId, targetType: 'course', targetId: String(course.id) }
+      await notify(ctx.db, 'course-received', to, vars, { ...target, action: 'email.course_received_sent' })
+      await notifyApprovers(ctx.db, 'admin-new-course', vars, { ...target, action: 'email.approvers_told' }, ctx.user.id)
+      return { ok: true }
     }),
 
   // Pause a live course (it leaves the site, its dates stay) or put it back live.

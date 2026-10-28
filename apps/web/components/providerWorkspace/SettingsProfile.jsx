@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
@@ -12,7 +13,7 @@ import { Confirm, Counter, Field, aria, isUrlOn } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
 
-// Settings tabs that use the API: provider information (headline, biography, town, social links), the logo, the terms learners
+// Settings tabs that use the API: provider information (the name while under review, headline, biography, town, social links), the logo, the terms learners
 // see before they book, and the venues used by classroom dates. Every change shows on the public profile and course pages at once.
 
 const useProfile = () => {
@@ -41,19 +42,26 @@ export function InfoTab({ say }) {
   return <WithProfile>{(p) => <InfoForm profile={p} say={say} />}</WithProfile>;
 }
 
+// the provider's name can change while its application is being reviewed (owner and admin); after approval it goes through us
+const UNDER_REVIEW = ["pending", "changes_requested"];
+
 function InfoForm({ profile, say }) {
   const { organisationId, can } = useProviderAccess();
+  const router = useRouter();
   const utils = api.useUtils();
   const update = api.provider.profile.update.useMutation();
-  const [f, setF] = useState({ headline: profile.headline, bio: profile.bio, city: profile.city, facebook: profile.socials.facebook || "", linkedin: profile.socials.linkedin || "", youtube: profile.socials.youtube || "" });
+  const [f, setF] = useState({ name: profile.name, headline: profile.headline, bio: profile.bio, city: profile.city, facebook: profile.socials.facebook || "", linkedin: profile.socials.linkedin || "", youtube: profile.socials.youtube || "" });
   const [errors, setErrors] = useState({});
   const formRef = useRef(null);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const locked = !can("provider.profile.edit");
+  const underReview = UNDER_REVIEW.includes(profile.status);
+  const canRename = underReview && can("provider.profile.rename");
 
   const submit = (e) => {
     e.preventDefault();
     const errs = {};
+    if (canRename && f.name.trim().length < 2) errs.name = "Enter your company or instructor name.";
     if (!f.headline.trim()) errs.headline = "Enter a headline, like “First aid and fire training across West Yorkshire”.";
     if (!f.bio.trim()) errs.bio = "Write a short biography: who you are and where you train.";
     SOCIAL.forEach((x) => {
@@ -62,14 +70,29 @@ function InfoForm({ profile, say }) {
     setErrors(errs);
     if (Object.keys(errs).length) return focusFirstError(formRef.current);
     update.mutate(
-      { organisationId, headline: f.headline.trim(), bio: f.bio.trim(), city: f.city.trim() || null, socials: Object.fromEntries(SOCIAL.map((x) => [x.key, f[x.key].trim()])) },
-      { onSuccess: () => { utils.provider.profile.get.invalidate({ organisationId }); say("Provider information saved"); }, onError: (er) => setErrors({ form: firstError(er) }) },
+      { organisationId, ...(canRename ? { name: f.name.trim() } : {}), headline: f.headline.trim(), bio: f.bio.trim(), city: f.city.trim() || null, socials: Object.fromEntries(SOCIAL.map((x) => [x.key, f[x.key].trim()])) },
+      {
+        onSuccess: (r) => {
+          utils.provider.profile.get.invalidate({ organisationId });
+          utils.provider.profile.review.invalidate({ organisationId });
+          // the name shows in the sidebar and the account menu, which come from the server
+          if (r.renamed) router.refresh();
+          say("Provider information saved");
+        },
+        onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general }); },
+      },
     );
   };
 
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      <p className="rt-acc__note">Provider name: <b>{profile.name}</b>. To change it, contact us: it was checked when your account was approved.</p>
+      {canRename ? (
+        <Field id="rt-set-name" label="Company or instructor name" hint="Learners see this name. You can change it until your account is approved." error={errors.name} count={<Counter value={f.name} max={100} />}>
+          <input {...aria("rt-set-name", errors.name, true)} type="text" maxLength={100} autoComplete="organization" value={f.name} onChange={set("name")} />
+        </Field>
+      ) : (
+        <p className="rt-acc__note">Provider name: <b>{profile.name}</b>. {underReview ? "The account owner or an admin can change it until your account is approved." : "To change it, contact us: it was checked when your account was approved."}</p>
+      )}
       <Field id="rt-set-headline" label="Headline" error={errors.headline} count={<Counter value={f.headline} max={120} />}>
         <input {...aria("rt-set-headline", errors.headline)} type="text" maxLength={120} autoComplete="off" value={f.headline} onChange={set("headline")} disabled={locked} />
       </Field>

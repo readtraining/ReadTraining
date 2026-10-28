@@ -9,8 +9,8 @@ import { Tabs, TableSkeleton, formatWhen, useSort, SortTh } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.emails;
-const AUDIENCES = ["all", "Learner", "Provider", "Admin", "Everyone"];
-const AUDIENCE_LABEL = { all: "All", Learner: "Learners", Provider: "Providers", Admin: "Admin team", Everyone: "Sign-in" };
+const AUDIENCES = ["all", "Learner", "Business", "Provider", "Admin", "Everyone"];
+const AUDIENCE_LABEL = { all: "All", Learner: "Learners", Business: "Businesses", Provider: "Providers", Admin: "Admin team", Everyone: "Sign-in" };
 
 const EMAIL_SORT = { name: (e) => e.name, audience: (e) => e.audience, status: (e) => e.status };
 

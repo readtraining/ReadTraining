@@ -11,11 +11,73 @@ export const pw = {
   tag: "Provider",
   backToSite: { label: "View site", href: "/" },
   help: { label: "Help centre", href: "/help-centre" },
-  // the provider account's status, at the top of every workspace page (real: set by the ReadTraining team in the admin)
+  // the provider account's status: one line at the top of every workspace page (the status bar), with at most one action. The
+  // work itself (the team's message, the changes, sending it back) is on the Account review page (/provider/review).
   accountStatus: {
-    pending: { title: "Your provider account is waiting for review", text: "Our team checks every new provider, usually within 2 working days. You can set up your courses while you wait; they can be booked once you're approved." },
-    changes_requested: { title: "We need a few changes before we can approve you", text: "Here is what our team asked for:", reply: "Anything to tell our team? (optional)", send: "I've made the changes: send for review", sent: "Sent for review. We'll email you when we've decided.", onlyManagers: "The account owner or an admin can send it back for review." },
-    suspended: { title: "Your provider account is suspended", text: "You can still look around, but you can't change anything and your courses can't be booked. The reason:" },
+    pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. You can set up your courses while you wait.", action: { label: "View review", href: "/provider/review" }, dismissible: true },
+    changes_requested: { tone: "warning", title: "A few changes are needed before we approve you", text: "Our team has asked for some changes to your account.", action: { label: "Review changes", href: "/provider/review" } },
+    suspended: { tone: "critical", title: "Your account is suspended", text: "Your courses can't be booked and you can't make changes.", action: { label: "See why", href: "/provider/review" } },
+    approved: { tone: "success", title: "Your account is approved", text: "Learners can find you on ReadTraining. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" }, dismissible: true },
+    reinstated: { tone: "success", title: "Your account is active again", text: "Everything works as before.", dismissible: true },
+    hide: "Hide this message",
+  },
+
+  // the Account review page: where the application stands, what our team asked for, and its history
+  review: {
+    statuses: {
+      pending: { pill: "Being reviewed", tone: "info", title: "Our team is checking your details", text: "Most providers hear back within 2 working days. We'll email you with the decision." },
+      changes_requested: { pill: "Changes needed", tone: "warn", title: "A few changes are needed", text: "Make the changes below, then send your account back to our team." },
+      active: { pill: "Approved", tone: "ok", title: "Your account is approved", text: "Learners can find you on ReadTraining, and your courses can be sent for approval." },
+      suspended: { pill: "Suspended", tone: "late", title: "Your account is suspended", text: "Your courses can't be booked and you can't make changes. Contact us to sort it out." },
+    },
+    updated: "Updated",
+    steps: ["Applied", "Review", "Changes", "Approved"],
+    stepsLabel: "Application progress",
+    asked: { title: "What our team asked for", where: "Where to make the changes" },
+    places: [
+      { label: "Provider name, headline and biography", href: "/provider/settings?tab=info" },
+      { label: "Logo", href: "/provider/settings?tab=logo" },
+      { label: "Cancellation policy and booking terms", href: "/provider/settings?tab=terms" },
+      { label: "Venues", href: "/provider/settings?tab=venues" },
+    ],
+    send: {
+      title: "Send it back for review",
+      reply: "Anything to tell our team? (optional)",
+      hint: "For example, what you changed.",
+      button: "I've made the changes: send for review",
+      busy: "Sending…",
+      after: "Our team is emailed and checks your account again. We'll email you with the decision.",
+      sent: "Sent for review. We'll email you when our team has decided.",
+      onlyManagers: "The account owner or an admin can send your account back for review.",
+    },
+    suspended: { reason: "The reason", contact: { label: "Contact us", href: "/contact-us" } },
+    wait: "While you wait",
+    history: { title: "History", empty: "Nothing yet." },
+    events: {
+      applied: "Applied to list on ReadTraining",
+      reapplied: "Applied again",
+      renamed: "Name changed",
+      resubmitted: "Sent back for review",
+      changes: "Our team asked for changes",
+      approved: "Approved",
+      rejected: "Not approved",
+      suspended: "Suspended",
+      reinstated: "Active again",
+    },
+    team: "ReadTraining team",
+  },
+
+  // the dashboard's "getting started" list until every step is done (Hurak's checklist, our design)
+  checklist: {
+    title: "Get set up to sell on ReadTraining",
+    done: (n, total) => `${n} of ${total} done`,
+    steps: {
+      approved: { title: "Get approved by our team", text: { pending: "We're checking your details and will email you.", changes_requested: "Our team has asked for a few changes.", active: "Your account is approved." }, action: { label: "Review changes", href: "/provider/review" } },
+      profile: { title: "Complete your public profile", text: "A headline, a short biography and your logo.", action: { label: "Edit profile", href: "/provider/settings?tab=info" } },
+      policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
+      course: { title: "Create your first course", text: "Build it now. You can send it for approval once you're approved.", action: { label: "New course", href: "/provider/courses/new" } },
+      date: { title: "Add your first date", text: "When and where it runs. A self-paced course needs no dates.", action: { label: "Add a date", href: "/provider/cohorts?new=1" } },
+    },
   },
 
   // the sidebar: our dashboard, then Hurak's sections in its order. Courses and Cohorts open to show their pages (the group heading
@@ -51,6 +113,7 @@ export const pw = {
 
   pages: {
     dashboard: { title: "Dashboard", lead: "What needs you today, how sales are going and what is coming up." },
+    review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
     courses: { title: "Courses", lead: "Every course you run. New courses and changes are checked by our team before they go live." },
     packages: { title: "Pricing plans", lead: "Saver, Flexi and Premium options you create once and use on any tiered course." },

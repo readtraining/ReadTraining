@@ -8,6 +8,7 @@ import type { Actor, AdminPermission } from '@readtraining/permissions'
 import { logActivity, logDenied } from '../../lib/activity.mjs'
 import { InviteError, inviteExpired, makeInviteLink, ROLE_LABEL, sendAddedEmail, sendInviteEmail } from '../../lib/adminInvite.mjs'
 import type { db as Db } from '../../lib/db.mjs'
+import { notify, personOf } from '../../lib/notify.mjs'
 import { supabase } from '../../lib/supabase.mjs'
 import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 
@@ -76,8 +77,8 @@ async function nameOf(db: typeof Db, userId: string) {
 
 // one admin row with what the screen needs; NOT_FOUND when they aren't on the team
 async function member(db: typeof Db, userId: string) {
-  const [r] = await db.execute<{ email: string; preset: Preset; permissions: string[]; pending: boolean; admin_only: boolean }>(sql`
-    select u.email, a.preset, a.permissions, ${PENDING} pending, a.admin_only
+  const [r] = await db.execute<{ email: string; preset: Preset; permissions: string[]; refund_limit_pence: number; pending: boolean; admin_only: boolean }>(sql`
+    select u.email, a.preset, a.permissions, a.refund_limit_pence, ${PENDING} pending, a.admin_only
     from public.admin_users a join auth.users u on u.id = a.user_id
     where a.user_id = ${userId}::uuid and a.active`)
   if (!r) throw new TRPCError({ code: 'NOT_FOUND', message: 'This person is not on the admin team.' })
@@ -236,13 +237,20 @@ export const teamRouter = createTRPCRouter({
       await checkGiving(ctx, owner, input.userId, input.preset, input.preset === 'custom' ? (input.permissions ?? []) : [], input.refundLimit * 100)
       if (!before.pending && before.preset === 'full' && input.preset !== 'full' && (await fullAdminsLeft(ctx.db, input.userId)) === 0)
         throw new TRPCError({ code: 'CONFLICT', message: 'There must always be at least one Full admin.' })
+      const nextPermissions = input.preset === 'custom' ? (input.permissions ?? []) : []
       await ctx.db.transaction(async (tx) => {
         await tx
           .update(adminUsers)
-          .set({ preset: input.preset, permissions: input.preset === 'custom' ? (input.permissions ?? []) : [], refundLimitPence: input.refundLimit * 100 })
+          .set({ preset: input.preset, permissions: nextPermissions, refundLimitPence: input.refundLimit * 100 })
           .where(eq(adminUsers.userId, input.userId))
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.updated', targetType: 'account', targetId: input.userId, metadata: { from: before.preset, to: input.preset, refundLimit: input.refundLimit }, ip: ctx.ip })
       })
+      // they're told when their access really changed (not for an invite they haven't accepted: that has its own email)
+      const same = (a: string[], b: string[]) => [...a].sort().join() === [...b].sort().join()
+      const changed = before.preset !== input.preset || !same(before.permissions, nextPermissions) || before.refund_limit_pence !== input.refundLimit * 100
+      if (changed && !before.pending) {
+        await notify(ctx.db, 'admin-role-changed', await personOf(ctx.db, input.userId), { changedBy: await nameOf(ctx.db, ctx.user.id), role: ROLE_LABEL[input.preset] }, { targetType: 'account', targetId: input.userId, action: 'email.admin_access_sent' })
+      }
       return { ok: true }
     }),
 
@@ -265,6 +273,10 @@ export const teamRouter = createTRPCRouter({
     if (before.pending && before.admin_only && supabase) {
       const { error } = await supabase.auth.admin.deleteUser(input.userId)
       if (error) console.error('admin invite: the unused login could not be deleted:', error.message)
+    }
+    // someone who had access is told it has gone (a cancelled invite never gave any)
+    if (!before.pending) {
+      await notify(ctx.db, 'admin-access-removed', await personOf(ctx.db, input.userId), { changedBy: await nameOf(ctx.db, ctx.user.id) }, { targetType: 'account', targetId: input.userId, action: 'email.admin_access_sent' })
     }
     return { ok: true }
   }),
