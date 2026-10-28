@@ -10,8 +10,10 @@ import { SHOW_DEMO } from "@/lib/demo";
 import { COURSE_TONE, Loading, ORDER_TONE, Pill, formatWhen } from "./providerParts";
 import { Delta, Sparkline, money } from "./charts";
 import { Seats, dayRange, useSchedule } from "./ProviderCohorts";
+import ProviderChecklist from "./ProviderChecklist";
 
-// Our dashboard (Hurak has none; everything on it opens the Hurak-style page it comes from). First what needs the provider today
+// Our dashboard (Hurak has none; everything on it opens the Hurak-style page it comes from). Under the greeting, the getting-set-up
+// checklist (ProviderChecklist) until every step is done. Then what needs the provider today
 // (refund requests, disputes, unpaid orders, reviews and questions to answer, new leads, cohorts with no tutor, courses sent back),
 // then the last 30 days against the 30 before (revenue, enrolments, orders, rating), then the next cohorts, the latest orders and
 // the courses by status. Courses and cohorts come from the API; orders, refunds, reviews and leads are still DEMO records.
@@ -86,6 +88,8 @@ export default function ProviderDashboard() {
           {access.can("provider.cohorts.edit") && <Link href="/provider/cohorts?new=1" className="button -sm -outline-purple-1 text-purple-1">Create cohort</Link>}
         </div>
       </section>
+
+      <ProviderChecklist />
 
       <div className="rt-dash__grid">
         <section className="rt-acc__card rt-dash__todo" aria-labelledby="rt-dash-todo">
