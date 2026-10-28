@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
 import NavIcon from "./navIcons";
-import { DrawerHead, FoldChevron, MenuButton, useFoldedGroups, useWorkDrawer } from "./workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, useFoldedGroups, useSideMenu, useWorkDrawer } from "./workNav";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -22,10 +22,10 @@ const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0])
 
 // The admin's layout: a work layout, not the public site's. The checkout header's dark band with the logo and an "Admin" tag, the
 // signed-in admin (from the server check: name, access level), "View site" and Sign out; a sidebar with the plan's groups (each page with its icon and a live count where
-// something waits); then the page head (title, intro, the page's actions) and the page. Each sidebar group folds, and "Collapse
-// all" / "Expand all" does them all at once (remembered in this browser; a folded group still shows how many things wait in it,
-// and the page you are on is marked on its heading). Below 992px
-// the sidebar is a menu drawer opened from the top bar. `current` marks the page. The top bar's search (Ctrl+K) reaches
+// something waits); then the page head (title, intro, the page's actions) and the page. Each sidebar group folds (remembered in
+// this browser; a folded group still shows how many things wait in it, and the page you are on is marked on its heading), and the
+// button at the sidebar's top right hides the whole sidebar (components/admin/workNav.jsx). Below 992px the sidebar is a menu
+// drawer opened from the top bar. `current` marks the page. The top bar's search (Ctrl+K) reaches
 // every page and the real learners and providers. A page that still shows made-up records says so beside its title (the nav's
 // `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a breadcrumb back to the list and
 // the record's own card carries the page's h1. `real`: a page of real records inside a section that is partly demo (a course in
@@ -35,8 +35,9 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const router = useRouter();
   const me = useAdminAccess();
   const [leaving, setLeaving] = useState(false);
-  const [folded, fold, setAll] = useFoldedGroups("rt-adm-nav-folded"); // the groups this admin folded
+  const [folded, fold] = useFoldedGroups("rt-adm-nav-folded"); // the groups this admin folded
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
+  const { closed } = useSideMenu(); // the sidebar hidden, from 992px
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
@@ -62,7 +63,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   };
 
   return (
-    <div className="rt-home rt-adm rt-adm--platform">
+    <div className={`rt-home rt-adm rt-adm--platform${closed ? " is-sideclosed" : ""}`}>
       <a href="#rt-adm-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">
@@ -88,14 +89,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
         <nav id="rt-adm-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Admin" ref={sideRef}>
           <DrawerHead drawer={drawer} />
           <div className="rt-adm__sidetools">
-            {(() => {
-              const allShut = nav.every((g) => folded.includes(g.group));
-              return (
-                <button type="button" className="rt-adm__foldall" onClick={() => setAll(allShut ? [] : nav.map((g) => g.group))}>
-                  {allShut ? "Expand all" : "Collapse all"}
-                </button>
-              );
-            })()}
+            <SideMenuButton where="side" controls="rt-adm-side" />
           </div>
           {nav.map((g) => {
             const here = g.items.some((x) => x.key === current);
@@ -136,6 +130,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
         </nav>
 
         <main id="rt-adm-main" className="rt-adm__main" tabIndex={-1}>
+          {closed && <SideMenuButton where="page" controls="rt-adm-side" />}
           {detail ? (
             <div className="rt-adm__crumbrow">
               <nav aria-label="Breadcrumb">

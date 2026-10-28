@@ -1,13 +1,44 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { SIDE_COOKIE } from "@/lib/sideMenu";
 
 // The sidebar parts both work layouts share (the admin, AdminShell; the provider workspace, ProviderShell), so they look and
 // behave the same: below 992px the sidebar is a drawer opened from the top bar's menu button (focus moves into it and is kept
 // there, Esc or the close button shuts it, the page behind doesn't scroll, and it shuts when a page opens), and its groups fold
-// one by one, remembered in this browser.
+// one by one, remembered in this browser. From 992px the button at the sidebar's top right hides it, and the same button at the
+// top left of the page brings it back (kept in a cookie, so the server draws the page the same way and nothing jumps on load).
+
+// The sidebar hidden or shown, from 992px. The layouts read the cookie on the server (`closed`, lib/sideMenu.js).
+const SideMenu = createContext({ closed: false, toggle: () => {} });
+export function SideMenuProvider({ closed: initial = false, children }) {
+  const [closed, setClosed] = useState(initial);
+  const toggle = () => {
+    const next = !closed;
+    document.cookie = `${SIDE_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+    setClosed(next);
+    // the keyboard stays on the button, which has moved: the page's button when hidden, the sidebar's when shown
+    requestAnimationFrame(() => document.querySelector(next ? ".rt-adm__sideopen" : ".rt-adm__sidehide")?.focus());
+  };
+  return <SideMenu.Provider value={{ closed, toggle }}>{children}</SideMenu.Provider>;
+}
+export const useSideMenu = () => useContext(SideMenu);
+
+// The button that hides the sidebar (`where="side"`, at its top right) or brings it back (`where="page"`, the page's top left).
+export function SideMenuButton({ where, controls }) {
+  const { closed, toggle } = useSideMenu();
+  const label = where === "side" ? "Hide menu" : "Show menu";
+  return (
+    <button type="button" className={where === "side" ? "rt-adm__sidehide" : "rt-adm__sideopen"} onClick={toggle} aria-expanded={!closed} aria-controls={controls} title={label}>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d={where === "side" ? "m15.5 10-2 2 2 2" : "m13.5 10 2 2-2 2"} />
+      </svg>
+      <span className="rt-sr">{label}</span>
+    </button>
+  );
+}
 
 // The drawer: `sideRef` is the sidebar <nav>.
 export function useWorkDrawer(sideRef) {
