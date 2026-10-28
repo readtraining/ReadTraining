@@ -171,11 +171,18 @@ export const organisationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN' })
       }
       const [org] = await ctx.db
-        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote })
+        .select({ id: organisations.id, name: organisations.name, slug: organisations.slug, status: organisations.status, statusNote: organisations.statusNote, statusChangedAt: organisations.statusChangedAt })
         .from(organisations)
         .where(eq(organisations.id, chosen.organisationId))
+      // a provider made active in the last 30 days: approved, or back from a suspension (the workspace says so once)
+      let welcome: 'approved' | 'reinstated' | null = null
+      if (input.type === 'provider' && org.status === 'active' && org.statusChangedAt && Date.now() - new Date(org.statusChangedAt).getTime() < 30 * 86_400_000) {
+        const [last] = await ctx.db.execute<{ action: string }>(sql`
+          select action from public.activity_log where organisation_id = ${org.id}::uuid and action in ('admin.provider_approved', 'admin.provider_reinstated') order by at desc limit 1`)
+        welcome = last?.action === 'admin.provider_reinstated' ? 'reinstated' : last ? 'approved' : null
+      }
       // userId: the browser's permission checks need it for "their own" rules (a tutor's own dates)
-      return { ...org, type: input.type, role: chosen.role, userId: ctx.user.id }
+      return { ...org, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and

@@ -103,7 +103,8 @@ export const TEMPLATES: Record<string, Template> = {
     status: 'live',
     placeholders: ['firstName', 'provider', 'message'],
     required: ['message'],
-    link: (s) => `${s}/provider`,
+    // the workspace's Account review page: the team's message, where to make each change, and "send for review"
+    link: (s) => `${s}/provider/review`,
     footer: 'You are receiving this because you manage {provider} on ReadTraining.',
     words: {
       subject: '{provider}: changes needed before approval',

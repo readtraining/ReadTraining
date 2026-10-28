@@ -82,7 +82,8 @@ const PROVIDER_RULES = {
   'provider.leads.view': { roles: ['owner', 'admin', 'support', 'sales', 'assistant'] },
   'provider.leads.manage': { roles: ['owner', 'admin', 'sales'] },
   'provider.settings.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'marketing', 'assistant'] },
-  'provider.profile.edit': { roles: ['owner', 'admin', 'marketing'] }, // name, headline, biography, socials, logo
+  'provider.profile.edit': { roles: ['owner', 'admin', 'marketing'] }, // headline, biography, socials, logo
+  'provider.profile.rename': { roles: ['owner', 'admin'] }, // the provider's name, while its application is still being reviewed
   'provider.terms.edit': { roles: ['owner', 'admin'] },
   'provider.faqs.edit': { roles: ['owner', 'admin', 'course_editor', 'marketing'] },
   'provider.qa.answer': { roles: ['owner', 'admin', 'course_editor', 'support'] },

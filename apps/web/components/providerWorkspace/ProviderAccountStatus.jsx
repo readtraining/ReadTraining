@@ -1,61 +1,61 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
-import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
 import { useWorkspace } from "@/lib/workspaceContext";
 
 const copy = pw.accountStatus;
-const CAN_RESUBMIT = ["owner", "admin", "marketing"]; // provider.profile.edit
+const ICON = { info: "icon-wall-clock", warning: "icon-edit", critical: "icon-flag", success: "icon-check" };
 
-// The provider account's status from the ReadTraining team, at the top of every workspace page: waiting for review, changes
-// asked for (the team's message, and "send for review" with an optional note), or suspended (with the reason). Nothing when
-// the account is active.
+// The provider account's status from the ReadTraining team: one line at the top of every workspace page, with at most one action
+// (GOV.UK's notification banner, Polaris and Atlassian's banners: one message at a time, just before the page heading, the work
+// itself on its own page). Waiting for review and just approved can be hidden; changes needed and suspended stay until they are
+// resolved. The Account review page (/provider/review) holds the details, so the bar isn't shown there. Nothing for an active
+// account, except once after it is approved or reinstated.
 export default function ProviderAccountStatus() {
   const workspace = useWorkspace();
-  const router = useRouter();
-  const resubmit = api.organisations.resubmit.useMutation();
-  const [reply, setReply] = useState("");
-  const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
-  const status = workspace?.status;
-  if (!copy[status]) return null;
-  const c = copy[status];
-
-  const send = async (e) => {
-    e.preventDefault();
-    setError("");
+  const path = usePathname();
+  const key = workspace?.status === "active" ? workspace?.welcome : workspace?.status;
+  const c = key ? copy[key] : null;
+  // a hidden message stays hidden for this status; a new status (or a new decision) shows again
+  const storeKey = c?.dismissible ? `rt-pws-status:${workspace.id}:${key}:${workspace.statusChangedAt || ""}` : null;
+  const [hidden, setHidden] = useState(storeKey ? null : false); // null: not checked yet, so a hidden message never flashes
+  useEffect(() => {
+    if (!storeKey) return setHidden(false);
     try {
-      await resubmit.mutateAsync({ organisationId: workspace.id, reply: reply.trim() || undefined });
-      setSent(true);
-      router.refresh();
-    } catch (err) {
-      const { fields, general } = errorsFrom(err);
-      setError(fields.reply || general);
+      setHidden(window.localStorage.getItem(storeKey) === "1");
+    } catch {
+      setHidden(false);
     }
+  }, [storeKey]);
+  if (!c || hidden !== false || path === "/provider/review") return null;
+
+  const hide = () => {
+    setHidden(true);
+    try {
+      window.localStorage.setItem(storeKey, "1");
+    } catch {}
   };
 
   return (
-    <section className={`rt-pws-status -${status}`} aria-labelledby="rt-pws-status-h">
-      <h2 className="rt-pws-status__title" id="rt-pws-status-h">{c.title}</h2>
-      <p className="rt-pws-status__text">{c.text}</p>
-      {workspace.statusNote && status !== "pending" && <p className="rt-pws-status__note">{workspace.statusNote}</p>}
-      {status === "changes_requested" && (sent ? (
-        <p className="rt-pws-status__text" role="status">{c.sent}</p>
-      ) : CAN_RESUBMIT.includes(workspace.role) ? (
-        <form className="rt-pws-status__form" onSubmit={send} noValidate>
-          <div className="rt-field">
-            <label htmlFor="rt-pws-reply">{c.reply}</label>
-            {error && <p className="rt-q__err" id="rt-pws-reply-e"><span className="rt-sr">Error: </span>{error}</p>}
-            <textarea id="rt-pws-reply" rows={2} maxLength={1000} value={reply} onChange={(e) => setReply(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-pws-reply-e" : undefined} />
-          </div>
-          <button type="submit" className="button -sm -purple-1 text-white" disabled={resubmit.isPending}>{c.send}</button>
-        </form>
-      ) : (
-        <p className="rt-pws-status__text">{c.onlyManagers}</p>
-      ))}
+    <section className={`rt-pws-status -${c.tone}`} aria-labelledby="rt-pws-status-h">
+      <span className="rt-pws-status__icon" aria-hidden="true"><i className={`${ICON[c.tone]} text-14`}></i></span>
+      <div className="rt-pws-status__body">
+        <h2 className="rt-pws-status__title" id="rt-pws-status-h">{c.title}</h2>
+        <p className="rt-pws-status__text">{c.text}</p>
+      </div>
+      {(c.action || c.dismissible) && (
+        <div className="rt-pws-status__side">
+          {c.action && <Link href={c.action.href} className="button -sm -outline-purple-1 text-purple-1 rt-pws-status__action">{c.action.label}</Link>}
+          {c.dismissible && (
+            <button type="button" className="rt-pws-status__close" onClick={hide} aria-label={copy.hide}>
+              <i className="icon-close text-10" aria-hidden="true"></i>
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
