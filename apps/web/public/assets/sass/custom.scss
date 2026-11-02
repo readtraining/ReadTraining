@@ -2437,10 +2437,11 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 
 /* Course features: ONE line of badges. Badges that do not fit on the line are clipped away whole (the row is exactly one badge high),
    so the row never wraps onto a second line. Text uses the same style as the body (15px, 500). */
-.rt-fx { margin: 0; padding: 0; list-style: none;  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; height: 42px; overflow: hidden; }
+.rt-fx { margin: 0; padding: 0; list-style: none;  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; } /* wraps, so every feature shows (up to 8, CourseFeatures.jsx) */
 .rt-fx li { margin: 0; list-style: none;  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: 42px; min-height: 0; padding: 0 16px 0 12px; border: 1px solid var(--cd-card-border); border-radius: 999px; background: var(--cd-surface); font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-dark-1); white-space: nowrap; }
 .rt-fx li > .rt-cd__icon { font-size: 18px; color: var(--cd-brand); }
 .rt-fx li:hover { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
+@media (max-width: 575px) { .rt-fx li { max-width: 100%; height: auto; min-height: 42px; padding-block: 10px; white-space: normal; } } /* a long feature wraps inside its badge on a phone */
 
 .rt-cd .rt-cd__fcard h2 { font-weight: 700; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 14px; }
 
@@ -7042,3 +7043,44 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* table headings and sidebar page names stay on one line */
 .rt-adm-table th { white-space: nowrap; }
 .rt-adm__link > span:not(.rt-adm__count) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Course guide sections on the course page (components/courseDetail/CourseGuide.jsx, data/courseGuides.js). They reuse the
+   page's own parts (.rt-cd__sec, .rt-cd__learn, .rt-cd__checks, .rt-cd__table, .rt-lc cards, .rt-benefit-card, .rt-cd__staff);
+   these rules only fit them to the new content. ------------------------------------------------------------------------------- */
+.rt-cd__lead.rt-cg__note { margin: 12px 0 0; }
+/* a section that ends on a table, or opens with the mock test callout, keeps the page's one 36px gap between sections */
+.rt-cd__sec .rt-cd__table-wrap:last-child > .rt-cd__table, .rt-cd__sec .rt-cd__table-wrap:has(+ .rt-cd__prose:empty) > .rt-cd__table { margin-bottom: 0; }
+.rt-cd__sec > .rt-cd__mock:first-child { margin-top: 0; }
+.rt-cd__learn .rt-cd__checks + .rt-cd__lead { margin-top: 4px; }
+.rt-cd__learn > .rt-cd__link { display: inline-flex; align-items: center; margin-top: 4px; }
+.rt-cg__yes { display: inline-flex; align-items: center; gap: 8px; }
+.rt-cg__no { color: var(--cd-muted); }
+.rt-cg__compare th:nth-child(2), .rt-cg__compare th:nth-child(3) { width: 140px; }
+.rt-cg__exams th:nth-child(2), .rt-cg__exams th:nth-child(3) { width: 96px; }
+.rt-cg__exams th:nth-child(4) { width: 120px; }
+.rt-cg__costs th:nth-child(2) { width: 220px; }
+.rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
+.rt-cg__pkgs { padding: 0; list-style: none; }
+.rt-cg__pkg { cursor: default; }
+.rt-cg__pkg:hover { border-color: var(--cd-border-strong); }
+.rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
+.rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
+.rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
+.rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
+.rt-cg__steps li::before { content: counter(rt-step); position: absolute; top: 0; left: 0; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--cd-brand-subtle); font-size: 14px; font-weight: 700; color: var(--cd-brand); }
+.rt-cg__steps strong { font-weight: 600; color: var(--cd-text); }
+@media (max-width: 767px) {
+  .rt-cg__compare th:nth-child(2), .rt-cg__compare th:nth-child(3) { width: 96px; }
+  .rt-cg__costs th:nth-child(2) { width: 130px; }
+}
+/* the exams table stacks into labelled rows on phones (the .rt-biz__table way) */
+@media (max-width: 575px) {
+  .rt-cg__exams, .rt-cg__exams tbody, .rt-cg__exams tr, .rt-cg__exams td { display: block; width: 100%; }
+  .rt-cg__exams thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .rt-cg__exams tr { padding: 12px 14px; border-top: 1px solid var(--cd-border); }
+  .rt-cg__exams tbody tr:first-child { border-top: 0; }
+  .rt-cg__exams td { padding: 2px 0; border-top: 0; }
+  .rt-cg__exams td:first-child { padding-bottom: 6px; font-weight: 600; color: var(--cd-text); }
+  .rt-cg__exams td[data-label] { display: flex; justify-content: space-between; gap: 12px; }
+  .rt-cg__exams td[data-label]::before { content: attr(data-label); color: var(--cd-muted); }
+}

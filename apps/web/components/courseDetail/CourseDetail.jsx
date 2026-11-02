@@ -19,6 +19,9 @@ import CourseFaqs from "@/components/courseDetail/CourseFaqs";
 import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
+import { CompareTable, TickCard, Packages, BusinessSection, LicenceSection } from "@/components/courseDetail/CourseGuide";
+import { courseGuides } from "@/data/courseGuides";
+import { matchesPick } from "@/lib/catalogueData";
 import { getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
@@ -27,18 +30,26 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 // features > learning options > training providers > overview > what you will learn > course content > requirements > exams >
 // who it's for > trust points > the provider's terms > FAQs > more courses > need help > footer. The booking card is sticky on
 // the right. `course`: a live course (lib/catalogueData.js toCourseDetail); a section it has nothing for is left out, and
-// nothing it doesn't have yet (ratings, reviews) is shown. `path` is the page's own address (canonical and structured data);
+// nothing it doesn't have yet (ratings, reviews) is shown. A course with a guide (data/courseGuides.js, by catalogue topic) also
+// gets the guide's sections (CourseGuide.jsx) in the same parts: a comparison, the course week, what's included, packages,
+// business training, the licence steps, costs and careers, plus a questions column and intro lines for the exams table. `path` is the page's own address (canonical and structured data);
 // `query` is its search params (?mode=&session=).
 export default function CourseDetail({ course, query = {}, path }) {
   const subject = getSubjectLabel(course);
   const prices = course.sessions.map((s) => s.price);
-  const { requirements, exams } = course;
+  const guide = courseGuides.find((g) => matchesPick(course, g.pick)) || null;
+  const { requirements } = course;
+  const exams = course.exams && guide?.exams ? { ...course.exams, ...guide.exams } : course.exams;
+  const columns = exams?.questions ? exams.columns : ["Unit", "Pass mark", "Duration"];
 
   const navSections = [
     { id: "learning-options", label: "Learning options" },
     { id: "overview", label: "Overview" },
     ...(course.modules.length ? [{ id: "content", label: "Course content" }] : []),
     { id: "requirements", label: "Requirements" },
+    ...(guide?.packages ? [{ id: "packages", label: "Packages" }] : []),
+    ...(guide?.business ? [{ id: "business", label: "For business" }] : []),
+    ...(guide?.licence ? [{ id: "licence", label: "Your licence" }] : []),
     ...(course.faqs.length ? [{ id: "faqs", label: "FAQs" }] : []),
   ];
 
@@ -111,6 +122,8 @@ export default function CourseDetail({ course, query = {}, path }) {
                     </ClampBlock>
                   </section>
 
+                  <CompareTable compare={guide?.compare} />
+
                   <MockTestBanner test={course.mockTest} />
 
                   {course.learningOutcomes.length > 0 && (
@@ -126,9 +139,13 @@ export default function CourseDetail({ course, query = {}, path }) {
 
                   {course.modules.length > 0 && (
                   <section className="rt-cd__sec" id="content" aria-labelledby="rt-cd-content-h">
-                    <ModulesAccordion modules={course.modules} title="Course content" titleId="rt-cd-content-h" />
+                    <ModulesAccordion modules={course.modules} title="Course content" titleId="rt-cd-content-h" intro={guide?.unitsIntro} />
                   </section>
                   )}
+
+                  <TickCard id="rt-cg-week-h" title={guide?.week?.title} items={guide?.week?.items.map((w) => `${w.day}: ${w.text}`)} note={guide?.week?.note} />
+
+                  <TickCard id="rt-cg-incl-h" title={guide?.included?.title} items={guide?.included?.items} />
 
                   <section className="rt-cd__sec" id="requirements" aria-labelledby="rt-cd-req-h">
                     <h2 id="rt-cd-req-h">{requirements.title}</h2>
@@ -150,14 +167,18 @@ export default function CourseDetail({ course, query = {}, path }) {
                         {exams.intro.map((p) => <p key={p}>{p}</p>)}
                       </div>
                       <div className="rt-cd__table-wrap">
-                        <table className="rt-cd__table">
+                        <table className={`rt-cd__table${exams.questions ? " rt-cg__exams" : ""}`}>
                           <thead>
-                            <tr><th scope="col">Unit</th><th scope="col">Pass mark</th><th scope="col">Duration</th></tr>
+                            <tr>{columns.map((c) => <th key={c} scope="col">{c}</th>)}</tr>
                           </thead>
                           <tbody>
-                            {exams.rows.map((r) => (
-                              <tr key={r.unit}><td>{r.unit}</td><td>{r.passMark}</td><td>{r.duration}</td></tr>
-                            ))}
+                            {exams.rows.map((r, i) =>
+                              exams.questions ? (
+                                <tr key={r.unit}><td>{r.unit}</td><td data-label={columns[1]}>{exams.questions[i] ?? ""}</td><td data-label={columns[2]}>{r.duration}</td><td data-label={columns[3]}>{r.passMark}</td></tr>
+                              ) : (
+                                <tr key={r.unit}><td>{r.unit}</td><td>{r.passMark}</td><td>{r.duration}</td></tr>
+                              )
+                            )}
                           </tbody>
                         </table>
                       </div>
@@ -178,6 +199,12 @@ export default function CourseDetail({ course, query = {}, path }) {
                       </div>
                     </section>
                   )}
+
+                  <Packages packages={guide?.packages} course={course} />
+
+                  <BusinessSection business={guide?.business} course={course} />
+
+                  <LicenceSection licence={guide?.licence} costs={guide?.costs} careers={guide?.careers} course={course} />
 
                   <TrustBoxes />
 
