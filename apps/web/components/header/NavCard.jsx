@@ -34,6 +34,16 @@ function More({ href, label }) {
   );
 }
 
+// The band across the top of every menu: its title, and its main link (or the study methods and the link, in Explore courses)
+function Band({ title, children }) {
+  return (
+    <div className="rt-nav-band">
+      <h2 className="rt-nav-band__title">{title}</h2>
+      <div className="rt-nav-band__side">{children}</div>
+    </div>
+  );
+}
+
 // Explore courses: every subject on the left; the panel on the right shows the popular courses, or the courses of the subject
 // you click (click it again to go back). It changes only on a click, so moving the pointer across subjects never swaps it. A
 // subject's number of courses and its three most popular are the real catalogue's (API catalogue.menu, asked once a while).
@@ -46,15 +56,12 @@ function CoursesPanel() {
   const top = live ? live.top.map((c) => ({ label: c.title, href: coursePath(c.slug), meta: [...new Set([c.duration, ...c.methods.map(methodName)])].filter(Boolean).join(" · ") })) : [];
   const rows = Math.ceil(C.subjects.length / 3);
   return (
-    <div className="rt-nav-courses">
-      <div className="rt-nav-courses__head">
-        <h2 className="rt-nav-h">{C.title}</h2>
-        <div className="rt-nav-courses__methods">
-          {C.methods.map((m) => <Link key={m.href} href={m.href} className="rt-nav-chip">{m.label}</Link>)}
-          <More {...C.all} />
-        </div>
-      </div>
-      <div className="rt-nav-courses__body">
+    <div>
+      <Band title={C.title}>
+        {C.methods.map((m) => <Link key={m.href} href={m.href} className="rt-nav-chip">{m.label}</Link>)}
+        <More {...C.all} />
+      </Band>
+      <div className="rt-nav-pad rt-nav-courses">
         {/* three columns, read A to Z down each one */}
         <ul className="rt-nav-subjects" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
           {C.subjects.map((s) => {
@@ -105,8 +112,11 @@ function CoursesPanel() {
 function LicencesPanel() {
   const L = N.licences;
   return (
-    <div className="rt-nav-pad">
-      <div className="rt-nav-cols -four">
+    <div>
+      <Band title={L.title}>
+        <More {...L.all} />
+      </Band>
+      <div className="rt-nav-pad rt-nav-cols -four">
         {L.groups.map((g) => (
           <div key={g.title}>
             <h2 className="rt-nav-h">{g.title}</h2>
@@ -114,12 +124,11 @@ function LicencesPanel() {
           </div>
         ))}
       </div>
-      <div className="rt-nav-foot"><More {...L.all} /></div>
     </div>
   );
 }
 
-// Near you: a town or postcode search (or the person's location), the main cities, and the courses that need no venue
+// Location: a town or postcode search (or the person's location), the main cities, and the courses that need no venue
 function NearPanel() {
   const P = N.near;
   const near = useNearYou();
@@ -134,57 +143,60 @@ function NearPanel() {
     townRef.current?.focus();
   };
   return (
-    <div className="rt-nav-pad rt-nav-near">
-      <form className="rt-nav-near__form" onSubmit={submit} noValidate>
-        <h2 className="rt-nav-h">{P.title}</h2>
-        <div className="rt-nav-field">
-          <label htmlFor="rt-nav-town">{P.town.label}</label>
-          <input
-            ref={townRef}
-            id="rt-nav-town"
-            type="text"
-            value={town}
-            autoComplete="postal-code"
-            placeholder={P.town.placeholder}
-            aria-invalid={error || undefined}
-            aria-describedby={error ? "rt-nav-town-error" : undefined}
-            onChange={(e) => {
-              setTown(e.target.value);
-              if (error) setError(false);
-            }}
-          />
-          {error && <span className="rt-nav-field__error" id="rt-nav-town-error">Enter a town or postcode</span>}
-        </div>
-        <div className="rt-nav-field">
-          <label htmlFor="rt-nav-course">{P.course.label}</label>
-          <FieldSelect id="rt-nav-course" label={P.course.label} compact value={course} onChange={setCourse} placeholder={P.course.any} options={[{ value: "", label: P.course.any }, ...P.courses]} />
-        </div>
-        <div className="rt-nav-near__actions">
-          <button type="submit" className="button -md -purple-1 text-white">{P.submit}</button>
-          <button type="button" className="rt-nav-btn" onClick={() => near.locate(course)} disabled={near.locating}>
-            <NavIcon name="locate" size={15} strokeWidth={2} />
-            {near.locating ? P.locating : P.locate}
-          </button>
-        </div>
-        {near.failed && <p className="rt-nav-near__note" role="status">{P.locateFailed}</p>}
-      </form>
-      <div>
-        <h2 className="rt-nav-h">{P.citiesTitle}</h2>
-        <ul className="rt-nav-cities">
-          {P.cities.map((c) => (
-            <li key={c.name}>
-              <Link href={c.href} className="rt-nav-city">
-                <NavIcon name="pin" size={14} strokeWidth={2} />
-                {c.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="rt-nav-near__side">
-        <h2 className="rt-nav-h">{P.online.title}</h2>
-        <ul className="rt-nav-list">{P.online.items.map((i) => <Row key={i.href} {...i} />)}</ul>
+    <div>
+      <Band title={P.title}>
         <More {...P.all} />
+      </Band>
+      <div className="rt-nav-pad rt-nav-near">
+        <form className="rt-nav-near__form" onSubmit={submit} noValidate>
+          <div className="rt-nav-field">
+            <label htmlFor="rt-nav-town">{P.town.label}</label>
+            <input
+              ref={townRef}
+              id="rt-nav-town"
+              type="text"
+              value={town}
+              autoComplete="postal-code"
+              placeholder={P.town.placeholder}
+              aria-invalid={error || undefined}
+              aria-describedby={error ? "rt-nav-town-error" : undefined}
+              onChange={(e) => {
+                setTown(e.target.value);
+                if (error) setError(false);
+              }}
+            />
+            {error && <span className="rt-nav-field__error" id="rt-nav-town-error">Enter a town or postcode</span>}
+          </div>
+          <div className="rt-nav-field">
+            <label htmlFor="rt-nav-course">{P.course.label}</label>
+            <FieldSelect id="rt-nav-course" label={P.course.label} compact value={course} onChange={setCourse} placeholder={P.course.any} options={[{ value: "", label: P.course.any }, ...P.courses]} />
+          </div>
+          <div className="rt-nav-near__actions">
+            <button type="submit" className="button -md -purple-1 text-white">{P.submit}</button>
+            <button type="button" className="rt-nav-btn" onClick={() => near.locate(course)} disabled={near.locating}>
+              <NavIcon name="locate" size={15} strokeWidth={2} />
+              {near.locating ? P.locating : P.locate}
+            </button>
+          </div>
+          {near.failed && <p className="rt-nav-near__note" role="status">{P.locateFailed}</p>}
+        </form>
+        <div>
+          <h2 className="rt-nav-h">{P.citiesTitle}</h2>
+          <ul className="rt-nav-cities">
+            {P.cities.map((c) => (
+              <li key={c.name}>
+                <Link href={c.href} className="rt-nav-city">
+                  <NavIcon name="pin" size={14} strokeWidth={2} />
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="rt-nav-near__side">
+          <h2 className="rt-nav-h">{P.online.title}</h2>
+          <ul className="rt-nav-list">{P.online.items.map((i) => <Row key={i.href} {...i} />)}</ul>
+        </div>
       </div>
     </div>
   );
@@ -193,13 +205,18 @@ function NearPanel() {
 // Help & guides: three groups of links
 function HelpPanel() {
   return (
-    <div className="rt-nav-pad rt-nav-cols -three">
-      {N.help.groups.map((g) => (
-        <div key={g.title}>
-          <h2 className="rt-nav-h">{g.title}</h2>
-          <ul className="rt-nav-list">{g.items.map((i) => <Row key={i.href} {...i} />)}</ul>
-        </div>
-      ))}
+    <div>
+      <Band title={N.help.title}>
+        <More {...N.help.all} />
+      </Band>
+      <div className="rt-nav-pad rt-nav-cols -three">
+        {N.help.groups.map((g) => (
+          <div key={g.title}>
+            <h2 className="rt-nav-h">{g.title}</h2>
+            <ul className="rt-nav-list">{g.items.map((i) => <Row key={i.href} {...i} />)}</ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -221,7 +238,7 @@ function useCardPlace(section, trigger) {
       const r = btn.getBoundingClientRect();
       const centre = r.left + r.width / 2;
       const left = Math.max(GUTTER, Math.min(page - GUTTER - width, centre - width / 2));
-      setPlace({ left: Math.round(left), width, caret: Math.round(centre - left) });
+      setPlace({ left: Math.round(left), width });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -231,8 +248,7 @@ function useCardPlace(section, trigger) {
   return place;
 }
 
-// The open menu: one card under the header that slides and resizes to sit under the menu you point at, with a small pointer
-// aimed at its label.
+// The open menu: one card under the header that slides and resizes to sit under the menu you point at.
 export default function NavCard({ section, trigger, cardProps }) {
   const Panel = PANELS[section.id];
   const place = useCardPlace(section, trigger);
@@ -245,7 +261,6 @@ export default function NavCard({ section, trigger, cardProps }) {
       style={place ? { left: place.left, width: place.width } : { visibility: "hidden" }}
       {...cardProps}
     >
-      {place && <span className="rt-nav-card__caret" aria-hidden="true" style={{ left: place.caret - 7 }}></span>}
       <div key={section.id} className="rt-nav-fade">
         <Panel />
       </div>

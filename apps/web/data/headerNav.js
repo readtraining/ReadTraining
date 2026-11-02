@@ -75,7 +75,7 @@ export const headerNav = {
   sections: [
     { id: "courses", label: "Explore courses", width: 1180 },
     { id: "licences", label: "Licences", width: 1000 },
-    { id: "near", label: "Near you", width: 980 },
+    { id: "near", label: "Location", width: 980 },
     { id: "help", label: "Help & guides", width: 900 },
   ],
 
@@ -94,6 +94,7 @@ export const headerNav = {
 
   // what each licence or card needs, in one line (the guides in data/licences.js have the detail)
   licences: {
+    title: "Licences and cards",
     groups: [
       {
         title: "Security (SIA)",
@@ -154,6 +155,7 @@ export const headerNav = {
   },
 
   help: {
+    title: "Help and guides",
     groups: [
       {
         title: "Prepare",
