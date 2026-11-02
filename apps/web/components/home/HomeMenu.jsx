@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { headerNav as N } from "@/data/headerNav";
-import { NavIcon } from "@/components/header/navIcons";
 
-// The navbar's four menus (Explore courses, Licences, Near you, Help & guides), in the template's menu row, grouped in one
-// box. Each opens its card (components/header/NavCard), which HomeHeader shows under the header; `menu` is HomeHeader's
-// useNavMenu.
+// The navbar's four menus (Explore courses, Licences, Location, Help & guides), in the template's own menu row: white
+// labels with a down arrow, the open one on a light background. Each opens its card (components/header/NavCard), which
+// HomeHeader shows under the header; `menu` is HomeHeader's useNavMenu.
 export default function HomeMenu({ allClasses, headerPosition, menu }) {
   return (
     <div className={`header-menu js-mobile-menu-toggle ${headerPosition ? headerPosition : ""}`}>
@@ -24,7 +23,7 @@ export default function HomeMenu({ allClasses, headerPosition, menu }) {
         </div>
 
         <nav aria-label="Main" className="menu js-navList">
-          <ul className={`${allClasses ? allClasses : ""} rt-navpill`}>
+          <ul className={allClasses || ""}>
             {N.sections.map((s) => {
               const on = menu.open === s.id;
               return (
@@ -43,7 +42,7 @@ export default function HomeMenu({ allClasses, headerPosition, menu }) {
                     }}
                   >
                     {s.label}
-                    <NavIcon name="chevronDown" size={12} strokeWidth={2.6} className="rt-navpill__chev" />
+                    <i className="icon-chevron-right text-13 ml-10" aria-hidden="true"></i>
                   </a>
                 </li>
               );

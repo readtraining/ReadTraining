@@ -50,6 +50,9 @@ Labels, chips and eyebrows use `--rt-text-xs` (12px) at weight 600. Small caps e
 ## 3. Shape, space and depth
 
 - **Cards:** `--rt-radius-card` (16px), 1px `--rt-c-line` border, `--rt-pad-card` (24px, 16px under 576px), white.
+  **The header's menu card** is the one floating panel without a border: `--rt-shadow-dialog` forms its edge, the site's
+  menu corners (`--rt-radius-control`), a `--rt-c-soft` band across the top with the menu's title and main link, and
+  `--rt-pad-panel` (32px) inside.
   Hover, only on cards that are links: `--rt-shadow-hover`.
 - **Inputs:** `--rt-radius-control` (10px). **Small inner buttons and thumbnails:** `--rt-radius-sm` (8px).
   **Chips and badges:** `--rt-radius-pill`.

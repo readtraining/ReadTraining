@@ -587,6 +587,7 @@
   --rt-radius-sm: 8px;                     /* small buttons inside cards, image thumbs */
   --rt-radius-pill: 999px;                 /* chips, badges, pills */
   --rt-pad-card: 24px;                     /* card padding (16px under 576px) */
+  --rt-pad-panel: 32px;                    /* large floating panels: the header menu card */
   --rt-gap: 24px;                          /* gap between cards in a grid */
   --rt-section-y: 88px;                    /* vertical padding of a marketing section (64px tablet, 48px phone) */
 
@@ -600,11 +601,8 @@
   --rt-nav-ink-2: #3F3C52;                 /* secondary text in the menu card */
   --rt-nav-muted: #6B6880;                 /* meta lines (5.3:1 on white) */
   --rt-nav-icon: #A3A0B5;                  /* idle icons in the card (icons only, never text) */
-  --rt-nav-line: #E7E5F2;                  /* card border, inputs */
-  --rt-nav-line-2: #EFEDF6;                /* dividers inside the card */
   --rt-nav-tint: #F1EEFF;                  /* icon tiles, pills */
   --rt-nav-hover: #F7F5FF;                 /* link hover */
-  --rt-nav-foot: #FAF9FD;                  /* the course preview panel */
 }
 /* end DESIGN TOKENS */
 
@@ -5240,29 +5238,23 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* ---------- SITE HEADER MENUS: the four menus (components/home/HomeMenu) and the card each opens (components/header/NavCard)
    ---------- */
 
-/* the four menus in the template's row, grouped in one box; hovered or open: green on see-through white, the arrow turned up
-   (!important: the template makes every link inherit its colour with !important) */
+/* the four menus in the template's own row (its size, spacing and hover); the open one keeps the hover's light background */
 @media (min-width: 1200px) {
-  .header .header-menu .menu__nav.rt-navpill { gap: 2px; padding: 4px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
-  .header .header-menu .menu__nav.rt-navpill > li { padding: 0; }
-  .header .header-menu .menu__nav.rt-navpill > li > a { gap: 6px; height: 36px; padding: 0 13px; border-radius: 9px; font-size: var(--rt-text-sm); font-weight: 500; white-space: nowrap; color: var(--rt-nav-on-1) !important; }
-  .header .header-menu .menu__nav.rt-navpill > li > a:hover, .header .header-menu .menu__nav.rt-navpill > li > a.is-open { color: var(--color-green-1) !important; background-color: rgba(255, 255, 255, 0.15); }
-  .rt-navpill__chev { flex: none; transition: transform 0.15s ease; }
-  .rt-navpill > li > a.is-open .rt-navpill__chev { transform: rotate(180deg); }
+  .header .header-menu .menu__nav > li > a.is-open { background-color: rgba(255, 255, 255, 0.15); }
 }
 
-/* the menu card: floats 10px under the header, under the label you point at (it slides and resizes between menus, with a small
-   pointer aimed at the label); the page is dimmed behind it */
+/* the menu card: floats 10px under the header, under the label you point at (it slides and resizes between menus); no border,
+   the system's menu shadow forms its edge, the corners of the site's own menus (--rt-radius-control); a soft band across the top
+   carries the menu's title and main link; the page is dimmed behind it */
 .rt-nav-dim { position: fixed; z-index: 1; right: 0; bottom: 0; left: 0; padding: 0; border: 0; background: rgba(20, 17, 43, 0.28); cursor: default; animation: rt-nav-fade 180ms ease-out; }
 @keyframes rt-nav-fade { from { opacity: 0; } }
-.rt-nav-card { position: absolute; z-index: 2; top: calc(100% + 10px); border: 1px solid var(--rt-nav-line); border-radius: 16px; background: var(--color-white); color: var(--color-dark-1); box-shadow: 0 2px 4px rgba(20, 17, 43, 0.05), 0 30px 60px rgba(20, 3, 66, 0.18); transition: left 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); animation: rt-nav-in 180ms ease-out; }
+.rt-nav-card { position: absolute; z-index: 2; top: calc(100% + 10px); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); color: var(--color-dark-1); box-shadow: var(--rt-shadow-dialog); transition: left 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); animation: rt-nav-in 180ms ease-out; }
 @keyframes rt-nav-in { from { opacity: 0; transform: translateY(-6px); } }
-.rt-nav-card__caret { position: absolute; top: -7px; width: 14px; height: 14px; border-top: 1px solid var(--rt-nav-line); border-left: 1px solid var(--rt-nav-line); border-top-left-radius: 3px; background: var(--color-white); transform: rotate(45deg); transition: left 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); }
 .rt-nav-fade { animation: rt-nav-fade 200ms ease-out; }
 .rt-nav-card h2, .rt-nav-card p { margin: 0; }
 /* keyboard focus on the white card: purple (the header's own outline is white) */
 .rt-nav-card :is(a, button, input):focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
-.rt-nav-pad { padding: 24px 26px 22px; }
+.rt-nav-pad { padding: var(--rt-pad-panel); }
 /* group headings: small dark capitals, so they mark each group without outweighing the links */
 .rt-nav-h { font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-dark-1); }
 .rt-nav-card .rt-nav-eyebrow { margin-top: 14px; font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-dark-1); }
@@ -5279,7 +5271,11 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-link__meta { font-size: var(--rt-text-xs); line-height: 1.45; color: var(--rt-nav-muted); }
 .rt-nav-more { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; }
 .rt-nav-more:hover { text-decoration: underline; }
-.rt-nav-foot { margin-top: 14px; padding-top: 4px; border-top: 1px solid var(--rt-nav-line-2); }
+.rt-nav-band { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; padding: 10px var(--rt-pad-panel); border-bottom: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control) var(--rt-radius-control) 0 0; background: var(--rt-c-soft); }
+.rt-nav-band__title { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
+.rt-nav-band__side { display: flex; align-items: center; gap: 8px; }
+.rt-nav-band__side .rt-nav-more { margin: 0 0 0 8px; }
+.rt-nav-band .rt-nav-chip { background: var(--rt-c-surface); }
 .rt-nav-cols { display: grid; gap: 26px; }
 .rt-nav-cols.-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .rt-nav-cols.-four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
@@ -5289,13 +5285,9 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-list.-preview .rt-nav-link__text { flex: 1; }
 
 /* Explore courses: the subjects, and the panel that shows the popular courses or the clicked subject's courses */
-.rt-nav-courses { padding: 22px 26px; }
-.rt-nav-courses__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--rt-nav-line-2); }
-.rt-nav-courses__methods { display: flex; align-items: center; gap: 8px; }
-.rt-nav-courses__methods .rt-nav-more { margin: 0 0 0 8px; }
-.rt-nav-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 13px; border: 1px solid var(--rt-nav-line); border-radius: var(--rt-radius-pill); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-nav-ink-2) !important; text-decoration: none; transition: border-color 0.15s ease, color 0.15s ease; }
+.rt-nav-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 13px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-pill); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-nav-ink-2) !important; text-decoration: none; transition: border-color 0.15s ease, color 0.15s ease; }
 .rt-nav-chip:hover { border-color: var(--color-purple-1); color: var(--color-purple-1) !important; }
-.rt-nav-courses__body { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 32px; margin-top: 16px; }
+.rt-nav-courses { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 32px; }
 .rt-nav-subjects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: column; align-content: start; gap: 4px 14px; margin: 0; padding: 0; list-style: none; }
 .rt-nav-subject { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: 10px; background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color 0.15s ease; }
 .rt-nav-subject:hover { background: var(--rt-nav-hover); }
@@ -5306,7 +5298,7 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-subject__chev { flex: none; margin-left: auto; color: var(--rt-nav-icon); }
 .rt-nav-subject.is-on .rt-nav-subject__chev { color: var(--color-purple-1); }
 .rt-nav-card .rt-nav-subject:focus-visible { outline-offset: 0; }
-.rt-nav-preview { min-height: 342px; padding: 18px 18px 16px; border: 1px solid var(--rt-nav-line-2); border-radius: 14px; background: var(--rt-nav-foot); }
+.rt-nav-preview { min-height: 342px; padding: 18px 18px 16px; border-radius: var(--rt-radius-sm); background: var(--rt-c-soft); }
 .rt-nav-preview__head { display: flex; align-items: center; gap: 11px; }
 .rt-nav-preview__title { font-size: var(--rt-text); font-weight: 700; color: var(--color-dark-1); }
 .rt-nav-card .rt-nav-preview__hint { margin-top: 2px; font-size: var(--rt-text-xs); color: var(--rt-nav-muted); }
@@ -5328,7 +5320,7 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-field__error { font-size: var(--rt-text-xs); font-weight: 500; color: var(--color-red-3); }
 .rt-nav-near__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 .rt-nav-near__actions .button { padding: 0 18px; } /* the site button, narrower, so it fits beside "Use my location" */
-.rt-nav-btn { display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 14px; border: 1px solid var(--rt-nav-line); border-radius: 10px; background: var(--color-white); font: inherit; font-size: var(--rt-text-sm); font-weight: 500; white-space: nowrap; color: var(--color-dark-1); cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.rt-nav-btn { display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--color-white); font: inherit; font-size: var(--rt-text-sm); font-weight: 500; white-space: nowrap; color: var(--color-dark-1); cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
 .rt-nav-btn svg { color: var(--color-purple-1); }
 .rt-nav-btn:hover { border-color: var(--color-purple-1); }
 .rt-nav-btn:disabled { cursor: progress; opacity: 0.7; }
@@ -5338,11 +5330,11 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-city svg { flex: none; color: var(--rt-nav-icon); transition: color 0.15s ease; }
 .rt-nav-city:hover { background: var(--rt-nav-hover); color: var(--color-purple-1) !important; }
 .rt-nav-city:hover svg { color: var(--color-purple-1); }
-.rt-nav-near__side { padding-left: 26px; border-left: 1px solid var(--rt-nav-line-2); }
+.rt-nav-near__side { padding-left: 26px; border-left: 1px solid var(--rt-c-line); }
 
 @media (prefers-reduced-motion: reduce) {
   .rt-nav-card, .rt-nav-fade, .rt-nav-dim { animation: none; }
-  .rt-nav-card, .rt-nav-card__caret, .rt-navpill__chev, .rt-nav-tile, .rt-nav-link, .rt-nav-link__name, .rt-nav-subject, .rt-nav-subject__name, .rt-nav-chip, .rt-nav-city, .rt-nav-btn { transition: none; }
+  .rt-nav-card, .rt-nav-tile, .rt-nav-link, .rt-nav-link__name, .rt-nav-subject, .rt-nav-subject__name, .rt-nav-chip, .rt-nav-city, .rt-nav-btn { transition: none; }
 }
 /* ---------- end SITE HEADER ---------- */
 

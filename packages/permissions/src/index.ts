@@ -29,6 +29,8 @@ export type AdminAccess = {
   refundLimitPence: number
   // has a verified authenticator (Supabase MFA): once set up, two-step sign-in is needed for every admin action
   twoStep?: boolean
+  // a test copy waived the Full admins' two-step rule (ADMIN_TWO_STEP_OPTIONAL, apps/api/src/lib/actor.mts); never on live
+  twoStepWaived?: boolean
   // the super admin (the platform's owner): a Full admin only they can change; see apps/api/src/modules/admin/team.mts
   isSuper?: boolean
 }
@@ -173,9 +175,9 @@ export const PROVIDER_ACTIONS = Object.keys(PROVIDER_RULES) as ProviderAction[]
 export const BUSINESS_ACTIONS = Object.keys(BUSINESS_RULES) as BusinessAction[]
 export const ADMIN_ACTIONS = Object.keys(ADMIN_RULES) as AdminAction[]
 
-// Two-step sign-in is required for any admin who has set up an authenticator. TEMPORARY (2026-10-22, the client's review):
-// Full admins no longer have to set one up; put `admin.preset === 'full' ||` back in front to require it again (the brief).
-export const needsTwoStep = (admin: AdminAccess) => admin.twoStep === true
+// Two-step sign-in is required for every Full admin (one who has none yet is sent to set up an authenticator first) and for any
+// admin who has set one up. A test copy may waive the Full rule for a client review (`twoStepWaived`); live never does.
+export const needsTwoStep = (admin: AdminAccess) => (admin.preset === 'full' && !admin.twoStepWaived) || admin.twoStep === true
 
 // The switches an admin actually holds: a preset's list, or the stored list for "custom".
 export function adminPermissions(admin: AdminAccess | null): AdminPermission[] {
