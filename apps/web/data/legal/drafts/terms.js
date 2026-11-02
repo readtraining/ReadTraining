@@ -68,7 +68,7 @@ export const terms = {
         ["ReadTraining is an online marketplace. We list courses from independent providers, take your booking and payment, and support you before and after your course."],
         ["When you book a course, your contract for the training is with the provider named on the course page. The provider is responsible for delivering the course, its content, its trainers and its venue."],
         ["We are responsible for running the website, handling your booking and payment correctly, and the other services we provide to you under these terms."],
-        ["You can contact us by email at [info@readtraining.co.uk](mailto:info@readtraining.co.uk) or by phone on [07405 098062](tel:+447405098062), Monday to Friday, 9:00am to 5:30pm."],
+        ["You can contact us by email at [info@readtraining.co.uk](mailto:info@readtraining.co.uk) or by phone on [020 3488 5052](tel:+442034885052), Monday to Saturday, 9:00am to 6:00pm."],
       ],
     },
     {

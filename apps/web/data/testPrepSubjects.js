@@ -156,7 +156,7 @@ export const subjects = {
         blocks: [
           {
             type: "p",
-            text: "If you're in a managerial role and have a recognised qualification, apply for the CSCS Black/White Card. Check the eligibility criteria in our dedicated guides or call our team at 07405 098062, 8am to 6pm, Monday to Friday excluding bank holidays."
+            text: "If you're in a managerial role and have a recognised qualification, apply for the CSCS Black/White Card. Check the eligibility criteria in our dedicated guides or call our team at 020 3488 5052, 9am to 6pm, Monday to Saturday excluding bank holidays."
           }
         ]
       }
@@ -273,7 +273,7 @@ export const subjects = {
           },
           {
             type: "p",
-            text: "If you want personalised guidance on which test to take for your desired CSCS Card, give us a call at 07405 098062. Our experienced team will assist you and help you save time."
+            text: "If you want personalised guidance on which test to take for your desired CSCS Card, give us a call at 020 3488 5052. Our experienced team will assist you and help you save time."
           }
         ]
       },
@@ -622,7 +622,7 @@ export const subjects = {
           },
           {
             type: "p",
-            text: "You can also reach us at 07405 098062, Monday to Friday from 8 am to 6 pm, excluding bank holidays, for further assistance."
+            text: "You can also reach us at 020 3488 5052, Monday to Saturday from 9am to 6pm, excluding bank holidays, for further assistance."
           }
         ]
       },
@@ -2370,7 +2370,7 @@ export const subjects = {
           },
           {
             type: "p",
-            text: "Having these certificates qualifies you for the CPCS Red Card, which cannot be renewed. To learn about courses that lead to the CPCS Blue Card, please contact us at 07405 098062, 9 AM - 6 PM, Monday to Friday, excluding bank holidays."
+            text: "Having these certificates qualifies you for the CPCS Red Card, which cannot be renewed. To learn about courses that lead to the CPCS Blue Card, please contact us at 020 3488 5052, 9am to 6pm, Monday to Saturday, excluding bank holidays."
           }
         ]
       },

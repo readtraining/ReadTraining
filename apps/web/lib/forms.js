@@ -27,9 +27,5 @@ export const formReady = (key) => typeof FORMS[key]?.send === "function";
 // Sends a ready form. Only ever called from a form <FormGate> showed, so its `send` exists.
 export const sendForm = (key, data) => FORMS[key].send(data);
 
-// The real ways to reach us, for the "coming soon" panels
-export const CONTACT = {
-  phone: topBar.phone,
-  phoneHref: `tel:${topBar.phone.replace(/\s+/g, "").replace(/^0/, "+44")}`,
-  email: topBar.email,
-};
+// The real ways to reach us (data/home topBar), for the "coming soon" panels
+export const CONTACT = { phone: topBar.phone, phoneHref: topBar.phoneHref, whatsappHref: topBar.whatsappHref, email: topBar.email };

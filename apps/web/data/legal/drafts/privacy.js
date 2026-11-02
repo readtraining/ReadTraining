@@ -41,7 +41,7 @@ export const privacy = {
       clauses: [
         ["ReadTraining is a trading name of [Company legal name] Ltd, registered in England and Wales under company number [Company number], with its registered office at [Registered office address] (**we**, **us**). We are the controller of the personal information described in this policy, which means we decide how and why it is used."],
         ["We are registered with the Information Commissioner's Office (ICO) under registration number [ICO registration number]."],
-        ["For any privacy question or request, email [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request) with \"Privacy request\" in the subject, or call [07405 098062](tel:+447405098062), Monday to Friday, 9:00am to 5:30pm."],
+        ["For any privacy question or request, email [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request) with \"Privacy request\" in the subject, or call [020 3488 5052](tel:+442034885052), Monday to Saturday, 9:00am to 6:00pm."],
       ],
     },
     {

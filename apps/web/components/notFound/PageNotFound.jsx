@@ -10,7 +10,7 @@ const places = [
   { title: "Test prep", summary: "Free practice questions and mock exams before your test.", href: "/test-prep", icon: "icon-search" },
   { title: "Licences & Cards",summary: "SIA licences, CSCS cards and personal licences explained.", href: "/licences", icon: "icon-badge" },
   { title: "Help centre", summary: "Answers about booking, payments and certificates.", href: "/help-centre", icon: "icon-document" },
-  { title: "Contact us", summary: "Talk to our UK team, Monday to Friday.", href: "/contact-us", icon: "icon-message" },
+  { title: "Contact us", summary: "Talk to our UK team, Monday to Saturday.", href: "/contact-us", icon: "icon-message" },
 ];
 
 export default function PageNotFound() {
