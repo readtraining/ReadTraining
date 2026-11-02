@@ -1,24 +1,9 @@
-// Places the order. There is no payments or bookings endpoint in apps/api yet, so this only simulates the call (as lib/quote.js does
-// for group quotes) and makes up a booking reference. Replace the body with the real request when the endpoint exists; the card
-// fields then come from the payment provider's own secure fields (card details never touch our servers). The form already handles
-// a rejected promise: an error with `code: "card_declined"` shows the declined message, anything else the general one.
-// Demo: the card number 4000 0000 0000 0002 is declined (the payment providers' usual test card for a decline).
+// Checkout rules. The order is placed through the checkout switch in lib/forms.js (the payment milestone): the card fields then
+// come from the payment provider's own secure fields (card details never touch our servers); an error with
+// `code: "card_declined"` shows the declined message, anything else the general one.
 
 export const ORDER_KEY = "rt-order"; // the last paid order, for the confirmation page (this browser tab only)
 export const PAY_FAILED_KEY = "rt-pay-failed"; // the last payment that did not go through, until one succeeds
-const DECLINE_CARD = "4000000000000002";
-
-export async function placeOrder(order) {
-  await new Promise((resolve) => setTimeout(resolve, 900));
-  if (order.payment.method === "card" && order.payment.cardNumber === DECLINE_CARD) {
-    const err = new Error("card_declined");
-    err.code = "card_declined";
-    throw err;
-  }
-  const reference = `RT-${new Date().getFullYear()}-${String(Math.floor(100000 + Math.random() * 900000))}`;
-  return { reference };
-}
-
 // Card number checks: digits only, 13 to 19 long, and the Luhn checksum every card number carries.
 export function validCardNumber(digits) {
   if (!/^\d{13,19}$/.test(digits)) return false;

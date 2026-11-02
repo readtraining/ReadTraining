@@ -2,8 +2,9 @@
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
-import { submitQuote } from "@/lib/quote";
+import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
+import FormGate from "@/components/forms/FormGate";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -19,7 +20,7 @@ const validate = (v) => {
 };
 
 // Group quote form. The course comes from the page (?course=), so the request always says which course it is about.
-export default function QuoteForm({ courseTitle, backHref }) {
+function QuoteFormFields({ courseTitle, backHref }) {
   const [values, setValues] = useState({ name: "", email: "", phone: "", people: "", message: "" });
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle"); // idle | sending | sent | error
@@ -34,7 +35,7 @@ export default function QuoteForm({ courseTitle, backHref }) {
     if (Object.keys(found).length) return focusFirstError(formRef.current);
     setStatus("sending");
     try {
-      await submitQuote({ ...values, course: courseTitle || null });
+      await sendForm("quote", { ...values, course: courseTitle || null });
       setStatus("sent");
     } catch {
       setStatus("error");
@@ -76,5 +77,14 @@ export default function QuoteForm({ courseTitle, backHref }) {
         {status === "sending" ? "Sending" : "Get my quote"}
       </button>
     </form>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function QuoteForm(props) {
+  return (
+    <FormGate form="quote">
+      <QuoteFormFields {...props} />
+    </FormGate>
   );
 }

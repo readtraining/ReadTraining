@@ -68,7 +68,7 @@ export const terms = {
         ["ReadTraining is an online marketplace. We list courses from independent providers, take your booking and payment, and support you before and after your course."],
         ["When you book a course, your contract for the training is with the provider named on the course page. The provider is responsible for delivering the course, its content, its trainers and its venue."],
         ["We are responsible for running the website, handling your booking and payment correctly, and the other services we provide to you under these terms."],
-        ["You can contact us by email at [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk) or by phone on [0333 344 1293](tel:03333441293), Monday to Friday, 9:00am to 5:30pm."],
+        ["You can contact us by email at [info@readtraining.co.uk](mailto:info@readtraining.co.uk) or by phone on [07405 098062](tel:+447405098062), Monday to Friday, 9:00am to 5:30pm."],
       ],
     },
     {
@@ -122,7 +122,7 @@ export const terms = {
       summary: "If you are a consumer you usually have 14 days to change your mind, with some exceptions for courses that start sooner or online content you start using.",
       clauses: [
         ["If you are a consumer, you have the legal right to cancel a booking within 14 days of the day we confirm it, without giving a reason. This is your cooling-off period."],
-        ["To cancel, tell us clearly within the 14 days, by email to [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk) or by phone. We will refund you within 14 days of receiving your cancellation, using the payment method you used."],
+        ["To cancel, tell us clearly within the 14 days, by email to [info@readtraining.co.uk](mailto:info@readtraining.co.uk) or by phone. We will refund you within 14 days of receiving your cancellation, using the payment method you used."],
         ["**Courses that start within the 14 days.** If you ask for a course to start before the cooling-off period ends and then cancel, you will pay a fair amount for any training already delivered. If the course has been delivered in full, you can no longer cancel under this right."],
         ["**Online courses and other digital content.** For online self-paced courses, your right to cancel ends once you start accessing the content, but only if you agreed to immediate access and confirmed you understand you will lose the right to cancel. We ask for this at checkout."],
         ["Free mock tests cost nothing, so there is nothing to cancel."],
@@ -262,7 +262,7 @@ export const terms = {
       title: "Complaints",
       summary: "Tell us first. We will help, including with problems about a provider.",
       clauses: [
-        ["If something goes wrong, please contact us at [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk) with your booking reference. We will acknowledge your complaint within [2] working days and aim to resolve it within [14] days."],
+        ["If something goes wrong, please contact us at [info@readtraining.co.uk](mailto:info@readtraining.co.uk) with your booking reference. We will acknowledge your complaint within [2] working days and aim to resolve it within [14] days."],
         ["If your complaint is about a course, we will pass it to the provider and help you reach an answer. Many providers also have a complaints procedure with their awarding body."],
         ["If we cannot resolve your complaint, you may be able to refer it to an alternative dispute resolution service. [ADR provider to be confirmed.] You can also go to court."],
       ],

@@ -8,8 +8,8 @@ import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 const course = (words, slug) => ({ slug, href: courseSearch(words) });
 
 export const topBar = {
-  phone: "0333 344 1293",
-  email: "hello@readtraining.co.uk",
+  phone: "07405 098062",
+  email: "info@readtraining.co.uk",
   hours: "Mon to Fri, 9:00am to 5:30pm",
 };
 
@@ -120,7 +120,7 @@ export const courseFinder = {
       allLabel: "Browse all NVQs", allHref: CATALOGUE_HREF,
     },
   ],
-  help: "Need personal guidance? Call 0333 344 1293",
+  help: "Need personal guidance? Call 07405 098062",
 };
 
 // Slider tiles for the finder section (template feature cards): the four goals.
@@ -241,7 +241,7 @@ export const help = {
   title: "Talk to a real person.",
   text: "Not sure which course, date or booking option is right? Our UK team helps with requirements, locations and group bookings.",
   options: [
-    { label: "Call us", value: "0333 344 1293", meta: "Mon to Fri, 9:00am to 5:30pm", href: "tel:03333441293" },
+    { label: "Call us", value: "07405 098062", meta: "Mon to Fri, 9:00am to 5:30pm", href: "tel:+447405098062" },
     { label: "Live chat", value: "Start a conversation", meta: "Usually replies within minutes", href: "/contact-us" },
     { label: "Help centre", value: "Guides, FAQs and requirements", meta: "Guides, FAQs and requirements", href: "/help-centre" },
   ],
@@ -251,10 +251,10 @@ export const help = {
 
 export const footer = {
   about: "Browse and book vocational and compliance training across the UK, with classroom, live online and self-paced options available.",
-  phone: "0333 344 1293",
+  phone: "07405 098062",
   hours: "Mon to Fri, 9:00am to 5:30pm",
   address: "London, United Kingdom",
-  email: "hello@readtraining.co.uk",
+  email: "info@readtraining.co.uk",
   columns: [
     {
       title: "Find a course",

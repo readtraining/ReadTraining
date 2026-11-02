@@ -3,9 +3,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { submitContact } from "@/lib/contact";
+import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import FormGate from "@/components/forms/FormGate";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_MESSAGE = 1500;
@@ -25,9 +26,9 @@ const validate = (v) => {
 // fields, "(optional)" instead of asterisks, checked on submit; on errors an inline message under each field (the first field
 // with one gets the focus) and "Error: " before the page title. The booking reference shows
 // only for booking questions and the company only for business and provider ones. `?topic=` (the route tiles' links) chooses
-// the topic. Short fields sit in pairs from 576px (name | email, phone | topic), so the card stays compact. Sent through lib/contact.js
-// (simulated until the endpoint exists), then a confirmation with a reference.
-export default function ContactForm({ form }) {
+// the topic. Short fields sit in pairs from 576px (name | email, phone | topic), so the card stays compact. Sent through the
+// contact switch in lib/forms.js, then a confirmation with the reference the server gives.
+function ContactFormFields({ form }) {
   const params = useSearchParams();
   const [values, setValues] = useState(EMPTY);
   const [errors, setErrors] = useState({});
@@ -64,7 +65,7 @@ export default function ContactForm({ form }) {
     }
     setStatus("sending");
     try {
-      const res = await submitContact(values);
+      const res = await sendForm("contact", values);
       setReference(res.reference);
       setStatus("sent");
     } catch {
@@ -129,5 +130,14 @@ export default function ContactForm({ form }) {
         </form>
       </div>
     </div>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function ContactForm(props) {
+  return (
+    <FormGate form="contact">
+      <ContactFormFields {...props} />
+    </FormGate>
   );
 }

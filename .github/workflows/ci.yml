@@ -33,5 +33,7 @@ jobs:
         run: pnpm --filter @readtraining/db build
       - name: Type-check every package
         run: pnpm typecheck
+      - name: Public forms never fake a result
+        run: pnpm check:forms
       - name: Build the API and the website
         run: pnpm build

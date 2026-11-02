@@ -123,6 +123,8 @@ which becomes a scrolling chip row below 992px. Long documents use `DocToc` (con
 **Sign-in pages:** `AuthPage`, `AuthField`, `AuthCheck` and `AuthNotice` (`components/auth/authParts.jsx`). **Checkboxes:** every
 checkbox already gets the one style site-wide; switches use `Toggle`.
 
+**Forms that don't send yet:** never fake a success. Wrap the form in `<FormGate form="…">` (switch in `lib/forms.js`); it shows the shared "coming soon" panel (the `EmptyState`, with the real phone and email) until the form really sends.
+
 **Dialogs and side panels:** use `Sheet` (`components/testPrep/runner/Sheet.jsx`), which handles the focus trap, Esc,
 scroll lock and returning focus. Don't build another modal. A panel that can't be a `Sheet` (a menu, a drop-down)
 uses `useFocusTrap` (`lib/useFocusTrap.js`) for the same keyboard behaviour. **Messages after an action:** `Toast`

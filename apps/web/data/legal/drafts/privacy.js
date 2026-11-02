@@ -41,7 +41,7 @@ export const privacy = {
       clauses: [
         ["ReadTraining is a trading name of [Company legal name] Ltd, registered in England and Wales under company number [Company number], with its registered office at [Registered office address] (**we**, **us**). We are the controller of the personal information described in this policy, which means we decide how and why it is used."],
         ["We are registered with the Information Commissioner's Office (ICO) under registration number [ICO registration number]."],
-        ["For any privacy question or request, email [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk?subject=Privacy%20request) with \"Privacy request\" in the subject, or call [0333 344 1293](tel:03333441293), Monday to Friday, 9:00am to 5:30pm."],
+        ["For any privacy question or request, email [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request) with \"Privacy request\" in the subject, or call [07405 098062](tel:+447405098062), Monday to Friday, 9:00am to 5:30pm."],
       ],
     },
     {
@@ -256,7 +256,7 @@ export const privacy = {
             ],
           },
         ],
-        ["To use any of these rights, email [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk?subject=Privacy%20request) with \"Privacy request\" in the subject. It is free. We may ask you to confirm your identity, and we reply within one month."],
+        ["To use any of these rights, email [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request) with \"Privacy request\" in the subject. It is free. We may ask you to confirm your identity, and we reply within one month."],
         ["Some rights have limits; for example, we must keep booking records for tax. If we cannot do what you ask, we will explain why."],
       ],
     },

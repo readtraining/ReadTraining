@@ -7,7 +7,8 @@ import CatalogueDropdown from "@/components/courses/CatalogueDropdown";
 import { licencesHub } from "@/data/licences";
 import { trackEvent } from "@/lib/analytics";
 import { validPostcode } from "@/lib/checkout";
-import { submitLicenceRequest } from "@/lib/licences";
+import FormGate from "@/components/forms/FormGate";
+import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 
 const copy = licencesHub.request;
@@ -86,7 +87,7 @@ export default function LicenceRequest({ licence, children }) {
     if (Object.keys(found).length) return focusFirstError(formRef.current);
     setStatus("sending");
     try {
-      setRef((await submitLicenceRequest(kind, { ...v, licence: licence.slug })).reference);
+      setRef((await sendForm("licence", { ...v, kind, licence: licence.slug })).reference);
       setStatus("sent");
       trackEvent("licence_request_sent", { licence: licence.slug, kind });
     } catch {
@@ -125,6 +126,7 @@ export default function LicenceRequest({ licence, children }) {
             <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={() => setOpen(false)}>{copy.close}</button>
           </div>
         ) : (
+          <FormGate form="licence" inCard>
           <form className="rt-q__form rt-lic__sheetform" onSubmit={submit} noValidate ref={formRef}>
             <p className="rt-acc__note">{kind === "service" ? options.formNote : c.note}</p>
             {kind === "service" ? (
@@ -167,6 +169,7 @@ export default function LicenceRequest({ licence, children }) {
             <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={status === "sending"} aria-busy={status === "sending"}>{status === "sending" ? copy.sending : c.submit}</button>
             <p className="rt-benefit__text rt-contact__privacy">{copy.privacy.text} <Link href={copy.privacy.href}>{copy.privacy.label}</Link>.</p>
           </form>
+          </FormGate>
         )}
       </Sheet>
     </Ctx.Provider>
