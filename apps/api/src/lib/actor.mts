@@ -28,6 +28,11 @@ export async function isSessionLive(db: typeof Db, user: VerifiedUser): Promise<
  * Everything the permission check needs to know about the signed-in person, read fresh from the database on each request
  * (memberships and admin switches change, and a token can be up to an hour old).
  */
+// Full admins must use two-step sign-in. A test copy can waive that for a client review with ADMIN_TWO_STEP_OPTIONAL=1; it is
+// ignored on live (a production deployment: VERCEL_ENV, or NODE_ENV when not on Vercel), so live can never be signed into without it.
+const deployment = process.env.VERCEL_ENV ?? (process.env.NODE_ENV === 'production' ? 'production' : 'development')
+const TWO_STEP_WAIVED = process.env.ADMIN_TWO_STEP_OPTIONAL === '1' && deployment !== 'production'
+
 export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Actor> {
   const [rows, [admin]] = await Promise.all([
     db
@@ -58,6 +63,6 @@ export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Acto
     userId: user.id,
     aal: user.aal,
     memberships: rows as Membership[],
-    admin: admin ?? null,
+    admin: admin ? { ...admin, twoStepWaived: TWO_STEP_WAIVED } : null,
   }
 }
