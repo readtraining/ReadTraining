@@ -87,7 +87,7 @@ One login can hold several identities:
 Roles:
 - Provider roles follow Hurak: owner, admin, tutor, course_editor, support, sales, accounts, marketing, assistant.
 - Business roles: owner, member.
-- Admins have one role with permission switches and presets (Full, Support, Finance). Full requires two-step sign-in.
+- Admins have one role with permission switches and presets (Full, Support, Finance). Full requires two-step sign-in (`needsTwoStep`; a Full admin without an authenticator sets one up at the admin login). A test copy can waive it for a client review with `ADMIN_TWO_STEP_OPTIONAL=1`, which live ignores (`apps/api/src/lib/actor.mts`).
 
 How permissions are checked:
 - One shared `can(actor, action, target)` table, used by both the API and the web server code.
