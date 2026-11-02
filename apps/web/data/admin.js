@@ -710,7 +710,7 @@ export const admin = {
       up: "Move up",
       down: "Move down",
       retired: "Retired",
-      retireNote: "A retired entry leaves the site's filters and menus. Courses that use it keep it, and you can restore it.",
+      retireNote: "A retired entry leaves the site's filters and menus, and you can restore it. An entry with live courses filed under it can't be retired until they are moved or paused.",
       subcategories: "{n} sub-categories",
       topics: "{n} topics",
       none: "None yet.",

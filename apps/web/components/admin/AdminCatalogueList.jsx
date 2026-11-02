@@ -26,6 +26,7 @@ export default function AdminCatalogueList() {
   const list = api.admin.catalogue.list.useQuery();
   const [sheet, setSheet] = useState(null); // { mode: "add" | "rename", kind, parent?, key?, name?, where? }
   const [said, setSaid] = useState("");
+  const [problem, setProblem] = useState(""); // the last refusal, shown until the next change
   const setActive = api.admin.catalogue.setActive.useMutation();
   const move = api.admin.catalogue.move.useMutation();
 
@@ -38,12 +39,16 @@ export default function AdminCatalogueList() {
     await utils.admin.catalogue.list.invalidate();
     await refreshCatalogueList();
   };
+  // a refusal (like retiring an entry with live courses) stays on screen until the next change, as well as in the toast
   const run = async (fn, what) => {
     try {
       await fn();
+      setProblem("");
       await changed(what);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      const message = errorsFrom(err).general;
+      setProblem(message);
+      setSaid(message);
     }
   };
   const actions = (kind, row, siblings, extra = []) => {
@@ -85,6 +90,7 @@ export default function AdminCatalogueList() {
       <p className="rt-acc__note rt-adm-help">{copy.note} {copy.retireNote}</p>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
       <Said text={said} />
+      {problem && <p className="rt-acc__notice -warn" role="alert">{problem}</p>}
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cat-h">
         <h2 className="rt-acc__h2" id="rt-adm-cat-h">{copy.sections.category}</h2>

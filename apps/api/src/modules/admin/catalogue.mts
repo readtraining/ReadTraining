@@ -13,7 +13,8 @@ import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 // Web addresses never change, because courses and links point at them: a new entry's address is made from its name once;
 // categories, sub-categories and topics can be renamed (the name only); a delivery method's or level's address IS its name
 // (the database insists), so those are not renamed. Nothing is deleted: a retired entry leaves the filters and menus and can
-// be restored.
+// be restored. An entry with live courses filed under it can't be retired (its courses would sit under a subject, method or
+// level no menu or filter offers): the refusal says how many and names a few, so they can be moved or paused first.
 
 const KINDS = ['category', 'subcategory', 'topic', 'method', 'level'] as const
 type Kind = (typeof KINDS)[number]
@@ -22,6 +23,8 @@ const TABLE = { category: categories, subcategory: subcategories, topic: topics,
 const PARENT = { subcategory: sql`category_id`, topic: sql`subcategory_id` } as const
 const WORD = { category: 'category', subcategory: 'sub-category', topic: 'topic', method: 'delivery method', level: 'level' }
 const byKey = (kind: Kind) => (kind === 'method' || kind === 'level' ? sql`slug` : sql`id`)
+// the course column that files a course under an entry, compared with the entry's key as text
+const FILED = { category: sql`category_id::text`, subcategory: sql`subcategory_id::text`, topic: sql`topic_id::text`, method: sql`method`, level: sql`level` } as const
 
 // the address made from a name, exactly as the database's rule for methods and levels makes it
 export const addressOf = (name: string) =>
@@ -108,6 +111,19 @@ export const catalogueAdminRouter = createTRPCRouter({
       const [row] = await ctx.db.execute<{ name: string; active: boolean }>(sql`select name, active from ${TABLE[input.kind]} where ${byKey(input.kind)}::text = ${input.key}`)
       if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
       if (row.active === input.active) return { ok: true }
+      if (!input.active) {
+        const live = await ctx.db.execute<{ title: string }>(sql`
+          select title from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key} order by title limit 4`)
+        if (live.length) {
+          const [n] = await ctx.db.execute<{ n: number }>(sql`select count(*)::int n from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key}`)
+          const names = live.slice(0, 3).map((c) => c.title).join(', ') + (n.n > 3 ? ` and ${n.n - 3} more` : '')
+          const one = n.n === 1
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `${row.name} can't be retired while ${n.n} live ${one ? 'course is' : 'courses are'} filed under it (${names}). Move ${one ? 'it' : 'them'} to another ${WORD[input.kind]}, or pause ${one ? 'it' : 'them'}, first.`,
+          })
+        }
+      }
       await ctx.db.transaction(async (tx) => {
         await tx.execute(sql`update ${TABLE[input.kind]} set active = ${input.active} where ${byKey(input.kind)}::text = ${input.key}`)
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: input.active ? 'admin.catalogue_restored' : 'admin.catalogue_retired', targetType: input.kind, targetId: input.key, metadata: { kind: input.kind, name: row.name }, ip: ctx.ip })
