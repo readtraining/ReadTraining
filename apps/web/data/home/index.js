@@ -162,9 +162,9 @@ export const stories = {
 // (API content.site). Same shapes as the API checks; lib/siteContent.js merges them.
 export const contentDefaults = {
   // only numbers we can prove (UK law bans unverifiable review claims). The rating and number of reviews count every one of our
-  // reviews: Read Training's Google listing, checked 2 November 2026 (4.9 from 1,160). `source` and `sourceUrl` are shown
-  // beside the rating as a small link; the client can clear them in admin › Site content › Trust numbers. Update the numbers
-  // there as they change. Customers and courses have no proven figure yet, so the site leaves them out.
+  // reviews: Read Training's Google listing, checked 2 November 2026 (4.9 from 1,160). `source` is shown beside the rating as
+  // text and `sourceUrl` is kept as a record, not shown; the client can clear them in admin › Site content › Trust numbers.
+  // Update the numbers there as they change. Customers and courses have no proven figure yet, so the site leaves them out.
   trust: { rating: 4.9, reviews: 1160, customers: null, courses: null, source: "Google", sourceUrl: "https://www.google.com/maps?cid=8524470252183802666" },
   // the search-engine words (admin > Platform settings): the homepage's, and the description pages without their own use
   seo: {

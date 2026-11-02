@@ -4,10 +4,10 @@ import React, { useMemo, useState } from "react";
 import { initials } from "@/components/marketing/parts";
 import { EmptyState } from "@/components/states/States";
 import ReviewStars from "./ReviewStars";
-import SourceLink from "./SourceLink";
+import SourceLabel from "./SourceLabel";
 
 // One review card (.rt-review, in the reviews grid .rt-reviews__grid): the reviewer first (initials, name, the course the
-// review names), their own stars and, when set, where it was first posted (a small link), then the full text with its line
+// review names), their own stars and, when set, where it was first posted (as text), then the full text with its line
 // breaks.
 export function ReviewCard({ review: r }) {
   return (
@@ -21,7 +21,7 @@ export function ReviewCard({ review: r }) {
       </figcaption>
       <div className="rt-review__top">
         <ReviewStars rating={r.rating} />
-        <SourceLink label={r.origin} href={r.originUrl} />
+        <SourceLabel label={r.origin} />
       </div>
       <blockquote className="rt-review__quote">{r.text}</blockquote>
     </figure>
@@ -61,7 +61,7 @@ export default function ReviewsList({ list }) {
           {list.lead && (
             <p className="fb-lede">
               {list.lead}
-              {list.source?.label && <> Rating from <SourceLink label={list.source.label} href={list.source.href} className="rt-trust-source" />.</>}
+              {list.source?.label && <> Rating from <SourceLabel label={list.source.label} className="rt-trust-source" />.</>}
             </p>
           )}
         </div>

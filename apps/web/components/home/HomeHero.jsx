@@ -14,7 +14,7 @@ import move_img_1 from "@/public/assets/img/masthead/1.png";
 import move_img_2 from "@/public/assets/img/masthead/2.png";
 import move_img_3 from "@/public/assets/img/masthead/3.png";
 import move_icon_3 from "@/public/assets/img/masthead/2.svg";
-import SourceLink from "@/components/customerReviews/SourceLink";
+import SourceLabel from "@/components/customerReviews/SourceLabel";
 
 
 const hero_content = {
@@ -162,7 +162,7 @@ const HomeHero = () => {
                       </div>
                       <span className="text-14 fw-500 text-white lh-1">{trust.ratingOutOf}</span>
                     </div>
-                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>Based on {trust.reviews} reviews{trust.source && <> on <SourceLink label={trust.source} href={trust.sourceUrl} className="rt-trust-source" /></>}{trust.customers ? ` · ${trust.customers} customers` : ""}</div>
+                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>Based on {trust.reviews} reviews{trust.source && <> on <SourceLabel label={trust.source} className="rt-trust-source" /></>}{trust.customers ? ` · ${trust.customers} customers` : ""}</div>
                   </div>
                 </div>
                 )}

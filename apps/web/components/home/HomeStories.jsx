@@ -3,12 +3,12 @@ import { stories } from "@/data/home";
 import { homeReviews, reviewCourse, REVIEWS_HREF } from "@/lib/siteReviews";
 import HomeTextLink from "./HomeTextLink";
 import ReviewStars from "@/components/customerReviews/ReviewStars";
-import SourceLink from "@/components/customerReviews/SourceLink";
+import SourceLabel from "@/components/customerReviews/SourceLabel";
 import { initials } from "@/components/marketing/parts";
 
 // Customer stories: centred header and the reviews ticked for the home page in a 2x2 grid (admin › Customer reviews;
 // `reviews` from loadReviews: the published ones). Each card shows the reviewer's own stars and, when set, where the review was
-// first posted as a small link. With none ticked the section is left out, its "Read more reviews" link with it. Call after
+// first posted (text, not a link). With none ticked the section is left out, its "Read more reviews" link with it. Call after
 // loadTaxonomy() (a review's course name).
 export default function HomeStories({ reviews: all = [] }) {
   const reviews = homeReviews(all);
@@ -33,7 +33,7 @@ export default function HomeStories({ reviews: all = [] }) {
               <div className="rt-review">
                 <div className="rt-review__top">
                   <ReviewStars rating={r.rating} />
-                  <SourceLink label={r.origin} href={r.originUrl} />
+                  <SourceLabel label={r.origin} />
                 </div>
                 <p className="rt-review__quote">{r.text}</p>
                 <div className="rt-review__who">

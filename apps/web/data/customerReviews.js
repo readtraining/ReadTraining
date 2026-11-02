@@ -47,7 +47,7 @@ export const customerReviews = (reviews = []) => {
       text: "How the reviews on this page are chosen and shown.",
       points: [
         { title: "In their own words", text: "We show each review as it was written, with the stars the reviewer gave." },
-        { title: "Where it was posted", text: "Our reviews were first posted on review sites such as Google and Trustpilot. Some link to the review there." },
+        { title: "Where it was posted", text: "Our reviews were first posted on review sites such as Google and Trustpilot. Each one names the site it came from." },
         { title: "A selection", text: "This page shows a selection of our reviews. Our rating counts every review on the site it comes from." },
       ],
     },

@@ -775,12 +775,8 @@
 .rt-review { display: flex; flex-direction: column; height: 100%; padding: 22px; background: #fff; border: 1px solid var(--color-light-5); border-radius: 16px; }
 .rt-review__top { display: flex; justify-content: space-between; align-items: center; }
 .rt-review__source { font-size: 12px; font-weight: 600; color: var(--color-light-1); }
-/* the source as a link (the template makes every link inherit its colour, hence !important) */
-a.rt-review__source { color: var(--color-light-1) !important; text-decoration: underline; text-underline-offset: 2px; }
-a.rt-review__source:hover { color: var(--color-purple-1) !important; }
-/* the overall rating's source beside it: on the dark hero, and under the reviews heading */
-.rt-trust-source { color: inherit !important; text-decoration: underline; text-underline-offset: 2px; }
-.rt-trust-source:hover { opacity: 0.85; }
+/* the overall rating's source beside it (text): on the dark hero, and under the reviews heading */
+.rt-trust-source { color: inherit; font-weight: 600; }
 .rt-review__quote { margin-top: 12px; font-size: 14px; line-height: 1.6; color: var(--color-dark-1); flex: 1; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .rt-review__who { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-light-5); }
 .rt-review__who img { border-radius: 50%; }
