@@ -282,15 +282,16 @@ export async function loadProviderCourses(db: typeof Db, organisationId: string)
     .sort((a, b) => a.title.localeCompare(b.title))
 }
 
-// Every active provider for the directory, A to Z: where it is, its headline and logo, how many courses it runs and in which
-// categories.
+// Every active provider with at least one live course (public and listed) for the directory, A to Z: where it is, its headline
+// and logo, how many courses it runs and in which categories. A provider with nothing to book (new, or only drafts) stays out,
+// and so out of the sitemap, which lists the same providers.
 export async function loadProviderDirectory(db: typeof Db) {
   const rows = await db.execute<{ id: string; name: string; slug: string; city: string | null; headline: string | null; logo_path: string | null; courses: number; categories: string[] | null }>(sql`
     select o.id, o.name, o.slug, o.city, o.headline, o.logo_path,
            count(c.id)::int courses,
            array_remove(array_agg(distinct (select slug from public.categories where id = c.category_id)), null) categories
     from public.organisations o
-    left join public.courses c on c.organisation_id = o.id and c.kind = 'provider' and c.status = 'live' and c.is_public and c.listed
+    join public.courses c on c.organisation_id = o.id and c.kind = 'provider' and c.status = 'live' and c.is_public and c.listed
     where o.type = 'provider' and o.status = 'active'
     group by o.id order by o.name`)
   return rows.map((r) => ({ name: r.name, slug: r.slug, city: r.city ?? '', headline: r.headline ?? '', logoUrl: mediaUrl(r.logo_path), courseCount: r.courses, categories: r.categories ?? [] }))
