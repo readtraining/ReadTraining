@@ -6,9 +6,13 @@ import Socials from "@/components/common/Socials";
 import FooterNewsletter from "./FooterNewsletter";
 import { socialMediaLinks } from "@/data/socialLinks";
 import { footer, topBar } from "@/data/home";
+import { hasReviews } from "@/lib/siteContent";
 
 // Footer built on the template's FooterEight (type-5) layout: brand + contact left, link columns right,
 // accreditation strip, then the legal row.
+// Customer reviews is listed only once a review is published (the page is hidden until then).
+const REVIEWS_HREF = "/customer-reviews";
+
 export default function HomeFooter() {
   return (
     <footer className="footer -type-5 bg-dark-1 rt-footer">
@@ -38,7 +42,7 @@ export default function HomeFooter() {
             <div key={col.title} className="col-xl-2 col-lg-2 col-md-3 col-6">
               <div className="rt-footer__colTitle">{col.title}</div>
               <div className="rt-footer__links">
-                {col.links.slice(0, 8).map((l) => (
+                {col.links.filter((l) => l.href !== REVIEWS_HREF || hasReviews()).slice(0, 8).map((l) => (
                   <Link key={l.label + l.href} href={l.href}>{l.label}</Link>
                 ))}
               </div>

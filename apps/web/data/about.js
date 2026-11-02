@@ -88,6 +88,6 @@ export const aboutFacts = () => {
     { icon: "icon-wall-clock", value: `Est. ${founded}`, label: "Training people across the UK" },
     { icon: "icon-person-3", value: t.customers, label: "Customers" },
     { icon: "icon-book", value: t.courses, label: "Courses to compare" },
-    { icon: "icon-star", value: t.ratingSlash, label: `From ${t.reviews} verified reviews` },
+    { icon: "icon-star", value: t.ratingSlash, label: `From ${t.reviews} reviews` },
   ];
 };

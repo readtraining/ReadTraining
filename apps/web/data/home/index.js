@@ -149,31 +149,23 @@ export const subjects = [
   { id: 8, title: "Hospitality", slug: "/courses/hospitality", href: "/courses?subject=hospitality", items: ["Personal Licence (APLH)", "Barista Skills", "Allergen Awareness", "Customer Service"] },
 ];
 
-const testimonials = [
-  { id: "1", author: "Oliver Desuza", position: "SIA Door Supervisor Course · Kingston upon Thames", text: "I’ve wanted to work in security since my old job at a theme park. The course was informative, practical and really engaging. I especially enjoyed putting what we learned into practice, and I’m now ready to go straight into the industry.", source: "", home: false },
-  { id: "2", author: "Denni Fibbs", position: "Door Supervisor Refresher Training · Canary Wharf", text: "I just completed my Door Supervisor Refresher Training today, and I couldn’t be happier with the experience. The instructor was absolutely excellent, incredibly knowledgeable, with a deep, practical understanding of the security industry. Highly recommended.", source: "", home: false },
-  { id: "3", author: "Toby McDonald", position: "SIA Security Guard Course · Kingston upon Thames", text: "I wanted a career that gave me the flexibility to earn while building my own company. The training was very hands-on, in-depth and well structured, and the instructor made the whole experience enjoyable.", source: "Google", home: true },
-  { id: "4", author: "Kirsty Lynch", position: "CSCS Green Card Course · Canary Wharf", text: "I’ve just completed my CSCS course and found it really interesting. The presentation was engaging, there was plenty of useful information, and I learned a lot about health and safety on construction sites.", source: "Trustpilot", home: true },
-  { id: "5", author: "Arton Asllani", position: "Fire Warden & Fire Marshal Course · Birmingham", text: "Great website to use, with reasonable prices for courses that are helpful in many ways and easy to follow. They have a great support team that actually helps when needed.", source: "Google", home: true },
-  { id: "6", author: "Laxley Lamley", position: "NEBOSH National General Certificate · Rainham", text: "Very good instructor who explained everything clearly and precisely, making the course easy to understand. The sessions were informative and well organised. I would definitely recommend.", source: "Trustpilot", home: true },
-  { id: "7", author: "Fabricio Santos", position: "CITB SEATS Course · Nottingham", text: "Excellent training sessions, well elaborated on verbally and physically. I would recommend them to everyone who is looking for security courses.", source: "", home: false },
-];
-
-// Customer stories block: the video story, the trust numbers and the testimonials ticked for the homepage (all editable in the
-// admin: lib/siteContent.js; the video file and the avatars stay here).
+// Customer stories block: the reviews ticked for the home page (admin › Customer reviews, lib/siteReviews.js). There are no
+// built-in reviews and no video story (the old ones were copied from another site): with none published the block is left
+// out. Each reviewer shows their initials, never a stock photo.
 export const stories = {
   eyebrow: "Customer stories",
-  title: "Real experiences from people who booked through ReadTraining",
-  text: "Hear from learners and teams who booked training through ReadTraining.",
-  video: { duration: "0:10", src: "/assets/video/story-1.mp4", poster: "/assets/video/story-1-poster.jpg" },
-  avatars: [2, 3, 4, 5].map((n) => `/assets/img/avatars/small/${n}.png`),
+  title: "Real experiences from people who trained with us",
+  text: "A selection of our reviews, in our learners' own words.",
 };
 
 // The editable content's built-in values (Part B, B2): what the site shows for a key until an admin saves one in the admin
 // (API content.site). Same shapes as the API checks; lib/siteContent.js merges them.
 export const contentDefaults = {
-  // none until an admin enters numbers they can prove (UK law bans unverifiable review claims): the site leaves them out
-  trust: { rating: null, reviews: null, customers: null, courses: null },
+  // only numbers we can prove (UK law bans unverifiable review claims). The rating and number of reviews count every one of our
+  // reviews: Read Training's Google listing, checked 2 November 2026 (4.9 from 1,160). `source` and `sourceUrl` are shown
+  // beside the rating as a small link; the client can clear them in admin › Site content › Trust numbers. Update the numbers
+  // there as they change. Customers and courses have no proven figure yet, so the site leaves them out.
+  trust: { rating: 4.9, reviews: 1160, customers: null, courses: null, source: "Google", sourceUrl: "https://www.google.com/maps?cid=8524470252183802666" },
   // the search-engine words (admin > Platform settings): the homepage's, and the description pages without their own use
   seo: {
     homeTitle: "ReadTraining | Accredited training courses across the UK",
@@ -189,8 +181,6 @@ export const contentDefaults = {
       { name: "Construction", picks: ["construction"] },
     ],
   },
-  testimonials,
-  video: { author: testimonials[0].author, position: testimonials[0].position, quote: "The course was informative, practical and really engaging." },
 };
 
 export const teamBooking = {
@@ -243,7 +233,8 @@ export const providers = {
     { value: "103", label: "towns and cities covered" },
     { value: "12", label: "subject categories" },
   ],
-  quote: { text: "We filled a Door Supervisor course in four days without spending a penny on ads.", author: "Sentinel Training", role: "SIA provider, London" },
+  // a real provider's words go here once one gives them ({ text, author, role }); none is made up
+  quote: null,
 };
 
 export const help = {

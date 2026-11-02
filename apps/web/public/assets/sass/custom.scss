@@ -775,6 +775,12 @@
 .rt-review { display: flex; flex-direction: column; height: 100%; padding: 22px; background: #fff; border: 1px solid var(--color-light-5); border-radius: 16px; }
 .rt-review__top { display: flex; justify-content: space-between; align-items: center; }
 .rt-review__source { font-size: 12px; font-weight: 600; color: var(--color-light-1); }
+/* the source as a link (the template makes every link inherit its colour, hence !important) */
+a.rt-review__source { color: var(--color-light-1) !important; text-decoration: underline; text-underline-offset: 2px; }
+a.rt-review__source:hover { color: var(--color-purple-1) !important; }
+/* the overall rating's source beside it: on the dark hero, and under the reviews heading */
+.rt-trust-source { color: inherit !important; text-decoration: underline; text-underline-offset: 2px; }
+.rt-trust-source:hover { opacity: 0.85; }
 .rt-review__quote { margin-top: 12px; font-size: 14px; line-height: 1.6; color: var(--color-dark-1); flex: 1; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .rt-review__who { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-light-5); }
 .rt-review__who img { border-radius: 50%; }
@@ -782,30 +788,8 @@
 .rt-review__course { font-size: 12px; color: var(--color-light-1); }
 /* review card parts used where reviews have a title, initials instead of a photo, "More" and a Helpful button (course page) */
 .rt-review__quote.is-open { display: block; -webkit-line-clamp: unset; overflow: visible; }
-.rt-review__avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--color-purple-3); color: var(--color-purple-1); font-size: 13px; font-weight: 700; }
+.rt-review__avatar { text-transform: uppercase; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--color-purple-3); color: var(--color-purple-1); font-size: 13px; font-weight: 700; }
 
-/* video story: portrait player in a white card, details below */
-.rt-vstory { height: 100%; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--color-light-5); border-radius: 20px; overflow: hidden; }
-.rt-vstory__frame { position: relative; height: 400px; background: var(--color-dark-1); overflow: hidden; }
-.rt-vstory__bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(24px) brightness(0.55); transform: scale(1.1); }
-.rt-vstory__frame video { position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); height: 100%; aspect-ratio: 9 / 16; object-fit: cover; display: block; }
-.rt-vstory__frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 3, 66, 0) 55%, rgba(20, 3, 66, 0.35) 100%); pointer-events: none; transition: opacity 0.2s; }
-.rt-vstory__frame.is-playing::after { opacity: 0; }
-.rt-story__chips { position: absolute; top: 14px; left: 14px; display: flex; gap: 8px; z-index: 2; }
-.rt-chip__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-green-1); }
-.rt-vstory__play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 50%; background: #fff; color: var(--color-dark-1); display: inline-flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 8px 24px rgba(20, 3, 66, 0.3); transition: transform 0.2s; }
-.rt-vstory__play::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); animation: rt-pulse 1.8s ease-out infinite; }
-@keyframes rt-pulse { 0% { transform: scale(0.9); opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
-.rt-vstory__play:hover { transform: translate(-50%, -50%) scale(1.08); }
-.rt-vstory__play i { margin-left: 3px; }
-.rt-vstory__body { padding: 20px 22px 22px; display: flex; flex-direction: column; flex: 1; }
-.rt-vstory__quote { font-size: 16px; font-weight: 500; line-height: 1.5; color: var(--color-dark-1); }
-.rt-vstory__name { margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--color-dark-1); }
-.rt-vstory__course { font-size: 12px; color: var(--color-light-1); }
-.rt-vstory__stats { display: flex; gap: 22px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--color-light-5); }
-.rt-vstory__stats > div { padding-top: 14px; }
-.rt-vstory__num { font-size: 18px; font-weight: 700; color: var(--color-dark-1); line-height: 1.1; letter-spacing: -0.02em; }
-.rt-vstory__label { margin-top: 2px; font-size: 12px; color: var(--color-light-1); }
 
 .rt-stories-grid { height: 100%; }
 
@@ -3372,13 +3356,11 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 
 /* ===================================================================================================
    CUSTOMER REVIEWS (/customer-reviews, components/customerReviews), in the marketing-page language of /about-us: MarketingHero,
-   the key facts strip, .fb-split / .fb-points, the home page's video story and review cards (.rt-vstory, .rt-review), the
+   the key facts strip, .fb-points, the home page's review cards (.rt-review), the
    result page's filter pills (.rt-tr__filter), the FAQ and CtaBand. Layout only.
    =================================================================================================== */
 .rt-reviews-page :focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
 .rt-reviews-page main:focus { outline: none; }
-/* the featured story: its rating figures are left out (the facts strip shows them), so no empty row is drawn */
-.rt-reviews__featured .rt-vstory__stats:empty { display: none; }
 /* the reviews: filter pills centred over a grid of cards (three from 992px, two from 576px), each row as tall as its longest
    review: the reviewer at the top over a thin line, then the whole review (the home cards cut it at four lines), so a short
    review leaves its spare room at the foot of the card */
@@ -3388,8 +3370,14 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 @media (min-width: 992px) { .rt-reviews__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .rt-reviews__grid li { min-width: 0; margin: 0; list-style: none; }
 .rt-reviews__grid .rt-review { margin: 0; }
-.rt-reviews__grid .rt-review__who { align-items: flex-start; margin: 0 0 14px; padding: 0 0 14px; border-top: 0; border-bottom: 1px solid var(--color-light-5); }
+.rt-reviews__grid .rt-review__who { align-items: center; margin: 0 0 14px; padding: 0 0 14px; border-top: 0; border-bottom: 1px solid var(--color-light-5); }
 .rt-reviews__grid .rt-review__quote { flex: none; display: block; -webkit-line-clamp: unset; overflow: visible; margin: 0; }
+/* the reviewer's own star rating sits under their name; paragraphs keep the reviewer's line breaks */
+.rt-reviews__grid .rt-review__top { margin: 0 0 10px; }
+/* the same height with or without a course line under the name, so the dividers line up across a row */
+.rt-reviews__grid .rt-review__who { box-sizing: border-box; min-height: 56px; }
+.rt-reviews__grid .rt-review__quote { white-space: pre-line; }
+.rt-reviews__empty { max-width: 560px; margin: 32px auto 0; }
 /* the closing call to action, spaced from the FAQ's tinted band */
 .rt-reviews__cta { padding-top: 64px; }
 
@@ -7075,4 +7063,14 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-cg__exams td:first-child { padding-bottom: 6px; font-weight: 600; color: var(--cd-text); }
   .rt-cg__exams td[data-label] { display: flex; justify-content: space-between; gap: 12px; }
   .rt-cg__exams td[data-label]::before { content: attr(data-label); color: var(--cd-muted); }
+}
+
+/* ---- Customer reviews (admin › Customer reviews) ------------------------------------------------------------------------ */
+/* the reviewer cell: name, then stars and source, then the first two lines of the review (it never widens the table) */
+.rt-biz__table td small.rt-adm-rv__line { display: flex; gap: 8px; align-items: center; margin: 4px 0 0; }
+.rt-biz__table td small.rt-adm-rv__text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 56ch; margin: 4px 0 0; }
+/* on phones the table's cells become rows: the reviewer cell stacks its name, stars and excerpt */
+@media (max-width: 767px) {
+  .rt-biz__table td.rt-adm-rv__who { flex-direction: column; align-items: flex-start; text-align: left; }
+  .rt-biz__table td.rt-adm-rv__who small.rt-adm-rv__line, .rt-biz__table td.rt-adm-rv__who small.rt-adm-rv__text { margin: 4px 0 0; }
 }

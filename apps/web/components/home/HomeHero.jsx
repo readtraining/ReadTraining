@@ -13,8 +13,8 @@ import move_img_1 from "@/public/assets/img/masthead/1.png";
 
 import move_img_2 from "@/public/assets/img/masthead/2.png";
 import move_img_3 from "@/public/assets/img/masthead/3.png";
-import move_icon_2 from "@/public/assets/img/masthead/4.png";
 import move_icon_3 from "@/public/assets/img/masthead/2.svg";
+import SourceLink from "@/components/customerReviews/SourceLink";
 
 
 const hero_content = {
@@ -162,7 +162,7 @@ const HomeHero = () => {
                       </div>
                       <span className="text-14 fw-500 text-white lh-1">{trust.ratingOutOf}</span>
                     </div>
-                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>Based on {trust.reviews} verified reviews{trust.customers ? ` · ${trust.customers} customers` : ""}</div>
+                    <div className="text-13 text-white mt-5 lh-1" style={{ opacity: 0.75 }}>Based on {trust.reviews} reviews{trust.source && <> on <SourceLink label={trust.source} href={trust.sourceUrl} className="rt-trust-source" /></>}{trust.customers ? ` · ${trust.customers} customers` : ""}</div>
                   </div>
                 </div>
                 )}
@@ -207,25 +207,6 @@ const HomeHero = () => {
                     style={{ objectFit: "cover" }}
                     alt=""
                   />
-                  <div
-                    data-move="60"
-                    className="lg:d-none img-el -w-260 px-20 py-20 d-flex items-center bg-white rounded-8 js-mouse-move"
-                  >
-                    <Image src={move_icon_2} alt="" />
-                    <div className="ml-20">
-                      <div className="text-dark-1 text-16 fw-500 lh-1">
-                        Oliver Desuza
-                      </div>
-                      <div className="mt-3">SIA Door Supervisor Course</div>
-                      <div className="d-flex x-gap-5 mt-3">
-                        {starts.map((start, index) => (
-                          <div key={index}>
-                            <div className={start}></div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="masthead-image__el3">

@@ -19,6 +19,7 @@ import { featuredGroups, seoSettings } from "@/lib/siteContent";
 import { contentDefaults } from "@/data/home";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { loadReviews } from "@/lib/siteReviewsServer";
 
 // the homepage's search-engine words (admin > Platform settings)
 export async function generateMetadata() {
@@ -31,7 +32,7 @@ export async function generateMetadata() {
 // course no longer live is skipped), or each tab's subjects' most popular. A tab with no live course is left out, and the
 // section with it when none has one. The first card in each tab is marked "Most booked".
 export default async function HomePage() {
-  const [, , courses] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadCatalogue()]);
+  const [, , courses, reviews] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadCatalogue(), loadReviews()]);
   const byId = new Map(courses.map((c) => [c.id, c]));
   const tabs = (groups) => groups
     .map((g) => ({ name: g.name, cards: (g.courses ? g.courses.map((id) => byId.get(id)).filter(Boolean) : pickCourses(courses, g.picks)).map((c, i) => ({ ...toCourseCard(c), popular: i === 0 })) }))
@@ -50,7 +51,7 @@ export default async function HomePage() {
         <HomeBookingOptions />
         <HomeSubjects />
         <HomeRoles />
-        <HomeStories />
+        <HomeStories reviews={reviews} />
         <HomeTeamBooking />
         <HomeProviders />
         <HomeBrands />

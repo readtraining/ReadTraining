@@ -30,10 +30,11 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 // features > learning options > training providers > overview > what you will learn > course content > requirements > exams >
 // who it's for > trust points > the provider's terms > FAQs > more courses > need help > footer. The booking card is sticky on
 // the right. `course`: a live course (lib/catalogueData.js toCourseDetail); a section it has nothing for is left out, and
-// nothing it doesn't have yet (ratings, reviews) is shown. A course with a guide (data/courseGuides.js, by catalogue topic) also
+// nothing it doesn't have (a rating of its own) is shown. A course with a guide (data/courseGuides.js, by catalogue topic) also
 // gets the guide's sections (CourseGuide.jsx) in the same parts: a comparison, the course week, what's included, packages,
 // business training, the licence steps, costs and careers, plus a questions column and intro lines for the exams table. `path` is the page's own address (canonical and structured data);
-// `query` is its search params (?mode=&session=).
+// `query` is its search params (?mode=&session=). No reviews: a course page lists several providers' dates, so the company's
+// reviews would mislead; course reviews will come from real bookings of the course (reviews.course_id).
 export default function CourseDetail({ course, query = {}, path }) {
   const subject = getSubjectLabel(course);
   const prices = course.sessions.map((s) => s.price);

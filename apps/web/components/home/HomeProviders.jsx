@@ -39,10 +39,12 @@ export default function HomeProviders() {
           <div className="col-xl-6 col-lg-6">
             <div className="rt-partner__visual">
               <Image width={520} height={620} src="/assets/img/coursesCards/6.png" alt="Trainer delivering a course" className="rt-partner__photo" />
-              <div className="rt-partner__quote">
-                <p>“{d.quote.text}”</p>
-                <div className="rt-partner__who"><b>{d.quote.author}</b> · {d.quote.role}</div>
-              </div>
+              {d.quote && (
+                <div className="rt-partner__quote">
+                  <p>“{d.quote.text}”</p>
+                  <div className="rt-partner__who"><b>{d.quote.author}</b> · {d.quote.role}</div>
+                </div>
+              )}
               <div className="rt-partner__chips">
                 {d.proof.map((pr) => (
                   <div key={pr.label} className="rt-partner__chip"><b>{pr.value}</b><span>{pr.label}</span></div>

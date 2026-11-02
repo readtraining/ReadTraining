@@ -155,6 +155,27 @@
       "when": 1792847001564,
       "tag": "0021_course_media_bucket",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793619431472,
+      "tag": "0022_reviews",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793621145036,
+      "tag": "0023_reviews_bookings",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793621158064,
+      "tag": "0024_reviews_drop_old",
+      "breakpoints": true
     }
   ]
 }
