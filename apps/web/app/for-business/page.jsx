@@ -2,7 +2,6 @@ import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
-import HomeBrands from "@/components/home/HomeBrands";
 import BizHero from "@/components/business/BizHero";
 import HowItWorks from "@/components/business/HowItWorks";
 import AssignDemo from "@/components/business/AssignDemo";
@@ -36,7 +35,6 @@ export default async function ForBusinessPage() {
         <CreditPanel />
         <FaqSection eyebrow={business.faq.eyebrow} title={business.faq.title} text={business.faq.text} items={faq} idPrefix="biz-faq" />
         <FinalCta />
-        <HomeBrands />
         <HomeHelp />
         <HomeFooter />
       </div>

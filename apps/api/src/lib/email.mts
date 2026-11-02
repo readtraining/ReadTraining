@@ -23,6 +23,8 @@ const transport =
     : null
 
 export const emailConfigured = () => Boolean(outbox || (transport && process.env.EMAIL_FROM))
+// Emails go to the test outbox folder instead of being sent (a development copy), so screens can say so instead of "sent".
+export const emailOutbox = () => Boolean(outbox)
 
 export async function sendEmail(email: Email): Promise<boolean> {
   const from = process.env.EMAIL_FROM ?? 'ReadTraining <no-reply@readtraining.local>'

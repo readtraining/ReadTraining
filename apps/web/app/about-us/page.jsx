@@ -13,7 +13,7 @@ import AboutAudiences from "@/components/aboutUs/AboutAudiences";
 import AboutMission from "@/components/aboutUs/AboutMission";
 import { about, aboutFacts } from "@/data/about";
 import { loadSiteContent } from "@/lib/siteContentServer";
-import { founded, topBar } from "@/data/home";
+import { topBar } from "@/data/home";
 import { abs, breadcrumbLd, faqPageLd, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
 import { faqItems } from "@/lib/siteContent";
 
@@ -33,7 +33,6 @@ const organizationLd = {
   name: "ReadTraining",
   url: SITE_URL,
   logo: abs("/assets/img/general/readtraining-logo.svg"),
-  foundingDate: String(founded),
   email: topBar.email,
   telephone: topBar.phone,
   areaServed: "GB",

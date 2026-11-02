@@ -7,6 +7,7 @@ import type { Actor, AdminPermission } from '@readtraining/permissions'
 
 import { logActivity, logDenied } from '../../lib/activity.mjs'
 import { InviteError, inviteExpired, makeInviteLink, ROLE_LABEL, sendAddedEmail, sendInviteEmail } from '../../lib/adminInvite.mjs'
+import { emailOutbox } from '../../lib/email.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { notify, personOf } from '../../lib/notify.mjs'
 import { supabase } from '../../lib/supabase.mjs'
@@ -186,7 +187,7 @@ export const teamRouter = createTRPCRouter({
           await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.granted', targetType: 'account', targetId: user.id, metadata: { preset: input.preset }, ip: ctx.ip })
         })
         const emailed = await sendAddedEmail(ctx.db, input.email, user.first_name ?? '', invitedBy, role)
-        return { userId: user.id, invited: false, emailed }
+        return { userId: user.id, invited: false, emailed, outbox: emailOutbox() }
       }
 
       let made: { userId: string; link: string }
@@ -202,7 +203,7 @@ export const teamRouter = createTRPCRouter({
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.invited', targetType: 'account', targetId: made.userId, metadata: { preset: input.preset }, ip: ctx.ip })
       })
       const emailed = await sendInviteEmail(ctx.db, input.email, made.link, invitedBy, role)
-      return { userId: made.userId, invited: true, emailed }
+      return { userId: made.userId, invited: true, emailed, outbox: emailOutbox() }
     }),
 
   // A new invite link for someone who hasn't set their password yet (the old link stops working).
@@ -222,7 +223,7 @@ export const teamRouter = createTRPCRouter({
     await ctx.db.update(adminUsers).set({ invitedAt: new Date() }).where(eq(adminUsers.userId, input.userId))
     await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.invite_resent', targetType: 'account', targetId: input.userId, metadata: {}, ip: ctx.ip })
     const emailed = await sendInviteEmail(ctx.db, m.email, link, await nameOf(ctx.db, ctx.user.id), ROLE_LABEL[m.preset])
-    return { emailed }
+    return { emailed, outbox: emailOutbox() }
   }),
 
   update: manage
