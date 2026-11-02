@@ -235,10 +235,11 @@ export const organisationsRouter = createTRPCRouter({
     }),
 
   // A provider's public profile (/providers/[slug]). New providers have one straight away; it stays out of search engines
-  // until the provider is approved. Rejected and suspended providers have none.
+  // until the provider is approved. Rejected and suspended providers have none, and nor does one that was removed: null, an
+  // ordinary answer (not an error), so the website's saved copy of a profile that has gone is replaced by "not found".
   providerProfile: publicProcedure.input(z.object({ slug: z.string().max(80) })).query(async ({ ctx, input }) => {
     const [org] = await ctx.db.select().from(organisations).where(and(eq(organisations.type, 'provider'), eq(organisations.slug, input.slug)))
-    if (!org || org.status === 'rejected' || org.status === 'suspended') throw new TRPCError({ code: 'NOT_FOUND' })
+    if (!org || org.status === 'rejected' || org.status === 'suspended') return null
     const approved = org.status === 'active'
     return {
       name: org.name,
