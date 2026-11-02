@@ -6,12 +6,14 @@ import React from "react";
 export default function Socials({ componentsClass, textSize }) {
   return (
     <>
-      {socialMediaLinks.map((link, index) => (
+      {socialMediaLinks.filter((link) => link.href !== "#").map((link, index) => (
         <a
           key={index}
           className={componentsClass ? componentsClass : ""}
           href={link.href}
-          aria-label={link.label}
+          aria-label={`${link.label} (opens in a new tab)`}
+          target="_blank"
+          rel="noopener noreferrer"
         >
           <i className={`${link.iconClassName} ${textSize}`} aria-hidden="true"></i>
         </a>

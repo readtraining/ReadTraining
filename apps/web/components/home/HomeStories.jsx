@@ -1,21 +1,18 @@
 import React from "react";
-import Image from "next/image";
 import { stories } from "@/data/home";
-import { homeTestimonials, trustFigures, videoStory } from "@/lib/siteContent";
+import { homeReviews, reviewCourse, REVIEWS_HREF } from "@/lib/siteReviews";
 import HomeTextLink from "./HomeTextLink";
-import HomeVideoStory from "./HomeVideoStory";
-import Stars from "./HomeStars";
+import ReviewStars from "@/components/customerReviews/ReviewStars";
+import SourceLabel from "@/components/customerReviews/SourceLabel";
+import { initials } from "@/components/marketing/parts";
 
-// Customer stories: centered header, the video story with the trust numbers, and the testimonials ticked for the homepage in
-// a 2x2 grid (all editable in the admin; lib/siteContent.js).
-export default function HomeStories() {
-  const trust = trustFigures();
-  const video = { ...stories.video, ...videoStory() };
-  const stats = [
-    { value: trust.ratingSlash, label: "Average rating" },
-    { value: trust.reviews, label: "Verified reviews" },
-    { value: trust.customers, label: "Customers" },
-  ].filter((s) => s.value); // a number not entered yet is left out
+// Customer stories: centred header and the reviews ticked for the home page in a 2x2 grid (admin › Customer reviews;
+// `reviews` from loadReviews: the published ones). Each card shows the reviewer's own stars and, when set, where the review was
+// first posted (text, not a link). With none ticked the section is left out, its "Read more reviews" link with it. Call after
+// loadTaxonomy() (a review's course name).
+export default function HomeStories({ reviews: all = [] }) {
+  const reviews = homeReviews(all);
+  if (!reviews.length) return null;
   return (
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">
@@ -26,37 +23,29 @@ export default function HomeStories() {
             <p className="sectionTitle__text mt-14">{stories.text}</p>
           </div>
           <div className="col-auto">
-            <HomeTextLink href="/customer-reviews">Read all reviews</HomeTextLink>
+            <HomeTextLink href={REVIEWS_HREF}>Read more reviews</HomeTextLink>
           </div>
         </div>
 
-        <div className="row y-gap-30 pt-40">
-          <div className="col-lg-5">
-            <HomeVideoStory video={video} stats={stats} />
-          </div>
-
-          <div className="col-lg-7">
-            <div className="row y-gap-24 rt-stories-grid">
-              {homeTestimonials().map((r, i) => (
-                <div key={r.id} className="col-md-6">
-                  <div className="rt-review">
-                    <div className="rt-review__top">
-                      <Stars />
-                      <span className="rt-review__source">{r.source}</span>
-                    </div>
-                    <p className="rt-review__quote">{r.text}</p>
-                    <div className="rt-review__who">
-                      <Image width={36} height={36} src={stories.avatars[i % stories.avatars.length]} alt={r.author} />
-                      <div>
-                        <div className="rt-review__name">{r.author}</div>
-                        <div className="rt-review__course">{r.position}</div>
-                      </div>
-                    </div>
+        <div className="row y-gap-30 pt-40 rt-stories-grid">
+          {reviews.map((r) => (
+            <div key={r.id} className="col-md-6">
+              <div className="rt-review">
+                <div className="rt-review__top">
+                  <ReviewStars rating={r.rating} />
+                  <SourceLabel label={r.origin} />
+                </div>
+                <p className="rt-review__quote">{r.text}</p>
+                <div className="rt-review__who">
+                  <span className="rt-review__avatar" aria-hidden="true">{initials(r.name)}</span>
+                  <div>
+                    <div className="rt-review__name">{r.name}</div>
+                    {reviewCourse(r) && <div className="rt-review__course">{reviewCourse(r)}</div>}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

@@ -23,6 +23,7 @@ const TONES = {
   session: { sent: "success", notSent: "warning", notSentLater: "neutral", cancelled: "neutral" },
   change: { provider: "info", approved: "warning", evidence: "warning", refunded: "success", moved: "success", rejected: "neutral", won: "success", lost: "neutral" },
   review: { challenge: "warning", hidden: "neutral" },
+  siteReview: { published: "success", hidden: "neutral", pending: "warning" },
   learner: { active: "success", unconfirmed: "info", blocked: "danger" },
   certificate: { valid: "success", none: "success", expiring: "warning", expired: "neutral", revoked: "danger" },
   credit: { none: "neutral", approved: "success", suspended: "danger" },

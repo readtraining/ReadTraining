@@ -198,6 +198,7 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
             <div>{topBar.hours}</div>
             <div>{footer.address}</div>
             <a href={`mailto:${topBar.email}`}>{topBar.email}</a>
+            <div><a href={topBar.whatsapp.href} target="_blank" rel="noopener noreferrer">WhatsApp {topBar.whatsapp.number}<span className="rt-sr"> (opens in a new tab)</span></a></div>
           </div>
         </div>
       </div>

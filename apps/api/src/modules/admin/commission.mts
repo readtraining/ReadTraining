@@ -10,8 +10,8 @@ import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 // points (2500 = 25%) so they are never rounded. Every admin can see them; changing them needs the "fees and commission"
 // switch, and each change is logged from → to. A rate applies to bookings made after the change.
 
-// Hurak's marketplace fee, until an admin sets another (the client confirms it)
-export const DEFAULT_COMMISSION_BPS = 3000
+// the standard marketplace fee the client confirmed (20%), until an admin sets another
+export const DEFAULT_COMMISSION_BPS = 2000
 const KEY = 'commission_default_bps'
 export const bps = z.number().int('Enter a rate with up to 2 decimal places.').min(0, 'Enter a rate from 0% to 60%.').max(6000, 'Enter a rate from 0% to 60%.')
 export const percent = (b: number | null) => (b === null ? null : b / 100)

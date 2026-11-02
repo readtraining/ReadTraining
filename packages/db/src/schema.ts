@@ -578,6 +578,61 @@ export const coupons = pgTable(
   ],
 ).enableRLS()
 
+// Reviews of Read Training, shown on the website (the home page and Customer reviews). Two kinds, in one table so it never has
+// to be redesigned:
+// - imported: real customers' reviews copied word for word from another site (`origin`, e.g. "Google", and `origin_url`),
+//   added by an admin in admin › Customer reviews and created as published;
+// - booking: a learner's review of a course they booked (a later milestone): `order_id` (one review per booking), with the
+//   course and provider from the order, starting as pending; the provider may reply.
+// Any rating from 1 to 5 is kept: refusing a low rating would be suppressing negative reviews (DMCC Act 2024). Which ones the
+// site shows is a display choice (published ones), and the site says it shows a selection. `topic` is the catalogue place an
+// imported review clearly names ("category/sub-category/topic"), or null. `review_date` is null when the real date isn't
+// known (never worked out from "3 weeks ago"); `date_is_approximate` marks a date that is only close. Read and written by
+// the API only: RLS on, no policy.
+export const reviewSource = pgEnum('review_source', ['imported', 'booking'])
+export const reviewStatus = pgEnum('review_status', ['pending', 'published', 'hidden'])
+export const reviews = pgTable(
+  'reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    source: reviewSource('source').notNull().default('imported'),
+    status: reviewStatus('status').notNull().default('pending'),
+    reviewerName: text('reviewer_name').notNull(),
+    rating: integer('rating').notNull(),
+    body: text('body').notNull(),
+    reviewDate: date('review_date'),
+    dateIsApproximate: boolean('date_is_approximate').notNull().default(false),
+    topic: text('topic'),
+    orderId: uuid('order_id').references((): AnyPgColumn => orders.id, { onDelete: 'set null' }),
+    courseId: integer('course_id').references((): AnyPgColumn => courses.id, { onDelete: 'set null' }),
+    providerId: uuid('provider_id').references(() => organisations.id, { onDelete: 'set null' }),
+    providerReply: text('provider_reply'),
+    providerRepliedAt: timestamp('provider_replied_at', { withTimezone: true }),
+    origin: text('origin'),
+    originUrl: text('origin_url'),
+    onHome: boolean('on_home').notNull().default(false),
+    createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('reviews_created_by_idx').on(t.createdBy),
+    index('reviews_status_idx').on(t.status, t.reviewDate.desc()),
+    uniqueIndex('reviews_order_key').on(t.orderId),
+    index('reviews_course_idx').on(t.courseId),
+    index('reviews_provider_idx').on(t.providerId),
+    check('reviews_rating_range', sql`${t.rating} between 1 and 5`),
+    check('reviews_name_length', sql`char_length(${t.reviewerName}) between 1 and 60`),
+    check('reviews_body_length', sql`char_length(${t.body}) between 10 and 2000`),
+    check('reviews_topic_format', sql`${t.topic} is null or ${t.topic} ~ '^[a-z0-9-]+(/[a-z0-9-]+){0,2}$'`),
+    check('reviews_booking_order', sql`${t.orderId} is null or ${t.source} = 'booking'`),
+    check('reviews_origin_length', sql`${t.origin} is null or char_length(${t.origin}) between 1 and 40`),
+    check('reviews_origin_url', sql`${t.originUrl} is null or (${t.origin} is not null and ${t.originUrl} ~ '^https://' and char_length(${t.originUrl}) <= 500)`),
+    check('reviews_reply_length', sql`${t.providerReply} is null or char_length(${t.providerReply}) between 1 and 2000`),
+    check('reviews_reply_date', sql`(${t.providerReply} is null) = (${t.providerRepliedAt} is null)`),
+  ],
+).enableRLS()
+
 // ---- money (Part B, B4) ---------------------------------------------------------------------------------------------------
 // Orders, refunds, disputes and payouts, and the ledger every money movement is written to. No payment provider is connected
 // yet: orders come from staff bookings (invoice, payment link or free) and test data, and refunds and payouts are RECORDED
