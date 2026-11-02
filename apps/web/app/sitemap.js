@@ -14,7 +14,7 @@ import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadReviews } from "@/lib/siteReviewsServer";
 
 // /sitemap.xml: every public page (the same lists the pages build from), so search engines find them all. Private areas
-// (account, business, provider, admin, basket, checkout) and the template's demo pages are left out (see robots.js). A legal page
+// (account, business, provider, admin, basket, checkout) are left out (see robots.js). A legal page
 // still marked as a draft (not yet reviewed by a solicitor) asks search engines not to index it, so it is left out too: listing
 // it would contradict that (Search Console reports "Submitted URL marked noindex").
 const STATIC = [

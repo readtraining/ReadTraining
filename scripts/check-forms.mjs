@@ -3,16 +3,14 @@
 //  2. a simulated send: `await new Promise((resolve) => setTimeout(resolve, …))` (a form either really sends or isn't shown);
 //  3. a public form that doesn't go through <FormGate> (components/forms/FormGate.jsx), the one place that decides between the
 //     form and its "coming soon" panel from the form's switch in apps/web/lib/forms.js.
-// Signed-in areas (account, business, provider, admin) talk to the API or are labelled demo, and the purchased template's demo
-// components aren't on real pages, so they are left out. Searches and a few real forms are listed below as allowed.
+// Signed-in areas (account, business, provider, admin) talk to the API or are labelled demo, so they are left out. Searches and
+// a few real forms are listed below as allowed.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const web = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'apps', 'web')
-const SKIP_DIRS = new Set(['node_modules', '.next', 'template', 'public',
-  // the template's demo components (not used by real pages)
-  'aboutCourses', 'blogs', 'cartsAndCheckout', 'contacts', 'courseSingle', 'events', 'homes', 'layout', 'shop', 'uiElements', 'dashboard', 'others',
+const SKIP_DIRS = new Set(['node_modules', '.next', 'public',
   // signed-in areas
   'account', 'admin', 'business', 'businessAccount', 'provider', 'providerWorkspace'])
 // public forms that are not submissions to us, or that already talk to the API
@@ -22,9 +20,11 @@ const ALLOWED_FORMS = new Set([
   'components/home/HomeSearch.jsx', 'components/home/HomeSearchBand.jsx', 'components/hseTest/CentreFinder.jsx',
   'components/providers/ProviderDirectory.jsx', 'components/testPrep/TestPrepHub.jsx',
   'components/providerSignup/BecomeProvider.jsx', 'components/providerSignup/ProviderOnboarding.jsx', // the API (organisations.*)
+  'components/others/LoginForm.jsx', 'components/others/SignUpFormv2.jsx', 'components/others/ForgotPasswordForm.jsx', // sign-in,
+  'components/others/ResetPasswordForm.jsx', // Supabase Auth (lib/auth)
 ])
 // a short pause to show a "checking" state, not a fake send
-const ALLOWED_WAITS = new Set(['lib/auth/useSignUpForm.js'])
+const ALLOWED_WAITS = new Set(['lib/auth/useSignUpForm.js', 'components/others/LoginForm.jsx'])
 // the learner account's bookings and cancellations (signed in; rebuilt with the booking milestone; no booking can exist while
 // the checkout switch is off)
 const ALLOWED_REFS = new Set(['lib/account.js'])
