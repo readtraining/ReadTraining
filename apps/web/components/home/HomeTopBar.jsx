@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { topBar } from "@/data/home";
 import { headerNav } from "@/data/headerNav";
+import WhatsAppIcon from "@/components/common/WhatsAppIcon";
 
 // Slim utility strip above the navbar: contact on the left, audience links on the right.
 // The link for the current page is shown as active (not a link), and "For learners" always leads home.
@@ -20,6 +21,7 @@ export default function HomeTopBar() {
           <a href={`tel:${topBar.phone.replace(/\s/g, "")}`}><i className="icon-person-3"></i>{topBar.phone}</a>
           <span className="rt-utility__sep"></span>
           <a href={`mailto:${topBar.email}`}><i className="icon-email"></i>{topBar.email}</a>
+          <a href={topBar.whatsapp.href} className="rt-utility__wa" target="_blank" rel="noopener noreferrer"><WhatsAppIcon className="rt-utility__waicon" />WhatsApp<span className="rt-sr"> {topBar.whatsapp.number} (opens in a new tab)</span></a>
           <span className="rt-utility__hours">{topBar.hours}</span>
         </div>
         <div className="rt-utility__right">

@@ -6,6 +6,8 @@ import { coursePath } from "@/lib/routes";
 import { SITE_URL } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 import { mockTestFor } from "@/lib/testPrep";
+import { reviewCourse, reviewsForCourse } from "@/lib/siteReviews";
+import { loadReviews } from "@/lib/siteReviewsServer";
 
 // The course details page (/course/<slug>): a live course (API catalogue.course), with up to three more courses from its
 // category and its free mock test when it has one (lib/testPrep.js). An old numeric link (/course/1012) is sent on to its
@@ -40,11 +42,13 @@ export default async function page(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const query = (await props.searchParams) || {};
-  const course = await findCourse(slug);
+  const [course, all] = await Promise.all([findCourse(slug), loadReviews()]);
   if (!course) notFound();
   if (slug !== course.slug) {
     const search = new URLSearchParams(Object.entries(query).flatMap(([k, v]) => [].concat(v).map((x) => [k, x]))).toString();
     permanentRedirect(`${coursePath(course.slug)}${search ? `?${search}` : ""}`);
   }
-  return <CourseDetail course={course} query={query} path={coursePath(course.slug)} />;
+  // the published reviews that name this course's topic, with the topic's name (the Customer reviews filter uses the same)
+  const reviews = reviewsForCourse(all, course).map((r) => ({ ...r, course: reviewCourse(r) }));
+  return <CourseDetail course={course} query={query} path={coursePath(course.slug)} reviews={reviews} reviewsCourse={reviews[0]?.course || ""} />;
 }

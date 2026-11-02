@@ -24,7 +24,8 @@ const MAX_PER_TAB = 4;
 const LEGAL = getLegalList();
 const faqOptions = faqGroups.flatMap((g) => g.sets.map((x) => ({ value: x.key, label: `${g.name}: ${x.label}` })));
 
-// Site content (Part B, B2): the numbers, featured courses, testimonials and video words the whole site shares, each page's
+// Site content (Part B, B2): the numbers and featured courses the whole site shares (the customer reviews have
+// their own page, admin › Customer reviews), each page's
 // FAQs, and the legal pages (API content.*). Each tab saves its own piece; a piece that was never saved shows the site's
 // built-in wording ("Use the built-in wording" goes back to it), and every saved version is kept under "Earlier versions". With
 // the "content" switch an admin can change them; after a save the site's saved copy is marked out of date, so every page shows
@@ -95,7 +96,7 @@ export default function AdminContent() {
     }
     setConfirming(false);
   };
-  const Panel = { trust: TrustForm, featured: FeaturedForm, testimonials: Testimonials, video: VideoForm, faqs: FaqForm, legal: LegalForm }[tab];
+  const Panel = { trust: TrustForm, featured: FeaturedForm, faqs: FaqForm, legal: LegalForm }[tab];
   const panelProps = tab === "faqs" ? { contentKey, set: faq } : tab === "legal" ? { contentKey, doc: legal } : {};
 
   return (
@@ -160,7 +161,7 @@ function TrustForm({ value, canEdit }) {
   const save = useSave("trust");
   // an empty field is a number not entered: the site leaves it out
   const text = (n) => (n == null ? "" : String(n));
-  const [v, setV] = useState(() => ({ rating: value.rating == null ? "" : value.rating.toFixed(1), reviews: text(value.reviews), customers: text(value.customers), courses: text(value.courses) }));
+  const [v, setV] = useState(() => ({ rating: value.rating == null ? "" : value.rating.toFixed(1), reviews: text(value.reviews), customers: text(value.customers), courses: text(value.courses), source: value.source ?? "", sourceUrl: value.sourceUrl ?? "" }));
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
@@ -173,7 +174,7 @@ function TrustForm({ value, canEdit }) {
   const shown = (n) => `${n.toLocaleString("en-GB")}+`;
   // what the site will say: only the numbers entered (a rating with its reviews)
   const preview = [
-    rating !== null && num(v.reviews) !== null && c.previewRating.replace("{rating}", rating.toFixed(1)).replace("{reviews}", shown(num(v.reviews))),
+    rating !== null && num(v.reviews) !== null && c.previewRating.replace("{rating}", rating.toFixed(1)).replace("{reviews}", shown(num(v.reviews))) + (v.source.trim() ? c.previewSource.replace("{source}", v.source.trim()) : ""),
     num(v.customers) !== null && c.previewCustomers.replace("{customers}", shown(num(v.customers))),
     num(v.courses) !== null && c.previewCourses.replace("{courses}", shown(num(v.courses))),
   ].filter(Boolean);
@@ -184,13 +185,16 @@ function TrustForm({ value, canEdit }) {
     setGeneral("");
     const found = {};
     if (!empty(v.rating) && rating === null) found.rating = "Enter a rating from 1 to 5, with one decimal place, like 4.9, or leave it empty.";
-    for (const k of ["reviews", "customers", "courses"]) if (!empty(v[k]) && num(v[k]) === null) found[k] = "Enter a whole number, like 12450, or leave it empty.";
+    for (const k of ["reviews", "customers", "courses"]) if (!empty(v[k]) && num(v[k]) === null) found[k] = "Enter a whole number, like 1160, or leave it empty.";
     if (!found.rating && !found.reviews && empty(v.rating) !== empty(v.reviews)) found[empty(v.rating) ? "rating" : "reviews"] = "Enter both the rating and the number of reviews, or leave both empty.";
+    if (v.source.trim().length > 40) found.source = "Keep the source to 40 characters or fewer.";
+    if (!empty(v.sourceUrl) && !/^https:\/\/\S+$/.test(v.sourceUrl.trim())) found.sourceUrl = "Enter the full link, starting https://, or leave it empty.";
+    if (!empty(v.sourceUrl) && empty(v.source)) found.source = "Enter where the rating comes from, like Google, to go with the link.";
     setErrors(found);
     if (Object.keys(found).length) return focusFirstError(ref.current);
     setSaving(true);
     try {
-      await save({ rating: empty(v.rating) ? null : rating, reviews: num(v.reviews), customers: num(v.customers), courses: num(v.courses) });
+      await save({ rating: empty(v.rating) ? null : rating, reviews: num(v.reviews), customers: num(v.customers), courses: num(v.courses), source: v.source.trim() || null, sourceUrl: v.source.trim() && v.sourceUrl.trim() ? v.sourceUrl.trim() : null });
       setSaved(true);
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
@@ -211,6 +215,15 @@ function TrustForm({ value, canEdit }) {
           <React.Fragment key={k}>
             {field(`rt-adm-tr-${k}`, f.label, f.hint, errors[k], (
               <input id={`rt-adm-tr-${k}`} type="text" inputMode="decimal" value={v[k]} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, [k]: e.target.value }))} aria-invalid={errors[k] ? true : undefined} aria-describedby={describedBy(`rt-adm-tr-${k}`, f.hint, errors[k])} className="rt-adm-num" />
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+      <div className="rt-adm-fees__grid rt-adm-content__grid">
+        {Object.entries(c.sourceFields).map(([k, f]) => (
+          <React.Fragment key={k}>
+            {field(`rt-adm-tr-${k}`, f.label, f.hint, errors[k], (
+              <input id={`rt-adm-tr-${k}`} type={k === "sourceUrl" ? "url" : "text"} maxLength={k === "sourceUrl" ? 500 : 40} value={v[k]} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, [k]: e.target.value }))} aria-invalid={errors[k] ? true : undefined} aria-describedby={describedBy(`rt-adm-tr-${k}`, f.hint, errors[k])} />
             ))}
           </React.Fragment>
         ))}
@@ -298,175 +311,3 @@ function FeaturedForm({ value, canEdit }) {
   );
 }
 
-// ---- video story ---------------------------------------------------------------------------------------------------------
-function VideoForm({ value, canEdit }) {
-  const save = useSave("video");
-  const [v, setV] = useState({ author: value.author, position: value.position, quote: value.quote });
-  const [errors, setErrors] = useState({});
-  const [general, setGeneral] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const ref = useRef(null);
-  const c = copy.video;
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaved(false);
-    setGeneral("");
-    const found = {};
-    if (v.author.trim().length < 2) found.author = "Enter the name.";
-    if (v.quote.trim().length < 5) found.quote = "Enter the quote.";
-    setErrors(found);
-    if (Object.keys(found).length) return focusFirstError(ref.current);
-    setSaving(true);
-    try {
-      await save({ author: v.author.trim(), position: v.position.trim(), quote: v.quote.trim() });
-      setSaved(true);
-    } catch (err) {
-      const { fields, general: g } = errorsFrom(err);
-      setErrors(fields);
-      setGeneral(Object.keys(fields).length ? "" : g);
-      if (Object.keys(fields).length) focusFirstError(ref.current);
-    }
-    setSaving(false);
-  };
-
-  return (
-    <form className="rt-acc__card" onSubmit={submit} noValidate ref={ref}>
-      <h2 className="rt-acc__h2">{c.title}</h2>
-      <p className="rt-acc__note">{c.note}</p>
-      {field("rt-adm-vs-author", c.fields.author, "", errors.author, <input id="rt-adm-vs-author" type="text" maxLength={60} value={v.author} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, author: e.target.value }))} aria-invalid={errors.author ? true : undefined} aria-describedby={describedBy("rt-adm-vs-author", "", errors.author)} />)}
-      {field("rt-adm-vs-position", c.fields.position, "", errors.position, <input id="rt-adm-vs-position" type="text" maxLength={120} value={v.position} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, position: e.target.value }))} />)}
-      {field("rt-adm-vs-quote", c.fields.quote, "", errors.quote, <textarea id="rt-adm-vs-quote" rows={3} maxLength={200} value={v.quote} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, quote: e.target.value }))} aria-invalid={errors.quote ? true : undefined} aria-describedby={describedBy("rt-adm-vs-quote", "", errors.quote)} />)}
-      <SaveRow canEdit={canEdit} saving={saving} error={general} saved={saved} />
-    </form>
-  );
-}
-
-// ---- testimonials --------------------------------------------------------------------------------------------------------
-function Testimonials({ value, canEdit }) {
-  const save = useSave("testimonials");
-  const c = copy.testimonials;
-  const [list, setList] = useState(value);
-  const [editing, setEditing] = useState(null); // a testimonial (new or existing) in the pop-up
-  const [removing, setRemoving] = useState(null);
-  const [said, setSaid] = useState("");
-  const [error, setError] = useState("");
-  const homeCount = list.filter((t) => t.home).length;
-
-  // every change is saved at once (the whole list), so the page and the site never differ
-  const commit = async (next) => {
-    setError("");
-    setSaid("");
-    try {
-      await save(next);
-      setList(next);
-      setSaid(copy.saved);
-      return true;
-    } catch (err) {
-      setError(errorsFrom(err).general);
-      return false;
-    }
-  };
-
-  return (
-    <div className="rt-acc__stack">
-      <p className="rt-acc__note rt-adm-help">{c.note}</p>
-      {error && <p className="rt-q__err rt-acc__formerr" role="alert">{error}</p>}
-      <p className="rt-sr" role="status">{said}</p>
-      <section className="rt-acc__card" aria-labelledby="rt-adm-tm-h">
-        <div className="rt-acc__cardhead">
-          <h2 className="rt-acc__h2" id="rt-adm-tm-h">{c.title} <span className="rt-adm-muted">{list.length}</span></h2>
-          {canEdit && <button type="button" className="button -sm -purple-1 text-white" onClick={() => setEditing({ id: "", author: "", position: "", text: "", source: "", home: false })}>{c.add}</button>}
-        </div>
-        {canEdit && homeCount >= 4 && <p className="rt-acc__note rt-adm-content__max">{c.maxHome}</p>}
-        <ul className="rt-adm-list rt-adm-tm">
-          {list.map((t) => (
-            <li key={t.id}>
-              <div>
-                <span className="rt-adm-strong">{t.author}</span>
-                <small>{t.position}{t.source ? ` · ${t.source}` : ""}</small>
-                <p className="rt-adm-tm__text">{t.text}</p>
-              </div>
-              <div className="rt-adm-tm__side">
-                <label className="rt-bk__check" htmlFor={`rt-adm-tm-home-${t.id}`}>
-                  <input id={`rt-adm-tm-home-${t.id}`} type="checkbox" checked={t.home} disabled={!canEdit || (!t.home && homeCount >= 4)} onChange={(e) => commit(list.map((x) => (x.id === t.id ? { ...x, home: e.target.checked } : x)))} />
-                  <span>{c.home}</span>
-                </label>
-                {canEdit && (
-                  <div className="rt-adm-tm__buttons">
-                    <button type="button" className="rt-cd__link" onClick={() => setEditing(t)}>{c.edit}<span className="rt-sr"> {t.author}</span></button>
-                    <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setRemoving(t)}>{c.remove}<span className="rt-sr"> {t.author}</span></button>
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <TestimonialSheet item={editing} onClose={() => setEditing(null)} onSave={async (t) => {
-        const next = t.id ? list.map((x) => (x.id === t.id ? t : x)) : [...list, { ...t, id: `t${Date.now().toString(36)}` }];
-        const ok = await commit(next);
-        if (ok) setEditing(null);
-        return ok;
-      }} homeFull={homeCount >= 4} />
-
-      <Sheet open={Boolean(removing)} onClose={() => setRemoving(null)} title={c.removeTitle} closeLabel="Close">
-        {removing && (
-          <div className="rt-q__form rt-biz__sheetform">
-            <p className="rt-adm-strong">{removing.author}<small>{removing.position}</small></p>
-            <p className="rt-acc__note">{c.removeText}</p>
-            <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={async () => { if (await commit(list.filter((x) => x.id !== removing.id))) setRemoving(null); }}>{c.remove}</button>
-          </div>
-        )}
-      </Sheet>
-    </div>
-  );
-}
-
-function TestimonialSheet({ item, onClose, onSave, homeFull }) {
-  const c = copy.testimonials;
-  const [v, setV] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [opened, setOpened] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const ref = useRef(null);
-  if (item !== opened) {
-    setOpened(item);
-    setV(item ? { ...item } : null);
-    setErrors({});
-  }
-  const submit = async (e) => {
-    e.preventDefault();
-    const found = {};
-    if (v.author.trim().length < 2) found.author = "Enter the name.";
-    if (v.text.trim().length < 10) found.text = "Enter what they said, at least 10 characters.";
-    setErrors(found);
-    if (Object.keys(found).length) return focusFirstError(ref.current);
-    setBusy(true);
-    await onSave({ ...v, author: v.author.trim(), position: v.position.trim(), text: v.text.trim() });
-    setBusy(false);
-  };
-  const f = c.form;
-  return (
-    <Sheet open={Boolean(item)} onClose={onClose} title={item?.id ? `${c.edit}: ${item.author}` : c.add} closeLabel="Close">
-      {v && (
-        <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
-          {field("rt-adm-tf-author", f.author, "", errors.author, <input id="rt-adm-tf-author" type="text" maxLength={60} autoComplete="off" value={v.author} onChange={(e) => setV((x) => ({ ...x, author: e.target.value }))} aria-invalid={errors.author ? true : undefined} aria-describedby={describedBy("rt-adm-tf-author", "", errors.author)} />)}
-          {field("rt-adm-tf-position", f.position, f.positionHint, "", <input id="rt-adm-tf-position" type="text" maxLength={120} autoComplete="off" value={v.position} onChange={(e) => setV((x) => ({ ...x, position: e.target.value }))} aria-describedby="rt-adm-tf-position-hint" />)}
-          {field("rt-adm-tf-text", f.text, "", errors.text, <textarea id="rt-adm-tf-text" rows={5} maxLength={800} value={v.text} onChange={(e) => setV((x) => ({ ...x, text: e.target.value }))} aria-invalid={errors.text ? true : undefined} aria-describedby={describedBy("rt-adm-tf-text", "", errors.text)} />)}
-          <div className="rt-field">
-            <label htmlFor="rt-adm-tf-source">{f.source}</label>
-            <FieldSelect id="rt-adm-tf-source" label={f.source} value={v.source} onChange={(s) => setV((x) => ({ ...x, source: s }))} options={Object.entries(c.sources).map(([value, label]) => ({ value, label }))} />
-          </div>
-          <label className="rt-bk__check" htmlFor="rt-adm-tf-home">
-            <input id="rt-adm-tf-home" type="checkbox" checked={v.home} disabled={!v.home && homeFull && !item?.home} onChange={(e) => setV((x) => ({ ...x, home: e.target.checked }))} />
-            <span>{c.home}</span>
-          </label>
-          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy}>{f.save}</button>
-        </form>
-      )}
-    </Sheet>
-  );
-}

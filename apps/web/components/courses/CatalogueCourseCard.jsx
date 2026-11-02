@@ -128,8 +128,11 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
       <div className="rt-card__body">
         <span className="rt-card__subject">{categoryName(course.subject)}</span>
         <h3 className="rt-card__title">
-          {/* Styled like a link (hover colour + underline); not navigating yet. Swap for <Link href={href}> when wanted. */}
-          <span className="rt-card__title-link">{course.title}</span>
+          {href ? (
+            <Link href={href} className="rt-card__title-link" onClick={() => trackEvent("select_item", { item_list_name: "All courses", items: [toItem(course, index)] })}>{course.title}</Link>
+          ) : (
+            <span className="rt-card__title-link">{course.title}</span>
+          )}
         </h3>
         {/* Two lines are always reserved so every card has the same text height */}
         <p className="rt-card__desc" aria-hidden={course.description ? undefined : "true"}>{course.description}</p>

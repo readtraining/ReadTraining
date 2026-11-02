@@ -6,9 +6,15 @@ import Socials from "@/components/common/Socials";
 import FooterNewsletter from "./FooterNewsletter";
 import { socialMediaLinks } from "@/data/socialLinks";
 import { footer, topBar } from "@/data/home";
+import { company } from "@/data/legal/company";
+import WhatsAppIcon from "@/components/common/WhatsAppIcon";
+import { hasReviews } from "@/lib/siteContent";
 
 // Footer built on the template's FooterEight (type-5) layout: brand + contact left, link columns right,
 // accreditation strip, then the legal row.
+// Customer reviews is listed only once a review is published (the page is hidden until then).
+const REVIEWS_HREF = "/customer-reviews";
+
 export default function HomeFooter() {
   return (
     <footer className="footer -type-5 bg-dark-1 rt-footer">
@@ -25,6 +31,10 @@ export default function HomeFooter() {
                 <i className="icon-person-3"></i>
                 <span><b>{footer.phone}</b><small>{footer.hours}</small></span>
               </a>
+              <a href={topBar.whatsapp.href} className="rt-footer__contactItem" target="_blank" rel="noopener noreferrer">
+                <i><WhatsAppIcon /></i>
+                <span><b>{topBar.whatsapp.number}</b><small>WhatsApp<span className="rt-sr"> (opens in a new tab)</span></small></span>
+              </a>
               <a href={`mailto:${footer.email}`} className="rt-footer__contactItem">
                 <i className="icon-email"></i>
                 <span><b>{footer.email}</b><small>We reply within one working day</small></span>
@@ -38,7 +48,7 @@ export default function HomeFooter() {
             <div key={col.title} className="col-xl-2 col-lg-2 col-md-3 col-6">
               <div className="rt-footer__colTitle">{col.title}</div>
               <div className="rt-footer__links">
-                {col.links.slice(0, 8).map((l) => (
+                {col.links.filter((l) => l.href !== REVIEWS_HREF || hasReviews()).slice(0, 8).map((l) => (
                   <Link key={l.label + l.href} href={l.href}>{l.label}</Link>
                 ))}
               </div>
@@ -51,7 +61,7 @@ export default function HomeFooter() {
           <div className="rt-footer__marksList">
             {footer.accreditations.map((a) => <span key={a}>{a}</span>)}
           </div>
-          {/* shown once data/socialLinks.js has the real profile links (all "#" for now) */}
+          {/* our social profiles (data/socialLinks.js) */}
           {socialMediaLinks.some((l) => l.href !== "#") && (
             <div className="rt-footer__social">
               <Socials componentsClass="rt-footer__socialLink" textSize="text-14" />
@@ -61,7 +71,7 @@ export default function HomeFooter() {
 
         <div className="rt-footer__legal">
           <div className="rt-footer__copy">
-            © {new Date().getFullYear()} ReadTraining. All rights reserved. Courses are delivered by independent, accredited training providers.
+            © {new Date().getFullYear()} {company.name}, trading as {company.tradingName}. All rights reserved. Courses are delivered by independent, accredited training providers.
           </div>
           <div className="rt-footer__legalLinks">
             {footer.legal.map((l) => <Link key={l.label} href={l.href}>{l.label}</Link>)}

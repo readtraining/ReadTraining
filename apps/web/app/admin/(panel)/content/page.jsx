@@ -4,7 +4,7 @@ import AdminContent from "@/components/admin/AdminContent";
 import { admin as A } from "@/data/admin";
 import { pageMetadata } from "@/lib/seo";
 
-// Site content (components/admin/AdminContent): the numbers, featured courses, testimonials and video words the site shares.
+// Site content (components/admin/AdminContent): the numbers and featured courses the site shares.
 // Every admin can look; changing needs the "content" switch. Private, so kept out of search.
 export const metadata = pageMetadata({ title: `${A.content.title} | ${A.title}`, description: A.content.lead, path: "/admin/content", noindex: true });
 

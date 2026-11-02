@@ -5,7 +5,7 @@ import { provider } from "@/data/provider";
 /* Pricing: two tiers + payout estimator (unchanged layout) */
 export default function ProPricing() {
   const p = provider.pricing; const [price, setPrice] = useState(199);
-  const fee = price * 0.03; const commission = (price - fee) * 0.3; const payout = price - fee - commission;
+  const fee = price * 0.03; const commission = (price - fee) * 0.2; const payout = price - fee - commission;
   const gbp = (n) => `£${n.toFixed(2)}`;
   return (
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
@@ -33,7 +33,7 @@ export default function ProPricing() {
             <label className="rt-field mt-10"><span>Course price (£)</span><input type="number" min="0" step="1" value={price} onChange={(e) => setPrice(Number(e.target.value) || 0)} /></label>
             <div className="pr-calc__rows">
               <div><span>Card transaction fee (3%)</span><b>- {gbp(fee)}</b></div>
-              <div><span>Marketplace fee (30%)</span><b>- {gbp(commission)}</b></div>
+              <div><span>Marketplace fee (20%)</span><b>- {gbp(commission)}</b></div>
               <div className="-total"><span>You receive</span><b>{gbp(payout)}</b></div>
             </div>
             <small>{p.calc.note}</small>
