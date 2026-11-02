@@ -55,9 +55,10 @@ export const contact = {
   channels: {
     eyebrow: "Ways to reach us",
     title: "Talk to our UK team",
-    text: "Call or email us, or send a message with the form.",
+    text: "Call, WhatsApp or email us, or send a message with the form.",
     items: [
       { icon: "icon-person-3", label: "Call us", value: topBar.phone, href: tel, meta: topBar.hours, note: "Calls to 03 numbers cost the same as calls to 01 and 02 numbers." },
+      { icon: "whatsapp", label: "WhatsApp", value: topBar.whatsapp.number, href: topBar.whatsapp.href, external: true, meta: "Send us a message on WhatsApp." },
       { icon: "icon-email", label: "Email us", value: topBar.email, href: `mailto:${topBar.email}`, meta: "We reply within one working day." },
     ],
   },

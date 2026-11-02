@@ -7,6 +7,7 @@ import FooterNewsletter from "./FooterNewsletter";
 import { socialMediaLinks } from "@/data/socialLinks";
 import { footer, topBar } from "@/data/home";
 import { company } from "@/data/legal/company";
+import WhatsAppIcon from "@/components/common/WhatsAppIcon";
 import { hasReviews } from "@/lib/siteContent";
 
 // Footer built on the template's FooterEight (type-5) layout: brand + contact left, link columns right,
@@ -29,6 +30,10 @@ export default function HomeFooter() {
               <a href={`tel:${footer.phone.replace(/\s/g, "")}`} className="rt-footer__contactItem">
                 <i className="icon-person-3"></i>
                 <span><b>{footer.phone}</b><small>{footer.hours}</small></span>
+              </a>
+              <a href={topBar.whatsapp.href} className="rt-footer__contactItem" target="_blank" rel="noopener noreferrer">
+                <i><WhatsAppIcon /></i>
+                <span><b>{topBar.whatsapp.number}</b><small>WhatsApp<span className="rt-sr"> (opens in a new tab)</span></small></span>
               </a>
               <a href={`mailto:${footer.email}`} className="rt-footer__contactItem">
                 <i className="icon-email"></i>
