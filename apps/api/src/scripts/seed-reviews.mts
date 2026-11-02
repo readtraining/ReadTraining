@@ -1,14 +1,24 @@
-// Our five current customer reviews, as imported reviews in the `reviews` table (admin › Customer reviews). Real reviews of
-// Read Training, copied word for word from its Google listing on 2 November 2026 (only the star emoji at the start of Malik's
+// Our imported customer reviews in the `reviews` table (admin › Customer reviews): five from Google and the 5-star ones from
+// Trustpilot (data/trustpilot-reviews.json). All real reviews of Read Training, copied word for word.
+//
+// Google: five reviews copied word for word from Read Training's Google listing on 2 November 2026 (only the star emoji at the start of Malik's
 // is left out: the site shows each reviewer's stars); the client gave permission to use them. Google showed only how old each
 // was ("3 weeks ago"), so they have no date (never worked out from that). A review names a course topic only when its text
 // clearly names the course (Tanzila's names the Door Supervisor course); the others are about us in general.
+//
+// Trustpilot: the 198 5-star reviews of Read Training its public pages showed on 2 November 2026 (uk.trustpilot.com/review/
+// readtraining.co.uk; Trustpilot shows only the latest 200 of a filter without signing in, so older ones need the client's
+// Trustpilot business export). Each keeps its own date (the day it was posted) and its link on Trustpilot. The title is the
+// first line unless the text already starts with it. A review names a course topic only when its words clearly name the
+// course; when it names several, the first one named.
 //
 //   pnpm --filter @readtraining/api seed:reviews            add them (a review already there is brought up to date)
 //   pnpm --filter @readtraining/api seed:reviews --remove   take them out again
 //
 // Not part of the migrations. On the live project it refuses to run unless --live is added, and that is only ever done after
 // asking first: pnpm live --filter @readtraining/api seed:reviews --live
+import { readFileSync } from 'node:fs'
+
 import { and, eq, reviews } from '@readtraining/db'
 
 import { db } from '../lib/db.mjs'
@@ -45,5 +55,23 @@ for (const r of REVIEWS) {
     n++
   }
 }
-console.log(remove ? `Removed ${n} reviews.` : `Added ${n} reviews (${REVIEWS.length - n} already there, brought up to date).`)
+type Imported = { name: string; rating: number; date: string; topic: string | null; url: string; text: string }
+const TRUSTPILOT: Imported[] = JSON.parse(readFileSync(new URL('./data/trustpilot-reviews.json', import.meta.url), 'utf8'))
+let t = 0
+for (const r of TRUSTPILOT) {
+  // a Trustpilot review is known by its own link
+  const same = eq(reviews.originUrl, r.url)
+  if (remove) {
+    t += (await db.delete(reviews).where(same).returning({ id: reviews.id })).length
+    continue
+  }
+  const row = { source: 'imported' as const, status: 'published' as const, reviewerName: r.name, rating: r.rating, body: r.text, reviewDate: r.date, dateIsApproximate: false, topic: r.topic, onHome: false, origin: 'Trustpilot', originUrl: r.url }
+  const [there] = await db.select({ id: reviews.id }).from(reviews).where(same)
+  if (there) await db.update(reviews).set({ ...row, updatedAt: new Date() }).where(eq(reviews.id, there.id))
+  else {
+    await db.insert(reviews).values(row)
+    t++
+  }
+}
+console.log(remove ? `Removed ${n} Google and ${t} Trustpilot reviews.` : `Added ${n} Google reviews (${REVIEWS.length - n} already there) and ${t} Trustpilot reviews (${TRUSTPILOT.length - t} already there, brought up to date).`)
 process.exit(0)

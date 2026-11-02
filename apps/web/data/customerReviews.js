@@ -34,7 +34,8 @@ export const customerReviews = (reviews = []) => {
     ],
     list: {
       title: list.length ? "A selection of our reviews" : "Our reviews",
-      lead: t.ratingOutOf ? `Our overall rating, ${t.ratingOutOf} from ${t.reviews} reviews, counts every review.` : "",
+      // the headline rating comes from one site (its source); say so, since the list also shows reviews from other sites
+      lead: !t.ratingOutOf ? "" : t.source ? `Our rating, ${t.ratingOutOf} from ${t.reviews} reviews, counts every review there.` : `Our overall rating, ${t.ratingOutOf} from ${t.reviews} reviews, counts every review.`,
       source: { label: t.source, href: t.sourceUrl },
       allLabel: "All",
       generalLabel: GENERAL,
@@ -47,16 +48,16 @@ export const customerReviews = (reviews = []) => {
       text: "How the reviews on this page are chosen and shown.",
       points: [
         { title: "In their own words", text: "We show each review as it was written, with the stars the reviewer gave." },
-        { title: "Where it was posted", text: "When a review was first posted on another site, such as Google, the review says so and links to it there." },
-        { title: "A selection", text: "This page shows a selection of our reviews. Our overall rating counts every review." },
+        { title: "Where it was posted", text: "When a review was first posted on another site, such as Google or Trustpilot, the review says so and links to it there." },
+        { title: "A selection", text: "This page shows a selection of our reviews. Our rating counts every review on the site it comes from." },
       ],
     },
     faq: {
       eyebrow: "FAQs",
       title: "Questions about reviews",
       items: [
-        { q: "Where do these reviews come from?", a: "They are reviews of Read Training, copied here word for word. When a review was first posted on another site, such as Google, it names that site and links to it." },
-        { q: "Do you show every review?", a: "No. This page shows a selection. Our overall rating, {ratingOutOf} from {reviews} reviews, counts every review." },
+        { q: "Where do these reviews come from?", a: "They are reviews of Read Training, copied here word for word. When a review was first posted on another site, such as Google or Trustpilot, it names that site and links to it." },
+        { q: "Do you show every review?", a: "No. This page shows a selection. Our rating of {ratingOutOf} counts all {reviews} reviews on the site it comes from, not only these." },
         { q: "How can I leave a review?", a: "After your course, tell us how it went by sending us a message. We read every one." },
       ],
     },

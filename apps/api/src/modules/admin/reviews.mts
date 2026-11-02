@@ -133,8 +133,8 @@ export const adminReviewsRouter = createTRPCRouter({
     }),
 })
 
-/** The website's reviews: the published ones, newest first (content.reviews). */
+/** The website's reviews: the published ones, newest first, at most 1,000 (content.reviews; the page shows them a few at a time). */
 export async function publishedReviews(db: typeof Db) {
-  const rows = await db.execute<Row>(sql`select ${COLUMNS} from ${reviews} where status = 'published' order by ${NEWEST} limit 200`)
+  const rows = await db.execute<Row>(sql`select ${COLUMNS} from ${reviews} where status = 'published' order by ${NEWEST} limit 1000`)
   return rows.map((r) => ({ id: r.id, name: r.reviewer_name, rating: r.rating, text: r.body, topic: r.topic, origin: r.origin, originUrl: r.origin_url, onHome: r.on_home }))
 }
