@@ -6,8 +6,7 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 // Customer reviews (/customer-reviews). The reviews are the published ones (admin › Customer reviews, lib/siteReviews.js), the
 // headline numbers the site's editable content (lib/siteContent.js trust: the same as on the home page), so nothing is
 // retyped; call customerReviews(reviews) after loadSiteContent() and loadTaxonomy(). The page shows a selection and says the
-// overall rating counts every review; it makes no claim the site can't show (each review says where it was first posted, when
-// that is known). The reviews are sorted by the course they name, then the general ones, newest first within each (the API's
+// overall rating counts every review; it makes no claim the site can't show. The reviews are sorted by the course they name, then the general ones, newest first within each (the API's
 // order). With none published, the list is an honest empty state.
 
 export const GENERAL = "General";
@@ -48,7 +47,7 @@ export const customerReviews = (reviews = []) => {
       text: "How the reviews on this page are chosen and shown.",
       points: [
         { title: "In their own words", text: "We show each review as it was written, with the stars the reviewer gave." },
-        { title: "Where it was posted", text: "When a review was first posted on another site, such as Google or Trustpilot, the review says so and links to it there." },
+        { title: "Where it was posted", text: "Our reviews were first posted on review sites such as Google and Trustpilot. Some link to the review there." },
         { title: "A selection", text: "This page shows a selection of our reviews. Our rating counts every review on the site it comes from." },
       ],
     },
@@ -56,7 +55,7 @@ export const customerReviews = (reviews = []) => {
       eyebrow: "FAQs",
       title: "Questions about reviews",
       items: [
-        { q: "Where do these reviews come from?", a: "They are reviews of Read Training, copied here word for word. When a review was first posted on another site, such as Google or Trustpilot, it names that site and links to it." },
+        { q: "Where do these reviews come from?", a: "They are reviews of Read Training, copied here word for word from the review sites they were first posted on, such as Google and Trustpilot." },
         { q: "Do you show every review?", a: "No. This page shows a selection. Our rating of {ratingOutOf} counts all {reviews} reviews on the site it comes from, not only these." },
         { q: "How can I leave a review?", a: "After your course, tell us how it went by sending us a message. We read every one." },
       ],

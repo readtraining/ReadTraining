@@ -7076,3 +7076,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-biz__table td.rt-adm-rv__who { flex-direction: column; align-items: flex-start; text-align: left; }
   .rt-biz__table td.rt-adm-rv__who small.rt-adm-rv__line, .rt-biz__table td.rt-adm-rv__who small.rt-adm-rv__text { margin: 4px 0 0; }
 }
+
+/* ---- a course page's "Reviews of Read Training" (CourseReviews): the Customer reviews cards, two across in the main column */
+.rt-cd__reviews { margin: 0 0 16px; }
+@media (min-width: 992px) { .rt-cd__reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 576px) { .rt-cd__reviews.-one { grid-template-columns: minmax(0, 1fr); } }

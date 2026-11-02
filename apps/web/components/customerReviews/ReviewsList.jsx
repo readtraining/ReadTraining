@@ -37,7 +37,8 @@ export function ReviewCard({ review: r }) {
 const PAGE = 12;
 
 export default function ReviewsList({ list }) {
-  const [group, setGroup] = useState("all");
+  // a course page links here with ?course=<its name>: start on that course when the reviews have it
+  const [group, setGroup] = useState(() => (list.initial && list.reviews.some((r) => r.course === list.initial) ? list.initial : "all"));
   const [count, setCount] = useState(PAGE);
   const pick = (key) => {
     setGroup(key);

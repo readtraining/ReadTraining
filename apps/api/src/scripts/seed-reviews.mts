@@ -8,8 +8,9 @@
 //
 // Trustpilot: the 198 5-star reviews of Read Training its public pages showed on 2 November 2026 (uk.trustpilot.com/review/
 // readtraining.co.uk; Trustpilot shows only the latest 200 of a filter without signing in, so older ones need the client's
-// Trustpilot business export). Each keeps its own date (the day it was posted) and its link on Trustpilot. The title is the
-// first line unless the text already starts with it. A review names a course topic only when its words clearly name the
+// Trustpilot business export). Each keeps its own date (the day it was posted). The site doesn't name Trustpilot or link to
+// it on these (the client's choice), so the link to each review there is kept only in the data file, as the record of where
+// it came from. The title is the first line unless the text already starts with it. A review names a course topic only when its words clearly name the
 // course; when it names several, the first one named.
 //
 //   pnpm --filter @readtraining/api seed:reviews            add them (a review already there is brought up to date)
@@ -59,13 +60,13 @@ type Imported = { name: string; rating: number; date: string; topic: string | nu
 const TRUSTPILOT: Imported[] = JSON.parse(readFileSync(new URL('./data/trustpilot-reviews.json', import.meta.url), 'utf8'))
 let t = 0
 for (const r of TRUSTPILOT) {
-  // a Trustpilot review is known by its own link
-  const same = eq(reviews.originUrl, r.url)
+  // a Trustpilot review is known by its reviewer and words (no source is stored for these)
+  const same = and(eq(reviews.reviewerName, r.name), eq(reviews.body, r.text))
   if (remove) {
     t += (await db.delete(reviews).where(same).returning({ id: reviews.id })).length
     continue
   }
-  const row = { source: 'imported' as const, status: 'published' as const, reviewerName: r.name, rating: r.rating, body: r.text, reviewDate: r.date, dateIsApproximate: false, topic: r.topic, onHome: false, origin: 'Trustpilot', originUrl: r.url }
+  const row = { source: 'imported' as const, status: 'published' as const, reviewerName: r.name, rating: r.rating, body: r.text, reviewDate: r.date, dateIsApproximate: false, topic: r.topic, onHome: false, origin: null, originUrl: null }
   const [there] = await db.select({ id: reviews.id }).from(reviews).where(same)
   if (there) await db.update(reviews).set({ ...row, updatedAt: new Date() }).where(eq(reviews.id, there.id))
   else {

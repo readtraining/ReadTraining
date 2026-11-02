@@ -1,10 +1,11 @@
+import { matchesPick } from "@/lib/catalogueData";
 import { topicName } from "@/lib/taxonomy";
 
 // Reviews of Read Training on the website (lib/siteReviewsServer.js loadReviews: the published ones, newest first: [{ id,
 // name, rating, text, topic, origin, originUrl, onHome }]). Real customers' words only. The home page and Customer reviews show
-// a selection, and say the overall rating (the trust numbers) counts every review. Course pages show none: a course page lists
-// several providers' dates, so these would mislead (course reviews will come from real bookings). A review names a course
-// topic ("category/sub-category/topic") only when its text clearly names that course; the others are about us in general.
+// a selection, and say the overall rating (the trust numbers) counts every review. A review names a course topic
+// ("category/sub-category/topic") only when its text clearly names that course; the others are about us in general. A course
+// page shows the reviews that name its topic, as reviews of Read Training (a course page lists several providers' dates).
 
 export const REVIEWS_HREF = "/customer-reviews";
 export const HOME_MAX = 4;
@@ -18,3 +19,9 @@ export const reviewCourse = (review) => {
   const [c, s, t] = review.topic.split("/");
   return topicName(c, s, t);
 };
+
+// the reviews that name this course's topic (a course page shows these)
+export const reviewsForCourse = (reviews, course) => reviews.filter((r) => r.topic && matchesPick(course, r.topic));
+
+// Customer reviews, filtered to one course (its name as the filter shows it)
+export const reviewsHref = (courseName) => (courseName ? `${REVIEWS_HREF}?course=${encodeURIComponent(courseName)}` : REVIEWS_HREF);

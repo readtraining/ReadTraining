@@ -31,9 +31,11 @@ export async function generateMetadata() {
   return pageMetadata({ title: r.title, description: r.description, path: PATH, noindex: !reviews.length });
 }
 
-export default async function CustomerReviewsPage() {
+export default async function CustomerReviewsPage(props) {
+  const { course } = (await props.searchParams) || {};
   const [, reviews] = await Promise.all([loadSiteContent(), loadReviews(), loadTaxonomy()]);
   const r = customerReviews(reviews);
+  const list = { ...r.list, initial: typeof course === "string" ? course : "" };
   const crumbs = [{ label: "Home", href: "/" }, { label: r.hero.eyebrow }];
   const faq = faqItems("customer-reviews", r.faq.items);
   return (
@@ -47,7 +49,7 @@ export default async function CustomerReviewsPage() {
           <div className="container">
             <SubjectFacts facts={r.facts} />
           </div>
-          <ReviewsList list={r.list} />
+          <ReviewsList list={list} />
           <ReviewsHow how={r.how} />
           <FaqSection eyebrow={r.faq.eyebrow} title={r.faq.title} items={faq} idPrefix="reviews-faq" className="layout-pt-lg layout-pb-lg bg-light-4" />
           <div className="rt-reviews__cta">

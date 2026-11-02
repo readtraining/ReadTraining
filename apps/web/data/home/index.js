@@ -233,8 +233,8 @@ export const providers = {
     { value: "103", label: "towns and cities covered" },
     { value: "12", label: "subject categories" },
   ],
-  // a real provider's words go here once one gives them ({ text, author, role }); none is made up
-  quote: null,
+  // a real provider's words, from the client (Proshield Training's review of listing with us); one sentence of it, as written
+  quote: { text: "Within a short time of listing, we saw a steady stream of enquiries and bookings, and we’ve filled a good number of places on our courses through their site.", author: "Proshield Training", role: "Training provider" },
 };
 
 export const help = {
@@ -243,7 +243,7 @@ export const help = {
   text: "Not sure which course, date or booking option is right? Our UK team helps with requirements, locations and group bookings.",
   options: [
     { label: "Call us", value: "0333 344 1293", meta: "Mon to Fri, 9:00am to 5:30pm", href: "tel:03333441293" },
-    { label: "Live chat", value: "Start a conversation", meta: "Usually replies within minutes", href: "/contact-us" },
+    { label: "Live chat", value: "Start a conversation", meta: "8am to 6pm", href: "/contact-us" },
     { label: "Help centre", value: "Guides, FAQs and requirements", meta: "Guides, FAQs and requirements", href: "/help-centre" },
   ],
   button: "Visit Help Centre",

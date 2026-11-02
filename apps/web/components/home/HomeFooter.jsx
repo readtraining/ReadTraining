@@ -6,6 +6,7 @@ import Socials from "@/components/common/Socials";
 import FooterNewsletter from "./FooterNewsletter";
 import { socialMediaLinks } from "@/data/socialLinks";
 import { footer, topBar } from "@/data/home";
+import { company } from "@/data/legal/company";
 import { hasReviews } from "@/lib/siteContent";
 
 // Footer built on the template's FooterEight (type-5) layout: brand + contact left, link columns right,
@@ -55,7 +56,7 @@ export default function HomeFooter() {
           <div className="rt-footer__marksList">
             {footer.accreditations.map((a) => <span key={a}>{a}</span>)}
           </div>
-          {/* shown once data/socialLinks.js has the real profile links (all "#" for now) */}
+          {/* our social profiles (data/socialLinks.js) */}
           {socialMediaLinks.some((l) => l.href !== "#") && (
             <div className="rt-footer__social">
               <Socials componentsClass="rt-footer__socialLink" textSize="text-14" />
@@ -65,7 +66,7 @@ export default function HomeFooter() {
 
         <div className="rt-footer__legal">
           <div className="rt-footer__copy">
-            © {new Date().getFullYear()} ReadTraining. All rights reserved. Courses are delivered by independent, accredited training providers.
+            © {new Date().getFullYear()} {company.name}, trading as {company.tradingName}. All rights reserved. Courses are delivered by independent, accredited training providers.
           </div>
           <div className="rt-footer__legalLinks">
             {footer.legal.map((l) => <Link key={l.label} href={l.href}>{l.label}</Link>)}
