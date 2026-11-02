@@ -85,7 +85,7 @@ function NoDatesCard({ course }) {
 }
 
 export default function BookingCard() {
-  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates } = useBooking();
+  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates, bundle, price, wasPrice } = useBooking();
   const [desktop, setDesktop] = useState(false);
   const [flashing, setFlashing] = useState(false);
 
@@ -109,7 +109,9 @@ export default function BookingCard() {
   // nothing to book yet: no dates and no team training
   if (!mode) return <NoDatesCard course={course} />;
   const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
-  const save = isInHouse ? 0 : savePercent(session.price, session.wasPrice);
+  const save = isInHouse ? 0 : savePercent(price, wasPrice);
+  // a package other than the course alone is named on the card (its price is already in `price`)
+  const withBundle = bundle && bundle.add > 0 ? bundle : null;
   const trust = trustItems(course);
   const onDemand = mode === "ondemand";
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
@@ -139,8 +141,8 @@ export default function BookingCard() {
             <p className="rt-bs__quote">{QUOTE_TEXT}</p>
           ) : (
             <div className="rt-bs__price">
-              <strong>{formatPrice(session.price)}</strong>
-              {session.wasPrice > session.price && <s><span className="rt-cd__sr">was </span>{formatPrice(session.wasPrice)}</s>}
+              <strong>{formatPrice(price)}</strong>
+              {wasPrice > price && <s><span className="rt-cd__sr">was </span>{formatPrice(wasPrice)}</s>}
               {save > 0 && <span className="rt-bs__off">{save}% off</span>}
             </div>
           )}
@@ -158,6 +160,7 @@ export default function BookingCard() {
               </>
             ) : (
               <>
+                {withBundle && <li className="rt-bs__pkg"><Icon name="badge" /><span>{withBundle.name}<small> (+{formatPrice(withBundle.add)})</small></span></li>}
                 <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}</span></li>
                 <li><Icon name="location" /><span>{session.location}</span></li>
                 <li><Icon name="coupon" /><span>All inc</span></li>

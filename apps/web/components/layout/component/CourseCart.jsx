@@ -32,7 +32,7 @@ const CourseCart = () => {
                   </Link>
                   <div className="rt-mini__body">
                     <Link href={coursePath(item.slug || item.id)} className="rt-mini__title">{item.title}</Link>
-                    <span className="rt-mini__meta">{hasDate(item) ? `${formatShortDate(item.date)} · ${item.city || "Online"}` : "No date chosen"}</span>
+                    <span className="rt-mini__meta">{item.bundle?.name ? `${item.bundle.name} · ` : ""}{hasDate(item) ? `${formatShortDate(item.date)} · ${item.city || "Online"}` : "No date chosen"}</span>
                     <span className="rt-mini__price">{quantity > 1 ? `${quantity} × ` : ""}<b>{formatPrice(total)}</b></span>
                   </div>
                   <button type="button" className="rt-mini__remove" onClick={() => remove(item)} aria-label={`Remove ${item.title}`}>

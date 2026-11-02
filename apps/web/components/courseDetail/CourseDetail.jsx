@@ -20,7 +20,8 @@ import CourseFaqs from "@/components/courseDetail/CourseFaqs";
 import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
-import { CompareTable, TickCard, Packages, BusinessSection, LicenceSection } from "@/components/courseDetail/CourseGuide";
+import { CompareTable, TickCard, BusinessSection, LicenceSection } from "@/components/courseDetail/CourseGuide";
+import PackagePicker from "@/components/courseDetail/PackagePicker";
 import { courseGuides } from "@/data/courseGuides";
 import { matchesPick } from "@/lib/catalogueData";
 import { getSubjectLabel } from "@/lib/courses";
@@ -95,7 +96,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
       {/* No overflow-hidden on any ancestor of the sticky card and nav. */}
       <div className="content-wrapper js-content-wrapper">
         <main id="rt-cd-main" className="rt-cd" tabIndex={-1}>
-          <BookingProvider course={course} initialMode={query.mode} initialSession={query.session}>
+          <BookingProvider course={course} initialMode={query.mode} initialSession={query.session} initialPackage={query.package} packages={guide?.packages?.items ?? null}>
             <div className="container rt-cd__wrap">
               <div className="rt-cd__grid">
                 <CourseHero course={course} />
@@ -203,7 +204,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
                     </section>
                   )}
 
-                  <Packages packages={guide?.packages} course={course} />
+                  <PackagePicker packages={guide?.packages} />
 
                   <BusinessSection business={guide?.business} course={course} />
 

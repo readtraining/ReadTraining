@@ -145,6 +145,7 @@ function CheckoutForm() {
         total: totals.total,
         lines: lines.map((item) => ({
           title: item.title,
+          ...(item.bundle?.name ? { package: item.bundle.name } : {}),
           when: when(item),
           where: where(item),
           provider: item.provider,
@@ -163,7 +164,7 @@ function CheckoutForm() {
         company: order.company,
         lines: lines.map((item) => {
           const { unit, total, quantity } = lineParts(item);
-          return { courseId: item.id, title: item.title, slug: item.slug, imageSrc: item.imageSrc, mode: item.mode, date: item.date, endDate: item.endDate, time: item.time, venue: item.venue, city: item.city, postcode: item.postcode, provider: item.provider, quantity, unit, total, delegates: namesFor(item) };
+          return { courseId: item.id, title: item.title, package: item.bundle?.name ?? null, slug: item.slug, imageSrc: item.imageSrc, mode: item.mode, date: item.date, endDate: item.endDate, time: item.time, venue: item.venue, city: item.city, postcode: item.postcode, provider: item.provider, quantity, unit, total, delegates: namesFor(item) };
         }),
       });
       try {
@@ -293,7 +294,7 @@ function CheckoutForm() {
                   <p className="rt-ck__lead">{copy.delegates.text}</p>
                   {lines.map((item) => (
                     <div key={lineKey(item)} className="rt-ck__course">
-                      <h3 className="rt-ck__h3">{item.title}</h3>
+                      <h3 className="rt-ck__h3">{item.title}{item.bundle?.name ? ` · ${item.bundle.name}` : ""}</h3>
                       <p className="rt-ck__meta">{when(item)} · {where(item)}</p>
                       {delegateList.filter((d) => d.key.startsWith(`${lineKey(item)}:`)).map((d) => {
                         const x = delegates[d.key] || NO_DELEGATE;

@@ -8,7 +8,8 @@ import { topBar } from "@/data/home";
 // The course guide's sections (data/courseGuides.js), built only from the course page's own parts: .rt-cd__sec sections with an
 // h2 and an .rt-cd__lead line, the .rt-cd__learn card with .rt-cd__checks, the .rt-cd__table table, the learning options' cards
 // (.rt-lc) for packages, the trust boxes' tiles (.rt-benefit-card) and the staff training callout (.rt-cd__staff). Every section
-// is left out when its guide has nothing for it. The course's own price is its lowest live price (course.price).
+// is left out when its guide has nothing for it. The course's own price is its lowest live price (course.price). The packages
+// are chosen on the page, so they are a client component of their own (PackagePicker).
 
 const quote = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 const tel = (phone) => `tel:${phone.replace(/\s+/g, "")}`;
@@ -57,34 +58,6 @@ export function TickCard({ id, title, items, note }) {
         <Ticks items={items} />
         {note && <p className="rt-cd__lead rt-cg__note">{note}</p>}
       </div>
-    </section>
-  );
-}
-
-// The packages, as the learning options' cards. "Course only" is the course's own lowest live price; a bundle has its own.
-export function Packages({ packages, course }) {
-  if (!packages) return null;
-  const priced = packages.items.map((p) => ({ ...p, price: p.course ? course.price : p.from }));
-  return (
-    <section className="rt-cd__sec rt-lo" id="packages" aria-labelledby="rt-cg-pkg-h">
-      <h2 id="rt-cg-pkg-h">{packages.title}</h2>
-      {packages.intro && <p className="rt-cd__lead">{packages.intro}</p>}
-      <ul className={`rt-lc -n${priced.length} rt-cg__pkgs`}>
-        {priced.map((p) => (
-          <li key={p.name} className="rt-lc__card rt-cg__pkg">
-            <span className="rt-lc__top">{p.badge && <span className="rt-pill -accent">{p.badge}</span>}</span>
-            <div>
-              <h3 className="rt-lc__name">{p.name}</h3>
-              <p className="rt-cg__pkg-text">{p.text}</p>
-            </div>
-            <ul className="rt-lc__list">{p.points.map((x) => <li key={x}><Check /> <span>{x}</span></li>)}</ul>
-            <span className="rt-lc__price">
-              {p.price != null && <><span>From</span> <strong>{formatPrice(p.price)}</strong></>}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {packages.note && <p className="rt-cd__lead rt-cg__note">{packages.note}</p>}
     </section>
   );
 }
