@@ -192,9 +192,9 @@ const HomeHero = () => {
                     </div>
                     <div className="ml-20">
                       <div className="text-dark-1 text-16 fw-500 lh-1">
-                        Next SIA course
+                        Compare dates
                       </div>
-                      <div className="mt-3">Mon 6 Oct · Manchester</div>
+                      <div className="mt-3">Classroom and live online</div>
                     </div>
                   </div>
                 </div>
@@ -214,16 +214,9 @@ const HomeHero = () => {
                     <Image src={move_icon_2} alt="" />
                     <div className="ml-20">
                       <div className="text-dark-1 text-16 fw-500 lh-1">
-                        Oliver Desuza
+                        Accredited courses
                       </div>
-                      <div className="mt-3">SIA Door Supervisor Course</div>
-                      <div className="d-flex x-gap-5 mt-3">
-                        {starts.map((start, index) => (
-                          <div key={index}>
-                            <div className={start}></div>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="mt-3">SIA, CSCS, first aid and more</div>
                     </div>
                   </div>
                 </div>
@@ -251,9 +244,9 @@ const HomeHero = () => {
                     </div>
                     <div className="">
                       <div className="text-purple-1 text-16 fw-500 lh-1">
-                        Certificate issued
+                        Get certified
                       </div>
-                      <div className="mt-3">3 days after your course</div>
+                      <div className="mt-3">From your training provider</div>
                     </div>
                   </div>
                 </div>

@@ -20,11 +20,8 @@ export const menu = [
   { href: "/template/blog-list-1", label: "Resources" },
 ];
 
-// The year ReadTraining was established (the home hero and the About page read it from here)
-export const founded = 2011;
-
 export const hero = {
-  eyebrow: `Established in ${founded} · Vocational training across the UK`,
+  eyebrow: "Vocational training across the UK",
   title: "Book accredited training.",
   titleLine2: "Get certified",
   titleAccent: "sooner.",
@@ -42,8 +39,6 @@ export const hero = {
     { href: courseSearch("CSCS Green Card"), label: "CSCS Green Card", slug: "/course/cscs-green-card-labourers-card-course" },
   ],
 };
-
-export const employers = ["G4S", "Transport for London", "Armani", "North East Autism Society", "Balfour Beatty", "Kier", "Mace", "Skanska", "Berkeley Group", "Coventry College"];
 
 export const bookingOptions = {
   eyebrow: "Why book through ReadTraining",
@@ -202,7 +197,6 @@ export const teamBooking = {
     { id: 2, title: "Business and group pricing", text: "Access suitable pricing for eligible group, repeat or larger bookings." },
     { id: 3, title: "Flexible training locations", text: "Arrange training at your workplace, a training centre or another suitable venue for your team." },
   ],
-  note: "Used by teams at",
   button: "Book for your team",
   href: "/for-business",
   secondary: "Request a quote",
@@ -238,12 +232,8 @@ export const providers = {
   button: "List your courses",
   note: "Free to list · Commission only",
   href: "/for-providers",
-  proof: [
-    { value: "46+", label: "providers on one SIA course" },
-    { value: "103", label: "towns and cities covered" },
-    { value: "12", label: "subject categories" },
-  ],
-  quote: { text: "We filled a Door Supervisor course in four days without spending a penny on ads.", author: "Sentinel Training", role: "SIA provider, London" },
+  // a training provider's own words (Proshield Training, sent by the client with permission to use it)
+  quote: { text: "We saw a steady stream of enquiries and bookings, and we’ve filled a good number of places on our courses through their site.", author: "Proshield Training", role: "Training provider" },
 };
 
 export const help = {
@@ -332,17 +322,3 @@ export const footer = {
     { href: "/provider-terms", label: "Provider Terms" },
   ],
 };
-
-// Employer logos for the trust strip (files in /public/assets/img/employers). `h` = rendered height in px.
-export const employerLogos = [
-  { name: "G4S", src: "/assets/img/employers/g4s.svg", h: 22 },
-  { name: "Transport for London", src: "/assets/img/employers/tfl.svg", h: 20 },
-  { name: "Armani", src: "/assets/img/employers/armani.svg", h: 20 },
-  { name: "North East Autism Society", src: "/assets/img/employers/neas.svg", h: 20 },
-  { name: "Balfour Beatty", src: "/assets/img/employers/balfour-beatty.svg", h: 20 },
-  { name: "Kier", src: "/assets/img/employers/kier.svg", h: 20 },
-  { name: "Mace", src: "/assets/img/employers/mace.svg", h: 20 },
-  { name: "Skanska", src: "/assets/img/employers/skanska.svg", h: 20 },
-  { name: "Berkeley Group", src: "/assets/img/employers/berkeley.svg", h: 20 },
-  { name: "Coventry College", src: "/assets/img/employers/coventry-college.svg", h: 20 },
-];
