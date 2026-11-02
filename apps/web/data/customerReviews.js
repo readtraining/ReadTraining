@@ -1,4 +1,4 @@
-import { founded, stories } from "@/data/home";
+import { stories } from "@/data/home";
 import { testimonials, trustFigures, videoStory } from "@/lib/siteContent";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
@@ -30,7 +30,6 @@ export const customerReviews = () => {
     { icon: "icon-star", value: t.ratingSlash, label: "Average rating" },
     { icon: "icon-message", value: t.reviews, label: "Verified reviews" },
     { icon: "icon-person-3", value: t.customers, label: "Customers" },
-    { icon: "icon-wall-clock", value: `Est. ${founded}`, label: "Training people across the UK" },
   ],
   featured: {
     eyebrow: "In their words",

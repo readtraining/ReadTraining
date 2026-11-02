@@ -2,7 +2,6 @@ import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
-import HomeBrands from "@/components/home/HomeBrands";
 import ProHero from "@/components/provider/ProHero";
 import ProWorkflow from "@/components/provider/ProWorkflow";
 import ProCohorts from "@/components/provider/ProCohorts";
@@ -41,7 +40,6 @@ export default async function ForProvidersPage() {
         <ProPricing />
         <FaqSection eyebrow={provider.faq.eyebrow} title={provider.faq.title} text={provider.faq.text} items={faq} idPrefix="pro-faq" />
         <ProCta />
-        <HomeBrands />
         <HomeHelp />
         <HomeFooter />
       </div>
