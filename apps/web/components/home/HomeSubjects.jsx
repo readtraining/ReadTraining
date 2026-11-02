@@ -29,7 +29,6 @@ export default function HomeSubjects() {
                 </div>
                 <div className="rt-subject__body">
                   <div className="rt-subject__title">{elm.title}</div>
-                  <div className="rt-subject__meta">{elm.items.length}+ courses</div>
                   <span className="rt-subject__arrow"><i className="icon-arrow-right text-11"></i></span>
                 </div>
               </Link>

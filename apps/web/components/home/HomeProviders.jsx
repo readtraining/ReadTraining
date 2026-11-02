@@ -5,7 +5,7 @@ import { providers as d } from "@/data/home";
 
 const icons = ["icon-list", "icon-notification", "icon-global-search"];
 
-// For training providers: three benefits + link on the left, photo with provider quote and proof on the right.
+// For training providers: three benefits + link on the left, photo with a provider's quote on the right.
 export default function HomeProviders() {
   return (
     <section id="providers" className="layout-pt-lg layout-pb-lg bg-light-4">
@@ -45,11 +45,6 @@ export default function HomeProviders() {
                   <div className="rt-partner__who"><b>{d.quote.author}</b> · {d.quote.role}</div>
                 </div>
               )}
-              <div className="rt-partner__chips">
-                {d.proof.map((pr) => (
-                  <div key={pr.label} className="rt-partner__chip"><b>{pr.value}</b><span>{pr.label}</span></div>
-                ))}
-              </div>
             </div>
           </div>
         </div>

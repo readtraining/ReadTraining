@@ -14,6 +14,7 @@ import move_img_1 from "@/public/assets/img/masthead/1.png";
 import move_img_2 from "@/public/assets/img/masthead/2.png";
 import move_img_3 from "@/public/assets/img/masthead/3.png";
 import move_icon_3 from "@/public/assets/img/masthead/2.svg";
+import move_icon_2 from "@/public/assets/img/masthead/4.png";
 import SourceLabel from "@/components/customerReviews/SourceLabel";
 
 
@@ -192,9 +193,9 @@ const HomeHero = () => {
                     </div>
                     <div className="ml-20">
                       <div className="text-dark-1 text-16 fw-500 lh-1">
-                        Next SIA course
+                        Compare dates
                       </div>
-                      <div className="mt-3">Mon 6 Oct · Manchester</div>
+                      <div className="mt-3">Classroom and live online</div>
                     </div>
                   </div>
                 </div>
@@ -207,6 +208,18 @@ const HomeHero = () => {
                     style={{ objectFit: "cover" }}
                     alt=""
                   />
+                  <div
+                    data-move="60"
+                    className="lg:d-none img-el -w-260 px-20 py-20 d-flex items-center bg-white rounded-8 js-mouse-move"
+                  >
+                    <Image src={move_icon_2} alt="" />
+                    <div className="ml-20">
+                      <div className="text-dark-1 text-16 fw-500 lh-1">
+                        Accredited courses
+                      </div>
+                      <div className="mt-3">SIA, CSCS, first aid and more</div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="masthead-image__el3">
@@ -232,9 +245,9 @@ const HomeHero = () => {
                     </div>
                     <div className="">
                       <div className="text-purple-1 text-16 fw-500 lh-1">
-                        Certificate issued
+                        Get certified
                       </div>
-                      <div className="mt-3">3 days after your course</div>
+                      <div className="mt-3">From your training provider</div>
                     </div>
                   </div>
                 </div>

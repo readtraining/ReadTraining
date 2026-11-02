@@ -34,8 +34,11 @@ export default function AdminTeam() {
   const sorter = useSort();
   const resendTo = async (a) => {
     try {
-      const { emailed } = await resend.mutateAsync({ userId: a.userId });
-      done(emailed ? `A new invite was sent to ${a.email}` : `A new invite link was made, but the email to ${a.email} couldn't be sent. Try again in a moment.`);
+      const { emailed, outbox } = await resend.mutateAsync({ userId: a.userId });
+      done(
+        outbox ? `A new invite for ${a.email} was saved to the test outbox. This copy of the site doesn't send emails.`
+        : emailed ? `A new invite was sent to ${a.email}` : `A new invite link was made, but the email to ${a.email} couldn't be sent. Try again in a moment.`,
+      );
     } catch (error) {
       setSaid(errorsFrom(error).general);
     }
@@ -154,11 +157,13 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
     try {
       const email = form.email.trim();
       if (form.mode === "add") {
-        const { invited, emailed } = await add.mutateAsync({ email, ...body });
+        const { invited, emailed, outbox } = await add.mutateAsync({ email, ...body });
+        // a development copy saves emails to its test outbox instead of sending them: say so, so nobody waits for an email
+        const test = " This copy of the site doesn't send emails: the email was saved to the test outbox.";
         onDone(
           invited
-            ? emailed ? `Invite sent to ${email}` : `${email} is invited, but the email couldn't be sent. Use Resend invite on their row.`
-            : emailed ? `${email} added to the admin team. We've let them know by email.` : `${email} added to the admin team.`,
+            ? outbox ? `${email} is invited.${test}` : emailed ? `Invite sent to ${email}` : `${email} is invited, but the email couldn't be sent. Use Resend invite on their row.`
+            : outbox ? `${email} added to the admin team.${test}` : emailed ? `${email} added to the admin team. We've let them know by email.` : `${email} added to the admin team.`,
         );
       } else {
         await update.mutateAsync({ userId: form.userId, ...body });

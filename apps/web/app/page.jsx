@@ -2,7 +2,6 @@ import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHero from "@/components/home/HomeHero";
 import HomeSearchBand from "@/components/home/HomeSearchBand";
-import HomeBrands from "@/components/home/HomeBrands";
 import HomeCourses from "@/components/home/HomeCourses";
 import HomeBookingOptions from "@/components/home/HomeBookingOptions";
 import HomeRoles from "@/components/home/HomeRoles";
@@ -54,7 +53,6 @@ export default async function HomePage() {
         <HomeStories reviews={reviews} />
         <HomeTeamBooking />
         <HomeProviders />
-        <HomeBrands />
         <HomeHelp />
         <HomeFooter />
       </div>

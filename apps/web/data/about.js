@@ -1,4 +1,4 @@
-import { bookingOptions, footer, founded } from "@/data/home";
+import { bookingOptions, footer } from "@/data/home";
 import { trustFigures } from "@/lib/siteContent";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
@@ -85,7 +85,6 @@ export const about = {
 export const aboutFacts = () => {
   const t = trustFigures();
   return [
-    { icon: "icon-wall-clock", value: `Est. ${founded}`, label: "Training people across the UK" },
     { icon: "icon-person-3", value: t.customers, label: "Customers" },
     { icon: "icon-book", value: t.courses, label: "Courses to compare" },
     { icon: "icon-star", value: t.ratingSlash, label: `From ${t.reviews} reviews` },

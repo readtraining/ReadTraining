@@ -1,4 +1,3 @@
-import { founded } from "@/data/home";
 import { trustFigures } from "@/lib/siteContent";
 import { reviewCourse } from "@/lib/siteReviews";
 import { CATALOGUE_HREF } from "@/lib/routes";
@@ -29,7 +28,6 @@ export const customerReviews = (reviews = []) => {
       { icon: "icon-star", value: t.ratingSlash, label: "Average rating" },
       { icon: "icon-message", value: t.reviews, label: "Reviews" },
       { icon: "icon-person-3", value: t.customers, label: "Customers" },
-      { icon: "icon-wall-clock", value: `Est. ${founded}`, label: "Training people across the UK" },
     ],
     list: {
       title: list.length ? "A selection of our reviews" : "Our reviews",

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { teamBooking as d, employers, subjects, hero } from "@/data/home";
+import { teamBooking as d, subjects, hero } from "@/data/home";
 
 // For employers: dark band with a short intro on the left and a "team quote" mini form on the right.
 export default function HomeTeamBooking() {
@@ -36,10 +36,6 @@ export default function HomeTeamBooking() {
               ))}
             </div>
 
-            <div className="rt-band__proof mt-25">
-              <span className="rt-band__proofLabel">{d.note}</span>
-              <span className="rt-band__logos">{employers.slice(0, 4).map((e) => <span key={e}>{e}</span>)}</span>
-            </div>
           </div>
 
           <div className="col-xl-6 col-lg-6">

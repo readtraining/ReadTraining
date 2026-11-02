@@ -18,6 +18,7 @@
     "seed:courses": "tsx --env-file-if-exists=../../.env src/scripts/seed-courses.mts",
     "seed:reviews": "tsx --env-file-if-exists=../../.env src/scripts/seed-reviews.mts",
     "clean:dev": "tsx --env-file-if-exists=../../.env src/scripts/clean-dev.mts",
+    "remove:test-content": "tsx --env-file-if-exists=../../.env src/scripts/remove-test-content.mts",
     "prelaunch:clean": "tsx --env-file-if-exists=../../.env src/scripts/prelaunch-clean.mts"
   },
   "dependencies": {
