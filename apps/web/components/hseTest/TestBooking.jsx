@@ -9,7 +9,8 @@ import { EMAIL_PATTERN } from "@/lib/auth/authClient";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
-import { keepSubmission } from "@/lib/inbox";
+import FormGate from "@/components/forms/FormGate";
+import { sendForm } from "@/lib/forms";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = hseTest.request;
@@ -35,13 +36,6 @@ function validate(v) {
   return e;
 }
 
-// DEMO: the booking request is simulated (a reference number back, kept for Admin > Requests); with a backend it goes to the bookings team.
-const sendRequest = async (data) => {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  const reference = `HS-${Math.floor(100000 + Math.random() * 900000)}`;
-  keepSubmission("test", reference, data);
-  return { reference };
-};
 
 // The HS&E pages' booking pop-up (Sheet, the site's dialog) with the form in the site's pattern: errors above each field, the
 // first invalid field focused, no browser pop-ups. As the client's site, we book the test for the learner: they say which test,
@@ -75,7 +69,7 @@ export default function TestBooking({ children }) {
     if (Object.keys(found).length) return focusFirstError(formRef.current);
     setStatus("sending");
     try {
-      setRef((await sendRequest(v)).reference);
+      setRef((await sendForm("hseTest", v)).reference);
       setStatus("sent");
       trackEvent("hse_booking_sent", { centre: v.centre || "none", test: v.type });
     } catch {
@@ -109,6 +103,7 @@ export default function TestBooking({ children }) {
             <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={() => setOpen(false)}>{copy.close}</button>
           </div>
         ) : (
+          <FormGate form="hseTest" inCard>
           <form className="rt-q__form rt-lic__sheetform" onSubmit={submit} noValidate ref={formRef}>
             <p className="rt-acc__note">{copy.note}</p>
             <div className="rt-contact__pair">
@@ -132,6 +127,7 @@ export default function TestBooking({ children }) {
             <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={status === "sending"} aria-busy={status === "sending"}>{status === "sending" ? copy.sending : copy.submit}</button>
             <p className="rt-benefit__text rt-contact__privacy">{copy.privacy.text} <Link href={copy.privacy.href}>{copy.privacy.label}</Link>.</p>
           </form>
+          </FormGate>
         )}
       </Sheet>
     </Ctx.Provider>

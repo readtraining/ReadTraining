@@ -8,13 +8,15 @@ import { basket as basketCopy } from "@/data/basket";
 import { checkout as copy } from "@/data/checkout";
 import { basketIssues, basketTotals, isSelected, lineKey, lineParts, modeLabel, promoFor } from "@/lib/basket";
 import { getWallet, saveBooking, spendWallet } from "@/lib/account";
-import { ORDER_KEY, PAY_FAILED_KEY, placeOrder, validCardNumber, validExpiry, validPostcode } from "@/lib/checkout";
+import { ORDER_KEY, PAY_FAILED_KEY, validCardNumber, validExpiry, validPostcode } from "@/lib/checkout";
+import { sendForm } from "@/lib/forms";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import BasketSteps from "@/components/basket/BasketSteps";
 import CheckoutSummary, { CheckoutMiniSummary } from "./CheckoutSummary";
 import { useSkillSaver } from "@/lib/useSkillSaver";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { EmptyState } from "@/components/states/States";
+import FormGate from "@/components/forms/FormGate";
 
 const FORM_ID = "rt-ck-form";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -62,7 +64,7 @@ function validate(v, delegateList, delegates) {
 // checked on submit, a message under each field (the first field with one gets the focus) and
 // "Error: " in the page title. Paid through lib/checkout.js (simulated); a declined card keeps everything entered. On success the
 // order is kept for the confirmation page, the booked courses leave the basket and the confirmation opens.
-export default function CheckoutPage() {
+function CheckoutForm() {
   const router = useRouter();
   const { cartCourses, setCartCourses } = useContextElement();
   const [ready, setReady] = useState(false);
@@ -129,7 +131,7 @@ export default function CheckoutPage() {
       return x.me ? booker : `${x.firstName.trim()} ${x.lastName.trim()}`;
     });
     try {
-      const { reference } = await placeOrder({ ...values, payment: { method, cardNumber: digits(values.cardNumber), wallet: walletUse }, lines, delegates });
+      const { reference } = await sendForm("checkout", { ...values, payment: { method, cardNumber: digits(values.cardNumber), wallet: walletUse }, lines, delegates });
       const walletUsed = spendWallet(walletUse, reference);
       const order = {
         paid: true,
@@ -377,5 +379,14 @@ export default function CheckoutPage() {
         </div>
       </section>
     </>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function CheckoutPage(props) {
+  return (
+    <FormGate form="checkout">
+      <CheckoutForm {...props} />
+    </FormGate>
   );
 }

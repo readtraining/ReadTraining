@@ -7,12 +7,16 @@ import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 // a route opens the course finder searched for its words (`slug` keeps the client's original path)
 const course = (words, slug) => ({ slug, href: courseSearch(words) });
 
+// How to reach the team, used across the site. The phone is the landline on the client's Google listing (so the site and the
+// listing match); the mobile is for WhatsApp only. Hours as on the Google listing.
 export const topBar = {
-  phone: "0333 344 1293",
-  email: "hello@readtraining.co.uk",
-  hours: "Mon to Fri, 9:00am to 5:30pm",
-  // our WhatsApp number (the client's), opened through wa.me
-  whatsapp: { number: "+44 7405 098062", href: "https://wa.me/447405098062" },
+  phone: "020 3488 5052",
+  phoneHref: "tel:+442034885052",
+  email: "info@readtraining.co.uk",
+  hours: "Mon to Sat, 9:00am to 6:00pm",
+  hoursLong: "Monday to Saturday, 9:00am to 6:00pm",
+  // our WhatsApp number (the client's mobile; WhatsApp only), opened through wa.me
+  whatsapp: { number: "07405 098062", href: "https://wa.me/447405098062" },
 };
 
 export const menu = [
@@ -122,7 +126,7 @@ export const courseFinder = {
       allLabel: "Browse all NVQs", allHref: CATALOGUE_HREF,
     },
   ],
-  help: "Need personal guidance? Call 0333 344 1293",
+  help: `Need personal guidance? Call ${topBar.phone}`,
 };
 
 // Slider tiles for the finder section (template feature cards): the four goals.
@@ -233,8 +237,8 @@ export const help = {
   title: "Talk to a real person.",
   text: "Not sure which course, date or booking option is right? Our UK team helps with requirements, locations and group bookings.",
   options: [
-    { label: "Call us", value: "0333 344 1293", meta: "Mon to Fri, 9:00am to 5:30pm", href: "tel:03333441293" },
-    { label: "Live chat", value: "Start a conversation", meta: "8am to 6pm", href: "/contact-us" },
+    { label: "Call us", value: topBar.phone, meta: topBar.hours, href: topBar.phoneHref },
+    { label: "WhatsApp", value: "Message us", meta: topBar.hours, href: topBar.whatsapp.href },
     { label: "Help centre", value: "Guides, FAQs and requirements", meta: "Guides, FAQs and requirements", href: "/help-centre" },
   ],
   button: "Visit Help Centre",
@@ -243,10 +247,10 @@ export const help = {
 
 export const footer = {
   about: "Browse and book vocational and compliance training across the UK, with classroom, live online and self-paced options available.",
-  phone: "0333 344 1293",
-  hours: "Mon to Fri, 9:00am to 5:30pm",
+  phone: topBar.phone,
+  hours: topBar.hours,
   address: "London, United Kingdom",
-  email: "hello@readtraining.co.uk",
+  email: "info@readtraining.co.uk",
   columns: [
     {
       title: "Find a course",

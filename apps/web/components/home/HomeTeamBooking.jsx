@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { teamBooking as d, subjects, hero } from "@/data/home";
+import FormGate from "@/components/forms/FormGate";
 
 // For employers: dark band with a short intro on the left and a "team quote" mini form on the right.
 export default function HomeTeamBooking() {
@@ -39,6 +40,7 @@ export default function HomeTeamBooking() {
           </div>
 
           <div className="col-xl-6 col-lg-6">
+            <FormGate form="quote">
             <form onSubmit={submit} className="rt-quote">
               <div className="rt-quote__head">
                 <div>
@@ -92,6 +94,7 @@ export default function HomeTeamBooking() {
                 ))}
               </div>
             </form>
+            </FormGate>
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@
     "dev:web": "pnpm --filter @readtraining/web dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
+    "check:forms": "node scripts/check-forms.mjs",
     "db:generate": "pnpm --filter @readtraining/db generate",
     "db:migrate": "pnpm --filter @readtraining/db migrate",
     "db:push": "pnpm --filter @readtraining/db push",

@@ -1,6 +1,4 @@
 import { adminWork as W, businessSeeds, candidateSeeds, employers, requestSeeds, roles } from "@/data/adminWork";
-import { testCentres } from "@/data/testCentres";
-import { readInbox } from "@/lib/inbox";
 import { DAY, HOUR, addWorkingDays, update } from "@/lib/adminStore";
 
 // Admin Phase 2 reads and writes: Requests and fulfilment, Security Jobs and Business accounts. The records are the demo ones in
@@ -10,26 +8,11 @@ import { DAY, HOUR, addWorkingDays, update } from "@/lib/adminStore";
 const R = W.requests;
 const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 const say = (event) => ({ at: Date.now(), text: event });
-const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 // ---- requests ------------------------------------------------------------------------------------------------------------------
-const centreName = (slug) => testCentres.find((c) => c.slug === slug)?.town;
-const fromInbox = (x) => {
-  const d = x.data || {};
-  const name = d.name || [d.firstName, d.lastName].filter(Boolean).join(" ");
-  const base = { ref: x.reference, name, email: d.email || "", phone: d.phone || "", company: d.company || "", at: x.at, status: "new", live: true };
-  if (x.kind === "quote") return { ...base, kind: "quote", title: d.course || "Course not given", details: [["Course", d.course || "Not given"], ["People", d.people || "Not given"], ["Message", d.message || ""]] };
-  if (x.kind === "licence") return { ...base, kind: "licence", title: d.type || "Licence", details: [["What they need", d.type], ["Application", d.application], ["Notes", d.notes]], docs: ["Proof of the qualification for the card or licence", "Photo ID"], price: null };
-  if (x.kind === "training") return { ...base, kind: "training", title: cap(d.licence || "forklift"), details: [["Truck", d.truck], ["Experience", d.experience], ["People", d.people], ["Postcode", d.postcode]] };
-  if (x.kind === "test") return { ...base, kind: "test", title: `CITB ${d.type || "test"}`, price: 41.99, details: [["Test", d.type], ["Centre", centreName(d.centre) ? `${centreName(d.centre)} Test Centre` : "Not chosen yet"], ["When", d.when], ["Notes", d.notes]] };
-  if (x.kind === "contact") return { ...base, kind: "contact", title: cap(d.topic || "message"), details: [["Topic", d.topic], ["Booking", d.reference], ["Message", d.message]] };
-  return null;
-};
-
 function buildRequests(saved, now) {
-  const live = readInbox().filter((x) => x.kind !== "job").map(fromInbox).filter(Boolean);
   const seeds = requestSeeds.map((s) => ({ ...s, at: now - s.hoursAgo * HOUR }));
-  return [...live, ...seeds]
+  return seeds
     .map((r) => {
       const s = saved.requests?.[r.ref] || {};
       const status = s.status || r.status;
@@ -83,20 +66,9 @@ export const addRequestNote = (r, text) =>
 
 // ---- Security Jobs ------------------------------------------------------------------------------------------------------------
 const roleById = Object.fromEntries(roles.map((r) => [r.id, { ...r, employerName: employers.find((e) => e.id === r.employer)?.name }]));
-const candidateFromInbox = (x) => {
-  const d = x.data || {};
-  const digits = (d.licenceNumber || "").replace(/\D/g, "");
-  return {
-    ref: x.reference, name: [d.firstName, d.lastName].filter(Boolean).join(" "), email: d.email, phone: d.phone, postcode: (d.postcode || "").toUpperCase(), city: "",
-    licence: { type: d.licenceType, last4: digits.slice(-4), expiry: d.licenceExpiry }, shifts: d.shifts || [], travel: d.travel, start: d.start,
-    eligibility: d.eligibility || {}, at: x.at, status: "new", intros: [], live: true,
-  };
-};
-
 function buildJobs(saved, now) {
-  const live = readInbox().filter((x) => x.kind === "job").map(candidateFromInbox);
   const seeds = candidateSeeds.map((c) => ({ ...c, at: now - c.daysAgo * DAY, intros: (c.intros || []).map((i) => ({ ...i, at: now - i.daysAgo * DAY, consent: i.consent ? { at: now - i.consent.daysAgo * DAY, how: i.consent.how } : null })) }));
-  const candidates = [...live, ...seeds].map((c) => {
+  const candidates = seeds.map((c) => {
     const s = saved.candidates?.[c.ref] || {};
     const intros = [...c.intros.filter((i) => !s.intros?.[i.role]), ...Object.entries(s.intros || {}).map(([role, i]) => ({ role, ...i }))]
       .map((i) => ({ ...i, roleInfo: roleById[i.role] }))

@@ -65,7 +65,7 @@ export const privacy = {
       id: "your-rights",
       title: "Your rights",
       blocks: [
-        "You can ask to see, correct, update or delete your personal information at any time by emailing [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk?subject=Privacy%20request).",
+        "You can ask to see, correct, update or delete your personal information at any time by emailing [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request).",
       ],
     },
     {

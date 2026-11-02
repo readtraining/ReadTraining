@@ -2,9 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CERT_EXAMPLE, checkCertificate, normaliseCertNumber } from "@/lib/certificates";
+import { CERT_EXAMPLE, normaliseCertNumber } from "@/lib/certificates";
+import { sendForm } from "@/lib/forms";
 import CheckerResult from "./CheckerResult";
 import { focusFirstError } from "@/lib/focusFirstError";
+import FormGate from "@/components/forms/FormGate";
 
 const EMPTY = { number: "", surname: "" };
 
@@ -21,7 +23,7 @@ const validate = (v, e) => {
 // the focus) and "Error: " before the page title. "Where do I find the certificate number?"
 // opens a drawing of a certificate with the number marked. `?number=` (a link or QR code on a certificate) fills the number.
 // Checked through lib/certificates.js (simulated until the endpoint exists); the result replaces the form in the same card.
-export default function CheckerCard({ form, result }) {
+function CheckerForm({ form, result }) {
   const params = useSearchParams();
   const [values, setValues] = useState(EMPTY);
   const [errors, setErrors] = useState({});
@@ -66,7 +68,7 @@ export default function CheckerCard({ form, result }) {
     }
     setStatus("checking");
     try {
-      const res = await checkCertificate(values);
+      const res = await sendForm("certificate", values);
       setOutcome({ ...res, checkedAt: new Date() });
       setStatus("done");
     } catch {
@@ -124,5 +126,14 @@ export default function CheckerCard({ form, result }) {
         </form>
       </div>
     </div>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function CheckerCard(props) {
+  return (
+    <FormGate form="certificate">
+      <CheckerForm {...props} />
+    </FormGate>
   );
 }

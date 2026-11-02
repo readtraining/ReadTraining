@@ -6,9 +6,9 @@ const icons = ["icon-message", "icon-person-3", "icon-book"];
 
 // Need help (shadcnblocks Contact 7 pattern, light variant): header, then three tonal cards.
 export default function HomeHelp() {
-  const [call, chat, centre] = help.options;
+  const [call, whatsapp, centre] = help.options;
   const cards = [
-    { icon: icons[0], label: "Live chat", meta: chat.meta, link: "Start a chat", href: chat.href },
+    { icon: icons[0], label: whatsapp.label, meta: whatsapp.meta, link: whatsapp.value, href: whatsapp.href },
     { icon: icons[1], label: "Call us", meta: call.meta, link: call.value, href: call.href },
     { icon: icons[2], label: "Help centre", meta: centre.meta, link: "Browse articles", href: centre.href },
   ];
