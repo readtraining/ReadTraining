@@ -58,7 +58,7 @@ export const contact = {
     text: "Call, WhatsApp or email us.",
     items: [
       { icon: "icon-person-3", label: "Call us", value: topBar.phone, href: tel, meta: topBar.hours },
-      { icon: "icon-message", label: "WhatsApp", value: topBar.whatsapp, href: topBar.whatsappHref, meta: topBar.hours },
+      { icon: "whatsapp", label: "WhatsApp", value: topBar.whatsapp.number, href: topBar.whatsapp.href, external: true, meta: "Send us a message on WhatsApp." },
       { icon: "icon-email", label: "Email us", value: topBar.email, href: `mailto:${topBar.email}`, meta: "We reply within one working day." },
     ],
   },

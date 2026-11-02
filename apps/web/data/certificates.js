@@ -3,7 +3,7 @@
 export const certificates = [
   {
     number: "RT-2026-004815",
-    name: "Oliver Desuza",
+    name: "Sample Learner One",
     course: "SIA Door Supervisor Course",
     qualification: "Level 2 Award for Door Supervisors in the Private Security Industry",
     awardingBody: "Highfield Qualifications",
@@ -13,7 +13,7 @@ export const certificates = [
   },
   {
     number: "RT-2025-010342",
-    name: "Laxley Lamley",
+    name: "Sample Learner Two",
     course: "Emergency First Aid at Work",
     qualification: "Level 3 Award in Emergency First Aid at Work",
     awardingBody: "Qualsafe Awards",
@@ -23,7 +23,7 @@ export const certificates = [
   },
   {
     number: "RT-2023-001207",
-    name: "Arton Asllani",
+    name: "Sample Learner Three",
     course: "Fire Warden & Fire Marshal Course",
     qualification: "Level 2 Award in Fire Safety",
     awardingBody: "Highfield Qualifications",

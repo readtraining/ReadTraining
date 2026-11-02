@@ -5,7 +5,7 @@ import React, { useState } from "react";
 // Course content in the site's accordion (.bz-acc, the same divider list and plus/minus icon as the FAQs), with
 // Expand all / Collapse all once there are 4 or more units (fewer are quick to open one by one). Any number of modules can be
 // open. A closed module is inert, so it cannot be tabbed into.
-export default function ModulesAccordion({ modules, title, titleId }) {
+export default function ModulesAccordion({ modules, title, titleId, intro }) {
   const [open, setOpen] = useState(() => modules.map((_, i) => i === 0));
   const [showAll, setShowAll] = useState(false);
   const allOpen = open.every(Boolean);
@@ -24,6 +24,7 @@ export default function ModulesAccordion({ modules, title, titleId }) {
           </button>
         )}
       </div>
+      {intro && <p className="rt-cd__lead">{intro}</p>}
       <div className="bz-acc rt-cd__acc">
         {visible.map((m, i) => (
           <div key={m.title} className={`bz-acc__item${open[i] ? " is-open" : ""}`}>

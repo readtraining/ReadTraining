@@ -30,3 +30,12 @@ export async function refreshCourses() {
   updateTag("courses");
   return { ok: true };
 }
+
+// The same for the customer reviews (lib/siteReviewsServer.js, tag "reviews"), after an admin adds, changes, publishes or
+// hides one.
+export async function refreshReviews() {
+  const admin = await getAdminAccess();
+  if (!admin?.permissions?.includes("content")) return { ok: false };
+  updateTag("reviews");
+  return { ok: true };
+}

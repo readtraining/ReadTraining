@@ -28,4 +28,4 @@ export const formReady = (key) => typeof FORMS[key]?.send === "function";
 export const sendForm = (key, data) => FORMS[key].send(data);
 
 // The real ways to reach us (data/home topBar), for the "coming soon" panels
-export const CONTACT = { phone: topBar.phone, phoneHref: topBar.phoneHref, whatsappHref: topBar.whatsappHref, email: topBar.email };
+export const CONTACT = { phone: topBar.phone, phoneHref: topBar.phoneHref, whatsappHref: topBar.whatsapp.href, email: topBar.email };

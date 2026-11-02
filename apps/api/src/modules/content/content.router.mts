@@ -9,12 +9,13 @@ import { EMAIL_KEY, editableTemplate, wordsSchema } from '../../emails/templates
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { adminProcedure, createTRPCRouter, publicProcedure, refuse } from '../../trpc/trpc.mjs'
+import { publishedReviews } from '../admin/reviews.mjs'
 
 // The site's editable content (Part B, B2), one value per key. The website reads them all at once (public); a key with no
 // value uses the website's built-in wording. Admins with the "content" switch save one key at a time; each save is checked
 // against that key's shape, logged, and kept as a version (so earlier wording can be looked at and brought back).
 //
-// Keys: trust, featured, testimonials, video, seo (fixed); faq:<set> (one page's FAQ list: any name in the safe pattern, the
+// Keys: trust, featured, seo (fixed); faq:<set> (one page's FAQ list: any name in the safe pattern, the
 // website decides which sets exist); page:<slug> (a legal document: terms, privacy, cookies, accessibility, provider-terms);
 // email:<template> (an automated email's words, emails/templates.mts: never sent to the website).
 // `seo` is a platform setting (the "platform.settings" switch); everything else needs the "content" switch.
@@ -37,9 +38,13 @@ const FIXED = {
       reviews: count.nullable(),
       customers: count.nullable(),
       courses: count.nullable(),
+      // where the rating comes from, e.g. "Google", and a link to it there: optional, shown beside the rating when set
+      source: z.string().trim().min(1).max(40, 'Keep the source to 40 characters or fewer.').nullable().optional(),
+      sourceUrl: z.string().trim().max(500, 'Keep the link to 500 characters or fewer.').url('Enter the full link, starting https://').startsWith('https://', 'Enter the full link, starting https://').nullable().optional(),
     })
     .superRefine((d, ctx) => {
       if ((d.rating === null) !== (d.reviews === null)) ctx.addIssue({ code: 'custom', path: [d.rating === null ? 'rating' : 'reviews'], message: 'Enter both the rating and the number of reviews, or leave both empty.' })
+      if (d.sourceUrl && !d.source) ctx.addIssue({ code: 'custom', path: ['source'], message: 'Enter where the rating comes from, like Google, to go with the link.' })
     }),
   // the homepage's "Popular courses and qualifications": tabs, each with up to four courses (by course number)
   featured: z.object({
@@ -53,23 +58,7 @@ const FIXED = {
       .min(1, 'Keep at least one tab.')
       .max(4, 'Keep to 4 tabs or fewer.'),
   }),
-  // the written testimonials (all on Customer reviews; up to four ticked for the homepage)
-  testimonials: z
-    .array(
-      z.object({
-        id: z.string().min(1).max(40),
-        author: text(2, 60, 'name'),
-        position: text(0, 120, 'course and place'),
-        text: text(10, 800, 'review'),
-        source: z.enum(['', 'Google', 'Trustpilot']),
-        home: z.boolean(),
-      }),
-    )
-    .min(1, 'Keep at least one testimonial.')
-    .max(40, 'Keep to 40 testimonials or fewer.')
-    .refine((a) => a.filter((t) => t.home).length <= 4, 'Choose up to 4 testimonials for the homepage.'),
-  // the words on the homepage's video story (the video itself stays as it is)
-  video: z.object({ author: text(2, 60, 'name'), position: text(0, 120, 'course and place'), quote: text(5, 200, 'quote') }),
+  // (the customer reviews are their own table, `reviews`: admin.reviews, content.reviews)
   // Platform settings: the search-engine words for the homepage, and the description any page without its own uses
   seo: z.object({ homeTitle: text(10, 70, 'homepage title'), homeDescription: text(50, 160, 'homepage description'), siteDescription: text(50, 160, 'default description') }),
 } as const
@@ -139,6 +128,9 @@ export async function providerTermsVersion(db: typeof Db, builtIn: string) {
 }
 
 export const contentRouter = createTRPCRouter({
+  // The customer reviews the website shows: the published ones, newest first (admin.reviews keeps them).
+  reviews: publicProcedure.query(({ ctx }) => publishedReviews(ctx.db)),
+
   // Everything that has been set (keys never set are left out, so the website uses its own wording for them).
   site: publicProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db.execute<{ key: string; value: unknown }>(sql`select key, value from ${siteContent}`)

@@ -1,7 +1,7 @@
 import React from "react";
 import { Icon } from "./Icon";
 
-// Course features, the way Hurak shows them: a heading, then one row of rounded badges, each an icon plus its text.
+// Course features, the way Hurak shows them: a heading, then rounded badges (wrapping onto more rows when needed), each an icon plus its text.
 // The icon is picked from the wording; anything unrecognised gets a tick.
 // Icon-font glyph per kind of feature (the same glyphs as home).
 const ICONS = { refresh: "check", clock: "wall-clock", award: "badge", tag: "save-money", shield: "check", user: "person-3", star: "star", pin: "location", check: "check" };

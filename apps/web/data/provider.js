@@ -129,9 +129,9 @@ export const provider = {
     text: "The operating tools and the marketplace have different commercial models, so the economics are explicit before you join.",
     tiers: [
       { label: "Provider tools", value: "£0", sub: "No monthly subscription", text: "Use the provider capabilities available today without a paid monthly plan." },
-      { label: "Marketplace", value: "30%", sub: "Standard marketplace fee", text: "Rates may vary by course, category and agreed terms. Transaction charges also apply." },
+      { label: "Marketplace", value: "20%", sub: "Standard marketplace fee", text: "Rates may vary by course, category and agreed terms. Transaction charges also apply." },
     ],
-    calc: { title: "Estimate your payout", note: "Illustrative. 30% marketplace fee plus 3% card transaction charge." },
+    calc: { title: "Estimate your payout", note: "Illustrative. 20% marketplace fee plus 3% card transaction charge." },
   },
   faq: {
     eyebrow: "Questions providers ask",
@@ -144,7 +144,7 @@ export const provider = {
       { q: "Can I deliver online learning?", a: "The provider LMS supports text, video, quizzes, assignments, downloads, certificates and SCORM-compatible content." },
       { q: "How does marketplace publication work?", a: "You prepare eligible training and dates for the marketplace from your workspace. Publication is subject to approval and the rules that apply to the course or category." },
       { q: "Is there a monthly provider subscription?", a: "No. The provider tools available today need no paid monthly plan. Marketplace sales use separate marketplace fees." },
-      { q: "What is the standard marketplace fee?", a: "The standard marketplace fee is 30%. Rates may vary by course, category and agreed commercial terms. Transaction charges also apply." },
+      { q: "What is the standard marketplace fee?", a: "The standard marketplace fee is 20%. Rates may vary by course, category and agreed commercial terms. Transaction charges also apply." },
       { q: "How are transaction fees and commission calculated?", a: "Card payments carry a 3% transaction fee and buy-now-pay-later payments 6%. The transaction fee comes off the gross order first, then commission is calculated on the remaining amount." },
       { q: "When are provider payouts made?", a: "Payouts are made on the 28th of each month for bookings completed in the previous month. Bookings completed in February are paid on 28 March." },
       { q: "Are you a broker, reseller or agent?", a: "No. ReadTraining operates as a marketplace. You list the same courses, prices and offers as on your own website, and anyone who books through us remains your customer under your refund and rescheduling policies." },
