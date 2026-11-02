@@ -3,7 +3,7 @@ import { asc, categories, courseLevels, deliveryMethods, eq, subcategories, topi
 import { z } from 'zod'
 
 import { createTRPCRouter, publicProcedure } from '../../trpc/trpc.mjs'
-import { loadCoursePage, loadListings, locate, notFoundCourse } from './listings.mjs'
+import { loadCoursePage, loadListings, locate } from './listings.mjs'
 
 // The catalogue's one list (brief §4): categories > sub-categories > topics, delivery methods and levels. Public, read by
 // the website (filters, menus, course pages), the provider's course form and the admin alike. Retired entries are left out.
@@ -39,9 +39,9 @@ export const catalogueRouter = createTRPCRouter({
 
   // One course page by its address, with its providers' dates.
   course: publicProcedure.input(z.object({ slug: z.string().trim().min(1).max(120) })).query(async ({ ctx, input }) => {
-    const page = await loadCoursePage(ctx.db, input.slug)
-    if (!page) throw notFoundCourse()
-    return page
+    // no such live page: null, an ordinary answer (not an error), so the website's saved copy of a page that has gone is replaced
+    // and the page shows "not found" (Next keeps the old copy when the API answers with an error)
+    return (await loadCoursePage(ctx.db, input.slug)) ?? null
   }),
 
   // The header's subject menu: each category's number of courses and its three most popular.
