@@ -10,6 +10,7 @@
 //   pnpm --filter @readtraining/api seed:courses --remove   remove everything it added
 //   pnpm live --filter @readtraining/api seed:courses --live-review   the review set on the live project (--remove takes it out)
 //   pnpm live --filter @readtraining/api seed:courses --content       update the words of the courses already there
+//   pnpm live --filter @readtraining/api seed:courses --prices        update the prices of their dates
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -26,7 +27,9 @@ const live = !env.DATABASE_URL || env.DATABASE_URL === env.LIVE_DATABASE_URL || 
 const review = process.argv.includes('--live-review')
 // only rewrite the details of the shared pages (and the sample providers' courses on them) that are already there
 const contentOnly = process.argv.includes('--content')
-if (live && !review && !contentOnly && !process.argv.includes('--remove')) {
+// only set the prices of the sample providers' dates that are already there (from OFFERS below)
+const pricesOnly = process.argv.includes('--prices')
+if (live && !review && !contentOnly && !pricesOnly && !process.argv.includes('--remove')) {
   console.error('seed:courses is for development and test databases only. For the client review on live, add --live-review.')
   process.exit(1)
 }
@@ -83,7 +86,7 @@ if (remove) {
   console.log(`Removed the sample providers, their courses and ${pages.length - kept.length} shared course pages.${kept.length ? ` Kept: ${kept.join(', ')}.` : ''}`)
   process.exit(0)
 }
-if (provRows.length && !contentOnly) {
+if (provRows.length && !contentOnly && !pricesOnly) {
   console.log('The sample courses are already there. Run with --remove first to add them again (or --content to update their details).')
   process.exit(0)
 }
@@ -316,6 +319,11 @@ if (contentOnly) {
 // ---- providers and venues -------------------------------------------------------------------------------------------------
 const orgs: Record<string, string> = {}
 for (const p of PROVIDERS) {
+  if (pricesOnly) {
+    const [o] = await db.select({ id: organisations.id }).from(organisations).where(eq(organisations.slug, p.slug))
+    if (o) orgs[p.slug] = o.id
+    continue
+  }
   const [o] = await db
     .insert(organisations)
     .values({ type: 'provider', name: p.name, slug: p.slug, status: 'active', headline: p.headline, city: p.city, bio: `${p.name.replace(' (sample)', '')} is a sample provider. Its courses show how real providers' courses look while the site is being reviewed.`, bookingTerms: 'Pay in full when you book. Your place is confirmed by email.', cancellationPolicy: 'Cancel up to 14 days before the start for a full refund. After that, you can move to another date once for free.' })
@@ -324,7 +332,9 @@ for (const p of PROVIDERS) {
 }
 const [harbour, kestrel, apex] = PROVIDERS.map((p) => orgs[p.slug])
 const venue = async (org: string, name: string, street: string, city: string, postcode: string, lat: number, lng: number) =>
-  (await db.insert(venues).values({ organisationId: org, name, street, city, postcode, lat, lng }).returning({ id: venues.id }))[0].id
+  pricesOnly
+    ? (org ? (await db.select({ id: venues.id }).from(venues).where(and(eq(venues.organisationId, org), eq(venues.name, name))))[0]?.id : undefined)
+    : (await db.insert(venues).values({ organisationId: org, name, street, city, postcode, lat, lng }).returning({ id: venues.id }))[0].id
 const V = {
   man: await venue(harbour, 'Harbour Manchester Centre', '1 Piccadilly', 'Manchester', 'M1 1AE', 53.4835, -2.2312),
   liv: await venue(harbour, 'Harbour Liverpool Rooms', '12 Hanover Street', 'Liverpool', 'L1 3DN', 53.4031, -2.9857),
@@ -335,7 +345,7 @@ const V = {
 }
 
 const sharedIds: Record<string, number> = {}
-for (const s of SHARED) {
+for (const s of pricesOnly ? [] : SHARED) {
   const [kept] = await db.select({ id: courses.id }).from(courses).where(sql`${courses.slug} = ${s.slug} and ${courses.kind} = 'shared'`)
   if (kept) {
     // a page --remove kept (someone else's course sits on it): reuse it, and give it its picture back if the file is gone
@@ -381,6 +391,28 @@ const OFFERS: Offer[] = [
   { org: kestrel, title: 'Asbestos Awareness (Category A)', slug: 'kestrel-asbestos-awareness', cat: 'construction', sub: 'site-safety', topic: 'asbestos-awareness', level: 'beginner', method: 'classroom', img: 10, status: 'pending', dates: [{ start: 18, len: 1, venue: V.bir, price: 5900 }], content: { summary: 'Spot materials that may contain asbestos and avoid disturbing them.', description: 'A half-day awareness course for anyone who could come across asbestos at work.', audience: 'Tradespeople and maintenance staff.', entry: 'None.', outcomes: ['Know where asbestos may be found', 'Understand the health risks', 'Know what to do if you find it', 'Follow the law'], features: ['Half a day'], units: [['What asbestos is', ''], ['Where it is found', ''], ['What to do', '']], faqs: [['Is this enough to remove asbestos?', 'No. Removal needs a licensed contractor.']] } },
   { org: harbour, title: 'Paediatric First Aid (draft)', slug: 'harbour-paediatric-first-aid', cat: 'first-aid', sub: 'paediatric-first-aid', level: 'intermediate', method: 'classroom', img: 4, status: 'draft' },
 ]
+// --prices: the sample providers' courses already there get the prices (and was-prices) in OFFERS on their dates, matched in
+// date order (the dates were added in that order). Nothing else changes: not the dates themselves, their places or anything else.
+//   pnpm live --filter @readtraining/api seed:courses --prices
+if (pricesOnly) {
+  let dates = 0
+  let offers = 0
+  for (const o of OFFERS) {
+    if (!o.org || !o.dates?.length) continue
+    const [c] = await db.select({ id: courses.id }).from(courses).where(and(eq(courses.slug, o.slug), eq(courses.organisationId, o.org)))
+    if (!c) continue
+    const rows = await db.execute<{ id: string }>(sql`select id from ${cohorts} where course_id = ${c.id} and cancelled_at is null order by starts_on, created_at`)
+    for (const [i, d] of o.dates.entries()) {
+      if (!rows[i]) break
+      await db.update(cohorts).set({ pricePence: d.price, wasPricePence: d.was ?? null }).where(eq(cohorts.id, rows[i].id))
+      dates++
+    }
+    offers++
+  }
+  console.log(`Updated the prices of ${dates} dates on ${offers} sample provider courses.`)
+  process.exit(0)
+}
+
 // the live review gets only the providers' live courses on the ten shared pages (no extra, waiting or draft examples)
 const ADD = review ? OFFERS.filter((o) => o.shared && (o.status ?? 'live') === 'live') : OFFERS
 for (const o of ADD) {
