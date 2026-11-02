@@ -1,4 +1,3 @@
-import { TRPCError } from '@trpc/server'
 
 import { asc, courseExams, courseFaqs, courseImages, courseUnits, eq, sql } from '@readtraining/db'
 
@@ -246,8 +245,6 @@ export async function locate(q: string) {
   located.set(key, found)
   return found
 }
-
-export const notFoundCourse = () => new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
 
 // ---- providers' public pages ------------------------------------------------------------------------------------------------
 
