@@ -79,8 +79,8 @@ export const accessibility = {
         {
           type: "ul",
           items: [
-            "email [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk?subject=Accessibility)",
-            "call [0333 344 1293](tel:03333441293), Monday to Friday, 9:00am to 5:30pm",
+            "email [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Accessibility)",
+            "call [020 3488 5052](tel:+442034885052), Monday to Saturday, 9:00am to 6:00pm",
           ],
         },
         "We will reply within [5] working days.",

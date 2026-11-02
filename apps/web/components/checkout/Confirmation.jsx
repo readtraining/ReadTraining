@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/format";
 import BasketSteps from "@/components/basket/BasketSteps";
 import { SaverLine } from "@/components/basket/BasketSummary";
 import { EmptyState } from "@/components/states/States";
+import FormGate from "@/components/forms/FormGate";
 
 const readJson = (key) => {
   try {
@@ -23,7 +24,7 @@ const readJson = (key) => {
 // it says so instead ("Payment not completed": nothing charged, the basket kept, try again). That is the payment provider's
 // return with `?redirect_status=failed` (Stripe's name for it), or the last attempt in this tab having failed after any paid order.
 // With neither (a new tab, a shared link) it points to the confirmation email. The heading takes focus, so the result is announced.
-export default function Confirmation() {
+function OrderConfirmation() {
   const c = copy.confirmation;
   const [result, setResult] = useState(undefined); // undefined while reading, then { kind: "paid", order } | { kind: "failed" } | { kind: "none" }
   const headRef = useRef(null);
@@ -137,5 +138,14 @@ export default function Confirmation() {
         </div>
       </section>
     </>
+  );
+}
+
+// shown only once checkout really places orders (its switch in lib/forms.js)
+export default function Confirmation() {
+  return (
+    <FormGate form="checkout">
+      <OrderConfirmation />
+    </FormGate>
   );
 }

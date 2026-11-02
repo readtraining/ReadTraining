@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import Sheet from "./Sheet";
 import { testPrepPage } from "@/data/testPrep";
-import { submitComment } from "@/lib/comments";
+import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
+import FormGate from "@/components/forms/FormGate";
 
 // "Leave a comment" (as on the reference, hurak.com): a button that opens the runner's pop-up (Sheet) with name, email (optional,
 // for a reply) and the comment. It checks the comment, sends through lib/comments.js (simulated until the endpoint exists) and
@@ -27,7 +28,7 @@ function CommentForm({ subject, test, onDone }) {
     }
     setStatus("sending");
     try {
-      await submitComment({ subject, test, name: name.trim(), email: email.trim(), text: text.trim() });
+      await sendForm("testComment", { subject, test, name: name.trim(), email: email.trim(), text: text.trim() });
       onDone();
     } catch {
       setStatus("failed");
@@ -58,7 +59,7 @@ function CommentForm({ subject, test, onDone }) {
   );
 }
 
-export default function CommentButton({ subject, test, className = "button -md -outline-purple-1 text-purple-1" }) {
+function CommentButtonForm({ subject, test, className = "button -md -outline-purple-1 text-purple-1" }) {
   const c = testPrepPage.comments;
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
@@ -77,5 +78,14 @@ export default function CommentButton({ subject, test, className = "button -md -
         )}
       </Sheet>
     </>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function CommentButton(props) {
+  return (
+    <FormGate form="testComment">
+      <CommentButtonForm {...props} />
+    </FormGate>
   );
 }

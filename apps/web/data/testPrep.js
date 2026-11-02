@@ -50,7 +50,7 @@ export const testPrepPage = {
       { q: "Are these the real exam questions?", a: "No. Mock tests are for practice. They follow the format of each exam, but the real exam uses its own questions." },
       { q: "How do I know how long a test is and what the pass mark is?", a: "Each test card lists the facts for that test, such as the number of questions, the time allowed and the pass mark." },
       { q: "Can I book the course after I practise?", a: "Yes. Tests such as the CSCS Green Card, SIA Licence, SMSTS and SSSTS mock tests match courses you can book on ReadTraining from approved training providers." },
-      { q: "Which test should I start with?", a: "Choose the test for the card, licence or qualification you need. If you are not sure, search by name or pick a subject, or call our team on 0333 344 1293." },
+      { q: "Which test should I start with?", a: "Choose the test for the card, licence or qualification you need. If you are not sure, search by name or pick a subject, or call our team on 020 3488 5052." },
     ],
   },
   // subject pages (/test-prep/<slug>) and the test pages (/mock-exams-test/<subject>/<test>)

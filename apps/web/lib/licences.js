@@ -1,7 +1,6 @@
 import { licencesHub, licences } from "@/data/licences";
 import { pickCourses } from "@/lib/catalogueData";
 import { formatPrice, toCourseCard } from "@/lib/courses";
-import { keepSubmission } from "@/lib/inbox";
 
 // Reads for the licence and card guides (/licences, /licences/<slug>). Swap these for API calls when licences live in the database.
 export const licenceHref = (slug) => `/licences/${slug}`;
@@ -31,15 +30,4 @@ export function licenceCosts(l, courses) {
   const counted = rows.filter((r) => !r.optional && typeof r.amount === "number");
   const total = counted.length > 1 ? { label: t.total, value: `${counted.some((r) => r.course) ? `${t.from} ` : ""}${formatPrice(counted.reduce((sum, r) => sum + r.amount, 0))}` } : null;
   return { rows, total };
-}
-
-// Sends an "apply for me" request or a training request. There is no endpoint in apps/api yet, so this only simulates the call
-// and makes up a reference (as lib/securityJobs.js does). Replace the body with the real request when the endpoint exists; the
-// form already handles a rejected promise by showing an error message.
-export async function submitLicenceRequest(kind, data) {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  const prefix = kind === "service" ? "LA" : "TR";
-  const reference = `${prefix}-${String(Math.floor(100000 + Math.random() * 900000))}`;
-  keepSubmission(kind === "service" ? "licence" : "training", reference, data); // DEMO: shows in Admin > Requests
-  return { reference };
 }

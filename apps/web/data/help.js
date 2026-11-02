@@ -23,8 +23,8 @@ const fromProvider = (q) => faq(provider.faq.items, q);
 const fromTestPrep = (q) => faq(testPrepPage.faq.items, q);
 const termsRefunds = (terms.sections.find((s) => s.id === "refunds-and-cancellations") || {}).blocks;
 if (!termsRefunds) throw new Error("Help Centre: the terms section \"refunds-and-cancellations\" no longer exists; update data/help.js");
-const tel = `[${topBar.phone}](tel:${topBar.phone.replace(/\s+/g, "")})`;
-const contactLine = `If you need help, [send us a message](/contact-us) or call us on ${tel}, ${topBar.hours.replace("Mon to Fri", "Monday to Friday")}.`;
+const tel = `[${topBar.phone}](${topBar.phoneHref})`;
+const contactLine = `If you need help, [send us a message](/contact-us) or call us on ${tel}, ${topBar.hoursLong}.`;
 
 // what each booking option includes, as a table built from the home page's booking options
 const optionsTable = {
@@ -208,10 +208,10 @@ export const helpTopics = [
     title: "Your data and getting in touch",
     summary: "Your personal data, cookies, accessibility and contacting us.",
     articles: [
-      { slug: "your-personal-data", title: "See, correct or delete your data", summary: "Your rights over your personal information.", blocks: ["You can ask to see, correct, update or delete your personal information at any time by emailing [hello@readtraining.co.uk](mailto:hello@readtraining.co.uk?subject=Privacy%20request).", "Read our [Privacy Policy](/privacy-policy) for how we use your information."] },
+      { slug: "your-personal-data", title: "See, correct or delete your data", summary: "Your rights over your personal information.", blocks: ["You can ask to see, correct, update or delete your personal information at any time by emailing [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request).", "Read our [Privacy Policy](/privacy-policy) for how we use your information."] },
       { slug: "cookies", title: "Manage cookies", summary: "Which cookies we use and how to change your choices.", blocks: ["Essential cookies make the site work and are always on. Analytics and advertising cookies are only used with your consent.", "Our [Cookie Policy](/cookie-policy) lists every cookie, what it does and how long it lasts, and explains how to change your choices."] },
       { slug: "accessibility", title: "Accessibility and other formats", summary: "Getting help using the website or information in another format.", blocks: ["If you have difficulty using any part of the website, or need information in a different format such as large print or audio, please tell us.", "Read our [Accessibility Statement](/accessibility-statement). " + contactLine] },
-      { slug: "contact-us", title: "Contact our team", summary: "Call, email or send us a message.", blocks: [`Call us on ${tel}, ${topBar.hours.replace("Mon to Fri", "Monday to Friday")}, or email [${topBar.email}](mailto:${topBar.email}). We reply within one working day.`, "You can also [send us a message](/contact-us#contact-form)."] },
+      { slug: "contact-us", title: "Contact our team", summary: "Call, email or send us a message.", blocks: [`Call us on ${tel}, ${topBar.hoursLong}, or email [${topBar.email}](mailto:${topBar.email}). We reply within one working day.`, "You can also [send us a message](/contact-us#contact-form)."] },
     ],
   },
 ];
@@ -239,8 +239,8 @@ export const helpPage = {
   feedback: { question: "Was this article helpful?", yes: "Yes", no: "No", thanks: "Thank you for your feedback." },
   stillNeedHelp: {
     title: "Still need help?",
-    text: `Our UK team is here ${topBar.hours.replace("Mon to Fri", "Monday to Friday")}.`,
+    text: `Our UK team is here ${topBar.hoursLong}.`,
     primary: { label: "Contact us", href: "/contact-us" },
-    secondary: { label: `Call ${topBar.phone}`, href: `tel:${topBar.phone.replace(/\s+/g, "")}` },
+    secondary: { label: `Call ${topBar.phone}`, href: topBar.phoneHref },
   },
 };

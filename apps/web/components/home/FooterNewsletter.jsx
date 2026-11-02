@@ -1,10 +1,11 @@
 "use client";
 import React, { useRef, useState } from "react";
 import { EMAIL_PATTERN } from "@/lib/auth/authClient";
+import FormGate from "@/components/forms/FormGate";
 
 // The footer's "Course alerts and offers" sign-up: our own check (no browser pop-up), an inline message under the box and a
 // thank-you once sent. DEMO: nothing is stored until there is a mailing-list backend.
-export default function FooterNewsletter() {
+function NewsletterForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -47,5 +48,14 @@ export default function FooterNewsletter() {
       </div>
       {error && <p id="footer-email-err" className="rt-footer__newsErr">{error}</p>}
     </form>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function FooterNewsletter(props) {
+  return (
+    <FormGate form="newsletter">
+      <NewsletterForm {...props} />
+    </FormGate>
   );
 }

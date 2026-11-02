@@ -7,9 +7,11 @@ import { Ticks } from "@/components/marketing/parts";
 import { securityJobs } from "@/data/securityJobs";
 import { trackEvent } from "@/lib/analytics";
 import { validPostcode } from "@/lib/checkout";
-import { submitApplication, validLicenceNumber } from "@/lib/securityJobs";
+import { validLicenceNumber } from "@/lib/securityJobs";
+import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import FormGate from "@/components/forms/FormGate";
 
 const copy = securityJobs.application;
 const q = copy.check;
@@ -60,8 +62,8 @@ function validate(step, v, a) {
 // "No" says why, links to the next step and offers no way on, so an ineligible application can never be sent; 2) about you;
 // 3) your SIA licence; 4) the work you want, consent and send. Each step uses the site's GOV.UK form pattern (labels above, a
 // message under each field, the first one focused on errors) and is checked before the next one opens; the
-// answers stay when going back. Sent through lib/securityJobs.js (simulated), then a reference.
-export default function JobsApplication() {
+// answers stay when going back. Sent through the jobs switch in lib/forms.js, then the reference the server gives.
+function JobsApplicationForm() {
   const [step, setStep] = useState(0);
   const [a, setA] = useState({});
   const [v, setV] = useState(EMPTY);
@@ -116,7 +118,7 @@ export default function JobsApplication() {
     if (!canApply(result)) return go(0); // answers changed: never send an ineligible application
     setStatus("sending");
     try {
-      setRef((await submitApplication({ ...v, eligibility: a })).reference);
+      setRef((await sendForm("jobs", { ...v, eligibility: a })).reference);
       setStatus("sent");
       trackEvent("security_jobs_sent", { licence: v.licenceType });
     } catch {
@@ -300,5 +302,14 @@ export default function JobsApplication() {
         </div>
       </div>
     </section>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function JobsApplication(props) {
+  return (
+    <FormGate form="jobs">
+      <JobsApplicationForm {...props} />
+    </FormGate>
   );
 }

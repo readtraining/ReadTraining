@@ -4,9 +4,11 @@ import React, { useEffect, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import HomeStars from "@/components/home/HomeStars";
 import { testPrepPage } from "@/data/testPrep";
-import { getReviews, submitReview } from "@/lib/reviews";
+import { getReviews } from "@/lib/reviews";
+import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { EmptyState } from "@/components/states/States";
+import FormGate from "@/components/forms/FormGate";
 
 // "Mock exam reviews" at the end of a subject page (as on the reference, hurak.com): the home section head (eyebrow + title),
 // then the reviews, or an empty state with "Give a review". The button opens the test runner's pop-up (Sheet: centred on
@@ -33,7 +35,7 @@ function ReviewForm({ subject, onDone }) {
     if (Object.keys(next).length) return focusFirstError(e.currentTarget);
     setStatus("sending");
     try {
-      await submitReview({ subject, rating, name: name.trim(), text: text.trim() });
+      await sendForm("testReview", { subject, rating, name: name.trim(), text: text.trim() });
       onDone();
     } catch {
       setStatus("failed");
@@ -77,7 +79,7 @@ function ReviewForm({ subject, onDone }) {
   );
 }
 
-export default function SubjectReviews({ subject }) {
+function SubjectReviewsList({ subject }) {
   const r = testPrepPage.subject.reviews;
   const [reviews, setReviews] = useState([]);
   const [open, setOpen] = useState(false);
@@ -134,5 +136,14 @@ export default function SubjectReviews({ subject }) {
         )}
       </Sheet>
     </section>
+  );
+}
+
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+export default function SubjectReviews(props) {
+  return (
+    <FormGate form="testReview">
+      <SubjectReviewsList {...props} />
+    </FormGate>
   );
 }
