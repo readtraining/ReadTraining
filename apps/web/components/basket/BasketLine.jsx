@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { basket as copy } from "@/data/basket";
-import { MAX_DELEGATES, hasDate, hasPackages, isSelected, lineParts, modeLabel, needsFirstAid } from "@/lib/basket";
+import { MAX_DELEGATES, bundleOf, firstAidInBundle, hasDate, hasPackages, isSelected, lineParts, modeLabel, needsFirstAid } from "@/lib/basket";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
@@ -21,6 +21,8 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
   const fa = copy.firstAid;
   const setQuantity = (next) => onChange({ quantity: Math.min(MAX_DELEGATES, Math.max(1, next)) });
   const on = isSelected(item);
+  // the course page package this line was booked with (its price is already in the line's price)
+  const bundle = bundleOf(item);
 
   return (
     <article className={`rt-bk__line${on ? "" : " is-off"}`} aria-labelledby={`${id}-t`}>
@@ -47,6 +49,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
               </ul>
               <div className="rt-bk__tags">
                 <span className="rt-pill">{modeLabel(item.mode)}</span>
+                {bundle && <span className="rt-pill -accent">{bundle.name} <small>+{formatPrice(bundle.add)}</small></span>}
                 {item.skillSaver && <SaverBadge />}
                 <button type="button" className="fb-textlink rt-bk__change" aria-haspopup="dialog" onClick={onDates}>{copy.changeDate}<span className="rt-sr"> for {item.title}</span></button>
               </div>
@@ -104,7 +107,11 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
         </fieldset>
       )}
 
-      {dated && needsFirstAid(item) && (
+      {dated && needsFirstAid(item) && firstAidInBundle(item) && (
+        <p className="rt-bk__note rt-bk__inpkg"><i className="icon-check text-10" aria-hidden="true"></i>Emergency First Aid at Work is included in your {bundle?.name || "package"} package.</p>
+      )}
+
+      {dated && needsFirstAid(item) && !firstAidInBundle(item) && (
         <fieldset className={`rt-bk__fs rt-bk__req${item.firstAid ? "" : " is-open"}`}>
           <legend>{fa.title}</legend>
           <p className="rt-bk__reqtext">{fa.text}</p>

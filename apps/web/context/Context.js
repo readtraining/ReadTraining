@@ -45,9 +45,10 @@ export const useContextElement = () => {
         const item = {...found,quantity:1}
         setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre : mergeLines([...pre,item]))
     }
-    // With a session id: is that date in the basket. Without: is the course in it on any date.
-    const isAddedToCartCourses = (id, sessionId)=>{
-        return cartCourses.some((elm)=>elm.id == id && (sessionId === undefined || (elm.sessionId || "") === sessionId))
+    // With a session id: is that date in the basket. Without: is the course in it on any date. With a package key (a course
+    // page package, lib/basket.js bundleOf): that date with that package ("" or none for the course alone).
+    const isAddedToCartCourses = (id, sessionId, bundleKey)=>{
+        return cartCourses.some((elm)=>elm.id == id && (sessionId === undefined || (elm.sessionId || "") === sessionId) && (bundleKey === undefined || (elm.bundle?.key || "") === (bundleKey || "")))
     }
     const addProductToCart = (id)=>{
 
