@@ -63,7 +63,7 @@ export function matchesLocation(course, query) {
 
 // --- filtering / sorting -----------------------------------------------------
 // Keyword matches title, subject and description, case-insensitive.
-const matchesKeyword = (course, q) => {
+export const matchesKeyword = (course, q) => {
   const needle = (q || "").trim().toLowerCase();
   if (!needle) return true;
   return [course.title, categoryName(course.subject), course.description].some((t) => (t || "").toLowerCase().includes(needle));

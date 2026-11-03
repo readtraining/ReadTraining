@@ -9,6 +9,7 @@ import ResultView from "@/components/testPrep/runner/ResultView";
 import { testPrepPage } from "@/data/testPrep";
 import { getSubjectSlugs, resolveTests } from "@/lib/testPrep";
 import { getTest } from "@/lib/testPrepRunner";
+import { liveHref } from "@/lib/catalogueServer";
 
 // The result of a mock test (/mock-exams-test/<subject>/<test>/result). The page is a shell; the last finished attempt on
 // this device is marked on the server and shown by ResultView. Not indexed: it is personal to the learner.
@@ -31,7 +32,9 @@ export default async function MockTestResultPage(props) {
   const { subject: subjectSlug, test: testSlug } = await props.params;
   const hit = getTest(subjectSlug, testSlug);
   if (!hit?.test.ready) notFound();
-  const { subject, test, links } = hit;
+  const { subject, test } = hit;
+  // "Book the course" never leads to an empty search (lib/catalogueServer.js liveHref)
+  const links = { ...hit.links, book: await liveHref(hit.links.book) };
   const crumbs = [
     { label: "Home", href: "/" },
     { label: "Test Prep", href: "/test-prep" },

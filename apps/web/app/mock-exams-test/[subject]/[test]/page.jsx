@@ -12,7 +12,7 @@ import SubjectCourses from "@/components/testPrep/subject/SubjectCourses";
 import { testPrepPage } from "@/data/testPrep";
 import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, resolveTests, subjectHref } from "@/lib/testPrep";
 import { getPaper, getTest } from "@/lib/testPrepRunner";
-import { loadCatalogue } from "@/lib/catalogueServer";
+import { loadCatalogue, liveHref } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A single mock test (/mock-exams-test/<subject>/<test>). A test with questions opens the test runner (the paper is sent
@@ -53,6 +53,8 @@ export default async function MockTestPage(props) {
   const c = testPrepPage.comingSoon;
   const paper = test.ready ? getPaper(subject.slug, test.slug) : null;
   const courses = getSubjectCourses(subject.slug, await loadCatalogue());
+  // "Book the course" never leads to an empty search (lib/catalogueServer.js liveHref)
+  const book = await liveHref(bookHref(subject.slug));
   const crumbs = [
     { label: "Home", href: "/" },
     { label: "Test Prep", href: "/test-prep" },
@@ -86,7 +88,7 @@ export default async function MockTestPage(props) {
             <section className="rt-tps__body rt-tq" aria-label={test.title}>
               <div className="container">
                 <div className="rt-tq__tools">
-                  <Link href={bookHref(subject.slug)} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
+                  <Link href={book} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
                   <CommentButton subject={subject.slug} test={test.slug} className="button -md -outline-purple-1 text-purple-1" />
                 </div>
                 <TestRunner
@@ -146,7 +148,7 @@ export default async function MockTestPage(props) {
                 )}
                 <div className="rt-tps__soon-actions">
                   <Link href={subjectHref(subject.slug)} className="button -md -purple-1 text-white">{c.backLabel}</Link>
-                  <Link href={bookHref(subject.slug)} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
+                  <Link href={book} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
                 </div>
               </div>
             </div>

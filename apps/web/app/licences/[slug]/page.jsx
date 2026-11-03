@@ -22,7 +22,7 @@ import LicenceCourses from "@/components/licences/LicenceCourses";
 import LicenceTiles from "@/components/licences/LicenceTiles";
 import { licencesHub as hub } from "@/data/licences";
 import { getGroup, getLicence, getLicenceSlugs, licenceCosts, licenceCourses, licenceHref, relatedLicences } from "@/lib/licences";
-import { loadCatalogue } from "@/lib/catalogueServer";
+import { loadCatalogue, searchFinds } from "@/lib/catalogueServer";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
@@ -48,8 +48,11 @@ export async function generateMetadata(props) {
 export default async function LicencePage(props) {
   await loadSiteContent();
   const { slug } = await props.params;
-  const l = getLicence(slug);
-  if (!l) notFound();
+  const found = getLicence(slug);
+  if (!found) notFound();
+  // "Book … training" leads to the course search; with no live course for it yet, the button asks us instead (it opens the
+  // request form when it has no link), so it never lands on "No courses match"
+  const l = found.primary?.href && !(await searchFinds(found.primary.href)) ? { ...found, primary: { label: `Ask about ${found.short.replace(/^SIA /, "")} training`, href: null } } : found;
   const faqs = faqItems(`licence-${slug}`, l.faqs);
   const courses = await loadCatalogue(); // the live courses: this licence's training and its prices
 

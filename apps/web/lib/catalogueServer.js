@@ -4,6 +4,8 @@ import { pickCourses, toCatalogueCourse } from "@/lib/catalogueData";
 import { toCourseCard } from "@/lib/courses";
 import { withLinks } from "@/lib/nav";
 import { coursePages } from "@/data/coursePages";
+import { matchesKeyword } from "@/lib/catalogueFilters";
+import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Server side: the real catalogue from the API (catalogue.listings, catalogue.course), saved by Next for a minute under the tag
 // "courses", so a course an admin approves (or a date a provider adds) shows on the site within a minute; an admin's decision
@@ -57,4 +59,25 @@ export const loadCatalogue = cache(async () => (await loadListings()).map(toCata
 // first, as the home page's cards (HomeCourseCard). [] when none is live yet: the page then leaves the cards out.
 export async function courseCards(picks, limit = 4) {
   return pickCourses(await loadCatalogue(), picks, limit).map(toCourseCard);
+}
+
+// ---- links that must lead somewhere --------------------------------------------------------------------------------------
+// A link to the course search for some words (/courses?q=…, data/courseTopics.js courseSearch) leads to "No courses match" when
+// no live course has those words. Pages built from fixed wording (the licence guides, Security Jobs) check their links here:
+// one that would find nothing is left out, or turned into a way to ask us. Any other link passes.
+export async function searchFinds(href) {
+  const m = /^\/courses\?q=([^&#]+)$/.exec(href || "");
+  if (!m) return true;
+  const words = decodeURIComponent(m[1].replace(/\+/g, " "));
+  await loadTaxonomy(); // the subject names the search also matches
+  return (await loadCatalogue()).some((c) => matchesKeyword(c, words));
+}
+/** The links (each { href, … }) that lead to at least one live course. */
+export async function liveLinks(links) {
+  const ok = await Promise.all(links.map((l) => searchFinds(l.href)));
+  return links.filter((_, i) => ok[i]);
+}
+/** `href`, or `fallback` (all courses) when it is a search that would find nothing. */
+export async function liveHref(href, fallback = "/courses") {
+  return (await searchFinds(href)) ? href : fallback;
 }
