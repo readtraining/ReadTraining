@@ -34,6 +34,20 @@ async function ownVenue(db: Parameters<typeof ownCourse>[0], organisationId: str
   return v
 }
 
+// A venue's or a date's row as it stands now, locked until the transaction ends: an action checks the state again under the
+// lock, so of two at the same moment (a double click, or two people) one acts and the other is told it has been done.
+type Tx = Parameters<Parameters<Parameters<typeof ownCourse>[0]['transaction']>[0]>[0]
+async function lockVenue(tx: Tx, venueId: string) {
+  const [v] = await tx.select({ active: venues.active }).from(venues).where(eq(venues.id, venueId)).for('update')
+  return v ?? null
+}
+async function lockCohort(tx: Tx, cohortId: string) {
+  const [c] = await tx.select({ cancelledAt: cohorts.cancelledAt, bookable: cohorts.bookable, endsOn: cohorts.endsOn }).from(cohorts).where(eq(cohorts.id, cohortId)).for('update')
+  return c ?? null
+}
+const VENUE_GONE = 'This venue has already been deleted. Reload the page.'
+const DATES_GONE = 'These dates have already been deleted. Reload the page.'
+
 export const providerVenuesRouter = createTRPCRouter({
   list: orgProcedure('provider.cohorts.view').query(async ({ ctx, input }) => {
     const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number }>(sql`
@@ -66,6 +80,9 @@ export const providerVenuesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await ownVenue(ctx.db, input.organisationId, input.venueId)
       return ctx.db.transaction(async (tx) => {
+        const now = await lockVenue(tx, input.venueId)
+        if (!now) throw new TRPCError({ code: 'CONFLICT', message: VENUE_GONE })
+        if (now.active === input.active) throw new TRPCError({ code: 'CONFLICT', message: input.active ? 'This venue is already in use again.' : 'This venue is already archived.' })
         await tx.update(venues).set({ active: input.active, updatedAt: new Date() }).where(eq(venues.id, input.venueId))
         await log(tx, ctx, input.organisationId, input.active ? 'venue.restored' : 'venue.archived', 'venue', input.venueId)
         return { ok: true }
@@ -77,9 +94,11 @@ export const providerVenuesRouter = createTRPCRouter({
     .input(z.object({ venueId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const v = await ownVenue(ctx.db, input.organisationId, input.venueId)
-      const [n] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(cohorts).where(eq(cohorts.venueId, v.id))
-      if (n.n) throw new TRPCError({ code: 'CONFLICT', message: 'Dates use this venue, so it can’t be deleted. Archive it instead.' })
       return ctx.db.transaction(async (tx) => {
+        // under the lock, a date being added to this venue at the same moment waits (or is counted here)
+        if (!(await lockVenue(tx, v.id))) throw new TRPCError({ code: 'CONFLICT', message: VENUE_GONE })
+        const [n] = await tx.select({ n: sql<number>`count(*)::int` }).from(cohorts).where(eq(cohorts.venueId, v.id))
+        if (n.n) throw new TRPCError({ code: 'CONFLICT', message: 'Dates use this venue, so it can’t be deleted. Archive it instead.' })
         await tx.delete(venues).where(eq(venues.id, v.id))
         await log(tx, ctx, input.organisationId, 'venue.deleted', 'venue', v.id, { name: v.name })
         return { ok: true }
@@ -241,8 +260,11 @@ export const providerCohortsRouter = createTRPCRouter({
     .input(z.object({ cohortId: z.string().uuid(), bookable: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const { cohort } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
-      if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
       return ctx.db.transaction(async (tx) => {
+        const now = await lockCohort(tx, cohort.id)
+        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
+        if (now.bookable === input.bookable) throw new TRPCError({ code: 'CONFLICT', message: input.bookable ? 'Bookings are already on for these dates.' : 'Bookings are already off for these dates.' })
         await tx.update(cohorts).set({ bookable: input.bookable, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, input.bookable ? 'cohort.bookings_on' : 'cohort.bookings_off', 'cohort', cohort.id)
         return { ok: true }
@@ -255,6 +277,7 @@ export const providerCohortsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       return ctx.db.transaction(async (tx) => {
+        if (!(await lockCohort(tx, cohort.id))) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
         await tx.delete(cohorts).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.deleted', 'cohort', cohort.id, { courseId: course.id, startsOn: cohort.startsOn })
         return { ok: true }
@@ -282,6 +305,9 @@ export const providerCohortsRouter = createTRPCRouter({
       const values = await cohortValues(ctx.db, input.organisationId, course.method, input, cohort.venueId)
       if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.')
       return ctx.db.transaction(async (tx) => {
+        const now = await lockCohort(tx, cohort.id)
+        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have just been cancelled, so they can’t be changed. Reload the page.' })
         await tx.update(cohorts).set({ ...values, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id })
         return { ok: true }
@@ -296,6 +322,9 @@ export const providerCohortsRouter = createTRPCRouter({
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are already cancelled.' })
       if (cohort.endsOn < today()) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have already finished.' })
       return ctx.db.transaction(async (tx) => {
+        const now = await lockCohort(tx, cohort.id)
+        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are already cancelled.' })
         await tx.update(cohorts).set({ cancelledAt: new Date(), cancelReason: input.reason, bookable: false, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.cancelled', 'cohort', cohort.id, { courseId: course.id, reason: input.reason })
         return { ok: true }

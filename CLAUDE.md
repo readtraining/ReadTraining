@@ -66,6 +66,7 @@ The schema is built on a development Supabase project and replayed later on the 
 - Every public table calls `.enableRLS()`. Drizzle connects as `postgres` and skips RLS, but the Data API is reachable with the public key, so RLS is what protects it. Policies are owner-only reads using `(select auth.uid())`; writes go through the API.
 - Database functions are `security definer` with `set search_path = ''`.
 - Append-only tables (`activity_log`, `site_content_versions`, `ledger_entries`) have no foreign keys, so removing an account never has to change a row, and a trigger blocks update, delete and truncate.
+- An action that checks a row's state and then changes it locks the row first: inside the transaction, `select ... for update`, check again, then write (`lockCourse`/`lockStatus` in `modules/provider/courses.mts`, `lockTeam` in `modules/admin/team.mts`). Emails go after the commit. So two clicks or two people at the same moment act once, and the second is told it has been done.
 - Run the Supabase security and performance advisors after each migration. Before moving to the client, apply all migrations to a fresh, empty project first.
 
 ## Sign-in and security rules
