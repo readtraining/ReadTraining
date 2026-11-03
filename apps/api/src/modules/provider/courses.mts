@@ -26,6 +26,7 @@ import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { refuseRetired } from '../../lib/retired.mjs'
+import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
@@ -388,6 +389,16 @@ export const providerCoursesRouter = createTRPCRouter({
   get: orgProcedure('provider.courses.view')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => courseDetail(ctx.db, await ownCourse(ctx.db, input.organisationId, input.courseId))),
+
+  // The course's page as learners will see it once it is live (the editor's Preview): the public page's own data, for this
+  // provider's course whatever its status, with its dates, and with a change still waiting for approval shown as if approved.
+  preview: orgProcedure('provider.courses.view')
+    .input(z.object({ courseId: id }))
+    .query(async ({ ctx, input }) => {
+      const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
+      const [rev] = await ctx.db.select({ content: courseRevisions.content }).from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending')))
+      return loadCoursePage(ctx.db, '', { id: course.id, pending: (rev?.content as Record<string, unknown> | undefined) ?? null })
+    }),
 
   // The shared course pages a provider can put a course under (live ones), A to Z, optionally searched, each with its subject
   // (sub-category and topic slugs): only a page with the course's subject can be chosen (sameSubject).

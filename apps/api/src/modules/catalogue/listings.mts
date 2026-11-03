@@ -52,12 +52,12 @@ export function runLength(sessions: Session[]) {
 const lengthText = (n: number) => (n ? `${n} ${n === 1 ? 'day' : 'days'}` : '')
 
 // The live offerings and their bookable dates (starting today or later, not cancelled, taking bookings).
-async function offeringsAndDates(db: typeof Db, where = sql`true`) {
+async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = false) {
   const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null }>(sql`
     select c.id, c.parent_id, c.slug, c.title, c.method, c.model, c.price_pence, c.skill_saver, c.is_public, c.listed, c.organisation_id,
            o.name provider, o.slug provider_slug, o.logo_path, o.city provider_city
     from public.courses c join public.organisations o on o.id = c.organisation_id
-    where c.kind = 'provider' and c.status = 'live' and o.status = 'active' and ${where}`)
+    where c.kind = 'provider' and ${anyStatus ? sql`true` : sql`c.status = 'live' and o.status = 'active'`} and ${where}`)
   const ids = offers.map((o) => o.id)
   const dates = ids.length
     ? await db.execute<{ id: string; course_id: number; method: string; sessions: Session[]; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; capacity: number; details: string | null; join_url: string | null; venue_name: string | null; street: string | null; city: string | null; postcode: string | null; lat: number | null; lng: number | null }>(sql`
@@ -130,7 +130,12 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
 // A shared page's offerings are the providers' courses on it; a provider course's page shows its own dates (and names the shared
 // page it is on). Null when there is no such live page. A course number (an old numeric link, /course/1012) finds its course too;
 // the page then sends the visitor on to its address.
-export async function loadCoursePage(db: typeof Db, slug: string) {
+// `preview` (the editors' Preview, provider.courses.preview / admin.courses.preview): the course by its id whatever its status, a
+// provider course with its own dates even before it is live, and a change still waiting for approval (`pending`) shown as if
+// approved, so the page is the one learners will see. The caller checks who may see it.
+export type CoursePreview = { id: number; pending?: Record<string, unknown> | null }
+const PREVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'units', 'exams', 'faqs'] as const
+export async function loadCoursePage(db: typeof Db, slug: string, preview: CoursePreview | null = null) {
   const id = /^\d{1,9}$/.test(slug) ? Number(slug) : null
   const [c] = await db.execute<Row & { id: number; kind: 'shared' | 'provider'; parent_id: number | null; organisation_id: string | null; method: string | null; price_pence: number | null }>(sql`
     select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.method, c.model,
@@ -139,8 +144,8 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
            (select slug from public.topics where id = c.topic_id) topic
     from public.courses c
-    where ${id === null ? sql`c.slug = ${slug}` : sql`c.id = ${id} and c.is_public`} and c.status = 'live'
-      and (c.kind = 'shared' or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.status = 'active'))`)
+    where ${preview ? sql`c.id = ${preview.id}` : sql`${id === null ? sql`c.slug = ${slug}` : sql`c.id = ${id} and c.is_public`} and c.status = 'live'
+      and (c.kind = 'shared' or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.status = 'active'))`}`)
   if (!c) return null
   const [units, exams, faqs, images] = await Promise.all([
     db.select().from(courseUnits).where(eq(courseUnits.courseId, c.id)).orderBy(asc(courseUnits.position)),
@@ -149,13 +154,13 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
     db.select().from(courseImages).where(eq(courseImages.courseId, c.id)).orderBy(asc(courseImages.position)),
   ])
   // a shared page lists the providers' public, listed courses on it; a provider course is its own offering
-  const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`)
+  const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`, Boolean(preview) && c.kind === 'provider')
   const [parent] = c.parent_id ? await db.execute<{ slug: string; title: string }>(sql`select slug, title from public.courses where id = ${c.parent_id} and status = 'live'`) : []
   const [provider] = c.kind === 'provider'
     ? await db.execute<{ name: string; slug: string; logo_path: string | null; headline: string | null; city: string | null; booking_terms: string | null; cancellation_policy: string | null }>(sql`
         select name, slug, logo_path, headline, city, booking_terms, cancellation_policy from public.organisations where id = ${c.organisation_id}::uuid`)
     : []
-  return {
+  const page = {
     id: c.id,
     kind: c.kind,
     slug: c.slug as string,
@@ -209,6 +214,10 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
         })),
     })),
   }
+  if (!preview?.pending) return page
+  // a waiting change, shown as if approved (the same names as the page's fields)
+  const pending = Object.fromEntries(PREVIEWED.filter((k) => preview.pending![k] !== undefined).map((k) => [k, preview.pending![k]]))
+  return { ...page, ...pending } as typeof page
 }
 
 // ---- where learners are: a town, place or postcode on the map (postcodes.io, Open Government Licence; only the words typed are sent)

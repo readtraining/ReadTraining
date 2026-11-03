@@ -14,7 +14,7 @@ import { refuseRetired } from '../../lib/retired.mjs'
 import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
-import { loadListings } from '../catalogue/listings.mjs'
+import { loadCoursePage, loadListings } from '../catalogue/listings.mjs'
 import {
   addCourseImage,
   applyContent,
@@ -198,6 +198,15 @@ export const adminCoursesRouter = createTRPCRouter({
 
   // One course as the editor shows it, with its provider, a waiting change field by field, and (for a shared page) the
   // providers' courses listed on it.
+  // A shared course page as visitors will see it (the editor's Preview), whatever its status: its live providers' dates included.
+  preview: adminProcedure('admin.panel.open')
+    .input(z.object({ courseId: id }))
+    .query(async ({ ctx, input }) => {
+      const course = await findCourse(ctx.db, input.courseId)
+      if (course.kind !== 'shared') throw notFound()
+      return loadCoursePage(ctx.db, '', { id: course.id })
+    }),
+
   get: adminProcedure('admin.panel.open')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => {

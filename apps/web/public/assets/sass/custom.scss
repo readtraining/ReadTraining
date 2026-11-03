@@ -5831,16 +5831,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__loyalty { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .rt-pws-ce__loyalty .rt-fp__opt { margin: 0; }
 .rt-pws-ce__plans { margin: 0; }
-.rt-pws-ce__preview { display: grid; gap: 10px; }
-.rt-pws-ce__preview img { width: 100%; aspect-ratio: 5 / 3; object-fit: cover; border-radius: var(--rt-radius-control); }
-.rt-pws-ce__preview h3 { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-ce__preview h4 { margin: 8px 0 0; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-ce__preview p { margin: 0; }
-.rt-pws-ce__pcat { font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
-.rt-pws-ce__learn { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
-.rt-pws-ce__learn li { display: flex; align-items: baseline; gap: 8px; list-style: none; }
-.rt-pws-ce__learn i { color: var(--rt-c-brand); }
-.rt-pws-ce__details { white-space: pre-line; font-size: var(--rt-text-sm); }
 .rt-pws-gear__check { margin: 0; }
 .rt-pws-gear__danger { padding-top: 16px; border-top: 1px solid var(--rt-c-line); }
 .rt-pws-gear__danger .rt-acc__note { margin: 0; }
@@ -7068,3 +7058,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-pws-course-removeimg { display: block; width: 100%; max-width: 320px; aspect-ratio: 5 / 3; object-fit: cover; border-radius: 8px; }
 /* a picture still uploading (course editor): shown at once from the file, a little faded until it is saved */
 .rt-pws-course-mediaitem.is-uploading img { opacity: 0.6; }
+
+/* ---------- The editors' course Preview (components/courseDetail/PreviewBar): a strip above the real course page ---------- */
+.rt-preview { position: sticky; top: 0; z-index: 1100; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 16px; border-bottom: 1px solid var(--color-orange-6); background: var(--color-orange-7); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-preview__text { margin: 0; }
+.rt-preview__back { font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }

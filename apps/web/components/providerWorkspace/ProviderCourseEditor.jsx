@@ -11,12 +11,11 @@ import { CourseEndpoints, useCourseEndpoints, useEndpoints } from "@/lib/courseE
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { formatPrice } from "@/lib/format";
 import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
 import { CohortForm } from "./ProviderCohorts";
 import { COURSE_TONE, CardChoice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { categoryName, categoryOptions, levelOptions, methodName, subcategoryName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
+import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
 // The course editor's sections, in Hurak's order, each ticked in the "Publish your course" list when it is complete. FAQs and SEO
@@ -305,6 +304,22 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     refresh();
     setToast({ message: "Your changes were withdrawn. The live version stays as it is." });
   };
+  // Preview: the real course page for this course (/provider/courses/<id>/preview, or the shared page's under /admin), in a new tab.
+  // It shows what is saved, so with unsaved changes it asks first. The tab is opened at the click (a tab opened after the save
+  // finishes would be blocked as a pop-up) and pointed at the preview once the save is done.
+  const previewHref = ep.admin ? `/admin/catalogue/${course.id}/preview` : `/provider/courses/${course.id}/preview`;
+  const openPreview = () => {
+    if (dirty) return setPreview(true);
+    window.open(previewHref, "_blank");
+  };
+  const saveAndPreview = async () => {
+    const tab = window.open("", "_blank");
+    const ok = await save();
+    setPreview(false);
+    if (ok && tab) tab.location.href = previewHref;
+    else if (ok) window.open(previewHref, "_blank");
+    else tab?.close();
+  };
   // load the course as it is now, in place of this draft (the person has copied what they wanted to keep)
   const loadLatest = async () => {
     setReloading(true);
@@ -353,7 +368,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
         <div className="rt-adm-hero__actions">
           {FORM_SECTIONS.includes(tab) && dirty && <span className="rt-pws-course-unsaved"><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
           {FORM_SECTIONS.includes(tab) && access.page && <button type="button" className="button -sm -purple-1 text-white" onClick={save} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save"}</button>}
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setPreview(true)}>Preview</button>
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={openPreview}>Preview<span className="rt-sr"> (opens in a new tab)</span></button>
           <button type="button" className="rt-pws-ce__gear" onClick={() => setGear(true)} aria-label="Course settings"><i className="icon-setting text-16" aria-hidden="true"></i></button>
         </div>
       </section>
@@ -438,39 +453,18 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       </div>
 
       {ep.admin ? <SharedGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} /> : <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} onStale={() => { setGear(false); setStale(true); requestAnimationFrame(() => staleRef.current?.focus()); }} />}
-      <PreviewSheet open={preview} onClose={() => setPreview(false)} course={course} draft={draft} />
+      <Sheet open={preview} onClose={() => setPreview(false)} title="Save your changes first?" closeLabel="Close">
+        <div className="rt-q__form">
+          <p className="rt-acc__note">The preview is the real course page, so it shows the course as saved. Save your changes to see them in it.</p>
+          <div className="rt-adm-cellrow">
+            <button type="button" className="button -md -purple-1 text-white" onClick={saveAndPreview} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save and preview"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => { setPreview(false); window.open(previewHref, "_blank"); }}>Preview without them</button>
+          </div>
+        </div>
+      </Sheet>
       <Toast toast={toast} onDone={clearToast} />
     </div>
     </CourseEndpoints.Provider>
-  );
-}
-
-// ---- Preview ---------------------------------------------------------------------------------------------------------------
-
-// The course page as learners will see the top of it, from the unsaved draft.
-function PreviewSheet({ open, onClose, course, draft }) {
-  const cover = course.images[0];
-  const cost = draft.method === "self-paced" && PRICE_RE.test(draft.price) ? formatPrice(Number(draft.price)) : "";
-  return (
-    <Sheet open={open} onClose={onClose} title="Preview" closeLabel="Close">
-      <article className="rt-pws-ce__preview">
-        {cover ? <img src={cover.url} alt={cover.alt || ""} /> : <EmptyState inCard title="No course image yet." />}
-        <p className="rt-pws-ce__pcat">{[categoryName(draft.category), subcategoryName(draft.category, draft.subcategory)].filter(Boolean).join(" › ")}</p>
-        <h3>{draft.title || "Untitled course"}</h3>
-        {draft.summary && <p>{draft.summary}</p>}
-        {cost && <p className="rt-adm-price">{cost}</p>}
-        {draft.features.length > 0 && <ul className="rt-pws-course-tags">{draft.features.map((f) => <li key={f}><span>{f}</span></li>)}</ul>}
-        {draft.outcomes.length > 0 && (
-          <>
-            <h4>What you&apos;ll learn</h4>
-            <ul className="rt-pws-ce__learn">{draft.outcomes.map((o) => <li key={o}><i className="icon-check text-10" aria-hidden="true"></i>{o}</li>)}</ul>
-          </>
-        )}
-        {draft.description && <><h4>Course details</h4><p className="rt-pws-ce__details">{draft.description}</p></>}
-        {draft.audience && <><h4>Who it&apos;s for</h4><p className="rt-pws-ce__details">{draft.audience}</p></>}
-        {draft.entryRequirements && <><h4>Entry requirements</h4><p className="rt-pws-ce__details">{draft.entryRequirements}</p></>}
-      </article>
-    </Sheet>
   );
 }
 
