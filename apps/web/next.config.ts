@@ -27,15 +27,17 @@ const originOf = (url: string | undefined) => {
 }
 const supabase = originOf(process.env.NEXT_PUBLIC_SUPABASE_URL)
 const api = originOf(process.env.NEXT_PUBLIC_API_URL)
+// Cloudflare Turnstile, the human check on sign-in and public forms (lib/humanCheck.js): its script and its frame
+const TURNSTILE = 'https://challenges.cloudflare.com'
 const GA = ['https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com']
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com ${GA[0]}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com ${TURNSTILE} ${GA[0]}`,
   "style-src 'self' 'unsafe-inline' https://accounts.google.com",
   `img-src 'self' data: blob: ${supabase} https://lh3.googleusercontent.com https://platform-lookaside.fbsbx.com https://*.fbcdn.net ${GA.join(' ')}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${api} ${supabase} ${supabase.replace(/^https:/, 'wss:')} https://accounts.google.com https://api.postcodes.io ${GA.join(' ')}${isDev ? ' ws: http://localhost:*' : ''}`,
-  "frame-src 'self' https://accounts.google.com https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com",
+  `connect-src 'self' ${api} ${supabase} ${supabase.replace(/^https:/, 'wss:')} https://accounts.google.com https://api.postcodes.io ${TURNSTILE} ${GA.join(' ')}${isDev ? ' ws: http://localhost:*' : ''}`,
+  `frame-src 'self' https://accounts.google.com ${TURNSTILE} https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com`,
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
   "object-src 'none'",
