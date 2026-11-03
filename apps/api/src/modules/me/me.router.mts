@@ -3,16 +3,17 @@ import { randomUUID } from 'node:crypto'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { adminUsers, and, eq, inArray, isNull, organisations, profiles, sql } from '@readtraining/db'
+import { accountClosureRequests, adminUsers, and, eq, inArray, isNull, organisations, profiles, sql } from '@readtraining/db'
 import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
 import { sendEmail } from '../../lib/email.mjs'
+import { notify, notifyAdmins, personOf } from '../../lib/notify.mjs'
 import { newPassword, personName } from '../../lib/rules.mjs'
 import { AVATARS, requestEmailChange, signedPhotoUrl, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
-import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, protectedProcedure } from '../../trpc/trpc.mjs'
 
 // Account settings, in Hurak's four parts: basic information, address, email (needs the current password) and password
 // (current, new, repeat). Every change is checked here, saved, and written to the activity log.
@@ -62,6 +63,10 @@ export const meRouter = createTRPCRouter({
              coalesce(email_change_token_current, '') <> '' or coalesce(email_change_token_new, '') <> '' as email_change_live,
              coalesce(encrypted_password, '') <> '' as has_password
       from auth.users where id = ${ctx.user.id}::uuid`)
+    const [closure] = await ctx.db
+      .select({ requestedAt: accountClosureRequests.requestedAt })
+      .from(accountClosureRequests)
+      .where(and(eq(accountClosureRequests.userId, ctx.user.id), eq(accountClosureRequests.status, 'open')))
     const ids = ctx.actor.memberships.map((m) => m.organisationId)
     const orgs = ids.length
       ? await ctx.db.select({ id: organisations.id, name: organisations.name, slug: organisations.slug }).from(organisations).where(inArray(organisations.id, ids))
@@ -74,6 +79,8 @@ export const meRouter = createTRPCRouter({
       pendingEmail: auth?.email_change_live ? auth.email_change : null,
       lapsedEmail: auth?.email_change && !auth.email_change_live ? auth.email_change : null,
       hasPassword: auth?.has_password ?? false,
+      // an open request to close the account (it shows on Account settings, with Withdraw)
+      closure: closure ? { requestedAt: closure.requestedAt.toISOString() } : null,
       profile: {
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -114,6 +121,56 @@ export const meRouter = createTRPCRouter({
       })
       return { postcode: input.postcode }
     }),
+
+  // Close my account: a request our team handles within one month (UK GDPR). It is saved (account_closure_requests: the record
+  // outlives the account), logged, the person is sent a confirmation and every admin who can suspend accounts is told. The
+  // current password is asked for, as for an email or password change (someone who signs in with Google has none: signed in is
+  // enough). One open request at a time; it can be withdrawn until the account is closed.
+  requestClosure: protectedProcedure
+    .input(z.object({ reason: z.string().trim().max(1000, 'Keep your reason to 1,000 characters or fewer.').optional(), currentPassword: z.string().max(200).optional() }))
+    .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'closure')
+      const [auth] = await ctx.db.execute<{ email: string; has_password: boolean }>(sql`select email, coalesce(encrypted_password, '') <> '' has_password from auth.users where id = ${ctx.user.id}::uuid`)
+      if (auth?.has_password) {
+        if (!input.currentPassword) throw fieldError('currentPassword', 'Enter your current password.')
+        const check = await checkCurrentPassword(ctx.db, ctx.user.id, input.currentPassword, ctx.ip)
+        if (check !== 'ok') throw passwordProblem(check)
+      }
+      const reason = input.reason || null
+      let requestedAt: Date
+      try {
+        requestedAt = await ctx.db.transaction(async (tx) => {
+          const [row] = await tx.insert(accountClosureRequests).values({ userId: ctx.user.id, email: auth?.email ?? ctx.user.email ?? '', reason }).returning({ requestedAt: accountClosureRequests.requestedAt })
+          await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'student', action: 'account.closure_requested', targetType: 'account', targetId: ctx.user.id, metadata: { reasonGiven: Boolean(reason) }, ip: ctx.ip })
+          return row.requestedAt
+        })
+      } catch (error) {
+        // the one-open-request index: asked already (a double click, or another tab)
+        const code = (error as { code?: string; cause?: { code?: string } })?.code ?? (error as { cause?: { code?: string } })?.cause?.code
+        if (code === '23505') throw new TRPCError({ code: 'CONFLICT', message: 'You have already asked to close your account. We’ll email you when it’s done.' })
+        throw error
+      }
+      // the emails go after the request is saved, and never undo it
+      const person = await personOf(ctx.db, ctx.user.id)
+      const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }).format(requestedAt)
+      const target = { targetType: 'account', targetId: ctx.user.id }
+      await notify(ctx.db, 'closure-received', person, { date }, { ...target, action: 'email.closure_received_sent' })
+      await notifyAdmins(ctx.db, 'suspend', 'admin-closure-request', { person: person?.label ?? auth?.email ?? '', date, reason: reason ? `Their reason: ${reason}` : 'They didn’t give a reason.', userId: ctx.user.id }, { ...target, action: 'email.admins_told' }, ctx.user.id)
+      return { requestedAt: requestedAt.toISOString() }
+    }),
+
+  withdrawClosure: protectedProcedure.mutation(async ({ ctx }) => {
+    return ctx.db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(accountClosureRequests)
+        .set({ status: 'withdrawn', closedAt: new Date() })
+        .where(and(eq(accountClosureRequests.userId, ctx.user.id), eq(accountClosureRequests.status, 'open')))
+        .returning({ id: accountClosureRequests.id })
+      if (!row) throw new TRPCError({ code: 'CONFLICT', message: 'There is no request to withdraw. Reload the page.' })
+      await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'student', action: 'account.closure_withdrawn', targetType: 'account', targetId: ctx.user.id, ip: ctx.ip })
+      return { ok: true }
+    })
+  }),
 
   // Marketing emails: the consent given at sign-up, changeable at any time (UK GDPR / PECR). The time is kept as evidence.
   setMarketing: protectedProcedure.input(z.object({ optIn: z.boolean() })).mutation(async ({ ctx, input }) => {
