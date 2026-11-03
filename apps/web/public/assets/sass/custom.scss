@@ -662,6 +662,7 @@
 .rt-subject:hover .rt-subject__image img { transform: scale(1.05); }
 .rt-subject__body { position: relative; padding: 16px 18px 18px; }
 .rt-subject__title { font-size: 16px; font-weight: 700; line-height: 1.3; padding-right: 40px; }
+.rt-subject__count { margin-top: 2px; font-size: 13px; color: var(--color-light-1); }
 .rt-subject__meta { margin-top: 3px; font-size: 13px; color: var(--color-light-1); }
 .rt-subject__arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--color-purple-3); color: var(--color-purple-1); transition: background 0.25s, color 0.25s, transform 0.25s; }
 .rt-subject:hover .rt-subject__arrow { background: var(--color-purple-1); color: #fff; transform: translateY(-50%) translateX(2px); }

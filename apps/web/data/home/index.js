@@ -5,7 +5,8 @@ import { courseSearch } from "@/data/courseTopics";
 import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 
 // a route opens the course finder searched for its words (`slug` keeps the client's original path)
-const course = (words, slug) => ({ slug, href: courseSearch(words) });
+// a route that searches the courses for some words (`q`); the finder shows it only while a live course matches them
+const course = (words, slug) => ({ slug, q: words, href: courseSearch(words) });
 
 // How to reach the team, used across the site. The phone is the landline on the client's Google listing (so the site and the
 // listing match); the mobile is for WhatsApp only. Hours as on the Google listing.
@@ -138,18 +139,6 @@ export const roles = courseFinder.goals.map((g, i) => ({
   href: g.allHref,
 }));
 
-// "Prefer to browse by subject?": the subject tiles from the client's site.
-export const subjects = [
-  { id: 1, title: "Security & SIA", slug: "/courses/security", href: "/courses/security", items: ["SIA Door Supervisor", "SIA Security Guard", "SIA CCTV Operator", "Close Protection", "Door Supervisor Refresher"] },
-  { id: 2, title: "First Aid", slug: "/courses/first-aid", href: "/courses/first-aid", items: ["Emergency First Aid at Work", "First Aid at Work (3 Days)", "First Aid Requalification", "Paediatric First Aid", "Mental Health First Aid"] },
-  { id: 3, title: "Health & Safety", slug: "/courses/health-and-safety", href: "/courses/health-and-safety", items: ["IOSH Managing Safely", "NEBOSH General Certificate", "Fire Marshal", "Manual Handling", "Asbestos Awareness"] },
-  { id: 4, title: "Construction & CSCS", slug: "/courses/construction", href: "/courses?subject=construction", items: ["CSCS Green Card", "CITB SMSTS", "CITB SSSTS", "Traffic Marshal", "CITB SEATS"] },
-  { id: 5, title: "Food Safety", slug: "/courses/food-hygiene", href: "/courses?q=food", items: ["Level 2 Food Hygiene", "Level 3 Food Hygiene", "APLH Personal Licence", "Scottish Personal Licence"] },
-  { id: 6, title: "Teaching & Assessing", slug: "/courses/teaching-&-academics", href: "/courses?subject=teaching-and-academics", items: ["Level 3 AET (PTLLS)", "Level 4 IQA", "Lead IQA", "Conflict Management Delivery", "Assessor Training"] },
-  { id: 7, title: "Health & Care", slug: "/courses/health-and-care", href: "/courses?subject=health-and-care", items: ["Care Certificate", "Medication Awareness", "Safeguarding Adults", "Moving and Handling"] },
-  { id: 8, title: "Hospitality", slug: "/courses/hospitality", href: "/courses?subject=hospitality", items: ["Personal Licence (APLH)", "Barista Skills", "Allergen Awareness", "Customer Service"] },
-];
-
 // Customer stories block: the reviews ticked for the home page (admin › Customer reviews, lib/siteReviews.js). There are no
 // built-in reviews and no video story (the old ones were copied from another site): with none published the block is left
 // out. Each reviewer shows their initials, never a stock photo.
@@ -252,39 +241,10 @@ export const footer = {
   address: "London, United Kingdom",
   email: "info@readtraining.co.uk",
   columns: [
-    {
-      title: "Find a course",
-      links: [
-        { href: "/courses/classroom", label: "Classroom courses" },
-        { href: "/courses/virtual", label: "Live online courses" },
-        { href: "/courses/online", label: "Online self-paced courses" },
-        { href: "/courses/citb-site-safety-plus", label: "CITB Site Safety Plus" },
-        { href: "/courses/personal-licence", label: "Personal Licence" },
-        { href: "/courses/first-aid", label: "First Aid" },
-        { href: "/courses/health-and-safety", label: "Health & Safety" },
-        { href: "/courses/security", label: "Security" },
-      ],
-    },
-    {
-      title: "Popular courses",
-      links: [
-        { href: courseSearch("Door Supervisor"), label: "Door Supervisor Course" },
-        { href: courseSearch("Door Supervisor Refresher"), label: "Door Supervisor Refresher" },
-        { href: courseSearch("Security Guard Refresher"), label: "Security Guard Refresher" },
-        { href: courseSearch("Emergency First Aid"), label: "Emergency First Aid" },
-        { href: courseSearch("First Aid at Work"), label: "First Aid at Work" },
-        { href: courseSearch("CSCS Green Card"), label: "CSCS Green Card Course" },
-        { href: courseSearch("Traffic Marshal"), label: "Traffic Marshal" },
-        { href: courseSearch("CCTV Operator"), label: "SIA CCTV Operator" },
-        { href: CATALOGUE_HREF, label: "CSCS NVQs" },
-        { href: courseSearch("Education and Training"), label: "AET" },
-        { href: courseSearch("SSSTS"), label: "SSSTS" },
-        { href: courseSearch("SMSTS"), label: "SMSTS" },
-        { href: courseSearch("Personal Licence"), label: "Personal Licence" },
-        { href: CATALOGUE_HREF, label: "IQA Training" },
-        { href: CATALOGUE_HREF, label: "Assessor Training" },
-      ],
-    },
+    // the first two columns are the live catalogue's (components/home/HomeFooter, useNav): the study methods and subjects that
+    // have courses, and the most popular courses, so no link leads to an empty search
+    { title: "Find a course", live: "find" },
+    { title: "Popular courses", live: "popular" },
     {
       title: "For providers",
       links: [

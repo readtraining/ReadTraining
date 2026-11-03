@@ -3,44 +3,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { subjects, popularByLocation } from "@/data/home/menu";
+import { useNav } from "@/lib/navContext";
+import { subjectName } from "@/lib/nav";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
 // Navbar search: the icon toggles an inline input (click again to close). A panel under the
 // input shows live matches as you type (nothing while it is empty).
 
-const allCourses = (() => {
-  const seen = new Set();
-  const out = [];
-  subjects.forEach((s) =>
-    s.courses.forEach((c) => {
-      if (!seen.has(c.label)) {
-        seen.add(c.label);
-        out.push({
-          label: c.label,
-          href: c.href,
-          subject: s.label,
-          img: `/assets/img/coursesCards/${(out.length % 12) + 1}.png`,
-          desc: `${s.label} · accredited, with classroom and online dates UK-wide.`,
-        });
-      }
-    }),
-  );
-  popularByLocation.forEach((c) => {
-    if (!seen.has(c.label)) {
-      seen.add(c.label);
-      out.push({
-        label: c.label,
-        href: c.href,
-        subject: /first aid/i.test(c.label) ? "First Aid" : /door|security|cctv/i.test(c.label) ? "Security" : /licence/i.test(c.label) ? "Hospitality" : /fire/i.test(c.label) ? "Health and Safety" : "Construction",
-        img: `/assets/img/coursesCards/${(out.length % 12) + 1}.png`,
-        desc: "Popular course · book a date near you.",
-      });
-    }
-  });
-  return out;
-})();
-
+// the courses and subjects it suggests are the live catalogue's (useNav): every live course, opening its own page, and every
+// subject with live courses, opening its page, so a suggestion never leads to an empty search
+const placeholder = (i) => `/assets/img/coursesCards/${(i % 12) + 1}.png`;
 
 function highlight(text, q) {
   if (!q) return text;
@@ -84,14 +56,17 @@ export default function HomeSearch() {
     };
   }, [open]);
 
+  const nav = useNav();
+  const allCourses = useMemo(() => nav.courses.map((c, i) => ({ label: c.title, href: c.href, subject: subjectName(nav, c.subject), img: c.imageUrl || placeholder(i) })), [nav]);
+  const subjects = nav.subjects;
   const query = q.trim();
   const results = useMemo(() => {
     if (!query) return [];
     const ql = query.toLowerCase();
     const courses = allCourses.filter((c) => c.label.toLowerCase().includes(ql) || c.subject.toLowerCase().includes(ql)).slice(0, 5);
-    const subs = courses.length >= 5 ? [] : subjects.filter((s) => s.label.toLowerCase().includes(ql)).slice(0, 5 - courses.length);
+    const subs = courses.length >= 5 ? [] : subjects.filter((s) => s.name.toLowerCase().includes(ql) || s.label.toLowerCase().includes(ql)).slice(0, 5 - courses.length);
     return { courses, subs };
-  }, [query]);
+  }, [query, allCourses, subjects]);
 
   const submit = (e) => {
     e.preventDefault();
@@ -203,7 +178,7 @@ export default function HomeSearch() {
                 <Row key={c.label} href={c.href} img={c.img} title={highlight(c.label, query)} subject={c.subject} />
               ))}
               {results.subs.map((s) => (
-                <Row key={s.label} href={s.href} img={`/assets/img/coursesCards/${(s.count % 12) + 1}.png`} title={highlight(s.label, query)} kind="Subject" subject={s.label} />
+                <Row key={s.slug} href={s.href} img={s.imageUrl || placeholder(s.count)} title={highlight(s.label, query)} kind="Subject" subject={`${s.count} ${s.count === 1 ? "course" : "courses"}`} />
               ))}
               {results.courses.length === 0 && results.subs.length === 0 && (
                 <div className="text-13 text-light-1 px-12 py-15">No matches for “{query}”. Try a course name like “first aid” or a subject like “security”.</div>

@@ -2,6 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { pickCourses, toCatalogueCourse } from "@/lib/catalogueData";
 import { toCourseCard } from "@/lib/courses";
+import { withLinks } from "@/lib/nav";
+import { coursePages } from "@/data/coursePages";
 
 // Server side: the real catalogue from the API (catalogue.listings, catalogue.course), saved by Next for a minute under the tag
 // "courses", so a course an admin approves (or a date a provider adds) shows on the site within a minute; an admin's decision
@@ -36,14 +38,17 @@ export const loadCoursePage = cache(async (slug) => {
   }
 });
 
-// Each category's number of courses and its three most popular, for the header's subject menu.
-export const loadCourseMenu = cache(async () => {
+// The site's navigation (API catalogue.nav: the subjects, methods, towns and courses every menu, the footer and the home page
+// read), with each entry's address (lib/nav.js withLinks); empty lists when the API can't be reached.
+export const loadNav = cache(async () => {
+  let raw = null;
   try {
-    return (await query("catalogue.menu")) || {};
-  } catch {
-    return {};
-  }
+    raw = await query("catalogue.nav");
+  } catch {}
+  return withLinks(raw, methodPages);
 });
+// the delivery methods with a page of their own (/courses/<slug>), for the method links; the rest open the search filtered to them
+export const methodPages = coursePages.filter((p) => p.select?.method && !p.select?.subject).map((p) => p.slug);
 
 // Every listing as a catalogue course (lib/catalogueData.js toCatalogueCourse), for the pages that pick some of them.
 export const loadCatalogue = cache(async () => (await loadListings()).map(toCatalogueCourse));

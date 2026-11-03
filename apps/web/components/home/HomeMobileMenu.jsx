@@ -2,12 +2,13 @@
 
 import { footer, topBar } from "@/data/home";
 
-import { mobileMenuList as menuList } from "@/data/headerNav";
+import { mobileMenu } from "@/data/headerNav";
+import { useNav } from "@/lib/navContext";
 
 import Link from "next/link";
 import HeaderAuth from "./HeaderAuth";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +17,9 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
   const [menuNesting, setMenuNesting] = useState([]);
   const [menuItem, setMenuItem] = useState("");
   const [submenu, setSubmenu] = useState("");
+  // the four menus, with the live catalogue's subjects, methods and towns (useNav)
+  const nav = useNav();
+  const menuList = useMemo(() => mobileMenu(nav), [nav]);
 
   useEffect(() => {
     menuList.forEach((elm) => {
