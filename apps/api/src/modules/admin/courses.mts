@@ -18,8 +18,10 @@ import {
   addCourseImage,
   applyContent,
   bad,
+  checkVersion,
   content,
   courseDetail,
+  currentVersion,
   courseImageUploadUrl,
   courseSlug,
   deleteCourse,
@@ -307,20 +309,24 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(
       z.object({
         courseId: id,
+        version: z.string().max(80).optional(),
         ...Object.fromEntries(Object.entries(content).map(([k, v]) => [k, (v as z.ZodTypeAny).optional()])),
         seoTitle: z.string().trim().max(60).nullable().optional(),
         seoDescription: z.string().trim().max(320).nullable().optional(),
         seoKeywords: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
         listed: z.boolean().optional(),
-      }) as z.ZodType<{ courseId: number; seoTitle?: string | null; seoDescription?: string | null; seoKeywords?: string[]; listed?: boolean } & Partial<Record<keyof typeof content, unknown>>>,
+      }) as z.ZodType<{ courseId: number; version?: string; seoTitle?: string | null; seoDescription?: string | null; seoKeywords?: string[]; listed?: boolean } & Partial<Record<keyof typeof content, unknown>>>,
     )
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      const { courseId, seoTitle, seoDescription, seoKeywords, listed, ...rest } = input
+      const { courseId, version, seoTitle, seoDescription, seoKeywords, listed, ...rest } = input
       void courseId
       if (rest.subcategory !== undefined && rest.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
       const reviewed = Object.fromEntries(Object.entries(rest).filter(([k, v]) => v !== undefined && (REVIEWED as readonly string[]).includes(k)))
-      await ctx.db.transaction(async (tx) => {
+      const now = await ctx.db.transaction(async (tx) => {
+        // another tab or another admin changed the page since this editor loaded it: refuse rather than overwrite their work
+        await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+        await checkVersion(tx, course.id, version)
         if (Object.keys(reviewed).length) await applyContent(tx, course.id, reviewed)
         const direct: Partial<typeof courses.$inferInsert> = {}
         if (seoTitle !== undefined) direct.seoTitle = seoTitle || null
@@ -328,9 +334,10 @@ export const adminCoursesRouter = createTRPCRouter({
         if (seoKeywords !== undefined) direct.seoKeywords = [...new Set(seoKeywords.map((w) => w.toLowerCase()))]
         if (listed !== undefined) direct.listed = listed
         if (Object.keys(direct).length) await tx.update(courses).set({ ...direct, updatedAt: new Date() }).where(eq(courses.id, course.id))
-        await logFor(ctx, course, 'admin.shared_course_updated', { fields: Object.keys(input).filter((k) => k !== 'courseId') })(tx)
+        await logFor(ctx, course, 'admin.shared_course_updated', { fields: Object.keys(input).filter((k) => k !== 'courseId' && k !== 'version') })(tx)
+        return currentVersion(tx, course.id)
       })
-      return { ok: true, pendingChange: false }
+      return { ok: true, pendingChange: false, version: now }
     }),
 
   // Publish a shared page (once nothing required is missing), take it off the site, or put it back.

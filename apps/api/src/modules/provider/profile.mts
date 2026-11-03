@@ -131,14 +131,21 @@ export const providerProfileRouter = createTRPCRouter({
       })
     }),
 
+  // Each text is saved on its own: only the one sent changes (two quick saves never undo each other). The cancellation policy
+  // can be changed but not emptied: learners see it before they pay.
   updateTerms: orgProcedure('provider.terms.edit')
-    .input(z.object({ bookingTerms: optional(20000, 'booking terms'), cancellationPolicy: optional(10000, 'cancellation policy') }))
+    .input(
+      z.object({
+        bookingTerms: optional(20000, 'booking terms').optional(),
+        cancellationPolicy: z.string().trim().min(1, 'Enter your cancellation policy.').max(10000, 'Keep the cancellation policy to 10000 characters or fewer.').optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
+      const set: Partial<typeof organisations.$inferInsert> = { updatedAt: new Date() }
+      if (input.bookingTerms !== undefined) set.bookingTerms = input.bookingTerms || null
+      if (input.cancellationPolicy !== undefined) set.cancellationPolicy = input.cancellationPolicy
       return ctx.db.transaction(async (tx) => {
-        await tx
-          .update(organisations)
-          .set({ bookingTerms: input.bookingTerms || null, cancellationPolicy: input.cancellationPolicy || null, updatedAt: new Date() })
-          .where(eq(organisations.id, input.organisationId))
+        await tx.update(organisations).set(set).where(eq(organisations.id, input.organisationId))
         await log(tx, ctx, input.organisationId, 'provider.terms_updated')
         return { ok: true }
       })

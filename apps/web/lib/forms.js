@@ -18,6 +18,10 @@ export const FORMS = {
   hseTest: { send: null, title: "Online test booking is coming soon", text: "To book your CITB HS&E test now, call or email us with your preferred centre and dates." },
   licence: { send: null, title: "Online applications are coming soon", text: "For help with your licence or card now, call or email us." },
   certificate: { send: null, title: "Certificate checks are coming soon", text: "To confirm a certificate now, email us the certificate number and the holder’s full name." },
+  // the provider settings that have no server yet (VAT number, email addresses, questions and answers, integrations)
+  providerSettings: { send: null, title: "This setting is coming soon", text: "To set it up now, call or WhatsApp us." },
+  // the provider workspace's Team page (signed in, not public): adding, changing and removing team members
+  providerTeam: { send: null, title: "Managing your team here is coming soon", text: "To add someone to your provider account, change their role or remove them, call or WhatsApp us." },
   // hidden while not ready (a "coming soon" in these places would only get in the way)
   newsletter: { send: null, hidden: true },
   testReview: { send: null, hidden: true },
