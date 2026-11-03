@@ -5578,6 +5578,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws__orgname span { display: block; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* "← Orders" above a page title: the arrow and words centred on one line */
 .rt-pws__back { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; margin: 0 0 8px -6px; padding: 0 10px 0 6px; border-radius: var(--rt-radius-sm); font-size: var(--rt-text-sm); font-weight: 600; line-height: 1; text-decoration: none; color: var(--rt-c-muted) !important; transition: background-color 150ms ease, color 150ms ease; }
+.rt-pws__demo { margin: 0 0 16px; }
 .rt-pws__back i { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--rt-c-line); border-radius: 50%; background: var(--rt-c-surface); line-height: 1; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), border-color 150ms ease; }
 .rt-pws__back i::before { display: block; line-height: 1; }
 @media (hover: hover) and (pointer: fine) { .rt-pws__back:hover { color: var(--rt-c-brand) !important; } .rt-pws__back:hover i { border-color: var(--rt-c-brand); transform: translateX(-2px); } }

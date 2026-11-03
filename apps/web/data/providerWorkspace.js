@@ -113,6 +113,22 @@ export const pw = {
     { label: "Team", href: "/provider/team" },
   ],
 
+  // The pages whose records are still made up (lib/providerWorkspace.js): what the "Demo data" banner under the title says. Shown
+  // only where demo records are on (lib/demo.js); on the live site these pages start empty.
+  demo: {
+    orders: "These orders, customers and amounts are made up, to show how this page works. Your real orders show here once learners can book and pay.",
+    learners: "These learners and their details are made up, to show how this page works. Your real learners show here once they book.",
+    performance: "These figures, reviews and leads are made up, to show how this page works. Your real ones show here once learners book and review.",
+    packages: "These pricing plans are examples, kept only in this browser. They aren't used by your real courses yet.",
+    notifications: "These notifications are made up, to show how this page works. Real ones show here once booking goes live.",
+    requests: "These refund requests and disputes are made up, to show how this page works. Real ones show here once booking goes live.",
+    team: "These team members are examples, kept only in this browser. Inviting or removing someone here doesn't change your real team yet.",
+    cohort: "This is a sample cohort with made-up learners, to show how the register and results work. Your real cohorts are in the Cohort list.",
+    settings: "Made up for now and kept only in this browser. This setting isn't used yet.",
+    qa: "These questions are made up, to show how answering works. Real learners' questions show here once your courses are live.",
+    attention: "Made up, to show how this works. Real refund requests, disputes, reviews, questions and leads show here once booking goes live.",
+  },
+
   pages: {
     dashboard: { title: "Dashboard", lead: "What needs you today, how sales are going and what is coming up." },
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },

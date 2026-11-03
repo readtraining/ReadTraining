@@ -7,7 +7,7 @@ import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { saveOrg, useProvider } from "@/lib/providerWorkspace";
-import { Choice, Loading } from "./providerParts";
+import { Choice, Loading, DemoTag } from "./providerParts";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { Field, aria, isEmail } from "./settingsForm";
 import { InfoTab, LogoTab, TermsTab, VenuesTab } from "./SettingsProfile";
@@ -30,6 +30,8 @@ const TAB_TEXT = {
   qa: "Questions learners ask about your courses, and ones you answer up front.",
   integrations: "Connect the tools you use to run courses.",
 };
+// the tabs that don't use the API yet: what they keep is made up or only in this browser (DemoTag beside the tab's heading)
+const DEMO_TABS = { vat: pw.demo.settings, emails: pw.demo.settings, integrations: pw.demo.settings, qa: pw.demo.qa, affiliate: "This link works, but bookings made through it aren't counted yet: that comes with booking." };
 const PANELS = { info: InfoTab, logo: LogoTab, terms: TermsTab, venues: VenuesTab, vat: VatTab, affiliate: AffiliateTab, emails: EmailsTab, qa: QaTab, integrations: IntegrationsTab };
 const hrefFor = (key) => `/provider/settings?tab=${key}`;
 
@@ -61,7 +63,6 @@ function Settings() {
               <li key={t.key}>
                 <Link href={hrefFor(t.key)} scroll={false} replace className={t.key === tab ? "is-active" : undefined} aria-current={t.key === tab ? "page" : undefined}>
                   <span>{t.label}</span>
-                  {t.key === "qa" && data?.counts.questions > 0 && <span className="rt-adm__count" aria-label={`${data.counts.questions} to answer`}>{data.counts.questions}</span>}
                 </Link>
               </li>
             ))}
@@ -78,7 +79,10 @@ function Settings() {
 
       <section className="rt-pws-set__panel" aria-labelledby="rt-set-h">
         <div className="rt-pws-set__head">
-          <h2 className="rt-acc__h2" id="rt-set-h">{label}</h2>
+          <div className="rt-adm__titlerow">
+            <h2 className="rt-acc__h2" id="rt-set-h">{label}</h2>
+            {DEMO_TABS[tab] && <DemoTag note={DEMO_TABS[tab]} />}
+          </div>
           <p className="rt-acc__note">{TAB_TEXT[tab]}</p>
         </div>
         {data ? <Panel key={tab} data={data} say={say} /> : <Loading rows={2} />}

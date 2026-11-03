@@ -22,6 +22,7 @@ const DEMO_OFF = {
   "business:assignments": ["No places to assign yet", "Places you buy show here, ready to give to your learners."],
   "business:bookings": ["No bookings yet", "Your team's bookings show here once you book a course."],
   "business:billing": ["No invoices yet", "Your invoices and what you owe show here once you book on account."],
+  "business:team": ["Only you for now", "Adding colleagues to manage this account is coming soon. Until then, contact us and we'll help."],
 };
 
 // The layout every account page shares (the customer account, and the Business account with `area="business"`): the site header,

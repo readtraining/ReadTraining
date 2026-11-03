@@ -10,13 +10,14 @@ import NavIcon from "@/components/admin/navIcons";
 import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, useFoldedGroups, useSideMenu, useWorkDrawer } from "@/components/admin/workNav";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
-import { actAs, useProvider } from "@/lib/providerWorkspace";
+import { actAs } from "@/lib/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { api } from "@/lib/trpc/react";
 import ProviderAccountStatus from "./ProviderAccountStatus";
+import { SHOW_DEMO } from "@/lib/demo";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -27,7 +28,7 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups, the button at its top right that hides it
 // and, below 992px, the menu drawer. Then the page head (title, intro, actions) and the page.
 // `current` marks the section; the page inside it is matched on the address.
-export default function ProviderShell({ current, title, lead, actions = null, back = null, children }) {
+export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = null, children }) {
   const sideRef = useRef(null);
   const router = useRouter();
   const path = usePathname();
@@ -46,8 +47,9 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
     if (q) return search.includes(q);
     return !siblings.some((x) => x.href.includes("?") && x.href.startsWith(`${p}?`) && search.includes(x.href.split("?")[1]));
   };
-  const data = useProvider();
-  const counts = data?.counts || {};
+  // the bell's unread number and the menu's badges count DEMO records (lib/providerWorkspace.js), so they stay hidden until those
+  // records are real: a made-up "3 unread" must not look like real news
+  const counts = {};
   // the real provider (from the server check in the layout) and the signed-in person; the pages' records are still DEMO data
   const workspace = useWorkspace();
   // the status can change while the page is open (approved, changes asked for, not approved, suspended): check quietly every
@@ -182,6 +184,8 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             </div>
             {actions}
           </div>
+          {/* `demo`: the page's records are made up (the note says what that means); only where demo records are shown */}
+          {demo && SHOW_DEMO && <p className="rt-acc__notice -warn rt-pws__demo"><b>Demo data.</b> {demo}</p>}
           {children}
         </main>
       </div>
