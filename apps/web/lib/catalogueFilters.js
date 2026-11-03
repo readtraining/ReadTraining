@@ -36,14 +36,15 @@ const allSortValues = [...sortOptions.map((o) => o.value), closestSortOption.val
 const norm = (s) => s.toLowerCase().replace(/\s+/g, "");
 const outward = (s) => s.trim().toLowerCase().split(/\s+/)[0];
 
-// A course with no venue can be taken from anywhere only when it runs without one (live online, self-paced). A classroom course
-// with no dates yet has no venue either, but it isn't near anywhere, so a location search leaves it out.
-export const takenAnywhere = (course) => course.venues.length === 0 && (course.methods || []).some((m) => m !== "classroom");
+// A course can be taken from anywhere when it runs without a venue (live online, self-paced), even if it also has classroom
+// dates somewhere else. A classroom-only course needs a venue near the place; with no dates yet it has none, so a location
+// search leaves it out.
+export const takenAnywhere = (course) => (course.methods || []).some((m) => m !== "classroom");
 
-// Courses with a physical venue match when a venue's town or postcode matches; online ones match anywhere.
-export function matchesLocation(course, query) {
+// One of the course's venues is in the typed town, or at the typed postcode.
+export function venueIn(course, query) {
   const q = (query || "").trim();
-  if (!q || takenAnywhere(course)) return true;
+  if (!q) return false;
   const qn = norm(q);
   const hasSpace = /\s/.test(q);
   return course.venues.some(
@@ -52,6 +53,12 @@ export function matchesLocation(course, query) {
       norm(v.postcode).startsWith(qn) ||
       (hasSpace && outward(v.postcode) === outward(q)),
   );
+}
+
+// A course matches a location when a venue is there, or when it can be taken online from anywhere.
+export function matchesLocation(course, query) {
+  const q = (query || "").trim();
+  return !q || takenAnywhere(course) || venueIn(course, q);
 }
 
 // --- filtering / sorting -----------------------------------------------------
@@ -64,7 +71,7 @@ const matchesKeyword = (course, q) => {
 
 // Within this distance of where the learner is (a town or postcode found on the map), a classroom venue counts as near.
 export const NEAR_KM = 50;
-// A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM; an online one is near anywhere.
+// A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM, or it can be taken online (anywhere).
 const nearPoint = (course, point) => takenAnywhere(course) || course.venues.some((v) => v.lat != null && distanceKm(point, v) <= NEAR_KM);
 
 // subject, sub, method and level are arrays of ticked values. Inside a group a course matches ANY ticked value (OR);
@@ -109,7 +116,7 @@ const distanceKm = (a, b) => {
 // Reference point for "closest": the first venue that matches the typed town or postcode.
 function locationPoint(courses, location) {
   for (const course of courses) {
-    const v = course.venues.find((venue) => matchesLocation({ venues: [venue] }, location));
+    const v = course.venues.find((venue) => venueIn({ venues: [venue] }, location));
     if (v) return v;
   }
   return null;

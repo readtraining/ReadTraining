@@ -251,7 +251,6 @@ export const footer = {
         { href: "/for-providers", label: "List Your Course" },
         { href: "/skill-saver", label: "Skill Saver Programme" },
         { href: "/provider-skill-saver", label: "Provider Skill Saver" },
-        { href: "/certificate-checker", label: "Verify Certificate" },
         { href: "/providers", label: "Listed Training Providers" },
         { href: "/security-jobs", label: "Security Jobs" },
       ],

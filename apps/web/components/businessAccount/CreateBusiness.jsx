@@ -65,8 +65,10 @@ export default function CreateBusiness() {
       router.push("/business");
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
-      setErrors(fields);
-      setGeneral(err?.data?.code === "CONFLICT" ? err.message : g);
+      // a refusal about the organisation's name (another one already uses it) shows beside the company name, once
+      const { name, ...rest } = fields;
+      setErrors(name ? { ...rest, companyName: name } : fields);
+      setGeneral(g);
       if (Object.keys(fields).length) requestAnimationFrame(() => focusFirstError(formRef.current));
       setBusy(false);
     }

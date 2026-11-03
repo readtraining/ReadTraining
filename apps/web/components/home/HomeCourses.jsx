@@ -6,12 +6,13 @@ import CourceCard from "./HomeCourseCard";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { useState } from "react";
 
-// "Popular courses and qualifications": the featured tabs an admin chose, each with its course cards (built on the server from
-// the catalogue, app/page.jsx).
+// "Popular courses and qualifications": the featured tabs an admin chose, each with its course cards and the link to all of its
+// subjects' courses (built on the server from the catalogue, app/page.jsx).
 export default function HomeCourses({ groups }) {
   const catagories = groups.map((g) => g.name);
   const [category, setCategory] = useState(catagories[0]);
-  const shown = (groups.find((g) => g.name === category) || groups[0])?.cards ?? [];
+  const group = groups.find((g) => g.name === category) || groups[0];
+  const shown = group?.cards ?? [];
 
   return (
     <section className="layout-pt-lg layout-pb-lg">
@@ -41,7 +42,7 @@ export default function HomeCourses({ groups }) {
         </div>
 
         <div className="pt-30" style={{ marginLeft: -10 }}>
-          <HomeTextLink href={CATALOGUE_HREF}>Show all {category} courses</HomeTextLink>
+          <HomeTextLink href={group?.href || CATALOGUE_HREF}>Show all {category} courses</HomeTextLink>
         </div>
       </div>
     </section>

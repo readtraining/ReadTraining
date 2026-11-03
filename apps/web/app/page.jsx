@@ -16,6 +16,7 @@ import { pickCourses } from "@/lib/catalogueData";
 import { loadCatalogue } from "@/lib/catalogueServer";
 import { featuredGroups, seoSettings } from "@/lib/siteContent";
 import { contentDefaults } from "@/data/home";
+import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 import { loadReviews } from "@/lib/siteReviewsServer";
@@ -30,11 +31,21 @@ export async function generateMetadata() {
 // The featured courses as course cards, from the live courses on the server: the ones an admin picked (lib/siteContent.js; a
 // course no longer live is skipped), or each tab's subjects' most popular. A tab with no live course is left out, and the
 // section with it when none has one. The first card in each tab is marked "Most booked".
+// "Show all … courses" under a tab: its courses' subject page, or the search for all of its subjects when it has several
+const subjectsHref = (picked) => {
+  const subjects = [...new Set(picked.map((c) => c.subject).filter(Boolean))];
+  if (!subjects.length) return CATALOGUE_HREF;
+  return subjects.length === 1 ? `${CATALOGUE_HREF}/${subjects[0]}` : `${CATALOGUE_HREF}?subject=${subjects.join(",")}`;
+};
+
 export default async function HomePage() {
   const [, , courses, reviews] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadCatalogue(), loadReviews()]);
   const byId = new Map(courses.map((c) => [c.id, c]));
   const tabs = (groups) => groups
-    .map((g) => ({ name: g.name, cards: (g.courses ? g.courses.map((id) => byId.get(id)).filter(Boolean) : pickCourses(courses, g.picks)).map((c, i) => ({ ...toCourseCard(c), popular: i === 0 })) }))
+    .map((g) => {
+      const picked = g.courses ? g.courses.map((id) => byId.get(id)).filter(Boolean) : pickCourses(courses, g.picks);
+      return { name: g.name, href: subjectsHref(picked), cards: picked.map((c, i) => ({ ...toCourseCard(c), popular: i === 0 })) };
+    })
     .filter((g) => g.cards.length);
   // the admin's choice; if none of those courses is live any more (or they were the old sample numbers), the built-in tabs
   const chosen = tabs(featuredGroups());
