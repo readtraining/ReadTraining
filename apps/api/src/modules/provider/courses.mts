@@ -27,7 +27,7 @@ import { can } from '@readtraining/permissions'
 import { logActivity } from '../../lib/activity.mjs'
 import { refuseRetired } from '../../lib/retired.mjs'
 import type { db as Db } from '../../lib/db.mjs'
-import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
+import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
@@ -272,7 +272,15 @@ export async function courseImageUploadUrl(course: Course, contentType: keyof ty
 
 export async function addCourseImage(db: typeof Db, course: Course, path: string, alt: string | undefined, onLog: OnLog) {
   if (!path.startsWith(`${imageFolder(course)}/`)) throw new TRPCError({ code: 'FORBIDDEN' })
-  if (!(await mediaExists(path))) throw bad('The image did not upload. Please try again.')
+  // the picture itself must be at least 500 × 300 pixels (checked on the stored file, whatever the browser said); a smaller or
+  // unreadable one is deleted again
+  const size = await storedImageSize(path)
+  if (size === undefined) throw bad('The image did not upload. Please try again.')
+  const { width, height } = MIN_COURSE_IMAGE
+  if (!size || size.width < width || size.height < height) {
+    await removeMedia([path])
+    throw bad(size ? `This picture is ${size.width} × ${size.height} pixels. Choose one at least ${width} × ${height} pixels.` : 'We couldn’t read that picture. Choose a JPG, PNG, WebP or GIF file.')
+  }
   const [n] = await db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, course.id))
   if (n.n >= 10) throw bad('A course can have up to 10 images.')
   return db.transaction(async (tx) => {

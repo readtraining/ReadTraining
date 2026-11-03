@@ -36,6 +36,21 @@ const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "pricing", "mode"]
 const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
 const MAX_IMAGE = 2 * 1024 * 1024; // the course-media bucket's limit
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+// the smallest course image (the API checks the stored file too: MIN_COURSE_IMAGE in apps/api/src/lib/media.mts)
+const MIN_IMAGE = { width: 500, height: 300 };
+// a chosen picture's width and height, as the browser shows it; null when it can't be read as a picture
+const pictureSize = (file) =>
+  new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    const done = (size) => {
+      URL.revokeObjectURL(url);
+      resolve(size);
+    };
+    img.onload = () => done({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => done(null);
+    img.src = url;
+  });
 const VIDEO_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/\S+$/;
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
 const STATUS_NOTES = {
@@ -573,6 +588,9 @@ function ImagesCard({ course, disabled, onSaved }) {
     if (!IMAGE_TYPES.includes(file.type)) return setError("Choose a JPG, PNG, WebP or GIF picture.");
     if (file.size > MAX_IMAGE) return setError("Choose a picture under 2MB.");
     if (saved.length >= 10) return setError("A course can have up to 10 images. Remove one first.");
+    const size = await pictureSize(file);
+    if (!size) return setError("We couldn't read that picture. Choose a JPG, PNG, WebP or GIF file.");
+    if (size.width < MIN_IMAGE.width || size.height < MIN_IMAGE.height) return setError(`This picture is ${size.width} × ${size.height} pixels. Choose one at least ${MIN_IMAGE.width} × ${MIN_IMAGE.height} pixels.`);
     setError("");
     setAction("upload");
     // the chosen picture shows at once, from the file itself, until the saved one replaces it
@@ -639,7 +657,7 @@ function ImagesCard({ course, disabled, onSaved }) {
         <div className="rt-pws-course-mediabar">
           <input ref={fileRef} type="file" accept={IMAGE_TYPES.join(",")} className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{action === "upload" ? "Uploading…" : "Upload course image"}</button>
-          <span className="rt-field__hint">500 × 300 pixels or larger. JPG, PNG, WebP or GIF, up to 2MB. No text on the image.</span>
+          <span className="rt-field__hint">{MIN_IMAGE.width} × {MIN_IMAGE.height} pixels or larger. JPG, PNG, WebP or GIF, up to 2MB. No text on the image.</span>
         </div>
       )}
       {list.length ? (
