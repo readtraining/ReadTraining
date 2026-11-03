@@ -75,12 +75,6 @@ function useSection(initial, mutation, check, toInput = (v) => v) {
   const [values, setValues] = useState(initial);
   // what is saved: the form has unsaved changes while its values differ (leaving then asks first, lib/unsavedChanges.js)
   const [base, setBase] = useState(initial);
-  const syncBase = useRef(false);
-  useEffect(() => {
-    if (!syncBase.current) return;
-    syncBase.current = false;
-    setBase(values); // a save's own tidying (a formatted postcode, a cleared password) counts as saved
-  }, [values]);
   useUnsavedChanges(JSON.stringify(values) !== JSON.stringify(base));
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
@@ -105,9 +99,14 @@ function useSection(initial, mutation, check, toInput = (v) => v) {
     try {
       const result = await mutation.mutateAsync(toInput(values));
       setBase(values);
-      syncBase.current = true;
+      // a save's own tidying (a formatted postcode, a cleared password) counts as saved too
+      const tidy = (next) => {
+        const tidied = typeof next === "function" ? next(values) : next;
+        setValues(tidied);
+        setBase(tidied);
+      };
       await utils.me.get.invalidate();
-      setSaved(onDone ? onDone(result, setValues) || "" : copy.saved);
+      setSaved(onDone ? onDone(result, tidy) || "" : copy.saved);
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       setErrors(fields);

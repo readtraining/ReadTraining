@@ -1192,7 +1192,7 @@ export const subjects = {
           },
           {
             type: "p",
-            text: "We have developed 15 mock exams for the SIA Door Supervisor course, offering valuable practice opportunities. These Door Supervisor mock tests are designed to help you prepare for your actual exam by providing a realistic and comprehensive practice experience."
+            text: "We have developed free mock exams for the units of the SIA Door Supervisor course, offering valuable practice opportunities. These Door Supervisor mock tests are designed to help you prepare for your actual exam by providing a realistic and comprehensive practice experience."
           },
           {
             type: "p",

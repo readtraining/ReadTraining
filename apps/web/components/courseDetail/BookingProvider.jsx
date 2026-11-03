@@ -192,6 +192,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   }, []);
 
   useEffect(() => {
+    if (course.preview) return; // an editor's preview (perhaps a draft) isn't a learner viewing the course
     trackEvent("view_item", { currency: "GBP", value: course.price ?? 0, items: [toItem(course)] });
   }, [course]);
 

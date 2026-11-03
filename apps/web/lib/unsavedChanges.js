@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 
 // "You have unsaved changes": every edit form calls useUnsavedChanges(dirty) (the course editor, account settings, the provider
 // settings tabs). While any form on the page has something not saved, leaving the page asks first, whichever way:
@@ -9,7 +9,8 @@ import { useEffect, useId } from "react";
 // - Back (or Forward) in the browser: an extra history entry for this page is added while something is unsaved, so Back lands
 //   on this page again first and can ask; staying puts the entry back, leaving goes on back. When everything is saved again the
 //   extra entry is taken off, so Back works as before.
-// A navigation made in code (router.push from a button) isn't covered: such buttons should save, or ask, themselves.
+// A navigation made in code (router.push from a button) isn't covered: such buttons should save, or ask, themselves, and then go
+// through leaveWithoutAsking, so the extra history entry is left behind (taking it off afterwards would undo the navigation).
 
 export const LEAVE_MESSAGE = "You have unsaved changes. Leave this page anyway? What you changed will be lost.";
 
@@ -108,6 +109,13 @@ function update() {
   }
 }
 
+/** Leave in code without asking (a save or a delete that then opens another page): `go` runs the navigation. */
+export function leaveWithoutAsking(go) {
+  dirty.clear();
+  guarded = false; // the new page goes on top of the extra entry, which is just this page again (as a link that was confirmed)
+  go();
+}
+
 /** Ask before leaving the page while `isDirty` (something typed or chosen that isn't saved yet). */
 export function useUnsavedChanges(isDirty) {
   const id = useId();
@@ -124,4 +132,19 @@ export function useUnsavedChanges(isDirty) {
     },
     [id],
   );
+}
+
+/**
+ * For a form whose values live in one piece of state: it counts as unsaved while `value` differs from what was last saved (or
+ * loaded). Returns markSaved, to call once a save has gone through. A value still loading (null) starts the comparison once it
+ * arrives.
+ */
+export function useSavedSnapshot(value) {
+  const now = JSON.stringify(value ?? null);
+  const [saved, setSaved] = useState(value == null ? null : now);
+  useEffect(() => {
+    if (saved === null && value != null) setSaved(now);
+  }, [saved, value, now]);
+  useUnsavedChanges(saved !== null && now !== saved);
+  return () => setSaved(now);
 }

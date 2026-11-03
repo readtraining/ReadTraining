@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { errorsFrom } from "@/lib/useMe";
 
@@ -19,6 +20,7 @@ export const parseRate = (text) => {
 // mutateAsync; a field error from the API shows here too.
 export function RateForm({ id, label, hint, bps, save, saving, onSaved }) {
   const [value, setValue] = useState(String(bps / 100));
+  const markSaved = useSavedSnapshot(value); // leaving with unsaved changes asks first
   const [error, setError] = useState("");
   const ref = useRef(null);
   useEffect(() => setValue(String(bps / 100)), [bps]);
@@ -32,6 +34,7 @@ export function RateForm({ id, label, hint, bps, save, saving, onSaved }) {
     setError("");
     try {
       await save(next);
+      markSaved();
       onSaved(next);
     } catch (err) {
       const { fields, general } = errorsFrom(err);

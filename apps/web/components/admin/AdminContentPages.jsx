@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { blocksToText, textToBlocks } from "@/lib/legalText";
@@ -33,6 +34,7 @@ export function FaqForm({ contentKey, set, value, canEdit }) {
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const markSaved = useSavedSnapshot(items); // leaving with unsaved changes asks first
   const ref = useRef(null);
   const edit = (id, patch) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
 
@@ -51,6 +53,7 @@ export function FaqForm({ contentKey, set, value, canEdit }) {
     try {
       await save({ items: items.map((x) => ({ q: x.q.trim(), a: x.a.trim() })) });
       setSaved(true);
+      markSaved();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       const mapped = {};
@@ -104,6 +107,7 @@ export function LegalForm({ contentKey, doc, value, canEdit }) {
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const markSaved = useSavedSnapshot({ v, sections });
   const ref = useRef(null);
   const editSection = (rid, patch) => setSections((xs) => xs.map((x) => (x.rid === rid ? { ...x, ...patch } : x)));
   const today = new Date().toISOString().slice(0, 10);
@@ -134,6 +138,7 @@ export function LegalForm({ contentKey, doc, value, canEdit }) {
     try {
       await save({ lead: v.lead.trim(), updated: v.updated, effective: v.effective, draft: v.draft, sections: out });
       setSaved(true);
+      markSaved();
       setSections((xs) => xs.map((x, i) => ({ ...x, id: out[i].id })));
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);

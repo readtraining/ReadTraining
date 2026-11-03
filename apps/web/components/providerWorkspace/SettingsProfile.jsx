@@ -157,7 +157,11 @@ function LogoForm({ profile, say }) {
     if (!local || profile.logoUrl === local.was) return; // the profile hasn't caught up with the change yet
     if (!profile.logoUrl) return void setLocal(null); // removed, and the profile agrees
     let live = true;
-    whenLoaded(profile.logoUrl).then(() => live && setLocal(null)); // the saved copy can show now
+    whenLoaded(profile.logoUrl).then(() => {
+      if (!live) return;
+      if (local.url?.startsWith("blob:")) URL.revokeObjectURL(local.url); // the chosen file's preview isn't needed any more
+      setLocal(null); // the saved copy can show now
+    });
     return () => {
       live = false;
     };
@@ -303,6 +307,12 @@ export function VenuesTab({ say }) {
   const remove = api.provider.venues.remove.useMutation();
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = new, a venue = edit it
   const [removing, setRemoving] = useState(null);
+  const [archiving, setArchiving] = useState(null);
+  const toggleActive = (v) =>
+    setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, {
+      onSuccess: () => { setArchiving(null); refresh(); say(v.active ? "Venue archived" : "Venue restored"); },
+      onError: (e) => { setArchiving(null); say(firstError(e)); },
+    });
   const [blocked, setBlocked] = useState("");
   const edit = can("provider.cohorts.edit");
   const refresh = () => utils.provider.venues.list.invalidate({ organisationId });
@@ -327,7 +337,8 @@ export function VenuesTab({ say }) {
                 {edit && (
                   <div className="rt-adm-list__side">
                     <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => setEditing(v)}>Edit<span className="rt-sr"> {v.name}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={setActive.isPending} onClick={() => setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, { onSuccess: () => { refresh(); say(v.active ? "Venue archived" : "Venue restored"); }, onError: (e) => say(firstError(e)) })}>{v.active ? "Archive" : "Restore"}<span className="rt-sr"> {v.name}</span></button>
+                    {/* archiving takes the venue out of new dates, so it asks first; restoring doesn't */}
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={setActive.isPending} aria-busy={(setActive.isPending && setActive.variables?.venueId === v.id) || undefined} onClick={() => (v.active ? setArchiving(v) : toggleActive(v))}>{setActive.isPending && setActive.variables?.venueId === v.id ? (v.active ? "Archiving…" : "Restoring…") : v.active ? "Archive" : "Restore"}<span className="rt-sr"> {v.name}</span></button>
                     {/* a venue a date has used can't be deleted (its dates keep it): only archived, so Delete isn't offered */}
                     {!v.used && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => { setBlocked(""); setRemoving(v); }}>Delete<span className="rt-sr"> {v.name}</span></button>}
                   </div>
@@ -339,7 +350,8 @@ export function VenuesTab({ say }) {
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : "Venue saved, but we couldn't find its postcode on the map"); }} />
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked}
+      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked} busy={remove.isPending}
         onConfirm={() => remove.mutate({ organisationId, venueId: removing.id }, { onSuccess: () => { setRemoving(null); refresh(); say("Venue deleted"); }, onError: (e) => setBlocked(firstError(e)) })} />
     </div>
   );

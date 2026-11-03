@@ -140,7 +140,8 @@ export const mobileMenu = (nav) => [
     title: N.sections[2].label,
     links: [
       ...(nav.towns.length ? [{ title: N.near.citiesTitle, links: nav.towns.slice(0, N.near.cities).map((t) => ({ label: t.name, href: t.href })) }] : []),
-      { title: N.near.online.title, links: N.near.online.items.filter((i) => nav.methods.some((m) => i.href.endsWith(m.slug))).map((i) => ({ label: i.label, href: i.href })) },
+      // "No venue near you?": the online ways of study in use; left out when there are none
+      ...[{ title: N.near.online.title, links: N.near.online.items.filter((i) => nav.methods.some((m) => i.href.endsWith(m.slug))).map((i) => ({ label: i.label, href: i.href })) }].filter((g) => g.links.length),
       { label: N.near.all.label, href: N.near.all.href },
     ],
   },

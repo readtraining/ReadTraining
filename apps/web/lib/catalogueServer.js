@@ -90,7 +90,8 @@ export const ukPlace = cache(async (townSlug) => {
   if (name.length < 2) return null;
   try {
     const hit = await query("catalogue.locate", { q: name });
-    const key = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    // "King's Lynn" and the address's "kings-lynn" read the same
+    const key = (v) => String(v || "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
     return hit && key(hit.label) === key(name) ? hit.label : null;
   } catch {
     return undefined;

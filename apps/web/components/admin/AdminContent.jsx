@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 import { refreshSiteContent } from "@/app/admin/actions";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import Sheet from "@/components/testPrep/runner/Sheet";
@@ -166,6 +167,7 @@ function TrustForm({ value, canEdit }) {
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const markSaved = useSavedSnapshot(v); // leaving with unsaved changes asks first
   const ref = useRef(null);
   const c = copy.trust;
   const num = (t) => (/^\d{1,9}$/.test(t.trim()) ? Number(t.trim()) : null);
@@ -196,6 +198,7 @@ function TrustForm({ value, canEdit }) {
     try {
       await save({ rating: empty(v.rating) ? null : rating, reviews: num(v.reviews), customers: num(v.customers), courses: num(v.courses), source: v.source.trim() || null, sourceUrl: v.source.trim() && v.sourceUrl.trim() ? v.sourceUrl.trim() : null });
       setSaved(true);
+      markSaved();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       setErrors(fields);
@@ -247,6 +250,7 @@ function FeaturedForm({ value, canEdit }) {
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const markSaved = useSavedSnapshot(groups);
   const ref = useRef(null);
   const c = copy.featured;
   if (!options.data) return null;
@@ -272,6 +276,7 @@ function FeaturedForm({ value, canEdit }) {
     try {
       await save({ groups: out });
       setSaved(true);
+      markSaved();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       setGeneral(g);

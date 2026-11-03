@@ -108,23 +108,25 @@ export const catalogueAdminRouter = createTRPCRouter({
   setActive: adminProcedure('admin.catalogue.edit')
     .input(z.object({ kind, key, active: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const [row] = await ctx.db.execute<{ name: string; active: boolean }>(sql`select name, active from ${TABLE[input.kind]} where ${byKey(input.kind)}::text = ${input.key}`)
-      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
-      if (row.active === input.active) return { ok: true }
-      if (!input.active) {
-        const live = await ctx.db.execute<{ title: string }>(sql`
-          select title from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key} order by title limit 4`)
-        if (live.length) {
-          const [n] = await ctx.db.execute<{ n: number }>(sql`select count(*)::int n from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key}`)
-          const names = live.slice(0, 3).map((c) => c.title).join(', ') + (n.n > 3 ? ` and ${n.n - 3} more` : '')
-          const one = n.n === 1
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `${row.name} can't be retired while ${n.n} live ${one ? 'course is' : 'courses are'} filed under it (${names}). Move ${one ? 'it' : 'them'} to another ${WORD[input.kind]}, or pause ${one ? 'it' : 'them'}, first.`,
-          })
-        }
-      }
+      // in one transaction with the entry locked: a course approved at the same moment (which locks the entries it is filed under,
+      // lib/retired.mts) either goes live first and is counted here, or waits and is refused there
       await ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ name: string; active: boolean }>(sql`select name, active from ${TABLE[input.kind]} where ${byKey(input.kind)}::text = ${input.key} for update`)
+        if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
+        if (row.active === input.active) return // already so
+        if (!input.active) {
+          const live = await tx.execute<{ title: string }>(sql`
+            select title from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key} order by title limit 4`)
+          if (live.length) {
+            const [n] = await tx.execute<{ n: number }>(sql`select count(*)::int n from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key}`)
+            const names = live.slice(0, 3).map((c) => c.title).join(', ') + (n.n > 3 ? ` and ${n.n - 3} more` : '')
+            const one = n.n === 1
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `${row.name} can't be retired while ${n.n} live ${one ? 'course is' : 'courses are'} filed under it (${names}). Move ${one ? 'it' : 'them'} to another ${WORD[input.kind]}, or pause ${one ? 'it' : 'them'}, first.`,
+            })
+          }
+        }
         await tx.execute(sql`update ${TABLE[input.kind]} set active = ${input.active} where ${byKey(input.kind)}::text = ${input.key}`)
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: input.active ? 'admin.catalogue_restored' : 'admin.catalogue_retired', targetType: input.kind, targetId: input.key, metadata: { kind: input.kind, name: row.name }, ip: ctx.ip })
       })

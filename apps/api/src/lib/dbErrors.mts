@@ -68,8 +68,19 @@ export function friendlyError(error: TRPCError, path: string): TRPCError | null 
   }
   // an error that isn't one of ours (a thrown Error or a library's): tRPC would send its own message, so send the plain one
   if (error.code === 'INTERNAL_SERVER_ERROR' && error.cause && !(error.cause instanceof TRPCError) && error.message === (error.cause as Error).message) {
-    console.error(`[api] unexpected error on ${path}:`, error.cause)
+    // never the whole error: a failed query's error (DrizzleQueryError) carries the SQL and every value in it (emails, phones)
+    console.error(`[api] unexpected error on ${path}: ${describe(error.cause)}`)
     return new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: GENERAL })
   }
   return null
+}
+
+// A short description of an unexpected error for the log: its kind, code and the first line of its message, or for a failed
+// query the database's own reason (never the query's text or values).
+function describe(e: unknown): string {
+  const err = e as { name?: string; code?: unknown; message?: unknown; cause?: { code?: unknown; message?: unknown } }
+  const query = err?.name === 'DrizzleQueryError' || /^Failed query:/.test(String(err?.message ?? ''))
+  const first = (v: unknown) => String(v ?? '').split('\n')[0].slice(0, 200)
+  if (query) return `query failed${err.cause?.code ? ` (${String(err.cause.code)})` : ''}: ${first(err.cause?.message ?? 'no reason given')}`
+  return `${err?.name ?? 'Error'}${err?.code ? ` ${String(err.code)}` : ''}: ${first(err?.message)}`
 }

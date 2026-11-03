@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server'
 
 import { asc, courseExams, courseFaqs, courseImages, courseUnits, eq, sql } from '@readtraining/db'
 
@@ -233,13 +234,13 @@ export async function locate(q: string) {
   const key = q.trim().toLowerCase()
   if (!key) return null
   if (located.has(key)) return located.get(key)!
+  // a 404 (no such postcode) is an answer; a timeout, a network error or a server error is not: it throws, so nothing is cached and
+  // the caller can tell "not found" from "couldn't ask" (a town page doesn't 404, the search doesn't say "we couldn't find it")
   const get = async (path: string) => {
-    try {
-      const res = await fetch(`https://api.postcodes.io${path}`, { signal: AbortSignal.timeout(4000) })
-      return res.ok ? ((await res.json()) as { result?: unknown }).result : null
-    } catch {
-      return null
-    }
+    const res = await fetch(`https://api.postcodes.io${path}`, { signal: AbortSignal.timeout(4000) }).catch(() => null)
+    if (res?.status === 404) return null
+    if (!res?.ok) throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: "We can't look places up right now. Please try again in a moment." })
+    return ((await res.json()) as { result?: unknown }).result
   }
   let found: { lat: number; lng: number; label: string } | null = null
   if (POSTCODE.test(key)) {
@@ -249,9 +250,11 @@ export async function locate(q: string) {
     const r = (await get(`/outcodes/${encodeURIComponent(key)}`)) as { latitude?: number; longitude?: number } | null
     if (r?.latitude != null && r.longitude != null) found = { lat: r.latitude, lng: r.longitude, label: key.toUpperCase() }
   } else {
-    const r = (await get(`/places?q=${encodeURIComponent(key)}&limit=5`)) as { name_1?: string; latitude?: number; longitude?: number; local_type?: string }[] | null
-    // a town or city first, if one matches; otherwise the first place
-    const best = r?.find((p) => /city|town/i.test(p.local_type ?? '')) ?? r?.[0]
+    const r = (await get(`/places?q=${encodeURIComponent(key)}&limit=20`)) as { name_1?: string; latitude?: number; longitude?: number; local_type?: string }[] | null
+    // the place with exactly that name first (a town or city before a hamlet of the same name), then a town or city, then the first
+    const same = (p: { name_1?: string }) => (p.name_1 ?? '').toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() === key.replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+    const town = (p: { local_type?: string }) => /city|town/i.test(p.local_type ?? '')
+    const best = r?.find((p) => same(p) && town(p)) ?? r?.find(same) ?? r?.find(town) ?? r?.[0]
     if (best?.latitude != null && best.longitude != null) found = { lat: best.latitude, lng: best.longitude, label: best.name_1 ?? q.trim() }
   }
   if (located.size > 2000) located.clear()

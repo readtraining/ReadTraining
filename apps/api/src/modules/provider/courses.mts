@@ -297,26 +297,36 @@ export async function addCourseImage(db: typeof Db, course: Course, path: string
   }
   const [n] = await db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, course.id))
   if (n.n >= 10) throw bad('A course can have up to 10 images.')
-  return db.transaction(async (tx) => {
-    const [img] = await tx.insert(courseImages).values({ courseId: course.id, position: n.n, path, alt: alt || null }).returning({ id: courseImages.id })
-    await onLog(tx)
-    return { id: img.id, url: mediaUrl(path) }
-  })
+  try {
+    return await db.transaction(async (tx) => {
+      const [img] = await tx.insert(courseImages).values({ courseId: course.id, position: n.n, path, alt: alt || null }).returning({ id: courseImages.id })
+      await onLog(tx)
+      return { id: img.id, url: mediaUrl(path) }
+    })
+  } catch (error) {
+    await removeMedia([path]) // not added (the course changed elsewhere, or the save failed): the uploaded file goes too
+    throw error
+  }
 }
 
 // keeps, orders and labels a course's images (the first is the cover) and deletes the ones left out
 export async function setCourseImages(db: typeof Db, course: Course, images: { id: string; alt: string }[], onLog: OnLog) {
-  const now = await db.select().from(courseImages).where(eq(courseImages.courseId, course.id))
-  const known = new Set(now.map((i) => i.id))
-  if (images.some((i) => !known.has(i.id))) throw bad('That image is no longer on this course. Refresh and try again.')
-  // a course that is (or has been) live keeps at least one image: it needed one to go live, and its card and page show it
-  if (!images.length && now.length && (course.status === 'live' || course.status === 'paused')) throw bad('A live course needs at least one image. Upload another before removing this one.')
-  const keep = new Set(images.map((i) => i.id))
-  const removed = now.filter((i) => !keep.has(i.id))
-  await db.transaction(async (tx) => {
-    if (removed.length) await tx.delete(courseImages).where(inArray(courseImages.id, removed.map((i) => i.id)))
+  // the course's row is locked and its images read inside the transaction, so two changes at the same moment (two tabs keeping
+  // different images) can't both pass the checks and leave a live course with none
+  const removed = await db.transaction(async (tx) => {
+    const [row] = await tx.select({ status: courses.status }).from(courses).where(eq(courses.id, course.id)).for('update')
+    const now = await tx.select().from(courseImages).where(eq(courseImages.courseId, course.id))
+    const known = new Set(now.map((i) => i.id))
+    if (images.some((i) => !known.has(i.id))) throw bad('That image is no longer on this course. Refresh and try again.')
+    // a course that is (or has been) live keeps at least one image: it needed one to go live, and its card and page show it
+    const status = row?.status ?? course.status
+    if (!images.length && now.length && (status === 'live' || status === 'paused')) throw bad('A live course needs at least one image. Upload another before removing this one.')
+    const keep = new Set(images.map((i) => i.id))
+    const gone = now.filter((i) => !keep.has(i.id))
+    if (gone.length) await tx.delete(courseImages).where(inArray(courseImages.id, gone.map((i) => i.id)))
     for (const [i, img] of images.entries()) await tx.update(courseImages).set({ position: i, alt: img.alt || null }).where(eq(courseImages.id, img.id))
-    await onLog(tx, { kept: images.length, removed: removed.length })
+    await onLog(tx, { kept: images.length, removed: gone.length })
+    return gone
   })
   await removeMedia(removed.map((i) => i.path))
   return { ok: true }
@@ -480,7 +490,8 @@ export const providerCoursesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input, path }) => {
       const { organisationId, courseId, seen, ...fields } = input as { organisationId: string; courseId: number; seen?: string } & Record<string, unknown>
       const keys = Object.keys(fields).filter((k) => fields[k] !== undefined)
-      if (!keys.length) return { ok: true, pendingChange: false, version: await courseVersion(ctx.db, courseId) }
+      // nothing to save: the editor keeps the version it had (handing it a newer one would hide a change made elsewhere)
+      if (!keys.length) return { ok: true, pendingChange: false, version: seen ?? (await courseVersion(ctx.db, courseId)) }
       // page wording and search fields: course editors and marketing; anything else needs full course editing; prices need pricing
       if (keys.some((k) => !PAGE_ONLY.has(k)) && !can(ctx.actor, 'provider.courses.edit', { organisationId })) await refuse(ctx, 'provider.courses.edit', organisationId, path)
       if (keys.some((k) => PRICING.has(k)) && !can(ctx.actor, 'provider.pricing.edit', { organisationId })) await refuse(ctx, 'provider.pricing.edit', organisationId, path)
@@ -550,10 +561,15 @@ export const providerCoursesRouter = createTRPCRouter({
 
   // Withdraw a content change that is still waiting (the live course stays as it is).
   discardChange: orgProcedure('provider.courses.editPage')
-    .input(z.object({ courseId: id }))
+    .input(z.object({ courseId: id, seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       await ownCourse(ctx.db, input.organisationId, input.courseId)
       return ctx.db.transaction(async (tx) => {
+        await lockStatus(tx, input.courseId)
+        await refuseIfChanged(tx, input.courseId, input.seen)
+        // the course's version moves on (it would otherwise fall back to before the change, and a tab still showing the change
+        // could save it again unwarned)
+        await tx.update(courses).set({ updatedAt: new Date() }).where(eq(courses.id, input.courseId))
         const gone = await tx.delete(courseRevisions).where(and(eq(courseRevisions.courseId, input.courseId), eq(courseRevisions.status, 'pending'))).returning({ id: courseRevisions.id })
         if (gone.length) await log(tx, ctx, input.organisationId, 'course.change_withdrawn', input.courseId)
         return { ok: true, version: await courseVersion(tx, input.courseId) }
@@ -567,22 +583,27 @@ export const providerCoursesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => courseImageUploadUrl(await ownCourse(ctx.db, input.organisationId, input.courseId), input.contentType)),
 
   addImage: orgProcedure('provider.courses.editPage')
-    .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: line(140, 'image description').optional() }))
+    .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: line(140, 'image description').optional(), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const added = await addCourseImage(ctx.db, course, input.path, input.alt, async (tx) => {
-        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status: await lockStatus(tx, course.id) })
+        const status = await lockStatus(tx, course.id)
+        await refuseIfChanged(tx, course.id, input.seen) // changed in another tab since the editor loaded it: nothing is added
+        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status })
         await log(tx, ctx, input.organisationId, 'course.image_added', course.id)
       })
       return { ...added, version: await courseVersion(ctx.db, course.id) }
     }),
 
   setImages: orgProcedure('provider.courses.editPage')
-    .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: line(140, 'image description') })).max(10) }))
+    .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: line(140, 'image description') })).max(10), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const done = await setCourseImages(ctx.db, course, input.images, async (tx, m) => {
-        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status: await lockStatus(tx, course.id) })
+        const status = await lockStatus(tx, course.id)
+        // changed in another tab since the editor loaded it (perhaps an image added there): nothing is changed or deleted
+        await refuseIfChanged(tx, course.id, input.seen)
+        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status })
         await log(tx, ctx, input.organisationId, 'course.images_changed', course.id, m)
       })
       return { ...done, version: await courseVersion(ctx.db, course.id) }
@@ -591,7 +612,7 @@ export const providerCoursesRouter = createTRPCRouter({
   // Send a draft (or a course an admin asked to change) for approval, once nothing required is missing. Only an approved provider
   // sends: one still waiting for our approval can build its courses and dates, and sends them once it is approved.
   submit: orgProcedure('provider.courses.edit')
-    .input(z.object({ courseId: id }))
+    .input(z.object({ courseId: id, seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const org = ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)
       if (org?.organisationStatus !== 'active') throw new TRPCError({ code: 'FORBIDDEN', message: 'Your provider account is waiting for our team’s approval. You can send courses for approval once it is approved.' })
@@ -600,6 +621,8 @@ export const providerCoursesRouter = createTRPCRouter({
       const gaps = await missing(ctx.db, course)
       if (gaps.length) throw bad(`Add ${gaps.join(', ')} before sending it for approval.`)
       await ctx.db.transaction(async (tx) => {
+        await lockStatus(tx, course.id)
+        await refuseIfChanged(tx, course.id, input.seen) // what is sent is what this editor showed
         await tx.update(courses).set({ status: 'pending', submittedAt: new Date(), statusNote: null, updatedAt: new Date() }).where(eq(courses.id, course.id))
         await log(tx, ctx, input.organisationId, 'course.submitted', course.id)
       })
@@ -614,7 +637,7 @@ export const providerCoursesRouter = createTRPCRouter({
 
   // Pause a live course (it leaves the site, its dates stay) or put it back live.
   setPaused: orgProcedure('provider.courses.edit')
-    .input(z.object({ courseId: id, paused: z.boolean() }))
+    .input(z.object({ courseId: id, paused: z.boolean(), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const from = input.paused ? 'live' : 'paused'
@@ -622,6 +645,8 @@ export const providerCoursesRouter = createTRPCRouter({
       // a course our team paused (it has their reason) goes back live only through them
       if (!input.paused && course.statusNote) throw new TRPCError({ code: 'FORBIDDEN', message: 'Our team paused this course. Contact us to put it back live.' })
       return ctx.db.transaction(async (tx) => {
+        await lockStatus(tx, course.id)
+        await refuseIfChanged(tx, course.id, input.seen)
         await tx.update(courses).set({ status: input.paused ? 'paused' : 'live', updatedAt: new Date() }).where(eq(courses.id, course.id))
         if (!input.paused) await refuseRetired(tx, course.id, 'provider')
         await log(tx, ctx, input.organisationId, input.paused ? 'course.paused' : 'course.resumed', course.id)

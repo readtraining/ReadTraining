@@ -8,7 +8,7 @@ import FaqSection from "@/components/marketing/FaqSection";
 import CourseCatalogue from "@/components/courses/CourseCatalogue";
 import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import CourseTowns from "@/components/courses/CourseTowns";
-import { getCourseTownPage, getCourseTownParams, getCourseTowns, isCourseTown } from "@/lib/coursePages";
+import { getCourseTownPage, getCourseTownParams, getCourseTowns, isCourseTown, mayBeTownPage } from "@/lib/coursePages";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
@@ -19,7 +19,8 @@ import { loadCatalogue, ukPlace } from "@/lib/catalogueServer";
 // the real catalogue (every live listing), as the pages read it
 const realCourses = loadCatalogue;
 // the town page, if the town has a venue for this page or is a real UK place (a town abroad, or made up, is "page not found")
-const townPage = async (slug, town, courses) => getCourseTownPage(slug, town, courses, isCourseTown(slug, town, courses) ? undefined : await ukPlace(town));
+const townPage = async (slug, town, courses) =>
+  getCourseTownPage(slug, town, courses, isCourseTown(slug, town, courses) || !mayBeTownPage(slug, town) ? undefined : await ukPlace(town));
 
 // A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds), as Hurak's course finder pages: the same
 // catalogue with the town as its location (courses with a venue there, closest first; the visitor can change the town), the

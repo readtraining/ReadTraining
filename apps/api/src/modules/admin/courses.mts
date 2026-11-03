@@ -291,7 +291,12 @@ export const adminCoursesRouter = createTRPCRouter({
         }
         // never live under a retired category, method or level (a change may move it into one retired since it was sent)
         if (input.decision === 'approve' || input.decision === 'resume' || (input.decision === 'approveChange' && locked.status === 'live')) await refuseRetired(tx, course.id, 'admin')
-        if (input.decision === 'rejectChange') await tx.update(courseRevisions).set({ status: 'rejected', note: message, decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
+        if (input.decision === 'rejectChange') {
+          await tx.update(courseRevisions).set({ status: 'rejected', note: message, decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
+          // the course's version moves on (it would otherwise fall back to before the change, and an editor still showing the
+          // change could send it again unwarned)
+          await tx.update(courses).set({ updatedAt: now }).where(eq(courses.id, course.id))
+        }
         await logFor(ctx, course, rule.log, { from: course.status, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })(tx)
         // a decision on their own request gets its own line in the log, so it is never missed
         if (own) await logFor(ctx, course, 'admin.own_request_decided', { decision: input.decision, reason: input.ownReason!.trim() })(tx)
@@ -355,16 +360,18 @@ export const adminCoursesRouter = createTRPCRouter({
 
   // Publish a shared page (once nothing required is missing), take it off the site, or put it back.
   setSharedStatus: adminProcedure('admin.catalogue.edit')
-    .input(z.object({ courseId: id, status: z.enum(['live', 'paused']) }))
+    .input(z.object({ courseId: id, status: z.enum(['live', 'paused']), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      if (course.status === input.status) return { ok: true, version: await courseVersion(ctx.db, course.id) }
+      if (course.status === input.status) return { ok: true, version: input.seen ?? (await courseVersion(ctx.db, course.id)) }
       if (input.status === 'live') {
         const gaps = await missing(ctx.db, course)
         if (gaps.length) throw bad(`Add ${gaps.join(', ')} before publishing it.`)
       } else if (course.status !== 'live') throw new TRPCError({ code: 'CONFLICT', message: 'Only a live page can be taken off the site.' })
       const now = new Date()
       await ctx.db.transaction(async (tx) => {
+        await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+        await refuseIfChanged(tx, course.id, input.seen) // what is published is what this editor showed
         await tx.update(courses).set({ status: input.status, publishedAt: course.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
         if (input.status === 'live') await refuseRetired(tx, course.id, 'admin')
         await logFor(ctx, course, input.status === 'live' ? 'admin.shared_course_published' : 'admin.shared_course_paused')(tx)
@@ -377,18 +384,25 @@ export const adminCoursesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => courseImageUploadUrl(await sharedPage(ctx.db, input.courseId), input.contentType)),
 
   sharedAddImage: adminProcedure('admin.catalogue.edit')
-    .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: z.string().trim().max(140).optional() }))
+    .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: z.string().trim().max(140).optional(), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      const added = await addCourseImage(ctx.db, course, input.path, input.alt, logFor(ctx, course, 'admin.shared_course_image_added'))
+      const added = await addCourseImage(ctx.db, course, input.path, input.alt, async (tx) => {
+        await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+        await refuseIfChanged(tx, course.id, input.seen) // changed in another tab since the editor loaded it: nothing is added
+        await logFor(ctx, course, 'admin.shared_course_image_added')(tx)
+      })
       return { ...added, version: await courseVersion(ctx.db, course.id) }
     }),
 
   sharedSetImages: adminProcedure('admin.catalogue.edit')
-    .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: z.string().trim().max(140) })).max(10) }))
+    .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: z.string().trim().max(140) })).max(10), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      const done = await setCourseImages(ctx.db, course, input.images, (tx, m) => logFor(ctx, course, 'admin.shared_course_images_changed', m)(tx))
+      const done = await setCourseImages(ctx.db, course, input.images, async (tx, m) => {
+        await refuseIfChanged(tx, course.id, input.seen) // changed in another tab since the editor loaded it: nothing is changed
+        await logFor(ctx, course, 'admin.shared_course_images_changed', m)(tx)
+      })
       return { ...done, version: await courseVersion(ctx.db, course.id) }
     }),
 

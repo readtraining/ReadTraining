@@ -95,6 +95,14 @@ export function subjectLead(slug) {
   return s.lead.replace(/\{(\w+)\}/g, (all, key) => (values[key] === undefined || values[key] === null ? all : String(values[key])));
 }
 
+// A course page's mock test line (data/testPrep.js `banner`) with {tests} and {questions} counted from the tests that are listed.
+export function subjectBanner(slug, banner) {
+  const list = resolveTests(slug);
+  const questions = list.reduce((sum, t) => sum + (t.questions || 0), 0);
+  const values = { tests: String(list.length), questions: questions.toLocaleString("en-GB") };
+  return list.length ? banner.replace(/\{(\w+)\}/g, (all, key) => values[key] ?? all) : "";
+}
+
 // Short facts for cards: test count, questions, pass mark and time, from the same numbers the subject page shows.
 export function subjectFacts(slug) {
   const list = resolveTests(slug);

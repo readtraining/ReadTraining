@@ -54,8 +54,10 @@ export function getCoursePage(slug, courses) {
       lead: page.lead,
       crumb: page.label,
       allHref: CATALOGUE_HREF,
-      links: coursePages.filter((p) => p.slug !== slug).map((p) => ({ label: p.label, href: coursePageHref(p.slug) })),
+      // the other written pages, each only while it lists a live course
+      links: coursePages.filter((p) => p.slug !== slug && select(courses, p.select).length > 0).map((p) => ({ label: p.label, href: coursePageHref(p.slug) })),
       subject: page.select.subject,
+      method: page.select.method, // a method page's own way of study (a town page's location search counts only that one)
       hide: page.hide,
       filters: page.filters !== false,
       about: page.about,
@@ -84,12 +86,15 @@ const TOWN_SLUG = /^[a-z]+(-[a-z]+){0,4}$/;
 const townFromSlug = (town) => town.split("-").map((w) => (["upon", "on", "under", "le", "in"].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
 /** Whether a town page's town has a venue for this page (so no map check is needed). */
 export const isCourseTown = (slug, town, courses) => getCourseTowns(slug, courses).some((t) => t.slug === town);
+/** Whether a town page can exist without a venue there: the address looks like a town, and the page is one that has towns at all
+ * (live online and self-paced pages have none), so nothing else is worth looking up on the map. */
+export const mayBeTownPage = (slug, town) => TOWN_SLUG.test(town) && town.length <= 40 && !["live-online", "self-paced"].includes(definition(slug)?.select?.method);
 export function getCourseTownPage(slug, town, courses, placeName) {
   const page = getCoursePage(slug, courses);
   if (!page) return null;
   const found = getCourseTowns(slug, courses).find((t) => t.slug === town);
-  if (!found && placeName === null) return null;
-  const place = found || (TOWN_SLUG.test(town) && town.length <= 40 ? { city: placeName || townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` } : null);
+  if (!found && (placeName === null || !mayBeTownPage(slug, town))) return null;
+  const place = found || { city: placeName || townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` };
   if (!place) return null;
   const what = page.label.replace(/ courses$/i, "");
   const title = `${what} courses in ${place.city}`;

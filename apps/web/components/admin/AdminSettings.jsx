@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -35,6 +36,7 @@ function FeesCard({ onSaved }) {
   const save = api.admin.fees.set.useMutation();
   const utils = api.useUtils();
   const [v, setV] = useState(null);
+  const markSaved = useSavedSnapshot(v); // leaving with unsaved changes asks first (from when the fees have loaded)
   const [errors, setErrors] = useState({});
   const ref = useRef(null);
   useEffect(() => {
@@ -54,6 +56,7 @@ function FeesCard({ onSaved }) {
     if (Object.keys(found).length) return focusFirstError(ref.current);
     try {
       await save.mutateAsync({ cardBps: Math.round(Number(v.card) * 100), bnplBps: Math.round(Number(v.bnpl) * 100), payoutDay: Number(v.payoutDay) });
+      markSaved();
       await utils.admin.fees.invalidate();
       utils.admin.activity.list.invalidate();
       onSaved(F.saved);

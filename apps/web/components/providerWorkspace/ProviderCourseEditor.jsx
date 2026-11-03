@@ -157,6 +157,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [reloading, setReloading] = useState(false);
   const needRef = useRef(null);
   const staleRef = useRef(null);
+  // any part of the editor (images, send, withdraw) refused because the course changed elsewhere shows the banner too
+  ep.onStale(() => {
+    setStale(true);
+    requestAnimationFrame(() => staleRef.current?.focus());
+  });
   const [gear, setGear] = useState(false);
   const [preview, setPreview] = useState(false);
   const formRef = useRef(null);
@@ -234,7 +239,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     }
     try {
       const r = await ep.update(patch);
-      setDraft(clean);
+      // anything typed while it was saving stays (and stays unsaved); otherwise the draft takes the tidied values
+      setDraft((current) => (current === draft ? clean : current));
       setBase(clean);
       refresh();
       const message = r.pendingChange ? "Saved. Your changes go live once our team has checked them." : r.backToDraft ? "Saved. The course is back with you as a draft: send it for approval again when you're ready." : ep.admin && course.status === "live" ? "Saved. The page shows the changes now." : "Course saved.";
@@ -286,6 +292,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
         setToast({ message });
         return;
       }
+      if (ep.stale(error)) return;
       const message = errorsFrom(error).general || "We couldn't send it. Check your connection, then try again.";
       setSubmitError(message);
       setSaid(message);
@@ -294,14 +301,23 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   };
   const withdraw = async () => {
     setWithdrawing(false);
-    await ep.discard();
-    const fresh = await ep.fetch();
-    const d = draftOf(fresh);
-    setDraft(d);
-    setBase(d);
-    ep.setVersion(fresh.version);
-    refresh();
-    setToast({ message: "Your changes were withdrawn. The live version stays as it is." });
+    try {
+      await ep.discard();
+      const fresh = await ep.fetch();
+      const d = draftOf(fresh);
+      setDraft(d);
+      setBase(d);
+      ep.setVersion(fresh.version);
+      refresh();
+      const message = "Your changes were withdrawn. The live version stays as it is.";
+      setSaid(message);
+      setToast({ message });
+    } catch (error) {
+      if (ep.stale(error)) return;
+      const message = errorsFrom(error).general || "We couldn't withdraw your changes. Check your connection, then try again.";
+      setSaid(message);
+      setToast({ message });
+    }
   };
   // Preview: the real course page for this course (/provider/courses/<id>/preview, or the shared page's under /admin), in a new tab.
   // It shows what is saved, so with unsaved changes it asks first. The tab is opened at the click (a tab opened after the save
@@ -675,6 +691,7 @@ function ImagesCard({ course, disabled, onSaved }) {
       });
     } catch (err) {
       drop();
+      if (ep.stale(err)) return; // changed somewhere else: the editor's banner says so, with a way to load the latest version
       setError(err?.data ? errorsFrom(err).general : err.message || "The picture didn't upload. Please try again.");
     } finally {
       setAction(null);
@@ -693,8 +710,8 @@ function ImagesCard({ course, disabled, onSaved }) {
       onSaved(message);
       return true;
     } catch (err) {
-      setError(errorsFrom(err).general);
       setList(before);
+      if (!ep.stale(err)) setError(errorsFrom(err).general);
       return false;
     } finally {
       setAction(null);

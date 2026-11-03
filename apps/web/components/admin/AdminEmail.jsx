@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
@@ -59,6 +60,7 @@ function Editor({ t, initial, canEdit, when, note, onRestart }) {
   const reset = api.content.reset.useMutation();
   const test = api.admin.emails.sendTest.useMutation();
   const [w, setW] = useState(initial);
+  const markSaved = useSavedSnapshot(w); // leaving with unsaved changes asks first
   const [shown, setShown] = useState(initial); // what the preview shows: the words a moment after typing stops
   const [errors, setErrors] = useState({});
   const [said, setSaid] = useState(note);
@@ -100,6 +102,7 @@ function Editor({ t, initial, canEdit, when, note, onRestart }) {
     setBusy(true);
     try {
       await save({ ...w, button: t.hasButton ? w.button : "" });
+      markSaved();
       await utils.admin.emails.invalidate();
       setSaid(copy.saved);
     } catch (err) {

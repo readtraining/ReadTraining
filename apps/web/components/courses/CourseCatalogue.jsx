@@ -35,7 +35,8 @@ import { ErrorState } from "@/components/states/States";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 
-// Quick links under the search: each applies the matching subject filter (no navigation).
+// Quick links under the search: each applies the matching subject filter (no navigation). One whose subject has no live course
+// isn't shown, so none leads to an empty list.
 const popularSearches = [
   { label: "Door Supervisor", subject: "security" },
   { label: "CSCS Green Card", subject: "construction" },
@@ -150,7 +151,9 @@ export default function CourseCatalogue({ courses, scope = null }) {
   // found (or if it isn't), the town or postcode is matched by its words
   const located = api.catalogue.locate.useQuery({ q: state.location.trim() }, { enabled: state.location.trim().length >= 2, staleTime: Infinity, retry: false });
   const point = state.location.trim().length >= 2 ? located.data ?? null : null;
-  const results = useMemo(() => sortCourses(filterCourses(courses, state, point), state.sort, state.location, courses, point), [courses, state, point]);
+  // the ways of study asked for: ticked, or a method page's own (/courses/classroom/leeds); a location only counts those
+  const methods = state.method.length ? state.method : scope?.method ? [scope.method] : [];
+  const results = useMemo(() => sortCourses(filterCourses(courses, { ...state, method: methods }, point), state.sort, state.location, courses, point), [courses, state, point, methods.join()]); // eslint-disable-line react-hooks/exhaustive-deps -- methods by value
   // a town or postcode that isn't on the map and matches no venue: say so, rather than let the courses that can be taken online
   // (takenAnywhere) look like courses near it. Only those are left then, so the message can say they can be taken online.
   // with a place entered, each card says how far its nearest venue is (or that it is taken online)
@@ -160,7 +163,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
     const near = nearestVenue(course, from);
     // a course with a venue within reach: how far; one taken online that has no venue near: online first, the nearest venue after
     if (near && near.km <= NEAR_KM) return distanceLabel(near);
-    if (takenAnywhere(course)) return near ? `Online, from anywhere. Nearest venue: ${distanceLabel(near).replace(/^About/, "about")}` : "Online, from anywhere";
+    if (takenAnywhere(course, methods)) return near ? `Online, from anywhere. Nearest venue: ${distanceLabel(near).replace(/^About/, "about")}` : "Online, from anywhere";
     return near ? distanceLabel(near) : "";
   };
   const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && !results.some((c) => venueIn(c, state.location));
@@ -287,17 +290,17 @@ export default function CourseCatalogue({ courses, scope = null }) {
     catalogueFilterGroups().forEach((g) => {
       out[g.key] = {};
       g.options.forEach((o) => {
-        out[g.key][o.value] = filterCourses(courses, { ...state, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }, point).length;
+        out[g.key][o.value] = filterCourses(courses, { ...state, method: methods, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }, point).length;
       });
     });
     out.sub = {};
     [...new Set([...state.subject, ...(scope?.subject ? [scope.subject] : [])])].forEach((sv) =>
       subcategoryOptions(sv).forEach((o) => {
-        out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }, point).length;
+        out.sub[o.value] = filterCourses(courses, { ...state, method: methods, sub: [o.value] }, point).length;
       }),
     );
     return out;
-  }, [courses, state, point]);
+  }, [courses, state, point, methods.join()]); // eslint-disable-line react-hooks/exhaustive-deps -- methods by value
 
   const showingFrom = (page - 1) * PAGE_SIZE + 1;
   const showingTo = Math.min(page * PAGE_SIZE, results.length);
@@ -368,7 +371,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
             <div className="rt-cat-popular">
               <span className="rt-cat-popular__label">Popular searches:</span>
               <div className="rt-cat-popular__list">
-                {popularSearches.map((item) => (
+                {popularSearches.filter((item) => courses.some((c) => c.subject === item.subject)).map((item) => (
                   <button key={item.label} type="button" className="rt-cat-popular__tag" onClick={() => applyPatch({ subject: [item.subject], sub: [] })}>
                     {item.label}
                   </button>

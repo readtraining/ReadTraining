@@ -17,6 +17,7 @@ import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import { VenueForm } from "./SettingsProfile";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 
 // Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
@@ -459,6 +460,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const [venueAdded, setVenueAdded] = useState("");
   const [view, setView] = useState(() => monthStart(todayIso()));
   const [studyMode, setStudyMode] = useState("classroom");
+  // the form as it was filled (or last saved): while it differs, leaving the page asks first (lib/unsavedChanges.js)
+  const [start, setStart] = useState(null);
+  useUnsavedChanges(Boolean(open && f && start !== null && JSON.stringify(f) !== start));
   const on = { enabled: open && Boolean(organisationId) };
   const coursesQ = api.provider.courses.list.useQuery({ organisationId }, on);
   const venuesQ = api.provider.venues.list.useQuery({ organisationId }, on);
@@ -474,11 +478,15 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   useEffect(() => {
     if (!open || !coursesQ.data) return;
     if (cohort) {
-      setF({ courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", price: money(cohort.pricePence), wasPrice: money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" });
+      const filled = { courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", price: money(cohort.pricePence), wasPrice: money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" };
+      setF(filled);
+      setStart(JSON.stringify(filled));
       setView(monthStart(cohort.startsOn || todayIso()));
     } else {
       const c = courseOf(suggestCourseId);
-      setF(blankFor(c && c.method !== "self-paced" ? c : null));
+      const blank = blankFor(c && c.method !== "self-paced" ? c : null);
+      setF(blank);
+      setStart(JSON.stringify(blank));
       setView(monthStart(todayIso()));
       setStudyMode(c?.method === "live-online" || (!c && mode === "live-online") ? "live-online" : "classroom");
     }
@@ -554,7 +562,11 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
       if (another) {
         const first = values.sessions[0]?.date;
-        setF((x) => ({ ...x, sessions: [] }));
+        setF((x) => {
+          const next = { ...x, sessions: [] };
+          setStart(JSON.stringify(next)); // saved: only the next cohort's dates are new
+          return next;
+        });
         setErrors({});
         // the form stays open, so the confirmation shows in it (the page's message is behind the form)
         setSavedNote(`Cohort saved${first ? ` (starting ${new Date(`${first}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Pick the dates for the next one.`);
@@ -562,6 +574,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
         requestAnimationFrame(() => formRef.current?.firstElementChild?.scrollIntoView({ block: "start" }));
         return;
       }
+      setStart(JSON.stringify(f)); // saved, so closing or leaving doesn't ask
       onSaved?.(id);
     } catch (error) {
       const { fields, general } = errorsFrom(error);

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
@@ -29,6 +30,8 @@ export default function ProviderNewCourse() {
   const [errors, setErrors] = useState({});
   const [failed, setFailed] = useState("");
   const create = api.provider.courses.create.useMutation();
+  // anything chosen or typed: Exit, a link, Back or closing the tab asks first (lib/unsavedChanges.js); none once it is created
+  useUnsavedChanges(Object.values(f).some((v) => String(v).trim() !== ""));
   const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const pages = pagesForSubject(shared.data || [], f); // only pages for the subject chosen in step 2
   const parentOk = pages.some((p) => String(p.id) === f.parentId);
@@ -86,7 +89,7 @@ export default function ProviderNewCourse() {
         model: f.model, skillSaver: f.skillSaver === "yes", parentId: toPage && parentOk ? Number(f.parentId) : null,
       },
       {
-        onSuccess: ({ id }) => router.push(`/provider/courses/${id}?created=1`),
+        onSuccess: ({ id }) => leaveWithoutAsking(() => router.push(`/provider/courses/${id}?created=1`)),
         onError: (error) => setFailed(errorsFrom(error).general || Object.values(errorsFrom(error).fields)[0]),
       },
     );

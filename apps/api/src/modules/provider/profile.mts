@@ -6,7 +6,7 @@ import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { refuseTakenProviderName } from '../../lib/providerName.mjs'
-import { IMAGE_TYPES, MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
+import { MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // the roles that read an organisation's private details: our team's status note and messages (the same rule as the database's
@@ -155,7 +155,8 @@ export const providerProfileRouter = createTRPCRouter({
 
   // Logo: an upload address, then setLogo with the uploaded file (the old one is deleted), or removeLogo.
   logoUploadUrl: orgProcedure('provider.profile.edit')
-    .input(z.object({ contentType: z.enum(Object.keys(IMAGE_TYPES) as [keyof typeof IMAGE_TYPES, ...(keyof typeof IMAGE_TYPES)[]]) }))
+    // a logo is a JPG, PNG or WebP (apps/web/lib/images.js): not a GIF
+    .input(z.object({ contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']) }))
     .mutation(async ({ input }) => {
       const up = await mediaUploadUrl(`${input.organisationId}/logo`, input.contentType)
       if (!up) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'We couldn’t prepare the upload. Please try again.' })

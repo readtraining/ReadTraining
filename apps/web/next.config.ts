@@ -61,6 +61,7 @@ const SECURITY_HEADERS = [
 ]
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false, // no "X-Powered-By: Next.js" (the API sends none either)
   // the public Supabase values, inlined for the browser, the server and proxy.js (the edge runtime does not read the root .env)
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',

@@ -75,7 +75,8 @@ function subjectPage(request) {
 export async function proxy(request) {
   if (request.nextUrl.pathname === CATALOGUE_HREF) {
     const to = subjectPage(request);
-    return to ? NextResponse.redirect(to, 308) : NextResponse.next();
+    // 307, not 308: a browser keeps a permanent redirect, so a subject retired later would stay a dead end for anyone who had it
+    return to ? NextResponse.redirect(to, 307) : NextResponse.next();
   }
   // nobody may send the workspace or admin header in from outside
   const headers = new Headers(request.headers);

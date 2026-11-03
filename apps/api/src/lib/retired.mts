@@ -27,6 +27,13 @@ export async function retiredEntries(db: typeof Db | Tx, courseId: number): Prom
 
 /** Throws (rolling back the transaction it runs in) when the course would go live under a retired entry. `who` picks the advice. */
 export async function refuseRetired(db: typeof Db | Tx, courseId: number, who: 'admin' | 'provider') {
+  // the course's entries are locked (shared) first, so a retire at the same moment (which locks its entry, then counts the live
+  // courses under it) waits for this step or this step waits for it: never both pass
+  await db.execute(sql`select 1 from public.categories where id = (select category_id from public.courses where id = ${courseId}) for share`)
+  await db.execute(sql`select 1 from public.subcategories where id = (select subcategory_id from public.courses where id = ${courseId}) for share`)
+  await db.execute(sql`select 1 from public.topics where id = (select topic_id from public.courses where id = ${courseId}) for share`)
+  await db.execute(sql`select 1 from public.delivery_methods where slug = (select method from public.courses where id = ${courseId}) for share`)
+  await db.execute(sql`select 1 from public.course_levels where slug = (select level from public.courses where id = ${courseId}) for share`)
   const retired = await retiredEntries(db, courseId)
   if (!retired.length) return
   const list = retired.join(', ')
