@@ -111,6 +111,12 @@ export const pw = {
     { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
 
+  // the tag beside a demo page's title (ProviderShell `demo`): on the development and test copies only, where the made-up records show
+  demo: {
+    all: { label: "Demo data", note: "The records on this page are made up for now. They become real when bookings and payments are connected." },
+    partly: { label: "Partly demo", note: "Some records on this page are made up for now. They become real when bookings and payments are connected." },
+  },
+
   pages: {
     dashboard: { title: "Dashboard", lead: "What needs you today, how sales are going and what is coming up." },
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },

@@ -47,7 +47,7 @@ export const businessAccount = {
     stats: {
       learners: { label: "Learners", hint: (active, invited) => (invited ? `${active} active, ${invited} invited` : `${active} active`) },
       unassigned: { label: "Places to assign", hint: (n) => (n ? "Ready to give to learners" : "Every place has a learner") },
-      certificates: { label: "Valid certificates", hint: "Ready to download" },
+      certificates: { label: "Valid certificates", hint: "Ready to print" },
       renewals: { label: "Need renewing", hint: (expired, soon) => [expired && `${expired} expired`, soon && `${soon} due in 90 days`].filter(Boolean).join(", ") || "Nothing due in 90 days" },
     },
     // the courses to come, each with its places and Assign (Hurak's unassigned licences and courses, as one list)
@@ -55,8 +55,8 @@ export const businessAccount = {
     renewals: { title: "Need renewing", cta: "Book renewal", none: "No certificates expire in the next 90 days." },
     // as Hurak's dashboard: the latest results, and the latest certificates (issue and expiry dates, with Download)
     results: { title: "Recent results", rebook: "Rebook", none: "No results yet. They show here once your learners finish a course." },
-    certificates: { title: "Recent certificates", columns: ["Learner", "Course", "Issue date", "Expiry date"], all: "View learners", download: "Download", none: "No valid certificates yet. They show here once your learners pass a course." },
-    billing: { title: "Business credit", cta: "View billing", pay: "Pay balance" },
+    certificates: { title: "Recent certificates", columns: ["Learner", "Course", "Issue date", "Expiry date"], all: "View learners", print: "Print", none: "No valid certificates yet. They show here once your learners pass a course." },
+    billing: { title: "Business credit", cta: "View billing" },
   },
 
   // Team (/business/team): colleagues who can manage the account, as on Hurak's Business account ("Add member": name, email,
@@ -91,7 +91,7 @@ export const businessAccount = {
     form: { title: "Add a learner", name: "Full name", email: "Email address", job: "Job title (optional)", submit: "Add learner", note: "We email them an invitation to join your Business account." },
     detail: { training: "Training", certificates: "Certificates", none: "No training booked yet.", noCerts: "No certificates yet.", assign: "Assign to a course" },
     // the certificate as a PDF: the browser's print window, where "Save as PDF" is the destination
-    download: "Download certificate",
+    print: "Print certificate",
     status: { active: "Active", invited: "Invited" },
   },
 
@@ -136,13 +136,10 @@ export const businessAccount = {
     title: "Billing and invoices",
     lead: "Your credit account, what is due and every invoice.",
     credit: { title: "Business credit", limit: "Credit limit", used: "Used", available: "Available", due: "Outstanding", next: (amount, date) => `${amount} due ${date}`, terms: "Payment terms" },
-    pay: "Pay balance",
-    payTitle: "Pay your balance",
-    payText: "Pay {amount} now by card. Your available credit goes back up straight away.",
-    payConfirm: "Pay {amount}",
-    paid: "Thank you. {amount} has been paid and your invoices are marked as paid.",
-    // Download opens the invoice and the browser's print window, where "Save as PDF" downloads it
-    invoices: { title: "Invoices", columns: ["Invoice", "Date", "Booking", "Amount", "Status"], view: "View", download: "Download", print: "Print invoice" },
+    // paying online comes with Milestone 4; until then the balance is paid by phone (nothing is marked paid on this page)
+    paySoon: "Paying online is coming soon. To pay your balance now, call us on",
+    // Print opens the invoice with the browser's print window (where "Save as PDF" keeps a copy)
+    invoices: { title: "Invoices", columns: ["Invoice", "Date", "Booking", "Amount", "Status"], view: "View", printRow: "Print", print: "Print invoice" },
     status: { paid: "Paid", due: "Due", overdue: "Overdue", refunded: "Refunded" },
     details: { title: "Billing details", change: "To change these details, contact us.", cta: { label: "Contact us", href: "/contact-us?topic=business#contact-form" } },
   },

@@ -14,7 +14,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { id } = await props.params;
   return (
-    <ProviderShell current="learners" title={p.title} back={{ label: "Learners", href: "/provider/learners" }}>
+    <ProviderShell demo current="learners" title={p.title} back={{ label: "Learners", href: "/provider/learners" }}>
       <ProviderLearner learnerId={id} />
     </ProviderShell>
   );

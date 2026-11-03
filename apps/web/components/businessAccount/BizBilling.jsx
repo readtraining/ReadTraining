@@ -1,31 +1,27 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { businessAccount as biz } from "@/data/businessAccount";
-import { getBusiness, payBalance } from "@/lib/businessAccount";
+import { getBusiness } from "@/lib/businessAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { formatDay, formatPrice } from "@/lib/format";
+import { CONTACT } from "@/lib/forms";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { DownloadIcon } from "./BizCertificate";
 
 const copy = biz.billing;
 const STATUS_TONE = { paid: "completed", due: "requested", overdue: "late", refunded: "cancelled" };
 
-// Billing and invoices: the business credit account (limit, used, available, the amount due and when, the payment terms) with Pay
-// balance (a simulated card payment: the open invoices are marked paid and the credit frees up), every invoice with its status, a
-// View that opens it with Print and a Download (the invoice opens and the print window with it, where "Save as PDF" downloads it;
-// it closes again after), and the billing details on the account. ?invoice= (from the bookings) opens one invoice.
+// Billing and invoices: the business credit account (limit, used, available, the amount due and when, the payment terms), how to
+// pay the balance (by phone until online payment opens, Milestone 4: nothing is marked paid here), every invoice with its status,
+// View (the invoice, with Print invoice) and Print (the invoice opens with the print window, and closes again after), and the
+// billing details on the account. ?invoice= (from the bookings) opens one invoice.
 export default function BizBilling() {
   // the real business name (from the server check); the address, VAT and credit are still DEMO
   const companyName = useWorkspace()?.name ?? "";
   const [data, setData] = useState(null);
   const [view, setView] = useState(null); // invoice number shown
-  const [downloading, setDownloading] = useState(false); // the open invoice was asked for as a download: print it, then close it
-  const [paying, setPaying] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState("");
-  const payRef = useRef(null);
+  const [printing, setPrinting] = useState(false); // the open invoice was asked to print straight away: print it, then close it
   useEffect(() => {
     const d = getBusiness();
     setData(d);
@@ -33,8 +29,8 @@ export default function BizBilling() {
     if (asked && d.invoices.some((i) => i.number === asked)) setView(asked);
   }, []);
   useEffect(() => {
-    if (!downloading || !view) return;
-    const done = () => { setDownloading(false); setView(null); };
+    if (!printing || !view) return;
+    const done = () => { setPrinting(false); setView(null); };
     window.addEventListener("afterprint", done, { once: true });
     // print once the invoice is on the page
     const frame = requestAnimationFrame(() => window.print());
@@ -42,27 +38,15 @@ export default function BizBilling() {
       cancelAnimationFrame(frame);
       window.removeEventListener("afterprint", done);
     };
-  }, [downloading, view]);
+  }, [printing, view]);
   if (!data) return null;
 
-  const open = data.invoices.filter((i) => i.status === "due" || i.status === "overdue");
   const usedPct = Math.min(100, (data.credit.used / data.credit.limit) * 100);
   const invoice = view && data.invoices.find((i) => i.number === view);
   const purchase = invoice && data.purchases.find((p) => p.reference === invoice.reference);
-  const pay = async () => {
-    setBusy(true);
-    const amount = formatPrice(data.credit.due);
-    await payBalance(open.map((i) => i.number));
-    setBusy(false);
-    setPaying(false);
-    setData(getBusiness());
-    setDone(copy.paid.replace("{amount}", amount));
-  };
 
   return (
     <div className="rt-acc__stack">
-      {done && <p className="rt-acc__banner -done" role="status">{done}</p>}
-
       <section className="rt-acc__card" aria-labelledby="rt-bb-credit-h">
         <div className="rt-acc__cardhead">
           <h2 className="rt-acc__h2" id="rt-bb-credit-h">{copy.credit.title}</h2>
@@ -81,7 +65,7 @@ export default function BizBilling() {
               <strong>{formatPrice(data.credit.due)}</strong>
               <small>{data.credit.due > 0 ? `${copy.credit.next(formatPrice(data.credit.nextAmount), formatDay(data.credit.dueDate))} · ${copy.credit.terms} ${data.credit.terms}` : `${copy.credit.terms} ${data.credit.terms}`}</small>
             </div>
-            {data.credit.due > 0 && <button type="button" ref={payRef} className="button -md -purple-1 text-white" aria-haspopup="dialog" onClick={() => setPaying(true)}>{copy.pay}</button>}
+            {data.credit.due > 0 && <p className="rt-acc__note">{copy.paySoon} <a href={CONTACT.phoneHref}>{CONTACT.phone}</a>.</p>}
           </div>
         </div>
       </section>
@@ -101,7 +85,7 @@ export default function BizBilling() {
                 <td className="rt-biz__act">
                   <span className="rt-biz__rowacts">
                     <button type="button" className="fb-textlink rt-biz__linkbtn" aria-haspopup="dialog" onClick={() => setView(i.number)}>{copy.invoices.view}<span className="rt-sr"> {i.number}</span></button>
-                    <button type="button" className="fb-textlink rt-biz__linkbtn rt-biz__download" onClick={() => { setView(i.number); setDownloading(true); }}><DownloadIcon />{copy.invoices.download}<span className="rt-sr"> {i.number}</span></button>
+                    <button type="button" className="fb-textlink rt-biz__linkbtn" onClick={() => { setView(i.number); setPrinting(true); }}>{copy.invoices.printRow}<span className="rt-sr"> {i.number}</span></button>
                   </span>
                 </td>
               </tr>
@@ -122,15 +106,7 @@ export default function BizBilling() {
         <p className="rt-acc__note">{copy.details.change} <Link href={copy.details.cta.href}>{copy.details.cta.label}</Link>.</p>
       </section>
 
-      <Sheet open={paying} onClose={() => setPaying(false)} title={copy.payTitle} closeLabel="Close" fallbackFocus={payRef}>
-        <p className="rt-acc__note">{copy.payText.replace("{amount}", formatPrice(data.credit.due))}</p>
-        <ul className="rt-ck__items rt-biz__payitems">
-          {open.map((i) => <li key={i.number}><div className="rt-ck__itemtop"><b>{i.number}</b><span>{formatPrice(i.amount)}</span></div><p>Due {formatDay(i.due)}</p></li>)}
-        </ul>
-        <button type="button" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy} onClick={pay}>{busy ? "Paying" : copy.payConfirm.replace("{amount}", formatPrice(data.credit.due))}</button>
-      </Sheet>
-
-      <Sheet open={Boolean(invoice)} onClose={() => { setView(null); setDownloading(false); }} title={invoice ? `Invoice ${invoice.number}` : ""} closeLabel="Close" className="rt-biz__invoice">
+      <Sheet open={Boolean(invoice)} onClose={() => { setView(null); setPrinting(false); }} title={invoice ? `Invoice ${invoice.number}` : ""} closeLabel="Close" className="rt-biz__invoice">
         {invoice && (
           <div className="rt-biz__invbody">
             <dl className="rt-biz__details">

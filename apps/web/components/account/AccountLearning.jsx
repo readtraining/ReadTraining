@@ -9,7 +9,7 @@ import { formatDay } from "@/lib/format";
 import { placeOf, whenOf } from "./BookingRow";
 import { EmptyState } from "@/components/states/States";
 import { useMe } from "@/lib/useMe";
-import { DownloadCertificate, useCertificateDownload } from "@/components/businessAccount/BizCertificate";
+import { PrintCertificate, useCertificatePrint } from "@/components/businessAccount/BizCertificate";
 
 const copy = account.learning;
 const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
@@ -24,10 +24,10 @@ export default function AccountLearning() {
   const [items, setItems] = useState(null);
   const [tab, setTab] = useState("upcoming");
   const [bookings, setBookings] = useState({});
-  // a certificate's download carries the learner's name
+  // a printed certificate carries the learner's name
   const { person, data } = useMe();
   const me = data ? `${data.profile.firstName} ${data.profile.lastName}`.trim() : person?.name || "";
-  const cert = useCertificateDownload();
+  const cert = useCertificatePrint();
   useEffect(() => {
     setItems(getLearning());
     setBookings(Object.fromEntries(getBookings().map((b) => [b.reference, b])));
@@ -72,7 +72,7 @@ export default function AccountLearning() {
                   {l.certificate && (
                     <p className="rt-acc__note rt-acc__certline">
                       {copy.certificate.replace("{number}", l.certificate.number).replace("{date}", formatDay(l.certificate.expires))}
-                      <DownloadCertificate cert={{ ...l.certificate, title: l.title, learner: me }} onDownload={cert.download} />
+                      <PrintCertificate cert={{ ...l.certificate, title: l.title, learner: me }} onPrint={cert.print} />
                     </p>
                   )}
                   <div className="rt-acc__lineactions">
