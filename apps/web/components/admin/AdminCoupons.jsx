@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { Choice } from "@/components/providerWorkspace/providerParts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
@@ -46,6 +47,7 @@ export default function AdminCoupons() {
   const [search, setSearch] = useState("");
   const [sheet, setSheet] = useState(null); // null, or { coupon } (undefined coupon = a new one)
   const [said, setSaid] = useState("");
+  const [turningOff, setTurningOff] = useState(null); // the coupon waiting for "Turn off this coupon?"
   const sorter = useSort();
   const utils = api.useUtils();
   const setActive = api.admin.coupons.setActive.useMutation();
@@ -106,7 +108,7 @@ export default function AdminCoupons() {
                   <td data-label={c.status}><AdminStatus kind="coupon" status={x.status}>{copy.statuses[x.status]}</AdminStatus></td>
                   {canEdit && (
                     <td data-label="Actions">
-                      <RowMenu label={`Actions for ${x.code}`} items={[{ label: copy.edit, onClick: () => setSheet({ coupon: x }) }, { label: x.status === "off" ? copy.turnOn : copy.turnOff, onClick: () => toggle(x), danger: x.status !== "off" }]} />
+                      <RowMenu label={`Actions for ${x.code}`} items={[{ label: copy.edit, onClick: () => setSheet({ coupon: x }) }, { label: x.status === "off" ? copy.turnOn : copy.turnOff, onClick: () => (x.status === "off" ? toggle(x) : setTurningOff(x)), danger: x.status !== "off" }]} />
                     </td>
                   )}
                 </tr>
@@ -124,6 +126,8 @@ export default function AdminCoupons() {
       <Sheet open={Boolean(sheet)} onClose={() => setSheet(null)} title={sheet?.coupon ? copy.sheet.edit : copy.sheet.add} closeLabel="Close">
         {sheet && <CouponForm coupon={sheet.coupon} onDone={(message) => { setSheet(null); setSaid(message); }} />}
       </Sheet>
+      {/* turning a coupon off stops it working at once, for every customer: asked first (turning it back on isn't) */}
+      <Confirm open={Boolean(turningOff)} onClose={() => setTurningOff(null)} title="Turn off this coupon?" text={turningOff ? `${turningOff.code} stops working straight away: customers who enter it are told it isn't valid. You can turn it back on later.` : ""} confirmLabel="Turn off coupon" onConfirm={() => { const c = turningOff; setTurningOff(null); toggle(c); }} />
     </div>
   );
 }

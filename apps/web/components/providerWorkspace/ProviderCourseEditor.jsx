@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { Confirm } from "./settingsForm";
 import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
@@ -166,6 +167,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [sentNote, setSentNote] = useState("");
   // a save was refused because the course changed somewhere else since this draft was loaded
   const [stale, setStale] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false); // "Withdraw your changes?" is open
   const [reloading, setReloading] = useState(false);
   const needRef = useRef(null);
   const staleRef = useRef(null);
@@ -305,6 +307,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     }
   };
   const withdraw = async () => {
+    setWithdrawing(false);
     await ep.discard();
     const fresh = await ep.fetch();
     const d = draftOf(fresh);
@@ -393,7 +396,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       {course.pendingChanges && (
         <section className="rt-acc__card rt-pws-ce__pending" aria-label="Changes waiting for approval">
           <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {formatWhen(new Date(course.pendingChanges.since).getTime())}). You can keep editing: new changes join the same request.</p>
-          {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={withdraw} disabled={ep.discarding}>Withdraw changes</button>}
+          {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setWithdrawing(true)} aria-haspopup="dialog" disabled={ep.discarding}>{ep.discarding ? "Withdrawing…" : "Withdraw changes"}</button>}
         </section>
       )}
       {!access.page && <p className="rt-adm-item__block">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : "Your role can see this course but not change it."}</p>}
@@ -463,6 +466,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       </div>
 
       {ep.admin ? <SharedGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} /> : <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} onStale={() => { setGear(false); setStale(true); requestAnimationFrame(() => staleRef.current?.focus()); }} />}
+      <Confirm open={withdrawing} onClose={() => setWithdrawing(false)} title="Withdraw your changes?" text="The changes waiting for our team's approval are thrown away, and the live course stays as it is. This can't be undone." confirmLabel="Withdraw changes" onConfirm={withdraw} />
       <Sheet open={preview} onClose={() => setPreview(false)} title="Save your changes first?" closeLabel="Close">
         <div className="rt-q__form">
           <p className="rt-acc__note">The preview is the real course page, so it shows the course as saved. Save your changes to see them in it.</p>
@@ -802,6 +806,9 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
   const set = useSet(setDraft);
   const [sheet, setSheet] = useState(false);
   const [editing, setEditing] = useState(null);
+  // a unit or exam row with something in it is removed only after "Remove this …?" (an empty new row goes at once)
+  const [removing, setRemoving] = useState(null); // { list: "units" | "exams", index, name }
+  const askRemove = (list, index, name, empty) => (empty ? set(list)(draft[list].filter((_, j) => j !== index)) : setRemoving({ list, index, name }));
   const locked = !access.full;
   const move = (i, by) => {
     const next = [...draft.units];
@@ -829,7 +836,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
                     <button type="button" className="rt-pws-ce__iconbtn" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move up: ${u.title}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
                     <button type="button" className="rt-pws-ce__iconbtn" onClick={() => move(i, 1)} disabled={i === draft.units.length - 1} aria-label={`Move down: ${u.title}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
                     <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => { setEditing(i); setSheet(true); }}>Edit<span className="rt-sr"> {u.title}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("units")(draft.units.filter((_, j) => j !== i))}>Remove<span className="rt-sr"> {u.title}</span></button>
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => askRemove("units", i, u.title || `unit ${i + 1}`, !u.title && !u.body)} aria-haspopup="dialog">Remove<span className="rt-sr"> {u.title}</span></button>
                   </div>
                 )}
               </li>
@@ -861,7 +868,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
                   <label htmlFor={`rt-pws-ce-ex-d${i}`}>Duration</label>
                   <input id={`rt-pws-ce-ex-d${i}`} value={e.duration} maxLength={40} onChange={(ev) => setExam(i, { duration: ev.target.value })} disabled={locked} placeholder="For example: 45 minutes" autoComplete="off" />
                 </div>
-                {!locked && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("exams")(draft.exams.filter((_, j) => j !== i))}>Remove<span className="rt-sr"> exam row {i + 1}</span></button>}
+                {!locked && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => askRemove("exams", i, e.unit || `exam row ${i + 1}`, !e.unit && !e.passMark && !e.duration)} aria-haspopup="dialog">Remove<span className="rt-sr"> exam row {i + 1}</span></button>}
               </li>
             ))}
           </ol>
@@ -873,6 +880,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         else set("units")(draft.units.map((u, i) => (i === editing ? rows[0] : u)));
         setSheet(false);
       }} />
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title={removing?.list === "exams" ? "Remove this exam row?" : "Remove this unit?"} text={removing ? `“${removing.name}” comes out of the syllabus when you save the course. Until then you can leave without saving to keep it.` : ""} confirmLabel={removing?.list === "exams" ? "Remove row" : "Remove unit"} onConfirm={() => { const r = removing; setRemoving(null); set(r.list)(draft[r.list].filter((_, j) => j !== r.index)); }} />
     </form>
   );
 }
@@ -931,6 +939,7 @@ function UnitSheet({ open, onClose, unit, onSave }) {
 function FaqSection({ draft, setDraft, access }) {
   const set = useSet(setDraft);
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = a new one, a number = that FAQ
+  const [removing, setRemoving] = useState(null); // the FAQ waiting for "Remove this question?": { index, name }
   const locked = !access.full;
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
@@ -948,7 +957,7 @@ function FaqSection({ draft, setDraft, access }) {
                 {!locked && (
                   <div className="rt-adm-list__side">
                     <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => setEditing(i)}>Edit<span className="rt-sr"> {f.question}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => set("faqs")(draft.faqs.filter((_, j) => j !== i))}>Remove<span className="rt-sr"> {f.question}</span></button>
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRemoving({ index: i, name: f.question })} aria-haspopup="dialog">Remove<span className="rt-sr"> {f.question}</span></button>
                   </div>
                 )}
               </li>
@@ -960,6 +969,7 @@ function FaqSection({ draft, setDraft, access }) {
         set("faqs")(typeof editing === "number" ? draft.faqs.map((x, i) => (i === editing ? f : x)) : [...draft.faqs, f]);
         setEditing(undefined);
       }} />
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this question?" text={removing ? `“${removing.name}” comes off the course's FAQs when you save the course.` : ""} confirmLabel="Remove question" onConfirm={() => { const r = removing; setRemoving(null); set("faqs")(draft.faqs.filter((_, j) => j !== r.index)); }} />
     </form>
   );
 }

@@ -13,6 +13,7 @@ import { Field, aria, isEmail } from "./settingsForm";
 import { InfoTab, LogoTab, TermsTab, VenuesTab } from "./SettingsProfile";
 import { QaTab } from "./SettingsPeople";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { Confirm } from "./settingsForm";
 
 // Provider settings (/provider/settings?tab=…): Hurak's provider information, company logo, terms, VAT, affiliate, emails, QA and
 // integrations, plus our venues. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below)
@@ -201,7 +202,9 @@ function AffiliateTab({ say }) {
 function IntegrationsTab({ data, say }) {
   const on = Boolean(data.org.zoom);
   // DEMO: "Connect with Zoom" would send the provider to Zoom to approve access; here it only records the choice
+  const [asking, setAsking] = useState(false); // "Disconnect Zoom?" is open
   const toggle = () => {
+    setAsking(false);
     saveOrg({ zoom: !on });
     say(on ? "Zoom disconnected" : "Zoom connected");
   };
@@ -217,7 +220,8 @@ function IntegrationsTab({ data, say }) {
         </ul>
         <p className="rt-acc__note">{on ? "Connected. New live online cohorts get a Zoom room." : "Not connected."}</p>
       </div>
-      <button type="button" className={`button -md ${on ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={toggle}>{on ? "Disconnect" : "Connect with Zoom"}</button>
+      <button type="button" className={`button -md ${on ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={on ? () => setAsking(true) : toggle} aria-haspopup={on ? "dialog" : undefined}>{on ? "Disconnect" : "Connect with Zoom"}</button>
+      <Confirm open={asking} onClose={() => setAsking(false)} title="Disconnect Zoom?" text="New live online cohorts won't get a Zoom room, and you add their joining links yourself. Rooms already made stay as they are. You can connect again at any time." confirmLabel="Disconnect Zoom" onConfirm={toggle} />
     </div>
   );
 }

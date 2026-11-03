@@ -187,7 +187,9 @@ function LogoForm({ profile, say }) {
       setBusy(false);
     }
   };
+  const [asking, setAsking] = useState(false); // "Remove your logo?" is open
   const remove = () => {
+    setAsking(false);
     setBusy(true);
     removeLogo.mutate({ organisationId }, { onSuccess: () => done("Logo removed", null), onError: (er) => setError(firstError(er)), onSettled: () => setBusy(false) });
   };
@@ -204,12 +206,13 @@ function LogoForm({ profile, say }) {
           {!locked && (
             <div className="rt-pws-set__actions">
               <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy && !removeLogo.isPending ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}</button>
-              {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={remove} disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
+              {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
             </div>
           )}
           <p className="rt-field__hint">At least 200 × 200 pixels. PNG, JPG or WebP, up to 2 MB. It is saved as soon as you choose it.</p>
         </div>
       </div>
+      <Confirm open={asking} onClose={() => setAsking(false)} title="Remove your logo?" text="It comes off your public profile and course pages, and your initials show instead. You can upload a logo again at any time." confirmLabel="Remove logo" onConfirm={remove} />
     </div>
   );
 }

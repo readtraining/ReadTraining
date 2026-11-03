@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import { refreshCatalogueList } from "@/app/admin/actions";
 import { admin as A } from "@/data/admin";
@@ -27,6 +28,7 @@ export default function AdminCatalogueList() {
   const [sheet, setSheet] = useState(null); // { mode: "add" | "rename", kind, parent?, key?, name?, where? }
   const [said, setSaid] = useState("");
   const [problem, setProblem] = useState(""); // the last refusal, shown until the next change
+  const [retiring, setRetiring] = useState(null); // the entry waiting for "Retire …?": { kind, key, name }
   const setActive = api.admin.catalogue.setActive.useMutation();
   const move = api.admin.catalogue.move.useMutation();
 
@@ -67,7 +69,7 @@ export default function AdminCatalogueList() {
             ...(i < siblings.length - 1 ? [{ label: copy.down, onClick: () => run(() => move.mutateAsync({ kind, key: row.key, direction: "down" }), copy.saved.move), phone: true }] : []),
             ...(RENAMEABLE.has(kind) ? [{ label: copy.rename, onClick: () => setSheet({ mode: "rename", kind, key: row.key, name: row.name }) }] : []),
             row.active
-              ? { label: copy.retire, danger: true, onClick: () => run(() => setActive.mutateAsync({ kind, key: row.key, active: false }), copy.saved.retire) }
+              ? { label: copy.retire, danger: true, onClick: () => setRetiring({ kind, key: row.key, name: row.name }) }
               : { label: copy.restore, onClick: () => run(() => setActive.mutateAsync({ kind, key: row.key, active: true }), copy.saved.restore) },
           ]}
         />
@@ -153,6 +155,8 @@ export default function AdminCatalogueList() {
       </div>
 
       <NameSheet sheet={sheet} onClose={() => setSheet(null)} onDone={changed} />
+      {/* retiring takes an entry out of the menus, filters and the provider editor's choices: asked first (restoring isn't) */}
+      <Confirm open={Boolean(retiring)} onClose={() => setRetiring(null)} title={retiring ? `Retire ${retiring.name}?` : ""} text="It leaves the site's menus and filters, and providers can't choose it for a course. Nothing is deleted: you can restore it later. (An entry with live courses can't be retired; you'll be told which.)" confirmLabel="Retire" onConfirm={() => { const r = retiring; setRetiring(null); run(() => setActive.mutateAsync({ kind: r.kind, key: r.key, active: false }), copy.saved.retire); }} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { validCardNumber, validExpiry } from "@/lib/checkout";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { EmptyState } from "@/components/states/States";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 
 const copy = account.payments;
 const digits = (v) => v.replace(/\D/g, "");
@@ -17,6 +18,7 @@ const digits = (v) => v.replace(/\D/g, "");
 export default function AccountPayments() {
   const [cards, setCards] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState(null); // the card waiting for "Remove this card?"
   const [form, setForm] = useState({ number: "", expiry: "", name: "", makeDefault: false });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -76,7 +78,7 @@ export default function AccountPayments() {
                   </div>
                   <div className="rt-acc__cardactions">
                     {c.default ? <span className="rt-pill rt-acc__status -confirmed">{copy.default}</span> : <button type="button" className="fb-textlink rt-biz__linkbtn" onClick={() => { setDefaultCard(c.id); reload(`${c.brand} ending ${c.last4} is now your default card.`); }}>{copy.makeDefault}<span className="rt-sr"> {c.brand} ending {c.last4}</span></button>}
-                    <button type="button" className="rt-biz__remove" onClick={() => { removeCard(c.id); reload(copy.removed.replace("{last4}", c.last4)); }}>{copy.remove}<span className="rt-sr"> {c.brand} ending {c.last4}</span></button>
+                    <button type="button" className="rt-biz__remove" aria-haspopup="dialog" onClick={() => setRemoving(c)}>{copy.remove}<span className="rt-sr"> {c.brand} ending {c.last4}</span></button>
                   </div>
                 </li>
               );
@@ -99,6 +101,7 @@ export default function AccountPayments() {
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={saving} aria-busy={saving}>{saving ? "Saving" : copy.form.submit}</button>
         </form>
       </Sheet>
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this card?" text={removing ? `${removing.brand} ending ${removing.last4} comes off your account. You can add it again at checkout.` : ""} confirmLabel="Remove card" onConfirm={() => { const c = removing; setRemoving(null); removeCard(c.id); reload(copy.removed.replace("{last4}", c.last4)); }} />
     </div>
   );
 }

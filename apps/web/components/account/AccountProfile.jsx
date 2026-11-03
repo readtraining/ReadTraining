@@ -10,6 +10,7 @@ import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 
@@ -188,6 +189,7 @@ function PhotoRow({ me }) {
   const removePhoto = api.me.removePhoto.useMutation();
   const input = useRef(null);
   const [state, setState] = useState({ busy: false, error: "", saved: "" });
+  const [asking, setAsking] = useState(false); // "Remove your photo?" is open
   const initials = `${me.profile.firstName[0] ?? ""}${me.profile.lastName[0] ?? ""}`.toUpperCase();
 
   const choose = async (e) => {
@@ -229,15 +231,16 @@ function PhotoRow({ me }) {
         <strong>{copy.photo.title}</strong>
         <span className="rt-acc__note" id="rt-pf-photo-hint">{copy.photo.hint}</span>
         <div className="rt-acc__photoactions">
-          <input ref={input} type="file" accept={PHOTO_ACCEPT} className="rt-sr" id="rt-pf-photo" onChange={choose} aria-describedby="rt-pf-photo-hint" tabIndex={-1} />
+          <input ref={input} type="file" accept={PHOTO_ACCEPT} className="rt-sr" id="rt-pf-photo" onChange={choose} tabIndex={-1} aria-hidden="true" />
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => input.current?.click()} disabled={state.busy} aria-busy={state.busy}>
             {state.busy ? copy.saving : me.profile.photoUrl ? copy.photo.change : copy.photo.add}
           </button>
-          {me.profile.photoUrl && !state.busy && <button type="button" className="rt-acc__linkbtn" onClick={remove}>{copy.photo.remove}</button>}
+          {me.profile.photoUrl && !state.busy && <button type="button" className="rt-acc__linkbtn" onClick={() => setAsking(true)} aria-haspopup="dialog">{copy.photo.remove}</button>}
         </div>
         <p className="rt-acc__savedmsg" role="status">{state.saved}</p>
         {state.error && <p className="rt-q__err" role="alert">{state.error}</p>}
       </div>
+      <Confirm open={asking} onClose={() => setAsking(false)} title="Remove your photo?" text="It comes off your account. Your initials show instead, and you can add a photo again at any time." confirmLabel="Remove photo" onConfirm={() => { setAsking(false); remove(); }} />
     </div>
   );
 }
