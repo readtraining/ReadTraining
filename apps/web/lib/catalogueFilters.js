@@ -122,9 +122,31 @@ function locationPoint(courses, location) {
   return null;
 }
 
+// Where "closest" measures from: the typed place on the map (catalogue.locate), or else the first venue in that town or postcode.
+export const referencePoint = (all, location, found = null) => found || (location ? locationPoint(all, location) : null);
+
+// The course's venue nearest `point`, with how far it is ({ km, city }); null when it has no venue on the map.
+export function nearestVenue(course, point) {
+  if (!point) return null;
+  let best = null;
+  for (const v of course.venues) {
+    if (v.lat == null) continue;
+    const km = distanceKm(point, v);
+    if (!best || km < best.km) best = { km, city: v.city };
+  }
+  return best;
+}
+
+// "About 12 miles away, Leeds" (UK distances in miles; under a mile says so)
+export function distanceLabel(near) {
+  const miles = near.km * 0.621371;
+  const town = near.city ? `, ${near.city}` : "";
+  return miles < 1 ? `Less than a mile away${town}` : `About ${Math.round(miles)} ${Math.round(miles) === 1 ? "mile" : "miles"} away${town}`;
+}
+
 export function sortCourses(courses, sort, location = "", all = courses, found = null) {
   if (sort === "closest") {
-    const point = found || locationPoint(all, location);
+    const point = referencePoint(all, location, found);
     if (!point) return sorters.popular ? [...courses].sort(sorters.popular) : courses;
     const dist = (c) => (c.venues.some((v) => v.lat != null) ? Math.min(...c.venues.filter((v) => v.lat != null).map((v) => distanceKm(point, v))) : Infinity);
     return [...courses].sort((a, b) => dist(a) - dist(b) || b.popularity - a.popularity);

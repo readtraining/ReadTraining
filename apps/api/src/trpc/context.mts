@@ -11,8 +11,7 @@ import { verifyAccessToken } from '../lib/supabase.mjs'
 export const createTRPCContext = async ({ req }: CreateExpressContextOptions) => {
   const header = req.headers.authorization
   const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : undefined
-  const forwarded = req.headers['x-forwarded-for']
-  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim() || req.socket.remoteAddress || null
+  const ip = clientIp(req)
 
   const user = await verifyAccessToken(token)
   // Whether the session is still live, and who the person is, asked once per request: a page's batch of calls (often 4 to 10)
@@ -31,6 +30,21 @@ export const createTRPCContext = async ({ req }: CreateExpressContextOptions) =>
     accessToken: user ? token! : null,
     ip,
   }
+}
+
+// The IP address written to the activity log. A forwarded-for header is only believed where our own host sets it: on Vercel its
+// edge replaces any x-forwarded-for a visitor sends and adds x-vercel-forwarded-for / x-real-ip, so they can't be faked. Anywhere
+// else (a local server, another host) a visitor could send any address in those headers, so the connection's own address is used,
+// unless TRUST_PROXY=1 says a trusted proxy in front sets them.
+const TRUSTED_PROXY = Boolean(process.env.VERCEL) || process.env.TRUST_PROXY === '1'
+const header = (req: CreateExpressContextOptions['req'], name: string) => {
+  const v = req.headers[name]
+  return (Array.isArray(v) ? v[0] : v)?.split(',')[0]?.trim() || null
+}
+export function clientIp(req: CreateExpressContextOptions['req']) {
+  const forwarded = TRUSTED_PROXY ? header(req, 'x-vercel-forwarded-for') || header(req, 'x-real-ip') || header(req, 'x-forwarded-for') : null
+  const ip = forwarded || req.socket.remoteAddress || null
+  return ip && ip.length <= 64 ? ip : null
 }
 
 export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>

@@ -69,7 +69,7 @@ function NoDatesCard({ course }) {
     <div className="rt-bk">
       {course.imageSrc && (
         <div className="rt-bk__img">
-          <Image src={course.imageSrc} alt="" width={440} height={248} style={{ width: "100%", height: "100%" }} priority />
+          <Image src={course.imageSrc} alt={course.imageAlt || course.title} width={440} height={248} style={{ width: "100%", height: "100%" }} priority />
         </div>
       )}
       <div className="rt-bs">
@@ -120,7 +120,7 @@ export default function BookingCard() {
       {course.imageSrc && (
         <Fold hidden={compact} className="rt-bk__fold--img">
           <div className="rt-bk__img">
-            <Image src={course.imageSrc} alt="" width={440} height={248} style={{ width: "100%", height: "100%" }} priority />
+            <Image src={course.imageSrc} alt={course.imageAlt || course.title} width={440} height={248} style={{ width: "100%", height: "100%" }} priority />
           </div>
         </Fold>
       )}

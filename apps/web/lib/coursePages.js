@@ -76,10 +76,16 @@ export function getCourseTowns(slug, courses) {
 export const getCourseTownParams = (courses) => getCoursePageSlugs().flatMap((slug) => getCourseTowns(slug, courses).map((t) => ({ slug, town: t.slug })));
 
 // A course page narrowed to one town: the same catalogue with the town as its location, its own title and breadcrumb.
+// A town with no venue for this page yet still has a page (an old link, or a town typed into the address): it says so and shows
+// what can be taken online, instead of "page not found". It is kept out of search (`empty`) until a venue opens there.
+const TOWN_SLUG = /^[a-z]+(-[a-z]+){0,4}$/;
+const townFromSlug = (town) => town.split("-").map((w) => (["upon", "on", "under", "le", "in"].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
 export function getCourseTownPage(slug, town, courses) {
   const page = getCoursePage(slug, courses);
-  const place = getCourseTowns(slug, courses).find((t) => t.slug === town);
-  if (!page || !place) return null;
+  if (!page) return null;
+  const found = getCourseTowns(slug, courses).find((t) => t.slug === town);
+  const place = found || (TOWN_SLUG.test(town) && town.length <= 40 ? { city: townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` } : null);
+  if (!place) return null;
   const what = page.label.replace(/ courses$/i, "");
   const title = `${what} courses in ${place.city}`;
   return {
@@ -87,11 +93,14 @@ export function getCourseTownPage(slug, town, courses) {
     city: place.city,
     title,
     href: place.href,
+    empty: !found,
     description: `Compare ${what.toLowerCase()} courses in ${place.city}: venues, dates, prices and approved providers in one place.`,
     scope: {
       ...page.scope,
       title,
-      lead: `Courses with a venue in or near ${place.city}, closest first. Change the town or postcode to look somewhere else.`,
+      lead: found
+        ? `Courses with a venue in or near ${place.city}, closest first. Change the town or postcode to look somewhere else.`
+        : `No ${what.toLowerCase()} venues in ${place.city} yet. Courses you can take online, and venues within reach, are below; or change the town or postcode.`,
       crumb: place.city,
       parent: { label: page.label, href: coursePageHref(slug) },
       location: place.city,

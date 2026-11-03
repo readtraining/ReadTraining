@@ -21,7 +21,7 @@ const formatPrice = (n) => gbp.format(Number(n) || 0); // always two decimals: Â
 // not shown when missing; a course with no dates yet says so where the price goes and links to its page instead of the basket.
 // A real course's dates are asked for (API catalogue.course) when Add to basket is pressed. `onNotify({ message, href?, label? })`
 // shows a toast.
-export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
+export default function CatalogueCourseCard({ course, index = 0, onNotify, distance = "" }) {
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
   const utils = api.useUtils();
   const priced = course.price != null;
@@ -58,7 +58,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
       try {
         addCourseToCart(detail.id, lineFor(detail, session));
         setStatus("added");
-        onNotify?.({ message: `Added to basket: ${session.mode === "ondemand" ? "on demand" : `${formatShortDate(session.date)}, ${session.location}`}`, href: BASKET_HREF, label: "View basket" });
+        onNotify?.({ message: `Added to basket: ${session.mode === "ondemand" ? "self-paced, start any time" : `${formatShortDate(session.date)}, ${session.location}`}`, href: BASKET_HREF, label: "View basket" });
         trackEvent("add_to_cart", { currency: "GBP", value: session.price, items: [{ ...toItem(course, index), item_variant: session.id, price: session.price, quantity: 1 }] });
         later(() => setStatus("idle"), 2000);
       } catch {
@@ -151,6 +151,13 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify }) {
             <p className="rt-card__meta2" title={delivery}>
               <span className="rt-sr">Delivery: </span>
               {delivery}
+            </p>
+          )}
+          {/* how far the nearest venue is from the place searched for */}
+          {distance && (
+            <p className="rt-card__dist">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
+              {distance}
             </p>
           )}
         </div>

@@ -113,6 +113,8 @@ export function toCourseDetail(page, related = []) {
     level: page.level || "",
     methods,
     imageSrc: page.images[0]?.url || "",
+    // the cover's description as the provider wrote it (course editor, ALT text), or the course's name
+    imageAlt: page.images[0]?.alt || page.title,
     images: page.images,
     videoUrl: page.videoUrl,
     video: videoEmbed(page.videoUrl),

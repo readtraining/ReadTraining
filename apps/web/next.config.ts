@@ -49,8 +49,7 @@ const nextConfig: NextConfig = {
       { source: '/courses/virtual', destination: '/courses/live-online', permanent: true },
       { source: '/courses/online', destination: '/courses/self-paced', permanent: true },
       { source: '/courses/on-demand', destination: '/courses/self-paced', permanent: true },
-      // the old course-in-a-town pages: a course's dates in a town are now the course finder's location search
-      { source: '/course-locations/:slug', destination: '/courses', permanent: true },
+      // the old course-in-a-town pages (/course-locations/<slug>) go to the course, or its search: app/course-locations/[slug]/route.js
     ]
   },
 }

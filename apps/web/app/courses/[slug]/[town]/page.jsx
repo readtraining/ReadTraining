@@ -33,7 +33,8 @@ export async function generateMetadata(props) {
   const { slug, town } = await props.params;
   const page = getCourseTownPage(slug, town, await realCourses());
   if (!page) return { title: "Courses not found | ReadTraining" };
-  return pageMetadata({ title: `${page.title} | ReadTraining`, description: page.description, path: page.href });
+  // a town with no venue yet: a useful page, but not one for search engines
+  return pageMetadata({ title: `${page.title} | ReadTraining`, description: page.description, path: page.href, noindex: page.empty });
 }
 
 export default async function CourseTownPage(props) {

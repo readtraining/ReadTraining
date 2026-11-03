@@ -129,6 +129,17 @@ export const toPerson = (user) => {
 // The last known answer, kept while the site is open: a page reached by a link starts with it, so the header doesn't blank and
 // shift on every page (a fresh page load still starts as "loading", the same as the server's copy of the page).
 let lastPerson;
+// One question to the auth server per page load, shared by every component that asks (the header, the basket, the forms...):
+// each used to ask on its own, four or more times a page. A sign-in or sign-out after that replaces the answer.
+let userCheck = null;
+const checkUser = (supabase) =>
+  (userCheck ??= supabase.auth
+    .getUser()
+    .then(({ data }) => toPerson(data.user))
+    .catch(() => {
+      userCheck = null; // couldn't reach it: the next component to ask tries again
+      return undefined;
+    }));
 export function useAuthUser() {
   const [person, setPersonState] = useState(() => lastPerson);
   useEffect(() => {
@@ -142,8 +153,12 @@ export function useAuthUser() {
       return undefined;
     }
     const supabase = getSupabase();
-    supabase.auth.getUser().then(({ data }) => setPerson(toPerson(data.user)));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setPerson(toPerson(session?.user)));
+    checkUser(supabase).then((p) => p !== undefined && setPerson(p));
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const p = toPerson(session?.user);
+      if (event !== "INITIAL_SESSION") userCheck = Promise.resolve(p);
+      setPerson(p);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
   return person;

@@ -47,8 +47,8 @@ export default function HomeBookingOptions() {
                     const on = f.tiers.includes(i);
                     return (
                       <li key={f.label} className={on ? "" : "is-off"}>
-                        <i className={on ? "icon-check" : "icon-close"}></i>
-                        <span>{f.label}</span>
+                        <i className={on ? "icon-check" : "icon-close"} aria-hidden="true"></i>
+                        <span>{f.label}{!on && <span className="rt-sr"> (not included)</span>}</span>
                       </li>
                     );
                   })}

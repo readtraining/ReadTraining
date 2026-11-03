@@ -11,6 +11,11 @@ import {
   catalogueFilterGroups,
   sortCourses,
   venueIn,
+  takenAnywhere,
+  referencePoint,
+  nearestVenue,
+  distanceLabel,
+  NEAR_KM,
   sortOptions,
 } from "@/lib/catalogueFilters";
 import { subcategoryOptions } from "@/lib/taxonomy";
@@ -148,6 +153,16 @@ export default function CourseCatalogue({ courses, scope = null }) {
   const results = useMemo(() => sortCourses(filterCourses(courses, state, point), state.sort, state.location, courses, point), [courses, state, point]);
   // a town or postcode that isn't on the map and matches no venue: say so, rather than let the courses that can be taken online
   // (takenAnywhere) look like courses near it. Only those are left then, so the message can say they can be taken online.
+  // with a place entered, each card says how far its nearest venue is (or that it is taken online)
+  const from = state.location.trim() ? referencePoint(courses, state.location.trim(), point) : null;
+  const distanceOf = (course) => {
+    if (!from) return "";
+    const near = nearestVenue(course, from);
+    // a course with a venue within reach: how far; one taken online that has no venue near: online first, the nearest venue after
+    if (near && near.km <= NEAR_KM) return distanceLabel(near);
+    if (takenAnywhere(course)) return near ? `Online, from anywhere. Nearest venue: ${distanceLabel(near).replace(/^About/, "about")}` : "Online, from anywhere";
+    return near ? distanceLabel(near) : "";
+  };
   const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && !results.some((c) => venueIn(c, state.location));
   const noMatches = results.length === 0;
   // Only what matches: with zero matches the page says so plainly and offers to loosen the filters; it never fills the space
@@ -469,7 +484,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
 
             <div className="rt-res__list" id="rt-res-list" tabIndex={-1}>
               {pageItems.map((course, i) => (
-                <CatalogueCourseCard key={course.id} course={course} index={(page - 1) * PAGE_SIZE + i} onNotify={setToast} />
+                <CatalogueCourseCard key={course.id} course={course} index={(page - 1) * PAGE_SIZE + i} onNotify={setToast} distance={distanceOf(course)} />
               ))}
             </div>
 

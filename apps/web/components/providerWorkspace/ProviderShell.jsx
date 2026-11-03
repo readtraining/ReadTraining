@@ -97,7 +97,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
               {counts.unread > 0 && <span className="rt-pws__bellcount" aria-hidden="true">{counts.unread}</span>}
             </Link>
             {meName && (
-              <RowMenu label="Account menu" triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
+              <RowMenu label={meName ? `${initials(meName)}, account menu for ${meName}` : "Account menu"} triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
                 head={<><strong title={meName}>{meName}</strong><span title={meEmail}>{meEmail}</span><small title={org || undefined}>{org ? `Provider · ${org}` : "Provider account"}</small></>}
                 items={[...pw.accountMenu, ...switchItems, { label: "Log out", onClick: logOut }]} />
             )}
