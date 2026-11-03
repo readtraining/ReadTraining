@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getHumanCheck } from "@/lib/humanCheck";
 import React, { useEffect, useRef, useState } from "react";
 import { AdminAuthPage } from "@/components/admin/AdminLogin";
 import { AuthField, AuthNotice, PasswordToggle } from "@/components/auth/authParts";
@@ -93,7 +94,7 @@ export default function AdminWelcome() {
     try {
       const supabase = getSupabase();
       await supabase.auth.signOut({ scope: "local" }).catch(() => {});
-      const { error } = await supabase.auth.signInWithPassword({ email, password: values.password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password: values.password, options: { captchaToken: await getHumanCheck() } });
       if (error) throw error;
       const { step } = await check.mutateAsync({ attempt: true });
       if (step === "ready") {

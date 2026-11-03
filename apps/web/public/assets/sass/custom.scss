@@ -7058,3 +7058,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cd__reviews { margin: 0 0 16px; }
 @media (min-width: 992px) { .rt-cd__reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 576px) { .rt-cd__reviews.-one { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- HUMAN CHECK (lib/humanCheck.js) ----------
+   Cloudflare Turnstile runs invisibly; in the rare case it wants a click, its small box shows here, above everything */
+.rt-humancheck { position: fixed; z-index: 3000; bottom: 24px; left: 50%; transform: translateX(-50%); }
+.rt-humancheck:empty { display: none; }

@@ -70,6 +70,17 @@ The schema is built on a development Supabase project and replayed later on the 
 
 ## Sign-in and security rules
 
+- **Bots and abuse (four layers).** (1) The Vercel Firewall (dashboard, free Hobby plan): known scanner paths are denied and
+  each IP gets 300 `/api/` requests a minute. (2) Cloudflare Turnstile: `apps/web/lib/humanCheck.js` gets a fresh one-use token
+  on sign-up, sign-in, forgot password, the confirmation resend and both admin sign-ins (passed to Supabase as `captchaToken`;
+  Supabase's CAPTCHA protection checks it), and on every public form (`sendForm` adds `humanCheck`; the API's
+  `publicFormProcedure` checks it with `lib/humanCheck.mts`, so every public form endpoint MUST be built on it). (3) The API:
+  `lib/rateLimit.mts` (Upstash Redis via `KV_REST_API_*`, or memory without them) caps each IP at 300 requests a minute and,
+  through `limit(ctx, name)`, provider applications, business accounts, admin invites and picture-upload links per person; a
+  request body over 100 KB is refused (413). (4) The `course-media` bucket accepts only images up to 2 MB. Production needs
+  `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`; preview and development copies use Cloudflare's test keys.
+  Supabase's CAPTCHA switch is turned on only after the code that sends the token is live (otherwise nobody can sign in).
+
 - On the server, verify the user with `supabase.auth.getClaims()` (it checks the JWT signature locally), never `getSession()`. Use `getUser()` only when fresh user data is needed.
 - Only the publishable key reaches the browser. The service-role key stays in the API, for admin tasks only.
 - Email links (confirm, reset) use the token-hash flow at `/auth/confirm`. Google/Facebook use `/auth/callback` (PKCE code exchange).
