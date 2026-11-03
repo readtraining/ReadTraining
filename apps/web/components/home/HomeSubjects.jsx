@@ -25,7 +25,7 @@ export default function HomeSubjects() {
             <div key={elm.id} className="col-lg-3 col-md-4 col-6">
               <Link href={elm.href} className="rt-subject">
                 <div className="rt-subject__image">
-                  <Image width={480} height={270} src={`/assets/img/coursesCards/${elm.id}.png`} alt={elm.title} />
+                  <Image width={480} height={270} src={`/assets/img/coursesCards/${elm.id}.png`} alt="" />
                 </div>
                 <div className="rt-subject__body">
                   <div className="rt-subject__title">{elm.title}</div>

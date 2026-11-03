@@ -697,7 +697,7 @@
 .rt-tier__list { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
 .rt-tier__list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; }
 .rt-tier__list li i { flex: 0 0 18px; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; margin-top: 1px; background: var(--color-purple-3); color: var(--color-purple-1); }
-.rt-tier__list li.is-off { color: var(--color-light-1); opacity: 0.6; }
+.rt-tier__list li.is-off { color: var(--color-light-1); }
 .rt-tier__list li.is-off i { background: var(--color-light-4); color: var(--color-light-1); }
 .rt-tier.is-rec .rt-tier__list li i { background: var(--color-green-1); color: var(--color-dark-1); }
 .rt-tier.is-rec .rt-tier__list li.is-off { color: rgba(255, 255, 255, 0.55); opacity: 1; }
@@ -3217,6 +3217,7 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
    Layout only here: spacing, list resets and the centred mission.
    =================================================================================================== */
 .rt-about-page main:focus { outline: none; }
+#rt-home-main:focus { outline: none; }
 /* our story: the promises card */
 .rt-about__promises { padding: 28px; }
 .rt-about__promises .bz-card__label { margin: 0; }

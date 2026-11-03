@@ -41,19 +41,22 @@ export default async function HomePage() {
   const featured = chosen.length ? chosen : tabs(contentDefaults.featured.groups);
   return (
     <div className="main-content rt-home">
+      <a href="#rt-home-main" className="rt-skip">Skip to main content</a>
       <Preloader />
       <HomeHeader />
       <div className="content-wrapper js-content-wrapper overflow-hidden">
-        <HomeHero />
-        <HomeSearchBand />
-        {featured.length > 0 && <HomeCourses groups={featured} />}
-        <HomeBookingOptions />
-        <HomeSubjects />
-        <HomeRoles />
-        <HomeStories reviews={reviews} />
-        <HomeTeamBooking />
-        <HomeProviders />
-        <HomeHelp />
+        <main id="rt-home-main" tabIndex={-1}>
+          <HomeHero />
+          <HomeSearchBand />
+          {featured.length > 0 && <HomeCourses groups={featured} />}
+          <HomeBookingOptions />
+          <HomeSubjects />
+          <HomeRoles />
+          <HomeStories reviews={reviews} />
+          <HomeTeamBooking />
+          <HomeProviders />
+          <HomeHelp />
+        </main>
         <HomeFooter />
       </div>
     </div>

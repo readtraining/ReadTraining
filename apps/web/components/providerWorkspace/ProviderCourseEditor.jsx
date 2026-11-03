@@ -141,8 +141,15 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const formRef = useRef(null);
   const navRef = useRef(null);
   const loadedFor = useRef(null);
+  // the course version this editor's draft is based on (sent with Save, so a save from an out-of-date tab is refused), and
+  // whether the next version to load comes from this editor's own image or settings change (taken on even with unsaved edits)
+  const seen = useRef(null);
+  const ownChange = useRef(false);
   const clearToast = useCallback(() => setToast(null), []);
-  const saved = useCallback((message) => setToast({ message }), []);
+  const saved = useCallback((message) => {
+    ownChange.current = true;
+    setToast({ message });
+  }, []);
   const access = ep.access;
   const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS;
   const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: "/provider/courses" };
@@ -152,19 +159,25 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (sections.some((x) => x.key === t)) setTab(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- read the address once
 
-  useEffect(() => {
-    if (course && loadedFor.current !== course.id) {
-      loadedFor.current = course.id;
-      const d = draftOf(course);
-      setDraft(d);
-      setBase(d);
-    }
-  }, [course]);
-
   // the course as loaded again has its new status: show that
   useEffect(() => setSent(false), [course?.status]);
 
   const dirty = Boolean(draft && base && !same(draft, base));
+  // a newer version of the course (this editor's own change, another tab or a colleague): with nothing unsaved here the editor
+  // shows it; with unsaved edits it keeps them, and Save is refused until the page is reloaded
+  useEffect(() => {
+    if (!course) return;
+    const fresh = loadedFor.current !== course.id;
+    if (!fresh && course.version === seen.current) return;
+    if (fresh || !dirty) {
+      loadedFor.current = course.id;
+      const d = draftOf(course);
+      setDraft(d);
+      setBase(d);
+      seen.current = course.version;
+    } else if (ownChange.current) seen.current = course.version;
+    ownChange.current = false;
+  }, [course]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the course loads again
   useEffect(() => {
     if (!dirty) return;
     const warn = (e) => {
@@ -207,7 +220,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       return true;
     }
     try {
-      const r = await ep.update(patch);
+      const r = await ep.update({ ...patch, version: seen.current });
+      seen.current = r.version ?? seen.current;
       setDraft(clean);
       setBase(clean);
       refresh();
@@ -217,7 +231,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       return true;
     } catch (error) {
       const { fields, general } = errorsFrom(error);
-      setErrors({ ...fields, form: general });
+      // a CONFLICT here means the course changed elsewhere since this page loaded (the API refuses the save: STALE in its courses module)
+      setErrors({ ...fields, form: general, stale: error?.data?.code === "CONFLICT" });
       if (fields.price || fields.pricePence) changeTab("pricing");
       setSaid(general || Object.values(fields)[0] || "");
       requestAnimationFrame(() => focusFirstError(formRef.current));
@@ -346,7 +361,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
         </nav>
 
         <div className="rt-pws-ce__main" ref={formRef}>
-          {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
+          {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}{errors.stale && <> <button type="button" className="rt-cd__link" onClick={() => window.location.reload()}>Reload the page</button></>}</p>}
           {tab === "landing" && <LandingSection {...sectionProps} shared={ep.admin} onSaved={saved} />}
           {tab === "info" && <InfoSection {...sectionProps} />}
           {tab === "syllabus" && <SyllabusSection {...sectionProps} />}
