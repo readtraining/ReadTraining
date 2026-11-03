@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   PAGE_SIZE,
   PRICE_BOUNDS,
-  PROJECT_NAME,
   buildCatalogueQuery,
   closestSortOption,
   filterCourses,
@@ -257,7 +256,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
   };
   // A course page keeps its own heading; otherwise one ticked subject names the page and none or several keep the general one.
   const subjectTitle = state.subject.length === 1 ? optionLabel(subjectGroup, state.subject[0]) : "";
-  const heading = scope ? scope.title : subjectTitle ? `${subjectTitle.replace(/ and /g, " & ")} Training Courses - ${PROJECT_NAME}` : "Find the right course for you";
+  const heading = scope ? scope.title : subjectTitle ? `${subjectTitle.replace(/ and /g, " & ")} training courses` : "Find the right course for you";
   const showFilters = !scope || scope.filters !== false;
 
   // "Remove last filter": undo the latest change; with no history (e.g. a shared URL) drop the last active chip.
