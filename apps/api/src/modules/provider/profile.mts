@@ -5,7 +5,7 @@ import { eq, organisations, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
+import { IMAGE_TYPES, MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // the roles that read an organisation's private details: our team's status note and messages (the same rule as the database's
@@ -164,7 +164,13 @@ export const providerProfileRouter = createTRPCRouter({
     .input(z.object({ path: z.string().regex(MEDIA_PATH) }))
     .mutation(async ({ ctx, input }) => {
       if (!input.path.startsWith(`${input.organisationId}/logo/`)) throw new TRPCError({ code: 'FORBIDDEN' })
-      if (!(await mediaExists(input.path))) throw new TRPCError({ code: 'BAD_REQUEST', message: 'The logo did not upload. Please try again.' })
+      // the stored file itself must be a picture of at least 200 × 200 (whatever the browser said); otherwise it is deleted again
+      const size = await storedImageSize(input.path)
+      if (size === undefined) throw new TRPCError({ code: 'BAD_REQUEST', message: 'The logo did not upload. Please try again.' })
+      if (!size || size.width < MIN_LOGO.width || size.height < MIN_LOGO.height) {
+        await removeMedia([input.path])
+        throw new TRPCError({ code: 'BAD_REQUEST', message: size ? `This logo is ${size.width} × ${size.height} pixels. Choose one at least ${MIN_LOGO.width} × ${MIN_LOGO.height} pixels.` : 'We couldn’t read that logo. Choose a PNG, JPG or WebP picture.' })
+      }
       const [before] = await ctx.db.select({ logoPath: organisations.logoPath }).from(organisations).where(eq(organisations.id, input.organisationId))
       await ctx.db.transaction(async (tx) => {
         await tx.update(organisations).set({ logoPath: input.path, updatedAt: new Date() }).where(eq(organisations.id, input.organisationId))

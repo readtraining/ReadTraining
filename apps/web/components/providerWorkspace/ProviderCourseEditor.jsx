@@ -10,6 +10,7 @@ import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { CourseEndpoints, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -35,23 +36,8 @@ const SECTIONS = [
 const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "pricing", "mode"];
 const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
-const MAX_IMAGE = 2 * 1024 * 1024; // the course-media bucket's limit
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-// the smallest course image (the API checks the stored file too: MIN_COURSE_IMAGE in apps/api/src/lib/media.mts)
-const MIN_IMAGE = { width: 500, height: 300 };
-// a chosen picture's width and height, as the browser shows it; null when it can't be read as a picture
-const pictureSize = (file) =>
-  new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    const done = (size) => {
-      URL.revokeObjectURL(url);
-      resolve(size);
-    };
-    img.onload = () => done({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => done(null);
-    img.src = url;
-  });
+// course pictures follow the rule every picture upload does (lib/images.js): JPG, PNG, WebP or GIF up to 15 MB, big ones made
+// smaller for you, at least 500 × 300 (the API checks the stored file too: MIN_COURSE_IMAGE in apps/api/src/lib/media.mts)
 const VIDEO_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/\S+$/;
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
 // A pass mark, as the API checks it (apps/api/src/modules/provider/courses.mts passMarkProblem): a percentage up to 100%, a score
@@ -636,7 +622,9 @@ function ImagesCard({ course, disabled, onSaved }) {
       ...course.images.map((img) => {
         const mine = cur.find((c) => c.id === img.id);
         const was = savedRef.current.find((c) => c.id === img.id);
-        return mine && was && (mine.alt || "") !== (was.alt || "") ? { ...img, alt: mine.alt } : img;
+        const next = mine && was && (mine.alt || "") !== (was.alt || "") ? { ...img, alt: mine.alt } : img;
+        // a picture just uploaded keeps showing from the file until its saved copy has loaded (see onFile)
+        return mine?.url?.startsWith("blob:") ? { ...next, url: mine.url } : next;
       }),
       ...cur.filter((i) => i.uploading),
     ]);
@@ -653,33 +641,38 @@ function ImagesCard({ course, disabled, onSaved }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!IMAGE_TYPES.includes(file.type)) return setError("Choose a JPG, PNG, WebP or GIF picture.");
-    if (file.size > MAX_IMAGE) return setError("Choose a picture under 2MB.");
     if (saved.length >= 10) return setError("A course can have up to 10 images. Remove one first.");
-    const size = await pictureSize(file);
-    if (!size) return setError("We couldn't read that picture. Choose a JPG, PNG, WebP or GIF file.");
-    if (size.width < MIN_IMAGE.width || size.height < MIN_IMAGE.height) return setError(`This picture is ${size.width} × ${size.height} pixels. Choose one at least ${MIN_IMAGE.width} × ${MIN_IMAGE.height} pixels.`);
     setError("");
+    let picture;
+    try {
+      picture = await prepareImage(file, "course");
+    } catch (err) {
+      return setError(err.message);
+    }
     setAction("upload");
     // the chosen picture shows at once, from the file itself, until the saved one replaces it
-    const temp = { id: `uploading-${Date.now()}`, url: URL.createObjectURL(file), alt: "", uploading: true };
+    const temp = { id: `uploading-${Date.now()}`, url: URL.createObjectURL(picture.blob), alt: "", uploading: true };
     setList((x) => [...x, temp]);
     const drop = () => {
       setList((x) => x.filter((i) => i.id !== temp.id));
       URL.revokeObjectURL(temp.url);
     };
     try {
-      const { path, token } = await ep.uploadUrl(file.type);
-      const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, file, { contentType: file.type });
+      const { path, token } = await ep.uploadUrl(picture.type);
+      const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, picture.blob, { contentType: picture.type });
       if (upError) throw new Error("The picture didn't upload. Please try again.");
       const added = await ep.addImage(path);
-      // the saved image (its id and address) takes the place of the preview; the course loads again in the background
+      // saved: it counts as saved now, and keeps showing the chosen picture until the saved copy has loaded (no blank box), then
+      // takes the saved copy's address; the course loads again in the background
       const image = { id: added.id, url: added.url, alt: "" };
       setSaved((x) => [...x, image]);
-      setList((x) => x.map((i) => (i.id === temp.id ? image : i)));
-      URL.revokeObjectURL(temp.url);
+      setList((x) => x.map((i) => (i.id === temp.id ? { ...image, url: temp.url } : i)));
       refresh();
       onSaved("Image added");
+      whenLoaded(added.url).then(() => {
+        setList((x) => x.map((i) => (i.id === image.id && i.url === temp.url ? { ...i, url: added.url } : i)));
+        URL.revokeObjectURL(temp.url);
+      });
     } catch (err) {
       drop();
       setError(err?.data ? errorsFrom(err).general : err.message || "The picture didn't upload. Please try again.");
@@ -723,9 +716,9 @@ function ImagesCard({ course, disabled, onSaved }) {
       {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
       {!disabled && (
         <div className="rt-pws-course-mediabar">
-          <input ref={fileRef} type="file" accept={IMAGE_TYPES.join(",")} className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
+          <input ref={fileRef} type="file" accept={acceptFor("course")} className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{action === "upload" ? "Uploading…" : "Upload course image"}</button>
-          <span className="rt-field__hint">{MIN_IMAGE.width} × {MIN_IMAGE.height} pixels or larger. JPG, PNG, WebP or GIF, up to 2MB. No text on the image.</span>
+          <span className="rt-field__hint">{hintFor("course")} No text on the image.</span>
         </div>
       )}
       {list.length ? (

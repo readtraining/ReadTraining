@@ -24,14 +24,6 @@ export async function mediaUploadUrl(folder: string, contentType: ImageType) {
   return error || !data ? null : { path: data.path, token: data.token }
 }
 
-/** Was this file really uploaded (it exists in the bucket)? */
-export async function mediaExists(path: string) {
-  if (!supabase) return false
-  const slash = path.lastIndexOf('/')
-  const { data } = await supabase.storage.from(COURSE_MEDIA).list(path.slice(0, slash), { search: path.slice(slash + 1) })
-  return Boolean(data?.some((f) => f.name === path.slice(slash + 1)))
-}
-
 /** Deletes stored files (errors are only reported: a left-over file is harmless). */
 export async function removeMedia(paths: string[]) {
   if (!supabase || !paths.length) return
@@ -46,6 +38,8 @@ export const MEDIA_PATH = /^([0-9a-f-]{36}\/(courses\/\d+|logo)|shared\/courses\
 // ---- picture sizes ---------------------------------------------------------------------------------------------------------
 // The smallest course image (the editor's hint says so): smaller ones look blurred on the course card and page.
 export const MIN_COURSE_IMAGE = { width: 500, height: 300 } as const
+// The smallest provider logo (the settings form says so; apps/web/lib/images.js has every picture rule).
+export const MIN_LOGO = { width: 200, height: 200 } as const
 
 /** Width and height read from the start of a JPG, PNG, WebP or GIF file; null when it isn't one of those (or is damaged). */
 export function imageSize(b: Uint8Array): { width: number; height: number } | null {

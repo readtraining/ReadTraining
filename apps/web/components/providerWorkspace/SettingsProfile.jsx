@@ -12,6 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill } from "./providerParts";
 import { Confirm, Counter, Field, aria, isUrlOn } from "./settingsForm";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
 
@@ -133,8 +134,7 @@ function InfoForm({ profile, say }) {
 
 // ---- company logo ----------------------------------------------------------------------------------------------------------
 
-const LOGO_MAX = 2 * 1024 * 1024; // the course-media bucket's limit
-const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+// the rule every picture upload follows (lib/images.js): PNG, JPG or WebP up to 15 MB, made smaller for you, at least 200 × 200
 
 export function LogoTab({ say }) {
   return <WithProfile>{(p) => <LogoForm profile={p} say={say} />}</WithProfile>;
@@ -148,40 +148,48 @@ function LogoForm({ profile, say }) {
   const removeLogo = api.provider.profile.removeLogo.useMutation();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  // the logo just saved (or removed: null) shows at once, until the profile loads again with it
-  const [justSaved, setJustSaved] = useState(undefined);
-  useEffect(() => setJustSaved(undefined), [profile.logoUrl]);
-  const logoUrl = justSaved === undefined ? profile.logoUrl : justSaved;
+  // What the box shows: the picture just chosen (from the file itself, at once) or none just removed (null), until the saved logo
+  // has loaded in the browser; then the profile's own address. So it never goes blank while the saved copy loads.
+  // `local`: { url (the chosen picture, or null once removed), was (the profile's logo when the change started) }
+  const [local, setLocal] = useState(null);
+  const logoUrl = local ? local.url : profile.logoUrl;
+  useEffect(() => {
+    if (!local || profile.logoUrl === local.was) return; // the profile hasn't caught up with the change yet
+    if (!profile.logoUrl) return void setLocal(null); // removed, and the profile agrees
+    let live = true;
+    whenLoaded(profile.logoUrl).then(() => live && setLocal(null)); // the saved copy can show now
+    return () => {
+      live = false;
+    };
+  }, [profile.logoUrl, local]);
   const fileRef = useRef(null);
   const locked = !can("provider.profile.edit");
-  const done = (message, shown) => { setJustSaved(shown); utils.provider.profile.get.invalidate({ organisationId }); say(message); };
 
-  // the picture's size, checked before it is uploaded
-  const measure = (file) => new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const img = new window.Image();
-    img.onload = () => { resolve({ w: img.width, h: img.height }); URL.revokeObjectURL(url); };
-    img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
-    img.src = url;
-  });
   const pick = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!LOGO_TYPES.includes(file.type)) return setError("Choose a PNG, JPG or WebP image.");
-    if (file.size > LOGO_MAX) return setError("Choose an image smaller than 2 MB.");
-    const size = await measure(file);
-    if (!size) return setError("That image could not be read. Try another file.");
-    if (size.w < 200 || size.h < 200) return setError("The logo must be at least 200 × 200 pixels.");
     setError("");
+    let picture;
+    try {
+      picture = await prepareImage(file, "logo");
+    } catch (err) {
+      return setError(err.message);
+    }
+    const before = local;
+    const preview = URL.createObjectURL(picture.blob);
+    setLocal({ url: preview, was: profile.logoUrl }); // the chosen logo shows straight away
     setBusy(true);
     try {
-      const { path, token } = await uploadUrl.mutateAsync({ organisationId, contentType: file.type });
-      const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, file, { contentType: file.type });
+      const { path, token } = await uploadUrl.mutateAsync({ organisationId, contentType: picture.type });
+      const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, picture.blob, { contentType: picture.type });
       if (upError) throw new Error("The logo didn't upload. Please try again.");
       await setLogo.mutateAsync({ organisationId, path });
-      done("Logo saved. It shows on your public profile.", URL.createObjectURL(file));
+      utils.provider.profile.get.invalidate({ organisationId });
+      say("Logo saved");
     } catch (err) {
+      setLocal(before);
+      URL.revokeObjectURL(preview);
       setError(err?.data ? firstError(err) : err.message || "The logo didn't upload. Please try again.");
     } finally {
       setBusy(false);
@@ -191,7 +199,11 @@ function LogoForm({ profile, say }) {
   const remove = () => {
     setAsking(false);
     setBusy(true);
-    removeLogo.mutate({ organisationId }, { onSuccess: () => done("Logo removed", null), onError: (er) => setError(firstError(er)), onSettled: () => setBusy(false) });
+    removeLogo.mutate({ organisationId }, {
+      onSuccess: () => { setLocal({ url: null, was: profile.logoUrl }); utils.provider.profile.get.invalidate({ organisationId }); say("Logo removed"); },
+      onError: (er) => setError(firstError(er)),
+      onSettled: () => setBusy(false),
+    });
   };
 
   return (
@@ -202,14 +214,14 @@ function LogoForm({ profile, say }) {
           {logoUrl ? <img src={logoUrl} alt="Your logo" width={96} height={96} /> : <span aria-hidden="true">{profile.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>}
         </span>
         <div className="rt-pws-set__logoside">
-          <input ref={fileRef} id="rt-set-logo" type="file" accept={LOGO_TYPES.join(",")} className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={pick} />
+          <input ref={fileRef} id="rt-set-logo" type="file" accept={acceptFor("logo")} className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={pick} />
           {!locked && (
             <div className="rt-pws-set__actions">
               <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy && !removeLogo.isPending ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}</button>
               {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
             </div>
           )}
-          <p className="rt-field__hint">At least 200 × 200 pixels. PNG, JPG or WebP, up to 2 MB. It is saved as soon as you choose it.</p>
+          <p className="rt-field__hint">{hintFor("logo")} It is saved as soon as you choose it.</p>
         </div>
       </div>
       <Confirm open={asking} onClose={() => setAsking(false)} title="Remove your logo?" text="It comes off your public profile and course pages, and your initials show instead. You can upload a logo again at any time." confirmLabel="Remove logo" onConfirm={remove} />
