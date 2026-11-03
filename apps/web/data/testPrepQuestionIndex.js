@@ -8,48 +8,6 @@ export const questionIndex = {
    "minutes": 45
   }
  },
- "cscs-mock-test": {
-  "citb-hs-and-e-mock-test-1": {
-   "questions": 50,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-2": {
-   "questions": 50,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-3": {
-   "questions": 50,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-4": {
-   "questions": 50,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-5": {
-   "questions": 50,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-6": {
-   "questions": 48,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-7": {
-   "questions": 50,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-8": {
-   "questions": 49,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-9": {
-   "questions": 49,
-   "minutes": 45
-  },
-  "citb-hs-and-e-mock-test-10": {
-   "questions": 47,
-   "minutes": 45
-  }
- },
  "citb-mock-test-50-questions": {
   "citb-hs-and-e-mock-test-1": {
    "questions": 50,
@@ -93,20 +51,8 @@ export const questionIndex = {
   }
  },
  "cscs-green-card-mock-test": {
-  "cscs-green-card-mock-test-1": {
-   "questions": 50,
-   "minutes": 60
-  },
   "cscs-green-card-mock-test-10": {
    "questions": 40,
-   "minutes": 60
-  },
-  "cscs-green-card-mock-test-2": {
-   "questions": 50,
-   "minutes": 60
-  },
-  "cscs-green-card-mock-test-3": {
-   "questions": 50,
    "minutes": 60
   },
   "cscs-green-card-mock-test-4": {
@@ -250,10 +196,6 @@ export const questionIndex = {
    "minutes": 15
   },
   "rt17-cpcs-telehandler-mock-test": {
-   "questions": 15,
-   "minutes": 15
-  },
-  "rt59-360-excavator-renewal-mock-test": {
    "questions": 15,
    "minutes": 15
   }

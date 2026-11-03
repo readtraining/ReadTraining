@@ -22,6 +22,13 @@ const PHOTO_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'we
 
 const name = personName
 
+// The youngest a learner can be: 16, the age the work courses here start from (a CSCS card; an SIA licence needs 18). The
+// account settings form checks the same (AccountProfile.jsx MIN_AGE).
+export const MIN_AGE = 16
+const latestBirthday = () => {
+  const now = new Date()
+  return `${now.getUTCFullYear() - MIN_AGE}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
+}
 const dateOfBirth = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter your date of birth.')
@@ -29,6 +36,7 @@ const dateOfBirth = z
     const d = new Date(`${v}T00:00:00Z`)
     return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v && v >= '1900-01-01' && d.getTime() < Date.now()
   }, 'Enter a real date of birth in the past.')
+  .refine((v) => v > latestBirthday() === false, `You need to be at least ${MIN_AGE} to have a ReadTraining account.`)
 
 const phone = z
   .string()

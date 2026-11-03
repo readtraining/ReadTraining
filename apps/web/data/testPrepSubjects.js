@@ -6,6 +6,8 @@
 //           The lead and the test cards both read these, so they cannot disagree.
 // lead      intro under the H1. Placeholders {questions}, {passMark}, {passCount}, {minutes} and {duration} are filled from `exam`.
 // tests     one card per mock test: { slug, title, subtitle? } plus questions / passMark / minutes only where that paper differs.
+//           A test another subject owns is listed with `ref` (that subject's slug; `slug` is the test's there): its card opens the
+//           owner's page, so each test has one address. `was`: the old address here, which goes on to the owner's.
 // more      other subjects for "More Tests & Resources" (hub slugs).
 // sections  the article: { id, heading, blocks: [{ type: "p" | "note" | "h3", text } | { type: "ul" | "ol", items } | { type: "table", rows }] }.
 // faqs      optional { q, a } list: shown as the FAQ accordion and the FAQPage structured data.
@@ -173,42 +175,52 @@ export const subjects = {
     tests: [
       {
         slug: "citb-hs-and-e-mock-test-1",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 1)"
       },
       {
         slug: "citb-hs-and-e-mock-test-2",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 2)"
       },
       {
         slug: "citb-hs-and-e-mock-test-3",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 3)"
       },
       {
         slug: "citb-hs-and-e-mock-test-4",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 4)"
       },
       {
         slug: "citb-hs-and-e-mock-test-5",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 5)"
       },
       {
         slug: "citb-hs-and-e-mock-test-6",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 6)"
       },
       {
         slug: "citb-hs-and-e-mock-test-7",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 7)"
       },
       {
         slug: "citb-hs-and-e-mock-test-8",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 8)"
       },
       {
         slug: "citb-hs-and-e-mock-test-9",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 9)"
       },
       {
         slug: "citb-hs-and-e-mock-test-10",
+        ref: "citb-mock-test-50-questions",
         title: "CITB HS&E test for operatives (Test 10)"
       }
     ],
@@ -704,15 +716,21 @@ export const subjects = {
     mockHeading: "2024 CSCS Green Card Mock Exam Test",
     tests: [
       {
-        slug: "cscs-green-card-mock-test-1",
+        slug: "citb-hs-and-e-mock-test-1",
+        ref: "citb-mock-test-50-questions",
+        was: "cscs-green-card-mock-test-1",
         title: "CSCS Green Mock (Test 1)"
       },
       {
-        slug: "cscs-green-card-mock-test-2",
+        slug: "citb-hs-and-e-mock-test-2",
+        ref: "citb-mock-test-50-questions",
+        was: "cscs-green-card-mock-test-2",
         title: "CSCS Green Mock (Test 2)"
       },
       {
-        slug: "cscs-green-card-mock-test-3",
+        slug: "citb-hs-and-e-mock-test-3",
+        ref: "citb-mock-test-50-questions",
+        was: "cscs-green-card-mock-test-3",
         title: "CSCS Green Mock (Test 3)"
       },
       {
@@ -1174,7 +1192,7 @@ export const subjects = {
           },
           {
             type: "p",
-            text: "We have developed 15 mock exams for the SIA Door Supervisor course, offering valuable practice opportunities. These Door Supervisor mock tests are designed to help you prepare for your actual exam by providing a realistic and comprehensive practice experience."
+            text: "We have developed free mock exams for the units of the SIA Door Supervisor course, offering valuable practice opportunities. These Door Supervisor mock tests are designed to help you prepare for your actual exam by providing a realistic and comprehensive practice experience."
           },
           {
             type: "p",
@@ -1792,6 +1810,7 @@ export const subjects = {
       },
       {
         slug: "rt59-360-excavator-renewal-mock-test",
+        ref: "cpcs-360-excavator-mock-test",
         title: "RT59 360 Excavator Renewal Mock Test",
         subtitle: "CPCS 360 Excavator Renewal Mock Test",
         passMark: 80,

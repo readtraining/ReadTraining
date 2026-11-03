@@ -11,7 +11,7 @@ export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, descri
 
 export default function Page() {
   return (
-    <ProviderShell demo current="courses" title={p.title} lead={p.lead} back={{ label: "Courses", href: "/provider/courses" }}>
+    <ProviderShell demo={pw.demo.packages} current="courses" title={p.title} lead={p.lead} back={{ label: "Courses", href: "/provider/courses" }}>
       <ProviderPackages />
     </ProviderShell>
   );

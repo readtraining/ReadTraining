@@ -17,6 +17,7 @@ import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import { VenueForm } from "./SettingsProfile";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 
 // Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
@@ -107,6 +108,17 @@ export const cohortInput = (k) => ({
   details: k.details || "", tutorUserId: k.tutorUserId, bookable: k.bookable,
 });
 
+// A joining link: a Zoom, Microsoft Teams or Google Meet meeting address (https), as the API checks it (schedule.mts isMeetingLink)
+const MEETING_HOSTS = /^(?:[a-z0-9-]+\.)*(zoom\.us|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com)$/i;
+export function isMeetingLink(v) {
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" && MEETING_HOSTS.test(u.hostname) && u.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
 // ---- the list --------------------------------------------------------------------------------------------------------------
 
 export default function ProviderCohorts() {
@@ -126,6 +138,9 @@ export default function ProviderCohorts() {
   const [cancelOne, setCancelOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  // a row change shows at once (bookings on or off, the tutor), before the list loads again; gone again if the save fails
+  const [changing, setChanging] = useState({});
+  const change = (id, patch) => setChanging((x) => (patch ? { ...x, [id]: { ...x[id], ...patch } } : Object.fromEntries(Object.entries(x).filter(([k]) => k !== id))));
   const s = useSchedule(when);
   const utils = api.useUtils();
   const update = api.provider.cohorts.update.useMutation();
@@ -165,7 +180,10 @@ export default function ProviderCohorts() {
   const tutors = s.tutors.data || [];
   // a tutor sees only the dates they teach (no team list), so a tutor on them is the tutor themselves
   const tutorName = (id) => tutors.find((t) => t.userId === id)?.name ?? (!s.may.team && id ? "You" : undefined);
-  const scoped = s.cohorts.data.map((k) => ({ ...k, status: cohortState(k, today), course: courseOf[k.courseId] }));
+  const scoped = s.cohorts.data.filter((k) => !changing[k.id]?.deleted).map((k) => {
+    const now = { ...k, ...changing[k.id] };
+    return { ...now, status: cohortState(now, today), course: courseOf[k.courseId] };
+  });
   const datedCourses = courses.filter((c) => c.method !== "self-paced");
   const onDemand = courses.filter((c) => c.method === "self-paced");
 
@@ -198,20 +216,23 @@ export default function ProviderCohorts() {
     setWhenNote("");
     [...(keepTab ? [] : ["mode"]), "course", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
-  const refresh = () => {
-    utils.provider.cohorts.list.invalidate();
-    utils.provider.courses.list.invalidate({ organisationId });
-    utils.provider.courses.get.invalidate();
-  };
+  const refresh = () =>
+    Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
   const fail = (e) => setToast({ message: errorsFrom(e).general || "We couldn't save that. Please try again." });
-  const setTutorOf = (k, v) => update.mutate({ organisationId, cohortId: k.id, ...cohortInput(k), tutorUserId: v || null }, {
-    onSuccess: () => { refresh(); setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); },
-    onError: fail,
-  });
-  const toggleBookings = (k) => bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
-    onSuccess: () => { refresh(); setToast({ message: k.bookable ? "Bookings turned off" : "Bookings turned on" }); },
-    onError: fail,
-  });
+  const setTutorOf = (k, v) => {
+    change(k.id, { tutorUserId: v || null });
+    update.mutate({ organisationId, cohortId: k.id, ...cohortInput(k), tutorUserId: v || null }, {
+      onSuccess: async () => { setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); await refresh(); change(k.id, null); },
+      onError: (e) => { change(k.id, null); fail(e); },
+    });
+  };
+  const toggleBookings = (k) => {
+    change(k.id, { bookable: !k.bookable });
+    bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
+      onSuccess: async () => { setToast({ message: k.bookable ? "Bookings turned off. Learners can't book this cohort now." : "Bookings turned on. Learners can book this cohort again." }); await refresh(); change(k.id, null); },
+      onError: (e) => { change(k.id, null); fail(e); },
+    });
+  };
 
   const create = edit && <button type="button" className="button -md -purple-1 text-white" onClick={() => setFormOpen(true)} disabled={!datedCourses.length}>Create cohort</button>;
   const nothingYet = !scoped.length && when === "upcoming" && !filtered;
@@ -303,8 +324,10 @@ export default function ProviderCohorts() {
                           </div>
                         </td>
                         <td data-label="Status">
-                          <Pill tone={COHORT_TONE[k.status]}>{STATUSES[k.status]}</Pill>
-                          {!k.bookable && !cancelled && <small>Bookings off</small>}
+                          <span className="rt-pws-coh__pills">
+                            <Pill tone={COHORT_TONE[k.status]}>{STATUSES[k.status]}</Pill>
+                            {!k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
+                          </span>
                         </td>
                         <td data-label="Tutor">
                           {edit && !cancelled && tutors.length ? (
@@ -340,10 +363,10 @@ export default function ProviderCohorts() {
         </>
       )}
 
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => { refresh(); setToast({ message: "Cohort saved. Pick the dates for the next one." }); }} />
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => refresh()} />
       <CohortForm open={Boolean(editingK)} onClose={() => setEditingK(null)} cohort={editingK} onSaved={() => { setEditingK(null); refresh(); setToast({ message: "Cohort saved" }); }} />
-      <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={() => { setCancelOne(null); refresh(); setToast({ message: "Cohort cancelled" }); }} />
-      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={() => { setDeleting(null); refresh(); setToast({ message: "Cohort deleted" }); }} />
+      <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
+      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
@@ -437,6 +460,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const [venueAdded, setVenueAdded] = useState("");
   const [view, setView] = useState(() => monthStart(todayIso()));
   const [studyMode, setStudyMode] = useState("classroom");
+  // the form as it was filled (or last saved): while it differs, leaving the page asks first (lib/unsavedChanges.js)
+  const [start, setStart] = useState(null);
+  useUnsavedChanges(Boolean(open && f && start !== null && JSON.stringify(f) !== start));
   const on = { enabled: open && Boolean(organisationId) };
   const coursesQ = api.provider.courses.list.useQuery({ organisationId }, on);
   const venuesQ = api.provider.venues.list.useQuery({ organisationId }, on);
@@ -452,11 +478,15 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   useEffect(() => {
     if (!open || !coursesQ.data) return;
     if (cohort) {
-      setF({ courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", price: money(cohort.pricePence), wasPrice: money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" });
+      const filled = { courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", price: money(cohort.pricePence), wasPrice: money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" };
+      setF(filled);
+      setStart(JSON.stringify(filled));
       setView(monthStart(cohort.startsOn || todayIso()));
     } else {
       const c = courseOf(suggestCourseId);
-      setF(blankFor(c && c.method !== "self-paced" ? c : null));
+      const blank = blankFor(c && c.method !== "self-paced" ? c : null);
+      setF(blank);
+      setStart(JSON.stringify(blank));
       setView(monthStart(todayIso()));
       setStudyMode(c?.method === "live-online" || (!c && mode === "live-online") ? "live-online" : "classroom");
     }
@@ -496,6 +526,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   // "Save and create another" (Hurak's "Create another cohort"): the form stays open for the same course and settings
   const save = async (e, another = false) => {
     e.preventDefault();
+    setPressed(another ? "another" : "save");
+    setSavedNote("");
     const err = {};
     if (!f.courseId) err.courseId = "Choose the course this cohort is for.";
     if (!f.sessions.length) err.sessions = "Pick at least one date on the calendar.";
@@ -507,7 +539,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       else if ((s.end || s.date) === s.date && s.to <= s.from) err[`d${i}`] = "The end time must be after the start time.";
     });
     if (method === "classroom" && !f.venueId) err.venueId = "Choose the venue.";
-    if (method === "live-online" && f.joinUrl.trim() && !/^https:\/\/\S+$/.test(f.joinUrl.trim())) err.joinUrl = "Use the full https link, or leave it empty for now.";
+    if (method === "live-online" && f.joinUrl.trim() && !isMeetingLink(f.joinUrl.trim())) err.joinUrl = "Use the full https link to a Zoom, Microsoft Teams or Google Meet meeting, or leave it empty for now.";
     if (!PRICE_RE.test(f.price) || Number(f.price) < 1) err.price = "Enter the price per learner in pounds, like 95.";
     if (f.wasPrice && (!PRICE_RE.test(f.wasPrice) || Number(f.wasPrice) <= Number(f.price))) err.wasPrice = "Enter a “was” price higher than the price, or leave it empty.";
     const m = Number(f.capacity);
@@ -529,12 +561,20 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     try {
       const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
       if (another) {
-        setF((x) => ({ ...x, sessions: [] }));
+        const first = values.sessions[0]?.date;
+        setF((x) => {
+          const next = { ...x, sessions: [] };
+          setStart(JSON.stringify(next)); // saved: only the next cohort's dates are new
+          return next;
+        });
         setErrors({});
+        // the form stays open, so the confirmation shows in it (the page's message is behind the form)
+        setSavedNote(`Cohort saved${first ? ` (starting ${new Date(`${first}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Pick the dates for the next one.`);
         onAnother?.(id);
-        requestAnimationFrame(() => formRef.current?.querySelector("h3")?.scrollIntoView({ block: "start" }));
+        requestAnimationFrame(() => formRef.current?.firstElementChild?.scrollIntoView({ block: "start" }));
         return;
       }
+      setStart(JSON.stringify(f)); // saved, so closing or leaving doesn't ask
       onSaved?.(id);
     } catch (error) {
       const { fields, general } = errorsFrom(error);
@@ -543,6 +583,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     }
   };
   const busy = create.isPending || update.isPending;
+  // which button is saving, so only that one says "Saving…"
+  const [pressed, setPressed] = useState(null);
+  const [savedNote, setSavedNote] = useState("");
+  useEffect(() => {
+    if (!open) setSavedNote("");
+  }, [open]);
 
   const err = (key) => errors[key] && <p className="rt-q__err" id={`rt-cf-${key}-e`}><span className="rt-sr">Error: </span>{errors[key]}</p>;
   const aria = (key) => ({ "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `rt-cf-${key}-e` : undefined });
@@ -557,6 +603,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       {open && !ready && <Loading rows={2} />}
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
+          {savedNote && <p className="rt-acc__notice -ok" role="status">{savedNote}</p>}
           {!cohort && !suggestCourseId && (
             <Choice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
               options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key) }))} />
@@ -673,8 +720,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           </section>
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
           <div className="rt-pws-coh__formfoot">
-            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : cohort ? "Save changes" : "Save cohort"}</button>
-            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={(e) => save(e, true)}>Save and create another</button>}
+            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={(busy && pressed !== "another") || undefined}>{busy && pressed !== "another" ? "Saving…" : cohort ? "Save changes" : "Save cohort"}</button>
+            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} aria-busy={(busy && pressed === "another") || undefined} onClick={(e) => save(e, true)}>{busy && pressed === "another" ? "Saving…" : "Save and create another"}</button>}
           </div>
         </form>
       )}

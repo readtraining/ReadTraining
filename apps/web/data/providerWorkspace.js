@@ -24,6 +24,8 @@ export const pw = {
 
   // the Account review page: where the application stands, what our team asked for, and its history
   review: {
+    // shown to a team member who isn't the owner or an admin, in place of our team's note (lib: profile.review `private`)
+    privateNote: "Our team's message is shown to the account owner and admins only. Ask them for the details.",
     statuses: {
       pending: { pill: "Being reviewed", tone: "info", title: "Our team is checking your details", text: "Most providers hear back within 2 working days. We'll email you with the decision." },
       changes_requested: { pill: "Changes needed", tone: "warn", title: "A few changes are needed", text: "Make the changes below, then send your account back to our team." },
@@ -100,6 +102,8 @@ export const pw = {
     { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
     // the provider's own account: how it is set up, and the page learners see
     { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear" },
+    // `can`: only for the roles that may open it (the shared permission table)
+    { key: "team", label: "Team", href: "/provider/team", navIcon: "team", can: "provider.team.view" },
     { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile" },
   ],
   // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team; then Switch account (the
@@ -111,10 +115,20 @@ export const pw = {
     { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
 
-  // the tag beside a demo page's title (ProviderShell `demo`): on the development and test copies only, where the made-up records show
+  // the tag beside a demo page's title (ProviderShell `demo`): on the development and test copies only, where the made-up records
+  // show. `all` and `partly` are the general notes; the rest is each page's own note (the tag explains it), and the notes for demo
+  // widgets and settings tabs (DemoTag)
   demo: {
     all: { label: "Demo data", note: "The records on this page are made up for now. They become real when bookings and payments are connected." },
     partly: { label: "Partly demo", note: "Some records on this page are made up for now. They become real when bookings and payments are connected." },
+    orders: "These orders, customers and amounts are made up, to show how this page works. Your real orders show here once learners can book and pay.",
+    learners: "These learners and their details are made up, to show how this page works. Your real learners show here once they book.",
+    performance: "These figures, reviews and leads are made up, to show how this page works. Your real ones show here once learners book and review.",
+    packages: "These pricing plans are examples, kept only in this browser. They aren't used by your real courses yet.",
+    notifications: "These notifications are made up, to show how this page works. Real ones show here once booking goes live.",
+    requests: "These refund requests and disputes are made up, to show how this page works. Real ones show here once booking goes live.",
+    cohort: "This is a sample cohort with made-up learners, to show how the register and results work. Your real cohorts are in the Cohort list.",
+    attention: "Made up, to show how this works. Real refund requests, disputes, reviews, questions and leads show here once booking goes live.",
   },
 
   pages: {
@@ -134,7 +148,7 @@ export const pw = {
     newOrder: { title: "Create order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
     order: { title: "Order details" },
     notifications: { title: "Notifications", lead: "Updates on your courses, orders and reviews." },
-    settings: { title: "Provider settings", lead: "Your provider information, logo, terms, VAT, emails, FAQs, questions and integrations." },
+    settings: { title: "Provider settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
     requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
     team: { title: "Manage team members", lead: "People who can use this workspace, and what each of them can do." },

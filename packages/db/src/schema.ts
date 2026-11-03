@@ -109,10 +109,12 @@ export const organisations = pgTable(
     uniqueIndex('organisations_slug_key').on(t.slug),
     index('organisations_created_by_idx').on(t.createdBy),
     check('organisations_commission_range', sql`${t.commissionBps} between 0 and 6000`),
-    pgPolicy('organisations: read where member', {
+    // only the organisation's active owner and admins read the row (its mobile, commission, terms and our status note are private
+    // business details); other team members, like a tutor or an assistant, and anyone only invited, get what they need through the API
+    pgPolicy('organisations: read where owner or admin', {
       for: 'select',
       to: authenticatedRole,
-      using: sql`exists (select 1 from public.organisation_members m where m.organisation_id = ${t.id} and m.user_id = ${me})`,
+      using: sql`exists (select 1 from public.organisation_members m where m.organisation_id = ${t.id} and m.user_id = ${me} and m.role in ('owner', 'admin') and m.status = 'active')`,
     }),
   ],
 ).enableRLS()
@@ -544,7 +546,8 @@ export const cohorts = pgTable(
 // ---- coupons (Part B, B3) -------------------------------------------------------------------------------------------------
 // Discount codes an admin creates: a percentage or an amount off (pence), an optional start and end, an optional limit on how
 // many times it can be used, and what it applies to (everything, some categories by slug, or some courses by course number).
-// Codes are stored in capitals and are unique; a coupon is never deleted (turned off instead), so past orders can still name it.
+// Codes are stored in capitals and are unique; a used coupon is never deleted (turned off instead), so past orders can still name
+// it; one nobody has used can be (admin.coupons.remove).
 // `used` counts orders that used it (checkout adds to it once payments are real). Read and written by the API only.
 export const couponKind = pgEnum('coupon_kind', ['percent', 'amount'])
 export const couponScope = pgEnum('coupon_scope', ['all', 'categories', 'courses'])

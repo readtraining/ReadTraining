@@ -7,11 +7,13 @@ import { can } from '@readtraining/permissions'
 import { logActivity, logDenied } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
-import { createTRPCRouter, limit, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, orgProcedure, protectedProcedure, publicProcedure, refuse } from '../../trpc/trpc.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
 import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
+import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
+import { PRIVATE_ROLES } from '../provider/profile.mjs'
 
 // One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
 // person belongs to. These procedures add an identity, open a workspace (the server-side check behind every /provider and
@@ -67,6 +69,7 @@ export const organisationsRouter = createTRPCRouter({
         // a double click (or two tabs) sends this twice at once: the second waits here, then finds the first one's account
         const own = await ownedUnderLock(tx, ctx.user.id, 'provider')
         if (own && own.status !== 'rejected') throw new TRPCError({ code: 'CONFLICT', message: 'You already have a provider account. Use Switch account to open it.' })
+        await refuseTakenProviderName(tx, input.name, own?.id)
         if (own) {
           const [reopened] = await tx
             .update(organisations)
@@ -139,6 +142,24 @@ export const organisationsRouter = createTRPCRouter({
       return created
     }),
 
+  // Delete a business account that was never used (made by mistake, or to try it out): only by its owner, and only while nobody
+  // else is on it. It goes with its membership; the owner's own login and learner account stay. Logged (the log keeps no link).
+  deleteBusiness: protectedProcedure
+    .input(z.object({ organisationId: z.string().uuid() }))
+    .mutation(async ({ ctx, input, path }) => {
+      const mine = ctx.actor.memberships.find((m) => m.organisationId === input.organisationId && m.type === 'business')
+      if (!mine || !can(ctx.actor, 'business.settings.edit', { organisationId: input.organisationId })) await refuse(ctx, 'business.settings.edit', input.organisationId, path)
+      return ctx.db.transaction(async (tx) => {
+        const [org] = await tx.select({ name: organisations.name, type: organisations.type }).from(organisations).where(eq(organisations.id, input.organisationId)).for('update')
+        if (!org || org.type !== 'business') throw new TRPCError({ code: 'NOT_FOUND', message: 'That business account no longer exists.' })
+        const [others] = await tx.execute<{ n: number }>(sql`select count(*)::int n from public.organisation_members where organisation_id = ${input.organisationId}::uuid and user_id <> ${ctx.user.id}::uuid`)
+        if (others.n) throw new TRPCError({ code: 'BAD_REQUEST', message: `${org.name} has ${others.n} other ${others.n === 1 ? 'person' : 'people'} on it, so it can't be deleted. Remove them from the team first.` })
+        await tx.delete(organisations).where(eq(organisations.id, input.organisationId))
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'business', organisationId: null, action: 'business.deleted', targetType: 'organisation', targetId: input.organisationId, metadata: { name: org.name }, ip: ctx.ip })
+        return { ok: true }
+      })
+    }),
+
   // The person's own provider application when it was not approved: its name and the team's reason, for the page that offers
   // to apply again. null when there is none.
   myRejectedApplication: protectedProcedure.query(async ({ ctx }) => {
@@ -184,7 +205,9 @@ export const organisationsRouter = createTRPCRouter({
         welcome = last?.action === 'admin.provider_reinstated' ? 'reinstated' : last ? 'approved' : null
       }
       // userId: the browser's permission checks need it for "their own" rules (a tutor's own dates)
-      return { ...org, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
+      // our team's status note is for the owner and admins only (a tutor or an assistant sees the status, not the note)
+      const statusNote = PRIVATE_ROLES.includes(chosen.role) ? org.statusNote : null
+      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and

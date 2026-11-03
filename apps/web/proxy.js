@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { AUTH_ROUTES } from "@/lib/routes";
+import { AUTH_ROUTES, CATALOGUE_HREF } from "@/lib/routes";
 import { safeNext } from "@/lib/safeNext";
 
 // Runs before the account areas, the admin panel and the log in / sign up pages (Next.js 16 calls this file "proxy", formerly
@@ -16,6 +16,9 @@ import { safeNext } from "@/lib/safeNext";
 //   (an active admin who has finished two-step sign-in where required); anyone else, signed in or not, goes to the admin login,
 //   which never says why. The admin travels to the panel layout in the x-rt-admin header (set only here). An admin who opens
 //   /admin/login while already signed in goes straight to the panel.
+// - One address per subject: the search with one subject ticked (/courses?subject=security, as old links and shared searches
+//   have it) is that subject's own page, so it goes there for good (308), with the other filters kept. Two or more subjects stay
+//   on the search. Changes made on the search page itself don't reload it, so this only meets a page being opened.
 // /skill-saver only needs the fresh session: the page reads it on the server to show the right buttons and level.
 const PROTECTED = ["/account", "/business", "/provider"];
 const GUEST_ONLY = ["/login", "/signup"];
@@ -59,7 +62,22 @@ async function askApi(request, procedure, input, accessToken) {
   }
 }
 
+// /courses?subject=<one subject>&… → /courses/<subject>?…; null when the address is already the one to use
+function subjectPage(request) {
+  const params = new URLSearchParams(request.nextUrl.searchParams);
+  const subjects = params.getAll("subject");
+  if (subjects.length !== 1 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(subjects[0])) return null;
+  params.delete("subject");
+  const rest = params.toString();
+  return new URL(`${CATALOGUE_HREF}/${subjects[0]}${rest ? `?${rest}` : ""}`, request.url);
+}
+
 export async function proxy(request) {
+  if (request.nextUrl.pathname === CATALOGUE_HREF) {
+    const to = subjectPage(request);
+    // 307, not 308: a browser keeps a permanent redirect, so a subject retired later would stay a dead end for anyone who had it
+    return to ? NextResponse.redirect(to, 307) : NextResponse.next();
+  }
   // nobody may send the workspace or admin header in from outside
   const headers = new Headers(request.headers);
   headers.delete(WORKSPACE_HEADER);
@@ -127,7 +145,12 @@ export async function proxy(request) {
     let { status, data: workspace } = token ? await askApi(request, "organisations.openWorkspace", { type: space.type, path }, token) : { status: 401, data: null };
     // the API didn't answer in time (not a refusal): ask once more before saying access couldn't be checked
     if (status >= 500) ({ status, data: workspace } = await askApi(request, "organisations.openWorkspace", { type: space.type, path }, token));
-    if (status === 401) return toLogin(request);
+    if (status === 401) {
+      // the API no longer accepts this sign-in (the account was removed, or signed out everywhere): end it here as well, or the
+      // log-in page would see a signed-in person and send them straight back, round and round
+      await supabase.auth.signOut({ scope: "local" });
+      return withCookies(toLogin(request), response);
+    }
     if (status !== 200 || !workspace) {
       const url = request.nextUrl.clone();
       url.pathname = `/no-access/${space.type}`;
@@ -141,5 +164,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/account/:path*", "/business/:path*", "/provider/:path*", "/admin/:path*", "/login", "/signup", "/skill-saver"],
+  matcher: ["/courses", "/account/:path*", "/business/:path*", "/provider/:path*", "/admin/:path*", "/login", "/signup", "/skill-saver"],
 };

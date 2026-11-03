@@ -36,11 +36,17 @@ const allSortValues = [...sortOptions.map((o) => o.value), closestSortOption.val
 const norm = (s) => s.toLowerCase().replace(/\s+/g, "");
 const outward = (s) => s.trim().toLowerCase().split(/\s+/)[0];
 
-// Courses with a physical venue match when a venue's town or postcode matches.
-// Courses with no venue (online only) are available anywhere, so they always match.
-export function matchesLocation(course, query) {
+// A course can be taken from anywhere when it runs without a venue (live online, self-paced), even if it also has classroom
+// dates somewhere else. A classroom-only course needs a venue near the place; with no dates yet it has none, so a location
+// search leaves it out. `methods`: the ways of study asked for (ticked, or the page's own, as /courses/classroom/leeds): only
+// those count, so a classroom search near Leeds doesn't list a course because it also runs online.
+export const takenAnywhere = (course, methods = []) =>
+  (course.methods || []).some((m) => m !== "classroom" && (!methods.length || methods.includes(m)));
+
+// One of the course's venues is in the typed town, or at the typed postcode.
+export function venueIn(course, query) {
   const q = (query || "").trim();
-  if (!q || course.venues.length === 0) return true;
+  if (!q) return false;
   const qn = norm(q);
   const hasSpace = /\s/.test(q);
   return course.venues.some(
@@ -51,9 +57,15 @@ export function matchesLocation(course, query) {
   );
 }
 
+// A course matches a location when a venue is there, or when it can be taken online from anywhere.
+export function matchesLocation(course, query, methods = []) {
+  const q = (query || "").trim();
+  return !q || takenAnywhere(course, methods) || venueIn(course, q);
+}
+
 // --- filtering / sorting -----------------------------------------------------
 // Keyword matches title, subject and description, case-insensitive.
-const matchesKeyword = (course, q) => {
+export const matchesKeyword = (course, q) => {
   const needle = (q || "").trim().toLowerCase();
   if (!needle) return true;
   return [course.title, categoryName(course.subject), course.description].some((t) => (t || "").toLowerCase().includes(needle));
@@ -61,8 +73,8 @@ const matchesKeyword = (course, q) => {
 
 // Within this distance of where the learner is (a town or postcode found on the map), a classroom venue counts as near.
 export const NEAR_KM = 50;
-// A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM; one with no venue (online) is near anywhere.
-const nearPoint = (course, point) => course.venues.length === 0 || course.venues.some((v) => v.lat != null && distanceKm(point, v) <= NEAR_KM);
+// A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM, or it can be taken online (anywhere).
+const nearPoint = (course, point, methods = []) => takenAnywhere(course, methods) || course.venues.some((v) => v.lat != null && distanceKm(point, v) <= NEAR_KM);
 
 // subject, sub, method and level are arrays of ticked values. Inside a group a course matches ANY ticked value (OR);
 // between groups every group must match (AND). An empty array means "no filter" for that group. The price slider's ends mean
@@ -81,7 +93,7 @@ export function filterCourses(courses, { subject = [], sub = [], method = [], le
       (!level.length || level.includes(course.level)) &&
       (!low || (course.price != null && course.price >= min)) &&
       (!high || (course.price != null && course.price <= max)) &&
-      (point && location ? nearPoint(course, point) : matchesLocation(course, location)),
+      (point && location ? nearPoint(course, point, method) : matchesLocation(course, location, method)),
   );
 }
 
@@ -106,15 +118,37 @@ const distanceKm = (a, b) => {
 // Reference point for "closest": the first venue that matches the typed town or postcode.
 function locationPoint(courses, location) {
   for (const course of courses) {
-    const v = course.venues.find((venue) => matchesLocation({ venues: [venue] }, location));
+    const v = course.venues.find((venue) => venueIn({ venues: [venue] }, location));
     if (v) return v;
   }
   return null;
 }
 
+// Where "closest" measures from: the typed place on the map (catalogue.locate), or else the first venue in that town or postcode.
+export const referencePoint = (all, location, found = null) => found || (location ? locationPoint(all, location) : null);
+
+// The course's venue nearest `point`, with how far it is ({ km, city }); null when it has no venue on the map.
+export function nearestVenue(course, point) {
+  if (!point) return null;
+  let best = null;
+  for (const v of course.venues) {
+    if (v.lat == null) continue;
+    const km = distanceKm(point, v);
+    if (!best || km < best.km) best = { km, city: v.city };
+  }
+  return best;
+}
+
+// "About 12 miles away, Leeds" (UK distances in miles; under a mile says so)
+export function distanceLabel(near) {
+  const miles = near.km * 0.621371;
+  const town = near.city ? `, ${near.city}` : "";
+  return miles < 1 ? `Less than a mile away${town}` : `About ${Math.round(miles)} ${Math.round(miles) === 1 ? "mile" : "miles"} away${town}`;
+}
+
 export function sortCourses(courses, sort, location = "", all = courses, found = null) {
   if (sort === "closest") {
-    const point = found || locationPoint(all, location);
+    const point = referencePoint(all, location, found);
     if (!point) return sorters.popular ? [...courses].sort(sorters.popular) : courses;
     const dist = (c) => (c.venues.some((v) => v.lat != null) ? Math.min(...c.venues.filter((v) => v.lat != null).map((v) => distanceKm(point, v))) : Infinity);
     return [...courses].sort((a, b) => dist(a) - dist(b) || b.popularity - a.popularity);

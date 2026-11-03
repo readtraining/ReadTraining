@@ -1,66 +1,9 @@
-// The site header (components/header): its words and the four menus. Course, licence and town links come from the menus' own
-// data in data/home/menu.js, so every link points at a page that exists.
-import { subjects, studyMethods, locationCourses, locationFinderHref, cityHref } from "@/data/home/menu";
+// The site header (components/header): its words and the four menus. The subjects, study methods, popular courses, towns and
+// the courses you can search for near you are the live catalogue's (lib/nav.js, useNav), so every link has something behind it;
+// the licence and help links are fixed pages.
 import { CATALOGUE_HREF, HSE_TEST_HREF } from "@/lib/routes";
 
-const slug = (label) => label.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const lic = (s) => `/licences/${s}`;
-// the header writes "and" as "&" in subject names (as Teaching & Academics), so none of them breaks onto two lines
-const short = (label) => label.replace(/ and /g, " & ");
-
-// the outline icon (components/header/navIcons.jsx) for each subject
-const SUBJECT_ICONS = {
-  "accounting-and-finance": "calculator",
-  business: "briefcase",
-  construction: "helmet",
-  "first-aid": "aid",
-  "health-and-care": "heart",
-  "health-and-safety": "warning",
-  hospitality: "food",
-  lifestyle: "sparkle",
-  marketing: "megaphone",
-  "personal-development": "growth",
-  security: "shield",
-  "teaching-and-academics": "cap",
-};
-// each subject's number of courses and its three most popular come from the real catalogue (API catalogue.menu), read by the
-// menu card itself (components/header/NavCard.jsx) when it opens
-const courseSubjects = subjects.map((s) => {
-  const id = slug(s.label);
-  return {
-    id,
-    label: short(s.label),
-    icon: SUBJECT_ICONS[id] || "book",
-    href: s.href,
-    all: `All ${short(s.label)} courses`,
-  };
-});
-
-// the courses the finder can search for, for "Popular courses" and the Near you course list
-const withPage = locationCourses.filter((c) => c.q);
-const byLabel = (label) => withPage.find((c) => c.label === label);
-const POPULAR = [
-  ["Door Supervisor Course", "Security"],
-  ["Emergency First Aid at Work Course", "First Aid"],
-  ["CSCS Green Card Course", "Construction"],
-  ["Fire Marshal Course", "Health and Safety"],
-];
-
-// the cities under Near you, with where they are (to find the nearest one to "Use my location")
-const CITIES = [
-  ["London", 51.5074, -0.1278],
-  ["Birmingham", 52.4862, -1.8904],
-  ["Manchester", 53.4808, -2.2426],
-  ["Leeds", 53.8008, -1.5491],
-  ["Glasgow", 55.8642, -4.2518],
-  ["Liverpool", 53.4084, -2.9916],
-  ["Bristol", 51.4545, -2.5879],
-  ["Sheffield", 53.3811, -1.4701],
-  ["Newcastle", 54.9783, -1.6178],
-  ["Cardiff", 51.4816, -3.1791],
-  ["Edinburgh", 55.9533, -3.1883],
-  ["Nottingham", 52.9548, -1.1581],
-];
 
 export const headerNav = {
   // the strip's audience links: the one for the page you are on shows as current ("For learners" is the home page)
@@ -82,14 +25,10 @@ export const headerNav = {
   courses: {
     title: "Browse by subject",
     topTitle: "Top courses",
-    methods: studyMethods.map((m) => ({ label: m.label === "Online self-paced" ? "Self-paced" : m.label, href: m.href })),
     all: { label: "Browse all courses", href: CATALOGUE_HREF },
-    subjects: courseSubjects,
-    popular: {
-      title: "Popular courses",
-      hint: "Choose a subject to see its courses",
-      items: POPULAR.map(([label, meta]) => ({ label: byLabel(label)?.label, meta: short(meta), href: byLabel(label)?.href })).filter((c) => c.href),
-    },
+    // the subjects, methods and popular courses come from the live catalogue (useNav)
+    popular: { title: "Popular courses", hint: "Choose a subject to see its courses", count: 4 },
+    allOf: (label) => `All ${label} courses`,
   },
 
   // what each licence or card needs, in one line (the guides in data/licences.js have the detail)
@@ -132,13 +71,13 @@ export const headerNav = {
     title: "Find a course near you",
     town: { label: "Town or postcode", placeholder: "e.g. Leeds or LS1 4AP" },
     course: { label: "Course", any: "Any course" },
-    courses: withPage.map((c) => ({ value: slug(c.label), label: c.label })),
     submit: "Find courses",
     locate: "Use my location",
     locating: "Finding you...",
     locateFailed: "We couldn't get your location. Type your town or postcode instead.",
-    citiesTitle: "Popular cities",
-    cities: CITIES.map(([name, lat, lng]) => ({ name, lat, lng, href: cityHref(name) })),
+    // the towns with live dates (useNav), most courses first
+    citiesTitle: "Towns with courses",
+    cities: 12,
     online: {
       title: "No venue near you?",
       items: [
@@ -147,11 +86,6 @@ export const headerNav = {
       ],
     },
     all: { label: "Browse all courses", href: CATALOGUE_HREF },
-    // where the search goes: the chosen course's dates in that town, or every course there
-    href: (town, courseValue) => {
-      const c = withPage.find((x) => slug(x.label) === courseValue);
-      return c ? locationFinderHref(c, town) : cityHref(town);
-    },
   },
 
   help: {
@@ -186,14 +120,15 @@ export const headerNav = {
   },
 };
 
-// the same four menus in the phone menu (components/home/HomeMobileMenu): a section opens to its groups, a group to its links
+// the same four menus in the phone menu (components/home/HomeMobileMenu): a section opens to its groups, a group to its links.
+// `nav` is the live catalogue's (useNav).
 const N = headerNav;
-export const mobileMenuList = [
+export const mobileMenu = (nav) => [
   {
     title: N.sections[0].label,
     links: [
-      { title: N.courses.title, links: N.courses.subjects.map((s) => ({ label: s.label, href: s.href })) },
-      { title: "Study method", links: N.courses.methods },
+      { title: N.courses.title, links: nav.subjects.map((s) => ({ label: s.label, href: s.href })) },
+      { title: "Study method", links: nav.methods.map((m) => ({ label: m.name, href: m.href })) },
       { label: N.courses.all.label, href: N.courses.all.href },
     ],
   },
@@ -204,8 +139,9 @@ export const mobileMenuList = [
   {
     title: N.sections[2].label,
     links: [
-      { title: N.near.citiesTitle, links: N.near.cities.map((c) => ({ label: c.name, href: c.href })) },
-      { title: N.near.online.title, links: N.near.online.items.map((i) => ({ label: i.label, href: i.href })) },
+      ...(nav.towns.length ? [{ title: N.near.citiesTitle, links: nav.towns.slice(0, N.near.cities).map((t) => ({ label: t.name, href: t.href })) }] : []),
+      // "No venue near you?": the online ways of study in use; left out when there are none
+      ...[{ title: N.near.online.title, links: N.near.online.items.filter((i) => nav.methods.some((m) => i.href.endsWith(m.slug))).map((i) => ({ label: i.label, href: i.href })) }].filter((g) => g.links.length),
       { label: N.near.all.label, href: N.near.all.href },
     ],
   },

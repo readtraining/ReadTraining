@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server'
 
 import { asc, courseExams, courseFaqs, courseImages, courseUnits, eq, sql } from '@readtraining/db'
 
@@ -36,6 +37,7 @@ export type Listing = {
   duration: string
   publishedAt: string | null
   imageUrl: string | null
+  imageAlt: string
   skillSaver: boolean
   nextDate: { method: string; date: string; city: string | null } | null
   popularity: number
@@ -52,12 +54,12 @@ export function runLength(sessions: Session[]) {
 const lengthText = (n: number) => (n ? `${n} ${n === 1 ? 'day' : 'days'}` : '')
 
 // The live offerings and their bookable dates (starting today or later, not cancelled, taking bookings).
-async function offeringsAndDates(db: typeof Db, where = sql`true`) {
+async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = false) {
   const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null }>(sql`
     select c.id, c.parent_id, c.slug, c.title, c.method, c.model, c.price_pence, c.skill_saver, c.is_public, c.listed, c.organisation_id,
            o.name provider, o.slug provider_slug, o.logo_path, o.city provider_city
     from public.courses c join public.organisations o on o.id = c.organisation_id
-    where c.kind = 'provider' and c.status = 'live' and o.status = 'active' and ${where}`)
+    where c.kind = 'provider' and ${anyStatus ? sql`true` : sql`c.status = 'live' and o.status = 'active'`} and ${where}`)
   const ids = offers.map((o) => o.id)
   const dates = ids.length
     ? await db.execute<{ id: string; course_id: number; method: string; sessions: Session[]; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; capacity: number; details: string | null; join_url: string | null; venue_name: string | null; street: string | null; city: string | null; postcode: string | null; lat: number | null; lng: number | null }>(sql`
@@ -72,12 +74,13 @@ async function offeringsAndDates(db: typeof Db, where = sql`true`) {
 
 // Every listing, most popular first. (Popularity counts providers and upcoming dates until there are bookings to count.)
 export async function loadListings(db: typeof Db): Promise<Listing[]> {
-  const pages = await db.execute<{ id: number; kind: 'shared' | 'provider'; slug: string; title: string; summary: string | null; parent_id: number | null; organisation_id: string | null; level: string | null; published_at: string | null; category: string | null; subcategory: string | null; topic: string | null; cover: string | null; is_public: boolean; listed: boolean; provider_active: boolean | null }>(sql`
+  const pages = await db.execute<{ id: number; kind: 'shared' | 'provider'; slug: string; title: string; summary: string | null; parent_id: number | null; organisation_id: string | null; level: string | null; published_at: string | null; category: string | null; subcategory: string | null; topic: string | null; cover: string | null; cover_alt: string | null; is_public: boolean; listed: boolean; provider_active: boolean | null }>(sql`
     select c.id, c.kind, c.slug, c.title, c.summary, c.parent_id, c.organisation_id, c.level, c.published_at, c.is_public, c.listed,
            (select slug from public.categories where id = c.category_id) category,
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
            (select slug from public.topics where id = c.topic_id) topic,
            (select i.path from public.course_images i where i.course_id = c.id order by i.position limit 1) cover,
+           (select i.alt from public.course_images i where i.course_id = c.id order by i.position limit 1) cover_alt,
            (select o.status = 'active' from public.organisations o where o.id = c.organisation_id) provider_active
     from public.courses c
     where c.status = 'live' and c.listed and (c.kind = 'shared' or (c.parent_id is null and c.is_public))`)
@@ -118,6 +121,8 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
       duration: first ? lengthText(runLength(first.sessions)) : methods.length === 1 && methods[0] === 'self-paced' ? 'Self-paced' : '',
       publishedAt: p.published_at ? new Date(p.published_at).toISOString() : null,
       imageUrl: mediaUrl(p.cover),
+      // what the cover shows, as the provider described it (ALT text), or the course's name
+      imageAlt: p.cover_alt || p.title,
       skillSaver: mine.some((o) => o.skill_saver),
       nextDate: first ? { method: first.method, date: first.starts_on, city: first.city } : null,
       popularity: providers * 100 + ds.length,
@@ -130,7 +135,12 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
 // A shared page's offerings are the providers' courses on it; a provider course's page shows its own dates (and names the shared
 // page it is on). Null when there is no such live page. A course number (an old numeric link, /course/1012) finds its course too;
 // the page then sends the visitor on to its address.
-export async function loadCoursePage(db: typeof Db, slug: string) {
+// `preview` (the editors' Preview, provider.courses.preview / admin.courses.preview): the course by its id whatever its status, a
+// provider course with its own dates even before it is live, and a change still waiting for approval (`pending`) shown as if
+// approved, so the page is the one learners will see. The caller checks who may see it.
+export type CoursePreview = { id: number; pending?: Record<string, unknown> | null }
+const PREVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'units', 'exams', 'faqs'] as const
+export async function loadCoursePage(db: typeof Db, slug: string, preview: CoursePreview | null = null) {
   const id = /^\d{1,9}$/.test(slug) ? Number(slug) : null
   const [c] = await db.execute<Row & { id: number; kind: 'shared' | 'provider'; parent_id: number | null; organisation_id: string | null; method: string | null; price_pence: number | null }>(sql`
     select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.method, c.model,
@@ -139,8 +149,8 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
            (select slug from public.topics where id = c.topic_id) topic
     from public.courses c
-    where ${id === null ? sql`c.slug = ${slug}` : sql`c.id = ${id} and c.is_public`} and c.status = 'live'
-      and (c.kind = 'shared' or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.status = 'active'))`)
+    where ${preview ? sql`c.id = ${preview.id}` : sql`${id === null ? sql`c.slug = ${slug}` : sql`c.id = ${id} and c.is_public`} and c.status = 'live'
+      and (c.kind = 'shared' or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.status = 'active'))`}`)
   if (!c) return null
   const [units, exams, faqs, images] = await Promise.all([
     db.select().from(courseUnits).where(eq(courseUnits.courseId, c.id)).orderBy(asc(courseUnits.position)),
@@ -149,13 +159,13 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
     db.select().from(courseImages).where(eq(courseImages.courseId, c.id)).orderBy(asc(courseImages.position)),
   ])
   // a shared page lists the providers' public, listed courses on it; a provider course is its own offering
-  const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`)
+  const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`, Boolean(preview) && c.kind === 'provider')
   const [parent] = c.parent_id ? await db.execute<{ slug: string; title: string }>(sql`select slug, title from public.courses where id = ${c.parent_id} and status = 'live'`) : []
   const [provider] = c.kind === 'provider'
     ? await db.execute<{ name: string; slug: string; logo_path: string | null; headline: string | null; city: string | null; booking_terms: string | null; cancellation_policy: string | null }>(sql`
         select name, slug, logo_path, headline, city, booking_terms, cancellation_policy from public.organisations where id = ${c.organisation_id}::uuid`)
     : []
-  return {
+  const page = {
     id: c.id,
     kind: c.kind,
     slug: c.slug as string,
@@ -209,6 +219,10 @@ export async function loadCoursePage(db: typeof Db, slug: string) {
         })),
     })),
   }
+  if (!preview?.pending) return page
+  // a waiting change, shown as if approved (the same names as the page's fields)
+  const pending = Object.fromEntries(PREVIEWED.filter((k) => preview.pending![k] !== undefined).map((k) => [k, preview.pending![k]]))
+  return { ...page, ...pending } as typeof page
 }
 
 // ---- where learners are: a town, place or postcode on the map (postcodes.io, Open Government Licence; only the words typed are sent)
@@ -220,13 +234,13 @@ export async function locate(q: string) {
   const key = q.trim().toLowerCase()
   if (!key) return null
   if (located.has(key)) return located.get(key)!
+  // a 404 (no such postcode) is an answer; a timeout, a network error or a server error is not: it throws, so nothing is cached and
+  // the caller can tell "not found" from "couldn't ask" (a town page doesn't 404, the search doesn't say "we couldn't find it")
   const get = async (path: string) => {
-    try {
-      const res = await fetch(`https://api.postcodes.io${path}`, { signal: AbortSignal.timeout(4000) })
-      return res.ok ? ((await res.json()) as { result?: unknown }).result : null
-    } catch {
-      return null
-    }
+    const res = await fetch(`https://api.postcodes.io${path}`, { signal: AbortSignal.timeout(4000) }).catch(() => null)
+    if (res?.status === 404) return null
+    if (!res?.ok) throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: "We can't look places up right now. Please try again in a moment." })
+    return ((await res.json()) as { result?: unknown }).result
   }
   let found: { lat: number; lng: number; label: string } | null = null
   if (POSTCODE.test(key)) {
@@ -236,9 +250,11 @@ export async function locate(q: string) {
     const r = (await get(`/outcodes/${encodeURIComponent(key)}`)) as { latitude?: number; longitude?: number } | null
     if (r?.latitude != null && r.longitude != null) found = { lat: r.latitude, lng: r.longitude, label: key.toUpperCase() }
   } else {
-    const r = (await get(`/places?q=${encodeURIComponent(key)}&limit=5`)) as { name_1?: string; latitude?: number; longitude?: number; local_type?: string }[] | null
-    // a town or city first, if one matches; otherwise the first place
-    const best = r?.find((p) => /city|town/i.test(p.local_type ?? '')) ?? r?.[0]
+    const r = (await get(`/places?q=${encodeURIComponent(key)}&limit=20`)) as { name_1?: string; latitude?: number; longitude?: number; local_type?: string }[] | null
+    // the place with exactly that name first (a town or city before a hamlet of the same name), then a town or city, then the first
+    const same = (p: { name_1?: string }) => (p.name_1 ?? '').toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() === key.replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+    const town = (p: { local_type?: string }) => /city|town/i.test(p.local_type ?? '')
+    const best = r?.find((p) => same(p) && town(p)) ?? r?.find(same) ?? r?.find(town) ?? r?.[0]
     if (best?.latitude != null && best.longitude != null) found = { lat: best.latitude, lng: best.longitude, label: best.name_1 ?? q.trim() }
   }
   if (located.size > 2000) located.clear()

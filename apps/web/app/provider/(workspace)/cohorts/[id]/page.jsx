@@ -18,7 +18,7 @@ export default async function Page(props) {
   const { id } = await props.params;
   const real = isCohortId(id);
   return (
-    <ProviderShell demo={!real} current="cohorts" title={real ? <CohortDetailTitle cohortId={id} fallback={p.title} /> : <CohortTitle cohortId={id} fallback={p.title} />} back={{ label: "Cohorts", href: "/provider/cohorts" }}>
+    <ProviderShell demo={real ? null : pw.demo.cohort} current="cohorts" title={real ? <CohortDetailTitle cohortId={id} fallback={p.title} /> : <CohortTitle cohortId={id} fallback={p.title} />} back={{ label: "Cohorts", href: "/provider/cohorts" }}>
       {real ? <ProviderCohortDetail cohortId={id} /> : <ProviderCohort cohortId={id} />}
     </ProviderShell>
   );

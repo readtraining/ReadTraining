@@ -86,12 +86,14 @@ export const adminReviewsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await check(ctx.db, input, null)
       const v = values(input)
-      const [row] = await ctx.db.execute<{ id: string }>(sql`
-        insert into ${reviews} (source, status, reviewer_name, rating, body, review_date, date_is_approximate, topic, origin, origin_url, on_home, created_by)
-        values ('imported', ${v.status}, ${v.name}, ${v.rating}, ${v.text}, ${v.reviewDate}::date, ${v.dateIsApproximate}, ${v.topic}, ${v.origin}, ${v.originUrl}, ${v.onHome}, ${ctx.user.id}::uuid)
-        returning id`)
-      await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.review_created', targetType: 'review', targetId: row.id, metadata: logged(input), ip: ctx.ip })
-      return { id: row.id }
+      return ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ id: string }>(sql`
+          insert into ${reviews} (source, status, reviewer_name, rating, body, review_date, date_is_approximate, topic, origin, origin_url, on_home, created_by)
+          values ('imported', ${v.status}, ${v.name}, ${v.rating}, ${v.text}, ${v.reviewDate}::date, ${v.dateIsApproximate}, ${v.topic}, ${v.origin}, ${v.originUrl}, ${v.onHome}, ${ctx.user.id}::uuid)
+          returning id`)
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.review_created', targetType: 'review', targetId: row.id, metadata: logged(input), ip: ctx.ip })
+        return { id: row.id }
+      })
     }),
 
   // Change an imported review (a booking review's words are the learner's: only its status changes, through setStatus).
@@ -100,24 +102,28 @@ export const adminReviewsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await check(ctx.db, input, input.id)
       const v = values(input)
-      const [row] = await ctx.db.execute<{ id: string }>(sql`
-        update ${reviews} set status = ${v.status}, reviewer_name = ${v.name}, rating = ${v.rating}, body = ${v.text}, review_date = ${v.reviewDate}::date,
-               date_is_approximate = ${v.dateIsApproximate}, topic = ${v.topic}, origin = ${v.origin}, origin_url = ${v.originUrl}, on_home = ${v.onHome}, updated_at = now()
-        where id = ${input.id}::uuid and source = 'imported' returning id`)
-      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That review no longer exists.' })
-      await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.review_updated', targetType: 'review', targetId: row.id, metadata: logged(input), ip: ctx.ip })
-      return { ok: true }
+      return ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ id: string }>(sql`
+          update ${reviews} set status = ${v.status}, reviewer_name = ${v.name}, rating = ${v.rating}, body = ${v.text}, review_date = ${v.reviewDate}::date,
+                 date_is_approximate = ${v.dateIsApproximate}, topic = ${v.topic}, origin = ${v.origin}, origin_url = ${v.originUrl}, on_home = ${v.onHome}, updated_at = now()
+          where id = ${input.id}::uuid and source = 'imported' returning id`)
+        if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That review no longer exists.' })
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.review_updated', targetType: 'review', targetId: row.id, metadata: logged(input), ip: ctx.ip })
+        return { ok: true }
+      })
     }),
 
   // Publish a review on the website, or hide it (it stays here and can be published again).
   setStatus: adminProcedure('admin.content.edit')
     .input(z.object({ id: z.string().uuid(), status: z.enum(['published', 'hidden']) }))
     .mutation(async ({ ctx, input }) => {
-      const [row] = await ctx.db.execute<{ id: string; reviewer_name: string }>(sql`
-        update ${reviews} set status = ${input.status}, updated_at = now() where id = ${input.id}::uuid returning id, reviewer_name`)
-      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That review no longer exists.' })
-      await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: input.status === 'published' ? 'admin.review_published' : 'admin.review_hidden', targetType: 'review', targetId: row.id, metadata: { name: row.reviewer_name }, ip: ctx.ip })
-      return { ok: true }
+      return ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ id: string; reviewer_name: string }>(sql`
+          update ${reviews} set status = ${input.status}, updated_at = now() where id = ${input.id}::uuid returning id, reviewer_name`)
+        if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That review no longer exists.' })
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: input.status === 'published' ? 'admin.review_published' : 'admin.review_hidden', targetType: 'review', targetId: row.id, metadata: { name: row.reviewer_name }, ip: ctx.ip })
+        return { ok: true }
+      })
     }),
 
   // Delete an imported review for good (one added by mistake, or a customer asked for it to come down). A booking review is
@@ -125,11 +131,13 @@ export const adminReviewsRouter = createTRPCRouter({
   remove: adminProcedure('admin.content.edit')
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const [row] = await ctx.db.execute<{ id: string; reviewer_name: string; rating: number }>(sql`
-        delete from ${reviews} where id = ${input.id}::uuid and source = 'imported' returning id, reviewer_name, rating`)
-      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That review no longer exists.' })
-      await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.review_deleted', targetType: 'review', targetId: row.id, metadata: { name: row.reviewer_name, rating: row.rating }, ip: ctx.ip })
-      return { ok: true }
+      return ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ id: string; reviewer_name: string; rating: number }>(sql`
+          delete from ${reviews} where id = ${input.id}::uuid and source = 'imported' returning id, reviewer_name, rating`)
+        if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That review no longer exists.' })
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.review_deleted', targetType: 'review', targetId: row.id, metadata: { name: row.reviewer_name, rating: row.rating }, ip: ctx.ip })
+        return { ok: true }
+      })
     }),
 })
 

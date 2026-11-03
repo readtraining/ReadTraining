@@ -5,12 +5,17 @@ import Link from "next/link";
 import {
   PAGE_SIZE,
   PRICE_BOUNDS,
-  PROJECT_NAME,
   buildCatalogueQuery,
   closestSortOption,
   filterCourses,
   catalogueFilterGroups,
   sortCourses,
+  venueIn,
+  takenAnywhere,
+  referencePoint,
+  nearestVenue,
+  distanceLabel,
+  NEAR_KM,
   sortOptions,
 } from "@/lib/catalogueFilters";
 import { subcategoryOptions } from "@/lib/taxonomy";
@@ -30,7 +35,8 @@ import { ErrorState } from "@/components/states/States";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 
-// Quick links under the search: each applies the matching subject filter (no navigation).
+// Quick links under the search: each applies the matching subject filter (no navigation). One whose subject has no live course
+// isn't shown, so none leads to an empty list.
 const popularSearches = [
   { label: "Door Supervisor", subject: "security" },
   { label: "CSCS Green Card", subject: "construction" },
@@ -127,7 +133,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
     if (next === pushedQ.current) return;
     const t = setTimeout(() => {
       pushedQ.current = next;
-      update({ q: next });
+      update({ q: next }, { typing: "q" });
     }, 300);
     return () => clearTimeout(t);
   });
@@ -136,7 +142,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
     if (next === pushedLocation.current) return;
     const t = setTimeout(() => {
       pushedLocation.current = next;
-      update({ location: next });
+      update({ location: next }, { typing: "location" });
     }, 350);
     return () => clearTimeout(t);
   });
@@ -145,10 +151,22 @@ export default function CourseCatalogue({ courses, scope = null }) {
   // found (or if it isn't), the town or postcode is matched by its words
   const located = api.catalogue.locate.useQuery({ q: state.location.trim() }, { enabled: state.location.trim().length >= 2, staleTime: Infinity, retry: false });
   const point = state.location.trim().length >= 2 ? located.data ?? null : null;
-  const results = useMemo(() => sortCourses(filterCourses(courses, state, point), state.sort, state.location, courses, point), [courses, state, point]);
-  // a town or postcode that isn't on the map and matches no venue: say so, rather than let the online courses (which run
-  // anywhere) look like courses near it
-  const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && !results.some((c) => c.venues.length);
+  // the ways of study asked for: ticked, or a method page's own (/courses/classroom/leeds); a location only counts those
+  const methods = state.method.length ? state.method : scope?.method ? [scope.method] : [];
+  const results = useMemo(() => sortCourses(filterCourses(courses, { ...state, method: methods }, point), state.sort, state.location, courses, point), [courses, state, point, methods.join()]); // eslint-disable-line react-hooks/exhaustive-deps -- methods by value
+  // a town or postcode that isn't on the map and matches no venue: say so, rather than let the courses that can be taken online
+  // (takenAnywhere) look like courses near it. Only those are left then, so the message can say they can be taken online.
+  // with a place entered, each card says how far its nearest venue is (or that it is taken online)
+  const from = state.location.trim() ? referencePoint(courses, state.location.trim(), point) : null;
+  const distanceOf = (course) => {
+    if (!from) return "";
+    const near = nearestVenue(course, from);
+    // a course with a venue within reach: how far; one taken online that has no venue near: online first, the nearest venue after
+    if (near && near.km <= NEAR_KM) return distanceLabel(near);
+    if (takenAnywhere(course, methods)) return near ? `Online, from anywhere. Nearest venue: ${distanceLabel(near).replace(/^About/, "about")}` : "Online, from anywhere";
+    return near ? distanceLabel(near) : "";
+  };
+  const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && !results.some((c) => venueIn(c, state.location));
   const noMatches = results.length === 0;
   // Only what matches: with zero matches the page says so plainly and offers to loosen the filters; it never fills the space
   // with courses that don't match (Milestone 2's rule for an empty filter).
@@ -256,7 +274,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
   };
   // A course page keeps its own heading; otherwise one ticked subject names the page and none or several keep the general one.
   const subjectTitle = state.subject.length === 1 ? optionLabel(subjectGroup, state.subject[0]) : "";
-  const heading = scope ? scope.title : subjectTitle ? `${subjectTitle.replace(/ and /g, " & ")} Training Courses - ${PROJECT_NAME}` : "Find the right course for you";
+  const heading = scope ? scope.title : subjectTitle ? `${subjectTitle.replace(/ and /g, " & ")} training courses` : "Find the right course for you";
   const showFilters = !scope || scope.filters !== false;
 
   // "Remove last filter": undo the latest change; with no history (e.g. a shared URL) drop the last active chip.
@@ -272,17 +290,17 @@ export default function CourseCatalogue({ courses, scope = null }) {
     catalogueFilterGroups().forEach((g) => {
       out[g.key] = {};
       g.options.forEach((o) => {
-        out[g.key][o.value] = filterCourses(courses, { ...state, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }, point).length;
+        out[g.key][o.value] = filterCourses(courses, { ...state, method: methods, [g.key]: [o.value], ...(g.key === "subject" ? { sub: [] } : {}) }, point).length;
       });
     });
     out.sub = {};
     [...new Set([...state.subject, ...(scope?.subject ? [scope.subject] : [])])].forEach((sv) =>
       subcategoryOptions(sv).forEach((o) => {
-        out.sub[o.value] = filterCourses(courses, { ...state, sub: [o.value] }, point).length;
+        out.sub[o.value] = filterCourses(courses, { ...state, method: methods, sub: [o.value] }, point).length;
       }),
     );
     return out;
-  }, [courses, state, point]);
+  }, [courses, state, point, methods.join()]); // eslint-disable-line react-hooks/exhaustive-deps -- methods by value
 
   const showingFrom = (page - 1) * PAGE_SIZE + 1;
   const showingTo = Math.min(page * PAGE_SIZE, results.length);
@@ -299,7 +317,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
           <form className="rt-cat-search" onSubmit={submitSearch} role="search" noValidate>
             <div className="rt-cat-search__field">
               <i className="icon-search text-16 text-light-1"></i>
-              <input type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Course or skill" aria-label="Course or skill" autoComplete="off" />
+              <input type="search" name="q" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Course or skill" aria-label="Course or skill" autoComplete="off" />
               {qDraft && (
                 <button
                   type="button"
@@ -318,7 +336,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
             <span className="rt-cat-search__divider" aria-hidden="true"></span>
             <div className="rt-cat-search__field">
               <i className="icon-location text-16 text-light-1"></i>
-              <input type="text" value={locationDraft} onChange={(e) => setLocationDraft(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" autoComplete="postal-code" />
+              <input type="text" name="location" value={locationDraft} onChange={(e) => setLocationDraft(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" autoComplete="postal-code" />
               {locationDraft && (
                 <button
                   type="button"
@@ -353,7 +371,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
             <div className="rt-cat-popular">
               <span className="rt-cat-popular__label">Popular searches:</span>
               <div className="rt-cat-popular__list">
-                {popularSearches.map((item) => (
+                {popularSearches.filter((item) => courses.some((c) => c.subject === item.subject)).map((item) => (
                   <button key={item.label} type="button" className="rt-cat-popular__tag" onClick={() => applyPatch({ subject: [item.subject], sub: [] })}>
                     {item.label}
                   </button>
@@ -413,7 +431,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
                     hide={scope?.hide}
                     baseSubject={scope?.subject}
                     onToggle={toggle}
-                    onPriceChange={(min, max) => applyPatch({ min, max })}
+                    onPriceChange={(min, max, o) => update({ min, max }, { afterCommit, typing: o?.typing ? "price" : null })}
                   />
                 </div>
               </div>
@@ -456,7 +474,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
             <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} />
             {placeUnknown && (
               <p className="rt-res__place" role="status">
-                We couldn’t find “{state.location.trim()}”. Check the town or postcode.{results.length > 0 ? " The courses below are online, so you can take them from anywhere." : ""}
+                We couldn’t find “{state.location.trim()}”. Check the town or postcode.{results.length > 0 ? " The courses below can be taken online, from anywhere." : ""}
               </p>
             )}
 
@@ -469,7 +487,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
 
             <div className="rt-res__list" id="rt-res-list" tabIndex={-1}>
               {pageItems.map((course, i) => (
-                <CatalogueCourseCard key={course.id} course={course} index={(page - 1) * PAGE_SIZE + i} onNotify={setToast} />
+                <CatalogueCourseCard key={course.id} course={course} index={(page - 1) * PAGE_SIZE + i} onNotify={setToast} distance={distanceOf(course)} />
               ))}
             </div>
 

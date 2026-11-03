@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { account } from "@/data/account";
 import { cardExpired, getCards, removeCard, setDefaultCard } from "@/lib/account";
 import { EmptyState } from "@/components/states/States";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 
 const copy = account.payments;
 
@@ -13,6 +14,7 @@ const copy = account.payments;
 export default function AccountPayments() {
   const [cards, setCards] = useState(null);
   const [announce, setAnnounce] = useState("");
+  const [removing, setRemoving] = useState(null); // the card waiting for "Remove this card?"
   useEffect(() => setCards(getCards()), []);
   if (!cards) return null;
 
@@ -42,7 +44,7 @@ export default function AccountPayments() {
                   </div>
                   <div className="rt-acc__cardactions">
                     {c.default ? <span className="rt-pill rt-acc__status -confirmed">{copy.default}</span> : <button type="button" className="fb-textlink rt-biz__linkbtn" onClick={() => { setDefaultCard(c.id); reload(`${c.brand} ending ${c.last4} is now your default card.`); }}>{copy.makeDefault}<span className="rt-sr"> {c.brand} ending {c.last4}</span></button>}
-                    <button type="button" className="rt-biz__remove" onClick={() => { removeCard(c.id); reload(copy.removed.replace("{last4}", c.last4)); }}>{copy.remove}<span className="rt-sr"> {c.brand} ending {c.last4}</span></button>
+                    <button type="button" className="rt-biz__remove" aria-haspopup="dialog" onClick={() => setRemoving(c)}>{copy.remove}<span className="rt-sr"> {c.brand} ending {c.last4}</span></button>
                   </div>
                 </li>
               );
@@ -52,6 +54,7 @@ export default function AccountPayments() {
           <EmptyState inCard title={copy.none.text} />
         )}
       </section>
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this card?" text={removing ? `${removing.brand} ending ${removing.last4} comes off your account.` : ""} confirmLabel="Remove card" onConfirm={() => { const c = removing; setRemoving(null); removeCard(c.id); reload(copy.removed.replace("{last4}", c.last4)); }} />
     </div>
   );
 }

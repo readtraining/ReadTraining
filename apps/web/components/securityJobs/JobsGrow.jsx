@@ -14,12 +14,17 @@ export default function JobsGrow({ grow: g }) {
             <Eyebrow>{g.eyebrow}</Eyebrow>
             <h2 className="fb-title" id="rt-jobs-grow-h">{g.title}</h2>
             <p className="fb-lede">{g.text}</p>
-            <h3 className="rt-jobs__need">{g.addTitle}</h3>
-            <ul className="rt-jobs__adds">
-              {g.adds.map((a) => (
-                <li key={a.label}><Link href={a.href} className="rt-tr__filter">{a.label}<i className="icon-arrow-right text-11" aria-hidden="true"></i></Link></li>
-              ))}
-            </ul>
+            {/* only the licences with live courses (the page checks: lib/catalogueServer.js liveLinks) */}
+            {g.adds.length > 0 && (
+              <>
+                <h3 className="rt-jobs__need">{g.addTitle}</h3>
+                <ul className="rt-jobs__adds">
+                  {g.adds.map((a) => (
+                    <li key={a.label}><Link href={a.href} className="rt-tr__filter">{a.label}<i className="icon-arrow-right text-11" aria-hidden="true"></i></Link></li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
           <ol className="fb-timeline rt-jobs__timeline">
             {g.steps.map((s) => (

@@ -54,8 +54,10 @@ export function getCoursePage(slug, courses) {
       lead: page.lead,
       crumb: page.label,
       allHref: CATALOGUE_HREF,
-      links: coursePages.filter((p) => p.slug !== slug).map((p) => ({ label: p.label, href: coursePageHref(p.slug) })),
+      // the other written pages, each only while it lists a live course
+      links: coursePages.filter((p) => p.slug !== slug && select(courses, p.select).length > 0).map((p) => ({ label: p.label, href: coursePageHref(p.slug) })),
       subject: page.select.subject,
+      method: page.select.method, // a method page's own way of study (a town page's location search counts only that one)
       hide: page.hide,
       filters: page.filters !== false,
       about: page.about,
@@ -76,10 +78,24 @@ export function getCourseTowns(slug, courses) {
 export const getCourseTownParams = (courses) => getCoursePageSlugs().flatMap((slug) => getCourseTowns(slug, courses).map((t) => ({ slug, town: t.slug })));
 
 // A course page narrowed to one town: the same catalogue with the town as its location, its own title and breadcrumb.
-export function getCourseTownPage(slug, town, courses) {
+// A town with no venue for this page yet still has a page (an old link, or a town typed into the address): it says so and shows
+// what can be taken online, instead of "page not found". It is kept out of search (`empty`) until a venue opens there. Only a
+// real UK place gets one: `placeName` is its name from the map (lib/catalogueServer.js ukPlace), null when there is no such
+// place (Islamabad: "page not found"), undefined when it couldn't be checked (the page shows, named from the address).
+const TOWN_SLUG = /^[a-z]+(-[a-z]+){0,4}$/;
+const townFromSlug = (town) => town.split("-").map((w) => (["upon", "on", "under", "le", "in"].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+/** Whether a town page's town has a venue for this page (so no map check is needed). */
+export const isCourseTown = (slug, town, courses) => getCourseTowns(slug, courses).some((t) => t.slug === town);
+/** Whether a town page can exist without a venue there: the address looks like a town, and the page is one that has towns at all
+ * (live online and self-paced pages have none), so nothing else is worth looking up on the map. */
+export const mayBeTownPage = (slug, town) => TOWN_SLUG.test(town) && town.length <= 40 && !["live-online", "self-paced"].includes(definition(slug)?.select?.method);
+export function getCourseTownPage(slug, town, courses, placeName) {
   const page = getCoursePage(slug, courses);
-  const place = getCourseTowns(slug, courses).find((t) => t.slug === town);
-  if (!page || !place) return null;
+  if (!page) return null;
+  const found = getCourseTowns(slug, courses).find((t) => t.slug === town);
+  if (!found && (placeName === null || !mayBeTownPage(slug, town))) return null;
+  const place = found || { city: placeName || townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` };
+  if (!place) return null;
   const what = page.label.replace(/ courses$/i, "");
   const title = `${what} courses in ${place.city}`;
   return {
@@ -87,11 +103,14 @@ export function getCourseTownPage(slug, town, courses) {
     city: place.city,
     title,
     href: place.href,
+    empty: !found,
     description: `Compare ${what.toLowerCase()} courses in ${place.city}: venues, dates, prices and approved providers in one place.`,
     scope: {
       ...page.scope,
       title,
-      lead: `Courses with a venue in or near ${place.city}, closest first. Change the town or postcode to look somewhere else.`,
+      lead: found
+        ? `Courses with a venue in or near ${place.city}, closest first. Change the town or postcode to look somewhere else.`
+        : `No ${what.toLowerCase()} venues in ${place.city} yet. Courses you can take online, and venues within reach, are below; or change the town or postcode.`,
       crumb: place.city,
       parent: { label: page.label, href: coursePageHref(slug) },
       location: place.city,

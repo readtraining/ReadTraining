@@ -7,7 +7,7 @@ import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { saveOrg, useProvider } from "@/lib/providerWorkspace";
-import { Choice, Loading } from "./providerParts";
+import { Choice, Loading, DemoTag } from "./providerParts";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { EmptyState } from "@/components/states/States";
@@ -15,6 +15,8 @@ import FormGate from "@/components/forms/FormGate";
 import { Field, aria, isEmail } from "./settingsForm";
 import { InfoTab, LogoTab, TermsTab, VenuesTab } from "./SettingsProfile";
 import { QaTab } from "./SettingsPeople";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { Confirm } from "./settingsForm";
 
 // Provider settings (/provider/settings?tab=…): Hurak's provider information, company logo, terms, VAT, affiliate, emails, QA and
 // integrations, plus our venues. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below)
@@ -33,6 +35,8 @@ const TAB_TEXT = {
   qa: "Questions learners ask about your courses, and ones you answer up front.",
   integrations: "Connect the tools you use to run courses.",
 };
+// a tab that works only in part (DemoTag beside the tab's heading); the tabs that don't save yet show "coming soon" (NOT_SAVED)
+const DEMO_TABS = { affiliate: "This link works, but bookings made through it aren't counted yet: that comes with booking." };
 const PANELS = { info: InfoTab, logo: LogoTab, terms: TermsTab, venues: VenuesTab, vat: VatTab, affiliate: AffiliateTab, emails: EmailsTab, qa: QaTab, integrations: IntegrationsTab };
 const hrefFor = (key) => `/provider/settings?tab=${key}`;
 // the tabs that would only save in this browser: behind the "coming soon" switch (lib/forms.js) until they save through the API
@@ -68,7 +72,6 @@ function Settings() {
               <li key={t.key}>
                 <Link href={hrefFor(t.key)} scroll={false} replace className={t.key === tab ? "is-active" : undefined} aria-current={t.key === tab ? "page" : undefined}>
                   <span>{t.label}</span>
-                  {t.key === "qa" && data?.counts.questions > 0 && <span className="rt-adm__count" aria-label={`${data.counts.questions} to answer`}>{data.counts.questions}</span>}
                 </Link>
               </li>
             ))}
@@ -85,7 +88,10 @@ function Settings() {
 
       <section className="rt-pws-set__panel" aria-labelledby="rt-set-h">
         <div className="rt-pws-set__head">
-          <h2 className="rt-acc__h2" id="rt-set-h">{label}</h2>
+          <div className="rt-adm__titlerow">
+            <h2 className="rt-acc__h2" id="rt-set-h">{label}</h2>
+            {DEMO_TABS[tab] && <DemoTag note={DEMO_TABS[tab]} />}
+          </div>
           <p className="rt-acc__note">{TAB_TEXT[tab]}</p>
         </div>
         {NOT_SAVED.has(tab) ? <FormGate form="providerSettings"><Panel key={tab} data={data} say={say} /></FormGate> : data ? <Panel key={tab} data={data} say={say} /> : <Loading rows={2} />}
@@ -102,6 +108,7 @@ function VatTab({ data, say }) {
   const [reg, setReg] = useState(data.org.vat.registered ? "yes" : "no");
   const [num, setNum] = useState(data.org.vat.number || "");
   const [error, setError] = useState("");
+  useUnsavedChanges((reg === "yes") !== Boolean(data.org.vat.registered) || (reg === "yes" && tidyVat(num) !== tidyVat(data.org.vat.number || "")));
   const formRef = useRef(null);
   const submit = (e) => {
     e.preventDefault();
@@ -140,6 +147,7 @@ const EMAILS = [
 function EmailsTab({ data, say }) {
   const [f, setF] = useState({ ...data.org.emails });
   const [errors, setErrors] = useState({});
+  useUnsavedChanges(EMAILS.some((m) => (f[m.key] || "").trim() !== (data.org.emails[m.key] || "")));
   const formRef = useRef(null);
   const submit = (e) => {
     e.preventDefault();
@@ -201,7 +209,9 @@ function AffiliateTab({ say }) {
 function IntegrationsTab({ data, say }) {
   const on = Boolean(data.org.zoom);
   // DEMO: "Connect with Zoom" would send the provider to Zoom to approve access; here it only records the choice
+  const [asking, setAsking] = useState(false); // "Disconnect Zoom?" is open
   const toggle = () => {
+    setAsking(false);
     saveOrg({ zoom: !on });
     say(on ? "Zoom disconnected" : "Zoom connected");
   };
@@ -217,7 +227,8 @@ function IntegrationsTab({ data, say }) {
         </ul>
         <p className="rt-acc__note">{on ? "Connected. New live online cohorts get a Zoom room." : "Not connected."}</p>
       </div>
-      <button type="button" className={`button -md ${on ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={toggle}>{on ? "Disconnect" : "Connect with Zoom"}</button>
+      <button type="button" className={`button -md ${on ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={on ? () => setAsking(true) : toggle} aria-haspopup={on ? "dialog" : undefined}>{on ? "Disconnect" : "Connect with Zoom"}</button>
+      <Confirm open={asking} onClose={() => setAsking(false)} title="Disconnect Zoom?" text="New live online cohorts won't get a Zoom room, and you add their joining links yourself. Rooms already made stay as they are. You can connect again at any time." confirmLabel="Disconnect Zoom" onConfirm={toggle} />
     </div>
   );
 }

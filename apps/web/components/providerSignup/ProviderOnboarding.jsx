@@ -65,8 +65,9 @@ export default function ProviderOnboarding() {
       router.push("/provider");
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
+      // a refusal about one field (a name another provider already uses) shows beside it, once; anything else above the form
       setErrors(fields);
-      setGeneral(err?.data?.code === "CONFLICT" ? err.message : g);
+      setGeneral(g);
       if (Object.keys(fields).length) requestAnimationFrame(() => focusFirstError(formRef.current));
       setBusy(false);
     }

@@ -2,18 +2,22 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { teamBooking as d, subjects, hero } from "@/data/home";
+import { teamBooking as d, hero } from "@/data/home";
+import { useNav } from "@/lib/navContext";
 import FormGate from "@/components/forms/FormGate";
 
 // For employers: dark band with a short intro on the left and a "team quote" mini form on the right.
 export default function HomeTeamBooking() {
   const router = useRouter();
   const icons = ["icon-person-3", "icon-save-money", "icon-location"];
-  const [form, setForm] = useState({ subject: subjects[0].title, learners: "5", method: hero.methods[1] || hero.methods[0], where: "" });
+  // the subjects with live courses (useNav)
+  const { subjects } = useNav();
+  const [form, setForm] = useState({ subject: "", learners: "5", method: hero.methods[1] || hero.methods[0], where: "" });
+  const subject = form.subject || subjects[0]?.name || "";
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const submit = (e) => {
     e.preventDefault();
-    router.push(`${d.secondaryHref}?${new URLSearchParams(form).toString()}`);
+    router.push(`${d.secondaryHref}?${new URLSearchParams({ ...form, subject }).toString()}`);
   };
 
   return (
@@ -53,8 +57,8 @@ export default function HomeTeamBooking() {
               <div className="rt-quote__grid">
                 <label className="rt-field">
                   <span>Course subject</span>
-                  <select value={form.subject} onChange={set("subject")}>
-                    {subjects.map((s) => <option key={s.id}>{s.title}</option>)}
+                  <select value={subject} onChange={set("subject")}>
+                    {subjects.map((s) => <option key={s.slug}>{s.name}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">

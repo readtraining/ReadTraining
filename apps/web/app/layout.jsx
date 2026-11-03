@@ -10,6 +10,7 @@ import { SITE_URL } from "@/lib/seo";
 import { browserContent, seoSettings } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadReviews } from "@/lib/siteReviewsServer";
+import { loadNav, methodPages } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // The root layout: a server component, so every page gets the site-wide metadata below (a page's own pageMetadata() adds its
@@ -42,11 +43,11 @@ export const viewport = {
 };
 
 export default async function RootLayout({ children }) {
-  const [taxonomy, content, reviews] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadReviews()]);
+  const [taxonomy, content, reviews, nav] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadReviews(), loadNav()]);
   return (
     <html lang="en-GB" data-scroll-behavior="smooth">
       <body>
-        <Providers taxonomy={taxonomy} content={browserContent(content, reviews.length > 0)}>{children}</Providers>
+        <Providers taxonomy={taxonomy} content={browserContent(content, reviews.length > 0)} nav={nav} methodPages={methodPages}>{children}</Providers>
       </body>
     </html>
   );

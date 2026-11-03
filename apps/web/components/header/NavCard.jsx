@@ -3,7 +3,8 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { headerNav as N } from "@/data/headerNav";
-import { api } from "@/lib/trpc/react";
+import { useNav } from "@/lib/navContext";
+import { subjectName } from "@/lib/nav";
 import { coursePath } from "@/lib/routes";
 import { methodName } from "@/lib/taxonomy";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -44,31 +45,33 @@ function Band({ title, children }) {
   );
 }
 
-// Explore courses: every subject on the left; the panel on the right shows the popular courses, or the courses of the subject
-// you click (click it again to go back). It changes only on a click, so moving the pointer across subjects never swaps it. A
-// subject's number of courses and its three most popular are the real catalogue's (API catalogue.menu, asked once a while).
+// Explore courses: every subject with live courses on the left; the panel on the right shows the popular courses, or the courses
+// of the subject you click (click it again to go back). It changes only on a click, so moving the pointer across subjects never
+// swaps it. The subjects, their number of courses and top three, the methods and the popular courses are the live catalogue's
+// (useNav, lib/nav.js), so a new subject shows up here once it has a course and a retired one goes.
 function CoursesPanel() {
   const C = N.courses;
+  const nav = useNav();
   const [subjectId, setSubjectId] = useState(null);
-  const sub = C.subjects.find((s) => s.id === subjectId);
-  const menu = api.catalogue.menu.useQuery(undefined, { staleTime: 5 * 60 * 1000, retry: 1 });
-  const live = sub && menu.data ? menu.data[sub.id] || { count: 0, top: [] } : null;
+  const sub = nav.subjects.find((s) => s.slug === subjectId);
+  const live = sub ? { count: sub.count, top: sub.top } : null;
   const top = live ? live.top.map((c) => ({ label: c.title, href: coursePath(c.slug), meta: [...new Set([c.duration, ...c.methods.map(methodName)])].filter(Boolean).join(" · ") })) : [];
-  const rows = Math.ceil(C.subjects.length / 3);
+  const popular = nav.courses.slice(0, C.popular.count).map((c) => ({ label: c.title, href: c.href, meta: subjectName(nav, c.subject) }));
+  const rows = Math.ceil(nav.subjects.length / 3);
   return (
     <div>
       <Band title={C.title}>
-        {C.methods.map((m) => <Link key={m.href} href={m.href} className="rt-nav-chip">{m.label}</Link>)}
+        {nav.methods.map((m) => <Link key={m.href} href={m.href} className="rt-nav-chip">{m.name}</Link>)}
         <More {...C.all} />
       </Band>
       <div className="rt-nav-pad rt-nav-courses">
         {/* three columns, read A to Z down each one */}
         <ul className="rt-nav-subjects" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
-          {C.subjects.map((s) => {
-            const on = s.id === subjectId;
+          {nav.subjects.map((s) => {
+            const on = s.slug === subjectId;
             return (
-              <li key={s.id}>
-                <button type="button" title={s.label} className={`rt-nav-subject${on ? " is-on" : ""}`} aria-pressed={on} aria-controls="rt-nav-preview" onClick={() => setSubjectId(on ? null : s.id)}>
+              <li key={s.slug}>
+                <button type="button" title={s.label} className={`rt-nav-subject${on ? " is-on" : ""}`} aria-pressed={on} aria-controls="rt-nav-preview" onClick={() => setSubjectId(on ? null : s.slug)}>
                   <span className="rt-nav-tile"><NavIcon name={s.icon} size={16} /></span>
                   <span className="rt-nav-subject__name">{s.label}</span>
                   <NavIcon name="chevronRight" size={14} strokeWidth={2.2} className="rt-nav-subject__chev" />
@@ -79,7 +82,7 @@ function CoursesPanel() {
         </ul>
         <div className="rt-nav-preview" id="rt-nav-preview" aria-live="polite">
           {sub ? (
-            <div key={sub.id} className="rt-nav-fade">
+            <div key={sub.slug} className="rt-nav-fade">
               <div className="rt-nav-preview__head">
                 <span className="rt-nav-tile -solid"><NavIcon name={sub.icon} size={18} /></span>
                 <span className="rt-nav-link__text">
@@ -91,7 +94,7 @@ function CoursesPanel() {
               {top.length > 0 && <ul className="rt-nav-list -preview">{top.map((c) => <Row key={c.href} {...c} />)}</ul>}
               {live && !top.length && <p className="rt-nav-preview__hint">No courses here yet.</p>}
               <Link href={sub.href} className="button -sm -purple-1 text-white rt-nav-cta">
-                {sub.all}
+                {C.allOf(sub.label)}
                 <NavIcon name="arrowRight" size={14} strokeWidth={2.4} />
               </Link>
             </div>
@@ -99,7 +102,7 @@ function CoursesPanel() {
             <div key="popular" className="rt-nav-fade">
               <p className="rt-nav-preview__title">{C.popular.title}</p>
               <p className="rt-nav-preview__hint">{C.popular.hint}</p>
-              <ul className="rt-nav-list -preview">{C.popular.items.map((c) => <Row key={c.href} {...c} />)}</ul>
+              <ul className="rt-nav-list -preview">{popular.map((c) => <Row key={c.href} {...c} />)}</ul>
             </div>
           )}
         </div>
@@ -128,10 +131,15 @@ function LicencesPanel() {
   );
 }
 
-// Location: a town or postcode search (or the person's location), the main cities, and the courses that need no venue
+// Location: a town or postcode search (or the person's location), the towns with live dates, and the courses that need no venue
 function NearPanel() {
   const P = N.near;
+  const nav = useNav();
   const near = useNearYou();
+  // the courses you can look for in a town: the live ones that run somewhere
+  const courses = nav.courses.filter((c) => c.towns.length).map((c) => ({ value: c.slug, label: c.title }));
+  const towns = nav.towns.slice(0, P.cities);
+  const online = P.online.items.filter((i) => nav.methods.some((m) => i.href.endsWith(m.slug)));
   const [town, setTown] = useState("");
   const [course, setCourse] = useState("");
   const [error, setError] = useState(false);
@@ -169,7 +177,7 @@ function NearPanel() {
           </div>
           <div className="rt-nav-field">
             <label htmlFor="rt-nav-course">{P.course.label}</label>
-            <FieldSelect id="rt-nav-course" label={P.course.label} compact value={course} onChange={setCourse} placeholder={P.course.any} options={[{ value: "", label: P.course.any }, ...P.courses]} />
+            <FieldSelect id="rt-nav-course" label={P.course.label} compact value={course} onChange={setCourse} placeholder={P.course.any} options={[{ value: "", label: P.course.any }, ...courses]} />
           </div>
           <div className="rt-nav-near__actions">
             <button type="submit" className="button -md -purple-1 text-white">{P.submit}</button>
@@ -180,10 +188,11 @@ function NearPanel() {
           </div>
           {near.failed && <p className="rt-nav-near__note" role="status">{P.locateFailed}</p>}
         </form>
+        {towns.length > 0 && (
         <div>
           <h2 className="rt-nav-h">{P.citiesTitle}</h2>
           <ul className="rt-nav-cities">
-            {P.cities.map((c) => (
+            {towns.map((c) => (
               <li key={c.name}>
                 <Link href={c.href} className="rt-nav-city">
                   <NavIcon name="pin" size={14} strokeWidth={2} />
@@ -193,10 +202,13 @@ function NearPanel() {
             ))}
           </ul>
         </div>
+        )}
+        {online.length > 0 && (
         <div className="rt-nav-near__side">
           <h2 className="rt-nav-h">{P.online.title}</h2>
-          <ul className="rt-nav-list">{P.online.items.map((i) => <Row key={i.href} {...i} />)}</ul>
+          <ul className="rt-nav-list">{online.map((i) => <Row key={i.href} {...i} />)}</ul>
         </div>
+        )}
       </div>
     </div>
   );

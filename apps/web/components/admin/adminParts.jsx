@@ -193,7 +193,7 @@ export function Search({ value, onChange, label }) {
   return (
     <div className="rt-adm-search">
       <i className="icon-search text-14" aria-hidden="true"></i>
-      <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={label} aria-label={label} />
+      <input type="search" name="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={label} aria-label={label} />
     </div>
   );
 }
@@ -214,13 +214,23 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
     if (!open) return;
     shownItems()[0]?.focus();
     const out = (e) => wrap.current && !wrap.current.contains(e.target) && setOpen(false);
+    // Esc closes it wherever focus is (a menu opened with the mouse may not have it inside), and focus goes back to the button
+    const esc = (e) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      setOpen(false);
+      btn.current?.focus();
+    };
     document.addEventListener("pointerdown", out);
-    return () => document.removeEventListener("pointerdown", out);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", out);
+      document.removeEventListener("keydown", esc);
+    };
   }, [open]);
   const onKey = (e) => {
     const all = shownItems();
     const i = all.indexOf(document.activeElement);
-    if (e.key === "Escape") { e.preventDefault(); setOpen(false); btn.current?.focus(); }
     if (e.key === "ArrowDown") { e.preventDefault(); all[(i + 1) % all.length]?.focus(); }
     if (e.key === "ArrowUp") { e.preventDefault(); all[(i - 1 + all.length) % all.length]?.focus(); }
     if (e.key === "Home") { e.preventDefault(); all[0]?.focus(); }

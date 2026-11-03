@@ -107,7 +107,7 @@ export const hseTest = {
   courses: {
     title: "Training for your CSCS card",
     text: "Most cards need a qualification as well as the test. The green card course is the usual first step.",
-    all: { label: "All construction courses", href: "/courses?subject=construction" },
+    all: { label: "All construction courses", href: "/courses/construction" },
     picks: [TOPICS.cscsGreen, TOPICS.smsts, TOPICS.sssts],
   },
   faqs: [
