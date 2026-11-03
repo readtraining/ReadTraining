@@ -8,16 +8,18 @@ import FaqSection from "@/components/marketing/FaqSection";
 import CourseCatalogue from "@/components/courses/CourseCatalogue";
 import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import CourseTowns from "@/components/courses/CourseTowns";
-import { getCourseTownPage, getCourseTownParams, getCourseTowns } from "@/lib/coursePages";
+import { getCourseTownPage, getCourseTownParams, getCourseTowns, isCourseTown } from "@/lib/coursePages";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
-import { loadCatalogue } from "@/lib/catalogueServer";
+import { loadCatalogue, ukPlace } from "@/lib/catalogueServer";
 
 // the real catalogue (every live listing), as the pages read it
 const realCourses = loadCatalogue;
+// the town page, if the town has a venue for this page or is a real UK place (a town abroad, or made up, is "page not found")
+const townPage = async (slug, town, courses) => getCourseTownPage(slug, town, courses, isCourseTown(slug, town, courses) ? undefined : await ukPlace(town));
 
 // A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds), as Hurak's course finder pages: the same
 // catalogue with the town as its location (courses with a venue there, closest first; the visitor can change the town), the
@@ -31,7 +33,7 @@ export async function generateStaticParams() {
 export async function generateMetadata(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug, town } = await props.params;
-  const page = getCourseTownPage(slug, town, await realCourses());
+  const page = await townPage(slug, town, await realCourses());
   if (!page) return { title: "Courses not found | ReadTraining" };
   // a town with no venue yet: a useful page, but not one for search engines
   return pageMetadata({ title: `${page.title} | ReadTraining`, description: page.description, path: page.href, noindex: page.empty });
@@ -41,7 +43,7 @@ export default async function CourseTownPage(props) {
   await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
   const { slug, town } = await props.params;
   const courses = await realCourses();
-  const page = getCourseTownPage(slug, town, courses);
+  const page = await townPage(slug, town, courses);
   if (!page) notFound();
   const faq = faqItems(`course-page-${slug}`, page.faq); // the same list as the page this town belongs to
   const crumbs = [{ label: "Home", href: "/" }, { label: "All courses", href: CATALOGUE_HREF }, { label: page.label, href: page.scope.parent.href }, { label: page.city }];

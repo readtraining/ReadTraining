@@ -5,6 +5,7 @@ import { eq, organisations, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
@@ -125,6 +126,7 @@ export const providerProfileRouter = createTRPCRouter({
       if (rename) {
         if (!can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId })) await refuse(ctx, 'provider.profile.rename', input.organisationId, path)
         if (!UNDER_REVIEW.includes(o.status)) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is approved, so its name can only be changed by our team. Contact us to change it.' })
+        await refuseTakenProviderName(ctx.db, input.name!, input.organisationId)
       }
       return ctx.db.transaction(async (tx) => {
         await tx

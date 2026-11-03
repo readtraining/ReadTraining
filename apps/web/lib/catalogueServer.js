@@ -81,3 +81,18 @@ export async function liveLinks(links) {
 export async function liveHref(href, fallback = "/courses") {
   return (await searchFinds(href)) ? href : fallback;
 }
+
+// A town page's town with no venue there yet (lib/coursePages.js getCourseTownPage): the UK place of that name on the map
+// (catalogue.locate), with its proper name; null when there is none, so /courses/<page>/islamabad is "page not found";
+// undefined when the API can't be asked, so the page still shows.
+export const ukPlace = cache(async (townSlug) => {
+  const name = String(townSlug).replace(/-/g, " ").slice(0, 80);
+  if (name.length < 2) return null;
+  try {
+    const hit = await query("catalogue.locate", { q: name });
+    const key = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    return hit && key(hit.label) === key(name) ? hit.label : null;
+  } catch {
+    return undefined;
+  }
+});

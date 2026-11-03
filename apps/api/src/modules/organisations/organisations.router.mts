@@ -10,6 +10,7 @@ import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
 import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure, refuse } from '../../trpc/trpc.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
 import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
+import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
 import { PRIVATE_ROLES } from '../provider/profile.mjs'
@@ -67,6 +68,7 @@ export const organisationsRouter = createTRPCRouter({
         // a double click (or two tabs) sends this twice at once: the second waits here, then finds the first one's account
         const own = await ownedUnderLock(tx, ctx.user.id, 'provider')
         if (own && own.status !== 'rejected') throw new TRPCError({ code: 'CONFLICT', message: 'You already have a provider account. Use Switch account to open it.' })
+        await refuseTakenProviderName(tx, input.name, own?.id)
         if (own) {
           const [reopened] = await tx
             .update(organisations)

@@ -5,7 +5,7 @@ import { and, asc, cohorts, courses, eq, organisationMembers, profiles, sql, ven
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { formatPostcode, locatePostcode, POSTCODE } from '../../lib/postcode.mjs'
+import { formatPostcode, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
 import { createTRPCRouter, orgProcedure } from '../../trpc/trpc.mjs'
 import { ownCourse } from './courses.mjs'
 
@@ -70,8 +70,12 @@ export const providerVenuesRouter = createTRPCRouter({
           and (lower(trim(name)) = ${input.name.trim().toLowerCase()} or lower(trim(street)) = ${input.street.trim().toLowerCase()})
         limit 1`)
       if (twin) throw new TRPCError({ code: 'BAD_REQUEST', message: `You already have this venue: ${twin.name}, ${postcode}. Edit that one instead.`, cause: Object.assign(new Error('duplicate venue'), { field: 'name' }) })
-      // look the postcode up only when it is new or changed
-      const where = before && before.postcode === postcode && before.lat !== null ? { lat: before.lat, lng: before.lng } : await locatePostcode(postcode)
+      // look the place up when the postcode or the town is new or changed: the postcode must be in use and the town a UK place near
+      // it (lib/postcode.mts placeVenue), since the town becomes a public town page
+      const same = before && before.postcode === postcode && before.city.trim().toLowerCase() === input.city.trim().toLowerCase() && before.lat !== null
+      const place = same ? { at: { lat: before.lat!, lng: before.lng! }, problem: null } : await placeVenue(postcode, input.city)
+      if (place.problem) throw new TRPCError({ code: 'BAD_REQUEST', message: place.problem.message, cause: Object.assign(new Error('venue place'), { field: place.problem.field }) })
+      const where = place.at
       const values = { name: input.name, street: input.street, city: input.city, postcode, lat: where?.lat ?? null, lng: where?.lng ?? null, updatedAt: new Date() }
       return ctx.db.transaction(async (tx) => {
         const [v] = before

@@ -77,14 +77,19 @@ export const getCourseTownParams = (courses) => getCoursePageSlugs().flatMap((sl
 
 // A course page narrowed to one town: the same catalogue with the town as its location, its own title and breadcrumb.
 // A town with no venue for this page yet still has a page (an old link, or a town typed into the address): it says so and shows
-// what can be taken online, instead of "page not found". It is kept out of search (`empty`) until a venue opens there.
+// what can be taken online, instead of "page not found". It is kept out of search (`empty`) until a venue opens there. Only a
+// real UK place gets one: `placeName` is its name from the map (lib/catalogueServer.js ukPlace), null when there is no such
+// place (Islamabad: "page not found"), undefined when it couldn't be checked (the page shows, named from the address).
 const TOWN_SLUG = /^[a-z]+(-[a-z]+){0,4}$/;
 const townFromSlug = (town) => town.split("-").map((w) => (["upon", "on", "under", "le", "in"].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
-export function getCourseTownPage(slug, town, courses) {
+/** Whether a town page's town has a venue for this page (so no map check is needed). */
+export const isCourseTown = (slug, town, courses) => getCourseTowns(slug, courses).some((t) => t.slug === town);
+export function getCourseTownPage(slug, town, courses, placeName) {
   const page = getCoursePage(slug, courses);
   if (!page) return null;
   const found = getCourseTowns(slug, courses).find((t) => t.slug === town);
-  const place = found || (TOWN_SLUG.test(town) && town.length <= 40 ? { city: townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` } : null);
+  if (!found && placeName === null) return null;
+  const place = found || (TOWN_SLUG.test(town) && town.length <= 40 ? { city: placeName || townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` } : null);
   if (!place) return null;
   const what = page.label.replace(/ courses$/i, "");
   const title = `${what} courses in ${place.city}`;
