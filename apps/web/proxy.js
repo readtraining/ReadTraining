@@ -144,7 +144,12 @@ export async function proxy(request) {
     let { status, data: workspace } = token ? await askApi(request, "organisations.openWorkspace", { type: space.type, path }, token) : { status: 401, data: null };
     // the API didn't answer in time (not a refusal): ask once more before saying access couldn't be checked
     if (status >= 500) ({ status, data: workspace } = await askApi(request, "organisations.openWorkspace", { type: space.type, path }, token));
-    if (status === 401) return toLogin(request);
+    if (status === 401) {
+      // the API no longer accepts this sign-in (the account was removed, or signed out everywhere): end it here as well, or the
+      // log-in page would see a signed-in person and send them straight back, round and round
+      await supabase.auth.signOut({ scope: "local" });
+      return withCookies(toLogin(request), response);
+    }
     if (status !== 200 || !workspace) {
       const url = request.nextUrl.clone();
       url.pathname = `/no-access/${space.type}`;

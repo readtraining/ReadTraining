@@ -126,6 +126,9 @@ export default function ProviderCohorts() {
   const [cancelOne, setCancelOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  // a row change shows at once (bookings on or off, the tutor), before the list loads again; gone again if the save fails
+  const [changing, setChanging] = useState({});
+  const change = (id, patch) => setChanging((x) => (patch ? { ...x, [id]: { ...x[id], ...patch } } : Object.fromEntries(Object.entries(x).filter(([k]) => k !== id))));
   const s = useSchedule(when);
   const utils = api.useUtils();
   const update = api.provider.cohorts.update.useMutation();
@@ -165,7 +168,10 @@ export default function ProviderCohorts() {
   const tutors = s.tutors.data || [];
   // a tutor sees only the dates they teach (no team list), so a tutor on them is the tutor themselves
   const tutorName = (id) => tutors.find((t) => t.userId === id)?.name ?? (!s.may.team && id ? "You" : undefined);
-  const scoped = s.cohorts.data.map((k) => ({ ...k, status: cohortState(k, today), course: courseOf[k.courseId] }));
+  const scoped = s.cohorts.data.filter((k) => !changing[k.id]?.deleted).map((k) => {
+    const now = { ...k, ...changing[k.id] };
+    return { ...now, status: cohortState(now, today), course: courseOf[k.courseId] };
+  });
   const datedCourses = courses.filter((c) => c.method !== "self-paced");
   const onDemand = courses.filter((c) => c.method === "self-paced");
 
@@ -198,20 +204,23 @@ export default function ProviderCohorts() {
     setWhenNote("");
     [...(keepTab ? [] : ["mode"]), "course", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
-  const refresh = () => {
-    utils.provider.cohorts.list.invalidate();
-    utils.provider.courses.list.invalidate({ organisationId });
-    utils.provider.courses.get.invalidate();
-  };
+  const refresh = () =>
+    Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
   const fail = (e) => setToast({ message: errorsFrom(e).general || "We couldn't save that. Please try again." });
-  const setTutorOf = (k, v) => update.mutate({ organisationId, cohortId: k.id, ...cohortInput(k), tutorUserId: v || null }, {
-    onSuccess: () => { refresh(); setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); },
-    onError: fail,
-  });
-  const toggleBookings = (k) => bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
-    onSuccess: () => { refresh(); setToast({ message: k.bookable ? "Bookings turned off" : "Bookings turned on" }); },
-    onError: fail,
-  });
+  const setTutorOf = (k, v) => {
+    change(k.id, { tutorUserId: v || null });
+    update.mutate({ organisationId, cohortId: k.id, ...cohortInput(k), tutorUserId: v || null }, {
+      onSuccess: async () => { setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); await refresh(); change(k.id, null); },
+      onError: (e) => { change(k.id, null); fail(e); },
+    });
+  };
+  const toggleBookings = (k) => {
+    change(k.id, { bookable: !k.bookable });
+    bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
+      onSuccess: async () => { setToast({ message: k.bookable ? "Bookings turned off. Learners can't book this cohort now." : "Bookings turned on. Learners can book this cohort again." }); await refresh(); change(k.id, null); },
+      onError: (e) => { change(k.id, null); fail(e); },
+    });
+  };
 
   const create = edit && <button type="button" className="button -md -purple-1 text-white" onClick={() => setFormOpen(true)} disabled={!datedCourses.length}>Create cohort</button>;
   const nothingYet = !scoped.length && when === "upcoming" && !filtered;
@@ -303,8 +312,10 @@ export default function ProviderCohorts() {
                           </div>
                         </td>
                         <td data-label="Status">
-                          <Pill tone={COHORT_TONE[k.status]}>{STATUSES[k.status]}</Pill>
-                          {!k.bookable && !cancelled && <small>Bookings off</small>}
+                          <span className="rt-pws-coh__pills">
+                            <Pill tone={COHORT_TONE[k.status]}>{STATUSES[k.status]}</Pill>
+                            {!k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
+                          </span>
                         </td>
                         <td data-label="Tutor">
                           {edit && !cancelled && tutors.length ? (
@@ -340,10 +351,10 @@ export default function ProviderCohorts() {
         </>
       )}
 
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => { refresh(); setToast({ message: "Cohort saved. Pick the dates for the next one." }); }} />
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => refresh()} />
       <CohortForm open={Boolean(editingK)} onClose={() => setEditingK(null)} cohort={editingK} onSaved={() => { setEditingK(null); refresh(); setToast({ message: "Cohort saved" }); }} />
-      <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={() => { setCancelOne(null); refresh(); setToast({ message: "Cohort cancelled" }); }} />
-      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={() => { setDeleting(null); refresh(); setToast({ message: "Cohort deleted" }); }} />
+      <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
+      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
@@ -496,6 +507,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   // "Save and create another" (Hurak's "Create another cohort"): the form stays open for the same course and settings
   const save = async (e, another = false) => {
     e.preventDefault();
+    setPressed(another ? "another" : "save");
+    setSavedNote("");
     const err = {};
     if (!f.courseId) err.courseId = "Choose the course this cohort is for.";
     if (!f.sessions.length) err.sessions = "Pick at least one date on the calendar.";
@@ -529,10 +542,13 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     try {
       const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
       if (another) {
+        const first = values.sessions[0]?.date;
         setF((x) => ({ ...x, sessions: [] }));
         setErrors({});
+        // the form stays open, so the confirmation shows in it (the page's message is behind the form)
+        setSavedNote(`Cohort saved${first ? ` (starting ${new Date(`${first}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Pick the dates for the next one.`);
         onAnother?.(id);
-        requestAnimationFrame(() => formRef.current?.querySelector("h3")?.scrollIntoView({ block: "start" }));
+        requestAnimationFrame(() => formRef.current?.firstElementChild?.scrollIntoView({ block: "start" }));
         return;
       }
       onSaved?.(id);
@@ -543,6 +559,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     }
   };
   const busy = create.isPending || update.isPending;
+  // which button is saving, so only that one says "Saving…"
+  const [pressed, setPressed] = useState(null);
+  const [savedNote, setSavedNote] = useState("");
+  useEffect(() => {
+    if (!open) setSavedNote("");
+  }, [open]);
 
   const err = (key) => errors[key] && <p className="rt-q__err" id={`rt-cf-${key}-e`}><span className="rt-sr">Error: </span>{errors[key]}</p>;
   const aria = (key) => ({ "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `rt-cf-${key}-e` : undefined });
@@ -557,6 +579,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       {open && !ready && <Loading rows={2} />}
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
+          {savedNote && <p className="rt-acc__notice -ok" role="status">{savedNote}</p>}
           {!cohort && !suggestCourseId && (
             <Choice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
               options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key) }))} />
@@ -673,8 +696,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           </section>
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
           <div className="rt-pws-coh__formfoot">
-            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : cohort ? "Save changes" : "Save cohort"}</button>
-            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={(e) => save(e, true)}>Save and create another</button>}
+            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={(busy && pressed !== "another") || undefined}>{busy && pressed !== "another" ? "Saving…" : cohort ? "Save changes" : "Save cohort"}</button>
+            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} aria-busy={(busy && pressed === "another") || undefined} onClick={(e) => save(e, true)}>{busy && pressed === "another" ? "Saving…" : "Save and create another"}</button>}
           </div>
         </form>
       )}

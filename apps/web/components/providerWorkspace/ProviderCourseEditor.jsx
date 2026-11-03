@@ -150,6 +150,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [submitError, setSubmitError] = useState("");
   // sent (or published) just now: the button gives way at once, without waiting for the course to load again
   const [sent, setSent] = useState(false);
+  // what was just sent (or published) stays said where the button was, not only in the passing message at the bottom
+  const [sentNote, setSentNote] = useState("");
   const needRef = useRef(null);
   const [gear, setGear] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -165,6 +167,13 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   useEffect(() => {
     const t = getQuery("tab");
     if (sections.some((x) => x.key === t)) setTab(t);
+    // just made by the new course steps: say so (once; the address loses ?created so a reload doesn't say it again)
+    if (getQuery("created")) {
+      const message = "Draft created. Fill in each section, then send it for approval.";
+      setToast({ message });
+      setSaid(message);
+      setQuery("created", "");
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- read the address once
 
   useEffect(() => {
@@ -254,13 +263,18 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       else await ep.submit();
       setSent(true);
       refresh();
-      setToast({ message: ep.admin ? "Published. The page is live and providers can list their courses on it." : "Sent for approval. We'll email you within 2 working days." });
+      const message = ep.admin ? "Published. The page is live and providers can list their courses on it." : "Sent for approval. We'll email you within 2 working days.";
+      setSentNote(message);
+      setSaid(message);
+      setToast({ message });
     } catch (error) {
       // already sent (from another tab, or before this page caught up): nothing went wrong, so say so and show it
       if (!ep.admin && error?.data?.code === "CONFLICT" && /already waiting/i.test(error.message)) {
         setSent(true);
         refresh();
-        setToast({ message: "This course is already waiting for approval. We'll email you within 2 working days." });
+        const message = "This course is already waiting for approval. We'll email you within 2 working days.";
+        setSentNote(message);
+        setToast({ message });
         return;
       }
       const message = errorsFrom(error).general || "We couldn't send it. Check your connection, then try again.";
@@ -357,7 +371,12 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
                 <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>
               ) : null}
             </>
-          ) : <p className="rt-pws-ce__status"><Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill></p>}
+          ) : (
+            <>
+              <p className="rt-pws-ce__status"><Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill></p>
+              {sentNote && <p className="rt-acc__notice -ok">{sentNote}</p>}
+            </>
+          )}
         </nav>
 
         <div className="rt-pws-ce__main" ref={formRef}>

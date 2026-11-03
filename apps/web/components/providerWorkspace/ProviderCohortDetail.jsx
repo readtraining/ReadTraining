@@ -40,7 +40,9 @@ export default function ProviderCohortDetail({ cohortId }) {
   const [cancelling, setCancelling] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState(null);
-  const k = query.data;
+  // bookings on or off shows at once, before the cohort loads again; gone again if the save fails
+  const [bookableNow, setBookableNow] = useState(null);
+  const k = query.data && (bookableNow === null ? query.data : { ...query.data, bookable: bookableNow });
 
   if (query.error?.data?.code === "NOT_FOUND") return <EmptyState title="This cohort was not found." text="It may have been deleted." action={{ href: "/provider/cohorts", label: "All cohorts" }} />;
   if (query.isError) return <ErrorState title="We couldn't load this cohort." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
@@ -49,17 +51,22 @@ export default function ProviderCohortDetail({ cohortId }) {
   const edit = can("provider.cohorts.edit");
   const status = cohortState(k);
   const cancelled = Boolean(k.cancelledAt);
-  const refresh = () => {
-    utils.provider.cohorts.get.invalidate({ organisationId, cohortId });
-    utils.provider.cohorts.list.invalidate();
-    utils.provider.courses.list.invalidate({ organisationId });
-    utils.provider.courses.get.invalidate();
-  };
+  const refresh = () =>
+    Promise.all([
+      utils.provider.cohorts.get.invalidate({ organisationId, cohortId }),
+      utils.provider.cohorts.list.invalidate(),
+      utils.provider.courses.list.invalidate({ organisationId }),
+      utils.provider.courses.get.invalidate(),
+    ]);
   const where = k.venue ? [k.venue.name, k.venue.street, k.venue.city, k.venue.postcode].filter(Boolean).join(", ") : "Online";
-  const toggle = () => bookable.mutate({ organisationId, cohortId, bookable: !k.bookable }, {
-    onSuccess: () => { refresh(); setToast({ message: k.bookable ? "Bookings turned off" : "Bookings turned on" }); },
-    onError: (e) => setToast({ message: errorsFrom(e).general }),
-  });
+  const toggle = () => {
+    const to = !k.bookable;
+    setBookableNow(to);
+    bookable.mutate({ organisationId, cohortId, bookable: to }, {
+      onSuccess: async () => { setToast({ message: to ? "Bookings turned on. Learners can book this cohort again." : "Bookings turned off. Learners can't book this cohort now." }); await refresh(); setBookableNow(null); },
+      onError: (e) => { setBookableNow(null); setToast({ message: errorsFrom(e).general || "We couldn't change that. Please try again." }); },
+    });
+  };
 
   return (
     <div className="rt-acc__stack">
@@ -78,7 +85,7 @@ export default function ProviderCohortDetail({ cohortId }) {
             <dt>Bookings</dt>
             <dd className="rt-pws-coh__inline">
               <Pill tone={k.bookable && !cancelled ? "ok" : "muted"}>{k.bookable && !cancelled ? "On" : "Off"}</Pill>
-              {edit && !cancelled && <button type="button" className="rt-cd__link" onClick={toggle} disabled={bookable.isPending}>{k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
+              {edit && !cancelled && <button type="button" className="rt-cd__link" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
             </dd>
           </div>
           <div><dt>Tutor</dt><dd>{k.tutorName || <span className="rt-adm-muted">Not assigned</span>}</dd></div>

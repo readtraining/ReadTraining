@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/states/States";
 
 // A new course in Hurak's five steps: 1 working title, 2 category, sub-category and topic, 3 compliance or not (a compliance course
 // can also go on a shared course page, chosen from the live ones), 4 performance model, 5 Skill Saver. Previous / Continue, Exit back
-// to the courses; Submit creates a classroom draft (Mode of study changes that) and opens the course editor on its landing page.
+// to the courses; Create draft makes a classroom draft (Mode of study changes that) and opens the course editor on its landing page.
 const STEPS = 5;
 const YES_NO = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
 
@@ -71,7 +71,7 @@ export default function ProviderNewCourse() {
         model: f.model, skillSaver: f.skillSaver === "yes", parentId: toPage && parentOk ? Number(f.parentId) : null,
       },
       {
-        onSuccess: ({ id }) => router.push(`/provider/courses/${id}`),
+        onSuccess: ({ id }) => router.push(`/provider/courses/${id}?created=1`),
         onError: (error) => setFailed(errorsFrom(error).general || Object.values(errorsFrom(error).fields)[0]),
       },
     );
@@ -164,13 +164,14 @@ export default function ProviderNewCourse() {
           <h2 className="rt-acc__h2" tabIndex={-1}>Skill Saver loyalty programme</h2>
           <p className="rt-acc__note">Learners on Skill Saver get money off their next course. Courses in the programme show the Skill Saver badge. <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link></p>
           <Choice name="rt-pws-nc-saver" legend="Include this course in Skill Saver?" value={f.skillSaver} onChange={(v) => set({ skillSaver: v })} error={errors.skillSaver} options={YES_NO} />
+          <p className="rt-acc__note">Create draft saves the course as a draft and opens it, so you can add its details. Nobody sees it until you send it for approval and our team approves it.</p>
         </>
       )}
 
       {failed && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{failed}</p>}
       <div className="rt-pws-wiz__foot">
         {step > 1 ? <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={back}>Previous</button> : <span />}
-        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{step < STEPS ? "Continue" : busy ? "Creating…" : "Submit"}</button>
+        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{step < STEPS ? "Continue" : create.isSuccess ? "Opening the editor…" : create.isPending ? "Creating draft…" : "Create draft"}</button>
       </div>
     </form>
   );

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
+import { useWorkspace } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
@@ -48,6 +49,7 @@ const UNDER_REVIEW = ["pending", "changes_requested"];
 function InfoForm({ profile, say }) {
   const { organisationId, can } = useProviderAccess();
   const router = useRouter();
+  const workspace = useWorkspace();
   const utils = api.useUtils();
   const update = api.provider.profile.update.useMutation();
   const [f, setF] = useState({ name: profile.name, headline: profile.headline, bio: profile.bio, city: profile.city, facebook: profile.socials.facebook || "", linkedin: profile.socials.linkedin || "", youtube: profile.socials.youtube || "" });
@@ -75,8 +77,11 @@ function InfoForm({ profile, say }) {
         onSuccess: (r) => {
           utils.provider.profile.get.invalidate({ organisationId });
           utils.provider.profile.review.invalidate({ organisationId });
-          // the name shows in the sidebar and the account menu, which come from the server
-          if (r.renamed) router.refresh();
+          // the name shows in the sidebar and the account menu: at once here, and from the server once it has caught up
+          if (r.renamed) {
+            workspace?.rename?.(f.name.trim());
+            router.refresh();
+          }
           say("Provider information saved");
         },
         onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general }); },
@@ -138,9 +143,13 @@ function LogoForm({ profile, say }) {
   const removeLogo = api.provider.profile.removeLogo.useMutation();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // the logo just saved (or removed: null) shows at once, until the profile loads again with it
+  const [justSaved, setJustSaved] = useState(undefined);
+  useEffect(() => setJustSaved(undefined), [profile.logoUrl]);
+  const logoUrl = justSaved === undefined ? profile.logoUrl : justSaved;
   const fileRef = useRef(null);
   const locked = !can("provider.profile.edit");
-  const done = (message) => { utils.provider.profile.get.invalidate({ organisationId }); say(message); };
+  const done = (message, shown) => { setJustSaved(shown); utils.provider.profile.get.invalidate({ organisationId }); say(message); };
 
   // the picture's size, checked before it is uploaded
   const measure = (file) => new Promise((resolve) => {
@@ -166,7 +175,7 @@ function LogoForm({ profile, say }) {
       const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, file, { contentType: file.type });
       if (upError) throw new Error("The logo didn't upload. Please try again.");
       await setLogo.mutateAsync({ organisationId, path });
-      done("Logo saved");
+      done("Logo saved. It shows on your public profile.", URL.createObjectURL(file));
     } catch (err) {
       setError(err?.data ? firstError(err) : err.message || "The logo didn't upload. Please try again.");
     } finally {
@@ -175,7 +184,7 @@ function LogoForm({ profile, say }) {
   };
   const remove = () => {
     setBusy(true);
-    removeLogo.mutate({ organisationId }, { onSuccess: () => done("Logo removed"), onError: (er) => setError(firstError(er)), onSettled: () => setBusy(false) });
+    removeLogo.mutate({ organisationId }, { onSuccess: () => done("Logo removed", null), onError: (er) => setError(firstError(er)), onSettled: () => setBusy(false) });
   };
 
   return (
@@ -183,14 +192,14 @@ function LogoForm({ profile, say }) {
       {error && <p className="rt-q__err" id="rt-set-logo-e" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
       <div className="rt-pws-set__logo">
         <span className="rt-pws-set__logobox">
-          {profile.logoUrl ? <img src={profile.logoUrl} alt="Your logo" width={96} height={96} /> : <span aria-hidden="true">{profile.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>}
+          {logoUrl ? <img src={logoUrl} alt="Your logo" width={96} height={96} /> : <span aria-hidden="true">{profile.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>}
         </span>
         <div className="rt-pws-set__logoside">
           <input ref={fileRef} id="rt-set-logo" type="file" accept={LOGO_TYPES.join(",")} className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={pick} />
           {!locked && (
             <div className="rt-pws-set__actions">
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Saving…" : profile.logoUrl ? "Change logo" : "Upload logo"}</button>
-              {profile.logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={remove} disabled={busy}>Remove logo</button>}
+              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy && !removeLogo.isPending ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}</button>
+              {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={remove} disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
             </div>
           )}
           <p className="rt-field__hint">At least 200 × 200 pixels. PNG, JPG or WebP, up to 2 MB. It is saved as soon as you choose it.</p>
