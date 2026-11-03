@@ -5,10 +5,10 @@ import { createPortal } from "react-dom";
 import { formatDate } from "@/lib/format";
 import { businessAccount as biz } from "@/data/businessAccount";
 
-// Download a learner's certificate (as Hurak's Business account does). There is no certificate file yet, so the certificate is drawn
-// as an A4 page and the browser's print window opens, where "Save as PDF" downloads it. The page is hidden on screen and is the
-// only thing printed while it is open. `download(cert)` takes a certificate from getBusiness().certificates.
-export function useCertificateDownload() {
+// Print a learner's certificate. There is no certificate file yet, so the certificate is drawn as an A4 page and the browser's print
+// window opens (where "Save as PDF" keeps a copy); so the button says Print, not Download. The page is hidden on screen and is the
+// only thing printed while it is open. `print(cert)` takes a certificate from getBusiness().certificates.
+export function useCertificatePrint() {
   const [cert, setCert] = useState(null);
   useEffect(() => {
     if (!cert) return;
@@ -22,7 +22,7 @@ export function useCertificateDownload() {
     };
   }, [cert]);
   const page = cert ? createPortal(<CertificatePage cert={cert} />, document.body) : null;
-  return { download: setCert, page };
+  return { print: setCert, page };
 }
 
 function CertificatePage({ cert }) {
@@ -47,19 +47,19 @@ function CertificatePage({ cert }) {
   );
 }
 
-// The download arrow (certificates and invoices)
-export const DownloadIcon = () => (
+// The printer (certificates and receipts)
+export const PrintIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" />
+    <path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" /><path d="M6 14h12v7H6z" />
   </svg>
 );
 
-// The Download button beside a certificate (a download icon and a short word; `label` "Download" in a table, the full
-// "Download certificate" where the button stands alone).
-export function DownloadCertificate({ cert, onDownload, label = biz.learners.download }) {
+// The Print button beside a certificate (a printer icon and a short word; `label` "Print" in a table, the full "Print certificate"
+// where the button stands alone).
+export function PrintCertificate({ cert, onPrint, label = biz.learners.print }) {
   return (
-    <button type="button" className="fb-textlink rt-biz__linkbtn rt-biz__download" onClick={() => onDownload(cert)}>
-      <DownloadIcon />
+    <button type="button" className="fb-textlink rt-biz__linkbtn rt-biz__print" onClick={() => onPrint(cert)}>
+      <PrintIcon />
       {label}<span className="rt-sr"> for {cert.learner}, {cert.title}</span>
     </button>
   );

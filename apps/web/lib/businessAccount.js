@@ -2,11 +2,12 @@ import { businessAccount as biz } from "@/data/businessAccount";
 import { demoCourse } from "@/data/demoCourses";
 
 // The Business account's reads and writes. There are no business endpoints in apps/api yet, so the demo company from
-// data/businessAccount.js is the starting point and every change made on the pages (a learner added, a place assigned or freed,
-// the balance paid) is kept in this browser (localStorage). Swap the bodies for API calls later; the pages only depend on the
+// data/businessAccount.js is the starting point and every change made on the pages (a learner added, a place assigned or freed)
+// is kept in this browser (localStorage). Nothing is ever marked paid here: an invoice is paid only through a real payment
+// (Milestone 4). Swap the bodies for API calls later; the pages only depend on the
 // shape getBusiness() returns. Browser-only: call from effects.
 
-const KEY = "rt-business"; // { learners: [added], assigned: { [purchaseId]: [learnerId] }, paid: [invoiceNumber], team: [added], removed: [id] }
+const KEY = "rt-business"; // { learners: [added], assigned: { [purchaseId]: [learnerId] }, team: [added], removed: [id] } (an old "paid" list is ignored)
 const DAY = 86400000;
 const read = () => {
   try {
@@ -69,10 +70,9 @@ export function getBusiness() {
     .map((r) => ({ ...r, learner: byId[r.learnerId].name, title: demoCourse(r.courseId)?.title || "Course", date: isoDay(now - r.daysAgo * DAY) }))
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
-  const paid = new Set(saved.paid || []);
   const invoices = biz.invoices.map((i) => {
     const due = isoDay(now + i.dueIn * DAY);
-    const isPaid = i.paid || paid.has(i.number);
+    const isPaid = Boolean(i.paid);
     // a cancelled booking's invoice was refunded (the refund and its date come from the booking)
     const cancelled = biz.purchases.find((p) => p.reference === i.reference)?.cancelled;
     const status = cancelled ? "refunded" : isPaid ? "paid" : due < today ? "overdue" : "due";
@@ -121,13 +121,6 @@ function setAssigned(purchaseId, update) {
 }
 export const assignPlace = (purchaseId, learnerId) => setAssigned(purchaseId, (list, p) => (list.includes(learnerId) || list.length >= p.places ? list : [...list, learnerId]));
 export const unassignPlace = (purchaseId, learnerId) => setAssigned(purchaseId, (list) => list.filter((id) => id !== learnerId));
-
-// Pay every open invoice (simulated card payment).
-export async function payBalance(numbers) {
-  await new Promise((r) => setTimeout(r, 900));
-  const saved = read();
-  write({ ...saved, paid: [...new Set([...(saved.paid || []), ...numbers])] });
-}
 
 // ---- team (/business/team) --------------------------------------------------------------------------------------------------
 // The colleagues who manage the account besides the owner: the demo team plus any added here, minus any removed.

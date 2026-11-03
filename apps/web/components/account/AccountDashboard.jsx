@@ -12,7 +12,7 @@ import BookingRow, { placeOf, whenOf } from "./BookingRow";
 import { Stats } from "@/components/admin/adminParts";
 import { EmptyState } from "@/components/states/States";
 import { CertPill } from "@/components/businessAccount/bizParts";
-import { DownloadCertificate, useCertificateDownload } from "@/components/businessAccount/BizCertificate";
+import { PrintCertificate, useCertificatePrint } from "@/components/businessAccount/BizCertificate";
 
 const copy = account.dashboard;
 const Arrow = () => <i className="icon-arrow-right text-12" aria-hidden="true"></i>;
@@ -26,12 +26,12 @@ export function Greeting() {
 
 // The account home (Find a course is in the page head), in the order people come for (Baymard: what is coming up first): the next
 // course with its practical details and actions; four numbers that link to their pages, each with a short line; the courses after
-// that one (never the next one again); the certificates (renew the ones that are due, download any) beside quick help.
+// that one (never the next one again); the certificates (renew the ones that are due, print any) beside quick help.
 export default function AccountDashboard() {
   const [data, setData] = useState(null);
   const { person, data: me } = useMe();
   const myName = me ? `${me.profile.firstName} ${me.profile.lastName}`.trim() : person?.name || "";
-  const cert = useCertificateDownload();
+  const cert = useCertificatePrint();
   useEffect(() => {
     const bookings = getBookings();
     const upcoming = bookings.filter((b) => bookingState(b) === "upcoming" || bookingState(b) === "requested").sort((a, b) => (firstDate(a) < firstDate(b) ? -1 : 1));
@@ -106,7 +106,7 @@ export default function AccountDashboard() {
                     <b>{c.title}</b>
                     <span>{c.number}</span>
                     <span>{c.state === "expired" ? "Expired" : "Expires"} {formatDay(c.expires)}</span>
-                    <DownloadCertificate cert={{ ...c, learner: myName }} onDownload={cert.download} />
+                    <PrintCertificate cert={{ ...c, learner: myName }} onPrint={cert.print} />
                   </div>
                   <div className="rt-acc__certside">
                     <CertPill state={c.state} />

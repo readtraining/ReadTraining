@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { and, asc, cohorts, courses, eq, organisationMembers, profiles, sql, venues } from '@readtraining/db'
+import { and, asc, cohorts, courses, eq, gte, isNull, ne, organisationMembers, profiles, sql, venues } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
@@ -152,6 +152,31 @@ const cohortFields = z.object({
 })
 
 type CohortInput = z.infer<typeof cohortFields>
+type Session = z.infer<typeof session>
+
+// Another active run of the same course at the same venue, at the same time, is a duplicate: the venue double-booked and learners
+// offered two identical sessions. It is refused. Different courses at one venue at once are allowed (centres run several rooms).
+// A session runs from its start day and time to its end day and time, as `overlapping` reads it. Checked inside the transaction,
+// after the course row is locked, so two people adding the same dates at the same moment can't both get through.
+const UK_DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+async function refuseClash(tx: Tx, courseId: number, venueId: string | null, sessions: Session[], exceptId: string | null = null) {
+  if (!venueId) return
+  await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, courseId)).for('update')
+  const others = await tx
+    .select({ sessions: cohorts.sessions })
+    .from(cohorts)
+    .where(and(eq(cohorts.courseId, courseId), eq(cohorts.venueId, venueId), isNull(cohorts.cancelledAt), gte(cohorts.endsOn, sessions[0].date), exceptId ? ne(cohorts.id, exceptId) : undefined))
+  const start = (s: Session) => `${s.date} ${s.from}`
+  const end = (s: Session) => `${s.end} ${s.to}`
+  for (const other of others)
+    for (const o of other.sessions)
+      if (sessions.some((s) => start(s) < end(o) && start(o) < end(s))) {
+        const [v] = await tx.select({ name: venues.name }).from(venues).where(eq(venues.id, venueId))
+        const when = `${UK_DAY.format(new Date(`${o.date}T00:00:00Z`))}${o.end !== o.date ? ` to ${UK_DAY.format(new Date(`${o.end}T00:00:00Z`))}` : ''}, ${o.from} to ${o.to}`
+        const message = `You already have dates for this course at ${v?.name ?? 'this venue'} on ${when}. Change the dates or times, or edit those dates instead.`
+        throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sessions' }) })
+      }
+}
 
 // checks a cohort against its course and provider; returns the values to save
 // keepVenueId: the venue the dates already have (it stays allowed if it has since been archived)
@@ -291,6 +316,7 @@ export const providerCohortsRouter = createTRPCRouter({
       const values = await cohortValues(ctx.db, input.organisationId, course.method, input)
       if (values.startsOn < today()) throw bad('New dates can’t start in the past.')
       return ctx.db.transaction(async (tx) => {
+        await refuseClash(tx, course.id, values.venueId, values.sessions)
         const [c] = await tx.insert(cohorts).values({ ...values, courseId: course.id, createdBy: ctx.user.id }).returning({ id: cohorts.id })
         await log(tx, ctx, input.organisationId, 'cohort.created', 'cohort', c.id, { courseId: course.id, startsOn: values.startsOn })
         return { id: c.id }
@@ -308,6 +334,7 @@ export const providerCohortsRouter = createTRPCRouter({
         const now = await lockCohort(tx, cohort.id)
         if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have just been cancelled, so they can’t be changed. Reload the page.' })
+        await refuseClash(tx, course.id, values.venueId, values.sessions, cohort.id)
         await tx.update(cohorts).set({ ...values, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id })
         return { ok: true }

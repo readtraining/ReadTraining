@@ -5,7 +5,7 @@ import Link from "next/link";
 import { account } from "@/data/account";
 import { getBookings } from "@/lib/account";
 import { formatDay, formatPrice } from "@/lib/format";
-import { DownloadIcon } from "@/components/businessAccount/BizCertificate";
+import { PrintIcon } from "@/components/businessAccount/BizCertificate";
 import { EmptyState } from "@/components/states/States";
 
 const copy = account.purchases;
@@ -43,7 +43,7 @@ export default function AccountPurchases() {
                 <td className="rt-biz__act">
                   <span className="rt-biz__rowacts">
                     <Link href={`/account/bookings/${o.reference}`} className="fb-textlink">{copy.view}<span className="rt-sr"> order {o.reference}</span></Link>
-                    <Link href={`/account/bookings/${o.reference}?print=1`} className="fb-textlink rt-biz__download"><DownloadIcon />{copy.receipt}<span className="rt-sr"> for order {o.reference}</span></Link>
+                    <Link href={`/account/bookings/${o.reference}?print=1`} className="fb-textlink rt-biz__print"><PrintIcon />{copy.receipt}<span className="rt-sr"> for order {o.reference}</span></Link>
                   </span>
                 </td>
               </tr>
