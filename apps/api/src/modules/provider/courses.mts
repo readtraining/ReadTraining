@@ -25,6 +25,7 @@ import {
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { refuseRetired } from '../../lib/retired.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
 import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
@@ -286,6 +287,8 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
   const now = await db.select().from(courseImages).where(eq(courseImages.courseId, course.id))
   const known = new Set(now.map((i) => i.id))
   if (images.some((i) => !known.has(i.id))) throw bad('That image is no longer on this course. Refresh and try again.')
+  // a course that is (or has been) live keeps at least one image: it needed one to go live, and its card and page show it
+  if (!images.length && now.length && (course.status === 'live' || course.status === 'paused')) throw bad('A live course needs at least one image. Upload another before removing this one.')
   const keep = new Set(images.map((i) => i.id))
   const removed = now.filter((i) => !keep.has(i.id))
   await db.transaction(async (tx) => {
@@ -556,6 +559,7 @@ export const providerCoursesRouter = createTRPCRouter({
       if (!input.paused && course.statusNote) throw new TRPCError({ code: 'FORBIDDEN', message: 'Our team paused this course. Contact us to put it back live.' })
       return ctx.db.transaction(async (tx) => {
         await tx.update(courses).set({ status: input.paused ? 'paused' : 'live', updatedAt: new Date() }).where(eq(courses.id, course.id))
+        if (!input.paused) await refuseRetired(tx, course.id, 'provider')
         await log(tx, ctx, input.organisationId, input.paused ? 'course.paused' : 'course.resumed', course.id)
         return { ok: true }
       })

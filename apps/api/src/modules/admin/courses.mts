@@ -10,6 +10,7 @@ import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { sendEmail } from '../../lib/email.mjs'
 import { OWN_REASON_ERROR, ownReasonOk, soleApprover } from '../../lib/soleApprover.mjs'
+import { refuseRetired } from '../../lib/retired.mjs'
 import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
@@ -276,6 +277,8 @@ export const adminCoursesRouter = createTRPCRouter({
           await applyContent(tx, course.id, revision.content as Record<string, unknown>)
           await tx.update(courseRevisions).set({ status: 'approved', decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
         }
+        // never live under a retired category, method or level (a change may move it into one retired since it was sent)
+        if (input.decision === 'approve' || input.decision === 'resume' || (input.decision === 'approveChange' && locked.status === 'live')) await refuseRetired(tx, course.id, 'admin')
         if (input.decision === 'rejectChange') await tx.update(courseRevisions).set({ status: 'rejected', note: message, decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
         await logFor(ctx, course, rule.log, { from: course.status, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })(tx)
         // a decision on their own request gets its own line in the log, so it is never missed
@@ -346,6 +349,7 @@ export const adminCoursesRouter = createTRPCRouter({
       const now = new Date()
       await ctx.db.transaction(async (tx) => {
         await tx.update(courses).set({ status: input.status, publishedAt: course.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
+        if (input.status === 'live') await refuseRetired(tx, course.id, 'admin')
         await logFor(ctx, course, input.status === 'live' ? 'admin.shared_course_published' : 'admin.shared_course_paused')(tx)
       })
       return { ok: true }

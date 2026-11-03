@@ -529,8 +529,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
   );
 }
 
-// The course's images: uploaded straight away (not part of the draft), shown in order; the first is the cover in search results.
-// The course's images. Every change shows on screen at once, before the server answers: a chosen picture appears straight away
+// The course's images, uploaded straight away (not part of the draft) and shown in order; the first is the cover. Every change shows on screen at once, before the server answers: a chosen picture appears straight away
 // (marked "Uploading…") and becomes the saved image when the upload finishes; a removed image goes, and a new cover moves first,
 // the moment they are asked for. If the server refuses, the list goes back and says why. The course then loads again in the
 // background. Each action has its own label while it runs (Uploading…, Removing…, Saving…), and Remove asks first.
@@ -627,6 +626,8 @@ function ImagesCard({ course, disabled, onSaved }) {
     setRemoving(null);
     saveList(shown.filter((x) => x.id !== m.id), "Image removed", { kind: "remove", id: m.id });
   };
+  // the only image of a live (or paused) course can't go: the server refuses it, so the question says so instead
+  const lastOfLive = shown.length === 1 && (course.status === "live" || course.status === "paused");
   const runs = (kind, id) => action && typeof action === "object" && action.kind === kind && action.id === id;
 
   return (
@@ -666,14 +667,18 @@ function ImagesCard({ course, disabled, onSaved }) {
         </>
       ) : <EmptyState inCard title="No images yet. Upload one: a course needs an image before it can be sent for approval." />}
 
-      <Sheet open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this image?" closeLabel="Close">
+      <Sheet open={Boolean(removing)} onClose={() => setRemoving(null)} title={lastOfLive ? "This image can't be removed yet" : "Remove this image?"} closeLabel="Close">
         {removing && (
           <div className="rt-q__form">
             <img src={removing.url} alt="" className="rt-pws-course-removeimg" />
-            <p className="rt-acc__note">It comes off the course page and is deleted for good. {shown[0]?.id === removing.id && shown.length > 1 ? "The next image becomes the cover." : shown.length === 1 ? "The course then has no image, and needs one before it can be sent for approval." : ""}</p>
+            {lastOfLive ? (
+              <p className="rt-acc__note">A live course needs at least one image. Upload another, then remove this one.</p>
+            ) : (
+              <p className="rt-acc__note">It comes off the course page and is deleted for good. {shown[0]?.id === removing.id && shown.length > 1 ? "The next image becomes the cover." : shown.length === 1 ? "The course then has no image, and needs one before it can be sent for approval." : ""}</p>
+            )}
             <div className="rt-adm-cellrow">
-              <button type="button" className="button -md -purple-1 text-white" onClick={doRemove} disabled={busy}>Remove image</button>
-              <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setRemoving(null)}>Keep it</button>
+              {!lastOfLive && <button type="button" className="button -md -purple-1 text-white" onClick={doRemove} disabled={busy}>Remove image</button>}
+              <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setRemoving(null)}>{lastOfLive ? "OK" : "Keep it"}</button>
             </div>
           </div>
         )}

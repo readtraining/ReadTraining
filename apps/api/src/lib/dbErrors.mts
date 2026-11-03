@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server'
 
 // Database errors in words a person can act on. A raw database error (and Drizzle's wrapper around it, whose message holds the
 // whole query) must never reach the browser: it names tables and constraints. trpc.mts runs every procedure through
-// `friendlyError`: a duplicate becomes a BAD_REQUEST on the form field it belongs to; any other database error, and any other
+// `friendlyError`: a duplicate becomes a CONFLICT on the form field it belongs to; any other database error, and any other
 // unexpected error, becomes a plain "something went wrong" (the real one is logged on the server).
 
 type PgLike = { code?: unknown; constraint_name?: unknown; constraint?: unknown; severity?: unknown; message?: unknown }

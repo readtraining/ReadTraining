@@ -47,6 +47,12 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
   // the field the last write came from while typing in it ("q", "location"), so its next write replaces instead of adding one
   const typingIn = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
+  // Back or Forward lands on another entry: typing after it adds a new one, never overwrites the entry gone back to
+  useEffect(() => {
+    const moved = () => (typingIn.current = null);
+    window.addEventListener("popstate", moved);
+    return () => window.removeEventListener("popstate", moved);
+  }, []);
 
   const writeUrl = useCallback(
     (query, mode) => {
