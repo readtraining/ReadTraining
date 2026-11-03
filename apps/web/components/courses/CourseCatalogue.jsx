@@ -11,6 +11,7 @@ import {
   filterCourses,
   catalogueFilterGroups,
   sortCourses,
+  takenAnywhere,
   sortOptions,
 } from "@/lib/catalogueFilters";
 import { subcategoryOptions } from "@/lib/taxonomy";
@@ -147,8 +148,8 @@ export default function CourseCatalogue({ courses, scope = null }) {
   const point = state.location.trim().length >= 2 ? located.data ?? null : null;
   const results = useMemo(() => sortCourses(filterCourses(courses, state, point), state.sort, state.location, courses, point), [courses, state, point]);
   // a town or postcode that isn't on the map and matches no venue: say so, rather than let the online courses (which run
-  // anywhere) look like courses near it
-  const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && !results.some((c) => c.venues.length);
+  // anywhere, takenAnywhere) look like courses near it. Only online courses are left then, so the message can say they are online.
+  const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && results.every(takenAnywhere);
   const noMatches = results.length === 0;
   // Only what matches: with zero matches the page says so plainly and offers to loosen the filters; it never fills the space
   // with courses that don't match (Milestone 2's rule for an empty filter).

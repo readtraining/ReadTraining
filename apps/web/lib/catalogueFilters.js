@@ -36,11 +36,14 @@ const allSortValues = [...sortOptions.map((o) => o.value), closestSortOption.val
 const norm = (s) => s.toLowerCase().replace(/\s+/g, "");
 const outward = (s) => s.trim().toLowerCase().split(/\s+/)[0];
 
-// Courses with a physical venue match when a venue's town or postcode matches.
-// Courses with no venue (online only) are available anywhere, so they always match.
+// A course with no venue can be taken from anywhere only when it runs without one (live online, self-paced). A classroom course
+// with no dates yet has no venue either, but it isn't near anywhere, so a location search leaves it out.
+export const takenAnywhere = (course) => course.venues.length === 0 && (course.methods || []).some((m) => m !== "classroom");
+
+// Courses with a physical venue match when a venue's town or postcode matches; online ones match anywhere.
 export function matchesLocation(course, query) {
   const q = (query || "").trim();
-  if (!q || course.venues.length === 0) return true;
+  if (!q || takenAnywhere(course)) return true;
   const qn = norm(q);
   const hasSpace = /\s/.test(q);
   return course.venues.some(
@@ -61,8 +64,8 @@ const matchesKeyword = (course, q) => {
 
 // Within this distance of where the learner is (a town or postcode found on the map), a classroom venue counts as near.
 export const NEAR_KM = 50;
-// A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM; one with no venue (online) is near anywhere.
-const nearPoint = (course, point) => course.venues.length === 0 || course.venues.some((v) => v.lat != null && distanceKm(point, v) <= NEAR_KM);
+// A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM; an online one is near anywhere.
+const nearPoint = (course, point) => takenAnywhere(course) || course.venues.some((v) => v.lat != null && distanceKm(point, v) <= NEAR_KM);
 
 // subject, sub, method and level are arrays of ticked values. Inside a group a course matches ANY ticked value (OR);
 // between groups every group must match (AND). An empty array means "no filter" for that group. The price slider's ends mean
