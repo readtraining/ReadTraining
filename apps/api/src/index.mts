@@ -19,6 +19,18 @@ process.on('unhandledRejection', (reason) => {
 // The web app sends a Bearer token, not cookies, so no credentialed CORS is needed (in production it's the same domain anyway).
 app.use(cors({ origin: WEB_ORIGIN }))
 
+// The same security headers as the website's pages (apps/web/next.config.ts), for the API's answers: they are data, never a page,
+// so nothing may run or be framed from them. Express's own "X-Powered-By" is dropped (it only tells attackers what we run).
+app.disable('x-powered-by')
+app.use((_req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('X-Frame-Options', 'DENY')
+  next()
+})
+
 // Mounted under /api because Vercel Services passes the full /api/... path through to this service.
 app.use(
   '/api/trpc',

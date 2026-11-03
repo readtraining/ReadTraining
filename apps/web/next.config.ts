@@ -7,6 +7,59 @@ import type { NextConfig } from 'next'
 // forceReload: Next has already loaded (and cached) the web app's own folder, which has no .env
 loadEnvConfig(path.resolve(process.cwd(), '../..'), process.env.NODE_ENV !== 'production', { info: () => {}, error: console.error }, true)
 
+// ---- security headers, on every page ----------------------------------------------------------------------------------------
+// Content-Security-Policy: where the page may load scripts, styles, pictures, frames and connections from, so injected markup
+// can't pull in another site's script or send data elsewhere, and no other site can show ReadTraining in a frame (clickjacking).
+// The outside services the site really uses:
+// - Supabase (sign-in, data, pictures in course-media) and the API (on Vercel the site's own /api; locally :4000);
+// - Google sign-in (its script, frame and style from accounts.google.com);
+// - course videos (youtube-nocookie.com and Vimeo frames); the test-centre search's postcode lookups (api.postcodes.io);
+// - Google Analytics, for when its tag is added (lib/analytics.js already queues the events).
+// 'unsafe-inline' scripts: Next's own inline start-up scripts (the pages are prebuilt, so a per-request nonce isn't possible);
+// 'unsafe-eval' only in development (hot reload). Add an origin here before using a new outside service in the browser.
+const isDev = process.env.NODE_ENV !== 'production'
+const originOf = (url: string | undefined) => {
+  try {
+    return url ? new URL(url).origin : ''
+  } catch {
+    return ''
+  }
+}
+const supabase = originOf(process.env.NEXT_PUBLIC_SUPABASE_URL)
+const api = originOf(process.env.NEXT_PUBLIC_API_URL)
+const GA = ['https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com']
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://accounts.google.com ${GA[0]}`,
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com",
+  `img-src 'self' data: blob: ${supabase} https://lh3.googleusercontent.com https://platform-lookaside.fbsbx.com https://*.fbcdn.net ${GA.join(' ')}`,
+  "font-src 'self' data:",
+  `connect-src 'self' ${api} ${supabase} ${supabase.replace(/^https:/, 'wss:')} https://accounts.google.com https://api.postcodes.io ${GA.join(' ')}${isDev ? ' ws: http://localhost:*' : ''}`,
+  "frame-src 'self' https://accounts.google.com https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com",
+  "media-src 'self' blob:",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  ...(isDev ? [] : ['upgrade-insecure-requests']),
+]
+  .map((d) => d.replace(/\s+/g, ' ').trim())
+  .join('; ')
+const SECURITY_HEADERS = [
+  { key: 'Content-Security-Policy', value: csp },
+  // HTTPS only, for a year (not includeSubDomains: other services on the client's domain may not be on HTTPS)
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+  // a file is what its type says (no guessing a script out of an upload)
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  // other sites see only our address, not the page or its query (a search, a booking reference)
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  // older browsers' version of frame-ancestors
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  // no camera, microphone or payment handler; location only for our own "Use my location"
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=(self), usb=(), interest-cohort=()' },
+]
+
 const nextConfig: NextConfig = {
   // the public Supabase values, inlined for the browser, the server and proxy.js (the edge runtime does not read the root .env)
   env: {
@@ -27,7 +80,10 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@readtraining/permissions'],
   // the test copy (Vercel preview deployments) can be opened by anyone with the link, but search engines never index it
   async headers() {
-    return process.env.VERCEL_ENV === 'preview' ? [{ source: '/(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }] : []
+    return [
+      { source: '/(.*)', headers: SECURITY_HEADERS },
+      ...(process.env.VERCEL_ENV === 'preview' ? [{ source: '/(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }] : []),
+    ]
   },
   // pages that left the template routes (auth, shop, checkout): old links and bookmarks land on the new addresses, query kept
   async redirects() {

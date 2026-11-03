@@ -31,6 +31,8 @@ To run a command in one package, use `pnpm --filter @readtraining/<api|web|db> <
 
 Env: copy `.env.example` to `.env` at the repo root. The API loads it through `tsx --env-file-if-exists=../../.env`, and drizzle-kit loads it through dotenv. `DATABASE_URL` is the Supabase transaction pooler (6543) and is used at runtime. `DIRECT_URL` (5432) is used for migrations. The web app reads the same root `.env` through `loadEnvConfig` in `next.config.ts` and inlines `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the edge `proxy.js` can't read the root file).
 
+Security headers: every page gets a Content-Security-Policy, HSTS, X-Content-Type-Options, Referrer-Policy, X-Frame-Options and Permissions-Policy (`next.config.ts` `SECURITY_HEADERS`), and the API's answers get their own (`apps/api/src/index.mts`). Before using a new outside service in the browser (a script, frame, image host or API), add its origin to the CSP there, or the browser blocks it.
+
 Deploy: one Vercel project (`vercel.json`, Vercel Services). `/api/*` goes to the API service and everything else to the web app. Health check: `/api/trpc/health`.
 
 ## Architecture
