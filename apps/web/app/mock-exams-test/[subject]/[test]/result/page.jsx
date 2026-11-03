@@ -1,5 +1,5 @@
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
@@ -7,7 +7,7 @@ import HomeFooter from "@/components/home/HomeFooter";
 import SubjectHero from "@/components/testPrep/subject/SubjectHero";
 import ResultView from "@/components/testPrep/runner/ResultView";
 import { testPrepPage } from "@/data/testPrep";
-import { getSubjectSlugs, resolveTests } from "@/lib/testPrep";
+import { getSubjectSlugs, ownTests, testRedirect } from "@/lib/testPrep";
 import { getTest } from "@/lib/testPrepRunner";
 import { liveHref } from "@/lib/catalogueServer";
 
@@ -15,7 +15,7 @@ import { liveHref } from "@/lib/catalogueServer";
 // this device is marked on the server and shown by ResultView. Not indexed: it is personal to the learner.
 
 export function generateStaticParams() {
-  return getSubjectSlugs().flatMap((subject) => resolveTests(subject).filter((t) => t.ready).map((t) => ({ subject, test: t.slug })));
+  return getSubjectSlugs().flatMap((subject) => ownTests(subject).filter((t) => t.ready).map((t) => ({ subject, test: t.slug })));
 }
 
 export async function generateMetadata(props) {
@@ -30,6 +30,8 @@ export async function generateMetadata(props) {
 
 export default async function MockTestResultPage(props) {
   const { subject: subjectSlug, test: testSlug } = await props.params;
+  const moved = testRedirect(subjectSlug, testSlug);
+  if (moved) permanentRedirect(`${moved}/result`);
   const hit = getTest(subjectSlug, testSlug);
   if (!hit?.test.ready) notFound();
   const { subject, test } = hit;

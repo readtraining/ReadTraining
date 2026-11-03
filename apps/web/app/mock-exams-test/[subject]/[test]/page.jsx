@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
@@ -10,7 +10,7 @@ import TestRunner from "@/components/testPrep/runner/TestRunner";
 import CommentButton from "@/components/testPrep/runner/CommentButton";
 import SubjectCourses from "@/components/testPrep/subject/SubjectCourses";
 import { testPrepPage } from "@/data/testPrep";
-import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, resolveTests, subjectHref } from "@/lib/testPrep";
+import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, ownTests, subjectHref, testRedirect } from "@/lib/testPrep";
 import { getPaper, getTest } from "@/lib/testPrepRunner";
 import { loadCatalogue, liveHref } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
@@ -21,13 +21,15 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 // "Still looking for an answer?" under it. A test without questions yet shows a "coming soon" page in the site's
 // design (never a 404) with the paper's facts and the way back to the subject.
 
+// Each test has one page, under the subject that owns it (another subject listing it links there; its old address there goes
+// on, permanently: testRedirect). A placeholder has no page built ahead, and nothing links to it.
 export function generateStaticParams() {
-  return getSubjectSlugs().flatMap((subject) => resolveTests(subject).map((t) => ({ subject, test: t.slug })));
+  return getSubjectSlugs().flatMap((subject) => ownTests(subject).filter((t) => t.ready).map((t) => ({ subject, test: t.slug })));
 }
 
 const find = (subjectSlug, testSlug) => {
   const subject = getSubject(subjectSlug);
-  const test = subject?.tests.find((t) => t.slug === testSlug);
+  const test = ownTests(subjectSlug).find((t) => t.slug === testSlug);
   return subject && test ? { subject, test } : null;
 };
 
@@ -47,6 +49,8 @@ export async function generateMetadata(props) {
 export default async function MockTestPage(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { subject: subjectSlug, test: testSlug } = await props.params;
+  const moved = testRedirect(subjectSlug, testSlug);
+  if (moved) permanentRedirect(moved);
   const hit = find(subjectSlug, testSlug);
   if (!hit) notFound();
   const { subject, test } = hit;

@@ -1,6 +1,6 @@
 import "server-only";
 import { questionBank } from "@/data/testPrepQuestions";
-import { bookHref, getSubject, passCount, subjectHref, testHref } from "@/lib/testPrep";
+import { bookHref, getSubject, ownTests, passCount, subjectHref, testHref } from "@/lib/testPrep";
 
 // Server-only reads for a mock test. The question bank holds the correct answers, so it never reaches the browser:
 // pages get the paper without answers (getPaper) and an attempt is marked here (markAttempt, via a server action).
@@ -8,13 +8,14 @@ import { bookHref, getSubject, passCount, subjectHref, testHref } from "@/lib/te
 
 export const resultHref = (subjectSlug, testSlug) => `${testHref(subjectSlug, testSlug)}/result`;
 
-// The subject and test, with the links the test and result pages need, or null for an unknown pair.
+// The subject and test, with the links the test and result pages need, or null for an unknown pair. Only the subject that owns
+// a test has it (another subject listing it links to the owner's address: lib/testPrep.js ownTests).
 export function getTest(subjectSlug, testSlug) {
   const subject = getSubject(subjectSlug);
-  const index = subject ? subject.tests.findIndex((t) => t.slug === testSlug) : -1;
-  if (index < 0) return null;
-  const test = subject.tests[index];
-  const next = subject.tests.slice(index + 1).find((t) => t.ready) || null;
+  const test = subject ? ownTests(subjectSlug).find((t) => t.slug === testSlug) : null;
+  if (!test) return null;
+  const index = subject.tests.findIndex((t) => t.slug === testSlug && t.owner === subjectSlug);
+  const next = index < 0 ? null : subject.tests.slice(index + 1).find((t) => t.ready) || null;
   return {
     subject: { slug: subject.slug, title: subject.title },
     test: { slug: test.slug, title: test.title, subtitle: test.subtitle || "", questions: test.questions, passMark: test.passMark, minutes: test.minutes, ready: test.ready },
@@ -22,7 +23,7 @@ export function getTest(subjectSlug, testSlug) {
       subject: subjectHref(subject.slug),
       test: testHref(subject.slug, test.slug),
       result: resultHref(subject.slug, test.slug),
-      next: next ? testHref(subject.slug, next.slug) : null,
+      next: next ? next.href : null,
       nextTitle: next ? next.title : null,
       book: bookHref(subject.slug),
     },
