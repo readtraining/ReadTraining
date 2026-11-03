@@ -9,9 +9,8 @@ export const basket = {
   steps: ["Choose a date", "Review basket", "Pay securely"], // the basket is the second
   continueLink: { label: "Continue browsing", href: CATALOGUE_HREF },
   checkout: { label: "Proceed to payment", href: CHECKOUT_HREF },
-  instalments: "Pay in 3 interest-free instalments with Klarna",
-  // what the customer can rely on, taken from the course page's booking card and FAQs
-  trust: ["No booking fee", "Approved providers only", "Move to another date free of charge up to 7 days before"],
+  // what the customer can rely on today (instalments and free date changes come with online payment, Milestone 4)
+  trust: ["No booking fee", "Approved providers only"],
   empty: { title: "Your basket is empty", text: "Find a course, choose a date and add it to your basket.", cta: { label: "Find courses", href: CATALOGUE_HREF } },
   recommended: { eyebrow: "More to consider", title: "You might also like" },
   noDate: "No date chosen yet.",

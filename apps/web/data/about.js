@@ -40,7 +40,7 @@ export const about = {
     steps: [
       { title: "Search", text: "Look up a course by name, subject or location, classroom or online.", icon: "icon-search" },
       { title: "Compare", text: "See dates, venues, prices and reviews from different providers side by side.", icon: "icon-list" },
-      { title: "Book", text: "Choose your date and booking option and pay securely in a few minutes.", icon: "icon-basket" },
+      { title: "Book", text: "Choose your date, then call us and we’ll book your place. Online booking is coming soon.", icon: "icon-basket" },
       { title: "Get certified", text: "Attend your course with the provider and receive your qualification.", icon: "icon-badge" },
     ],
   },

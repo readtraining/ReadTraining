@@ -2011,7 +2011,6 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__hprice { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 0 0 14px; color: color-mix(in srgb, var(--color-white) 80%, transparent); }
 .rt-cd__hprice-from { font-size: 14px; }
 
-.rt-cd__klarna { margin: 12px 0 0; font-size: 13px; line-height: 20px; color: color-mix(in srgb, var(--color-white) 80%, transparent); }
 @media (max-width: 991px) { .rt-cd__hrow .button { width: 100%; } }
 
 /* ---------- Course features card: overlaps the hero edge ---------- */
@@ -2081,9 +2080,8 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__hprice-inc { font-size: 12px; }
 .rt-cd__hprice-was { font-size: 14px; }
 .rt-cd__hprice-off { color: var(--color-green-1); font-size: 14px; font-weight: 700; white-space: nowrap; }
-.rt-cd__hero .rt-cd__klarna { margin: 0; font-size: 14px; line-height: 20px; }
 /* from 992px the booking card sits beside the hero and shows the same price and instalments line, so they are shown once, in the card; below 992px the card is under the hero, so the hero keeps them */
-@media (min-width: 992px) { .rt-cd__hero .rt-cd__hprice, .rt-cd__hero .rt-cd__klarna { display: none; } }
+@media (min-width: 992px) { .rt-cd__hero .rt-cd__hprice { display: none; } }
 @media (max-width: 991px) { .rt-cd__hero { padding: 24px 0; } }
 
 /* ---------- Stats card on the hero edge ---------- */
@@ -3748,7 +3746,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__go:disabled { opacity: 0.5; cursor: not-allowed; }
 .rt-bk__issues { margin: 12px 0 0; padding: 12px 14px 12px 30px; border-radius: 10px; background: var(--color-light-4); font-size: 13px; line-height: 1.5; color: var(--color-dark-1); }
 .rt-bk__issues li { list-style: disc; }
-.rt-bk__klarna { margin: 14px 0 0; text-align: center; font-size: 13px; color: var(--color-light-1); }
 .rt-bk__trust { display: grid; gap: 10px; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--color-light-5); list-style: none; }
 .rt-bk__trust li { display: flex; align-items: flex-start; gap: 10px; list-style: none; font-size: 13px; line-height: 1.45; color: var(--color-dark-1); }
 .rt-bk__trust .fb-ticks__icon { flex: 0 0 20px; width: 20px; height: 20px; }
