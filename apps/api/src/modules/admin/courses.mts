@@ -22,12 +22,15 @@ import {
   content,
   courseDetail,
   courseImageUploadUrl,
+  courseVersion,
   courseSlug,
   deleteCourse,
   missing,
   notFound,
+  refuseIfChanged,
   resolveCatalogue,
   REVIEWED,
+  seenVersion,
   setCourseImages,
 } from '../provider/courses.mjs'
 
@@ -315,15 +318,19 @@ export const adminCoursesRouter = createTRPCRouter({
         seoDescription: z.string().trim().max(320).nullable().optional(),
         seoKeywords: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
         listed: z.boolean().optional(),
-      }) as z.ZodType<{ courseId: number; seoTitle?: string | null; seoDescription?: string | null; seoKeywords?: string[]; listed?: boolean } & Partial<Record<keyof typeof content, unknown>>>,
+        seen: seenVersion,
+      }) as z.ZodType<{ courseId: number; seoTitle?: string | null; seoDescription?: string | null; seoKeywords?: string[]; listed?: boolean; seen?: string } & Partial<Record<keyof typeof content, unknown>>>,
     )
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      const { courseId, seoTitle, seoDescription, seoKeywords, listed, ...rest } = input
+      const { courseId, seoTitle, seoDescription, seoKeywords, listed, seen, ...rest } = input
       void courseId
       if (rest.subcategory !== undefined && rest.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
       const reviewed = Object.fromEntries(Object.entries(rest).filter(([k, v]) => v !== undefined && (REVIEWED as readonly string[]).includes(k)))
-      await ctx.db.transaction(async (tx) => {
+      const version = await ctx.db.transaction(async (tx) => {
+        // two staff (or two tabs) on the same page: a save over a newer version is refused (lock the row so they take turns)
+        await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+        await refuseIfChanged(tx, course.id, seen)
         if (Object.keys(reviewed).length) await applyContent(tx, course.id, reviewed)
         const direct: Partial<typeof courses.$inferInsert> = {}
         if (seoTitle !== undefined) direct.seoTitle = seoTitle || null
@@ -331,9 +338,10 @@ export const adminCoursesRouter = createTRPCRouter({
         if (seoKeywords !== undefined) direct.seoKeywords = [...new Set(seoKeywords.map((w) => w.toLowerCase()))]
         if (listed !== undefined) direct.listed = listed
         if (Object.keys(direct).length) await tx.update(courses).set({ ...direct, updatedAt: new Date() }).where(eq(courses.id, course.id))
-        await logFor(ctx, course, 'admin.shared_course_updated', { fields: Object.keys(input).filter((k) => k !== 'courseId') })(tx)
+        await logFor(ctx, course, 'admin.shared_course_updated', { fields: Object.keys(input).filter((k) => k !== 'courseId' && k !== 'seen') })(tx)
+        return courseVersion(tx, course.id)
       })
-      return { ok: true, pendingChange: false }
+      return { ok: true, pendingChange: false, version }
     }),
 
   // Publish a shared page (once nothing required is missing), take it off the site, or put it back.
@@ -341,7 +349,7 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, status: z.enum(['live', 'paused']) }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      if (course.status === input.status) return { ok: true }
+      if (course.status === input.status) return { ok: true, version: await courseVersion(ctx.db, course.id) }
       if (input.status === 'live') {
         const gaps = await missing(ctx.db, course)
         if (gaps.length) throw bad(`Add ${gaps.join(', ')} before publishing it.`)
@@ -352,7 +360,7 @@ export const adminCoursesRouter = createTRPCRouter({
         if (input.status === 'live') await refuseRetired(tx, course.id, 'admin')
         await logFor(ctx, course, input.status === 'live' ? 'admin.shared_course_published' : 'admin.shared_course_paused')(tx)
       })
-      return { ok: true }
+      return { ok: true, version: await courseVersion(ctx.db, course.id) }
     }),
 
   sharedImageUploadUrl: adminProcedure('admin.catalogue.edit')
@@ -363,14 +371,16 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: z.string().trim().max(140).optional() }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      return addCourseImage(ctx.db, course, input.path, input.alt, logFor(ctx, course, 'admin.shared_course_image_added'))
+      const added = await addCourseImage(ctx.db, course, input.path, input.alt, logFor(ctx, course, 'admin.shared_course_image_added'))
+      return { ...added, version: await courseVersion(ctx.db, course.id) }
     }),
 
   sharedSetImages: adminProcedure('admin.catalogue.edit')
     .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: z.string().trim().max(140) })).max(10) }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      return setCourseImages(ctx.db, course, input.images, (tx, m) => logFor(ctx, course, 'admin.shared_course_images_changed', m)(tx))
+      const done = await setCourseImages(ctx.db, course, input.images, (tx, m) => logFor(ctx, course, 'admin.shared_course_images_changed', m)(tx))
+      return { ...done, version: await courseVersion(ctx.db, course.id) }
     }),
 
   // Delete a shared page that has never been live and has no provider courses on it.

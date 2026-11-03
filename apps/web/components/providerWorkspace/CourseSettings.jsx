@@ -98,8 +98,10 @@ export function SeoPanel({ course, onSaved }) {
 // The gear on every editor page (Hurak's course settings): who can enrol (public or private), the address to share, the shared
 // course page it is listed under, showing it in ReadTraining's search, pausing a live course, and deleting a course that has never
 // been live. Each choice saves at once.
-export function CourseGear({ course, open, onClose, onSaved }) {
+export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const router = useRouter();
+  // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
+  const ep = useEndpoints();
   const { organisationId, can } = useProviderAccess();
   const utils = api.useUtils();
   const update = api.provider.courses.update.useMutation();
@@ -116,10 +118,14 @@ export function CourseGear({ course, open, onClose, onSaved }) {
     utils.provider.courses.get.invalidate({ organisationId, courseId: course.id });
     utils.provider.courses.list.invalidate({ organisationId });
   };
-  const fail = (e) => setError(errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0]);
+  const fail = (e) => {
+    // changed somewhere else since the editor loaded it: the editor says so, with a way to load the latest version
+    if (onStale && e?.data?.code === "CONFLICT" && /changed somewhere else/i.test(e.message)) return onStale();
+    setError(errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0]);
+  };
   const change = (patch, message) => {
     setError("");
-    update.mutate({ organisationId, courseId: course.id, ...patch }, { onSuccess: () => { refresh(); onSaved(message); }, onError: fail });
+    update.mutate({ organisationId, courseId: course.id, ...patch, seen: ep?.seen() }, { onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(message); }, onError: fail });
   };
   const copy = async () => {
     try {
@@ -180,7 +186,7 @@ export function CourseGear({ course, open, onClose, onSaved }) {
           {edit && (course.status === "live" || (course.status === "paused" && !course.statusNote)) && (
             <div className="rt-field">
               <p className="rt-acc__note">{course.status === "live" ? "Pausing takes the course off ReadTraining. Its dates stay, and you can put it back live at any time." : "This course is paused: it doesn't show on ReadTraining."}</p>
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => { setError(""); pause.mutate({ organisationId, courseId: course.id, paused: course.status === "live" }, { onSuccess: () => { refresh(); onSaved(course.status === "live" ? "The course is paused" : "The course is live again"); }, onError: fail }); }}>{course.status === "live" ? "Pause course" : "Put back live"}</button>
+              <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => { setError(""); pause.mutate({ organisationId, courseId: course.id, paused: course.status === "live" }, { onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(course.status === "live" ? "The course is paused" : "The course is live again"); }, onError: fail }); }}>{course.status === "live" ? "Pause course" : "Put back live"}</button>
             </div>
           )}
           {can("provider.courses.delete") && (

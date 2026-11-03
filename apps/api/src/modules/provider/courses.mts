@@ -249,6 +249,7 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     images: images.map((i) => ({ id: i.id, url: mediaUrl(i.path), alt: i.alt ?? '' })),
     parent: parent ? { id: parent.id, title: parent.title, slug: parent.slug, sameSubject: sameSubject(parent, course) } : null,
     pendingChanges: revision ? { content: revision.content, since: revision.submittedAt } : null,
+    version: new Date(Math.max(course.updatedAt.getTime(), revision?.submittedAt?.getTime() ?? 0)).toISOString(),
     lastChange: last ?? null,
     upcomingCohorts: dates?.upcoming ?? 0,
     cohortCount: dates?.total ?? 0,
@@ -328,6 +329,33 @@ const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organ
 // The course's status as it stands now, with the row locked until the transaction ends. An admin deciding on the course locks
 // the same row (modules/admin/courses.mts), so a provider's edit and an admin's decision at the same moment take turns: the edit
 // either lands first (the course leaves review and the decision is refused) or after (it goes in as a change to the live course).
+// ---- versions: two tabs or two people editing the same course ----------------------------------------------------------------
+// A course's version is when it last changed: its own row, or the change to a live course waiting for approval, whichever is
+// later. The editor sends the version its draft was loaded from (`seen`); a save over a newer one is refused, so neither person's
+// work is silently overwritten. Every change the editor makes itself returns the new version, so its next save isn't refused.
+export const CHANGED_SINCE_OPENED =
+  'This course was changed somewhere else (in another tab, or by someone else) since you opened it. Your changes are not saved. Copy anything you want to keep, then load the latest version.'
+
+/** The course's version (ISO time), as the editor sends it back in `seen`. */
+export async function courseVersion(db: Writer, courseId: number) {
+  const [[c], [r]] = await Promise.all([
+    db.select({ at: courses.updatedAt }).from(courses).where(eq(courses.id, courseId)),
+    db.select({ at: courseRevisions.submittedAt }).from(courseRevisions).where(and(eq(courseRevisions.courseId, courseId), eq(courseRevisions.status, 'pending'))),
+  ])
+  const t = Math.max(c?.at?.getTime() ?? 0, r?.at?.getTime() ?? 0)
+  return t ? new Date(t).toISOString() : null
+}
+
+/** Refuses the save when the course changed after the version the editor loaded (call it holding the course's row lock). */
+export async function refuseIfChanged(db: Writer, courseId: number, seen: string | undefined) {
+  if (!seen) return
+  const now = await courseVersion(db, courseId)
+  if (now && new Date(now).getTime() > new Date(seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE_OPENED })
+}
+
+/** `seen` in an editor call's input: the version the editor's draft was loaded from. */
+export const seenVersion = z.string().datetime().optional()
+
 async function lockStatus(tx: Writer, courseId: number) {
   const [row] = await tx.select({ status: courses.status }).from(courses).where(eq(courses.id, courseId)).for('update')
   return row?.status ?? 'draft'
@@ -421,14 +449,15 @@ export const providerCoursesRouter = createTRPCRouter({
     .input(
       z.object({
         courseId: id,
+        seen: seenVersion,
         ...Object.fromEntries(Object.entries(content).map(([k, v]) => [k, (v as z.ZodTypeAny).optional()])),
         ...Object.fromEntries(Object.entries(settings).map(([k, v]) => [k, (v as z.ZodTypeAny).optional()])),
-      }) as z.ZodType<{ courseId: number } & Partial<Record<keyof typeof content | keyof typeof settings, unknown>>>,
+      }) as z.ZodType<{ courseId: number; seen?: string } & Partial<Record<keyof typeof content | keyof typeof settings, unknown>>>,
     )
     .mutation(async ({ ctx, input, path }) => {
-      const { organisationId, courseId, ...fields } = input as { organisationId: string; courseId: number } & Record<string, unknown>
+      const { organisationId, courseId, seen, ...fields } = input as { organisationId: string; courseId: number; seen?: string } & Record<string, unknown>
       const keys = Object.keys(fields).filter((k) => fields[k] !== undefined)
-      if (!keys.length) return { ok: true, pendingChange: false }
+      if (!keys.length) return { ok: true, pendingChange: false, version: await courseVersion(ctx.db, courseId) }
       // page wording and search fields: course editors and marketing; anything else needs full course editing; prices need pricing
       if (keys.some((k) => !PAGE_ONLY.has(k)) && !can(ctx.actor, 'provider.courses.edit', { organisationId })) await refuse(ctx, 'provider.courses.edit', organisationId, path)
       if (keys.some((k) => PRICING.has(k)) && !can(ctx.actor, 'provider.pricing.edit', { organisationId })) await refuse(ctx, 'provider.pricing.edit', organisationId, path)
@@ -469,6 +498,8 @@ export const providerCoursesRouter = createTRPCRouter({
 
       const result = await ctx.db.transaction(async (tx) => {
         const status = await lockStatus(tx, courseId)
+        // saved over a newer version (another tab, or someone else): refused, nothing written
+        await refuseIfChanged(tx, courseId, seen)
         const isLive = status === 'live' || status === 'paused'
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
         const backToDraft = await leaveReview(tx, ctx, organisationId, { id: courseId, status })
@@ -484,14 +515,14 @@ export const providerCoursesRouter = createTRPCRouter({
           } else await applyContent(tx, courseId, reviewed)
         }
         await log(tx, ctx, organisationId, pendingChange ? 'course.change_submitted' : 'course.updated', courseId, { fields: keys })
-        return { ok: true, pendingChange, backToDraft, newChange }
+        return { ok: true, pendingChange, backToDraft, newChange, version: await courseVersion(tx, courseId) }
       })
       // a change to a live course: the admins who approve are told once, when it starts (later saves add to the same change)
       if (result.newChange) {
         const { provider } = await ownerOf(ctx.db, organisationId)
         await notifyApprovers(ctx.db, 'admin-course-change', { provider, course: course.title, courseId: String(courseId) }, { organisationId, targetType: 'course', targetId: String(courseId), action: 'email.approvers_told' }, ctx.user.id)
       }
-      return { ok: result.ok, pendingChange: result.pendingChange, backToDraft: result.backToDraft }
+      return { ok: result.ok, pendingChange: result.pendingChange, backToDraft: result.backToDraft, version: result.version }
     }),
 
   // Withdraw a content change that is still waiting (the live course stays as it is).
@@ -502,7 +533,7 @@ export const providerCoursesRouter = createTRPCRouter({
       return ctx.db.transaction(async (tx) => {
         const gone = await tx.delete(courseRevisions).where(and(eq(courseRevisions.courseId, input.courseId), eq(courseRevisions.status, 'pending'))).returning({ id: courseRevisions.id })
         if (gone.length) await log(tx, ctx, input.organisationId, 'course.change_withdrawn', input.courseId)
-        return { ok: true }
+        return { ok: true, version: await courseVersion(tx, input.courseId) }
       })
     }),
 
@@ -516,20 +547,22 @@ export const providerCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: line(140, 'image description').optional() }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      return addCourseImage(ctx.db, course, input.path, input.alt, async (tx) => {
+      const added = await addCourseImage(ctx.db, course, input.path, input.alt, async (tx) => {
         await leaveReview(tx, ctx, input.organisationId, { id: course.id, status: await lockStatus(tx, course.id) })
         await log(tx, ctx, input.organisationId, 'course.image_added', course.id)
       })
+      return { ...added, version: await courseVersion(ctx.db, course.id) }
     }),
 
   setImages: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, images: z.array(z.object({ id: z.string().uuid(), alt: line(140, 'image description') })).max(10) }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      return setCourseImages(ctx.db, course, input.images, async (tx, m) => {
+      const done = await setCourseImages(ctx.db, course, input.images, async (tx, m) => {
         await leaveReview(tx, ctx, input.organisationId, { id: course.id, status: await lockStatus(tx, course.id) })
         await log(tx, ctx, input.organisationId, 'course.images_changed', course.id, m)
       })
+      return { ...done, version: await courseVersion(ctx.db, course.id) }
     }),
 
   // Send a draft (or a course an admin asked to change) for approval, once nothing required is missing. Only an approved provider
@@ -553,7 +586,7 @@ export const providerCoursesRouter = createTRPCRouter({
       const target = { organisationId: input.organisationId, targetType: 'course', targetId: String(course.id) }
       await notify(ctx.db, 'course-received', to, vars, { ...target, action: 'email.course_received_sent' })
       await notifyApprovers(ctx.db, 'admin-new-course', vars, { ...target, action: 'email.approvers_told' }, ctx.user.id)
-      return { ok: true }
+      return { ok: true, version: await courseVersion(ctx.db, course.id) }
     }),
 
   // Pause a live course (it leaves the site, its dates stay) or put it back live.
@@ -569,7 +602,7 @@ export const providerCoursesRouter = createTRPCRouter({
         await tx.update(courses).set({ status: input.paused ? 'paused' : 'live', updatedAt: new Date() }).where(eq(courses.id, course.id))
         if (!input.paused) await refuseRetired(tx, course.id, 'provider')
         await log(tx, ctx, input.organisationId, input.paused ? 'course.paused' : 'course.resumed', course.id)
-        return { ok: true }
+        return { ok: true, version: await courseVersion(tx, course.id) }
       })
     }),
 

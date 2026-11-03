@@ -152,7 +152,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [sent, setSent] = useState(false);
   // what was just sent (or published) stays said where the button was, not only in the passing message at the bottom
   const [sentNote, setSentNote] = useState("");
+  // a save was refused because the course changed somewhere else since this draft was loaded
+  const [stale, setStale] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const needRef = useRef(null);
+  const staleRef = useRef(null);
   const [gear, setGear] = useState(false);
   const [preview, setPreview] = useState(false);
   const formRef = useRef(null);
@@ -182,8 +186,9 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       const d = draftOf(course);
       setDraft(d);
       setBase(d);
+      ep.setVersion(course.version);
     }
-  }, [course]);
+  }, [course]); // eslint-disable-line react-hooks/exhaustive-deps -- ep is rebuilt every render; its version lives in a ref
 
   // the course as loaded again has its new status: show that
   useEffect(() => setSent(false), [course?.status]);
@@ -240,6 +245,13 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       setToast({ message });
       return true;
     } catch (error) {
+      // changed in another tab or by someone else: nothing was saved; say so where it can't be missed, with a way to catch up
+      if (error?.data?.code === "CONFLICT" && /changed somewhere else/i.test(error.message)) {
+        setStale(true);
+        setSaid(error.message);
+        requestAnimationFrame(() => staleRef.current?.focus());
+        return false;
+      }
       const { fields, general } = errorsFrom(error);
       setErrors({ ...fields, form: general });
       if (fields.price || fields.pricePence) changeTab("pricing");
@@ -285,11 +297,32 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   };
   const withdraw = async () => {
     await ep.discard();
-    const d = draftOf(await ep.fetch());
+    const fresh = await ep.fetch();
+    const d = draftOf(fresh);
     setDraft(d);
     setBase(d);
+    ep.setVersion(fresh.version);
     refresh();
     setToast({ message: "Your changes were withdrawn. The live version stays as it is." });
+  };
+  // load the course as it is now, in place of this draft (the person has copied what they wanted to keep)
+  const loadLatest = async () => {
+    setReloading(true);
+    try {
+      const fresh = await ep.fetch();
+      const d = draftOf(fresh);
+      setDraft(d);
+      setBase(d);
+      setErrors({});
+      ep.setVersion(fresh.version);
+      setStale(false);
+      refresh();
+      setToast({ message: "Loaded the latest version. Make your change again, then save." });
+    } catch {
+      setToast({ message: "We couldn't load it. Check your connection, then try again." });
+    } finally {
+      setReloading(false);
+    }
   };
   function changeTab(t) {
     setTab(t);
@@ -325,6 +358,13 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
         </div>
       </section>
 
+      {stale && (
+        <div className="rt-acc__notice -warn rt-pws-ce__stale" role="alert" tabIndex={-1} ref={staleRef}>
+          <b>This course was changed somewhere else since you opened it.</b>
+          <p>Someone else, or you in another tab, saved a newer version. Your changes are not saved, so nothing was overwritten. Copy anything you want to keep, then load the latest version and make your change again.</p>
+          <button type="button" className="button -sm -purple-1 text-white" onClick={loadLatest} disabled={reloading} aria-busy={reloading || undefined}>{reloading ? "Loading…" : "Load the latest version"}</button>
+        </div>
+      )}
       {course.pendingChanges && (
         <section className="rt-acc__card rt-pws-ce__pending" aria-label="Changes waiting for approval">
           <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {formatWhen(new Date(course.pendingChanges.since).getTime())}). You can keep editing: new changes join the same request.</p>
@@ -397,7 +437,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
         </div>
       </div>
 
-      {ep.admin ? <SharedGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} /> : <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} />}
+      {ep.admin ? <SharedGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} /> : <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} onStale={() => { setGear(false); setStale(true); requestAnimationFrame(() => staleRef.current?.focus()); }} />}
       <PreviewSheet open={preview} onClose={() => setPreview(false)} course={course} draft={draft} />
       <Toast toast={toast} onDone={clearToast} />
     </div>
