@@ -226,7 +226,24 @@ export const account = {
     },
     noPassword: "You log in with Google or Facebook, so there's no password here yet. To add one, use \"Forgot password\" on the log in page.",
     marketing: { title: "Emails from us", label: "Send me offers and news about new courses", note: "You can change this at any time. We always email you about your bookings." },
-    delete: { title: "Close your account", text: "To close your account and delete your data, contact us. We keep booking records the law asks us to keep.", cta: { label: "Contact us", href: "/contact-us" } },
+    // a request our team handles within one month (UK GDPR); it can be withdrawn until then
+    delete: {
+      title: "Close your account",
+      text: "Ask us to close your account and delete your personal details. We keep the booking and payment records the law asks us to keep, without your login.",
+      cta: "Request account closure",
+      sheet: {
+        title: "Close your account",
+        what: ["We close your account and delete your personal details within one month, and email you when it’s done.", "We keep the booking and payment records the law asks us to keep, without your login.", "Until then you can still sign in, and withdraw the request here."],
+        reason: "Why are you leaving? (optional)",
+        password: "Current password",
+        submit: "Send request",
+        sending: "Sending…",
+      },
+      requested: "You asked to close your account on {date}. We’ll email you when it’s done, within one month.",
+      withdraw: "Withdraw request",
+      withdrawn: "Your request is withdrawn. Your account stays open.",
+      sent: "Request sent. We’ve emailed you a confirmation.",
+    },
   },
 
   saved: {

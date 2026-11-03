@@ -190,6 +190,13 @@
       "when": 1793711372310,
       "tag": "0026_rls_auto_enable_execute",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793715692716,
+      "tag": "0027_account_closure_requests",
+      "breakpoints": true
     }
   ]
 }

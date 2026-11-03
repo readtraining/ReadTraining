@@ -19,7 +19,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { authenticatedRole, authUsers } from 'drizzle-orm/supabase'
+import { anonRole, authenticatedRole, authUsers } from 'drizzle-orm/supabase'
 
 // Every public table has RLS on. The API connects as `postgres` and skips RLS; RLS protects the Data API, which anyone can
 // reach with the public key. Policies only ever let a signed-in user READ their own rows; every write goes through the API.
@@ -802,6 +802,31 @@ export const ledgerEntries = pgTable(
   ],
 ).enableRLS()
 
+// ---- account closure requests ------------------------------------------------------------------------------------------------
+// A person asking us to close their account and delete their personal data (UK GDPR: answered within one month). Staff do the
+// closing; this keeps the request and what became of it. No foreign key to the login, on purpose: the record outlives the
+// account it closed (as activity_log does). One open request per person. API only: no grants, and a policy refusing every row.
+export const closureStatus = pgEnum('closure_status', ['open', 'withdrawn', 'done'])
+export const accountClosureRequests = pgTable(
+  'account_closure_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    email: text('email').notNull(), // the address when they asked, so the reply can still go out once the login is gone
+    reason: text('reason'),
+    status: closureStatus('status').notNull().default('open'),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp('closed_at', { withTimezone: true }), // when it was withdrawn or done
+    closedBy: uuid('closed_by'), // the admin who closed the account (null when they withdrew it themselves)
+  },
+  (t) => [
+    uniqueIndex('account_closure_one_open').on(t.userId).where(sql`${t.status} = 'open'`),
+    index('account_closure_status_idx').on(t.status, t.requestedAt),
+    check('account_closure_reason_length', sql`${t.reason} is null or char_length(${t.reason}) <= 1000`),
+    pgPolicy('account_closure_requests: API only', { as: 'restrictive', for: 'all', to: [anonRole, authenticatedRole], using: sql`false`, withCheck: sql`false` }),
+  ],
+).enableRLS()
+
 export type Profile = typeof profiles.$inferSelect
 export type Organisation = typeof organisations.$inferSelect
 export type OrganisationMember = typeof organisationMembers.$inferSelect
@@ -816,5 +841,6 @@ export type Venue = typeof venues.$inferSelect
 export type Coupon = typeof coupons.$inferSelect
 export type Order = typeof orders.$inferSelect
 export type LedgerEntry = typeof ledgerEntries.$inferSelect
+export type AccountClosureRequest = typeof accountClosureRequests.$inferSelect
 export type Post = typeof posts.$inferSelect
 export type NewPost = typeof posts.$inferInsert

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { account } from "@/data/account";
 import { api } from "@/lib/trpc/react";
@@ -14,6 +13,7 @@ import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
+import Sheet from "@/components/testPrep/runner/Sheet";
 
 const copy = account.profile;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -47,11 +47,7 @@ export default function AccountProfile() {
       <PasswordSection me={me.data} />
       <MarketingSection me={me.data} />
       <BusinessSection me={me.data} />
-      <section className="rt-acc__card" aria-labelledby="rt-pf-close-h">
-        <h2 className="rt-acc__h3" id="rt-pf-close-h">{copy.delete.title}</h2>
-        <p className="rt-acc__note">{copy.delete.text}</p>
-        <Link href={copy.delete.cta.href} className="fb-textlink">{copy.delete.cta.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
-      </section>
+      <CloseSection me={me.data} />
     </div>
   );
 }
@@ -426,6 +422,89 @@ function MarketingSection({ me }) {
       <p className="rt-acc__note">{copy.marketing.note}</p>
       <Foot busy={s.busy} label={copy.save} saved={s.saved} general={s.general} outline />
     </form>
+  );
+}
+
+// ---- closing the account ------------------------------------------------------------------------------------------------------
+
+// A request to close the account and delete the personal data (UK GDPR): saved on the server, logged, emailed to the person
+// and to the admins who can suspend accounts (me.requestClosure). Our team closes it within one month; until then the
+// section says so and the request can be withdrawn.
+function CloseSection({ me }) {
+  const c = copy.delete;
+  const utils = api.useUtils();
+  const request = api.me.requestClosure.useMutation();
+  const withdraw = api.me.withdrawClosure.useMutation();
+  const [open, setOpen] = useState(false);
+  const [values, setValues] = useState({ reason: "", currentPassword: "" });
+  const [errors, setErrors] = useState({});
+  const [said, setSaid] = useState("");
+  const openRef = useRef(null);
+  const formRef = useRef(null);
+  const day = (iso) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const found = {};
+    if (me.hasPassword && !values.currentPassword) found.currentPassword = "Enter your current password.";
+    if (values.reason.trim().length > 1000) found.reason = "Keep your reason to 1,000 characters or fewer.";
+    setErrors(found);
+    if (Object.keys(found).length) return focusFirstError(formRef.current);
+    try {
+      await request.mutateAsync({ reason: values.reason.trim() || undefined, currentPassword: me.hasPassword ? values.currentPassword : undefined });
+      await utils.me.get.invalidate();
+      setOpen(false);
+      setValues({ reason: "", currentPassword: "" });
+      setSaid(c.sent);
+    } catch (err) {
+      const { fields, general } = errorsFrom(err);
+      setErrors({ ...fields, form: general });
+      requestAnimationFrame(() => focusFirstError(formRef.current));
+    }
+  };
+  const takeBack = async () => {
+    setSaid("");
+    try {
+      await withdraw.mutateAsync();
+      await utils.me.get.invalidate();
+      setSaid(c.withdrawn);
+    } catch (err) {
+      setSaid(errorsFrom(err).general);
+    }
+  };
+
+  return (
+    <section className="rt-acc__card" aria-labelledby="rt-pf-close-h">
+      <h2 className="rt-acc__h3" id="rt-pf-close-h">{c.title}</h2>
+      {me.closure ? (
+        <>
+          <p className="rt-acc__notice -warn" role="status">{c.requested.replace("{date}", day(me.closure.requestedAt))}</p>
+          <button type="button" className="rt-acc__linkbtn" onClick={takeBack} disabled={withdraw.isPending} aria-busy={withdraw.isPending}>{c.withdraw}</button>
+        </>
+      ) : (
+        <>
+          <p className="rt-acc__note">{c.text}</p>
+          <button type="button" ref={openRef} className="button -md -outline-purple-1 text-purple-1" aria-haspopup="dialog" onClick={() => { setErrors({}); setOpen(true); }}>{c.cta}</button>
+        </>
+      )}
+      <p className="rt-acc__savedmsg" role="status">{said}</p>
+
+      <Sheet open={open} onClose={() => setOpen(false)} title={c.sheet.title} closeLabel="Close" fallbackFocus={openRef}>
+        <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={formRef}>
+          {c.sheet.what.map((w) => <p key={w} className="rt-acc__note">{w}</p>)}
+          <div className="rt-field">
+            <label htmlFor="rt-pf-close-reason">{c.sheet.reason}</label>
+            {errors.reason && <p className="rt-q__err" id="rt-pf-close-reason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
+            <textarea id="rt-pf-close-reason" rows={3} maxLength={1000} value={values.reason} onChange={(e) => setValues((v) => ({ ...v, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-pf-close-reason-e" : undefined} />
+          </div>
+          {me.hasPassword && (
+            <Field id="rt-pf-close-pw" label={c.sheet.password} error={errors.currentPassword} type="password" autoComplete="current-password" value={values.currentPassword} onChange={(e) => { const v = e.target.value; setValues((x) => ({ ...x, currentPassword: v })); }} />
+          )}
+          {errors.form && <p className="rt-q__err" role="alert">{errors.form}</p>}
+          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={request.isPending} aria-busy={request.isPending}>{request.isPending ? c.sheet.sending : c.sheet.submit}</button>
+        </form>
+      </Sheet>
+    </section>
   );
 }
 
