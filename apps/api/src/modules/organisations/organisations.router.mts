@@ -12,6 +12,7 @@ import { mediaUrl } from '../../lib/media.mjs'
 import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
 import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
+import { PRIVATE_ROLES } from '../provider/profile.mjs'
 
 // One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
 // person belongs to. These procedures add an identity, open a workspace (the server-side check behind every /provider and
@@ -182,7 +183,9 @@ export const organisationsRouter = createTRPCRouter({
         welcome = last?.action === 'admin.provider_reinstated' ? 'reinstated' : last ? 'approved' : null
       }
       // userId: the browser's permission checks need it for "their own" rules (a tutor's own dates)
-      return { ...org, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
+      // our team's status note is for the owner and admins only (a tutor or an assistant sees the status, not the note)
+      const statusNote = PRIVATE_ROLES.includes(chosen.role) ? org.statusNote : null
+      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and

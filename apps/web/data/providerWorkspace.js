@@ -24,6 +24,8 @@ export const pw = {
 
   // the Account review page: where the application stands, what our team asked for, and its history
   review: {
+    // shown to a team member who isn't the owner or an admin, in place of our team's note (lib: profile.review `private`)
+    privateNote: "Our team's message is shown to the account owner and admins only. Ask them for the details.",
     statuses: {
       pending: { pill: "Being reviewed", tone: "info", title: "Our team is checking your details", text: "Most providers hear back within 2 working days. We'll email you with the decision." },
       changes_requested: { pill: "Changes needed", tone: "warn", title: "A few changes are needed", text: "Make the changes below, then send your account back to our team." },

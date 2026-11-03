@@ -53,7 +53,7 @@ export default function ProviderReview() {
       {r.status === "suspended" && (
         <section className="rt-acc__card" aria-labelledby="rt-pws-rev-why">
           <h2 className="rt-acc__h2" id="rt-pws-rev-why">{copy.suspended.reason}</h2>
-          {r.statusNote && <p className="rt-pws-rev__quote">{r.statusNote}</p>}
+          {r.statusNote ? <p className="rt-pws-rev__quote">{r.statusNote}</p> : r.private && <p className="rt-acc__note">{copy.privateNote}</p>}
           <div><Link href={copy.suspended.contact.href} className="button -md -purple-1 text-white">{copy.suspended.contact.label}</Link></div>
         </section>
       )}
@@ -106,7 +106,7 @@ function Changes({ review, onSent }) {
     <>
       <section className="rt-acc__card" aria-labelledby="rt-pws-rev-asked">
         <h2 className="rt-acc__h2" id="rt-pws-rev-asked">{copy.asked.title}</h2>
-        {review.statusNote && <p className="rt-pws-rev__quote">{review.statusNote}</p>}
+        {review.statusNote ? <p className="rt-pws-rev__quote">{review.statusNote}</p> : review.private && <p className="rt-acc__note">{copy.privateNote}</p>}
         <h3 className="rt-adm-h3">{copy.asked.where}</h3>
         <ul className="rt-pws-rev__places">
           {copy.places.map((x) => (

@@ -176,6 +176,13 @@
       "when": 1793621158064,
       "tag": "0024_reviews_drop_old",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793697206047,
+      "tag": "0025_organisations_read_owner_admin",
+      "breakpoints": true
     }
   ]
 }

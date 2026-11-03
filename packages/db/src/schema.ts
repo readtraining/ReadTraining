@@ -109,10 +109,12 @@ export const organisations = pgTable(
     uniqueIndex('organisations_slug_key').on(t.slug),
     index('organisations_created_by_idx').on(t.createdBy),
     check('organisations_commission_range', sql`${t.commissionBps} between 0 and 6000`),
-    pgPolicy('organisations: read where member', {
+    // only the owner and the organisation's admins read the row (its mobile, commission, terms and our status note are private
+    // business details); other team members, like a tutor or an assistant, get what they need through the API
+    pgPolicy('organisations: read where owner or admin', {
       for: 'select',
       to: authenticatedRole,
-      using: sql`exists (select 1 from public.organisation_members m where m.organisation_id = ${t.id} and m.user_id = ${me})`,
+      using: sql`exists (select 1 from public.organisation_members m where m.organisation_id = ${t.id} and m.user_id = ${me} and m.role in ('owner', 'admin'))`,
     }),
   ],
 ).enableRLS()

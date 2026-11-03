@@ -8,6 +8,10 @@ import { logActivity } from '../../lib/activity.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
+// the roles that read an organisation's private details: our team's status note and messages (the same rule as the database's
+// "organisations: read where owner or admin")
+export const PRIVATE_ROLES: string[] = ['owner', 'admin']
+
 // A provider's public profile (headline, about, town, social links, logo) and the terms learners accept when booking with them.
 // Both show on the provider's public page and course pages; they change straight away. The provider's name can change only
 // while its application is being reviewed (it is what our team checks); after approval a change goes through us.
@@ -63,8 +67,10 @@ export const providerProfileRouter = createTRPCRouter({
   }),
 
   // The provider's application: where it stands, and its steps newest first (what our team asked, what the provider replied).
-  // Every member can read it: the status bar on every page points here.
+  // Every member can read where it stands (the status bar on every page points here); our team's note and messages are for the
+  // owner and admins only (`private`), so a tutor or an assistant sees the status without them.
   review: orgProcedure('provider.workspace.open').query(async ({ ctx, input }) => {
+    const mayRead = PRIVATE_ROLES.includes(ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)?.role ?? '')
     const [o] = await ctx.db.select({ name: organisations.name, status: organisations.status, statusNote: organisations.statusNote, statusChangedAt: organisations.statusChangedAt, createdAt: organisations.createdAt }).from(organisations).where(eq(organisations.id, input.organisationId))
     if (!o) throw new TRPCError({ code: 'NOT_FOUND' })
     const rows = await ctx.db.execute<{ action: string; at: string; metadata: Record<string, unknown> | null; actor_identity: string; first_name: string | null; last_name: string | null }>(sql`
@@ -76,7 +82,8 @@ export const providerProfileRouter = createTRPCRouter({
     return {
       name: o.name,
       status: o.status,
-      statusNote: o.statusNote,
+      statusNote: mayRead ? o.statusNote : null,
+      private: !mayRead,
       statusChangedAt: o.statusChangedAt ? new Date(o.statusChangedAt).toISOString() : null,
       appliedAt: new Date(o.createdAt).toISOString(),
       canRename: UNDER_REVIEW.includes(o.status) && can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId }),
@@ -88,7 +95,7 @@ export const providerProfileRouter = createTRPCRouter({
           at: new Date(r.at).toISOString(),
           by: fromTeam ? null : `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || null,
           fromTeam,
-          message: text(m.message) ?? text(m.reply),
+          message: fromTeam && !mayRead ? null : text(m.message) ?? text(m.reply),
           from: text(m.from),
           to: text(m.to),
         }
