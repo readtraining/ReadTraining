@@ -300,11 +300,15 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
 
 // deletes a course that has never been live, with its dates, lists and images
 export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog) {
-  if (course.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
-  const images = await db.select({ path: courseImages.path }).from(courseImages).where(eq(courseImages.courseId, course.id))
-  await db.transaction(async (tx) => {
+  const images = await db.transaction(async (tx) => {
+    // checked under the row lock: a second delete, or an approval at the same moment, sees the other's result
+    const now = await lockCourse(tx, course.id)
+    if (!now) throw new TRPCError({ code: 'CONFLICT', message: 'This course has already been deleted.' })
+    if (now.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
+    const paths = await tx.select({ path: courseImages.path }).from(courseImages).where(eq(courseImages.courseId, course.id))
     await tx.delete(courses).where(eq(courses.id, course.id))
     await onLog(tx, { title: course.title })
+    return paths
   })
   await removeMedia(images.map((i) => i.path))
   return { ok: true }
@@ -338,6 +342,12 @@ export async function checkVersion(tx: Writer, courseId: number, seen: string | 
 // The course's status as it stands now, with the row locked until the transaction ends. An admin deciding on the course locks
 // the same row (modules/admin/courses.mts), so a provider's edit and an admin's decision at the same moment take turns: the edit
 // either lands first (the course leaves review and the decision is refused) or after (it goes in as a change to the live course).
+/** The whole course row as it stands now, locked until the transaction ends (as lockStatus); null when it has been deleted. */
+async function lockCourse(tx: Writer, courseId: number) {
+  const [row] = await tx.select().from(courses).where(eq(courses.id, courseId)).for('update')
+  return row ?? null
+}
+
 async function lockStatus(tx: Writer, courseId: number) {
   const [row] = await tx.select({ status: courses.status }).from(courses).where(eq(courses.id, courseId)).for('update')
   return row?.status ?? 'draft'
@@ -556,10 +566,13 @@ export const providerCoursesRouter = createTRPCRouter({
       const org = ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)
       if (org?.organisationStatus !== 'active') throw new TRPCError({ code: 'FORBIDDEN', message: 'Your provider account is waiting for our team’s approval. You can send courses for approval once it is approved.' })
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      if (course.status !== 'draft' && course.status !== 'changes') throw new TRPCError({ code: 'CONFLICT', message: course.status === 'pending' ? 'This course is already waiting for approval.' : 'This course is already live.' })
-      const gaps = await missing(ctx.db, course)
-      if (gaps.length) throw bad(`Add ${gaps.join(', ')} before sending it for approval.`)
       await ctx.db.transaction(async (tx) => {
+        // checked under the row lock, so a double click (or two people) sends it once, and its emails go once
+        const now = await lockCourse(tx, course.id)
+        if (!now) throw notFound()
+        if (now.status !== 'draft' && now.status !== 'changes') throw new TRPCError({ code: 'CONFLICT', message: now.status === 'pending' ? 'This course is already waiting for approval.' : 'This course is already live.' })
+        const gaps = await missing(tx, now)
+        if (gaps.length) throw bad(`Add ${gaps.join(', ')} before sending it for approval.`)
         await tx.update(courses).set({ status: 'pending', submittedAt: new Date(), statusNote: null, updatedAt: new Date() }).where(eq(courses.id, course.id))
         await log(tx, ctx, input.organisationId, 'course.submitted', course.id)
       })
@@ -578,10 +591,13 @@ export const providerCoursesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const from = input.paused ? 'live' : 'paused'
-      if (course.status !== from) throw new TRPCError({ code: 'CONFLICT', message: input.paused ? 'Only a live course can be paused.' : 'This course isn’t paused.' })
-      // a course our team paused (it has their reason) goes back live only through them
-      if (!input.paused && course.statusNote) throw new TRPCError({ code: 'FORBIDDEN', message: 'Our team paused this course. Contact us to put it back live.' })
       return ctx.db.transaction(async (tx) => {
+        const now = await lockCourse(tx, course.id)
+        if (!now) throw notFound()
+        if (now.status === (input.paused ? 'paused' : 'live')) throw new TRPCError({ code: 'CONFLICT', message: input.paused ? 'This course is already paused.' : 'This course is already live.' })
+        if (now.status !== from) throw new TRPCError({ code: 'CONFLICT', message: input.paused ? 'Only a live course can be paused.' : 'This course isn’t paused.' })
+        // a course our team paused (it has their reason) goes back live only through them
+        if (!input.paused && now.statusNote) throw new TRPCError({ code: 'FORBIDDEN', message: 'Our team paused this course. Contact us to put it back live.' })
         await tx.update(courses).set({ status: input.paused ? 'paused' : 'live', updatedAt: new Date() }).where(eq(courses.id, course.id))
         await log(tx, ctx, input.organisationId, input.paused ? 'course.paused' : 'course.resumed', course.id)
         return { ok: true }

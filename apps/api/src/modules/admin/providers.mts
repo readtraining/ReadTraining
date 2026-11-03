@@ -32,6 +32,12 @@ const DECISIONS: Record<ProviderDecision, { action: AdminAction; from: Status[];
   suspend: { action: 'admin.accounts.suspend', from: ['active'], to: 'suspended', message: true, log: 'admin.provider_suspended' },
   reinstate: { action: 'admin.accounts.suspend', from: ['suspended'], to: 'active', message: false, log: 'admin.provider_reinstated' },
 }
+// a decision the provider's status no longer allows: already made (a double click, or another admin at the same moment), or
+// the status moved on some other way
+const STATUS_WORDS: Record<Status, string> = { pending: 'waiting for review', changes_requested: 'waiting for changes', active: 'approved', suspended: 'suspended', rejected: 'not approved' }
+const statusConflict = (now: Status, to: Status) =>
+  new TRPCError({ code: 'CONFLICT', message: now === to ? `This decision has already been made: the provider is ${STATUS_WORDS[now]}. Reload the page to see it.` : 'This provider’s status has changed. Reload the page to see it.' })
+
 const MESSAGE_ERROR: Partial<Record<ProviderDecision, string>> = {
   changes: 'Enter what the provider needs to change.',
   reject: 'Enter why the provider is not approved.',
@@ -155,11 +161,15 @@ export const providersRouter = createTRPCRouter({
       const own = rule.action === 'admin.approvals.decide' && Boolean(o.created_by) && o.created_by === ctx.user.id
       if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, rule.action)) : !can(ctx.actor, rule.action, { createdBy: o.created_by ?? undefined })) await refuse(ctx, rule.action, o.id, path)
       if (own && !ownReasonOk(input.ownReason)) throw new TRPCError({ code: 'BAD_REQUEST', message: OWN_REASON_ERROR, cause: Object.assign(new Error(OWN_REASON_ERROR), { field: 'ownReason' }) })
-      if (!rule.from.includes(o.status)) throw new TRPCError({ code: 'CONFLICT', message: 'This provider’s status has changed. Reload the page to see it.' })
+      if (!rule.from.includes(o.status)) throw statusConflict(o.status, rule.to)
       const message = input.message?.trim() || null
       if (rule.message && !message) throw new TRPCError({ code: 'BAD_REQUEST', message: MESSAGE_ERROR[input.decision]!, cause: Object.assign(new Error(MESSAGE_ERROR[input.decision]), { field: 'message' }) })
 
       await ctx.db.transaction(async (tx) => {
+        // checked again under the row lock: of two decisions at the same moment (two admins, or a double click) only the first is
+        // made and emailed; the second is told it has been made
+        const [locked] = await tx.execute<{ status: Status }>(sql`select status from public.organisations where id = ${o.id}::uuid for update`)
+        if (!locked || !rule.from.includes(locked.status)) throw statusConflict(locked?.status ?? o.status, rule.to)
         await tx.execute(sql`update ${organisations} set status = ${rule.to}, status_note = ${rule.message ? message : null}, status_changed_at = now(), updated_at = now() where id = ${o.id}::uuid`)
         await logActivity(tx, {
           actorUserId: ctx.user.id,
@@ -168,7 +178,7 @@ export const providersRouter = createTRPCRouter({
           action: rule.log,
           targetType: 'organisation',
           targetId: o.id,
-          metadata: { from: o.status, to: rule.to, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) },
+          metadata: { from: locked.status, to: rule.to, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) },
           ip: ctx.ip,
         })
         // a decision on their own request gets its own line in the log, so it is never missed
@@ -191,8 +201,11 @@ export const providersRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const [o] = await ctx.db.execute<{ commission_bps: number | null }>(sql`select commission_bps from public.organisations where id = ${input.organisationId}::uuid and type = 'provider'`)
       if (!o) throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider was not found.' })
-      if (o.commission_bps === input.bps) return { commissionBps: input.bps }
-      await ctx.db.transaction(async (tx) => {
+      if (o.commission_bps === input.bps) return { commissionBps: input.bps, unchanged: true }
+      const changed = await ctx.db.transaction(async (tx) => {
+        // under the row lock: two saves at the same moment change (and log) it once, and the log shows the rate it really replaced
+        const [locked] = await tx.execute<{ commission_bps: number | null }>(sql`select commission_bps from public.organisations where id = ${input.organisationId}::uuid for update`)
+        if (locked.commission_bps === input.bps) return false
         await tx.execute(sql`update ${organisations} set commission_bps = ${input.bps}, updated_at = now() where id = ${input.organisationId}::uuid`)
         await logActivity(tx, {
           actorUserId: ctx.user.id,
@@ -201,10 +214,11 @@ export const providersRouter = createTRPCRouter({
           action: 'admin.provider_commission_changed',
           targetType: 'organisation',
           targetId: input.organisationId,
-          metadata: { fromPercent: percent(o.commission_bps) ?? 'default', toPercent: percent(input.bps) ?? 'default' },
+          metadata: { fromPercent: percent(locked.commission_bps) ?? 'default', toPercent: percent(input.bps) ?? 'default' },
           ip: ctx.ip,
         })
+        return true
       })
-      return { commissionBps: input.bps }
+      return { commissionBps: input.bps, unchanged: !changed }
     }),
 })

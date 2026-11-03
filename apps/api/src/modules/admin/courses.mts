@@ -345,14 +345,17 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, status: z.enum(['live', 'paused']) }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      if (course.status === input.status) return { ok: true }
-      if (input.status === 'live') {
-        const gaps = await missing(ctx.db, course)
-        if (gaps.length) throw bad(`Add ${gaps.join(', ')} before publishing it.`)
-      } else if (course.status !== 'live') throw new TRPCError({ code: 'CONFLICT', message: 'Only a live page can be taken off the site.' })
       const now = new Date()
       await ctx.db.transaction(async (tx) => {
-        await tx.update(courses).set({ status: input.status, publishedAt: course.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
+        // checked under the row lock: of two at the same moment (a double click, or two admins) one acts, the other is told
+        const [page] = await tx.select().from(courses).where(eq(courses.id, course.id)).for('update')
+        if (!page) throw notFound()
+        if (page.status === input.status) throw new TRPCError({ code: 'CONFLICT', message: input.status === 'live' ? 'This page is already live.' : 'This page is already off the site.' })
+        if (input.status === 'live') {
+          const gaps = await missing(tx, page)
+          if (gaps.length) throw bad(`Add ${gaps.join(', ')} before publishing it.`)
+        } else if (page.status !== 'live') throw new TRPCError({ code: 'CONFLICT', message: 'Only a live page can be taken off the site.' })
+        await tx.update(courses).set({ status: input.status, publishedAt: page.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
         await logFor(ctx, course, input.status === 'live' ? 'admin.shared_course_published' : 'admin.shared_course_paused')(tx)
       })
       return { ok: true }
