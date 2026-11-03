@@ -59,23 +59,26 @@ export async function notify(db: typeof Db, key: string, to: Person | null, vars
   return sent
 }
 
-// The admins who decide on providers and courses: active, invite accepted, holding the "approve" switch. The person whose
-// request it is isn't told about their own (an admin who is also a provider's owner, say).
-async function approvers(db: typeof Db, except: string | null): Promise<Person[]> {
+// The admins holding one switch (the "approve" switch for providers and courses): active and their invite accepted. The person
+// whose request it is isn't told about their own (an admin who is also a provider's owner, say).
+async function adminsWith(db: typeof Db, permission: string, except: string | null): Promise<Person[]> {
   const rows = await db.execute<{ user_id: string; email: string; first_name: string | null; preset: 'full' | 'support' | 'finance' | 'custom'; permissions: string[]; refund_limit_pence: number }>(sql`
     select a.user_id, u.email, p.first_name, a.preset, a.permissions, a.refund_limit_pence
     from public.admin_users a join auth.users u on u.id = a.user_id left join public.profiles p on p.id = a.user_id
     where a.active and not (a.invited_at is not null and a.accepted_at is null) and u.deleted_at is null and u.email is not null`)
   return rows
-    .filter((r) => r.user_id !== except && adminPermissions({ active: true, preset: r.preset, permissions: r.permissions, refundLimitPence: r.refund_limit_pence }).includes('approve'))
+    .filter((r) => r.user_id !== except && (adminPermissions({ active: true, preset: r.preset, permissions: r.permissions, refundLimitPence: r.refund_limit_pence }) as string[]).includes(permission))
     .map((r) => ({ email: r.email, firstName: r.first_name ?? '' }))
 }
 
 // One email to each admin who can approve. Returns how many were sent.
-export async function notifyApprovers(db: typeof Db, key: string, vars: Record<string, string>, log: Log, except: string | null) {
+export const notifyApprovers = (db: typeof Db, key: string, vars: Record<string, string>, log: Log, except: string | null) => notifyAdmins(db, 'approve', key, vars, log, except)
+
+// One email to each admin holding `permission` (an admin switch, like "suspend"). Returns how many were sent.
+export async function notifyAdmins(db: typeof Db, permission: string, key: string, vars: Record<string, string>, log: Log, except: string | null) {
   let team: Person[]
   try {
-    team = await approvers(db, except)
+    team = await adminsWith(db, permission, except)
   } catch (error) {
     console.error(`email ${key}: could not find the admins to tell`, error instanceof Error ? error.message : error)
     return 0
