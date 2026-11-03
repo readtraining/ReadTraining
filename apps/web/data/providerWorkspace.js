@@ -108,7 +108,7 @@ export const pw = {
     { label: "Account settings", href: "/account/settings" },
     { label: "Requests", href: "/provider/requests" },
     { label: "Public profile", href: "/provider/profile" },
-    { label: "Team", href: "/provider/team" },
+    { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
 
   pages: {

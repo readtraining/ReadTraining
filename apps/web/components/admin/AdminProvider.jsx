@@ -36,6 +36,7 @@ export default function AdminProvider({ slug }) {
   const [deciding, setDeciding] = useState(null);
   const [said, setSaid] = useState("");
   const [warning, setWarning] = useState("");
+  const [refreshing, setRefreshing] = useState(false); // a decision was saved: no buttons until the new status has loaded
 
   if (record.isLoading) return <DetailSkeleton />;
   if (record.error?.data?.code === "NOT_FOUND") return <EmptyState title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
@@ -45,11 +46,13 @@ export default function AdminProvider({ slug }) {
   const decisions = p.ownRequest && !p.soleApprover ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
   const blockedNote = NEXT[p.status].length && !decisions.length ? (p.ownRequest && NEXT[p.status].some((k) => SWITCH[k] === "approve") ? d.ownRequest : d.noSwitch) : "";
   const soleNote = p.ownRequest && p.soleApprover && decisions.some((k) => SWITCH[k] === "approve") ? d.ownSole : "";
-  const decided = (decision, emailed) => {
+  const decided = async (decision, emailed) => {
+    setRefreshing(true);
+    utils.admin.activity.list.invalidate();
+    await utils.admin.providers.invalidate().catch(() => {});
+    setRefreshing(false);
     setSaid(d.done[decision]);
     setWarning(emailed ? "" : d.notEmailed);
-    utils.admin.providers.invalidate();
-    utils.admin.activity.list.invalidate();
   };
   const f = d.fields;
   const lastReply = p.status === "pending" && activity.data?.entries.find((e) => e.action === "provider.resubmitted");
@@ -66,7 +69,7 @@ export default function AdminProvider({ slug }) {
           <p className="rt-acc__note">Signed up {formatWhen(Date.parse(p.appliedAt))}{p.statusChangedAt ? ` · status changed ${formatWhen(Date.parse(p.statusChangedAt))}` : ""}</p>
         </div>
         <div className="rt-adm-hero__actions">
-          {decisions.map((k) => (
+          {!refreshing && decisions.map((k) => (
             <button key={k} type="button" className={PRIMARY.has(k) ? "button -sm -purple-1 text-white" : DANGER.has(k) ? "rt-cd__link rt-adm-danger" : "button -sm -outline-purple-1 text-purple-1"} onClick={() => setDeciding(k)}>{d.actions[k]}</button>
           ))}
           {blockedNote && <p className="rt-acc__notice">{blockedNote}</p>}

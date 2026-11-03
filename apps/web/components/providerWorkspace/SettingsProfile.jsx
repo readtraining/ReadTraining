@@ -211,9 +211,9 @@ function TermsForms({ profile, say }) {
   const utils = api.useUtils();
   const update = api.provider.profile.updateTerms.useMutation();
   const locked = !can("provider.terms.edit");
-  // both texts are saved together; each form changes its own
+  // each form saves only its own text
   const save = (patch, saved, onError) => update.mutate(
-    { organisationId, cancellationPolicy: profile.cancellationPolicy || null, bookingTerms: profile.bookingTerms || null, ...patch },
+    { organisationId, ...patch },
     { onSuccess: () => { utils.provider.profile.get.invalidate({ organisationId }); say(saved); }, onError: (er) => onError(firstError(er)) },
   );
   return (
