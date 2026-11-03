@@ -7058,3 +7058,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cd__reviews { margin: 0 0 16px; }
 @media (min-width: 992px) { .rt-cd__reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 576px) { .rt-cd__reviews.-one { grid-template-columns: minmax(0, 1fr); } }
+
+/* the image shown in "Remove this image?" (course editor) */
+.rt-pws-course-removeimg { display: block; width: 100%; max-width: 320px; aspect-ratio: 5 / 3; object-fit: cover; border-radius: 8px; }
+/* a picture still uploading (course editor): shown at once from the file, a little faded until it is saved */
+.rt-pws-course-mediaitem.is-uploading img { opacity: 0.6; }

@@ -530,14 +530,41 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
 }
 
 // The course's images: uploaded straight away (not part of the draft), shown in order; the first is the cover in search results.
+// The course's images. Every change shows on screen at once, before the server answers: a chosen picture appears straight away
+// (marked "Uploading…") and becomes the saved image when the upload finishes; a removed image goes, and a new cover moves first,
+// the moment they are asked for. If the server refuses, the list goes back and says why. The course then loads again in the
+// background. Each action has its own label while it runs (Uploading…, Removing…, Saving…), and Remove asks first.
 function ImagesCard({ course, disabled, onSaved }) {
   const ep = useEndpoints();
   const [list, setList] = useState(course.images);
-  const [busy, setBusy] = useState(false);
+  // what is running: null, "upload", "alt", or { kind: "remove" | "cover", id }
+  const [action, setAction] = useState(null);
+  const [removing, setRemoving] = useState(null); // the image waiting for "Remove this image?"
   const [error, setError] = useState("");
   const fileRef = useRef(null);
-  useEffect(() => setList(course.images), [course.images]);
-  const changed = !same(list.map((i) => [i.id, i.alt]), course.images.map((i) => [i.id, i.alt]));
+  // the saved list (what the server holds), kept in step with the course as it loads again
+  const [saved, setSaved] = useState(course.images);
+  // a change still saving: a reload that arrives meanwhile is an older copy, so it is left out (the one after the save follows)
+  const runningRef = useRef(false);
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
+  useEffect(() => {
+    if (runningRef.current) return;
+    // the course as loaded again, keeping what is still being typed (ALT text not saved yet) and a picture still uploading
+    setList((cur) => [
+      ...course.images.map((img) => {
+        const mine = cur.find((c) => c.id === img.id);
+        const was = savedRef.current.find((c) => c.id === img.id);
+        return mine && was && (mine.alt || "") !== (was.alt || "") ? { ...img, alt: mine.alt } : img;
+      }),
+      ...cur.filter((i) => i.uploading),
+    ]);
+    setSaved(course.images);
+  }, [course.images]);
+  const busy = Boolean(action);
+  runningRef.current = busy;
+  const shown = list.filter((i) => !i.uploading);
+  const changed = !same(shown.map((i) => [i.id, i.alt]), saved.map((i) => [i.id, i.alt]));
   const refresh = ep.refresh;
 
   const onFile = async (e) => {
@@ -546,36 +573,61 @@ function ImagesCard({ course, disabled, onSaved }) {
     if (!file) return;
     if (!IMAGE_TYPES.includes(file.type)) return setError("Choose a JPG, PNG, WebP or GIF picture.");
     if (file.size > MAX_IMAGE) return setError("Choose a picture under 2MB.");
-    if (course.images.length >= 10) return setError("A course can have up to 10 images. Remove one first.");
+    if (saved.length >= 10) return setError("A course can have up to 10 images. Remove one first.");
     setError("");
-    setBusy(true);
+    setAction("upload");
+    // the chosen picture shows at once, from the file itself, until the saved one replaces it
+    const temp = { id: `uploading-${Date.now()}`, url: URL.createObjectURL(file), alt: "", uploading: true };
+    setList((x) => [...x, temp]);
+    const drop = () => {
+      setList((x) => x.filter((i) => i.id !== temp.id));
+      URL.revokeObjectURL(temp.url);
+    };
     try {
       const { path, token } = await ep.uploadUrl(file.type);
       const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, file, { contentType: file.type });
       if (upError) throw new Error("The picture didn't upload. Please try again.");
-      await ep.addImage(path);
+      const added = await ep.addImage(path);
+      // the saved image (its id and address) takes the place of the preview; the course loads again in the background
+      const image = { id: added.id, url: added.url, alt: "" };
+      setSaved((x) => [...x, image]);
+      setList((x) => x.map((i) => (i.id === temp.id ? image : i)));
+      URL.revokeObjectURL(temp.url);
       refresh();
       onSaved("Image added");
     } catch (err) {
+      drop();
       setError(err?.data ? errorsFrom(err).general : err.message || "The picture didn't upload. Please try again.");
     } finally {
-      setBusy(false);
+      setAction(null);
     }
   };
-  const saveList = async (next, message) => {
+  // the list as asked for shows at once; if the server refuses, it goes back to what is saved and says why
+  const saveList = async (next, message, running) => {
     setError("");
-    setBusy(true);
+    setAction(running);
+    const before = saved;
+    setList(next);
     try {
       await ep.setImages(next.map((i) => ({ id: i.id, alt: i.alt || "" })));
+      setSaved(next);
       refresh();
       onSaved(message);
+      return true;
     } catch (err) {
       setError(errorsFrom(err).general);
-      setList(course.images);
+      setList(before);
+      return false;
     } finally {
-      setBusy(false);
+      setAction(null);
     }
   };
+  const doRemove = () => {
+    const m = removing;
+    setRemoving(null);
+    saveList(shown.filter((x) => x.id !== m.id), "Image removed", { kind: "remove", id: m.id });
+  };
+  const runs = (kind, id) => action && typeof action === "object" && action.kind === kind && action.id === id;
 
   return (
     <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
@@ -585,7 +637,7 @@ function ImagesCard({ course, disabled, onSaved }) {
       {!disabled && (
         <div className="rt-pws-course-mediabar">
           <input ref={fileRef} type="file" accept={IMAGE_TYPES.join(",")} className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Uploading…" : "Upload course image"}</button>
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{action === "upload" ? "Uploading…" : "Upload course image"}</button>
           <span className="rt-field__hint">500 × 300 pixels or larger. JPG, PNG, WebP or GIF, up to 2MB. No text on the image.</span>
         </div>
       )}
@@ -593,22 +645,39 @@ function ImagesCard({ course, disabled, onSaved }) {
         <>
           <ul className="rt-pws-course-media">
             {list.map((m, i) => (
-              <li key={m.id} className="rt-pws-course-mediaitem">
+              <li key={m.id} className={`rt-pws-course-mediaitem${m.uploading ? " is-uploading" : ""}`} aria-busy={m.uploading || undefined}>
                 <img src={m.url} alt="" />
+                {m.uploading ? (
+                  <div className="rt-pws-course-mediabody"><Pill tone="info">Uploading…</Pill></div>
+                ) : (
                 <div className="rt-pws-course-mediabody">
-                  {i === 0 ? <Pill tone="info">Cover</Pill> : !disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={busy} onClick={() => saveList([m, ...list.filter((x) => x.id !== m.id)], "Cover image changed")}>Make cover</button>}
+                  {i === 0 ? <Pill tone="info">Cover</Pill> : !disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={busy} onClick={() => saveList([m, ...shown.filter((x) => x.id !== m.id)], "Cover image changed", { kind: "cover", id: m.id })}>{runs("cover", m.id) ? "Saving…" : "Make cover"}</button>}
                   <div className="rt-field">
                     <label htmlFor={`rt-pws-ce-alt-${i}`}>ALT text</label>
                     <input id={`rt-pws-ce-alt-${i}`} value={m.alt || ""} maxLength={140} disabled={disabled} onChange={(e) => setList(list.map((x) => (x.id === m.id ? { ...x, alt: e.target.value } : x)))} placeholder="For example: learners practising CPR on a manikin" autoComplete="off" />
                   </div>
-                  {!disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" disabled={busy} onClick={() => saveList(list.filter((x) => x.id !== m.id), "Image removed")}>Remove<span className="rt-sr"> image {i + 1}</span></button>}
+                  {!disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" disabled={busy} onClick={() => setRemoving(m)} aria-haspopup="dialog">{runs("remove", m.id) ? "Removing…" : "Remove"}<span className="rt-sr"> image {i + 1}</span></button>}
                 </div>
+                )}
               </li>
             ))}
           </ul>
-          {changed && !disabled && <div><button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => saveList(list, "ALT text saved")}>Save ALT text</button></div>}
+          {changed && !disabled && <div><button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => saveList(shown, "ALT text saved", "alt")}>{action === "alt" ? "Saving…" : "Save ALT text"}</button></div>}
         </>
       ) : <EmptyState inCard title="No images yet. Upload one: a course needs an image before it can be sent for approval." />}
+
+      <Sheet open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this image?" closeLabel="Close">
+        {removing && (
+          <div className="rt-q__form">
+            <img src={removing.url} alt="" className="rt-pws-course-removeimg" />
+            <p className="rt-acc__note">It comes off the course page and is deleted for good. {shown[0]?.id === removing.id && shown.length > 1 ? "The next image becomes the cover." : shown.length === 1 ? "The course then has no image, and needs one before it can be sent for approval." : ""}</p>
+            <div className="rt-adm-cellrow">
+              <button type="button" className="button -md -purple-1 text-white" onClick={doRemove} disabled={busy}>Remove image</button>
+              <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setRemoving(null)}>Keep it</button>
+            </div>
+          </div>
+        )}
+      </Sheet>
     </section>
   );
 }
