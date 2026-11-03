@@ -12,6 +12,7 @@ import { useWorkspace } from "@/lib/workspaceContext";
 import { Field, aria, isEmail } from "./settingsForm";
 import { InfoTab, LogoTab, TermsTab, VenuesTab } from "./SettingsProfile";
 import { QaTab } from "./SettingsPeople";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 
 // Provider settings (/provider/settings?tab=…): Hurak's provider information, company logo, terms, VAT, affiliate, emails, QA and
 // integrations, plus our venues. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below)
@@ -99,6 +100,7 @@ function VatTab({ data, say }) {
   const [reg, setReg] = useState(data.org.vat.registered ? "yes" : "no");
   const [num, setNum] = useState(data.org.vat.number || "");
   const [error, setError] = useState("");
+  useUnsavedChanges((reg === "yes") !== Boolean(data.org.vat.registered) || (reg === "yes" && tidyVat(num) !== tidyVat(data.org.vat.number || "")));
   const formRef = useRef(null);
   const submit = (e) => {
     e.preventDefault();
@@ -137,6 +139,7 @@ const EMAILS = [
 function EmailsTab({ data, say }) {
   const [f, setF] = useState({ ...data.org.emails });
   const [errors, setErrors] = useState({});
+  useUnsavedChanges(EMAILS.some((m) => (f[m.key] || "").trim() !== (data.org.emails[m.key] || "")));
   const formRef = useRef(null);
   const submit = (e) => {
     e.preventDefault();

@@ -8,6 +8,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { CourseEndpoints, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -205,15 +206,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   useEffect(() => setSent(false), [course?.status]);
 
   const dirty = Boolean(draft && base && !same(draft, base));
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  // leaving with unsaved changes (a link, Back, closing the tab) asks first (lib/unsavedChanges.js)
+  useUnsavedChanges(dirty);
 
   if (!id || query.error?.data?.code === "NOT_FOUND" || (ep.admin && course && course.kind !== "shared")) return <EmptyState title="This course was not found" text={ep.admin ? "It may have been deleted. Only shared course pages are edited here." : "It may have been deleted, or it belongs to another provider."} action={back} />;
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
@@ -648,6 +642,7 @@ function ImagesCard({ course, disabled, onSaved }) {
   runningRef.current = busy;
   const shown = list.filter((i) => !i.uploading);
   const changed = !same(shown.map((i) => [i.id, i.alt]), saved.map((i) => [i.id, i.alt]));
+  useUnsavedChanges(changed && !disabled); // ALT text typed but not saved
   const refresh = ep.refresh;
 
   const onFile = async (e) => {

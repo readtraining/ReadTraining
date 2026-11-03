@@ -9,6 +9,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 
@@ -69,6 +70,15 @@ function Field({ id, label, error, hint, ...input }) {
 // One saved-on-its-own form: its values, errors, status and the server call, with the first error focused.
 function useSection(initial, mutation, check, toInput = (v) => v) {
   const [values, setValues] = useState(initial);
+  // what is saved: the form has unsaved changes while its values differ (leaving then asks first, lib/unsavedChanges.js)
+  const [base, setBase] = useState(initial);
+  const syncBase = useRef(false);
+  useEffect(() => {
+    if (!syncBase.current) return;
+    syncBase.current = false;
+    setBase(values); // a save's own tidying (a formatted postcode, a cleared password) counts as saved
+  }, [values]);
+  useUnsavedChanges(JSON.stringify(values) !== JSON.stringify(base));
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [saved, setSaved] = useState("");
@@ -91,6 +101,8 @@ function useSection(initial, mutation, check, toInput = (v) => v) {
     setPending(true);
     try {
       const result = await mutation.mutateAsync(toInput(values));
+      setBase(values);
+      syncBase.current = true;
       await utils.me.get.invalidate();
       setSaved(onDone ? onDone(result, setValues) || "" : copy.saved);
     } catch (err) {

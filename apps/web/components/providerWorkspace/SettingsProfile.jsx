@@ -11,6 +11,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill } from "./providerParts";
 import { Confirm, Counter, Field, aria, isUrlOn } from "./settingsForm";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
 
@@ -54,9 +55,12 @@ function InfoForm({ profile, say }) {
   const update = api.provider.profile.update.useMutation();
   const [f, setF] = useState({ name: profile.name, headline: profile.headline, bio: profile.bio, city: profile.city, facebook: profile.socials.facebook || "", linkedin: profile.socials.linkedin || "", youtube: profile.socials.youtube || "" });
   const [errors, setErrors] = useState({});
+  // what is saved (updated on a save, without waiting for the profile to load again): leaving with changes asks first
+  const [savedF, setSavedF] = useState(f);
   const formRef = useRef(null);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const locked = !can("provider.profile.edit");
+  useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
   const underReview = UNDER_REVIEW.includes(profile.status);
   const canRename = underReview && can("provider.profile.rename");
 
@@ -75,6 +79,7 @@ function InfoForm({ profile, say }) {
       { organisationId, ...(canRename ? { name: f.name.trim() } : {}), headline: f.headline.trim(), bio: f.bio.trim(), city: f.city.trim() || null, socials: Object.fromEntries(SOCIAL.map((x) => [x.key, f[x.key].trim()])) },
       {
         onSuccess: (r) => {
+          setSavedF(f);
           utils.provider.profile.get.invalidate({ organisationId });
           utils.provider.profile.review.invalidate({ organisationId });
           // the name shows in the sidebar and the account menu: at once here, and from the server once it has caught up
@@ -221,18 +226,18 @@ function TermsForms({ profile, say }) {
   const update = api.provider.profile.updateTerms.useMutation();
   const locked = !can("provider.terms.edit");
   // both texts are saved together; each form changes its own
-  const save = (patch, saved, onError) => update.mutate(
+  const save = (patch, saved, onError, onSaved) => update.mutate(
     { organisationId, cancellationPolicy: profile.cancellationPolicy || null, bookingTerms: profile.bookingTerms || null, ...patch },
-    { onSuccess: () => { utils.provider.profile.get.invalidate({ organisationId }); say(saved); }, onError: (er) => onError(firstError(er)) },
+    { onSuccess: () => { onSaved?.(); utils.provider.profile.get.invalidate({ organisationId }); say(saved); }, onError: (er) => onError(firstError(er)) },
   );
   return (
     <div className="rt-acc__stack">
       <TextDoc id="rt-set-policy" title="Cancellation policy" required value={profile.cancellationPolicy} locked={locked} busy={update.isPending}
         text="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain."
-        onSave={(v, onError) => save({ cancellationPolicy: v }, "Cancellation policy saved", onError)} />
+        onSave={(v, onError, onSaved) => save({ cancellationPolicy: v }, "Cancellation policy saved", onError, onSaved)} />
       <TextDoc id="rt-set-terms" title="Booking terms" value={profile.bookingTerms} locked={locked} busy={update.isPending}
         text="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms."
-        onSave={(v, onError) => save({ bookingTerms: v || null }, "Booking terms saved", onError)} />
+        onSave={(v, onError, onSaved) => save({ bookingTerms: v || null }, "Booking terms saved", onError, onSaved)} />
     </div>
   );
 }
@@ -241,6 +246,9 @@ function TextDoc({ id, title, text, value, required, locked, busy, onSave }) {
   const max = id === "rt-set-terms" ? 20000 : 10000;
   const [v, setV] = useState(value || "");
   const [error, setError] = useState("");
+  // what is saved (set on a save, before the profile loads again)
+  const [savedV, setSavedV] = useState(value || "");
+  useUnsavedChanges(!locked && v.trim() !== savedV.trim());
   const formRef = useRef(null);
   const submit = (e) => {
     e.preventDefault();
@@ -249,7 +257,8 @@ function TextDoc({ id, title, text, value, required, locked, busy, onSave }) {
       return focusFirstError(formRef.current);
     }
     setError("");
-    onSave(v.trim(), setError);
+    const sent = v.trim();
+    onSave(sent, setError, () => setSavedV(sent));
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
@@ -337,6 +346,8 @@ export function VenueForm({ venue = null, onSaved, onCancel, inline = false, idP
   const save = api.provider.venues.save.useMutation();
   const [f, setF] = useState(() => (venue ? { name: venue.name, street: venue.street, city: venue.city, postcode: venue.postcode || "" } : { name: "", street: "", city: "", postcode: "" }));
   const [errors, setErrors] = useState({});
+  const [start] = useState(f);
+  useUnsavedChanges(JSON.stringify(f) !== JSON.stringify(start)); // typed into but not saved (the form closes once saved)
   const ref = useRef(null);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const submit = (e) => {
