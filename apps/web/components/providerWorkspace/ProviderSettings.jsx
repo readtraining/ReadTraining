@@ -9,6 +9,9 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { saveOrg, useProvider } from "@/lib/providerWorkspace";
 import { Choice, Loading, DemoTag } from "./providerParts";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { useProviderAccess } from "@/lib/providerAccess";
+import { EmptyState } from "@/components/states/States";
+import FormGate from "@/components/forms/FormGate";
 import { Field, aria, isEmail } from "./settingsForm";
 import { InfoTab, LogoTab, TermsTab, VenuesTab } from "./SettingsProfile";
 import { QaTab } from "./SettingsPeople";
@@ -18,7 +21,7 @@ import { Confirm } from "./settingsForm";
 // Provider settings (/provider/settings?tab=…): Hurak's provider information, company logo, terms, VAT, affiliate, emails, QA and
 // integrations, plus our venues. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below)
 // and the chosen tab. Information, logo, terms and venues use the API (SettingsProfile.jsx); VAT, emails, QA (SettingsPeople.jsx)
-// and integrations are still DEMO records. Every save shows a toast.
+// and integrations are still DEMO records, so they show the "coming soon" panel (NOT_SAVED). Every save shows a toast.
 
 const TABS = pw.settingsTabs;
 const TAB_TEXT = {
@@ -32,12 +35,16 @@ const TAB_TEXT = {
   qa: "Questions learners ask about your courses, and ones you answer up front.",
   integrations: "Connect the tools you use to run courses.",
 };
-// the tabs that don't use the API yet: what they keep is made up or only in this browser (DemoTag beside the tab's heading)
-const DEMO_TABS = { vat: pw.demo.settings, emails: pw.demo.settings, integrations: pw.demo.settings, qa: pw.demo.qa, affiliate: "This link works, but bookings made through it aren't counted yet: that comes with booking." };
+// a tab that works only in part (DemoTag beside the tab's heading); the tabs that don't save yet show "coming soon" (NOT_SAVED)
+const DEMO_TABS = { affiliate: "This link works, but bookings made through it aren't counted yet: that comes with booking." };
 const PANELS = { info: InfoTab, logo: LogoTab, terms: TermsTab, venues: VenuesTab, vat: VatTab, affiliate: AffiliateTab, emails: EmailsTab, qa: QaTab, integrations: IntegrationsTab };
 const hrefFor = (key) => `/provider/settings?tab=${key}`;
+// the tabs that would only save in this browser: behind the "coming soon" switch (lib/forms.js) until they save through the API
+const NOT_SAVED = new Set(["vat", "emails", "qa", "integrations"]);
 
 export default function ProviderSettings() {
+  const { can } = useProviderAccess();
+  if (!can("provider.settings.view")) return <EmptyState title="Settings aren't part of your role" text="Ask your provider's owner or an admin if something here needs changing." />;
   return (
     <Suspense fallback={<Loading rows={2} />}>
       <Settings />
@@ -87,7 +94,7 @@ function Settings() {
           </div>
           <p className="rt-acc__note">{TAB_TEXT[tab]}</p>
         </div>
-        {data ? <Panel key={tab} data={data} say={say} /> : <Loading rows={2} />}
+        {NOT_SAVED.has(tab) ? <FormGate form="providerSettings"><Panel key={tab} data={data} say={say} /></FormGate> : data ? <Panel key={tab} data={data} say={say} /> : <Loading rows={2} />}
       </section>
       <Toast toast={toast} onDone={clear} />
     </div>

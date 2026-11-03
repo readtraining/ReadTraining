@@ -1,29 +1,20 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { account } from "@/data/account";
-import { addCard, cardExpired, getCards, removeCard, setDefaultCard } from "@/lib/account";
-import { validCardNumber, validExpiry } from "@/lib/checkout";
-import Sheet from "@/components/testPrep/runner/Sheet";
-import { focusFirstError } from "@/lib/focusFirstError";
+import { cardExpired, getCards, removeCard, setDefaultCard } from "@/lib/account";
 import { EmptyState } from "@/components/states/States";
 import { Confirm } from "@/components/providerWorkspace/settingsForm";
 
 const copy = account.payments;
-const digits = (v) => v.replace(/\D/g, "");
 
 // Payment methods (the client's "Payment methods"): the saved cards (brand, last 4 digits, expiry, the default one), with Make
-// default and Remove, and "Add a card" in the site's pop-up (number formatted as typed, MM / YY, name, use as default), checked as
-// the checkout checks them. Simulated until the payment provider is connected: the provider keeps the card, we keep its last 4 digits.
+// default and Remove. A card is never typed in here: it is saved in the payment provider's secure form when online payment opens
+// (Milestone 4), and the provider keeps it; we keep only its brand, last 4 digits and expiry. Until then the cards are the demo's.
 export default function AccountPayments() {
   const [cards, setCards] = useState(null);
-  const [adding, setAdding] = useState(false);
-  const [removing, setRemoving] = useState(null); // the card waiting for "Remove this card?"
-  const [form, setForm] = useState({ number: "", expiry: "", name: "", makeDefault: false });
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
   const [announce, setAnnounce] = useState("");
-  const addRef = useRef(null);
+  const [removing, setRemoving] = useState(null); // the card waiting for "Remove this card?"
   useEffect(() => setCards(getCards()), []);
   if (!cards) return null;
 
@@ -31,31 +22,6 @@ export default function AccountPayments() {
     setCards(getCards());
     setAnnounce(msg);
   };
-  const submit = async (e) => {
-    e.preventDefault();
-    const found = {};
-    if (!digits(form.number)) found.number = "Enter the card number.";
-    else if (!validCardNumber(digits(form.number))) found.number = "Enter a valid card number.";
-    if (!form.expiry.trim()) found.expiry = "Enter the card's expiry date.";
-    else if (!validExpiry(form.expiry)) found.expiry = "Enter an expiry date in the future, like 08 / 28.";
-    if (!form.name.trim()) found.name = "Enter the name on the card.";
-    setErrors(found);
-    if (Object.keys(found).length) return focusFirstError(e.currentTarget);
-    setSaving(true);
-    const card = await addCard(form);
-    setSaving(false);
-    setAdding(false);
-    setForm({ number: "", expiry: "", name: "", makeDefault: false });
-    reload(copy.added.replace("{last4}", card.last4));
-  };
-  const field = (k, label, props = {}, hint, format) => (
-    <div className="rt-field">
-      <label htmlFor={`rt-pm-${k}`}>{label}</label>
-      {hint && <small className="rt-field__hint" id={`rt-pm-${k}-hint`}>{hint}</small>}
-      {errors[k] && <p className="rt-q__err" id={`rt-pm-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p>}
-      <input id={`rt-pm-${k}`} value={form[k]} onChange={(e) => setForm((f) => ({ ...f, [k]: format ? format(e.target.value) : e.target.value }))} aria-invalid={errors[k] ? true : undefined} aria-describedby={[hint && `rt-pm-${k}-hint`, errors[k] && `rt-pm-${k}-e`].filter(Boolean).join(" ") || undefined} {...props} />
-    </div>
-  );
 
   return (
     <div className="rt-acc__stack">
@@ -63,8 +29,8 @@ export default function AccountPayments() {
       <section className="rt-acc__card" aria-labelledby="rt-pm-h">
         <div className="rt-acc__cardhead">
           <h2 className="rt-acc__h2" id="rt-pm-h">Saved cards</h2>
-          <button type="button" ref={addRef} className="button -md -purple-1 text-white" aria-haspopup="dialog" onClick={() => { setErrors({}); setAdding(true); }}>{copy.add}</button>
         </div>
+        <p className="rt-acc__note">{copy.soon}</p>
         {cards.length ? (
           <ul className="rt-acc__cards">
             {cards.map((c) => {
@@ -88,20 +54,7 @@ export default function AccountPayments() {
           <EmptyState inCard title={copy.none.text} />
         )}
       </section>
-
-      <Sheet open={adding} onClose={() => setAdding(false)} title={copy.form.title} closeLabel="Close" fallbackFocus={addRef}>
-        <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate>
-          {field("number", copy.form.number, { type: "text", inputMode: "numeric", autoComplete: "cc-number", spellCheck: false }, null, (v) => digits(v).slice(0, 19).replace(/(\d{4})(?=\d)/g, "$1 "))}
-          {field("expiry", copy.form.expiry, { type: "text", inputMode: "numeric", autoComplete: "cc-exp", placeholder: "MM / YY" }, copy.form.expiryHint, (v) => {
-            const d = digits(v).slice(0, 4);
-            return d.length > 2 ? `${d.slice(0, 2)} / ${d.slice(2)}` : d;
-          })}
-          {field("name", copy.form.name, { type: "text", autoComplete: "cc-name" })}
-          <label className="rt-bk__check" htmlFor="rt-pm-default"><input id="rt-pm-default" type="checkbox" checked={form.makeDefault} onChange={(e) => setForm((f) => ({ ...f, makeDefault: e.target.checked }))} /><span>{copy.form.makeDefault}</span></label>
-          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={saving} aria-busy={saving}>{saving ? "Saving" : copy.form.submit}</button>
-        </form>
-      </Sheet>
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this card?" text={removing ? `${removing.brand} ending ${removing.last4} comes off your account. You can add it again at checkout.` : ""} confirmLabel="Remove card" onConfirm={() => { const c = removing; setRemoving(null); removeCard(c.id); reload(copy.removed.replace("{last4}", c.last4)); }} />
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this card?" text={removing ? `${removing.brand} ending ${removing.last4} comes off your account.` : ""} confirmLabel="Remove card" onConfirm={() => { const c = removing; setRemoving(null); removeCard(c.id); reload(copy.removed.replace("{last4}", c.last4)); }} />
     </div>
   );
 }

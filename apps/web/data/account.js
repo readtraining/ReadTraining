@@ -124,13 +124,12 @@ export const account = {
     default: "Default",
     makeDefault: "Make default",
     remove: "Remove",
-    add: "Add a card",
     expires: "Expires {date}",
     expired: "Expired {date}",
-    form: { title: "Add a card", number: "Card number", expiry: "Expiry date", expiryHint: "As shown on the card, like 08 / 28.", name: "Name on card", makeDefault: "Use as my default card", submit: "Save card" },
-    added: "Card ending {last4} saved.",
+    // no card is ever typed into our own pages: it is saved in the payment provider's secure form when online payment opens
+    soon: "Saving a card comes with online payment. You’ll save it when you pay, in our payment provider’s secure form.",
     removed: "Card ending {last4} removed.",
-    none: { title: "No saved cards", text: "Save a card to pay faster at checkout." },
+    none: { title: "No saved cards", text: "Cards you choose to save when you pay will show here." },
   },
 
   wallet: {

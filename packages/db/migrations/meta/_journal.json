@@ -180,8 +180,15 @@
     {
       "idx": 25,
       "version": "7",
-      "when": 1793697206047,
-      "tag": "0025_organisations_read_owner_admin",
+      "when": 1793708493028,
+      "tag": "0025_api_only_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793711372310,
+      "tag": "0026_rls_auto_enable_execute",
       "breakpoints": true
     }
   ]

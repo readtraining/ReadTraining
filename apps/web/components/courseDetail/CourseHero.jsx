@@ -8,8 +8,7 @@ import { CATALOGUE_HREF, coursePath } from "@/lib/routes";
 
 const CATALOGUE = CATALOGUE_HREF;
 
-// Hero, in this order: breadcrumb, title, summary, badge, provider count, price row with Book now, instalments line (only when
-// supported). The rating, students and "Rated Excellent" proof now live in the stats card on the hero edge (StatsCard).
+// Hero, in this order: breadcrumb, title, summary, badge, provider count, price row with Book now. The rating, students and "Rated Excellent" proof now live in the stats card on the hero edge (StatsCard).
 export default function CourseHero({ course }) {
   const subject = getSubjectLabel(course);
   const sub = getSubLabel(course);
@@ -49,7 +48,6 @@ export default function CourseHero({ course }) {
           <BookNow />
         </div>
 
-        {course.trust?.instalments && <p className="rt-cd__klarna">Pay in 3 interest-free instalments with Klarna</p>}
       </div>
     </div>
   );

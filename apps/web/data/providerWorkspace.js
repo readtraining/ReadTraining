@@ -112,22 +112,22 @@ export const pw = {
     { label: "Account settings", href: "/account/settings" },
     { label: "Requests", href: "/provider/requests" },
     { label: "Public profile", href: "/provider/profile" },
-    { label: "Team", href: "/provider/team" },
+    { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
 
-  // The pages whose records are still made up (lib/providerWorkspace.js): what the "Demo data" banner under the title says. Shown
-  // only where demo records are on (lib/demo.js); on the live site these pages start empty.
+  // the tag beside a demo page's title (ProviderShell `demo`): on the development and test copies only, where the made-up records
+  // show. `all` and `partly` are the general notes; the rest is each page's own note (the tag explains it), and the notes for demo
+  // widgets and settings tabs (DemoTag)
   demo: {
+    all: { label: "Demo data", note: "The records on this page are made up for now. They become real when bookings and payments are connected." },
+    partly: { label: "Partly demo", note: "Some records on this page are made up for now. They become real when bookings and payments are connected." },
     orders: "These orders, customers and amounts are made up, to show how this page works. Your real orders show here once learners can book and pay.",
     learners: "These learners and their details are made up, to show how this page works. Your real learners show here once they book.",
     performance: "These figures, reviews and leads are made up, to show how this page works. Your real ones show here once learners book and review.",
     packages: "These pricing plans are examples, kept only in this browser. They aren't used by your real courses yet.",
     notifications: "These notifications are made up, to show how this page works. Real ones show here once booking goes live.",
     requests: "These refund requests and disputes are made up, to show how this page works. Real ones show here once booking goes live.",
-    team: "These team members are examples, kept only in this browser. Inviting or removing someone here doesn't change your real team yet.",
     cohort: "This is a sample cohort with made-up learners, to show how the register and results work. Your real cohorts are in the Cohort list.",
-    settings: "Made up for now and kept only in this browser. This setting isn't used yet.",
-    qa: "These questions are made up, to show how answering works. Real learners' questions show here once your courses are live.",
     attention: "Made up, to show how this works. Real refund requests, disputes, reviews, questions and leads show here once booking goes live.",
   },
 

@@ -1,2 +1,0 @@
-DROP POLICY "organisations: read where member" ON "organisations" CASCADE;--> statement-breakpoint
-CREATE POLICY "organisations: read where owner or admin" ON "organisations" AS PERMISSIVE FOR SELECT TO "authenticated" USING (exists (select 1 from public.organisation_members m where m.organisation_id = "organisations"."id" and m.user_id = (select auth.uid()) and m.role in ('owner', 'admin')));

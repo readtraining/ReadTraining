@@ -7,7 +7,7 @@ import { can } from '@readtraining/permissions'
 import { logActivity, logDenied } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
-import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure, refuse } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, orgProcedure, protectedProcedure, publicProcedure, refuse } from '../../trpc/trpc.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
 import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
 import { refuseTakenProviderName } from '../../lib/providerName.mjs'
@@ -63,6 +63,7 @@ export const organisationsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'providerApply')
       const termsVersion = await providerTermsVersion(ctx.db, PROVIDER_TERMS_VERSION)
       const { org, again } = await ctx.db.transaction(async (tx) => {
         // a double click (or two tabs) sends this twice at once: the second waits here, then finds the first one's account
@@ -123,6 +124,7 @@ export const organisationsRouter = createTRPCRouter({
   createBusiness: protectedProcedure
     .input(z.object({ companyName: orgName('company name'), jobTitle: z.string().trim().min(2, 'Enter your role, like Operations Manager.').max(80, 'Your role must be 80 characters or fewer.'), phone }))
     .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'businessCreate')
       const created = await ctx.db.transaction(async (tx) => {
         if (await ownedUnderLock(tx, ctx.user.id, 'business')) throw new TRPCError({ code: 'CONFLICT', message: 'You already have a business account. Use Switch account to open it.' })
         const base = slugify(input.companyName)
@@ -213,6 +215,7 @@ export const organisationsRouter = createTRPCRouter({
   resubmit: orgProcedure('provider.profile.edit')
     .input(z.object({ organisationId: z.string().uuid(), reply: z.string().trim().max(1000, 'Keep your note to 1,000 characters or fewer.').optional() }))
     .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'providerApply')
       const reply = input.reply?.trim() || null
       const updated = await ctx.db.transaction(async (tx) => {
         const [row] = await tx

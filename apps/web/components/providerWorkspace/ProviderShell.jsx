@@ -15,9 +15,9 @@ import { useMe } from "@/lib/useMe";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { SHOW_DEMO } from "@/lib/demo";
 import { api } from "@/lib/trpc/react";
 import ProviderAccountStatus from "./ProviderAccountStatus";
-import { SHOW_DEMO } from "@/lib/demo";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -27,8 +27,10 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
 // sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups, the button at its top right that hides it
 // and, below 992px, the menu drawer. Then the page head (title, intro, actions) and the page.
-// `current` marks the section; the page inside it is matched on the address.
-export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = null, children }) {
+// `current` marks the section; the page inside it is matched on the address. `demo` marks a page whose records are still made up
+// (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's. It is true (the
+// general note), "partly", or the page's own note (data/providerWorkspace.js pw.demo), which the tag then explains.
+export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = false, children }) {
   const sideRef = useRef(null);
   const router = useRouter();
   const path = usePathname();
@@ -37,6 +39,8 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
   const { closed: sideHidden } = useSideMenu(); // the sidebar hidden, from 992px
   const access = useProviderAccess();
+  const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
+  const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);
   // a group's page is current when its path matches and, for ?tab= / ?mode= pages, its query does too
   // a page opened from a notification goes back to the notifications; otherwise to its own list (`back`)
@@ -99,7 +103,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             {meName && (
               <RowMenu label={meName ? `${initials(meName)}, account menu for ${meName}` : "Account menu"} triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
                 head={<><strong title={meName}>{meName}</strong><span title={meEmail}>{meEmail}</span><small title={org || undefined}>{org ? `Provider · ${org}` : "Provider account"}</small></>}
-                items={[...pw.accountMenu, ...switchItems, { label: "Log out", onClick: logOut }]} />
+                items={[...pw.accountMenu.filter((x) => !x.need || access.can(x.need)).map(({ need, ...x }) => x), ...switchItems, { label: "Log out", onClick: logOut }]} />
             )}
           </div>
         </div>
@@ -179,13 +183,14 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
           {backTo && <Link href={backTo.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backTo.label}</Link>}
           <div className="rt-adm__head">
             <div>
-              <h1 className="rt-adm__h1">{title}</h1>
+              <div className="rt-adm__titlerow">
+                <h1 className="rt-adm__h1">{title}</h1>
+                {demoTag}
+              </div>
               {lead && <p className="rt-adm__lead">{lead}</p>}
             </div>
             {actions}
           </div>
-          {/* `demo`: the page's records are made up (the note says what that means); only where demo records are shown */}
-          {demo && SHOW_DEMO && <p className="rt-acc__notice -warn rt-pws__demo"><b>Demo data.</b> {demo}</p>}
           {children}
         </main>
       </div>

@@ -46,7 +46,8 @@ const key = z.string().min(1).max(80)
 type Row = { key: string; parent: string | null; slug: string; name: string; position: number; active: boolean }
 
 // one kind's rows: its key (id, or the address for methods and levels), parent, address, name, place and whether it's in use
-async function rows(db: typeof Db, k: Kind): Promise<Row[]> {
+type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
+async function rows(db: typeof Db | Tx, k: Kind): Promise<Row[]> {
   const parent = k === 'subcategory' || k === 'topic' ? sql`${PARENT[k]}::text` : sql`null`
   return db.execute<Row>(sql`select ${byKey(k)}::text "key", ${parent} parent, slug, name, position, active from ${TABLE[k]} order by position, name`)
 }
@@ -204,19 +205,22 @@ export const catalogueAdminRouter = createTRPCRouter({
   move: adminProcedure('admin.catalogue.edit')
     .input(z.object({ kind, key, direction: z.enum(['up', 'down']) }))
     .mutation(async ({ ctx, input }) => {
-      const all = await rows(ctx.db, input.kind)
-      const me = all.find((r) => r.key === input.key)
-      if (!me) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
-      const siblings = all.filter((r) => r.parent === me.parent)
-      const i = siblings.indexOf(me)
-      const j = input.direction === 'up' ? i - 1 : i + 1
-      if (j < 0 || j >= siblings.length) return { ok: true }
-      ;[siblings[i], siblings[j]] = [siblings[j], siblings[i]]
-      await ctx.db.transaction(async (tx) => {
+      return ctx.db.transaction(async (tx) => {
+        // the order is read under a lock on the list, so two moves at the same moment take turns: each one moves from the order the
+        // other left, and no two entries end up in the same place
+        await tx.execute(sql`select 1 from ${TABLE[input.kind]} for update`)
+        const all = await rows(tx, input.kind)
+        const me = all.find((r) => r.key === input.key)
+        if (!me) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
+        const siblings = all.filter((r) => r.parent === me.parent)
+        const i = siblings.indexOf(me)
+        const j = input.direction === 'up' ? i - 1 : i + 1
+        if (j < 0 || j >= siblings.length) throw new TRPCError({ code: 'CONFLICT', message: input.direction === 'up' ? 'This is already first. Reload the page to see the order.' : 'This is already last. Reload the page to see the order.' })
+        ;[siblings[i], siblings[j]] = [siblings[j], siblings[i]]
         // renumber the neighbours 0, 1, 2… in their new order
         for (const [n, r] of siblings.entries()) if (r.position !== n) await tx.execute(sql`update ${TABLE[input.kind]} set position = ${n} where ${byKey(input.kind)}::text = ${r.key}`)
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.catalogue_moved', targetType: input.kind, targetId: input.key, metadata: { kind: input.kind, name: me.name, direction: input.direction }, ip: ctx.ip })
+        return { ok: true }
       })
-      return { ok: true }
     }),
 })

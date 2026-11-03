@@ -11,7 +11,7 @@ import { emailOutbox } from '../../lib/email.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { notify, personOf } from '../../lib/notify.mjs'
 import { supabase } from '../../lib/supabase.mjs'
-import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
+import { adminProcedure, createTRPCRouter, limit } from '../../trpc/trpc.mjs'
 
 // Admin Users & Roles (Part B, B1): the admin team itself. One role with switches and presets (Full, Support, Finance,
 // Custom), as agreed in Part A. Every change needs the "admins" switch, is logged, and two safeguards keep the team from
@@ -63,8 +63,10 @@ const SUPER_ONLY = 'Only the super admin can add, change or remove a Full admin.
 const SUPER_PROTECTED = 'The super admin can’t be changed or removed. They can hand the role to another Full admin first.'
 const INVITE_FAILED = 'The invite couldn’t be made just now. Please try again in a moment.'
 
+type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
+
 // Full admins who can use the panel now (accepted invites only), not counting one person
-async function fullAdminsLeft(db: typeof Db, without: string) {
+async function fullAdminsLeft(db: typeof Db | Tx, without: string) {
   const [r] = await db.execute<{ n: number }>(sql`select count(*)::int n from public.admin_users a where a.active and a.preset = 'full' and not ${PENDING} and a.user_id <> ${without}::uuid`)
   return r?.n ?? 0
 }
@@ -77,7 +79,7 @@ async function nameOf(db: typeof Db, userId: string) {
 }
 
 // one admin row with what the screen needs; NOT_FOUND when they aren't on the team
-async function member(db: typeof Db, userId: string) {
+async function member(db: typeof Db | Tx, userId: string) {
   const [r] = await db.execute<{ email: string; preset: Preset; permissions: string[]; refund_limit_pence: number; pending: boolean; admin_only: boolean }>(sql`
     select u.email, a.preset, a.permissions, a.refund_limit_pence, ${PENDING} pending, a.admin_only
     from public.admin_users a join auth.users u on u.id = a.user_id
@@ -85,6 +87,16 @@ async function member(db: typeof Db, userId: string) {
   if (!r) throw new TRPCError({ code: 'NOT_FOUND', message: 'This person is not on the admin team.' })
   return r
 }
+
+// A change to someone's access is checked and made under row locks: every active Full admin's row and the person's own, taken in
+// one order (by account id) so two changes never wait on each other in a circle. A second change at the same moment waits, then
+// sees the first one's result: two admins can't each remove "one of two" Full admins and leave none, and a double click acts once.
+async function lockTeam(tx: Tx, userId: string) {
+  await tx.execute(sql`select user_id from public.admin_users where active and (preset = 'full' or user_id = ${userId}::uuid) order by user_id for update`)
+}
+const CHANGED_SINCE = 'Someone has just changed this admin’s access. Reload the page to see it.'
+const sameAccess = (a: { preset: Preset; permissions: string[]; refund_limit_pence: number }, b: { preset: Preset; permissions: string[]; refund_limit_pence: number }) =>
+  a.preset === b.preset && [...a.permissions].sort().join() === [...b.permissions].sort().join() && a.refund_limit_pence === b.refund_limit_pence
 
 // ---- nobody gives more than they have (once there is a super admin, who can give anything) ----
 type TeamCtx = { db: typeof Db; ip: string | null; user: { id: string }; actor: Actor }
@@ -165,6 +177,7 @@ export const teamRouter = createTRPCRouter({
   add: manage
     .input(z.object({ email: z.string().trim().toLowerCase().email('Enter a valid email address.'), preset, permissions: permissions.optional(), refundLimit: refundLimit.optional() }))
     .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'adminInvite')
       const owner = await superAdmin(ctx.db)
       if (input.preset === 'full' && !ctx.actor.admin?.isSuper && owner) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
       const values = { preset: input.preset, permissions: input.preset === 'custom' ? (input.permissions ?? []) : [], refundLimitPence: (input.refundLimit ?? 100) * 100, active: true }
@@ -208,6 +221,7 @@ export const teamRouter = createTRPCRouter({
 
   // A new invite link for someone who hasn't set their password yet (the old link stops working).
   resend: manage.input(z.object({ userId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    await limit(ctx, 'adminInvite')
     const m = await member(ctx.db, input.userId)
     if (!m.pending) throw new TRPCError({ code: 'CONFLICT', message: 'This person has already accepted their invite.' })
     const owner = await superAdmin(ctx.db)
@@ -236,23 +250,28 @@ export const teamRouter = createTRPCRouter({
       if (owner && !ctx.actor.admin?.isSuper && (before.preset === 'full' || input.preset === 'full')) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
       await checkTouching(ctx, owner, input.userId, before)
       await checkGiving(ctx, owner, input.userId, input.preset, input.preset === 'custom' ? (input.permissions ?? []) : [], input.refundLimit * 100)
-      if (!before.pending && before.preset === 'full' && input.preset !== 'full' && (await fullAdminsLeft(ctx.db, input.userId)) === 0)
-        throw new TRPCError({ code: 'CONFLICT', message: 'There must always be at least one Full admin.' })
       const nextPermissions = input.preset === 'custom' ? (input.permissions ?? []) : []
-      await ctx.db.transaction(async (tx) => {
+      const next = { preset: input.preset, permissions: nextPermissions, refund_limit_pence: input.refundLimit * 100 }
+      const changed = await ctx.db.transaction(async (tx) => {
+        await lockTeam(tx, input.userId)
+        const now = await member(tx, input.userId)
+        // already what was asked (a double click, or the same change from someone else): nothing to do, nobody emailed twice
+        if (sameAccess(now, next)) return false
+        if (!sameAccess(now, before) || now.pending !== before.pending) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
+        if (!now.pending && now.preset === 'full' && input.preset !== 'full' && (await fullAdminsLeft(tx, input.userId)) === 0)
+          throw new TRPCError({ code: 'CONFLICT', message: 'There must always be at least one Full admin.' })
         await tx
           .update(adminUsers)
           .set({ preset: input.preset, permissions: nextPermissions, refundLimitPence: input.refundLimit * 100 })
           .where(eq(adminUsers.userId, input.userId))
-        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.updated', targetType: 'account', targetId: input.userId, metadata: { from: before.preset, to: input.preset, refundLimit: input.refundLimit }, ip: ctx.ip })
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.updated', targetType: 'account', targetId: input.userId, metadata: { from: now.preset, to: input.preset, refundLimit: input.refundLimit }, ip: ctx.ip })
+        return true
       })
       // they're told when their access really changed (not for an invite they haven't accepted: that has its own email)
-      const same = (a: string[], b: string[]) => [...a].sort().join() === [...b].sort().join()
-      const changed = before.preset !== input.preset || !same(before.permissions, nextPermissions) || before.refund_limit_pence !== input.refundLimit * 100
       if (changed && !before.pending) {
         await notify(ctx.db, 'admin-role-changed', await personOf(ctx.db, input.userId), { changedBy: await nameOf(ctx.db, ctx.user.id), role: ROLE_LABEL[input.preset] }, { targetType: 'account', targetId: input.userId, action: 'email.admin_access_sent' })
       }
-      return { ok: true }
+      return { ok: true, unchanged: !changed }
     }),
 
   // Remove someone's admin access, or cancel an invite they haven't accepted. A cancelled invite made a staff-only login, so that
@@ -264,10 +283,14 @@ export const teamRouter = createTRPCRouter({
     if (owner === input.userId) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_PROTECTED })
     if (owner && !ctx.actor.admin?.isSuper && before.preset === 'full') throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
     await checkTouching(ctx, owner, input.userId, before)
-    if (!before.pending && before.preset === 'full' && (await fullAdminsLeft(ctx.db, input.userId)) === 0)
-      throw new TRPCError({ code: 'CONFLICT', message: 'There must always be at least one Full admin.' })
     const action = before.pending ? 'admin.invite_cancelled' : 'admin.revoked'
     await ctx.db.transaction(async (tx) => {
+      await lockTeam(tx, input.userId)
+      const [now] = await tx.execute<{ active: boolean; preset: Preset; pending: boolean }>(sql`select a.active, a.preset, ${PENDING} pending from public.admin_users a where a.user_id = ${input.userId}::uuid`)
+      if (!now?.active) throw new TRPCError({ code: 'CONFLICT', message: before.pending ? 'This invite has already been cancelled.' : 'This person’s admin access has already been removed.' })
+      if (now.preset !== before.preset || now.pending !== before.pending) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
+      if (!now.pending && now.preset === 'full' && (await fullAdminsLeft(tx, input.userId)) === 0)
+        throw new TRPCError({ code: 'CONFLICT', message: 'There must always be at least one Full admin.' })
       await tx.update(adminUsers).set({ active: false }).where(eq(adminUsers.userId, input.userId))
       await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action, targetType: 'account', targetId: input.userId, metadata: {}, ip: ctx.ip })
     })
@@ -290,6 +313,12 @@ export const teamRouter = createTRPCRouter({
     if (to.preset !== 'full') throw new TRPCError({ code: 'CONFLICT', message: 'Hand the role to an admin with Full access.' })
     if (to.pending) throw new TRPCError({ code: 'CONFLICT', message: 'They need to accept their invite first.' })
     await ctx.db.transaction(async (tx) => {
+      // under the locks: two hand-overs at the same moment can't leave two super admins
+      await lockTeam(tx, input.userId)
+      const [me] = await tx.execute<{ is_super: boolean }>(sql`select is_super from public.admin_users where user_id = ${ctx.user.id}::uuid and active`)
+      if (!me?.is_super) throw new TRPCError({ code: 'CONFLICT', message: 'You have already handed the super admin role over.' })
+      const [them] = await tx.execute<{ ok: boolean }>(sql`select (a.active and a.preset = 'full' and not ${PENDING}) ok from public.admin_users a where a.user_id = ${input.userId}::uuid`)
+      if (!them?.ok) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
       await tx.update(adminUsers).set({ isSuper: false }).where(eq(adminUsers.userId, ctx.user.id))
       await tx.update(adminUsers).set({ isSuper: true }).where(eq(adminUsers.userId, input.userId))
       await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.super_handed_over', targetType: 'account', targetId: input.userId, metadata: {}, ip: ctx.ip })

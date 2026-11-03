@@ -13,7 +13,7 @@ import { OWN_REASON_ERROR, ownReasonOk, soleApprover } from '../../lib/soleAppro
 import { refuseRetired } from '../../lib/retired.mjs'
 import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
-import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
+import { adminProcedure, createTRPCRouter, limit, refuse } from '../../trpc/trpc.mjs'
 import { loadCoursePage, loadListings } from '../catalogue/listings.mjs'
 import {
   addCourseImage,
@@ -327,6 +327,7 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(
       z.object({
         courseId: id,
+        version: z.string().max(80).optional(),
         ...Object.fromEntries(Object.entries(content).map(([k, v]) => [k, (v as z.ZodTypeAny).optional()])),
         seoTitle: z.string().trim().max(60).nullable().optional(),
         seoDescription: z.string().trim().max(320).nullable().optional(),
@@ -363,17 +364,19 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, status: z.enum(['live', 'paused']), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
-      if (course.status === input.status) return { ok: true, version: input.seen ?? (await courseVersion(ctx.db, course.id)) }
-      if (input.status === 'live') {
-        const gaps = await missing(ctx.db, course)
-        if (gaps.length) throw bad(`Add ${gaps.join(', ')} before publishing it.`)
-      } else if (course.status !== 'live') throw new TRPCError({ code: 'CONFLICT', message: 'Only a live page can be taken off the site.' })
       const now = new Date()
       await ctx.db.transaction(async (tx) => {
-        await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+        // checked under the row lock: of two at the same moment (a double click, or two admins) one acts, the other is told
+        const [page] = await tx.select().from(courses).where(eq(courses.id, course.id)).for('update')
+        if (!page) throw notFound()
+        if (page.status === input.status) throw new TRPCError({ code: 'CONFLICT', message: input.status === 'live' ? 'This page is already live.' : 'This page is already off the site.' })
         await refuseIfChanged(tx, course.id, input.seen) // what is published is what this editor showed
-        await tx.update(courses).set({ status: input.status, publishedAt: course.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
-        if (input.status === 'live') await refuseRetired(tx, course.id, 'admin')
+        if (input.status === 'live') {
+          const gaps = await missing(tx, page)
+          if (gaps.length) throw bad(`Add ${gaps.join(', ')} before publishing it.`)
+        } else if (page.status !== 'live') throw new TRPCError({ code: 'CONFLICT', message: 'Only a live page can be taken off the site.' })
+        await tx.update(courses).set({ status: input.status, publishedAt: page.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
+        if (input.status === 'live') await refuseRetired(tx, course.id, 'admin') // never live under a retired entry
         await logFor(ctx, course, input.status === 'live' ? 'admin.shared_course_published' : 'admin.shared_course_paused')(tx)
       })
       return { ok: true, version: await courseVersion(ctx.db, course.id) }
@@ -381,7 +384,11 @@ export const adminCoursesRouter = createTRPCRouter({
 
   sharedImageUploadUrl: adminProcedure('admin.catalogue.edit')
     .input(z.object({ courseId: id, contentType: z.enum(Object.keys(IMAGE_TYPES) as [keyof typeof IMAGE_TYPES, ...(keyof typeof IMAGE_TYPES)[]]) }))
-    .mutation(async ({ ctx, input }) => courseImageUploadUrl(await sharedPage(ctx.db, input.courseId), input.contentType)),
+    .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'uploadHour')
+      await limit(ctx, 'uploadDay')
+      return courseImageUploadUrl(await sharedPage(ctx.db, input.courseId), input.contentType)
+    }),
 
   sharedAddImage: adminProcedure('admin.catalogue.edit')
     .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: z.string().trim().max(140).optional(), seen: seenVersion }))

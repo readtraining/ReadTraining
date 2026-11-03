@@ -698,7 +698,7 @@
 .rt-tier__list { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
 .rt-tier__list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; }
 .rt-tier__list li i { flex: 0 0 18px; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; margin-top: 1px; background: var(--color-purple-3); color: var(--color-purple-1); }
-.rt-tier__list li.is-off { color: var(--color-light-1); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--color-light-1) 50%, transparent); } /* full-strength grey (AA contrast); the line and the cross say "not included" */
+.rt-tier__list li.is-off { color: var(--color-light-1); }
 .rt-tier__list li.is-off i { background: var(--color-light-4); color: var(--color-light-1); }
 .rt-tier.is-rec .rt-tier__list li i { background: var(--color-green-1); color: var(--color-dark-1); }
 .rt-tier.is-rec .rt-tier__list li.is-off { color: rgba(255, 255, 255, 0.72); text-decoration-color: rgba(255, 255, 255, 0.4); }
@@ -2014,7 +2014,6 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__hprice { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 0 0 14px; color: color-mix(in srgb, var(--color-white) 80%, transparent); }
 .rt-cd__hprice-from { font-size: 14px; }
 
-.rt-cd__klarna { margin: 12px 0 0; font-size: 13px; line-height: 20px; color: color-mix(in srgb, var(--color-white) 80%, transparent); }
 @media (max-width: 991px) { .rt-cd__hrow .button { width: 100%; } }
 
 /* ---------- Course features card: overlaps the hero edge ---------- */
@@ -2084,9 +2083,8 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__hprice-inc { font-size: 12px; }
 .rt-cd__hprice-was { font-size: 14px; }
 .rt-cd__hprice-off { color: var(--color-green-1); font-size: 14px; font-weight: 700; white-space: nowrap; }
-.rt-cd__hero .rt-cd__klarna { margin: 0; font-size: 14px; line-height: 20px; }
 /* from 992px the booking card sits beside the hero and shows the same price and instalments line, so they are shown once, in the card; below 992px the card is under the hero, so the hero keeps them */
-@media (min-width: 992px) { .rt-cd__hero .rt-cd__hprice, .rt-cd__hero .rt-cd__klarna { display: none; } }
+@media (min-width: 992px) { .rt-cd__hero .rt-cd__hprice { display: none; } }
 @media (max-width: 991px) { .rt-cd__hero { padding: 24px 0; } }
 
 /* ---------- Stats card on the hero edge ---------- */
@@ -3220,6 +3218,7 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
    Layout only here: spacing, list resets and the centred mission.
    =================================================================================================== */
 .rt-about-page main:focus { outline: none; }
+#rt-home-main:focus { outline: none; }
 /* our story: the promises card */
 .rt-about__promises { padding: 28px; }
 .rt-about__promises .bz-card__label { margin: 0; }
@@ -3750,7 +3749,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__go:disabled { opacity: 0.5; cursor: not-allowed; }
 .rt-bk__issues { margin: 12px 0 0; padding: 12px 14px 12px 30px; border-radius: 10px; background: var(--color-light-4); font-size: 13px; line-height: 1.5; color: var(--color-dark-1); }
 .rt-bk__issues li { list-style: disc; }
-.rt-bk__klarna { margin: 14px 0 0; text-align: center; font-size: 13px; color: var(--color-light-1); }
 .rt-bk__trust { display: grid; gap: 10px; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--color-light-5); list-style: none; }
 .rt-bk__trust li { display: flex; align-items: flex-start; gap: 10px; list-style: none; font-size: 13px; line-height: 1.45; color: var(--color-dark-1); }
 .rt-bk__trust .fb-ticks__icon { flex: 0 0 20px; width: 20px; height: 20px; }
@@ -4152,7 +4150,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__detail { display: grid; gap: 10px; }
 .rt-biz__detail .rt-acc__h3 { margin-top: 8px; }
 .rt-biz__detail .rt-acc__certs { margin: 0; }
-.rt-biz__payitems { margin: 12px 0 16px; }
 .rt-biz__invbody { display: grid; gap: 14px; }
 /* assign places */
 .rt-biz__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
@@ -4173,7 +4170,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__rows li > div:first-child { gap: 2px; }
 .rt-biz__certtable th:nth-child(3), .rt-biz__certtable th:nth-child(4) { width: 112px; }
 .rt-biz__certtable td small, .rt-biz__certtable td:nth-child(3), .rt-biz__certtable td:nth-child(4) { white-space: nowrap; } /* IDs and dates never break */
-.rt-biz__download { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rt-biz__print { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .rt-biz__rowacts { display: inline-flex; align-items: center; gap: 16px; }
 .rt-biz__creditrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 12px; }
 .rt-biz__creditrow .rt-biz__creditnums { flex: 1 1 420px; margin: 0; }
@@ -7065,3 +7062,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-preview { position: sticky; top: 0; z-index: 1100; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 16px; border-bottom: 1px solid var(--color-orange-6); background: var(--color-orange-7); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-preview__text { margin: 0; }
 .rt-preview__back { font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+/* ---------- HUMAN CHECK (lib/humanCheck.js) ----------
+   Cloudflare Turnstile runs invisibly; in the rare case it wants a click, its small box shows here, above everything */
+.rt-humancheck { position: fixed; z-index: 3000; bottom: 24px; left: 50%; transform: translateX(-50%); }
+.rt-humancheck:empty { display: none; }

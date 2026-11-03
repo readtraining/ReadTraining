@@ -7,7 +7,7 @@ import { can } from '@readtraining/permissions'
 import { logActivity } from '../../lib/activity.mjs'
 import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
-import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // the roles that read an organisation's private details: our team's status note and messages (the same rule as the database's
 // "organisations: read where owner or admin")
@@ -140,14 +140,21 @@ export const providerProfileRouter = createTRPCRouter({
       })
     }),
 
+  // Each text is saved on its own: only the one sent changes (two quick saves never undo each other). The cancellation policy
+  // can be changed but not emptied: learners see it before they pay.
   updateTerms: orgProcedure('provider.terms.edit')
-    .input(z.object({ bookingTerms: optional(20000, 'booking terms'), cancellationPolicy: optional(10000, 'cancellation policy') }))
+    .input(
+      z.object({
+        bookingTerms: optional(20000, 'booking terms').optional(),
+        cancellationPolicy: z.string().trim().min(1, 'Enter your cancellation policy.').max(10000, 'Keep the cancellation policy to 10000 characters or fewer.').optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
+      const set: Partial<typeof organisations.$inferInsert> = { updatedAt: new Date() }
+      if (input.bookingTerms !== undefined) set.bookingTerms = input.bookingTerms || null
+      if (input.cancellationPolicy !== undefined) set.cancellationPolicy = input.cancellationPolicy
       return ctx.db.transaction(async (tx) => {
-        await tx
-          .update(organisations)
-          .set({ bookingTerms: input.bookingTerms || null, cancellationPolicy: input.cancellationPolicy || null, updatedAt: new Date() })
-          .where(eq(organisations.id, input.organisationId))
+        await tx.update(organisations).set(set).where(eq(organisations.id, input.organisationId))
         await log(tx, ctx, input.organisationId, 'provider.terms_updated')
         return { ok: true }
       })
@@ -157,7 +164,9 @@ export const providerProfileRouter = createTRPCRouter({
   logoUploadUrl: orgProcedure('provider.profile.edit')
     // a logo is a JPG, PNG or WebP (apps/web/lib/images.js): not a GIF
     .input(z.object({ contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'uploadHour')
+      await limit(ctx, 'uploadDay')
       const up = await mediaUploadUrl(`${input.organisationId}/logo`, input.contentType)
       if (!up) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'We couldn’t prepare the upload. Please try again.' })
       return up

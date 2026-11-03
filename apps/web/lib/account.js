@@ -140,18 +140,16 @@ export function getLearning() {
 }
 
 // ---- payment methods: saved cards (the payment provider keeps the card; we keep its brand, last 4 digits and expiry) ----
-const CARDS_KEY = "rt-cards";
-export const getCards = () => read(CARDS_KEY, account.demoCards);
-const brandOf = (digits) => (/^4/.test(digits) ? "Visa" : /^(5[1-5]|2[2-7])/.test(digits) ? "Mastercard" : /^3[47]/.test(digits) ? "American Express" : "Card");
-export async function addCard({ number, expiry, name, makeDefault }) {
-  await new Promise((r) => setTimeout(r, 600));
-  const digits = number.replace(/\D/g, "");
-  const [mm, yy] = expiry.split("/").map((x) => x.trim());
-  const cards = getCards();
-  const card = { id: `c${Date.now()}`, brand: brandOf(digits), last4: digits.slice(-4), exp: `${mm}/${yy}`, name: name.trim(), default: makeDefault || cards.length === 0 };
-  write(CARDS_KEY, [...cards.map((c) => (card.default ? { ...c, default: false } : c)), card]);
-  return card;
-}
+// The demo's sample cards only: a card is never typed into our own pages (it will be saved in the payment provider's secure form,
+// Milestone 4). The old "Add a card" kept what was typed (last 4 digits, expiry, name) under "rt-cards", shared by everyone on
+// the browser: that is cleared the first time this runs.
+const CARDS_KEY = "rt-cards-demo";
+export const getCards = () => {
+  try {
+    window.localStorage.removeItem("rt-cards");
+  } catch {}
+  return read(CARDS_KEY, account.demoCards);
+};
 export function removeCard(id) {
   const rest = getCards().filter((c) => c.id !== id);
   if (rest.length && !rest.some((c) => c.default)) rest[0] = { ...rest[0], default: true }; // there is always a default

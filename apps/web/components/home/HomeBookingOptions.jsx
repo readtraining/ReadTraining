@@ -48,7 +48,7 @@ export default function HomeBookingOptions() {
                     return (
                       <li key={f.label} className={on ? "" : "is-off"}>
                         <i className={on ? "icon-check" : "icon-close"} aria-hidden="true"></i>
-                        <span>{f.label}{!on && <span className="rt-sr"> (not included)</span>}</span>
+                        <span>{!on && <span className="rt-sr">Not included: </span>}{f.label}</span>
                       </li>
                     );
                   })}

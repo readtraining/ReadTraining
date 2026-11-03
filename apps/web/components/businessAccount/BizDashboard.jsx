@@ -7,7 +7,7 @@ import { getBusiness } from "@/lib/businessAccount";
 import { demoCourseHref } from "@/data/demoCourses";
 import { formatDay, formatDateRange, formatPrice } from "@/lib/format";
 import { CertPill, PlacesBar, ResultPill } from "./bizParts";
-import { DownloadCertificate, useCertificateDownload } from "./BizCertificate";
+import { PrintCertificate, useCertificatePrint } from "./BizCertificate";
 import { Stats } from "@/components/admin/adminParts";
 import { EmptyState } from "@/components/states/States";
 
@@ -20,7 +20,7 @@ const Arrow = () => <i className="icon-arrow-right text-12" aria-hidden="true"><
 // Download.
 export default function BizDashboard() {
   const [data, setData] = useState(null);
-  const cert = useCertificateDownload();
+  const cert = useCertificatePrint();
   useEffect(() => setData(getBusiness()), []);
   if (!data) return null;
 
@@ -57,7 +57,6 @@ export default function BizDashboard() {
             <div><dt>{biz.billing.credit.used}</dt><dd>{formatPrice(data.credit.used)} <small>of {formatPrice(data.credit.limit)}</small></dd></div>
             <div><dt>{biz.billing.credit.due}</dt><dd>{formatPrice(data.credit.due)}{data.credit.due > 0 && <small>{biz.billing.credit.next(formatPrice(data.credit.nextAmount), formatDay(data.credit.dueDate))}</small>}</dd></div>
           </dl>
-          {data.credit.due > 0 && <Link href="/business/billing" className="button -md -purple-1 text-white">{copy.billing.pay}</Link>}
         </div>
         <div className="rt-biz__meter" role="img" aria-label={`${Math.round(usedPct)}% of your credit used`}><span style={{ width: `${usedPct}%` }}></span></div>
       </section>
@@ -152,7 +151,7 @@ export default function BizDashboard() {
                   <td data-label={cc[1]}>{c.title}</td>
                   <td data-label={cc[2]}>{formatDay(c.issued)}</td>
                   <td data-label={cc[3]}>{formatDay(c.expires)}</td>
-                  <td className="rt-biz__act"><DownloadCertificate cert={c} onDownload={cert.download} label={copy.certificates.download} /></td>
+                  <td className="rt-biz__act"><PrintCertificate cert={c} onPrint={cert.print} label={copy.certificates.print} /></td>
                 </tr>
               ))}
             </tbody>

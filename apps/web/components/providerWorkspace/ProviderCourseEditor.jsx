@@ -185,20 +185,23 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- read the address once
 
-  useEffect(() => {
-    if (course && loadedFor.current !== course.id) {
-      loadedFor.current = course.id;
-      const d = draftOf(course);
-      setDraft(d);
-      setBase(d);
-      ep.setVersion(course.version);
-    }
-  }, [course]); // eslint-disable-line react-hooks/exhaustive-deps -- ep is rebuilt every render; its version lives in a ref
-
   // the course as loaded again has its new status: show that
   useEffect(() => setSent(false), [course?.status]);
 
   const dirty = Boolean(draft && base && !same(draft, base));
+  // the course as loaded: the first time, or a newer version (another tab or a colleague) while nothing is unsaved here, fills
+  // the draft; with unsaved edits they are kept, and their save is refused as out of date (the banner offers the latest). The
+  // editor's own changes keep the version they returned (lib/courseEditorApi.js), so loading again after them changes nothing.
+  useEffect(() => {
+    if (!course) return;
+    const fresh = loadedFor.current !== course.id;
+    if (!fresh && (course.version === ep.seen() || dirty)) return;
+    loadedFor.current = course.id;
+    const d = draftOf(course);
+    setDraft(d);
+    setBase(d);
+    ep.setVersion(course.version);
+  }, [course]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the course loads again; ep keeps its version in a ref
   // leaving with unsaved changes (a link, Back, closing the tab) asks first (lib/unsavedChanges.js)
   useUnsavedChanges(dirty);
 

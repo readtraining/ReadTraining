@@ -14,7 +14,7 @@ const DEMO_OFF = {
   "account:dashboard": ["Nothing booked yet", "When you book a course, your bookings, upcoming dates and certificates show here."],
   "account:learning": ["No courses yet", "Courses you book show here, with their dates, joining instructions and progress."],
   "account:purchases": ["No purchases yet", "Your orders and receipts show here once you book a course."],
-  "account:payments": ["No saved payment methods", "Cards you choose to save at checkout show here."],
+  "account:payments": ["No saved payment methods", "Saving a card comes with online payment. Cards you save when you pay will show here."],
   "account:wallet": ["Your wallet is empty", "Refunds paid to your wallet and gift credit show here, ready to spend on your next course."],
   "account:bookings": ["Booking not found", "Your bookings show under My learning once you book a course."],
   "business:dashboard": ["Nothing booked yet", "Places you buy for your team, who is booked and what you owe show here."],

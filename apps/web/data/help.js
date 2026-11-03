@@ -50,7 +50,7 @@ export const helpTopics = [
         blocks: [
           fromAbout("Is ReadTraining a training provider?"),
           fromAbout("Who delivers the courses?"),
-          `[Search for a course](${CATALOGUE_HREF}), choose a date and book online, or call us on ${tel} and we will book it with you.`,
+          `[Search for a course](${CATALOGUE_HREF}) and choose a date, then call us on ${tel} and we will book it with you. Online booking is coming soon.`,
         ],
       },
       {
@@ -66,11 +66,11 @@ export const helpTopics = [
       {
         slug: "booking-options",
         title: "Compare booking options",
-        summary: "Basic, Plus and Pro, and what each one includes.",
+        summary: "Basic, Plus and Pro, and what each one will include.",
         blocks: [
-          `Some courses offer more than one booking option. ${bookingOptions.text}`,
+          `Booking options come with online booking, which is coming soon. Some courses will then offer more than one. ${bookingOptions.text}`,
           optionsTable,
-          "The options and prices for each course are shown on its course page before you book.",
+          `When online booking opens, the options and prices for each course will show on its course page before you book. Until then, call us on ${tel} and we will talk you through what is included.`,
         ],
       },
       {
@@ -105,12 +105,12 @@ export const helpTopics = [
     slug: "changes-and-refunds",
     icon: "icon-wall-clock",
     title: "Changes, cancellations and refunds",
-    summary: "Cancelling, changing your date, and how your payment is protected.",
+    summary: "Cancelling, changing your date, and how your payment will be protected.",
     articles: [
       {
         slug: "cancel-a-booking",
         title: "Cancel a booking",
-        summary: "Refunds follow the training provider's policy, shown at checkout.",
+        summary: "Refunds follow the training provider's policy. Ask us before you book and we will tell you what it is.",
         blocks: [
           termsRefunds[0],
           "To cancel, [send us a message](/contact-us?topic=booking#contact-form) with your booking reference. We will explain your options under the provider's policy and handle any refund due through us.",
@@ -135,11 +135,12 @@ export const helpTopics = [
       },
       {
         slug: "payment-protection",
-        title: "How your payment is protected",
-        summary: "We hold your payment until your result or certificate is supplied.",
+        title: "How your payment will be protected",
+        summary: "When online booking opens, we will hold your payment until your result or certificate is supplied.",
         blocks: [
           bookingOptions.benefits.find((b) => b.title === "Payment protection").text,
-          "The Pro booking option adds extra booking protection. See [Compare booking options](/help-centre/booking-a-course/booking-options).",
+          "The Pro booking option will add extra booking protection. See [Compare booking options](/help-centre/booking-a-course/booking-options).",
+          `Until then, you book by calling us on ${tel}, and we explain how payment works for your booking before you pay anything.`,
         ],
       },
     ],
