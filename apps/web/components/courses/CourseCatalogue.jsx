@@ -127,7 +127,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
     if (next === pushedQ.current) return;
     const t = setTimeout(() => {
       pushedQ.current = next;
-      update({ q: next });
+      update({ q: next }, { typing: "q" });
     }, 300);
     return () => clearTimeout(t);
   });
@@ -136,7 +136,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
     if (next === pushedLocation.current) return;
     const t = setTimeout(() => {
       pushedLocation.current = next;
-      update({ location: next });
+      update({ location: next }, { typing: "location" });
     }, 350);
     return () => clearTimeout(t);
   });
@@ -413,7 +413,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
                     hide={scope?.hide}
                     baseSubject={scope?.subject}
                     onToggle={toggle}
-                    onPriceChange={(min, max) => applyPatch({ min, max })}
+                    onPriceChange={(min, max, o) => update({ min, max }, { afterCommit, typing: o?.typing ? "price" : null })}
                   />
                 </div>
               </div>

@@ -23,7 +23,7 @@ export default function PriceRange({ min, max, onChange }) {
     onChange(band.min, band.max);
   };
 
-  // Typing a custom range is debounced 500ms.
+  // Typing a custom range is debounced 500ms; it says it is typing, so more typing replaces its Back entry instead of adding one.
   const typed = (field, raw) => {
     const next = { ...draft, [field]: raw };
     setDraft(next);
@@ -33,7 +33,7 @@ export default function PriceRange({ min, max, onChange }) {
       let lo = clamp(parseFloat(next.min), PRICE_BOUNDS.min);
       let hi = clamp(parseFloat(next.max), PRICE_BOUNDS.max);
       if (lo > hi) [lo, hi] = [hi, lo];
-      onChange(lo, hi);
+      onChange(lo, hi, { typing: true });
     }, 500);
   };
 
