@@ -52,11 +52,12 @@ export const bookingOptions = {
   text: "Choose the learning method, location and booking route that suits your schedule.",
   benefits: [
     { icon: "icon-search", title: "More choice in one place", text: "Explore suitable dates, locations and study methods without searching across multiple training websites." },
-    { icon: "icon-badge", title: "Payment protection", text: "We hold your payment until the required result or certificate is supplied, with refunds handled if issues arise." },
-    { icon: "icon-star", title: "Selected booking benefits", text: "Some booking options include rescheduling, faster results, bonus learning or other useful extras." },
+    // payment protection and the booking options' benefits come with online payment (Milestone 4): said as what will happen
+    { icon: "icon-badge", title: "Payment protection", text: "When online booking opens, we’ll hold your payment until the required result or certificate is supplied, and handle refunds if issues arise." },
+    { icon: "icon-star", title: "Selected booking benefits", text: "When online booking opens, some booking options will include rescheduling, faster results, bonus learning or other useful extras." },
     { icon: "icon-message", title: "Support throughout your booking", text: "Get help choosing, booking and managing your course from start to finish." },
   ],
-  example: { eyebrow: "Example booking options", course: "SIA Door Supervisor Course", meta: "Classroom · London" },
+  example: { eyebrow: "Coming with online booking", course: "SIA Door Supervisor Course", meta: "Classroom · London" },
   tiers: [
     { type: "Basic", price: 199, text: "Standard course booking." },
     { type: "Plus", price: 224, text: "Added flexibility for date changes.", recommended: true },
@@ -71,7 +72,7 @@ export const bookingOptions = {
     { label: "Extra booking protection", tiers: [2] },
     { label: "Bonus online course & study resources", tiers: [2] },
   ],
-  footnote: "Example prices and benefits. Options vary by course, date and location.",
+  footnote: "Example prices and benefits for when online booking opens. Options will vary by course, date and location.",
   disclaimer: "Courses are delivered by independent training providers. ReadTraining helps you find, book and manage the option that suits you.",
   cta: { label: "Find course options", href: CATALOGUE_HREF },
 };

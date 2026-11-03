@@ -20,6 +20,8 @@ export const FORMS = {
   certificate: { send: null, title: "Certificate checks are coming soon", text: "To confirm a certificate now, email us the certificate number and the holder’s full name." },
   // the provider settings that have no server yet (VAT number, email addresses, questions and answers, integrations)
   providerSettings: { send: null, title: "This setting is coming soon", text: "To set it up now, call or WhatsApp us." },
+  // the Business account's Team page (signed in, not public): inviting and removing colleagues
+  businessTeam: { send: null, title: "Adding colleagues here is coming soon", text: "To give a colleague access to your Business account, or remove someone, call or WhatsApp us." },
   // the provider workspace's Team page (signed in, not public): adding, changing and removing team members
   providerTeam: { send: null, title: "Managing your team here is coming soon", text: "To add someone to your provider account, change their role or remove them, call or WhatsApp us." },
   // hidden while not ready (a "coming soon" in these places would only get in the way)

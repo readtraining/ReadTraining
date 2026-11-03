@@ -15,7 +15,7 @@ export const SaverLine = ({ saver }) => (
 );
 
 // The order summary: the sums, the promo code (hidden behind a link, so an empty box does not pull people away from paying),
-// the total, Proceed and what stops it, the instalments line and what the customer can rely on. Sticky beside the lines from
+// the total, Proceed and what stops it, and what the customer can rely on. Sticky beside the lines from
 // 992px. Proceed is a real link when the basket is ready; otherwise a disabled button with the reasons listed under it. The sums
 // are for the ticked courses only; `count` { chosen, total } says how many of the basket's courses this booking includes.
 // A signed-in learner's Skill Saver discount is its own line; signed out (`signedOut`) with a Skill Saver course ticked, a
@@ -91,7 +91,6 @@ export function BasketSummary({ totals, issues, promo, onPromo, count, signedOut
           </ul>
         </>
       )}
-      <p className="rt-bk__klarna">{copy.instalments}</p>
 
       <ul className="rt-bk__trust">
         {copy.trust.map((t) => <li key={t}><span className="fb-ticks__icon" aria-hidden="true"><IconCheck /></span>{t}</li>)}

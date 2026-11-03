@@ -22,6 +22,6 @@ export const TEAM = {
   },
   trust: {
     title: "Buying for your team?",
-    text: "Purchase courses for your team, family or colleagues. Add a course, and provide student details at checkout.",
+    text: "Book courses for your team, family or colleagues. Online booking is coming soon: until then, call us and we'll book everyone's places.",
   },
 };
