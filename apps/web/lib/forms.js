@@ -1,10 +1,12 @@
 import { topBar } from "@/data/home";
+import { getHumanCheck } from "@/lib/humanCheck";
 
 // The website's public forms, and whether each one really sends yet. This is the ONE switch for each form:
 // - `send: null`: not ready. The form is never shown: <FormGate> shows the "coming soon" panel in its place (or nothing,
 //   for `hidden` forms), with the real phone and email so a visitor always has a next step.
-// - `send: <function>`: ready. <FormGate> shows the form. The function must call the server and return what the server
-//   confirmed, e.g. { reference }. A form never makes up a reference and never shows success the server didn't confirm.
+// - `send: <function>`: ready. <FormGate> shows the form. The function must call the server, through an API procedure built
+//   on publicFormProcedure (apps/api/src/trpc/trpc.mts: the Turnstile check and a per-connection limit), and return what the
+//   server confirmed, e.g. { reference }. A form never makes up a reference and never shows success the server didn't confirm.
 // So the day a form's endpoint exists, put its function here: the "coming soon" goes away everywhere that form is used.
 // scripts/check-forms.mjs (run in CI with the typecheck) fails the build on a made-up reference, a simulated send, or a public
 // form that doesn't go through <FormGate>.
@@ -24,8 +26,9 @@ export const FORMS = {
 
 export const formReady = (key) => typeof FORMS[key]?.send === "function";
 
-// Sends a ready form. Only ever called from a form <FormGate> showed, so its `send` exists.
-export const sendForm = (key, data) => FORMS[key].send(data);
+// Sends a ready form, with a fresh Turnstile token (`humanCheck`). Only ever called from a form <FormGate> showed, so its
+// `send` exists.
+export const sendForm = async (key, data) => FORMS[key].send({ ...data, humanCheck: await getHumanCheck() });
 
 // The real ways to reach us (data/home topBar), for the "coming soon" panels
 export const CONTACT = { phone: topBar.phone, phoneHref: topBar.phoneHref, whatsappHref: topBar.whatsapp.href, email: topBar.email };

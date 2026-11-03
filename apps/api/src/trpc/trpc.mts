@@ -6,6 +6,8 @@ import { can } from '@readtraining/permissions'
 import type { Action, AdminAction, BusinessAction, ProviderAction } from '@readtraining/permissions'
 
 import { logDenied } from '../lib/activity.mjs'
+import { isHuman } from '../lib/humanCheck.mjs'
+import { allowed, LIMITS, type LimitName } from '../lib/rateLimit.mjs'
 import type { TRPCContext } from './context.mjs'
 
 const t = initTRPC.context<TRPCContext>().create({
@@ -27,6 +29,27 @@ export const createTRPCRouter = t.router
 export const createCallerFactory = t.createCallerFactory
 
 export const publicProcedure = t.procedure
+
+/**
+ * Refuses with TOO_MANY_REQUESTS once `key` (the caller's user id, or IP address when signed out) has used up the `name` limit
+ * (lib/rateLimit.mts). Call it inside a procedure, before the work: `await limit(ctx, 'uploadHour')`.
+ */
+export async function limit(ctx: { ip: string | null; user?: { id: string } | null }, name: LimitName, by: 'user' | 'ip' = ctx.user ? 'user' : 'ip') {
+  if (!(await allowed(name, by === 'user' ? ctx.user?.id : ctx.ip))) throw new TRPCError({ code: 'TOO_MANY_REQUESTS', message: LIMITS[name].message })
+}
+
+/**
+ * A public form that sends to us (contact, quotes, applications, the certificate check… once each is built; their switch is in
+ * apps/web/lib/forms.js). The input must carry `humanCheck`, a fresh Cloudflare Turnstile token (the web's sendForm adds it),
+ * and each connection may send only a few in a short time. Every public form endpoint MUST use this, never publicProcedure.
+ */
+export const publicFormProcedure = t.procedure
+  .input(z.object({ humanCheck: z.string().min(1).max(2048) }))
+  .use(async ({ ctx, input, next }) => {
+    await limit(ctx, 'publicForm', 'ip')
+    if (!(await isHuman(input.humanCheck, ctx.ip))) throw new TRPCError({ code: 'FORBIDDEN', message: 'We couldn’t confirm you are a person. Please try again.' })
+    return next()
+  })
 
 /**
  * Signed in with a live session (not signed out, banned or deleted since the token was issued), and `ctx.actor` loaded

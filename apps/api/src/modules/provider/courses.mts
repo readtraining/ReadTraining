@@ -29,7 +29,7 @@ import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
 import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
-import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's courses (Milestone 2): create one (under a shared course page or on its own), write its page, add images, send it
 // for approval, pause it, delete a draft. Every change is checked against the provider's permission table and logged.
@@ -499,7 +499,11 @@ export const providerCoursesRouter = createTRPCRouter({
   // cover) and deletes the ones left out.
   imageUploadUrl: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, contentType: z.enum(Object.keys(IMAGE_TYPES) as [keyof typeof IMAGE_TYPES, ...(keyof typeof IMAGE_TYPES)[]]) }))
-    .mutation(async ({ ctx, input }) => courseImageUploadUrl(await ownCourse(ctx.db, input.organisationId, input.courseId), input.contentType)),
+    .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'uploadHour')
+      await limit(ctx, 'uploadDay')
+      return courseImageUploadUrl(await ownCourse(ctx.db, input.organisationId, input.courseId), input.contentType)
+    }),
 
   addImage: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: line(140, 'image description').optional() }))

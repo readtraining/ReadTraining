@@ -1,6 +1,7 @@
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express'
 
 import { isSessionLive, loadActor } from '../lib/actor.mjs'
+import { clientIp } from '../lib/clientIp.mjs'
 import { db } from '../lib/db.mjs'
 import { verifyAccessToken } from '../lib/supabase.mjs'
 
@@ -11,8 +12,7 @@ import { verifyAccessToken } from '../lib/supabase.mjs'
 export const createTRPCContext = async ({ req }: CreateExpressContextOptions) => {
   const header = req.headers.authorization
   const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : undefined
-  const forwarded = req.headers['x-forwarded-for']
-  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim() || req.socket.remoteAddress || null
+  const ip = clientIp(req)
 
   const user = await verifyAccessToken(token)
   // Whether the session is still live, and who the person is, asked once per request: a page's batch of calls (often 4 to 10)

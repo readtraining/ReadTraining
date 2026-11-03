@@ -11,7 +11,7 @@ import { emailOutbox } from '../../lib/email.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { notify, personOf } from '../../lib/notify.mjs'
 import { supabase } from '../../lib/supabase.mjs'
-import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
+import { adminProcedure, createTRPCRouter, limit } from '../../trpc/trpc.mjs'
 
 // Admin Users & Roles (Part B, B1): the admin team itself. One role with switches and presets (Full, Support, Finance,
 // Custom), as agreed in Part A. Every change needs the "admins" switch, is logged, and two safeguards keep the team from
@@ -165,6 +165,7 @@ export const teamRouter = createTRPCRouter({
   add: manage
     .input(z.object({ email: z.string().trim().toLowerCase().email('Enter a valid email address.'), preset, permissions: permissions.optional(), refundLimit: refundLimit.optional() }))
     .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'adminInvite')
       const owner = await superAdmin(ctx.db)
       if (input.preset === 'full' && !ctx.actor.admin?.isSuper && owner) throw new TRPCError({ code: 'FORBIDDEN', message: SUPER_ONLY })
       const values = { preset: input.preset, permissions: input.preset === 'custom' ? (input.permissions ?? []) : [], refundLimitPence: (input.refundLimit ?? 100) * 100, active: true }
@@ -208,6 +209,7 @@ export const teamRouter = createTRPCRouter({
 
   // A new invite link for someone who hasn't set their password yet (the old link stops working).
   resend: manage.input(z.object({ userId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    await limit(ctx, 'adminInvite')
     const m = await member(ctx.db, input.userId)
     if (!m.pending) throw new TRPCError({ code: 'CONFLICT', message: 'This person has already accepted their invite.' })
     const owner = await superAdmin(ctx.db)

@@ -32,6 +32,12 @@ importers:
       '@trpc/server':
         specifier: ^11.7.0
         version: 11.19.0(typescript@5.9.3)
+      '@upstash/ratelimit':
+        specifier: ^2.2.0
+        version: 2.2.0(@upstash/redis@1.40.0)
+      '@upstash/redis':
+        specifier: ^1.40.0
+        version: 1.40.0
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -201,7 +207,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.3
-        version: 0.45.3(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00))
+        version: 0.45.3(@upstash/redis@1.40.0)(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00))
       postgres:
         specifier: ^3.4.9
         version: 3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)
@@ -1544,6 +1550,18 @@ packages:
   '@types/serve-static@2.2.0':
     resolution: {integrity: sha512-8mam4H1NHLtu7nmtalF7eyBH14QyOASmcxHhSfEoRyr0nP/YdoesEtU+uSRvMe96TW/HPTtkoKqQLl53N7UXMQ==}
 
+  '@upstash/core-analytics@0.0.10':
+    resolution: {integrity: sha512-7qJHGxpQgQr9/vmeS1PktEwvNAF7TI4iJDi8Pu2CFZ9YUGHZH4fOP5TfYlZ4aVxfopnELiE4BS4FBjyK7V1/xQ==}
+    engines: {node: '>=16.0.0'}
+
+  '@upstash/ratelimit@2.2.0':
+    resolution: {integrity: sha512-gSydXspG6TJKTh71/gGGv4IGDjD9rXglQfm2jAue2kh4bcfWtEAsG1NW4OqzZd/hubJPojsbOU6AMdS6Xqh0tQ==}
+    peerDependencies:
+      '@upstash/redis': ^1.38.2
+
+  '@upstash/redis@1.40.0':
+    resolution: {integrity: sha512-F6+V7Kof2McJtGWclusZLt7hBRmIMZg+albS32/5TuNRg/92FM2nkyKPY9wWEieMj9hjyUi4iURsN1djsHNbwA==}
+
   '@wojtekmaj/date-utils@1.5.1':
     resolution: {integrity: sha512-+i7+JmNiE/3c9FKxzWFi2IjRJ+KzZl1QPu6QNrsgaa2MuBgXvUy4gA1TVzf/JMdIIloB76xSKikTWuyYAIVLww==}
 
@@ -2364,6 +2382,9 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  uncrypto@0.1.3:
+    resolution: {integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==}
 
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
@@ -3437,6 +3458,19 @@ snapshots:
       '@types/http-errors': 2.0.5
       '@types/node': 22.20.4
 
+  '@upstash/core-analytics@0.0.10':
+    dependencies:
+      '@upstash/redis': 1.40.0
+
+  '@upstash/ratelimit@2.2.0(@upstash/redis@1.40.0)':
+    dependencies:
+      '@upstash/core-analytics': 0.0.10
+      '@upstash/redis': 1.40.0
+
+  '@upstash/redis@1.40.0':
+    dependencies:
+      uncrypto: 0.1.3
+
   '@wojtekmaj/date-utils@1.5.1': {}
 
   accepts@2.0.0:
@@ -3598,8 +3632,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.3(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)):
+  drizzle-orm@0.45.3(@upstash/redis@1.40.0)(postgres@3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)):
     optionalDependencies:
+      '@upstash/redis': 1.40.0
       postgres: 3.4.9(patch_hash=04606c7c3d4358f7b1c29060d389b26a0ce2706346673b288668fa4c182b4c00)
 
   dunder-proto@1.0.1:
@@ -4250,6 +4285,8 @@ snapshots:
       mime-types: 3.0.2
 
   typescript@5.9.3: {}
+
+  uncrypto@0.1.3: {}
 
   undici-types@6.21.0: {}
 
