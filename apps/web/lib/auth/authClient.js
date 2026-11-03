@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getHumanCheck } from "@/lib/humanCheck";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { safeNext } from "@/lib/safeNext";
@@ -28,6 +29,8 @@ function friendly(error, fallback) {
   if (code === "same_password" || text.includes("different from the old password")) return "Choose a new password that is different from your current one.";
   if (code === "weak_password" || text.includes("password should")) return "Choose a stronger password: at least 8 characters, with letters and numbers.";
   if (code === "user_already_exists" || text.includes("already registered")) return "An account with this email already exists. Try logging in instead.";
+  // Supabase's CAPTCHA protection refused the Turnstile token (lib/humanCheck.js)
+  if (code === "captcha_failed" || text.includes("captcha")) return "We couldn't confirm you're a person. Please try again.";
   if (text.includes("failed to fetch") || text.includes("network")) return "We couldn't reach the server. Check your connection and try again.";
   return fallback;
 }
@@ -38,14 +41,16 @@ const fail = (error, fallback) => {
 };
 
 export async function loginWithPassword({ email, password }) {
-  const { data, error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
+  const captchaToken = await getHumanCheck();
+  const { data, error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password, options: { captchaToken } });
   if (error) throw fail(error, "We couldn't log you in. Please try again.");
   return data.user;
 }
 
 // Email confirmation link sent again (log in shows this when the email is not confirmed yet)
 export async function resendConfirmation({ email }) {
-  const { error } = await getSupabase().auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: confirmUrl(AUTH_ROUTES.afterLogin) } });
+  const captchaToken = await getHumanCheck();
+  const { error } = await getSupabase().auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: confirmUrl(AUTH_ROUTES.afterLogin), captchaToken } });
   if (error) throw fail(error, "We couldn't send the link. Please try again.");
 }
 
@@ -74,7 +79,8 @@ export const loginWithProvider = (provider, next) => socialSignIn(provider, next
 // Sends the reset email; its link opens /reset-password signed in for that one change. Says nothing about whether the
 // email has an account, so the form cannot be used to find out who is registered.
 export async function requestPasswordReset({ email }) {
-  const { error } = await getSupabase().auth.resetPasswordForEmail(email.trim(), { redirectTo: confirmUrl(AUTH_ROUTES.resetPassword) });
+  const captchaToken = await getHumanCheck();
+  const { error } = await getSupabase().auth.resetPasswordForEmail(email.trim(), { redirectTo: confirmUrl(AUTH_ROUTES.resetPassword), captchaToken });
   if (error) throw fail(error, "We couldn't send the reset email. Please try again.");
   return { email };
 }
@@ -93,10 +99,12 @@ export async function resetPassword({ password }) {
 // returns no error and sends nothing, so the screen says the same either way. `next` is where the email link continues to
 // (the account by default; provider onboarding from "Become a provider"), and `intent` records why the account was made.
 export async function registerAccount({ firstName, lastName, email, password, marketingOptIn, next, intent }) {
+  const captchaToken = await getHumanCheck();
   const { data, error } = await getSupabase().auth.signUp({
     email: email.trim(),
     password,
     options: {
+      captchaToken,
       emailRedirectTo: confirmUrl(next || AUTH_ROUTES.afterLogin),
       data: { first_name: firstName.trim(), last_name: lastName.trim(), marketing_opt_in: Boolean(marketingOptIn), ...(intent ? { signup_intent: intent } : {}) },
     },

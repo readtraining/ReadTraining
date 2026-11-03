@@ -6,7 +6,7 @@ import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
-import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's public profile (headline, about, town, social links, logo) and the terms learners accept when booking with them.
 // Both show on the provider's public page and course pages; they change straight away. The provider's name can change only
@@ -147,7 +147,9 @@ export const providerProfileRouter = createTRPCRouter({
   // Logo: an upload address, then setLogo with the uploaded file (the old one is deleted), or removeLogo.
   logoUploadUrl: orgProcedure('provider.profile.edit')
     .input(z.object({ contentType: z.enum(Object.keys(IMAGE_TYPES) as [keyof typeof IMAGE_TYPES, ...(keyof typeof IMAGE_TYPES)[]]) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'uploadHour')
+      await limit(ctx, 'uploadDay')
       const up = await mediaUploadUrl(`${input.organisationId}/logo`, input.contentType)
       if (!up) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'We couldn’t prepare the upload. Please try again.' })
       return up

@@ -12,7 +12,7 @@ import { sendEmail } from '../../lib/email.mjs'
 import { OWN_REASON_ERROR, ownReasonOk, soleApprover } from '../../lib/soleApprover.mjs'
 import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
 import { siteUrl } from '../../lib/supabase.mjs'
-import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
+import { adminProcedure, createTRPCRouter, limit, refuse } from '../../trpc/trpc.mjs'
 import { loadListings } from '../catalogue/listings.mjs'
 import {
   addCourseImage,
@@ -353,7 +353,11 @@ export const adminCoursesRouter = createTRPCRouter({
 
   sharedImageUploadUrl: adminProcedure('admin.catalogue.edit')
     .input(z.object({ courseId: id, contentType: z.enum(Object.keys(IMAGE_TYPES) as [keyof typeof IMAGE_TYPES, ...(keyof typeof IMAGE_TYPES)[]]) }))
-    .mutation(async ({ ctx, input }) => courseImageUploadUrl(await sharedPage(ctx.db, input.courseId), input.contentType)),
+    .mutation(async ({ ctx, input }) => {
+      await limit(ctx, 'uploadHour')
+      await limit(ctx, 'uploadDay')
+      return courseImageUploadUrl(await sharedPage(ctx.db, input.courseId), input.contentType)
+    }),
 
   sharedAddImage: adminProcedure('admin.catalogue.edit')
     .input(z.object({ courseId: id, path: z.string().regex(MEDIA_PATH), alt: z.string().trim().max(140).optional() }))

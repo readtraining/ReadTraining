@@ -5,6 +5,7 @@ import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { EyeIcon, EyeOffIcon, FacebookIcon, GoogleIcon } from "@/components/others/authIcons";
 import { authProviders } from "@/lib/supabase/client";
+import { preloadHumanCheck } from "@/lib/humanCheck";
 import GoogleButton, { useGoogleButton } from "./GoogleButton";
 
 // The one card every sign-in page uses (log in, sign up, forgot and reset password), built from the design system
@@ -12,6 +13,7 @@ import GoogleButton, { useGoogleButton } from "./GoogleButton";
 // the input, the catalogue's checkbox, the template's buttons. Styles: "AUTH PAGES" in custom.scss.
 
 export function AuthPage({ title, lead, children, footer }) {
+  useEffect(() => preloadHumanCheck(), []);
   return (
     <div className="rt-home rt-auth">
       <main className="rt-auth__card" id="rt-auth-main">

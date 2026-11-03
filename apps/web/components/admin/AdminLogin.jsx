@@ -11,6 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { safeNext } from "@/lib/safeNext";
 import { getSupabase } from "@/lib/supabase/client";
+import { getHumanCheck, preloadHumanCheck } from "@/lib/humanCheck";
 import { api } from "@/lib/trpc/react";
 
 // The admin sign-in (/admin/login): its own dark page, no sign-up and no social sign-in. Step 1 is email and password; the API
@@ -64,6 +65,7 @@ export default function AdminLogin() {
 
   // where to go afterwards (only somewhere in the panel), and whether a session is already here (an admin who still has to
   // enter their code, or someone signed in on the public site)
+  useEffect(() => preloadHumanCheck(), []);
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const n = safeNext(q.get("next"), AUTH_ROUTES.admin);
@@ -139,7 +141,13 @@ export default function AdminLogin() {
     if (Object.keys(found).length) return focusFirstError(formRef.current);
     setBusy(true);
     try {
-      const { error } = await getSupabase().auth.signInWithPassword({ email: values.email.trim(), password: values.password });
+      let captchaToken;
+      try {
+        captchaToken = await getHumanCheck();
+      } catch (e) {
+        return setNotice(e.message);
+      }
+      const { error } = await getSupabase().auth.signInWithPassword({ email: values.email.trim(), password: values.password, options: { captchaToken } });
       if (error) {
         const limited = error.code === "over_request_rate_limit" || /rate limit/i.test(error.message);
         const offline = /fetch|network/i.test(error.message);
