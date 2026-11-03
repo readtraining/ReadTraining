@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { account } from "@/data/account";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom, useMe } from "@/lib/useMe";
@@ -45,6 +46,7 @@ export default function AccountProfile() {
       <EmailSection me={me.data} />
       <PasswordSection me={me.data} />
       <MarketingSection me={me.data} />
+      <BusinessSection me={me.data} />
       <section className="rt-acc__card" aria-labelledby="rt-pf-close-h">
         <h2 className="rt-acc__h3" id="rt-pf-close-h">{copy.delete.title}</h2>
         <p className="rt-acc__note">{copy.delete.text}</p>
@@ -365,6 +367,52 @@ function PasswordSection({ me }) {
         <p className="rt-acc__note">{copy.noPassword}</p>
       )}
     </form>
+  );
+}
+
+// ---- the business account this person owns ---------------------------------------------------------------------------------
+// A business account made by mistake, or to try it out, can be deleted by its owner while nobody else is on it (the API checks,
+// organisations.deleteBusiness, and says so if someone is). Their own login and learner account stay as they are.
+function BusinessSection({ me }) {
+  const utils = api.useUtils();
+  const router = useRouter();
+  const remove = api.organisations.deleteBusiness.useMutation();
+  const [asking, setAsking] = useState(false);
+  const [state, setState] = useState({ error: "", done: "" });
+  const business = (me.identities || []).find((i) => i.kind === "business" && i.role === "owner");
+  if (!business && !state.done) return null;
+  const confirm = async () => {
+    setAsking(false);
+    setState({ error: "", done: "" });
+    try {
+      await remove.mutateAsync({ organisationId: business.organisationId });
+      setState({ error: "", done: `${business.name || "Your business account"} has been deleted.` });
+      await utils.me.get.invalidate();
+      router.refresh(); // the switch-account menus and the business pages follow
+    } catch (err) {
+      setState({ error: errorsFrom(err).general, done: "" });
+    }
+  };
+  return (
+    <section className="rt-acc__card" aria-labelledby="rt-pf-biz-h">
+      <h2 className="rt-acc__h3" id="rt-pf-biz-h">Your business account</h2>
+      {state.done ? (
+        <p className="rt-acc__savedmsg" role="status">{state.done}</p>
+      ) : (
+        <>
+          <p className="rt-acc__note">
+            <b>{business.name}</b>. Made it by mistake, or only to try it out? You can delete it while nobody else is on its team. Your own account stays as it is.
+          </p>
+          {state.error && <p className="rt-q__err" role="alert">{state.error}</p>}
+          <div>
+            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={remove.isPending} aria-busy={remove.isPending || undefined}>
+              {remove.isPending ? "Deleting…" : "Delete business account"}
+            </button>
+          </div>
+          <Confirm open={asking} onClose={() => setAsking(false)} title={`Delete ${business.name}?`} text="The business account is removed for good. Your own account, bookings and settings stay as they are. This can't be undone." confirmLabel="Delete business account" onConfirm={confirm} />
+        </>
+      )}
+    </section>
   );
 }
 

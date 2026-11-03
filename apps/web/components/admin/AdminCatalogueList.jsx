@@ -29,7 +29,9 @@ export default function AdminCatalogueList() {
   const [said, setSaid] = useState("");
   const [problem, setProblem] = useState(""); // the last refusal, shown until the next change
   const [retiring, setRetiring] = useState(null); // the entry waiting for "Retire …?": { kind, key, name }
+  const [deleting, setDeleting] = useState(null); // a retired entry waiting for "Delete …?": { kind, key, name }
   const setActive = api.admin.catalogue.setActive.useMutation();
+  const remove = api.admin.catalogue.remove.useMutation();
   const move = api.admin.catalogue.move.useMutation();
 
   if (list.isLoading) return <TableSkeleton />;
@@ -71,6 +73,8 @@ export default function AdminCatalogueList() {
             row.active
               ? { label: copy.retire, danger: true, onClick: () => setRetiring({ kind, key: row.key, name: row.name }) }
               : { label: copy.restore, onClick: () => run(() => setActive.mutateAsync({ kind, key: row.key, active: true }), copy.saved.restore) },
+            // a retired entry nothing uses can be deleted for good (the API refuses, saying where, if anything uses it)
+            ...(!row.active ? [{ label: "Delete", danger: true, onClick: () => setDeleting({ kind, key: row.key, name: row.name }) }] : []),
           ]}
         />
       </div>
@@ -156,6 +160,7 @@ export default function AdminCatalogueList() {
 
       <NameSheet sheet={sheet} onClose={() => setSheet(null)} onDone={changed} />
       {/* retiring takes an entry out of the menus, filters and the provider editor's choices: asked first (restoring isn't) */}
+      <Confirm open={Boolean(deleting)} onClose={() => setDeleting(null)} title={deleting ? `Delete ${deleting.name}?` : ""} text={deleting ? `It is removed for good${deleting.kind === "category" ? ", with its sub-categories and topics" : deleting.kind === "subcategory" ? ", with its topics" : ""}. Only an entry nothing has used can be deleted: if a course, review, coupon or the site content uses it, you'll be told and it stays retired. This can't be undone.` : ""} confirmLabel="Delete" onConfirm={() => { const d = deleting; setDeleting(null); run(() => remove.mutateAsync({ kind: d.kind, key: d.key }), `${d.name} deleted`); }} />
       <Confirm open={Boolean(retiring)} onClose={() => setRetiring(null)} title={retiring ? `Retire ${retiring.name}?` : ""} text="It leaves the site's menus and filters, and providers can't choose it for a course. Nothing is deleted: you can restore it later. (An entry with live courses can't be retired; you'll be told which.)" confirmLabel="Retire" onConfirm={() => { const r = retiring; setRetiring(null); run(() => setActive.mutateAsync({ kind: r.kind, key: r.key, active: false }), copy.saved.retire); }} />
     </div>
   );

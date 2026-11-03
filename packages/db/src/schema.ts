@@ -546,7 +546,8 @@ export const cohorts = pgTable(
 // ---- coupons (Part B, B3) -------------------------------------------------------------------------------------------------
 // Discount codes an admin creates: a percentage or an amount off (pence), an optional start and end, an optional limit on how
 // many times it can be used, and what it applies to (everything, some categories by slug, or some courses by course number).
-// Codes are stored in capitals and are unique; a coupon is never deleted (turned off instead), so past orders can still name it.
+// Codes are stored in capitals and are unique; a used coupon is never deleted (turned off instead), so past orders can still name
+// it; one nobody has used can be (admin.coupons.remove).
 // `used` counts orders that used it (checkout adds to it once payments are real). Read and written by the API only.
 export const couponKind = pgEnum('coupon_kind', ['percent', 'amount'])
 export const couponScope = pgEnum('coupon_scope', ['all', 'categories', 'courses'])

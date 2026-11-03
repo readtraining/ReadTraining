@@ -7,7 +7,7 @@ import { can } from '@readtraining/permissions'
 import { logActivity, logDenied } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { freeSlug, slugify as slugifyText } from '../../lib/slug.mjs'
-import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, orgProcedure, protectedProcedure, publicProcedure, refuse } from '../../trpc/trpc.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
 import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
 import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
@@ -136,6 +136,24 @@ export const organisationsRouter = createTRPCRouter({
       })
       await notify(ctx.db, 'business-ready', await personOf(ctx.db, ctx.user.id), { business: created.name }, { organisationId: created.id, targetType: 'organisation', targetId: created.id, action: 'email.business_ready_sent' })
       return created
+    }),
+
+  // Delete a business account that was never used (made by mistake, or to try it out): only by its owner, and only while nobody
+  // else is on it. It goes with its membership; the owner's own login and learner account stay. Logged (the log keeps no link).
+  deleteBusiness: protectedProcedure
+    .input(z.object({ organisationId: z.string().uuid() }))
+    .mutation(async ({ ctx, input, path }) => {
+      const mine = ctx.actor.memberships.find((m) => m.organisationId === input.organisationId && m.type === 'business')
+      if (!mine || !can(ctx.actor, 'business.settings.edit', { organisationId: input.organisationId })) await refuse(ctx, 'business.settings.edit', input.organisationId, path)
+      return ctx.db.transaction(async (tx) => {
+        const [org] = await tx.select({ name: organisations.name, type: organisations.type }).from(organisations).where(eq(organisations.id, input.organisationId)).for('update')
+        if (!org || org.type !== 'business') throw new TRPCError({ code: 'NOT_FOUND', message: 'That business account no longer exists.' })
+        const [others] = await tx.execute<{ n: number }>(sql`select count(*)::int n from public.organisation_members where organisation_id = ${input.organisationId}::uuid and user_id <> ${ctx.user.id}::uuid`)
+        if (others.n) throw new TRPCError({ code: 'BAD_REQUEST', message: `${org.name} has ${others.n} other ${others.n === 1 ? 'person' : 'people'} on it, so it can't be deleted. Remove them from the team first.` })
+        await tx.delete(organisations).where(eq(organisations.id, input.organisationId))
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'business', organisationId: null, action: 'business.deleted', targetType: 'organisation', targetId: input.organisationId, metadata: { name: org.name }, ip: ctx.ip })
+        return { ok: true }
+      })
     }),
 
   // The person's own provider application when it was not approved: its name and the team's reason, for the page that offers

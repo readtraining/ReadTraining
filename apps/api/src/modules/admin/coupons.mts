@@ -165,4 +165,19 @@ export const couponsRouter = createTRPCRouter({
         return { ok: true }
       })
     }),
+
+  // Delete a coupon nobody has used (a test, or one made by mistake). A used one is kept, turned off instead, so past orders can
+  // still name it.
+  remove: adminProcedure('admin.coupons.manage')
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const [c] = await tx.execute<{ code: string; used: number }>(sql`select code, used from ${coupons} where id = ${input.id}::uuid for update`)
+        if (!c) throw new TRPCError({ code: 'NOT_FOUND', message: 'That coupon no longer exists.' })
+        if (c.used > 0) throw new TRPCError({ code: 'BAD_REQUEST', message: `${c.code} has been used ${c.used} ${c.used === 1 ? 'time' : 'times'}, so it is kept for the orders that used it. Turn it off instead.` })
+        await tx.execute(sql`delete from ${coupons} where id = ${input.id}::uuid`)
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.coupon_deleted', targetType: 'coupon', targetId: input.id, metadata: { code: c.code }, ip: ctx.ip })
+        return { ok: true }
+      }),
+    ),
 })
