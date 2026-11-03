@@ -62,6 +62,13 @@ export default function AdminLearner({ id }) {
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
+      {/* they asked to close their account and delete their data (UK GDPR: done within one month of the request) */}
+      {l.closureRequest && (
+        <p className="rt-acc__notice -warn" role="status">
+          <strong>Asked to close their account</strong> on {new Date(l.closureRequest.requestedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}. Close it and delete their personal details by {((x) => (x.setMonth(x.getMonth() + 1), x))(new Date(l.closureRequest.requestedAt)).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}, then email them.
+          {l.closureRequest.reason && <><br />Their reason: {l.closureRequest.reason}</>}
+        </p>
+      )}
 
       <section className="rt-acc__card rt-adm-hero" aria-label={d.profile}>
         <div className="rt-adm-learner__who">
