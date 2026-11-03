@@ -34,13 +34,28 @@ export default function ProviderNewCourse() {
   const parentOk = pages.some((p) => String(p.id) === f.parentId);
   const toPage = f.type === "compliance" && pages.length > 0 && f.sharedLanding === "yes";
   const ref = useRef(null);
-  const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  // a change clears the errors of what changed (and of the questions that depend on it), so no message shows for a question the
+  // person hasn't answered yet, or one that has just gone
+  const DEPENDS = { type: ["sharedLanding", "parentId"], sharedLanding: ["parentId"], category: ["subcategory", "topic"] };
+  const set = (patch) => {
+    setF((x) => ({ ...x, ...patch }));
+    setErrors((e) => {
+      const gone = Object.keys(patch).flatMap((k) => [k, ...(DEPENDS[k] || [])]);
+      return gone.some((k) => e[k]) ? Object.fromEntries(Object.entries(e).filter(([k]) => !gone.includes(k))) : e;
+    });
+  };
   const subs = subcategoryOptions(f.category);
   const topics = topicOptions(f.category, f.subcategory);
 
   const check = () => {
     const e = {};
-    if (step === 1 && !f.title.trim()) e.title = "Enter a working title. You can change it later.";
+    // the title as the API checks it (3 to 80 characters), on its own step rather than after the last one
+    if (step === 1) {
+      const t = f.title.trim();
+      if (!t) e.title = "Enter a working title. You can change it later.";
+      else if (t.length < 3) e.title = "Enter a title of at least 3 characters.";
+      else if (t.length > 80) e.title = `Shorten the title to 80 characters or fewer (it has ${t.length}).`;
+    }
     if (step === 2) {
       if (!f.category) e.category = "Choose a category.";
       if (!f.subcategory) e.subcategory = "Choose a sub-category.";

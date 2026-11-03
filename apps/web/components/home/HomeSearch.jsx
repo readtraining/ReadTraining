@@ -121,6 +121,8 @@ export default function HomeSearch() {
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Search courses..."
           aria-label="Search courses"
+          name="q"
+          id="rt-head-search"
           className="text-13 text-dark-1"
           style={{ border: 0, outline: 0, background: "transparent", flex: 1, minWidth: 0, padding: 0 }}
         />

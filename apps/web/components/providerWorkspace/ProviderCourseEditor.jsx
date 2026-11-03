@@ -52,6 +52,17 @@ const pictureSize = (file) =>
   });
 const VIDEO_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/\S+$/;
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
+// A pass mark, as the API checks it (apps/api/src/modules/provider/courses.mts passMarkProblem): a percentage up to 100%, a score
+// that isn't more than its total ("26 out of 40", "26/40"), or words ("Pass or fail"). Returns what is wrong, or "".
+export function passMarkProblem(text) {
+  const t = (text || "").trim().toLowerCase();
+  if (!t) return "";
+  const pct = t.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (pct && Number(pct[1]) > 100) return "A percentage pass mark can't be over 100%.";
+  const score = t.match(/(\d+)\s*(?:out of|\/|of)\s*(\d+)/);
+  if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return "The pass mark can't be more than the total, like 26 out of 40.";
+  return "";
+}
 const STATUS_NOTES = {
   draft: "This course is a draft. Only your team can see it.",
   pending: "We're checking this course. If you change anything now, it comes back to you as a draft and you send it for approval again.",
@@ -91,7 +102,8 @@ function sectionOk(d, course, key) {
   if (key === "info") return d.outcomes.length >= 4;
   if (key === "syllabus") return d.units.length > 0;
   if (key === "faqs") return d.faqs.length > 0;
-  if (key === "pricing") return d.method !== "self-paced" || d.price !== "";
+  // priced: a self-paced course has its own price; one on dates is priced on each date, so it has a price once it has a date
+  if (key === "pricing") return d.method === "self-paced" ? d.price !== "" : course.upcomingCohorts > 0;
   if (key === "mode") return Boolean(d.method);
   return Boolean(course.seoTitle && course.seoDescription);
 }
@@ -220,9 +232,13 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (!draft.title.trim() || draft.title.trim().length < 3) e.title = "Enter a title of at least 3 characters.";
     if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
     if (draft.videoUrl.trim() && !VIDEO_RE.test(draft.videoUrl.trim())) e.videoUrl = "Use a YouTube or Vimeo link, starting https://";
+    draft.exams.forEach((x, i) => {
+      const problem = passMarkProblem(x.passMark);
+      if (problem) e[`passMark${i}`] = problem;
+    });
     setErrors(e);
     if (Object.keys(e).length) {
-      const where = e.price ? "pricing" : "landing";
+      const where = e.price ? "pricing" : Object.keys(e).some((k) => k.startsWith("passMark")) && !e.title && !e.videoUrl ? "syllabus" : "landing";
       if (tab !== where) changeTab(where);
       requestAnimationFrame(() => focusFirstError(formRef.current));
       return false;
@@ -787,7 +803,7 @@ function InfoSection({ draft, setDraft, access }) {
 
 // ---- Syllabus and exam -----------------------------------------------------------------------------------------------------
 
-function SyllabusSection({ draft, setDraft, access }) {
+function SyllabusSection({ draft, setDraft, access, errors = {} }) {
   const set = useSet(setDraft);
   const [sheet, setSheet] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -843,7 +859,8 @@ function SyllabusSection({ draft, setDraft, access }) {
                 </div>
                 <div className="rt-field">
                   <label htmlFor={`rt-pws-ce-ex-p${i}`}>Pass mark</label>
-                  <input id={`rt-pws-ce-ex-p${i}`} value={e.passMark} maxLength={40} onChange={(ev) => setExam(i, { passMark: ev.target.value })} disabled={locked} placeholder="For example: 70%" autoComplete="off" />
+                  {errors[`passMark${i}`] && <p className="rt-q__err" id={`rt-pws-ce-ex-p${i}-e`}><span className="rt-sr">Error: </span>{errors[`passMark${i}`]}</p>}
+                  <input id={`rt-pws-ce-ex-p${i}`} value={e.passMark} maxLength={40} onChange={(ev) => setExam(i, { passMark: ev.target.value })} disabled={locked} placeholder="For example: 70%" autoComplete="off" aria-invalid={errors[`passMark${i}`] ? true : undefined} aria-describedby={errors[`passMark${i}`] ? `rt-pws-ce-ex-p${i}-e` : undefined} />
                 </div>
                 <div className="rt-field">
                   <label htmlFor={`rt-pws-ce-ex-d${i}`}>Duration</label>

@@ -97,7 +97,8 @@ export default function BizLearners() {
         </div>
       </div>
       <p className="rt-sr" aria-live="polite">{announce || `${list.length} ${list.length === 1 ? "learner" : "learners"} shown`}</p>
-      {announce && <p className="rt-acc__banner -done rt-biz__added" role="status">{announce}</p>}
+      {/* shown here; read out once, by the live line above (a second live region read it twice) */}
+      {announce && <p className="rt-acc__banner -done rt-biz__added">{announce}</p>}
 
       <div className="rt-acc__card rt-biz__tablecard">
         {list.length ? (

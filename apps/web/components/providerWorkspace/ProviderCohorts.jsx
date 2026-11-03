@@ -107,6 +107,17 @@ export const cohortInput = (k) => ({
   details: k.details || "", tutorUserId: k.tutorUserId, bookable: k.bookable,
 });
 
+// A joining link: a Zoom, Microsoft Teams or Google Meet meeting address (https), as the API checks it (schedule.mts isMeetingLink)
+const MEETING_HOSTS = /^(?:[a-z0-9-]+\.)*(zoom\.us|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com)$/i;
+export function isMeetingLink(v) {
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" && MEETING_HOSTS.test(u.hostname) && u.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
 // ---- the list --------------------------------------------------------------------------------------------------------------
 
 export default function ProviderCohorts() {
@@ -520,7 +531,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       else if ((s.end || s.date) === s.date && s.to <= s.from) err[`d${i}`] = "The end time must be after the start time.";
     });
     if (method === "classroom" && !f.venueId) err.venueId = "Choose the venue.";
-    if (method === "live-online" && f.joinUrl.trim() && !/^https:\/\/\S+$/.test(f.joinUrl.trim())) err.joinUrl = "Use the full https link, or leave it empty for now.";
+    if (method === "live-online" && f.joinUrl.trim() && !isMeetingLink(f.joinUrl.trim())) err.joinUrl = "Use the full https link to a Zoom, Microsoft Teams or Google Meet meeting, or leave it empty for now.";
     if (!PRICE_RE.test(f.price) || Number(f.price) < 1) err.price = "Enter the price per learner in pounds, like 95.";
     if (f.wasPrice && (!PRICE_RE.test(f.wasPrice) || Number(f.wasPrice) <= Number(f.price))) err.wasPrice = "Enter a “was” price higher than the price, or leave it empty.";
     const m = Number(f.capacity);

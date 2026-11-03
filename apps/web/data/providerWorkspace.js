@@ -102,6 +102,8 @@ export const pw = {
     { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
     // the provider's own account: how it is set up, and the page learners see
     { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear" },
+    // `can`: only for the roles that may open it (the shared permission table)
+    { key: "team", label: "Team", href: "/provider/team", navIcon: "team", can: "provider.team.view" },
     { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile" },
   ],
   // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team; then Switch account (the
@@ -146,7 +148,7 @@ export const pw = {
     newOrder: { title: "Create order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
     order: { title: "Order details" },
     notifications: { title: "Notifications", lead: "Updates on your courses, orders and reviews." },
-    settings: { title: "Provider settings", lead: "Your provider information, logo, terms, VAT, emails, FAQs, questions and integrations." },
+    settings: { title: "Provider settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
     requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
     team: { title: "Manage team members", lead: "People who can use this workspace, and what each of them can do." },

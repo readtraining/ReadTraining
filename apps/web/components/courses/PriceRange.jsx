@@ -55,12 +55,12 @@ export default function PriceRange({ min, max, onChange }) {
         <label>
           <span className="rt-sr">Minimum price in pounds</span>
           <span aria-hidden="true">£</span>
-          <input type="number" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Min" value={draft.min === String(PRICE_BOUNDS.min) ? "" : draft.min} onChange={(e) => typed("min", e.target.value)} />
+          <input type="number" name="min" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Min" value={draft.min === String(PRICE_BOUNDS.min) ? "" : draft.min} onChange={(e) => typed("min", e.target.value)} />
         </label>
         <label>
           <span className="rt-sr">Maximum price in pounds</span>
           <span aria-hidden="true">£</span>
-          <input type="number" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Max" value={draft.max === String(PRICE_BOUNDS.max) ? "" : draft.max} onChange={(e) => typed("max", e.target.value)} />
+          <input type="number" name="max" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Max" value={draft.max === String(PRICE_BOUNDS.max) ? "" : draft.max} onChange={(e) => typed("max", e.target.value)} />
         </label>
       </div>
     </div>

@@ -36,6 +36,7 @@ export type Listing = {
   duration: string
   publishedAt: string | null
   imageUrl: string | null
+  imageAlt: string
   skillSaver: boolean
   nextDate: { method: string; date: string; city: string | null } | null
   popularity: number
@@ -72,12 +73,13 @@ async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = f
 
 // Every listing, most popular first. (Popularity counts providers and upcoming dates until there are bookings to count.)
 export async function loadListings(db: typeof Db): Promise<Listing[]> {
-  const pages = await db.execute<{ id: number; kind: 'shared' | 'provider'; slug: string; title: string; summary: string | null; parent_id: number | null; organisation_id: string | null; level: string | null; published_at: string | null; category: string | null; subcategory: string | null; topic: string | null; cover: string | null; is_public: boolean; listed: boolean; provider_active: boolean | null }>(sql`
+  const pages = await db.execute<{ id: number; kind: 'shared' | 'provider'; slug: string; title: string; summary: string | null; parent_id: number | null; organisation_id: string | null; level: string | null; published_at: string | null; category: string | null; subcategory: string | null; topic: string | null; cover: string | null; cover_alt: string | null; is_public: boolean; listed: boolean; provider_active: boolean | null }>(sql`
     select c.id, c.kind, c.slug, c.title, c.summary, c.parent_id, c.organisation_id, c.level, c.published_at, c.is_public, c.listed,
            (select slug from public.categories where id = c.category_id) category,
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
            (select slug from public.topics where id = c.topic_id) topic,
            (select i.path from public.course_images i where i.course_id = c.id order by i.position limit 1) cover,
+           (select i.alt from public.course_images i where i.course_id = c.id order by i.position limit 1) cover_alt,
            (select o.status = 'active' from public.organisations o where o.id = c.organisation_id) provider_active
     from public.courses c
     where c.status = 'live' and c.listed and (c.kind = 'shared' or (c.parent_id is null and c.is_public))`)
@@ -118,6 +120,8 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
       duration: first ? lengthText(runLength(first.sessions)) : methods.length === 1 && methods[0] === 'self-paced' ? 'Self-paced' : '',
       publishedAt: p.published_at ? new Date(p.published_at).toISOString() : null,
       imageUrl: mediaUrl(p.cover),
+      // what the cover shows, as the provider described it (ALT text), or the course's name
+      imageAlt: p.cover_alt || p.title,
       skillSaver: mine.some((o) => o.skill_saver),
       nextDate: first ? { method: first.method, date: first.starts_on, city: first.city } : null,
       popularity: providers * 100 + ds.length,

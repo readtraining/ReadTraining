@@ -117,7 +117,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-pws__orgname"><strong>{org || " "}</strong><span>Training provider</span></span>
           </div>
           <ul className="rt-pws__nav">
-            {pw.nav.map((x) => {
+            {pw.nav.filter((x) => !x.can || access.can(x.can)).map((x) => {
               const here = x.key === current;
               const badge = x.badge && counts[x.badge] > 0 ? <span className="rt-adm__count" aria-label={`${counts[x.badge]} new`}>{counts[x.badge]}</span> : null;
               if (!x.items) {

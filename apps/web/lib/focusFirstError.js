@@ -14,5 +14,11 @@ export function focusFirstError(root, tries = 6) {
     const field = box.querySelector("input:not([type=hidden]):not([disabled]), select, textarea, button") || err;
     (field === err ? err : box).scrollIntoView({ block: "center", behavior: "smooth" });
     if (field !== err) field.focus({ preventScroll: true });
+    else {
+      // an error with no field of its own (pick a date on the calendar, choose an option): focus the message, so it is read out
+      // and the next Tab goes on from there, instead of focus staying where it was (or on a pop-up's title)
+      if (!err.hasAttribute("tabindex")) err.setAttribute("tabindex", "-1");
+      err.focus({ preventScroll: true });
+    }
   });
 }

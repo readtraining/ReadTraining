@@ -16,6 +16,12 @@ const copy = account.profile;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const NAME_RE = /^[\p{L}][\p{L}\p{M} '’.-]*$/u;
 const today = () => new Date().toISOString().slice(0, 10);
+// the youngest a learner can be (the API checks the same: me.router.mts MIN_AGE): 16, the age the work courses here start from
+const MIN_AGE = 16;
+const latestBirthday = () => {
+  const now = new Date();
+  return `${now.getUTCFullYear() - MIN_AGE}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+};
 
 // Account settings in Hurak's four parts, each saved on its own: basic information (photo, name, date of birth, phone, the
 // "Verified" badge), address, email (needs the current password) and password (current, new, repeat). Then the marketing
@@ -126,6 +132,7 @@ function BasicSection({ me }) {
       else if (!NAME_RE.test(v.lastName.trim())) e.lastName = "Your last name can only use letters, spaces, hyphens and apostrophes.";
       if (!v.dateOfBirth) e.dateOfBirth = "Enter your date of birth.";
       else if (v.dateOfBirth >= today() || v.dateOfBirth < "1900-01-01") e.dateOfBirth = "Enter a real date of birth in the past.";
+      else if (v.dateOfBirth > latestBirthday()) e.dateOfBirth = `You need to be at least ${MIN_AGE} to have a ReadTraining account.`;
       const digits = v.phone.replace(/\D/g, "").length;
       if (!v.phone.trim()) e.phone = "Enter your contact number.";
       else if (!/^\+?[\d\s()-]+$/.test(v.phone.trim()) || digits < 10 || digits > 15) e.phone = "Enter a phone number, like 07700 900 982.";
@@ -153,7 +160,7 @@ function BasicSection({ me }) {
         <div className="rt-field">
           <label htmlFor="rt-pf-dob">Date of birth</label>
           {s.errors.dateOfBirth && <p className="rt-q__err" id="rt-pf-dob-e"><span className="rt-sr">Error: </span>{s.errors.dateOfBirth}</p>}
-          <DateField id="rt-pf-dob" value={s.values.dateOfBirth} onChange={(v) => s.set("dateOfBirth")({ target: { value: v } })} min="1900-01-01" max={today()} invalid={Boolean(s.errors.dateOfBirth)} describedBy={s.errors.dateOfBirth ? "rt-pf-dob-e" : undefined} placeholder="Choose your date of birth" startView="decade" />
+          <DateField id="rt-pf-dob" value={s.values.dateOfBirth} onChange={(v) => s.set("dateOfBirth")({ target: { value: v } })} min="1900-01-01" max={latestBirthday()} invalid={Boolean(s.errors.dateOfBirth)} describedBy={s.errors.dateOfBirth ? "rt-pf-dob-e" : undefined} placeholder="Choose your date of birth" startView="decade" />
         </div>
         <Field id="rt-pf-phone" label="Contact number" error={s.errors.phone} type="tel" autoComplete="tel" value={s.values.phone} onChange={s.set("phone")} />
       </div>

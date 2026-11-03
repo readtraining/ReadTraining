@@ -51,6 +51,18 @@ const slugRef = z.string().trim().max(80).regex(/^[a-z0-9-]*$/)
 // the content an admin checks before it shows on a live course
 export const REVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'units', 'exams', 'faqs'] as const
 
+// A pass mark: a percentage up to 100%, a score that isn't more than its total ("26 out of 40", "26/40"), or words ("Pass or
+// fail"). The editor checks the same (passMarkProblem in ProviderCourseEditor.jsx). Returns what is wrong, or ''.
+export function passMarkProblem(text: string) {
+  const t = text.trim().toLowerCase()
+  if (!t) return ''
+  const pct = t.match(/(\d+(?:\.\d+)?)\s*%/)
+  if (pct && Number(pct[1]) > 100) return 'A percentage pass mark can’t be over 100%.'
+  const score = t.match(/(\d+)\s*(?:out of|\/|of)\s*(\d+)/)
+  if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return 'The pass mark can’t be more than the total, like 26 out of 40.'
+  return ''
+}
+
 export const content = {
   title: line(80, 'title').min(3, 'Enter a title of at least 3 characters.'),
   summary: text(300, 'short description'),
@@ -71,7 +83,7 @@ export const content = {
     .optional()
     .nullable(),
   units: z.array(z.object({ title: line(120, 'unit title').min(1, 'Give every unit a title.'), body: text(2000, 'unit text') })).max(40, 'Add up to 40 units.'),
-  exams: z.array(z.object({ unit: line(120, 'exam unit').min(1, 'Name every exam row.'), passMark: text(40, 'pass mark'), duration: text(40, 'duration') })).max(20, 'Add up to 20 exam rows.'),
+  exams: z.array(z.object({ unit: line(120, 'exam unit').min(1, 'Name every exam row.'), passMark: text(40, 'pass mark').refine((v) => !passMarkProblem(v ?? ''), (v) => ({ message: passMarkProblem(v ?? '') })), duration: text(40, 'duration') })).max(20, 'Add up to 20 exam rows.'),
   faqs: z.array(z.object({ question: line(160, 'question').min(1, 'Write every question.'), answer: line(1200, 'answer').min(1, 'Write every answer.') })).max(30, 'Add up to 30 FAQs.'),
 }
 // The ways of teaching a provider course can use: booking only knows these (classroom and live online are priced on their dates,

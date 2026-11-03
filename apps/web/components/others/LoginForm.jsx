@@ -76,10 +76,7 @@ export default function LoginForm() {
     e.preventDefault();
     if (busy) return;
     setFormError("");
-    setStatus("validating");
-
-    // Brief pause so the "Validating" state is visible; validation itself is sync.
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    // the checks are instant: no made-up pause before them
     const errors = validate(values);
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
@@ -167,6 +164,8 @@ export default function LoginForm() {
           </AuthNotice>
         )}
 
+        {/* someone still logged in after an old email link: the message and its link only, no form to log in again */}
+        {!(linkProblem && person) && (<>
         <AuthField id="login-email" label="Email address" icon={<MailIcon />} error={fieldErrors.email} type="email" name="email" autoComplete="email" placeholder="you@example.com" value={values.email} onChange={handleChange} disabled={busy} />
         <AuthField
           id="login-password"
@@ -187,9 +186,10 @@ export default function LoginForm() {
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={status !== "idle"}>
           {BUTTON_LABELS[status]}
         </button>
+        </>)}
       </form>
 
-      <SocialSignIn onSocial={handleSocial} disabled={busy} onError={setFormError} />
+      {!(linkProblem && person) && <SocialSignIn onSocial={handleSocial} disabled={busy} onError={setFormError} />}
     </AuthPage>
   );
 }

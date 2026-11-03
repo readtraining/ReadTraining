@@ -254,12 +254,12 @@ function TextDoc({ id, title, text, value, required, locked, busy, onSave }) {
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
       <Field id={id} label={`${title}${required ? "" : " (optional)"}`} hint={text} error={error} count={<Counter value={v} max={max} />}>
-        <textarea {...aria(id, error, true)} rows={9} maxLength={max} autoComplete="off" value={v} onChange={(e) => setV(e.target.value)} disabled={locked} />
+        <textarea {...aria(id, error, true)} rows={9} maxLength={max} autoComplete="off" value={v} onChange={(e) => { setV(e.target.value); if (error) setError(""); }} disabled={locked} />
       </Field>
       {!locked && (
         <div className="rt-pws-set__foot">
           <span></span>
-          <button type="submit" className="button -md -outline-purple-1 text-purple-1" disabled={busy || v.trim() === (value || "")}>Save {title.toLowerCase()}</button>
+          <button type="submit" className="button -md -outline-purple-1 text-purple-1" disabled={busy || v.trim() === (value || "")} aria-busy={busy || undefined}>{busy ? "Saving…" : `Save ${title.toLowerCase()}`}</button>
         </div>
       )}
     </form>
@@ -304,7 +304,8 @@ export function VenuesTab({ say }) {
                   <div className="rt-adm-list__side">
                     <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => setEditing(v)}>Edit<span className="rt-sr"> {v.name}</span></button>
                     <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={setActive.isPending} onClick={() => setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, { onSuccess: () => { refresh(); say(v.active ? "Venue archived" : "Venue restored"); }, onError: (e) => say(firstError(e)) })}>{v.active ? "Archive" : "Restore"}<span className="rt-sr"> {v.name}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => { setBlocked(""); setRemoving(v); }}>Delete<span className="rt-sr"> {v.name}</span></button>
+                    {/* a venue a date has used can't be deleted (its dates keep it): only archived, so Delete isn't offered */}
+                    {!v.used && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => { setBlocked(""); setRemoving(v); }}>Delete<span className="rt-sr"> {v.name}</span></button>}
                   </div>
                 )}
               </li>

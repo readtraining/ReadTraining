@@ -61,6 +61,10 @@ export default function DateField({ id, value, onChange, min, max, invalid = fal
             defaultActiveStartDate={!value && startView ? new Date(new Date().getFullYear() - 30, 0, 1) : undefined}
             next2Label={null}
             prev2Label={null}
+            prevAriaLabel="Previous"
+            nextAriaLabel="Next"
+            navigationAriaLabel="Change the month or year"
+            navigationAriaLive="polite"
           />
           {clearable && value && (
             <button type="button" className="rt-cd__link rt-datefield__clear" onClick={() => { onChange(""); setOpen(false); btn.current?.focus(); }}>Clear</button>

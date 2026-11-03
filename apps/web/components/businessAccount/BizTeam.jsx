@@ -72,7 +72,8 @@ export default function BizTeam() {
         <button type="button" ref={addRef} className="button -md -purple-1 text-white" aria-haspopup="dialog" onClick={() => { setErrors({}); setAdding(true); }}>{copy.add}</button>
       </div>
       <p className="rt-sr" aria-live="polite">{announce}</p>
-      {announce && <p className="rt-acc__banner -done rt-biz__added" role="status">{announce}</p>}
+      {/* shown here; read out once, by the live line above (a second live region read it twice) */}
+      {announce && <p className="rt-acc__banner -done rt-biz__added">{announce}</p>}
 
       <div className="rt-acc__card rt-biz__tablecard">
         <table className="rt-biz__table">

@@ -314,7 +314,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
           <form className="rt-cat-search" onSubmit={submitSearch} role="search" noValidate>
             <div className="rt-cat-search__field">
               <i className="icon-search text-16 text-light-1"></i>
-              <input type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Course or skill" aria-label="Course or skill" autoComplete="off" />
+              <input type="search" name="q" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Course or skill" aria-label="Course or skill" autoComplete="off" />
               {qDraft && (
                 <button
                   type="button"
@@ -333,7 +333,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
             <span className="rt-cat-search__divider" aria-hidden="true"></span>
             <div className="rt-cat-search__field">
               <i className="icon-location text-16 text-light-1"></i>
-              <input type="text" value={locationDraft} onChange={(e) => setLocationDraft(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" autoComplete="postal-code" />
+              <input type="text" name="location" value={locationDraft} onChange={(e) => setLocationDraft(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" autoComplete="postal-code" />
               {locationDraft && (
                 <button
                   type="button"

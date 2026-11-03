@@ -34,6 +34,7 @@ export function toCatalogueCourse(l) {
     validity: "",
     addedAt: (l.publishedAt || "").slice(0, 10),
     imageSrc: l.imageUrl || "",
+    imageAlt: l.imageAlt || l.title,
     detailsHref: coursePath(l.slug),
     nextDate: l.nextDate,
     skillSaver: l.skillSaver,
