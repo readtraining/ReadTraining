@@ -4147,7 +4147,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__detail { display: grid; gap: 10px; }
 .rt-biz__detail .rt-acc__h3 { margin-top: 8px; }
 .rt-biz__detail .rt-acc__certs { margin: 0; }
-.rt-biz__payitems { margin: 12px 0 16px; }
 .rt-biz__invbody { display: grid; gap: 14px; }
 /* assign places */
 .rt-biz__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
@@ -4168,7 +4167,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__rows li > div:first-child { gap: 2px; }
 .rt-biz__certtable th:nth-child(3), .rt-biz__certtable th:nth-child(4) { width: 112px; }
 .rt-biz__certtable td small, .rt-biz__certtable td:nth-child(3), .rt-biz__certtable td:nth-child(4) { white-space: nowrap; } /* IDs and dates never break */
-.rt-biz__download { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rt-biz__print { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .rt-biz__rowacts { display: inline-flex; align-items: center; gap: 16px; }
 .rt-biz__creditrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 12px; }
 .rt-biz__creditrow .rt-biz__creditnums { flex: 1 1 420px; margin: 0; }
