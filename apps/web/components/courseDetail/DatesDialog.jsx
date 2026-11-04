@@ -34,7 +34,7 @@ const tile = (iso) => {
   const f = (o) => new Intl.DateTimeFormat("en-GB", { ...o, timeZone: "UTC" }).format(d);
   return { month: f({ month: "short" }), day: f({ day: "numeric" }), weekday: f({ weekday: "short" }) };
 };
-const SHOWN = 3; // a venue shows its first three dates; the rest behind "Show N more dates"
+const dayLabel = (iso) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 
 // One date: the whole row picks it (a calendar tile, the dates, how long and when, the price, and a tick once chosen).
 function DateRow({ s, selected, onSelect, classroom }) {
@@ -66,38 +66,46 @@ function DateRow({ s, selected, onSelect, classroom }) {
   );
 }
 
-// A venue: its name, address and map link, its lowest price, then its dates (the first few; the rest on request).
-function VenueCard({ v, current, onSelect, more, onMore }) {
+// A venue: a header that opens and closes its dates (name, address and map link, how many dates and the next one, the lowest
+// price), then its dates once open.
+function VenueCard({ v, current, onSelect, open, onToggle }) {
   const has = v.sessions.some((s) => s.id === current);
-  const shown = more || has ? v.sessions : v.sessions.slice(0, SHOWN);
-  const hidden = v.sessions.length - shown.length;
   const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
+  const count = `${v.sessions.length} ${v.sessions.length === 1 ? "date" : "dates"}`;
+  // the whole header toggles; the map link inside it only opens the map
+  const onHead = (e) => {
+    if (e.target.closest("a")) return;
+    onToggle();
+  };
   return (
-    <section className={`rt-dd__vcard${has ? " is-selected" : ""}`} aria-labelledby={id}>
-      <div className="rt-dd__vhead">
+    <section className={`rt-dd__vcard${has ? " is-selected" : ""}${open ? " is-open" : ""}`}>
+      <div className="rt-dd__vhead" onClick={onHead}>
         <span className="rt-dd__vpin" aria-hidden="true"><PinIcon /></span>
         <div className="rt-dd__vinfo">
-          <h3 id={id}>{v.venue || v.city}</h3>
+          <h3>
+            <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}>
+              {v.venue || v.city}
+              <span className="rt-cd__sr">{`, ${count}, from ${formatPrice(v.from)}`}</span>
+            </button>
+          </h3>
           <p className="rt-dd__addr">
             {[v.street, v.city, v.postcode].filter(Boolean).join(", ")} ·{" "}
             <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.name, v.postcode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener">Map<span className="rt-cd__sr"> (opens in a new tab)</span></a>
           </p>
+          <p className="rt-dd__vnext" aria-hidden="true">{count} · next {dayLabel(v.next)}</p>
         </div>
-        {v.sessions.length > 1 && (
-          <p className="rt-dd__vfrom">
-            <span>{v.sessions.length} dates from</span>
-            <strong>{formatPrice(v.from)}</strong>
-          </p>
-        )}
+        <p className="rt-dd__vfrom" aria-hidden="true">
+          <span>from</span>
+          <strong>{formatPrice(v.from)}</strong>
+        </p>
+        <span className="rt-dd__vchev" aria-hidden="true"><Chevron /></span>
       </div>
-      <ul className="rt-dd__slots" aria-label={`Dates at ${v.venue || v.city}`}>
-        {shown.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom />)}
+      <ul className="rt-dd__slots" id={`${id}-dates`} hidden={!open} aria-label={`Dates at ${v.venue || v.city}`}>
+        {v.sessions.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom />)}
       </ul>
-      {hidden > 0 && (
-        <button type="button" className="rt-dd__more" onClick={onMore}>
-          Show {hidden} more {hidden === 1 ? "date" : "dates"} <Chevron />
-        </button>
-      )}
     </section>
   );
 }
@@ -131,7 +139,11 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   const [input, setInput] = useState(saved?.q || "");
   const [q, setQ] = useState(saved?.q || "");
   const [sort, setSort] = useState(sorts.some(([v]) => v === saved?.sort) ? saved.sort : DEFAULT_SORT);
-  const [open, setOpen] = useState(Array.isArray(saved?.open) ? saved.open : []); // venues showing all their dates
+  // venues showing their dates: the one holding the chosen date starts open, the rest closed until clicked
+  const [open, setOpen] = useState(() => {
+    const s = course.sessions.find((x) => x.id === selectedId && x.mode === mode);
+    return s ? [`${s.address}|${s.postcode}`] : [];
+  });
 
   useEffect(() => {
     const t = setTimeout(() => setQ(input.trim()), 150);
@@ -161,7 +173,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
     setQ("");
     setSort(DEFAULT_SORT);
   };
-  const showAll = (k) => setOpen((o) => (o.includes(k) ? o : [...o, k]));
+  const toggle = (k) => setOpen((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));
   const pick = useCallback((id) => (confirm ? setChosen(id) : onPick(id)), [confirm, onPick]);
   const current = confirm ? chosen : selectedId;
   const chosenSession = course.sessions.find((s) => s.id === chosen);
@@ -211,7 +223,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
           <EmptyState inCard title="No venues match." text="Try another town or postcode." />
         ) : classroom ? (
           <div className="rt-dd__venues">
-            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} more={open.includes(v.key)} onMore={() => showAll(v.key)} />)}
+            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} open={open.includes(v.key)} onToggle={() => toggle(v.key)} />)}
           </div>
         ) : (
           <ul className="rt-dd__slots rt-dd__slots--flat">
