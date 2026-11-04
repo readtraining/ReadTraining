@@ -904,6 +904,9 @@
 
 /* utility strip above the navbar */
 .rt-utility { background: #0E0230; color: rgba(255, 255, 255, 0.75); font-size: 13px; position: relative; z-index: 101; }
+/* the phone menu lives inside the header, below this bar: while it is open the bar steps back, so the menu's Log in, Sign up and
+   close row isn't hidden under it */
+body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
 .rt-utility__inner { display: flex; justify-content: space-between; align-items: center; min-height: 38px; gap: 16px; }
 .rt-utility__left, .rt-utility__right { display: flex; align-items: center; gap: 18px; }
 .rt-utility a { display: inline-flex; align-items: center; gap: 7px; color: rgba(255, 255, 255, 0.8); font-weight: 500; transition: color 0.15s; }
