@@ -226,6 +226,9 @@ export const meRouter = createTRPCRouter({
 
   // Profile photo: a one-time upload address for the browser, then `setPhoto` with the uploaded path.
   photoUploadUrl: protectedProcedure.input(z.object({ contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']) })).mutation(async ({ ctx, input }) => {
+    // the same per-person upload limits as logos and course pictures
+    await limit(ctx, 'uploadHour')
+    await limit(ctx, 'uploadDay')
     if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' })
     const path = `${ctx.user.id}/${randomUUID()}.${PHOTO_TYPES[input.contentType]}`
     const { data, error } = await supabase.storage.from(AVATARS).createSignedUploadUrl(path)
