@@ -9,7 +9,9 @@ import FilterScrollPill from "@/components/courses/FilterScrollPill";
 // A pop-up in the site's dialog shell (.rt-dd, as the course page's "choose a date" pop-up): centred on desktop, a bottom
 // sheet on phones. Locks page scroll, traps Tab, closes on Esc and on the backdrop, and puts focus on the title.
 // fallbackFocus: a ref to focus when the opener has gone (it was inside another pop-up that has closed).
-export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, children }) {
+// unsaved: its form has typed changes, so closing it (X, Esc or the backdrop) asks first; a save closes it as usual.
+export const DISCARD_MESSAGE = "Close without saving? What you typed will be lost.";
+export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, unsaved = false, children }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const panelRef = useRef(null);
@@ -19,6 +21,13 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
   // the title while someone is typing or fixing an error
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const unsavedRef = useRef(unsaved);
+  unsavedRef.current = unsaved;
+  // the visitor closing it: with typed changes, only after they confirm
+  const close = () => {
+    if (unsavedRef.current && !window.confirm(DISCARD_MESSAGE)) return;
+    onCloseRef.current();
+  };
 
   useEffect(() => {
     if (open) {
@@ -66,7 +75,7 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
   }, [mounted]);
 
   // keyboard: Tab stays inside, Esc closes (the shared focus trap); focus starts on the title
-  useFocusTrap(open && mounted, panelRef, () => onCloseRef.current());
+  useFocusTrap(open && mounted, panelRef, close);
   useEffect(() => {
     if (!open || !mounted) return;
     const t = setTimeout(() => panelRef.current?.querySelector("h2")?.focus({ preventScroll: true }), 30);
@@ -75,11 +84,11 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
 
   if (!mounted) return null;
   return createPortal(
-    <div className={`rt-dd rt-tq-sheet${className ? ` ${className}` : ""}${shown ? " is-in" : ""}`} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className={`rt-dd rt-tq-sheet${className ? ` ${className}` : ""}${shown ? " is-in" : ""}`} onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <div className="rt-dd__panel" role="dialog" aria-modal="true" aria-labelledby="rt-tq-sheet-title" ref={panelRef}>
         <div className="rt-dd__head">
           <h2 id="rt-tq-sheet-title" className="rt-dd__title" tabIndex={-1}>{title}</h2>
-          <button type="button" className="rt-icon-btn" aria-label={closeLabel} onClick={onClose}><Icon name="close" /></button>
+          <button type="button" className="rt-icon-btn" aria-label={closeLabel} onClick={close}><Icon name="close" /></button>
         </div>
         <div className="rt-tq-sheet__body rt-pill-scroll" ref={bodyRef}>{children}</div>
         <FilterScrollPill scrollRef={bodyRef} />

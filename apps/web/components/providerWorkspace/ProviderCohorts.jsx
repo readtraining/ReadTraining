@@ -462,7 +462,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const [studyMode, setStudyMode] = useState("classroom");
   // the form as it was filled (or last saved): while it differs, leaving the page asks first (lib/unsavedChanges.js)
   const [start, setStart] = useState(null);
-  useUnsavedChanges(Boolean(open && f && start !== null && JSON.stringify(f) !== start));
+  const unsaved = Boolean(open && f && start !== null && JSON.stringify(f) !== start);
+  useUnsavedChanges(unsaved);
   const on = { enabled: open && Boolean(organisationId) };
   const coursesQ = api.provider.courses.list.useQuery({ organisationId }, on);
   const venuesQ = api.provider.venues.list.useQuery({ organisationId }, on);
@@ -599,7 +600,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const ordered = ready ? f.sessions.map((s, i) => ({ s, i })).sort((a, b) => a.s.date.localeCompare(b.s.date)) : [];
 
   return (
-    <Sheet open={open} onClose={onClose} title={cohort ? "Edit cohort" : "Create cohort"} closeLabel="Close" className="rt-pws-coh__sheet">
+    <Sheet open={open} onClose={onClose} unsaved={unsaved} title={cohort ? "Edit cohort" : "Create cohort"} closeLabel="Close" className="rt-pws-coh__sheet">
       {open && !ready && <Loading rows={2} />}
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>

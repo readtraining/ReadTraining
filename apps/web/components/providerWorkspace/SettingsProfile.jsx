@@ -358,9 +358,11 @@ export function VenuesTab({ say }) {
 }
 
 function VenueSheet({ open, venue, onClose, onSaved }) {
+  const [unsaved, setUnsaved] = useState(false);
+  useEffect(() => setUnsaved(false), [open]);
   return (
-    <Sheet open={open} onClose={onClose} title={venue ? "Edit venue" : "Add venue"} closeLabel="Close">
-      {open && <VenueForm venue={venue} onSaved={onSaved} />}
+    <Sheet open={open} onClose={onClose} unsaved={unsaved} title={venue ? "Edit venue" : "Add venue"} closeLabel="Close">
+      {open && <VenueForm venue={venue} onSaved={onSaved} onDirty={setUnsaved} />}
     </Sheet>
   );
 }
@@ -368,13 +370,15 @@ function VenueSheet({ open, venue, onClose, onSaved }) {
 // A venue's fields and its Save, checked here as the API checks them. `venue` to edit one (null for a new one); onSaved(result,
 // isNew) with the API's { id, located }. `inline`: inside another form (Create cohort), so it isn't a <form> of its own: Save is a
 // plain button and Enter in a field saves the venue, not the outer form; `idPrefix` keeps its ids apart; onCancel shows Cancel.
-export function VenueForm({ venue = null, onSaved, onCancel, inline = false, idPrefix = "rt-set-v" }) {
+export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = false, idPrefix = "rt-set-v" }) {
   const { organisationId } = useProviderAccess();
   const save = api.provider.venues.save.useMutation();
   const [f, setF] = useState(() => (venue ? { name: venue.name, street: venue.street, city: venue.city, postcode: venue.postcode || "" } : { name: "", street: "", city: "", postcode: "" }));
   const [errors, setErrors] = useState({});
   const [start] = useState(f);
-  useUnsavedChanges(JSON.stringify(f) !== JSON.stringify(start)); // typed into but not saved (the form closes once saved)
+  const dirty = JSON.stringify(f) !== JSON.stringify(start);
+  useUnsavedChanges(dirty); // typed into but not saved (the form closes once saved)
+  useEffect(() => onDirty?.(dirty), [dirty, onDirty]); // tells its pop-up, so closing it asks first
   const ref = useRef(null);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const submit = (e) => {
