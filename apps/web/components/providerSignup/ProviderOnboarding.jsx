@@ -7,6 +7,7 @@ import { api } from "@/lib/trpc/react";
 import { errorsFrom, useMe } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { trackEvent } from "@/lib/analytics";
+import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 
 const o = providerSignup.onboarding;
 
@@ -37,6 +38,8 @@ export default function ProviderOnboarding() {
   const [busy, setBusy] = useState(false);
   const formRef = useRef(null);
   const existing = me.data?.identities.find((i) => i.kind === "provider");
+  // typed in and not sent yet: leaving asks first (the mobile filled in from the profile doesn't count)
+  useUnsavedChanges(Boolean(v.name.trim() || v.acceptTerms || (v.mobile.trim() && v.mobile.trim() !== (me.data?.profile.phone ?? ""))));
 
   // the mobile number from the profile, if one is saved
   useEffect(() => {
@@ -62,7 +65,7 @@ export default function ProviderOnboarding() {
       await create.mutateAsync({ name: v.name.trim(), mobile: v.mobile.trim(), acceptTerms: true });
       trackEvent("provider_created");
       await utils.me.get.invalidate();
-      router.push("/provider");
+      leaveWithoutAsking(() => router.push("/provider"));
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       // a refusal about one field (a name another provider already uses) shows beside it, once; anything else above the form

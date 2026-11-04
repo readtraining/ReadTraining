@@ -68,7 +68,7 @@ export function lineParts(item) {
   const pkg = hasPackages(item) ? packageOf(item).price : 0;
   const bundle = bundleOf(item)?.add ?? 0;
   const addOn = needsFirstAid(item) && item.firstAid === "add" ? copy.firstAid.add.price : 0;
-  const addOnWas = addOn ? copy.firstAid.add.wasPrice : 0;
+  const addOnWas = addOn && copy.firstAid.add.wasPrice > addOn ? copy.firstAid.add.wasPrice : 0;
   const unit = basePrice(item) + pkg + bundle + addOn;
   const unitWas = wasBase(item) ? wasBase(item) + pkg + bundle + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
   const quantity = Math.max(1, Number(item.quantity) || 1);

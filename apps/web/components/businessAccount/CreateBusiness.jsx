@@ -9,6 +9,7 @@ import { api } from "@/lib/trpc/react";
 import { errorsFrom, useMe } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { trackEvent } from "@/lib/analytics";
+import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 
 const c = businessAccount.create;
 
@@ -37,6 +38,8 @@ export default function CreateBusiness() {
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [busy, setBusy] = useState(false);
+  // typed in and not sent yet: leaving asks first (the phone filled in from the profile doesn't count)
+  useUnsavedChanges(Boolean(v.companyName.trim() || v.jobTitle.trim() || (v.phone.trim() && v.phone.trim() !== (me.data?.profile.phone ?? ""))));
   const formRef = useRef(null);
   const existing = me.data?.identities.find((i) => i.kind === "business");
 
@@ -62,7 +65,7 @@ export default function CreateBusiness() {
       await create.mutateAsync({ companyName: v.companyName.trim(), jobTitle: v.jobTitle.trim(), phone: v.phone.trim() });
       trackEvent("business_account_created");
       await utils.me.get.invalidate();
-      router.push("/business");
+      leaveWithoutAsking(() => router.push("/business"));
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       // a refusal about the organisation's name (another one already uses it) shows beside the company name, once
