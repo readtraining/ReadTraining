@@ -2314,16 +2314,14 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dd__venues { display: flex; flex-direction: column; gap: 12px; }
 .rt-dd__vcard { padding: 16px; background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: var(--cd-card-radius); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .rt-dd__vcard.is-selected { border-color: var(--cd-brand); box-shadow: 0 0 0 1px var(--cd-brand); }
-.rt-dd__vhead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; margin: -16px; padding: 16px; border-radius: var(--cd-card-radius); cursor: pointer; }
-.rt-dd__vcard.is-open .rt-dd__vhead { margin-bottom: -4px; }
-.rt-dd__vcard:not(.is-selected):hover { border-color: var(--cd-border-strong); }
-.rt-dd__vtoggle { display: inline; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.rt-dd__vtoggle:focus-visible { outline: 2px solid var(--cd-brand); outline-offset: 3px; border-radius: 4px; }
-.rt-dd__vnext { margin: 4px 0 0; font-size: 13px; line-height: 19px; font-weight: 600; color: var(--cd-text); }
-.rt-dd__vchev { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--cd-band); color: var(--cd-text); font-size: 12px; transition: transform 0.2s ease, background-color 0.15s ease; }
-.rt-dd__vcard.is-open .rt-dd__vchev { transform: rotate(180deg); background: var(--cd-brand-subtle); color: var(--cd-brand); }
-.rt-dd__vcard .rt-dd__slots { margin-top: 16px; }
+.rt-dd__vhead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; cursor: pointer; }
+.rt-dd__vcard.is-open .rt-dd__vhead { margin-bottom: 12px; }
 .rt-dd__vcard .rt-dd__slots[hidden] { display: none; }
+.rt-dd__vside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.rt-dd__vtoggle { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--cd-brand); border-radius: var(--rt-radius-sm); background: var(--cd-surface); font-size: 13px; line-height: 18px; font-weight: 600; color: var(--cd-brand); white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease; }
+.rt-dd__vtoggle:hover { background: var(--cd-brand-subtle); }
+.rt-dd__vtoggle .rt-cd__icon { font-size: 10px; transition: transform 0.2s ease; }
+.rt-dd__vtoggle[aria-expanded="true"] .rt-cd__icon { transform: rotate(180deg); }
 .rt-dd__vpin { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rt-radius-sm); background: var(--cd-brand-subtle); color: var(--cd-brand); font-size: 16px; }
 .rt-dd__vinfo { min-width: 0; }
 .rt-dd__vinfo h3 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
@@ -2359,17 +2357,14 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
   .rt-dd__list { padding: 12px 12px 16px; }
   .rt-dd__vcard { padding: 12px; }
   .rt-dd__vpin { display: none; }
-  .rt-dd__vhead { grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; margin: -12px; padding: 12px; }
-  .rt-dd__vcard .rt-dd__slots { margin-top: 12px; }
-  .rt-dd__vfrom strong { font-size: 16px; }
-  .rt-dd__vchev { width: 28px; height: 28px; }
+  .rt-dd__vhead { grid-template-columns: minmax(0, 1fr) auto; }
   .rt-dd__slot { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 8px 10px 8px 8px; }
   .rt-dd__tick { display: none; }
   .rt-dd__tile { width: 46px; }
   .rt-dd__controls:has(.rt-dd__search) .rt-dd__sort { flex-basis: 128px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rt-dd, .rt-dd__panel, .rt-dd__slot, .rt-dd__vcard, .rt-dd__tick, .rt-dd__vchev { transition: none; }
+  .rt-dd, .rt-dd__panel, .rt-dd__slot, .rt-dd__vcard, .rt-dd__tick, .rt-dd__vtoggle, .rt-dd__vtoggle .rt-cd__icon { transition: none; }
 }
 
 /* Radio circles removed from the Learning options cards and the booking card (the real radio inputs stay for keyboard and screen readers) */

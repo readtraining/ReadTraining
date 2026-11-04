@@ -34,7 +34,6 @@ const tile = (iso) => {
   const f = (o) => new Intl.DateTimeFormat("en-GB", { ...o, timeZone: "UTC" }).format(d);
   return { month: f({ month: "short" }), day: f({ day: "numeric" }), weekday: f({ weekday: "short" }) };
 };
-const dayLabel = (iso) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 
 // One date: the whole row picks it (a calendar tile, the dates, how long and when, the price, and a tick once chosen).
 function DateRow({ s, selected, onSelect, classroom }) {
@@ -66,42 +65,36 @@ function DateRow({ s, selected, onSelect, classroom }) {
   );
 }
 
-// A venue: a header that opens and closes its dates (name, address and map link, how many dates and the next one, the lowest
-// price), then its dates once open.
+// A venue: its name, address and map link, its lowest price, and a "Show dates" button that opens its dates below (a click
+// anywhere on the venue's header does the same; the map link only opens the map).
 function VenueCard({ v, current, onSelect, open, onToggle }) {
   const has = v.sessions.some((s) => s.id === current);
   const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
-  const count = `${v.sessions.length} ${v.sessions.length === 1 ? "date" : "dates"}`;
-  // the whole header toggles; the map link inside it only opens the map
   const onHead = (e) => {
-    if (e.target.closest("a")) return;
-    onToggle();
+    if (!e.target.closest("a, button")) onToggle();
   };
   return (
-    <section className={`rt-dd__vcard${has ? " is-selected" : ""}${open ? " is-open" : ""}`}>
+    <section className={`rt-dd__vcard${has ? " is-selected" : ""}${open ? " is-open" : ""}`} aria-labelledby={id}>
       <div className="rt-dd__vhead" onClick={onHead}>
         <span className="rt-dd__vpin" aria-hidden="true"><PinIcon /></span>
         <div className="rt-dd__vinfo">
-          <h3>
-            <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={(e) => {
-              e.stopPropagation();
-              onToggle();
-            }}>
-              {v.venue || v.city}
-              <span className="rt-cd__sr">{`, ${count}, from ${formatPrice(v.from)}`}</span>
-            </button>
-          </h3>
+          <h3 id={id}>{v.venue || v.city}</h3>
           <p className="rt-dd__addr">
             {[v.street, v.city, v.postcode].filter(Boolean).join(", ")} ·{" "}
             <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.name, v.postcode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener">Map<span className="rt-cd__sr"> (opens in a new tab)</span></a>
           </p>
-          <p className="rt-dd__vnext" aria-hidden="true">{count} · next {dayLabel(v.next)}</p>
         </div>
-        <p className="rt-dd__vfrom" aria-hidden="true">
-          <span>from</span>
-          <strong>{formatPrice(v.from)}</strong>
-        </p>
-        <span className="rt-dd__vchev" aria-hidden="true"><Chevron /></span>
+        <div className="rt-dd__vside">
+          {v.sessions.length > 1 && (
+            <p className="rt-dd__vfrom">
+              <span>{v.sessions.length} dates from</span>
+              <strong>{formatPrice(v.from)}</strong>
+            </p>
+          )}
+          <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={onToggle}>
+            {open ? "Hide dates" : `Show dates (${v.sessions.length})`} <Chevron />
+          </button>
+        </div>
       </div>
       <ul className="rt-dd__slots" id={`${id}-dates`} hidden={!open} aria-label={`Dates at ${v.venue || v.city}`}>
         {v.sessions.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom />)}
@@ -139,7 +132,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   const [input, setInput] = useState(saved?.q || "");
   const [q, setQ] = useState(saved?.q || "");
   const [sort, setSort] = useState(sorts.some(([v]) => v === saved?.sort) ? saved.sort : DEFAULT_SORT);
-  // venues showing their dates: the one holding the chosen date starts open, the rest closed until clicked
+  // venues showing their dates: the one holding the chosen date starts open, the rest open on "Show dates"
   const [open, setOpen] = useState(() => {
     const s = course.sessions.find((x) => x.id === selectedId && x.mode === mode);
     return s ? [`${s.address}|${s.postcode}`] : [];
