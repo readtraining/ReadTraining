@@ -330,8 +330,14 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
 }
 
 // The course page's pop-up for Classroom and Live online, on the page's booking state (choosing applies the date and closes).
+// When the course runs both, the pop-up's own tabs switch between their dates; the page follows only once a date is chosen.
 export default function DatesDialog() {
   const { course, mode, session, selectSession, datesOpen, closeDates } = useBooking();
+  const dated = useMemo(() => ["classroom", "online"].filter((m) => course.sessions.some((s) => s.mode === m)), [course]);
+  const [view, setView] = useState(mode);
+  useEffect(() => {
+    if (datesOpen) setView(mode); // every opening starts on the page's study method
+  }, [datesOpen, mode]);
   const pick = useCallback(
     (id) => {
       selectSession(id);
@@ -341,5 +347,6 @@ export default function DatesDialog() {
   );
   if (mode === "ondemand" || mode === "inhouse") return null;
   if (!session) return null;
-  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={mode} selectedId={session.id} onPick={pick} />;
+  const shown = dated.includes(view) ? view : mode;
+  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={shown} modes={dated.length > 1 ? dated : undefined} onMode={setView} selectedId={session.id} onPick={pick} />;
 }
