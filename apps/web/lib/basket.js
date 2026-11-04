@@ -4,7 +4,8 @@ import { basket as copy } from "@/data/basket";
 // on one date (`sessionId`); `quantity` is its delegates; `selected` false leaves it out of this booking. Every way in adds a date;
 // an older saved line without one asks for it in the basket's date pop-up. Swap the promo lookup for an API call later.
 
-export const lineKey = (item) => `${item.id}:${item.sessionId || ""}`;
+// a course page package (`bundle`, data/courseGuides.js) is part of the line: the same date as another package is another line
+export const lineKey = (item) => `${item.id}:${item.sessionId || ""}${item.bundle?.key ? `:${item.bundle.key}` : ""}`;
 export const MAX_DELEGATES = 20;
 // A ticked line is part of this booking; unticked lines stay in the basket for later and are left out of the total and payment.
 export const isSelected = (item) => item.selected !== false;
@@ -56,15 +57,22 @@ export const needsFirstAid = (item) => rule(copy.firstAid, item);
 
 export const packageOf = (item) => copy.packages.items.find((p) => p.key === (item.package || "saver")) || copy.packages.items[0];
 
+// The course page package a line was booked with (data/courseGuides.js: "Course + first aid" and the like), or null for the
+// course alone. Its `add` is per delegate, on top of the date's price.
+export const bundleOf = (item) => (item.bundle?.key && item.bundle.add > 0 ? item.bundle : null);
+// first aid is part of the line's package: the basket doesn't ask about it, and it is never charged twice
+export const firstAidInBundle = (item) => item.firstAid === "bundle";
+
 // What one delegate pays and what it would have been without offers, then the line's totals.
 export function lineParts(item) {
   const pkg = hasPackages(item) ? packageOf(item).price : 0;
+  const bundle = bundleOf(item)?.add ?? 0;
   const addOn = needsFirstAid(item) && item.firstAid === "add" ? copy.firstAid.add.price : 0;
   const addOnWas = addOn && copy.firstAid.add.wasPrice > addOn ? copy.firstAid.add.wasPrice : 0;
-  const unit = basePrice(item) + pkg + addOn;
-  const unitWas = wasBase(item) ? wasBase(item) + pkg + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
+  const unit = basePrice(item) + pkg + bundle + addOn;
+  const unitWas = wasBase(item) ? wasBase(item) + pkg + bundle + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
   const quantity = Math.max(1, Number(item.quantity) || 1);
-  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, pkg, addOn };
+  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, pkg, bundle, addOn };
 }
 
 // What stops a line from going to payment (shown on the line, and listed under the Proceed button).

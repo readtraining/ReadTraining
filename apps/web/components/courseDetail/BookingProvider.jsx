@@ -16,10 +16,12 @@ export const useBooking = () => useContext(BookingContext);
 export const IN_HOUSE_NOTE = TEAM.note;
 export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 
-// Shared booking state for the whole detail page: delivery mode, location filter and the selected session.
-// BookingCard, DatesSection and MobileBuyBar all read this one source. It is mirrored to the URL (?mode=&session=)
-// with history.replaceState, so a shared link opens with the same selection and nothing reloads or scrolls.
-export default function BookingProvider({ course, initialMode, initialSession, children }) {
+// Shared booking state for the whole detail page: delivery mode, location filter, the selected session and, on a course with
+// packages (data/courseGuides.js), the chosen package. BookingCard, DatesSection, MobileBuyBar and PackagePicker all read this
+// one source. It is mirrored to the URL (?mode=&session=&package=) with history.replaceState, so a shared link opens with the
+// same selection and nothing reloads or scrolls. A package adds its `add` to the date's price (`price`, `wasPrice`) and goes
+// into the basket with the date.
+export default function BookingProvider({ course, initialMode, initialSession, initialPackage, packages = null, children }) {
   const pathname = usePathname();
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
 
@@ -37,6 +39,9 @@ export default function BookingProvider({ course, initialMode, initialSession, c
     const wanted = course.sessions.find((s) => s.id === initialSession);
     return (wanted && wanted.mode === startMode ? wanted : startMode ? firstOf(startMode) : null)?.id;
   });
+  // the chosen package's key ("course": the course alone); none on a course without packages
+  const [bundleKey, setBundleKey] = useState(() => (packages?.some((p) => p.key === initialPackage) ? initialPackage : packages?.[0]?.key ?? null));
+  const bundle = packages?.find((p) => p.key === bundleKey) ?? null;
   const [city, setCity] = useState("");
   const [toast, setToast] = useState(null);
   const [datesOpen, setDatesOpen] = useState(false); // the "choose a date" pop-up
@@ -47,18 +52,26 @@ export default function BookingProvider({ course, initialMode, initialSession, c
 
   const isInHouse = mode === "inhouse";
   const session = course.sessions.find((s) => s.id === sessionId) || (mode ? firstOf(mode) : null) || course.sessions[0] || null;
+  // what one place costs with the chosen package (the date's price plus the package), and its was-price when the date has one
+  const extra = bundle?.add ?? 0;
+  const price = session ? session.price + extra : null;
+  const wasPrice = session && session.wasPrice > session.price ? session.wasPrice + extra : null;
 
   const writeUrl = useCallback(
-    (nextMode, nextSession) => {
+    (nextMode, nextSession, nextBundle) => {
       try {
         const params = new URLSearchParams(window.location.search);
-        params.set("mode", nextMode);
+        if (nextMode) params.set("mode", nextMode);
         if (nextSession) params.set("session", nextSession);
-        else params.delete("session");
+        else if (nextMode) params.delete("session");
+        if (nextBundle !== undefined) {
+          if (nextBundle && nextBundle !== packages?.[0]?.key) params.set("package", nextBundle);
+          else params.delete("package");
+        }
         window.history.replaceState(window.history.state, "", `${pathname}?${params.toString()}${window.location.hash}`);
       } catch {}
     },
-    [pathname],
+    [pathname, packages],
   );
 
   const setMode = useCallback(
@@ -94,6 +107,26 @@ export default function BookingProvider({ course, initialMode, initialSession, c
       }
     },
     [course, notify, writeUrl],
+  );
+
+  // ---- a package (data/courseGuides.js): choosing one leaves dated booking on the same date, or goes back to it from team
+  // training, and the booking card flashes with the new price ----
+  const selectBundle = useCallback(
+    (key) => {
+      const next = packages?.find((p) => p.key === key);
+      if (!next || key === bundleKey) return;
+      setFlash((f) => f + 1);
+      setBundleKey(key);
+      if (mode === "inhouse" && defaultMode && defaultMode !== "inhouse") {
+        const target = session?.mode === defaultMode ? session : firstOf(defaultMode);
+        setModeState(defaultMode);
+        if (target) setSessionId(target.id);
+        writeUrl(defaultMode, target?.id, key);
+      } else writeUrl(null, null, key);
+      notify(`Selected: ${next.name}`);
+      trackEvent("select_promotion", { promotion_id: next.key, promotion_name: next.name, items: [toItem(course)] });
+    },
+    [packages, bundleKey, mode, defaultMode, session, firstOf, writeUrl, notify, course],
   );
 
   // ---- "choose a date" pop-up: opening adds a history entry (?dates=open) so the browser Back button closes it ----
@@ -150,7 +183,8 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
-  const inBasket = isAddedToCartCourses(course.id, session?.id || "");
+  const lineBundle = bundle && bundle.add > 0 ? { key: bundle.key, name: bundle.name, add: bundle.add } : null;
+  const inBasket = isAddedToCartCourses(course.id, session?.id || "", lineBundle?.key || "");
   const addToBasket = useCallback(() => {
     if (status === "loading" || status === "added" || !session || isInHouse) return;
     // the editors' Preview of a course that may not be live yet: nothing goes in the basket
@@ -158,11 +192,14 @@ export default function BookingProvider({ course, initialMode, initialSession, c
     setStatus("loading");
     later(() => {
       try {
-        addCourseToCart(course.id, lineFor(course, session));
+        // with a package: the package goes with the line, and one that includes first aid answers the basket's first aid question
+        const line = { ...lineFor(course, session), ...(lineBundle ? { bundle: lineBundle, ...(bundle.firstAid ? { firstAid: "bundle" } : {}) } : {}) };
+        addCourseToCart(course.id, line);
         setStatus("added");
         // a self-paced course has no date: it starts whenever the learner likes
-        notify({ message: `Added to basket: ${session.mode === "ondemand" ? "self-paced, start any time" : `${formatShortDate(session.date)}, ${session.location}`}`, href: BASKET_HREF, label: "View basket" });
-        trackEvent("add_to_cart", { currency: "GBP", value: session.price, items: [{ ...toItem(course), item_variant: session.id, price: session.price, quantity: 1 }] });
+        const when = session.mode === "ondemand" ? "self-paced, start any time" : `${formatShortDate(session.date)}, ${session.location}`;
+        notify({ message: `Added to basket: ${lineBundle ? `${lineBundle.name}, ` : ""}${when}`, href: BASKET_HREF, label: "View basket" });
+        trackEvent("add_to_cart", { currency: "GBP", value: price, items: [{ ...toItem(course), item_variant: lineBundle ? `${session.id}:${lineBundle.key}` : session.id, price, quantity: 1 }] });
         later(() => setStatus("idle"), 1500);
       } catch {
         setStatus("error");
@@ -170,7 +207,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
         later(() => setStatus("idle"), 1500);
       }
     }, 300);
-  }, [status, session, isInHouse, addCourseToCart, course, notify]);
+  }, [status, session, isInHouse, addCourseToCart, course, notify, lineBundle, bundle, price]);
 
   // The booking card's button, observed by the mobile buy bar.
   const cardButtonRef = useRef(null);
@@ -199,6 +236,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
     status, inBasket, addToBasket, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
+    packages, bundle, selectBundle, price, wasPrice,
   };
 
   return (

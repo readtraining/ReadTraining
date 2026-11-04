@@ -7014,8 +7014,6 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__costs th:nth-child(2) { width: 220px; }
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
 .rt-cg__pkgs { padding: 0; list-style: none; }
-.rt-cg__pkg { cursor: default; }
-.rt-cg__pkg:hover { border-color: var(--cd-border-strong); }
 .rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
 .rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
@@ -7066,3 +7064,9 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
    Cloudflare Turnstile runs invisibly; in the rare case it wants a click, its small box shows here, above everything */
 .rt-humancheck { position: fixed; z-index: 3000; bottom: 24px; left: 50%; transform: translateX(-50%); }
 .rt-humancheck:empty { display: none; }
+
+/* ---- course page packages (PackagePicker): the chosen one in the booking card, the basket and the mini basket ------------ */
+.rt-bs__pkg span small { color: var(--cd-muted); font-weight: 400; }
+.rt-bk__tags .rt-pill.-accent small { margin-left: 4px; font-weight: 400; }
+.rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
+.rt-bk__inpkg i { color: var(--rt-c-success); }
