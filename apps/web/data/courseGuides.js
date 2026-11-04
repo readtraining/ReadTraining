@@ -3,8 +3,10 @@ import { TOPICS } from "@/data/courseTopics";
 // Extra sections for a course page, beyond the fields a course has in the editor (summary, description, outcomes, units, exams,
 // entry requirements, audience, FAQs): a comparison, the course week, what's included, packages, business training, getting the
 // licence, costs and careers. A guide belongs to a catalogue topic (data/courseTopics.js), so the shared page and every provider
-// course on that topic show it (components/courseDetail/CourseGuide.jsx), in the course page's own parts. The course's own price
-// is always its live dates' lowest price; a bundle's price here is the client's published starting price.
+// course on that topic show it (components/courseDetail/CourseGuide.jsx), in the course page's own parts. The packages can be
+// chosen on the page (PackagePicker): a package is the chosen date plus `add` (pounds, per delegate), so the basket and the
+// booking card show the date's price plus that. With the lowest date at £249.99 the bundles start at the client's published
+// prices (£319.99 and £479.99). `firstAid`: the package includes first aid, so the basket doesn't ask about it again.
 export const courseGuides = [
   {
     pick: TOPICS.doorSupervisor,
@@ -45,9 +47,9 @@ export const courseGuides = [
       title: "Packages",
       intro: "Bundle what you need and save. Prices are starting prices and vary by location and date.",
       items: [
-        { name: "Course only", text: "You already hold a valid EFAW certificate.", points: ["6-day SIA Door Supervisor course", "Exams, registration and certificate", "Free mock exams and study guide"], course: true },
-        { name: "Course + first aid", badge: "Most popular", text: "Everything a new starter needs to qualify, for less than booking separately.", points: ["Everything in Course only", "1-day Emergency First Aid at Work (EFAW)", "Priority licence application support"], from: 319.99 },
-        { name: "Career bundle", text: "Stand out to employers from day one.", points: ["Door Supervisor + EFAW", "SIA CCTV Operator course", "CV review and access to our security job board"], from: 479.99 },
+        { key: "course", name: "Course only", text: "You already hold a valid EFAW certificate.", points: ["6-day SIA Door Supervisor course", "Exams, registration and certificate", "Free mock exams and study guide"], add: 0 },
+        { key: "first-aid", name: "Course + first aid", badge: "Most popular", text: "Everything a new starter needs to qualify, for less than booking separately.", points: ["Everything in Course only", "1-day Emergency First Aid at Work (EFAW)", "Priority licence application support"], add: 70, firstAid: true },
+        { key: "career", name: "Career bundle", text: "Stand out to employers from day one.", points: ["Door Supervisor + EFAW", "SIA CCTV Operator course", "CV review and access to our security job board"], add: 230, firstAid: true },
       ],
       note: "All prices include VAT. The SIA licence fee is paid separately, directly to the SIA.",
     },
