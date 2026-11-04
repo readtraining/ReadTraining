@@ -5,10 +5,13 @@
 // for approval and one draft. Images are the template's sample pictures. Never part of the migrations. On the live project it
 // runs only with --live-review (the client's review of Milestone 2, decided 27 October 2026): then it adds just the ten popular
 // shared course pages and their providers' courses, no extra, waiting or draft examples. Remove them before a public launch.
+// The shared course pages are ReadTraining's own pages (as Hurak's are Hurak's), with real words (SIA Door Supervisor has the
+// client's), so --remove never deletes them: it takes out only the sample providers, their courses, dates, venues and pictures.
+// A shared page with no live provider course is hidden from the site, and shows again when a real provider lists a course on it.
 //
 //   pnpm --filter @readtraining/api seed:courses            add them (once; it stops if they are already there)
-//   pnpm --filter @readtraining/api seed:courses --remove   remove everything it added
-//   pnpm live --filter @readtraining/api seed:courses --live-review   the review set on the live project (--remove takes it out)
+//   pnpm --filter @readtraining/api seed:courses --remove   remove the sample providers and their courses (the shared pages stay)
+//   pnpm live --filter @readtraining/api seed:courses --live-review   the review set on the live project (--remove takes the samples out)
 //   pnpm live --filter @readtraining/api seed:courses --content       update the words of the courses already there
 //   pnpm live --filter @readtraining/api seed:courses --prices        update the prices of their dates
 import { randomUUID } from 'node:crypto'
@@ -66,24 +69,13 @@ if (remove) {
     const files = await filesUnder(`${o}/courses`)
     if (files.length) await supabase.storage.from(COURSE_MEDIA).remove(files)
   }
-  // a sample shared page that someone else's course now sits on is kept (with its picture); the others go
-  const pages = await db.select({ id: courses.id, slug: courses.slug }).from(courses).where(sql`${courses.slug} in ${SHARED_SLUGS} and ${courses.kind} = 'shared'`)
-  const kept: string[] = []
-  for (const p of pages) {
-    const [used] = await db.select({ n: sql<number>`count(*)::int` }).from(courses).where(eq(courses.parentId, p.id))
-    if (used.n) {
-      kept.push(`${p.slug} (${used.n} other course${used.n === 1 ? '' : 's'} on it)`)
-      continue
-    }
-    await db.delete(courses).where(eq(courses.id, p.id))
-    const files = await filesUnder(`shared/courses/${p.id}`)
-    if (files.length) await supabase.storage.from(COURSE_MEDIA).remove(files)
-  }
   if (orgIds.length) {
     await db.delete(venues).where(inArray(venues.organisationId, orgIds))
     await db.delete(organisations).where(inArray(organisations.id, orgIds))
   }
-  console.log(`Removed the sample providers, their courses and ${pages.length - kept.length} shared course pages.${kept.length ? ` Kept: ${kept.join(', ')}.` : ''}`)
+  // the shared course pages stay, with their words and pictures: hidden until a real provider lists a course on one
+  const pages = await db.select({ slug: courses.slug }).from(courses).where(sql`${courses.slug} in ${SHARED_SLUGS} and ${courses.kind} = 'shared'`)
+  console.log(`Removed ${orgIds.length} sample providers and their courses. The ${pages.length} shared course pages stay (hidden until a real provider lists a course on one): ${pages.map((p) => p.slug).join(', ')}.`)
   process.exit(0)
 }
 if (provRows.length && !contentOnly && !pricesOnly) {
