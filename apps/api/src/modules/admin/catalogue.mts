@@ -12,8 +12,9 @@ import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 // needs the "catalogue" switch, and every change is logged.
 // Web addresses never change, because courses and links point at them: a new entry's address is made from its name once;
 // categories, sub-categories and topics can be renamed (the name only); a delivery method's or level's address IS its name
-// (the database insists), so those are not renamed. Nothing is deleted: a retired entry leaves the filters and menus and can
-// be restored.
+// (the database insists), so those are not renamed. A retired entry leaves the filters and menus and can be restored; one that was
+// never used (a test or a mistake) can then be deleted (`remove`, below). An entry with live courses filed under it can't be retired (its courses would sit under a subject, method or
+// level no menu or filter offers): the refusal says how many and names a few, so they can be moved or paused first.
 
 const KINDS = ['category', 'subcategory', 'topic', 'method', 'level'] as const
 type Kind = (typeof KINDS)[number]
@@ -22,6 +23,8 @@ const TABLE = { category: categories, subcategory: subcategories, topic: topics,
 const PARENT = { subcategory: sql`category_id`, topic: sql`subcategory_id` } as const
 const WORD = { category: 'category', subcategory: 'sub-category', topic: 'topic', method: 'delivery method', level: 'level' }
 const byKey = (kind: Kind) => (kind === 'method' || kind === 'level' ? sql`slug` : sql`id`)
+// the course column that files a course under an entry, compared with the entry's key as text
+const FILED = { category: sql`category_id::text`, subcategory: sql`subcategory_id::text`, topic: sql`topic_id::text`, method: sql`method`, level: sql`level` } as const
 
 // the address made from a name, exactly as the database's rule for methods and levels makes it
 export const addressOf = (name: string) =>
@@ -106,12 +109,94 @@ export const catalogueAdminRouter = createTRPCRouter({
   setActive: adminProcedure('admin.catalogue.edit')
     .input(z.object({ kind, key, active: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const [row] = await ctx.db.execute<{ name: string; active: boolean }>(sql`select name, active from ${TABLE[input.kind]} where ${byKey(input.kind)}::text = ${input.key}`)
-      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
-      if (row.active === input.active) return { ok: true }
+      // in one transaction with the entry locked: a course approved at the same moment (which locks the entries it is filed under,
+      // lib/retired.mts) either goes live first and is counted here, or waits and is refused there
       await ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ name: string; active: boolean }>(sql`select name, active from ${TABLE[input.kind]} where ${byKey(input.kind)}::text = ${input.key} for update`)
+        if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
+        if (row.active === input.active) return // already so
+        if (!input.active) {
+          const live = await tx.execute<{ title: string }>(sql`
+            select title from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key} order by title limit 4`)
+          if (live.length) {
+            const [n] = await tx.execute<{ n: number }>(sql`select count(*)::int n from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key}`)
+            const names = live.slice(0, 3).map((c) => c.title).join(', ') + (n.n > 3 ? ` and ${n.n - 3} more` : '')
+            const one = n.n === 1
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `${row.name} can't be retired while ${n.n} live ${one ? 'course is' : 'courses are'} filed under it (${names}). Move ${one ? 'it' : 'them'} to another ${WORD[input.kind]}, or pause ${one ? 'it' : 'them'}, first.`,
+            })
+          }
+        }
         await tx.execute(sql`update ${TABLE[input.kind]} set active = ${input.active} where ${byKey(input.kind)}::text = ${input.key}`)
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: input.active ? 'admin.catalogue_restored' : 'admin.catalogue_retired', targetType: input.kind, targetId: input.key, metadata: { kind: input.kind, name: row.name }, ip: ctx.ip })
+      })
+      return { ok: true }
+    }),
+
+  // Delete a retired entry that nothing has ever used (a test or a mistake): no course of any status filed under it, no change
+  // waiting for approval moving one there, no date taught that way, no coupon limited to it, and no review or site content (the home
+  // page's featured courses) naming it. A category goes with its sub-categories and topics, a sub-category with its topics, as long
+  // as none of those is used either. Anything in use is refused, saying where, so it stays retired instead.
+  remove: adminProcedure('admin.catalogue.edit')
+    .input(z.object({ kind, key }))
+    .mutation(async ({ ctx, input }) => {
+      const [row] = await ctx.db.execute<{ name: string; active: boolean; slug: string }>(sql`select name, active, slug from ${TABLE[input.kind]} where ${byKey(input.kind)}::text = ${input.key}`)
+      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
+      if (row.active) throw new TRPCError({ code: 'BAD_REQUEST', message: `Retire ${row.name} first. Only a retired entry that nothing uses can be deleted.` })
+
+      // the entry and everything under it: ids for courses and pending changes, and their paths ("category/sub/topic") for reviews,
+      // site content and coupons
+      const under = await ctx.db.execute<{ kind: 'category' | 'subcategory' | 'topic'; id: string; slug: string; path: string }>(
+        input.kind === 'category'
+          ? sql`select 'category' kind, c.id::text id, c.slug, c.slug path from public.categories c where c.id::text = ${input.key}
+                union all select 'subcategory', s.id::text, s.slug, c.slug || '/' || s.slug from public.subcategories s join public.categories c on c.id = s.category_id where c.id::text = ${input.key}
+                union all select 'topic', t.id::text, t.slug, c.slug || '/' || s.slug || '/' || t.slug from public.topics t join public.subcategories s on s.id = t.subcategory_id join public.categories c on c.id = s.category_id where c.id::text = ${input.key}`
+          : input.kind === 'subcategory'
+            ? sql`select 'subcategory' kind, s.id::text id, s.slug, c.slug || '/' || s.slug path from public.subcategories s join public.categories c on c.id = s.category_id where s.id::text = ${input.key}
+                  union all select 'topic', t.id::text, t.slug, c.slug || '/' || s.slug || '/' || t.slug from public.topics t join public.subcategories s on s.id = t.subcategory_id join public.categories c on c.id = s.category_id where s.id::text = ${input.key}`
+            : input.kind === 'topic'
+              ? sql`select 'topic' kind, t.id::text id, t.slug, c.slug || '/' || s.slug || '/' || t.slug path from public.topics t join public.subcategories s on s.id = t.subcategory_id join public.categories c on c.id = s.category_id where t.id::text = ${input.key}`
+              : sql`select null::text kind, null::text id, null::text slug, null::text path where false`,
+      )
+      const ids = (k: string) => under.filter((u) => u.kind === k).map((u) => u.id)
+      const paths = under.map((u) => u.path)
+      const uses: string[] = []
+      const count = async (q: ReturnType<typeof sql>) => Number((await ctx.db.execute<{ n: number }>(q))[0]?.n ?? 0)
+      const inList = (list: string[]) => sql.raw(`(${list.map((x) => `'${x.replace(/'/g, "''")}'`).join(',')})`)
+      let courses = 0
+      let pending = 0
+      if (input.kind === 'method' || input.kind === 'level') {
+        courses = await count(sql`select count(*)::int n from public.courses where ${FILED[input.kind]} = ${input.key}`)
+        if (input.kind === 'method') {
+          const dates = await count(sql`select count(*)::int n from public.cohorts where method = ${input.key}`)
+          if (dates) uses.push(`${dates} course ${dates === 1 ? 'date' : 'dates'}`)
+        } else pending = await count(sql`select count(*)::int n from public.course_revisions where status = 'pending' and content->>'level' = ${row.slug}`)
+      } else {
+        const where = [ids('category').length ? sql`category_id::text in ${inList(ids('category'))}` : null, ids('subcategory').length ? sql`subcategory_id::text in ${inList(ids('subcategory'))}` : null, ids('topic').length ? sql`topic_id::text in ${inList(ids('topic'))}` : null].filter(Boolean)
+        if (where.length) courses = await count(sql`select count(*)::int n from public.courses where ${sql.join(where as ReturnType<typeof sql>[], sql` or `)}`)
+        const slugs = under.map((u) => u.slug)
+        pending = await count(sql`select count(*)::int n from public.course_revisions where status = 'pending' and (content->>'category' in ${inList(slugs)} or content->>'subcategory' in ${inList(slugs)} or content->>'topic' in ${inList(slugs)})`)
+        if (input.kind === 'category') {
+          const coupons = await count(sql`select count(*)::int n from public.coupons where ${row.slug} = any(categories)`)
+          if (coupons) uses.push(`${coupons} ${coupons === 1 ? 'coupon' : 'coupons'}`)
+        }
+        const reviews = await count(sql`select count(*)::int n from public.reviews where ${sql.join(paths.map((p) => sql`topic = ${p} or topic like ${p + '/%'}`), sql` or `)}`)
+        if (reviews) uses.push(`${reviews} customer ${reviews === 1 ? 'review' : 'reviews'}`)
+        const content = await count(sql`select count(*)::int n from public.site_content where ${sql.join(paths.map((p) => sql`value::text like ${'%"' + p + '%'}`), sql` or `)}`)
+        if (content) uses.push('the site content (the home page’s featured courses)')
+      }
+      if (courses) uses.unshift(`${courses} ${courses === 1 ? 'course' : 'courses'} (live, draft or paused)`)
+      if (pending) uses.push(`${pending} course ${pending === 1 ? 'change' : 'changes'} waiting for approval`)
+      if (uses.length) {
+        const also = under.length > 1 ? ' (or its sub-categories and topics)' : ''
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `${row.name} can't be deleted: ${uses.join(', ')} ${uses.length === 1 && !uses[0].includes('content') ? 'uses' : 'use'} it${also}. It stays retired, so nobody sees it.` })
+      }
+      await ctx.db.transaction(async (tx) => {
+        if (ids('topic').length) await tx.execute(sql`delete from public.topics where id::text in ${inList(ids('topic'))}`)
+        if (ids('subcategory').length) await tx.execute(sql`delete from public.subcategories where id::text in ${inList(ids('subcategory'))}`)
+        if (input.kind === 'category' || input.kind === 'method' || input.kind === 'level') await tx.execute(sql`delete from ${TABLE[input.kind]} where ${byKey(input.kind)}::text = ${input.key}`)
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.catalogue_deleted', targetType: input.kind, targetId: input.key, metadata: { kind: input.kind, name: row.name, with: under.length - (input.kind === 'method' || input.kind === 'level' ? 0 : 1) }, ip: ctx.ip })
       })
       return { ok: true }
     }),

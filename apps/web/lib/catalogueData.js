@@ -34,6 +34,7 @@ export function toCatalogueCourse(l) {
     validity: "",
     addedAt: (l.publishedAt || "").slice(0, 10),
     imageSrc: l.imageUrl || "",
+    imageAlt: l.imageAlt || l.title,
     detailsHref: coursePath(l.slug),
     nextDate: l.nextDate,
     skillSaver: l.skillSaver,
@@ -113,6 +114,8 @@ export function toCourseDetail(page, related = []) {
     level: page.level || "",
     methods,
     imageSrc: page.images[0]?.url || "",
+    // the cover's description as the provider wrote it (course editor, ALT text), or the course's name
+    imageAlt: page.images[0]?.alt || page.title,
     images: page.images,
     videoUrl: page.videoUrl,
     video: videoEmbed(page.videoUrl),

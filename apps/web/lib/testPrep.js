@@ -8,7 +8,7 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 // All reads for the test prep subject pages go through here (swap the bodies for API calls later).
 // Every number shown on a subject (lead, test cards, hub card) is derived from one place. A test's question count and
 // time limit come from its question bank (data/testPrepQuestionIndex.js); the pass mark from the subject's `exam`
-// (data/testPrepSubjects.js) or the test's own value where that paper differs. Tests without a bank show "coming soon".
+// (data/testPrepSubjects.js) or the test's own value where that paper differs. Tests without a bank are left out of the lists.
 
 export const subjectHref = (slug) => `/test-prep/${slug}`;
 export const testHref = (subjectSlug, testSlug) => `/mock-exams-test/${subjectSlug}/${testSlug}`;
@@ -26,21 +26,40 @@ export function formatDuration(minutes) {
 // Questions needed to pass: the pass mark rounded up (80% of 30 is 24).
 export const passCount = (questions, passMark) => Math.ceil((questions * passMark) / 100);
 
-// Each test with its numbers resolved: its own values, else the subject's exam.
-export function resolveTests(slug) {
+// Each test with its numbers resolved: its own values, else its subject's exam. A test listed with `ref` belongs to another subject
+// (the CITB HS&E tests are the CITB Mock Test's; the CSCS pages list them too): its card is the owner's test, with the owner's
+// numbers and address (`owner`, `href`), so each test has one page. A test with no questions yet (a "coming soon" placeholder) is
+// left out of every list, so nothing links to it; `placeholders` keeps them (the test's own page still works if opened directly).
+function resolveOne(slug, t) {
+  const ownerSlug = t.ref || slug;
+  const owner = subjects[ownerSlug];
+  const own = t.ref ? owner?.tests.find((x) => x.slug === t.slug && !x.ref) : t;
+  if (!owner || !own) return null;
+  const bank = questionIndex[ownerSlug]?.[own.slug];
+  return {
+    ...own,
+    title: t.title || own.title, // a subject listing another's test keeps its own name for it (CSCS Green Mock Test 1, 2, 3...)
+    owner: ownerSlug,
+    questions: bank?.questions ?? own.questions ?? owner.exam.questions ?? null,
+    passMark: own.passMark ?? owner.exam.passMark ?? null,
+    minutes: bank?.minutes ?? own.minutes ?? owner.exam.minutes ?? null,
+    ready: Boolean(bank?.questions),
+    href: testHref(ownerSlug, own.slug),
+  };
+}
+export function resolveTests(slug, { placeholders = false } = {}) {
   const s = subjects[slug];
   if (!s) return [];
-  return s.tests.map((t) => {
-    const bank = questionIndex[slug]?.[t.slug];
-    return {
-      ...t,
-      questions: bank?.questions ?? t.questions ?? s.exam.questions ?? null,
-      passMark: t.passMark ?? s.exam.passMark ?? null,
-      minutes: bank?.minutes ?? t.minutes ?? s.exam.minutes ?? null,
-      ready: Boolean(bank?.questions),
-      href: testHref(slug, t.slug),
-    };
-  });
+  return s.tests.map((t) => resolveOne(slug, t)).filter((t) => t && (placeholders || t.ready));
+}
+
+/** The tests this subject owns (their pages are /mock-exams-test/<subject>/<test>), placeholders included. */
+export const ownTests = (slug) => resolveTests(slug, { placeholders: true }).filter((t) => t.owner === slug);
+
+/** Where a test reached under the wrong subject (or by its old address) lives, or null: /mock-exams-test/<owner>/<test>. */
+export function testRedirect(subjectSlug, testSlug) {
+  const t = subjects[subjectSlug]?.tests.find((x) => x.ref && (x.slug === testSlug || x.was === testSlug));
+  return t ? testHref(t.ref, t.slug) : null;
 }
 
 const mostCommon = (values) => {
@@ -74,6 +93,14 @@ export function subjectLead(slug) {
     duration: formatDuration(minutes),
   };
   return s.lead.replace(/\{(\w+)\}/g, (all, key) => (values[key] === undefined || values[key] === null ? all : String(values[key])));
+}
+
+// A course page's mock test line (data/testPrep.js `banner`) with {tests} and {questions} counted from the tests that are listed.
+export function subjectBanner(slug, banner) {
+  const list = resolveTests(slug);
+  const questions = list.reduce((sum, t) => sum + (t.questions || 0), 0);
+  const values = { tests: String(list.length), questions: questions.toLocaleString("en-GB") };
+  return list.length ? banner.replace(/\{(\w+)\}/g, (all, key) => values[key] ?? all) : "";
 }
 
 // Short facts for cards: test count, questions, pass mark and time, from the same numbers the subject page shows.

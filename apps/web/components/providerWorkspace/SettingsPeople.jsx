@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { pw } from "@/data/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -20,6 +21,7 @@ const ROLE = Object.fromEntries(pw.roles.map((r) => [r.key, r]));
 function AnswerForm({ q, onDone, say }) {
   const [v, setV] = useState(q.answer || "");
   const [error, setError] = useState("");
+  useUnsavedChanges(v.trim() !== (q.answer || "").trim());
   const ref = useRef(null);
   const submit = (e) => {
     e.preventDefault();
@@ -52,6 +54,7 @@ export function QaTab({ data, say }) {
   const [adding, setAdding] = useState(false);
   const [f, setF] = useState({ course: "", question: "", answer: "" });
   const [errors, setErrors] = useState({});
+  useUnsavedChanges(adding && Boolean(f.question.trim() || f.answer.trim())); // only while the add form is open
   const [removing, setRemoving] = useState(null);
   const formRef = useRef(null);
 
@@ -78,6 +81,7 @@ export function QaTab({ data, say }) {
     setErrors(errs);
     if (Object.keys(errs).length) return focusFirstError(formRef.current);
     addQuestion(f.course, f.question.trim(), f.answer.trim());
+    setF({ course: "", question: "", answer: "" });
     setAdding(false);
     say("Question added");
   };

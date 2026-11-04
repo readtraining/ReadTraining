@@ -128,12 +128,15 @@ export const couponsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await check(ctx.db, input, null)
       const v = values(input)
-      const [row] = await ctx.db.execute<{ id: string }>(sql`
-        insert into ${coupons} (code, kind, value, starts_at, ends_at, usage_limit, scope, categories, courses, created_by)
-        values (${v.code}, ${v.kind}, ${v.value}, ${v.starts_at}, ${v.ends_at}, ${v.usage_limit}, ${v.scope}, ${textArray(v.categories)}, ${intArray(v.courses)}, ${ctx.user.id}::uuid)
-        returning id`)
-      await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.coupon_created', targetType: 'coupon', targetId: row.id, metadata: { code: v.code, kind: v.kind, value: input.value }, ip: ctx.ip })
-      return { id: row.id }
+      // the coupon and its line in the activity log are saved together, or neither is
+      return ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ id: string }>(sql`
+          insert into ${coupons} (code, kind, value, starts_at, ends_at, usage_limit, scope, categories, courses, created_by)
+          values (${v.code}, ${v.kind}, ${v.value}, ${v.starts_at}, ${v.ends_at}, ${v.usage_limit}, ${v.scope}, ${textArray(v.categories)}, ${intArray(v.courses)}, ${ctx.user.id}::uuid)
+          returning id`)
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.coupon_created', targetType: 'coupon', targetId: row.id, metadata: { code: v.code, kind: v.kind, value: input.value }, ip: ctx.ip })
+        return { id: row.id }
+      })
     }),
 
   update: adminProcedure('admin.coupons.manage')
@@ -141,22 +144,40 @@ export const couponsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await check(ctx.db, input, input.id)
       const v = values(input)
-      const [row] = await ctx.db.execute<{ id: string }>(sql`
-        update ${coupons} set code = ${v.code}, kind = ${v.kind}, value = ${v.value}, starts_at = ${v.starts_at}, ends_at = ${v.ends_at},
-               usage_limit = ${v.usage_limit}, scope = ${v.scope}, categories = ${textArray(v.categories)}, courses = ${intArray(v.courses)}, updated_at = now()
-        where id = ${input.id}::uuid returning id`)
-      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That coupon no longer exists.' })
-      await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.coupon_updated', targetType: 'coupon', targetId: row.id, metadata: { code: v.code, kind: v.kind, value: input.value }, ip: ctx.ip })
-      return { ok: true }
+      return ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ id: string }>(sql`
+          update ${coupons} set code = ${v.code}, kind = ${v.kind}, value = ${v.value}, starts_at = ${v.starts_at}, ends_at = ${v.ends_at},
+                 usage_limit = ${v.usage_limit}, scope = ${v.scope}, categories = ${textArray(v.categories)}, courses = ${intArray(v.courses)}, updated_at = now()
+          where id = ${input.id}::uuid returning id`)
+        if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That coupon no longer exists.' })
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.coupon_updated', targetType: 'coupon', targetId: row.id, metadata: { code: v.code, kind: v.kind, value: input.value }, ip: ctx.ip })
+        return { ok: true }
+      })
     }),
 
   // Turn a coupon off (it stops working at once) or back on.
   setActive: adminProcedure('admin.coupons.manage')
     .input(z.object({ id: z.string().uuid(), active: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const [row] = await ctx.db.execute<{ code: string }>(sql`update ${coupons} set active = ${input.active}, updated_at = now() where id = ${input.id}::uuid and active <> ${input.active} returning code`)
-      if (!row) return { ok: true }
-      await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: input.active ? 'admin.coupon_turned_on' : 'admin.coupon_turned_off', targetType: 'coupon', targetId: input.id, metadata: { code: row.code }, ip: ctx.ip })
-      return { ok: true }
+      return ctx.db.transaction(async (tx) => {
+        const [row] = await tx.execute<{ code: string }>(sql`update ${coupons} set active = ${input.active}, updated_at = now() where id = ${input.id}::uuid and active <> ${input.active} returning code`)
+        if (row) await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: input.active ? 'admin.coupon_turned_on' : 'admin.coupon_turned_off', targetType: 'coupon', targetId: input.id, metadata: { code: row.code }, ip: ctx.ip })
+        return { ok: true }
+      })
     }),
+
+  // Delete a coupon nobody has used (a test, or one made by mistake). A used one is kept, turned off instead, so past orders can
+  // still name it.
+  remove: adminProcedure('admin.coupons.manage')
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const [c] = await tx.execute<{ code: string; used: number }>(sql`select code, used from ${coupons} where id = ${input.id}::uuid for update`)
+        if (!c) throw new TRPCError({ code: 'NOT_FOUND', message: 'That coupon no longer exists.' })
+        if (c.used > 0) throw new TRPCError({ code: 'BAD_REQUEST', message: `${c.code} has been used ${c.used} ${c.used === 1 ? 'time' : 'times'}, so it is kept for the orders that used it. Turn it off instead.` })
+        await tx.execute(sql`delete from ${coupons} where id = ${input.id}::uuid`)
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.coupon_deleted', targetType: 'coupon', targetId: input.id, metadata: { code: c.code }, ip: ctx.ip })
+        return { ok: true }
+      }),
+    ),
 })

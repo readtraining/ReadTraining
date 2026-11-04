@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { headerNav as N } from "@/data/headerNav";
+import { useNav } from "@/lib/navContext";
+import { cityHref, courseInTown } from "@/lib/nav";
 
 // distance between two points on the map, good enough to compare (an equirectangular approximation)
 const far = (a, b) => {
@@ -12,16 +13,22 @@ const far = (a, b) => {
 };
 
 // Near you: a town or postcode (and a course, if chosen) opens the course finder there. "Use my location" asks the browser where
-// the person is and opens the finder at the nearest of the listed cities; nothing leaves the browser.
+// the person is and opens the finder at the nearest town with live dates (useNav); nothing leaves the browser.
 export function useNearYou() {
   const router = useRouter();
+  const nav = useNav();
+  // where to go: the chosen course (its slug) in that town, or every course there
+  const hrefFor = (town, slug) => {
+    const course = slug ? nav.courses.find((c) => c.slug === slug) : null;
+    return course ? courseInTown(course, town) : cityHref(town);
+  };
   const [locating, setLocating] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const go = (town, course) => {
     const words = town.trim();
     if (!words) return false;
-    router.push(N.near.href(words, course));
+    router.push(hrefFor(words, course));
     return true;
   };
 
@@ -33,8 +40,10 @@ export function useNearYou() {
       ({ coords }) => {
         setLocating(false);
         const here = { lat: coords.latitude, lng: coords.longitude };
-        const city = N.near.cities.reduce((best, c) => (far(here, c) < far(here, best) ? c : best));
-        router.push(N.near.href(city.name, course));
+        const towns = nav.towns.filter((t) => t.lat != null && t.lng != null);
+        if (!towns.length) return setFailed(true);
+        const city = towns.reduce((best, c) => (far(here, c) < far(here, best) ? c : best));
+        router.push(hrefFor(city.name, course));
       },
       () => {
         setLocating(false);

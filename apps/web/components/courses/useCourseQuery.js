@@ -20,7 +20,10 @@ const TICK_DEBOUNCE = 250;
 // - Ticks show instantly (an optimistic copy of the state), while the URL write is debounced 250ms, so ticking three
 //   boxes quickly makes ONE update. `afterCommit` runs once, after that single write.
 // - URL changes use the History API (Next.js keeps useSearchParams in sync), so there is no server request and no
-//   scroll jump. Filter changes replace the entry; page changes push one so Back / Forward restore the page.
+//   scroll jump. One rule for Back: every change the visitor makes (a filter, the sort, the page, the location, the words) is
+//   one history entry, so Back undoes exactly one change. Ticks made together in the debounce are one change; typing in a field
+//   (`typing: "q"` or "location") is one change for as long as they keep typing in it, so Back undoes the whole word, not a
+//   letter. Writing the address the page already has (or tidying it) adds no entry.
 // `baseSubject` is a course page's own subject (/courses/first-aid): its sub-subjects work without a ticked subject.
 // `baseLocation` is a town page's town (/courses/first-aid/leeds): the location until the visitor changes it.
 // The address is read against the catalogue list, so it is read again when the list arrives (a page built ahead of time
@@ -40,12 +43,22 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
   stateRef.current = state;
 
   const timer = useRef(null);
-  const commit = useRef({ query: "", mode: "replace", after: null });
+  const commit = useRef({ query: "", mode: "push", after: null });
+  // the field the last write came from while typing in it ("q", "location"), so its next write replaces instead of adding one
+  const typingIn = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
+  // Back or Forward lands on another entry: typing after it adds a new one, never overwrites the entry gone back to
+  useEffect(() => {
+    const moved = () => (typingIn.current = null);
+    window.addEventListener("popstate", moved);
+    return () => window.removeEventListener("popstate", moved);
+  }, []);
 
   const writeUrl = useCallback(
     (query, mode) => {
       const url = query ? `${pathname}?${query}` : pathname;
+      // the page is already at this address: nothing to add (a search pressed after typing the same words, an unchanged sort)
+      if (url === `${window.location.pathname}${window.location.search}`) return;
       if (mode === "push") window.history.pushState(null, "", url);
       else window.history.replaceState(null, "", url);
     },
@@ -73,7 +86,7 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
   const [canUndo, setCanUndo] = useState(false);
 
   const update = useCallback(
-    (patch, { record = true, push = false, debounce = 0, afterCommit = null } = {}) => {
+    (patch, { record = true, push = true, typing = null, debounce = 0, afterCommit = null } = {}) => {
       // `prev` is the search as it stands; `base` stays the page's own defaults (a town page's town, a subject page's subject),
       // which the address leaves out
       const prev = stateRef.current;
@@ -91,12 +104,18 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
       }
       setPending(next);
       stateRef.current = next;
+      // more typing in the same field replaces its entry; anything else adds one. A write still waiting (debounced ticks) keeps
+      // "add" if either change wanted it, so merged changes are still one entry.
+      const own = !push ? "replace" : typing && typingIn.current === typing ? "replace" : "push";
+      const waiting = Boolean(timer.current);
       clearTimeout(timer.current);
-      commit.current = { query: buildCatalogueQuery(next, base), mode: push ? "push" : "replace", after: afterCommit };
+      const mode = waiting && commit.current.mode === "push" ? "push" : own;
+      commit.current = { query: buildCatalogueQuery(next, base), mode, after: afterCommit, typing };
       timer.current = setTimeout(() => {
         timer.current = null;
-        const { query, mode, after } = commit.current;
-        writeUrl(query, mode);
+        const { query, mode: m, after, typing: field } = commit.current;
+        writeUrl(query, m);
+        typingIn.current = field || null;
         after?.();
       }, debounce);
     },
@@ -112,7 +131,7 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
     },
     [update],
   );
-  // Price (and any single value): replace.
+  // Price and any single value: one entry per change (typing a price range counts as one, like the words).
   const setFilter = useCallback((key, value, opts = {}) => update({ [key]: value }, opts), [update]);
   const setPrice = useCallback((min, max, opts = {}) => update({ min, max }, opts), [update]);
   const clearGroup = useCallback(

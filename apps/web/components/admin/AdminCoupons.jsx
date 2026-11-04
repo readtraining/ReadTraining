@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { Choice } from "@/components/providerWorkspace/providerParts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
@@ -46,6 +47,21 @@ export default function AdminCoupons() {
   const [search, setSearch] = useState("");
   const [sheet, setSheet] = useState(null); // null, or { coupon } (undefined coupon = a new one)
   const [said, setSaid] = useState("");
+  const [turningOff, setTurningOff] = useState(null);
+  const [deleting, setDeleting] = useState(null); // a coupon nobody has used, waiting for "Delete this coupon?"
+  const remove = api.admin.coupons.remove.useMutation();
+  const doDelete = async () => {
+    const c = deleting;
+    setDeleting(null);
+    try {
+      await remove.mutateAsync({ id: c.id });
+      await utils.admin.coupons.invalidate();
+      utils.admin.activity.list.invalidate();
+      setSaid(`${c.code} deleted.`);
+    } catch (err) {
+      setSaid(errorsFrom(err).general);
+    }
+  }; // the coupon waiting for "Turn off this coupon?"
   const sorter = useSort();
   const utils = api.useUtils();
   const setActive = api.admin.coupons.setActive.useMutation();
@@ -106,7 +122,7 @@ export default function AdminCoupons() {
                   <td data-label={c.status}><AdminStatus kind="coupon" status={x.status}>{copy.statuses[x.status]}</AdminStatus></td>
                   {canEdit && (
                     <td data-label="Actions">
-                      <RowMenu label={`Actions for ${x.code}`} items={[{ label: copy.edit, onClick: () => setSheet({ coupon: x }) }, { label: x.status === "off" ? copy.turnOn : copy.turnOff, onClick: () => toggle(x), danger: x.status !== "off" }]} />
+                      <RowMenu label={`Actions for ${x.code}`} items={[{ label: copy.edit, onClick: () => setSheet({ coupon: x }) }, { label: x.status === "off" ? copy.turnOn : copy.turnOff, onClick: () => (x.status === "off" ? toggle(x) : setTurningOff(x)), danger: x.status !== "off" }, ...(x.used === 0 ? [{ label: "Delete", onClick: () => setDeleting(x), danger: true }] : [])]} />
                     </td>
                   )}
                 </tr>
@@ -124,6 +140,10 @@ export default function AdminCoupons() {
       <Sheet open={Boolean(sheet)} onClose={() => setSheet(null)} title={sheet?.coupon ? copy.sheet.edit : copy.sheet.add} closeLabel="Close">
         {sheet && <CouponForm coupon={sheet.coupon} onDone={(message) => { setSheet(null); setSaid(message); }} />}
       </Sheet>
+      {/* turning a coupon off stops it working at once, for every customer: asked first (turning it back on isn't) */}
+      {/* only a coupon nobody has used can be deleted (a used one stays, turned off, for the orders that name it) */}
+      <Confirm open={Boolean(deleting)} onClose={() => setDeleting(null)} title="Delete this coupon?" text={deleting ? `${deleting.code} has never been used, so it can be deleted for good. This can't be undone.` : ""} confirmLabel="Delete coupon" onConfirm={doDelete} />
+      <Confirm open={Boolean(turningOff)} onClose={() => setTurningOff(null)} title="Turn off this coupon?" text={turningOff ? `${turningOff.code} stops working straight away: customers who enter it are told it isn't valid. You can turn it back on later.` : ""} confirmLabel="Turn off coupon" onConfirm={() => { const c = turningOff; setTurningOff(null); toggle(c); }} />
     </div>
   );
 }

@@ -14,7 +14,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { ref } = await props.params;
   return (
-    <ProviderShell demo current="orders" title={p.title} back={{ label: "Orders", href: "/provider/orders" }}>
+    <ProviderShell demo={pw.demo.orders} current="orders" title={p.title} back={{ label: "Orders", href: "/provider/orders" }}>
       <ProviderOrder reference={ref} />
     </ProviderShell>
   );

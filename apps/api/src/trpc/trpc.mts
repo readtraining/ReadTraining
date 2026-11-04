@@ -6,6 +6,7 @@ import { can } from '@readtraining/permissions'
 import type { Action, AdminAction, BusinessAction, ProviderAction } from '@readtraining/permissions'
 
 import { logDenied } from '../lib/activity.mjs'
+import { friendlyError } from '../lib/dbErrors.mjs'
 import { isHuman } from '../lib/humanCheck.mjs'
 import { allowed, LIMITS, type LimitName } from '../lib/rateLimit.mjs'
 import type { TRPCContext } from './context.mjs'
@@ -28,7 +29,18 @@ const t = initTRPC.context<TRPCContext>().create({
 export const createTRPCRouter = t.router
 export const createCallerFactory = t.createCallerFactory
 
-export const publicProcedure = t.procedure
+// Every procedure runs through this: a database error (or any other unexpected one) is turned into words a person can act on,
+// a duplicate onto its form field, so no table, constraint or query text ever reaches the browser (lib/dbErrors.mts).
+const base = t.procedure.use(async ({ next, path }) => {
+  const result = await next()
+  if (!result.ok) {
+    const friendly = friendlyError(result.error, path)
+    if (friendly) throw friendly
+  }
+  return result
+})
+
+export const publicProcedure = base
 
 /**
  * Refuses with TOO_MANY_REQUESTS once `key` (the caller's user id, or IP address when signed out) has used up the `name` limit
@@ -55,7 +67,7 @@ export const publicFormProcedure = t.procedure
  * Signed in with a live session (not signed out, banned or deleted since the token was issued), and `ctx.actor` loaded
  * (memberships and admin switches, read fresh).
  */
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = base.use(async ({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: 'UNAUTHORIZED' })
   }

@@ -38,6 +38,7 @@ const CartToggle = ({ allClasses, parentClassess }) => {
     };
   }, [activeCart]);
 
+  const count = isShop ? cartProducts.length : isEvents ? cartEvents.length : cartCourses.length;
   return (
     <>
       <div className={parentClassess ? parentClassess : ""} ref={boxRef}>
@@ -48,7 +49,7 @@ const CartToggle = ({ allClasses, parentClassess }) => {
           aria-controls="rt-minibasket"
           onClick={() => setActiveCart((pre) => !pre)}
           className={`${allClasses ? allClasses : ""}`}
-          aria-label={`Basket, ${isShop ? cartProducts.length : isEvents ? cartEvents.length : cartCourses.length} items`}
+          aria-label={`Basket, ${count} ${count === 1 ? "item" : "items"}`}
           data-el-toggle=".js-cart-toggle"
         >
           <i className="text-20 icon icon-basket"></i>

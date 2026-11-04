@@ -1,6 +1,9 @@
 // Removes test and sample content made on a real database while it was being tried out: providers (with their team, venues,
 // courses, dates, pictures and logo) and single provider courses, each named on the command line. Nothing is ever removed by
 // guessing: run it first without names to see the candidates, then with names to see exactly what would go, then add --confirm.
+// The candidate list points out what looks like test content: a name saying test or sample, two providers with one name, a
+// course with its shared page's words copied, and a venue whose town isn't in the UK or isn't where its postcode is (every
+// venue's town is a public town page). The seed:courses samples ("… (sample)") are removed with seed:courses --remove.
 //
 //   pnpm live --filter @readtraining/api remove:test-content                                   list the candidates (no change)
 //   pnpm live --filter @readtraining/api remove:test-content --provider apexr-training-group --course test-course-44
@@ -15,6 +18,7 @@ import { sql } from '@readtraining/db'
 import { logActivity } from '../lib/activity.mjs'
 import { db } from '../lib/db.mjs'
 import { removeMedia } from '../lib/media.mjs'
+import { placeVenue } from '../lib/postcode.mjs'
 
 const args = process.argv.slice(2)
 const named = (flag: string) => args.flatMap((a, i) => (args[i - 1] === flag ? [a.trim()] : []))
@@ -37,18 +41,39 @@ if (!providers.length && !courseRefs.length) {
            (select count(*)::int from public.orders r where r.provider_id = o.id) orders,
            (select string_agg(u.email, ', ') from public.organisation_members m join auth.users u on u.id = m.user_id where m.organisation_id = o.id) people
     from public.organisations o where o.type = 'provider' order by o.created_at`)
+  const nameKey = (n: string) => n.trim().replace(/\s+/g, ' ').toLowerCase()
+  const twins = new Set(orgs.map((o) => nameKey(o.name)).filter((k, i, all) => all.indexOf(k) !== i))
   console.log('PROVIDERS (slug · status · live/all courses · orders · people)')
   for (const o of orgs) {
-    const hint = TEST_WORDS.test(o.name) ? '  <- name says test/sample' : o.live === 0 ? '  <- no live course' : ''
+    const hint = [
+      o.slug.endsWith('-sample') ? 'a seed:courses sample (seed:courses --remove takes them all out)' : TEST_WORDS.test(o.name) ? 'name says test/sample' : o.live === 0 ? 'no live course' : '',
+      twins.has(nameKey(o.name)) ? 'same name as another provider' : '',
+    ].filter(Boolean)
+      .join('; ')
+      .replace(/^(.)/, '  <- $1')
     console.log(`  ${o.slug} · "${o.name}" · ${o.status} · ${o.live}/${o.courses} · ${o.orders} orders · ${o.people ?? 'no team'}${hint}`)
   }
-  const cs = await db.execute<Course & { orders: number }>(sql`
+  const cs = await db.execute<Course & { orders: number; copied: boolean }>(sql`
     select c.id, c.title, c.slug, c.kind, c.status, c.organisation_id, o.name provider,
-           (select count(*)::int from public.orders r where r.course_id = c.id) orders
-    from public.courses c left join public.organisations o on o.id = c.organisation_id
+           (select count(*)::int from public.orders r where r.course_id = c.id) orders,
+           coalesce(c.description = p.description, false) copied
+    from public.courses c left join public.organisations o on o.id = c.organisation_id left join public.courses p on p.id = c.parent_id
     where c.kind = 'provider' order by c.created_at`)
   console.log('\nPROVIDER COURSES (slug · status · provider · orders)')
-  for (const c of cs) console.log(`  ${c.slug} · "${c.title}" · ${c.status} · ${c.provider ?? '-'} · ${c.orders} orders${TEST_WORDS.test(c.title) || TEST_WORDS.test(c.slug) ? '  <- says test' : ''}`)
+  for (const c of cs) {
+    const hint = [TEST_WORDS.test(c.title) || TEST_WORDS.test(c.slug) ? 'says test' : '', c.copied ? "the shared page's words, copied" : ''].filter(Boolean).join('; ')
+    console.log(`  ${c.slug} · "${c.title}" · ${c.status} · ${c.provider ?? '-'} · ${c.orders} orders${hint ? `  <- ${hint}` : ''}`)
+  }
+  // every venue's town becomes a public town page (/courses/<page>/<town>): one abroad, or not where its postcode is, is flagged
+  // with the same check a provider's save gets (lib/postcode.mts placeVenue)
+  const vs = await db.execute<{ name: string; city: string; postcode: string | null; active: boolean; provider: string; dates: number }>(sql`
+    select v.name, v.city, v.postcode, v.active, o.slug provider, (select count(*)::int from public.cohorts h where h.venue_id = v.id) dates
+    from public.venues v join public.organisations o on o.id = v.organisation_id order by o.slug, v.city`)
+  console.log('\nVENUES (town · postcode · provider · dates) — a venue goes with its provider')
+  for (const v of vs) {
+    const { problem } = v.postcode ? await placeVenue(v.postcode, v.city) : { problem: { message: 'no postcode' } }
+    console.log(`  ${v.city} · ${v.postcode ?? '-'} · ${v.provider} · ${v.dates} dates${v.active ? '' : ' · archived'}${problem ? `  <- ${problem.message}` : ''}`)
+  }
   console.log('\nNothing was changed. Name what should go with --provider <slug> and --course <slug>, check the list, then add --confirm.')
   process.exit(0)
 }

@@ -3,13 +3,24 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { courseFinder as d } from "@/data/home";
 import HomeTextLink from "./HomeTextLink";
+import { useNav } from "@/lib/navContext";
+import { subjectName } from "@/lib/nav";
 
 const icons = ["icon-badge", "icon-time-management", "icon-document", "icon-graduate-cap"];
 
-// Course finder: pick a goal (segmented tabs), then choose the route (cards).
+// Course finder: pick a goal (segmented tabs), then choose the route (cards). A route that searches for some words shows only
+// while a live course matches them the way the search does (the words in its title or subject; useNav), so none leads to an
+// empty search; a goal with no route left isn't shown.
 export default function HomeRoles() {
+  const nav = useNav();
   const [active, setActive] = useState(0);
-  const goal = d.goals[active];
+  const has = (q) => {
+    const needle = q.toLowerCase();
+    return nav.courses.some((c) => c.title.toLowerCase().includes(needle) || subjectName(nav, c.subject).replace(/&/g, "and").toLowerCase().includes(needle));
+  };
+  const goals = d.goals.map((g) => ({ ...g, routes: g.routes.filter((r) => !r.q || has(r.q)) })).filter((g) => g.routes.length);
+  const goal = goals[Math.min(active, goals.length - 1)];
+  if (!goal) return null;
 
   return (
     <section className="layout-pt-lg layout-pb-lg">
@@ -26,7 +37,7 @@ export default function HomeRoles() {
 
         <div className="rt-finder mt-40">
           <div className="rt-finder__goals" role="tablist">
-            {d.goals.map((g, i) => (
+            {goals.map((g, i) => (
               <button
                 key={g.label}
                 type="button"

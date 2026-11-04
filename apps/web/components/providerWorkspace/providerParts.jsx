@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { SHOW_DEMO } from "@/lib/demo";
 
 // Shared bits of the provider workspace. The pills, tabs, search, address helpers and date-time format are the admin's
 // (components/admin/adminParts.jsx), so both work layouts look and behave the same. Added here: the status tones, the loading
@@ -14,6 +15,13 @@ export { Pill, Tabs, Search, Stats, RowMenu, setQuery, getQuery, formatWhen } fr
 export const COURSE_TONE = { draft: "muted", pending: "info", changes: "warn", live: "ok", paused: "muted" };
 export const COHORT_TONE = { upcoming: "muted", progress: "info", completed: "warn", partial: "warn", certificated: "ok", cancelled: "muted" };
 export const ORDER_TONE = { paid: "ok", incomplete: "warn", cancelled: "muted", refunded: "muted", partial: "muted", dispute: "late", lost: "muted" };
+
+// "Demo data" beside a heading or record whose contents are made up for now (lib/providerWorkspace.js), with what that means on
+// hover and for screen readers. Nothing on the live site, where the made-up records are off (lib/demo.js).
+export function DemoTag({ note = "Made up for now, to show how this works. Real records show here once booking goes live.", label = "Demo data" }) {
+  if (!SHOW_DEMO) return null;
+  return <span className="rt-demo-tag" title={note}>{label}<span className="rt-sr">: {note}</span></span>;
+}
 
 // While the records load: grey blocks in the shape of the page (a strip of stats, then cards), not a spinner.
 export function Loading({ rows = 3, stats = false }) {

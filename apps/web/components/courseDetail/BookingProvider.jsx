@@ -153,12 +153,15 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const inBasket = isAddedToCartCourses(course.id, session?.id || "");
   const addToBasket = useCallback(() => {
     if (status === "loading" || status === "added" || !session || isInHouse) return;
+    // the editors' Preview of a course that may not be live yet: nothing goes in the basket
+    if (course.preview) return notify({ message: "This is a preview, so booking is off. Learners can book once the course is live." });
     setStatus("loading");
     later(() => {
       try {
         addCourseToCart(course.id, lineFor(course, session));
         setStatus("added");
-        notify({ message: `Added to basket: ${formatShortDate(session.date)}, ${session.location}`, href: BASKET_HREF, label: "View basket" });
+        // a self-paced course has no date: it starts whenever the learner likes
+        notify({ message: `Added to basket: ${session.mode === "ondemand" ? "self-paced, start any time" : `${formatShortDate(session.date)}, ${session.location}`}`, href: BASKET_HREF, label: "View basket" });
         trackEvent("add_to_cart", { currency: "GBP", value: session.price, items: [{ ...toItem(course), item_variant: session.id, price: session.price, quantity: 1 }] });
         later(() => setStatus("idle"), 1500);
       } catch {
@@ -189,6 +192,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   }, []);
 
   useEffect(() => {
+    if (course.preview) return; // an editor's preview (perhaps a draft) isn't a learner viewing the course
     trackEvent("view_item", { currency: "GBP", value: course.price ?? 0, items: [toItem(course)] });
   }, [course]);
 

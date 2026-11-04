@@ -7,7 +7,7 @@ import { DAY, customerName, useProvider } from "@/lib/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { SHOW_DEMO } from "@/lib/demo";
-import { COURSE_TONE, Loading, ORDER_TONE, Pill, formatWhen } from "./providerParts";
+import { COURSE_TONE, DemoTag, Loading, ORDER_TONE, Pill, formatWhen } from "./providerParts";
 import { Delta, Sparkline, money } from "./charts";
 import { Seats, dayRange, useSchedule } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
@@ -54,15 +54,21 @@ export default function ProviderDashboard() {
   const noTutor = upcoming.filter((k) => !k.tutorUserId);
   const sentBack = courses.filter((c) => c.status === "changes");
   const todo = [
-    ...refunds.map((r) => ({ key: r.id, tone: "warn", text: `Refund request: ${money(r.amount)} on order ${r.orderRef}`, href: `/provider/orders/${r.orderRef}`, cta: "Reply" })),
-    ...disputes.map((o) => ({ key: o.ref, tone: "late", text: `Order ${o.ref} is in dispute. Send your evidence within 7 days.`, href: `/provider/orders/${o.ref}`, cta: "Send evidence" })),
-    ...(unpaid.length ? [{ key: "unpaid", tone: "info", text: `${unpaid.length} ${unpaid.length === 1 ? "order is" : "orders are"} waiting for payment`, href: "/provider/orders?status=incomplete", cta: "View" }] : []),
-    ...(data.counts.reviews ? [{ key: "reviews", tone: "info", text: `${data.counts.reviews} ${data.counts.reviews === 1 ? "review needs" : "reviews need"} a reply`, href: "/provider/performance?tab=reviews", cta: "Reply" }] : []),
-    ...(data.counts.questions ? [{ key: "qa", tone: "info", text: `${data.counts.questions} learner ${data.counts.questions === 1 ? "question" : "questions"} to answer`, href: "/provider/settings?tab=qa", cta: "Answer" }] : []),
-    ...(data.counts.leads ? [{ key: "leads", tone: "info", text: `${data.counts.leads} new ${data.counts.leads === 1 ? "lead" : "leads"}`, href: "/provider/performance?tab=leads", cta: "View" }] : []),
+    ...refunds.map((r) => ({ key: r.id, demo: true, tone: "warn", text: `Refund request: ${money(r.amount)} on order ${r.orderRef}`, href: `/provider/orders/${r.orderRef}`, cta: "Reply" })),
+    ...disputes.map((o) => ({ key: o.ref, demo: true, tone: "late", text: `Order ${o.ref} is in dispute. Send your evidence within 7 days.`, href: `/provider/orders/${o.ref}`, cta: "Send evidence" })),
+    ...(unpaid.length ? [{ key: "unpaid", demo: true, tone: "info", text: `${unpaid.length} ${unpaid.length === 1 ? "order is" : "orders are"} waiting for payment`, href: "/provider/orders?status=incomplete", cta: "View" }] : []),
+    ...(data.counts.reviews ? [{ key: "reviews", demo: true, tone: "info", text: `${data.counts.reviews} ${data.counts.reviews === 1 ? "review needs" : "reviews need"} a reply`, href: "/provider/performance?tab=reviews", cta: "Reply" }] : []),
+    ...(data.counts.questions ? [{ key: "qa", demo: true, tone: "info", text: `${data.counts.questions} learner ${data.counts.questions === 1 ? "question" : "questions"} to answer`, href: "/provider/settings?tab=qa", cta: "Answer" }] : []),
+    ...(data.counts.leads ? [{ key: "leads", demo: true, tone: "info", text: `${data.counts.leads} new ${data.counts.leads === 1 ? "lead" : "leads"}`, href: "/provider/performance?tab=leads", cta: "View" }] : []),
     ...noTutor.slice(0, 3).map((k) => ({ key: k.id, tone: "muted", text: `No tutor yet for ${k.courseTitle}, ${dayRange(k.startsOn, k.endsOn)}`, href: `/provider/cohorts/${k.id}`, cta: "Assign" })),
     ...sentBack.map((c) => ({ key: c.id, tone: "late", text: `Changes requested on ${c.title}`, href: `/provider/courses/${c.id}`, cta: "Edit" })),
   ];
+
+  // the made-up items (refunds, disputes, unpaid orders, reviews, questions, leads) are tagged; the greeting counts only real ones
+  const real = todo.filter((t) => !t.demo);
+  const demoItems = todo.length - real.length;
+  // real items first, so made-up ones never push them out of the first seven
+  const shownTodo = [...real, ...todo.filter((t) => t.demo)];
 
   const kpis = [
     { label: "Revenue", value: money(sum(from, now + 1, (o) => o.money.gross)), now: sum(from, now + 1, (o) => o.money.gross), before: sum(prev, from, (o) => o.money.gross), spark: weeks.map(([a, b]) => sum(a, b, (o) => o.money.gross)), href: "/provider/performance" },
@@ -81,7 +87,7 @@ export default function ProviderDashboard() {
       <section className="rt-dash__hello" aria-labelledby="rt-dash-hi">
         <div>
           <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}{firstName ? `, ${firstName}` : ""}</h2>
-          <p className="rt-dash__sub">{todo.length ? `${todo.length} ${todo.length === 1 ? "thing needs" : "things need"} you today.` : "You're all caught up."} {upcoming.length ? `Next cohort: ${upcoming[0].courseTitle}, ${dayRange(upcoming[0].startsOn, upcoming[0].endsOn)}.` : ""}</p>
+          <p className="rt-dash__sub">{real.length ? `${real.length} ${real.length === 1 ? "thing needs" : "things need"} you today.` : "You're all caught up."} {upcoming.length ? `Next cohort: ${upcoming[0].courseTitle}, ${dayRange(upcoming[0].startsOn, upcoming[0].endsOn)}.` : ""}</p>
         </div>
         <div className="rt-dash__quick">
           {access.can("provider.orders.create") && <Link href="/provider/orders/new" className="button -sm -outline-purple-1 text-purple-1">Create order</Link>}
@@ -93,13 +99,13 @@ export default function ProviderDashboard() {
 
       <div className="rt-dash__grid">
         <section className="rt-acc__card rt-dash__todo" aria-labelledby="rt-dash-todo">
-          <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-todo">Needs your attention</h2>{todo.length > 0 && <span className="rt-dash__n">{todo.length}</span>}</div>
+          <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-todo">Needs your attention {demoItems > 0 && <DemoTag label={real.length ? "Partly demo" : "Demo data"} note={pw.demo.attention} />}</h2>{real.length > 0 && <span className="rt-dash__n">{real.length}</span>}</div>
           {todo.length ? (
             <ul className="rt-dash__list">
-              {todo.slice(0, 7).map((t) => (
+              {shownTodo.slice(0, 7).map((t) => (
                 <li key={t.key}>
                   <span className={`rt-dash__dot -${t.tone}`} aria-hidden="true"></span>
-                  <span className="rt-dash__text">{t.text}</span>
+                  <span className="rt-dash__text">{t.text}{t.demo && <> <DemoTag label="Demo" note={pw.demo.attention} /></>}</span>
                   <Link href={t.href} className="rt-dash__go">{t.cta}<span className="rt-sr">: {t.text}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>
                 </li>
               ))}

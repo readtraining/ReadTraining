@@ -5,7 +5,7 @@ import { and, asc, cohorts, courses, eq, gte, isNull, ne, organisationMembers, p
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { formatPostcode, locatePostcode, POSTCODE } from '../../lib/postcode.mjs'
+import { formatPostcode, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
 import { createTRPCRouter, orgProcedure } from '../../trpc/trpc.mjs'
 import { ownCourse } from './courses.mjs'
 
@@ -18,6 +18,18 @@ const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London'
 
 const log = (tx: Parameters<typeof logActivity>[0], ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, targetType: string, targetId: string, metadata: Record<string, unknown> = {}) =>
   logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId, action, targetType, targetId, metadata, ip: ctx.ip })
+
+// A live online date's joining link: a Zoom, Microsoft Teams or Google Meet meeting address (https), so learners are never sent
+// to some other site. The cohort form checks the same (ProviderCohorts.jsx MEETING_LINK).
+const MEETING_HOSTS = /^(?:[a-z0-9-]+\.)*(zoom\.us|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com)$/i
+export function isMeetingLink(v: string) {
+  try {
+    const u = new URL(v)
+    return u.protocol === 'https:' && MEETING_HOSTS.test(u.hostname) && u.pathname.length > 1
+  } catch {
+    return false
+  }
+}
 
 // ---- venues -------------------------------------------------------------------------------------------------------------
 
@@ -50,9 +62,11 @@ const DATES_GONE = 'These dates have already been deleted. Reload the page.'
 
 export const providerVenuesRouter = createTRPCRouter({
   list: orgProcedure('provider.cohorts.view').query(async ({ ctx, input }) => {
-    const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number }>(sql`
+    // `used`: dates that have ever used the venue (any, past or cancelled): such a venue can be archived but not deleted
+    const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number; used: number }>(sql`
       select v.id, v.name, v.street, v.city, v.postcode, v.active, v.lat is not null located,
-             (select count(*)::int from public.cohorts k where k.venue_id = v.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming
+             (select count(*)::int from public.cohorts k where k.venue_id = v.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming,
+             (select count(*)::int from public.cohorts k where k.venue_id = v.id) used
       from public.venues v where v.organisation_id = ${input.organisationId}::uuid order by v.active desc, v.name`)
     return rows
   }),
@@ -62,8 +76,20 @@ export const providerVenuesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const postcode = formatPostcode(input.postcode)
       const before = input.venueId ? await ownVenue(ctx.db, input.organisationId, input.venueId) : null
-      // look the postcode up only when it is new or changed
-      const where = before && before.postcode === postcode && before.lat !== null ? { lat: before.lat, lng: before.lng } : await locatePostcode(postcode)
+      // the same place twice (same postcode, and the same name or street) would show twice in every venue list: refused
+      const [twin] = await ctx.db.execute<{ name: string }>(sql`
+        select name from public.venues
+        where organisation_id = ${input.organisationId}::uuid and ${before ? sql`id <> ${before.id}::uuid` : sql`true`}
+          and upper(replace(coalesce(postcode, ''), ' ', '')) = ${postcode.replace(/\s/g, '').toUpperCase()}
+          and (lower(trim(name)) = ${input.name.trim().toLowerCase()} or lower(trim(street)) = ${input.street.trim().toLowerCase()})
+        limit 1`)
+      if (twin) throw new TRPCError({ code: 'BAD_REQUEST', message: `You already have this venue: ${twin.name}, ${postcode}. Edit that one instead.`, cause: Object.assign(new Error('duplicate venue'), { field: 'name' }) })
+      // look the place up when the postcode or the town is new or changed: the postcode must be in use and the town a UK place near
+      // it (lib/postcode.mts placeVenue), since the town becomes a public town page
+      const same = before && before.postcode === postcode && before.city.trim().toLowerCase() === input.city.trim().toLowerCase() && before.lat !== null
+      const place = same ? { at: { lat: before.lat!, lng: before.lng! }, problem: null } : await placeVenue(postcode, input.city)
+      if (place.problem) throw new TRPCError({ code: 'BAD_REQUEST', message: place.problem.message, cause: Object.assign(new Error('venue place'), { field: place.problem.field }) })
+      const where = place.at
       const values = { name: input.name, street: input.street, city: input.city, postcode, lat: where?.lat ?? null, lng: where?.lng ?? null, updatedAt: new Date() }
       return ctx.db.transaction(async (tx) => {
         const [v] = before
@@ -140,7 +166,7 @@ const cohortFields = z.object({
     .string()
     .trim()
     .max(300)
-    .refine((v) => v === '' || /^https:\/\/\S+$/.test(v), 'Use a full https link.')
+    .refine((v) => v === '' || isMeetingLink(v), 'Use the full https link to a Zoom, Microsoft Teams or Google Meet meeting.')
     .nullable()
     .optional(),
   capacity: z.number().int().min(1, 'Allow at least 1 place.').max(200, 'Allow up to 200 places.'),

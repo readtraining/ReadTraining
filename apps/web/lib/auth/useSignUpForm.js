@@ -72,10 +72,7 @@ export function useSignUpForm() {
     e.preventDefault();
     if (busy) return;
     setFormError("");
-    setStatus("validating");
-
-    // Brief pause so the "Validating" state is visible; validation itself is sync.
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    // the checks are instant: no made-up pause before them
     const errors = validateSignUp(values);
     setFieldErrors(errors);
     if (Object.keys(errors).length) {

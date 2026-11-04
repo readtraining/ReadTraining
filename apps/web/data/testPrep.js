@@ -194,19 +194,21 @@ export const testCategories = ["Construction", "Security", "Health and Safety", 
 // Icon-font glyph per category (the card's icon square).
 export const testCategoryIcons = { Construction: "icon-tools", Security: "icon-person-2", "Health and Safety": "icon-badge", Licensing: "icon-document", Fire: "icon-notification" };
 
+// `banner`: the line on a course page's mock test box; {tests} and {questions} are filled from the tests that are really there
+// (lib/testPrep.js subjectBanner), so it never claims more than the subject page lists.
 export const tests = [
   { slug: "cscs-mock-test-for-managers-and-professionals", title: "CSCS Mock Test for Managers and Professionals", category: "Construction" },
   { slug: "cscs-mock-test", title: "CSCS Mock Tests - Free", category: "Construction" },
   { slug: "citb-mock-test-50-questions", title: "CITB Mock Test", category: "Construction" },
-  { slug: "cscs-green-card-mock-test", title: "CSCS Green Card Mock Test", category: "Construction", banner: "CSCS Green Card Course Mock Tests – 10+ free practice exams with over 1,000 questions for learners at ReadTraining" },
+  { slug: "cscs-green-card-mock-test", title: "CSCS Green Card Mock Test", category: "Construction", banner: "CSCS Green Card Course Mock Tests – {tests} free practice exams with {questions} questions for learners at ReadTraining" },
   { slug: "personal-licence-mock-exam", title: "Personal Licence Mock Exam", category: "Licensing" },
   { slug: "fire-marshal-test", title: "Fire Banksman (Marshal) Mock Exam 2025", category: "Fire" },
-  { slug: "sia-mock-test", title: "SIA Licence Training Mock Exams 2026", category: "Security", banner: "Start free SIA Mock Tests with ReadTraining – 15+ practice tests and over 1000 questions available" },
-  { slug: "smsts-mock-test", title: "SMSTS Mock Tests 2026", category: "Construction", banner: "Free SMSTS mock tests from ReadTraining offering over 300 questions and 10+ practice exams to prepare for the SMSTS course exam" },
-  { slug: "sssts-mock-test", title: "SSSTS Mock Tests 2026", category: "Construction", banner: "Access over 10 free SSSTS mock tests and 300 practice exam questions to prepare for the CITB Site Supervision Safety Training Scheme assessment." },
+  { slug: "sia-mock-test", title: "SIA Licence Training Mock Exams 2026", category: "Security", banner: "Start free SIA Mock Tests with ReadTraining – {tests} practice tests and {questions} questions available" },
+  { slug: "smsts-mock-test", title: "SMSTS Mock Tests 2026", category: "Construction", banner: "Free SMSTS mock tests from ReadTraining: {tests} practice exams with {questions} questions to prepare for the SMSTS course exam" },
+  { slug: "sssts-mock-test", title: "SSSTS Mock Tests 2026", category: "Construction", banner: "{tests} free SSSTS mock tests with {questions} practice exam questions to prepare for the CITB Site Supervision Safety Training Scheme assessment." },
   { slug: "free-cpcs-renewal-mock-test-questions-and-answers", title: "Free CPCS Renewal Mock test Questions and Answers", category: "Construction" },
   { slug: "level-1-health-and-safety-in-a-construction-environment-mock-test", title: "Level 1 Health and Safety in a Construction Environment Mock Test 2026", category: "Construction" },
-  { slug: "sia-top-up-mock-tests", title: "SIA Top-Up Mock Tests for Door Supervisor & Security Guard", category: "Security", banner: "Free SIA Top-Up Refresher Mock Tests for Door Supervisors – 15+ practice tests and 1000+ questions" },
+  { slug: "sia-top-up-mock-tests", title: "SIA Top-Up Mock Tests for Door Supervisor & Security Guard", category: "Security", banner: "Free SIA Top-Up Refresher Mock Tests for Door Supervisors – {tests} practice tests and {questions} questions" },
   { slug: "cpcs-360-excavator-mock-test", title: "CPCS 360 Excavator Mock Test", category: "Construction" },
   { slug: "iosh-managing-safely-exam-questions", title: "IOSH Managing Safely Exam Questions Mock Test", category: "Health and Safety" },
   { slug: "cscs-working-at-height-mock-test", title: "CSCS Working at Height", category: "Construction" },

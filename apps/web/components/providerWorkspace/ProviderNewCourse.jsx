@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
@@ -16,7 +17,7 @@ import { ErrorState } from "@/components/states/States";
 
 // A new course in Hurak's five steps: 1 working title, 2 category, sub-category and topic, 3 compliance or not (a compliance course
 // can also go on a shared course page, chosen from the live ones), 4 performance model, 5 Skill Saver. Previous / Continue, Exit back
-// to the courses; Submit creates a classroom draft (Mode of study changes that) and opens the course editor on its landing page.
+// to the courses; Create draft makes a classroom draft (Mode of study changes that) and opens the course editor on its landing page.
 const STEPS = 5;
 const YES_NO = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
 
@@ -29,18 +30,35 @@ export default function ProviderNewCourse() {
   const [errors, setErrors] = useState({});
   const [failed, setFailed] = useState("");
   const create = api.provider.courses.create.useMutation();
+  // anything chosen or typed: Exit, a link, Back or closing the tab asks first (lib/unsavedChanges.js); none once it is created
+  useUnsavedChanges(Object.values(f).some((v) => String(v).trim() !== ""));
   const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const pages = pagesForSubject(shared.data || [], f); // only pages for the subject chosen in step 2
   const parentOk = pages.some((p) => String(p.id) === f.parentId);
   const toPage = f.type === "compliance" && pages.length > 0 && f.sharedLanding === "yes";
   const ref = useRef(null);
-  const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  // a change clears the errors of what changed (and of the questions that depend on it), so no message shows for a question the
+  // person hasn't answered yet, or one that has just gone
+  const DEPENDS = { type: ["sharedLanding", "parentId"], sharedLanding: ["parentId"], category: ["subcategory", "topic"] };
+  const set = (patch) => {
+    setF((x) => ({ ...x, ...patch }));
+    setErrors((e) => {
+      const gone = Object.keys(patch).flatMap((k) => [k, ...(DEPENDS[k] || [])]);
+      return gone.some((k) => e[k]) ? Object.fromEntries(Object.entries(e).filter(([k]) => !gone.includes(k))) : e;
+    });
+  };
   const subs = subcategoryOptions(f.category);
   const topics = topicOptions(f.category, f.subcategory);
 
   const check = () => {
     const e = {};
-    if (step === 1 && !f.title.trim()) e.title = "Enter a working title. You can change it later.";
+    // the title as the API checks it (3 to 80 characters), on its own step rather than after the last one
+    if (step === 1) {
+      const t = f.title.trim();
+      if (!t) e.title = "Enter a working title. You can change it later.";
+      else if (t.length < 3) e.title = "Enter a title of at least 3 characters.";
+      else if (t.length > 80) e.title = `Shorten the title to 80 characters or fewer (it has ${t.length}).`;
+    }
     if (step === 2) {
       if (!f.category) e.category = "Choose a category.";
       if (!f.subcategory) e.subcategory = "Choose a sub-category.";
@@ -71,7 +89,7 @@ export default function ProviderNewCourse() {
         model: f.model, skillSaver: f.skillSaver === "yes", parentId: toPage && parentOk ? Number(f.parentId) : null,
       },
       {
-        onSuccess: ({ id }) => router.push(`/provider/courses/${id}`),
+        onSuccess: ({ id }) => leaveWithoutAsking(() => router.push(`/provider/courses/${id}?created=1`)),
         onError: (error) => setFailed(errorsFrom(error).general || Object.values(errorsFrom(error).fields)[0]),
       },
     );
@@ -164,13 +182,14 @@ export default function ProviderNewCourse() {
           <h2 className="rt-acc__h2" tabIndex={-1}>Skill Saver loyalty programme</h2>
           <p className="rt-acc__note">Learners on Skill Saver get money off their next course. Courses in the programme show the Skill Saver badge. <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link></p>
           <Choice name="rt-pws-nc-saver" legend="Include this course in Skill Saver?" value={f.skillSaver} onChange={(v) => set({ skillSaver: v })} error={errors.skillSaver} options={YES_NO} />
+          <p className="rt-acc__note">Create draft saves the course as a draft and opens it, so you can add its details. Nobody sees it until you send it for approval and our team approves it.</p>
         </>
       )}
 
       {failed && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{failed}</p>}
       <div className="rt-pws-wiz__foot">
         {step > 1 ? <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={back}>Previous</button> : <span />}
-        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{step < STEPS ? "Continue" : busy ? "Creating…" : "Submit"}</button>
+        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{step < STEPS ? "Continue" : create.isSuccess ? "Opening the editor…" : create.isPending ? "Creating draft…" : "Create draft"}</button>
       </div>
     </form>
   );

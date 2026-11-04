@@ -5,8 +5,13 @@ import { eq, organisations, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { IMAGE_TYPES, MEDIA_PATH, mediaExists, mediaUploadUrl, mediaUrl, removeMedia } from '../../lib/media.mjs'
+import { refuseTakenProviderName } from '../../lib/providerName.mjs'
+import { MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
+
+// the roles that read an organisation's private details: our team's status note and messages (the same rule as the database's
+// "organisations: read where owner or admin")
+export const PRIVATE_ROLES: string[] = ['owner', 'admin']
 
 // A provider's public profile (headline, about, town, social links, logo) and the terms learners accept when booking with them.
 // Both show on the provider's public page and course pages; they change straight away. The provider's name can change only
@@ -63,8 +68,10 @@ export const providerProfileRouter = createTRPCRouter({
   }),
 
   // The provider's application: where it stands, and its steps newest first (what our team asked, what the provider replied).
-  // Every member can read it: the status bar on every page points here.
+  // Every member can read where it stands (the status bar on every page points here); our team's note and messages are for the
+  // owner and admins only (`private`), so a tutor or an assistant sees the status without them.
   review: orgProcedure('provider.workspace.open').query(async ({ ctx, input }) => {
+    const mayRead = PRIVATE_ROLES.includes(ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)?.role ?? '')
     const [o] = await ctx.db.select({ name: organisations.name, status: organisations.status, statusNote: organisations.statusNote, statusChangedAt: organisations.statusChangedAt, createdAt: organisations.createdAt }).from(organisations).where(eq(organisations.id, input.organisationId))
     if (!o) throw new TRPCError({ code: 'NOT_FOUND' })
     const rows = await ctx.db.execute<{ action: string; at: string; metadata: Record<string, unknown> | null; actor_identity: string; first_name: string | null; last_name: string | null }>(sql`
@@ -76,7 +83,8 @@ export const providerProfileRouter = createTRPCRouter({
     return {
       name: o.name,
       status: o.status,
-      statusNote: o.statusNote,
+      statusNote: mayRead ? o.statusNote : null,
+      private: !mayRead,
       statusChangedAt: o.statusChangedAt ? new Date(o.statusChangedAt).toISOString() : null,
       appliedAt: new Date(o.createdAt).toISOString(),
       canRename: UNDER_REVIEW.includes(o.status) && can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId }),
@@ -88,7 +96,7 @@ export const providerProfileRouter = createTRPCRouter({
           at: new Date(r.at).toISOString(),
           by: fromTeam ? null : `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || null,
           fromTeam,
-          message: text(m.message) ?? text(m.reply),
+          message: fromTeam && !mayRead ? null : text(m.message) ?? text(m.reply),
           from: text(m.from),
           to: text(m.to),
         }
@@ -118,6 +126,7 @@ export const providerProfileRouter = createTRPCRouter({
       if (rename) {
         if (!can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId })) await refuse(ctx, 'provider.profile.rename', input.organisationId, path)
         if (!UNDER_REVIEW.includes(o.status)) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is approved, so its name can only be changed by our team. Contact us to change it.' })
+        await refuseTakenProviderName(ctx.db, input.name!, input.organisationId)
       }
       return ctx.db.transaction(async (tx) => {
         await tx
@@ -153,7 +162,8 @@ export const providerProfileRouter = createTRPCRouter({
 
   // Logo: an upload address, then setLogo with the uploaded file (the old one is deleted), or removeLogo.
   logoUploadUrl: orgProcedure('provider.profile.edit')
-    .input(z.object({ contentType: z.enum(Object.keys(IMAGE_TYPES) as [keyof typeof IMAGE_TYPES, ...(keyof typeof IMAGE_TYPES)[]]) }))
+    // a logo is a JPG, PNG or WebP (apps/web/lib/images.js): not a GIF
+    .input(z.object({ contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']) }))
     .mutation(async ({ ctx, input }) => {
       await limit(ctx, 'uploadHour')
       await limit(ctx, 'uploadDay')
@@ -166,7 +176,13 @@ export const providerProfileRouter = createTRPCRouter({
     .input(z.object({ path: z.string().regex(MEDIA_PATH) }))
     .mutation(async ({ ctx, input }) => {
       if (!input.path.startsWith(`${input.organisationId}/logo/`)) throw new TRPCError({ code: 'FORBIDDEN' })
-      if (!(await mediaExists(input.path))) throw new TRPCError({ code: 'BAD_REQUEST', message: 'The logo did not upload. Please try again.' })
+      // the stored file itself must be a picture of at least 200 × 200 (whatever the browser said); otherwise it is deleted again
+      const size = await storedImageSize(input.path)
+      if (size === undefined) throw new TRPCError({ code: 'BAD_REQUEST', message: 'The logo did not upload. Please try again.' })
+      if (!size || size.width < MIN_LOGO.width || size.height < MIN_LOGO.height) {
+        await removeMedia([input.path])
+        throw new TRPCError({ code: 'BAD_REQUEST', message: size ? `This logo is ${size.width} × ${size.height} pixels. Choose one at least ${MIN_LOGO.width} × ${MIN_LOGO.height} pixels.` : 'We couldn’t read that logo. Choose a PNG, JPG or WebP picture.' })
+      }
       const [before] = await ctx.db.select({ logoPath: organisations.logoPath }).from(organisations).where(eq(organisations.id, input.organisationId))
       await ctx.db.transaction(async (tx) => {
         await tx.update(organisations).set({ logoPath: input.path, updatedAt: new Date() }).where(eq(organisations.id, input.organisationId))

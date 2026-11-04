@@ -12,6 +12,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Choice, Toggle } from "./providerParts";
 import { pagesForSubject } from "@/lib/taxonomy";
+import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 
 // The course editor's self-saving parts: SEO settings, and the gear's course settings (a provider's course, or a shared course
 // page in the admin). Each saves on its own (SEO with its button, the gear as you choose) and reports back through onSaved for the
@@ -29,6 +30,9 @@ export function SeoPanel({ course, onSaved }) {
   const [word, setWord] = useState("");
   const [errors, setErrors] = useState({});
   const ref = useRef(null);
+  // what is saved: leaving the page with anything else typed asks first (lib/unsavedChanges.js)
+  const [saved, setSaved] = useState({ title: course.seoTitle || "", desc: course.seoDescription || "", keywords: course.seoKeywords || [] });
+  useUnsavedChanges(title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords));
 
   const addWords = (text) => {
     const add = text.split(",").map((w) => w.trim().toLowerCase().slice(0, 40)).filter((w) => w && !keywords.includes(w));
@@ -48,7 +52,7 @@ export function SeoPanel({ course, onSaved }) {
     setWord("");
     setBusy(true);
     ep.update({ seoTitle: title.trim(), seoDescription: desc.trim(), seoKeywords })
-      .then(() => { ep.refresh(); onSaved("SEO settings saved"); })
+      .then(() => { setSaved({ title: title.trim(), desc: desc.trim(), keywords: seoKeywords }); setTitle(title.trim()); setDesc(desc.trim()); ep.refresh(); onSaved("SEO settings saved"); })
       .catch((error) => setErrors({ form: errorsFrom(error).general || Object.values(errorsFrom(error).fields)[0] }))
       .finally(() => setBusy(false));
   };
@@ -98,8 +102,10 @@ export function SeoPanel({ course, onSaved }) {
 // The gear on every editor page (Hurak's course settings): who can enrol (public or private), the address to share, the shared
 // course page it is listed under, showing it in ReadTraining's search, pausing a live course, and deleting a course that has never
 // been live. Each choice saves at once.
-export function CourseGear({ course, open, onClose, onSaved }) {
+export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const router = useRouter();
+  // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
+  const ep = useEndpoints();
   const { organisationId, can } = useProviderAccess();
   const utils = api.useUtils();
   const update = api.provider.courses.update.useMutation();
@@ -107,6 +113,7 @@ export function CourseGear({ course, open, onClose, onSaved }) {
   const remove = api.provider.courses.remove.useMutation();
   const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: open && Boolean(organisationId) });
   const [confirm, setConfirm] = useState(false);
+  const [askPause, setAskPause] = useState(false); // "Pause course" asks first
   const [error, setError] = useState("");
   const edit = can("provider.courses.edit");
   const [url, setUrl] = useState("");
@@ -116,10 +123,21 @@ export function CourseGear({ course, open, onClose, onSaved }) {
     utils.provider.courses.get.invalidate({ organisationId, courseId: course.id });
     utils.provider.courses.list.invalidate({ organisationId });
   };
-  const fail = (e) => setError(errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0]);
+  const fail = (e) => {
+    // changed somewhere else since the editor loaded it: the editor says so, with a way to load the latest version
+    if (onStale && e?.data?.code === "CONFLICT" && /changed somewhere else/i.test(e.message)) return onStale();
+    setError(errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0]);
+  };
+  const doPause = (paused) => {
+    setError("");
+    pause.mutate({ organisationId, courseId: course.id, paused, seen: ep?.seen() }, {
+      onSuccess: (r) => { ep?.keep(r); refresh(); setAskPause(false); onSaved(paused ? "The course is paused" : "The course is live again"); },
+      onError: (e) => { setAskPause(false); fail(e); },
+    });
+  };
   const change = (patch, message) => {
     setError("");
-    update.mutate({ organisationId, courseId: course.id, ...patch }, { onSuccess: () => { refresh(); onSaved(message); }, onError: fail });
+    update.mutate({ organisationId, courseId: course.id, ...patch, seen: ep?.seen() }, { onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(message); }, onError: fail });
   };
   const copy = async () => {
     try {
@@ -132,7 +150,7 @@ export function CourseGear({ course, open, onClose, onSaved }) {
   };
   const doRemove = () => {
     setError("");
-    remove.mutate({ organisationId, courseId: course.id }, { onSuccess: () => { utils.provider.courses.list.invalidate({ organisationId }); router.push("/provider/courses"); }, onError: fail });
+    remove.mutate({ organisationId, courseId: course.id }, { onSuccess: () => { utils.provider.courses.list.invalidate({ organisationId }); leaveWithoutAsking(() => router.push("/provider/courses")); }, onError: fail });
   };
   const close = () => {
     setConfirm(false);
@@ -180,7 +198,15 @@ export function CourseGear({ course, open, onClose, onSaved }) {
           {edit && (course.status === "live" || (course.status === "paused" && !course.statusNote)) && (
             <div className="rt-field">
               <p className="rt-acc__note">{course.status === "live" ? "Pausing takes the course off ReadTraining. Its dates stay, and you can put it back live at any time." : "This course is paused: it doesn't show on ReadTraining."}</p>
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => { setError(""); pause.mutate({ organisationId, courseId: course.id, paused: course.status === "live" }, { onSuccess: () => { refresh(); onSaved(course.status === "live" ? "The course is paused" : "The course is live again"); }, onError: fail }); }}>{course.status === "live" ? "Pause course" : "Put back live"}</button>
+              {/* pausing takes the course off the site, so it asks first (putting it back live doesn't) */}
+              {askPause ? (
+                <div className="rt-adm-cellrow" role="group" aria-label="Pause this course?">
+                  <button type="button" className="button -sm -purple-1 text-white" disabled={busy} aria-busy={pause.isPending || undefined} onClick={() => doPause(true)}>{pause.isPending ? "Pausing…" : "Yes, pause it"}</button>
+                  <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => setAskPause(false)}>Keep it live</button>
+                </div>
+              ) : (
+                <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={pause.isPending || undefined} onClick={() => (course.status === "live" ? setAskPause(true) : doPause(false))}>{course.status === "live" ? "Pause course" : pause.isPending ? "Putting back live…" : "Put back live"}</button>
+              )}
             </div>
           )}
           {can("provider.courses.delete") && (
@@ -205,6 +231,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
   const utils = api.useUtils();
   const remove = api.admin.courses.removeShared.useMutation();
   const [confirm, setConfirm] = useState(false);
+  const [askOff, setAskOff] = useState(false); // "Take off the site" asks first
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState("");
@@ -229,7 +256,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
           <p className="rt-acc__note">“{course.title}” and its images will be deleted for good.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-adm-cellrow">
-            <button type="button" className="button -md -purple-1 text-white" disabled={remove.isPending} onClick={() => remove.mutate({ courseId: course.id }, { onSuccess: () => { utils.admin.courses.list.invalidate(); router.push("/admin/catalogue"); }, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete page"}</button>
+            <button type="button" className="button -md -purple-1 text-white" disabled={remove.isPending} onClick={() => remove.mutate({ courseId: course.id }, { onSuccess: () => { utils.admin.courses.list.invalidate(); leaveWithoutAsking(() => router.push("/admin/catalogue")); }, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete page"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)}>Keep it</button>
           </div>
         </div>
@@ -245,7 +272,15 @@ export function SharedGear({ course, open, onClose, onSaved }) {
           {edit && course.status === "live" && (
             <div className="rt-field">
               <p className="rt-acc__note">Taking the page off the site hides it and the providers' courses on it, until it is published again.</p>
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => run(() => ep.setStatus("paused"), "The page is off the site")}>Take off the site</button>
+              {/* it hides every provider's course on the page too, so it asks first */}
+              {askOff ? (
+                <div className="rt-adm-cellrow" role="group" aria-label="Take this page off the site?">
+                  <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => { setAskOff(false); run(() => ep.setStatus("paused"), "The page is off the site"); }}>Yes, take it off</button>
+                  <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => setAskOff(false)}>Keep it on the site</button>
+                </div>
+              ) : (
+                <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => setAskOff(true)}>Take off the site</button>
+              )}
             </div>
           )}
           {edit && (

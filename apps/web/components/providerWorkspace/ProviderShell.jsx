@@ -10,7 +10,7 @@ import NavIcon from "@/components/admin/navIcons";
 import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, useFoldedGroups, useSideMenu, useWorkDrawer } from "@/components/admin/workNav";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
-import { actAs, useProvider } from "@/lib/providerWorkspace";
+import { actAs } from "@/lib/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
 import { useWorkspace } from "@/lib/workspaceContext";
@@ -27,8 +27,9 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
 // sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups, the button at its top right that hides it
 // and, below 992px, the menu drawer. Then the page head (title, intro, actions) and the page.
-// `current` marks the section; the page inside it is matched on the address. `demo` (true, or "partly") marks a page whose records
-// are still made up (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's.
+// `current` marks the section; the page inside it is matched on the address. `demo` marks a page whose records are still made up
+// (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's. It is true (the
+// general note), "partly", or the page's own note (data/providerWorkspace.js pw.demo), which the tag then explains.
 export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = false, children }) {
   const sideRef = useRef(null);
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
   const { closed: sideHidden } = useSideMenu(); // the sidebar hidden, from 992px
   const access = useProviderAccess();
-  const demoText = SHOW_DEMO && demo ? pw.demo[demo === true ? "all" : demo] : null;
+  const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
   const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);
   // a group's page is current when its path matches and, for ?tab= / ?mode= pages, its query does too
@@ -50,8 +51,9 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
     if (q) return search.includes(q);
     return !siblings.some((x) => x.href.includes("?") && x.href.startsWith(`${p}?`) && search.includes(x.href.split("?")[1]));
   };
-  const data = useProvider();
-  const counts = data?.counts || {};
+  // the bell's unread number and the menu's badges count DEMO records (lib/providerWorkspace.js), so they stay hidden until those
+  // records are real: a made-up "3 unread" must not look like real news
+  const counts = {};
   // the real provider (from the server check in the layout) and the signed-in person; the pages' records are still DEMO data
   const workspace = useWorkspace();
   // the status can change while the page is open (approved, changes asked for, not approved, suspended): check quietly every
@@ -99,7 +101,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
               {counts.unread > 0 && <span className="rt-pws__bellcount" aria-hidden="true">{counts.unread}</span>}
             </Link>
             {meName && (
-              <RowMenu label="Account menu" triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
+              <RowMenu label={meName ? `${initials(meName)}, account menu for ${meName}` : "Account menu"} triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
                 head={<><strong title={meName}>{meName}</strong><span title={meEmail}>{meEmail}</span><small title={org || undefined}>{org ? `Provider · ${org}` : "Provider account"}</small></>}
                 items={[...pw.accountMenu.filter((x) => !x.need || access.can(x.need)).map(({ need, ...x }) => x), ...switchItems, { label: "Log out", onClick: logOut }]} />
             )}
@@ -119,7 +121,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-pws__orgname"><strong>{org || " "}</strong><span>Training provider</span></span>
           </div>
           <ul className="rt-pws__nav">
-            {pw.nav.map((x) => {
+            {pw.nav.filter((x) => !x.can || access.can(x.can)).map((x) => {
               const here = x.key === current;
               const badge = x.badge && counts[x.badge] > 0 ? <span className="rt-adm__count" aria-label={`${counts[x.badge]} new`}>{counts[x.badge]}</span> : null;
               if (!x.items) {

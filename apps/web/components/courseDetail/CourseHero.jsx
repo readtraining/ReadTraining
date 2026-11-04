@@ -20,8 +20,8 @@ export default function CourseHero({ course }) {
       <div className="rt-cd__hero-text">
         <Crumbs
           crumbs={[
-            subject && { label: subject, href: `${CATALOGUE}?subject=${course.subject}` },
-            subject && sub && { label: sub, href: `${CATALOGUE}?subject=${course.subject}&sub=${course.sub}` },
+            subject && { label: subject, href: `${CATALOGUE}/${course.subject}` },
+            subject && sub && { label: sub, href: `${CATALOGUE}/${course.subject}?sub=${course.sub}` },
             { label: course.title },
           ].filter(Boolean)}
         />

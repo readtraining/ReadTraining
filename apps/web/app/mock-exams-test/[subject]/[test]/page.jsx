@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
@@ -10,9 +10,9 @@ import TestRunner from "@/components/testPrep/runner/TestRunner";
 import CommentButton from "@/components/testPrep/runner/CommentButton";
 import SubjectCourses from "@/components/testPrep/subject/SubjectCourses";
 import { testPrepPage } from "@/data/testPrep";
-import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, resolveTests, subjectHref } from "@/lib/testPrep";
+import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, ownTests, subjectHref, testRedirect } from "@/lib/testPrep";
 import { getPaper, getTest } from "@/lib/testPrepRunner";
-import { loadCatalogue } from "@/lib/catalogueServer";
+import { loadCatalogue, liveHref } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A single mock test (/mock-exams-test/<subject>/<test>). A test with questions opens the test runner (the paper is sent
@@ -21,13 +21,15 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 // "Still looking for an answer?" under it. A test without questions yet shows a "coming soon" page in the site's
 // design (never a 404) with the paper's facts and the way back to the subject.
 
+// Each test has one page, under the subject that owns it (another subject listing it links there; its old address there goes
+// on, permanently: testRedirect). A placeholder has no page built ahead, and nothing links to it.
 export function generateStaticParams() {
-  return getSubjectSlugs().flatMap((subject) => resolveTests(subject).map((t) => ({ subject, test: t.slug })));
+  return getSubjectSlugs().flatMap((subject) => ownTests(subject).filter((t) => t.ready).map((t) => ({ subject, test: t.slug })));
 }
 
 const find = (subjectSlug, testSlug) => {
   const subject = getSubject(subjectSlug);
-  const test = subject?.tests.find((t) => t.slug === testSlug);
+  const test = ownTests(subjectSlug).find((t) => t.slug === testSlug);
   return subject && test ? { subject, test } : null;
 };
 
@@ -47,12 +49,16 @@ export async function generateMetadata(props) {
 export default async function MockTestPage(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { subject: subjectSlug, test: testSlug } = await props.params;
+  const moved = testRedirect(subjectSlug, testSlug);
+  if (moved) permanentRedirect(moved);
   const hit = find(subjectSlug, testSlug);
   if (!hit) notFound();
   const { subject, test } = hit;
   const c = testPrepPage.comingSoon;
   const paper = test.ready ? getPaper(subject.slug, test.slug) : null;
   const courses = getSubjectCourses(subject.slug, await loadCatalogue());
+  // "Book the course" never leads to an empty search (lib/catalogueServer.js liveHref)
+  const book = await liveHref(bookHref(subject.slug));
   const crumbs = [
     { label: "Home", href: "/" },
     { label: "Test Prep", href: "/test-prep" },
@@ -86,7 +92,7 @@ export default async function MockTestPage(props) {
             <section className="rt-tps__body rt-tq" aria-label={test.title}>
               <div className="container">
                 <div className="rt-tq__tools">
-                  <Link href={bookHref(subject.slug)} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
+                  <Link href={book} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
                   <CommentButton subject={subject.slug} test={test.slug} className="button -md -outline-purple-1 text-purple-1" />
                 </div>
                 <TestRunner
@@ -146,7 +152,7 @@ export default async function MockTestPage(props) {
                 )}
                 <div className="rt-tps__soon-actions">
                   <Link href={subjectHref(subject.slug)} className="button -md -purple-1 text-white">{c.backLabel}</Link>
-                  <Link href={bookHref(subject.slug)} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
+                  <Link href={book} className="button -md -outline-purple-1 text-purple-1">{c.bookLabel}</Link>
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import { refreshCatalogueList } from "@/app/admin/actions";
 import { admin as A } from "@/data/admin";
@@ -26,7 +27,11 @@ export default function AdminCatalogueList() {
   const list = api.admin.catalogue.list.useQuery();
   const [sheet, setSheet] = useState(null); // { mode: "add" | "rename", kind, parent?, key?, name?, where? }
   const [said, setSaid] = useState("");
+  const [problem, setProblem] = useState(""); // the last refusal, shown until the next change
+  const [retiring, setRetiring] = useState(null); // the entry waiting for "Retire …?": { kind, key, name }
+  const [deleting, setDeleting] = useState(null); // a retired entry waiting for "Delete …?": { kind, key, name }
   const setActive = api.admin.catalogue.setActive.useMutation();
+  const remove = api.admin.catalogue.remove.useMutation();
   const move = api.admin.catalogue.move.useMutation();
 
   if (list.isLoading) return <TableSkeleton />;
@@ -38,12 +43,16 @@ export default function AdminCatalogueList() {
     await utils.admin.catalogue.list.invalidate();
     await refreshCatalogueList();
   };
+  // a refusal (like retiring an entry with live courses) stays on screen until the next change, as well as in the toast
   const run = async (fn, what) => {
     try {
       await fn();
+      setProblem("");
       await changed(what);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      const message = errorsFrom(err).general;
+      setProblem(message);
+      setSaid(message);
     }
   };
   const actions = (kind, row, siblings, extra = []) => {
@@ -62,8 +71,10 @@ export default function AdminCatalogueList() {
             ...(i < siblings.length - 1 ? [{ label: copy.down, onClick: () => run(() => move.mutateAsync({ kind, key: row.key, direction: "down" }), copy.saved.move), phone: true }] : []),
             ...(RENAMEABLE.has(kind) ? [{ label: copy.rename, onClick: () => setSheet({ mode: "rename", kind, key: row.key, name: row.name }) }] : []),
             row.active
-              ? { label: copy.retire, danger: true, onClick: () => run(() => setActive.mutateAsync({ kind, key: row.key, active: false }), copy.saved.retire) }
+              ? { label: copy.retire, danger: true, onClick: () => setRetiring({ kind, key: row.key, name: row.name }) }
               : { label: copy.restore, onClick: () => run(() => setActive.mutateAsync({ kind, key: row.key, active: true }), copy.saved.restore) },
+            // a retired entry nothing uses can be deleted for good (the API refuses, saying where, if anything uses it)
+            ...(!row.active ? [{ label: "Delete", danger: true, onClick: () => setDeleting({ kind, key: row.key, name: row.name }) }] : []),
           ]}
         />
       </div>
@@ -85,6 +96,7 @@ export default function AdminCatalogueList() {
       <p className="rt-acc__note rt-adm-help">{copy.note} {copy.retireNote}</p>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
       <Said text={said} />
+      {problem && <p className="rt-acc__notice -warn" role="alert">{problem}</p>}
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cat-h">
         <h2 className="rt-acc__h2" id="rt-adm-cat-h">{copy.sections.category}</h2>
@@ -147,6 +159,9 @@ export default function AdminCatalogueList() {
       </div>
 
       <NameSheet sheet={sheet} onClose={() => setSheet(null)} onDone={changed} />
+      {/* retiring takes an entry out of the menus, filters and the provider editor's choices: asked first (restoring isn't) */}
+      <Confirm open={Boolean(deleting)} onClose={() => setDeleting(null)} title={deleting ? `Delete ${deleting.name}?` : ""} text={deleting ? `It is removed for good${deleting.kind === "category" ? ", with its sub-categories and topics" : deleting.kind === "subcategory" ? ", with its topics" : ""}. Only an entry nothing has used can be deleted: if a course, review, coupon or the site content uses it, you'll be told and it stays retired. This can't be undone.` : ""} confirmLabel="Delete" onConfirm={() => { const d = deleting; setDeleting(null); run(() => remove.mutateAsync({ kind: d.kind, key: d.key }), `${d.name} deleted`); }} />
+      <Confirm open={Boolean(retiring)} onClose={() => setRetiring(null)} title={retiring ? `Retire ${retiring.name}?` : ""} text="It leaves the site's menus and filters, and providers can't choose it for a course. Nothing is deleted: you can restore it later. (An entry with live courses can't be retired; you'll be told which.)" confirmLabel="Retire" onConfirm={() => { const r = retiring; setRetiring(null); run(() => setActive.mutateAsync({ kind: r.kind, key: r.key, active: false }), copy.saved.retire); }} />
     </div>
   );
 }

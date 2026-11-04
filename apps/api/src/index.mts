@@ -21,6 +21,18 @@ process.on('unhandledRejection', (reason) => {
 // The web app sends a Bearer token, not cookies, so no credentialed CORS is needed (in production it's the same domain anyway).
 app.use(cors({ origin: WEB_ORIGIN }))
 
+// The same security headers as the website's pages (apps/web/next.config.ts), for the API's answers: they are data, never a page,
+// so nothing may run or be framed from them. Express's own "X-Powered-By" is dropped (it only tells attackers what we run).
+app.disable('x-powered-by')
+app.use((_req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('X-Frame-Options', 'DENY')
+  next()
+})
+
 // A request body over 100 KB is refused straight away (413), before anything else runs: no form or editor sends that much
 // (pictures go straight to storage). tRPC's own maxBodySize below catches a body that doesn't say its size up front.
 const MAX_BODY = 100 * 1024

@@ -42,7 +42,17 @@ function OrderConfirmation() {
     if (result && result.kind !== "none") headRef.current?.focus({ preventScroll: true });
   }, [result]);
 
-  if (result === undefined) return null;
+  // the result is read in the browser: until then the page still has its heading (the page as sent has one, for screen readers
+  // and checks), which the result's own heading then replaces
+  if (result === undefined) {
+    return (
+      <section className="rt-bk layout-pt-lg layout-pb-lg" aria-busy="true">
+        <div className="container">
+          <h1 className="rt-bk__h1">Checking your booking…</h1>
+        </div>
+      </section>
+    );
+  }
   if (result.kind === "failed") {
     return (
       <>
@@ -144,7 +154,7 @@ function OrderConfirmation() {
 // shown only once checkout really places orders (its switch in lib/forms.js)
 export default function Confirmation() {
   return (
-    <FormGate form="checkout">
+    <FormGate form="checkout" headingLevel={1}>
       <OrderConfirmation />
     </FormGate>
   );

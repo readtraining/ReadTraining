@@ -23,7 +23,7 @@ export default function PriceRange({ min, max, onChange }) {
     onChange(band.min, band.max);
   };
 
-  // Typing a custom range is debounced 500ms.
+  // Typing a custom range is debounced 500ms; it says it is typing, so more typing replaces its Back entry instead of adding one.
   const typed = (field, raw) => {
     const next = { ...draft, [field]: raw };
     setDraft(next);
@@ -33,7 +33,7 @@ export default function PriceRange({ min, max, onChange }) {
       let lo = clamp(parseFloat(next.min), PRICE_BOUNDS.min);
       let hi = clamp(parseFloat(next.max), PRICE_BOUNDS.max);
       if (lo > hi) [lo, hi] = [hi, lo];
-      onChange(lo, hi);
+      onChange(lo, hi, { typing: true });
     }, 500);
   };
 
@@ -55,12 +55,12 @@ export default function PriceRange({ min, max, onChange }) {
         <label>
           <span className="rt-sr">Minimum price in pounds</span>
           <span aria-hidden="true">£</span>
-          <input type="number" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Min" value={draft.min === String(PRICE_BOUNDS.min) ? "" : draft.min} onChange={(e) => typed("min", e.target.value)} />
+          <input type="number" name="min" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Min" value={draft.min === String(PRICE_BOUNDS.min) ? "" : draft.min} onChange={(e) => typed("min", e.target.value)} />
         </label>
         <label>
           <span className="rt-sr">Maximum price in pounds</span>
           <span aria-hidden="true">£</span>
-          <input type="number" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Max" value={draft.max === String(PRICE_BOUNDS.max) ? "" : draft.max} onChange={(e) => typed("max", e.target.value)} />
+          <input type="number" name="max" inputMode="numeric" min={PRICE_BOUNDS.min} max={PRICE_BOUNDS.max} step={PRICE_STEP} placeholder="Max" value={draft.max === String(PRICE_BOUNDS.max) ? "" : draft.max} onChange={(e) => typed("max", e.target.value)} />
         </label>
       </div>
     </div>

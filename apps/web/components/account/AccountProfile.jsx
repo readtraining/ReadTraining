@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { account } from "@/data/account";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom, useMe } from "@/lib/useMe";
@@ -8,6 +9,8 @@ import { getSupabase } from "@/lib/supabase/client";
 import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import Sheet from "@/components/testPrep/runner/Sheet";
@@ -16,6 +19,12 @@ const copy = account.profile;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const NAME_RE = /^[\p{L}][\p{L}\p{M} '’.-]*$/u;
 const today = () => new Date().toISOString().slice(0, 10);
+// the youngest a learner can be (the API checks the same: me.router.mts MIN_AGE): 16, the age the work courses here start from
+const MIN_AGE = 16;
+const latestBirthday = () => {
+  const now = new Date();
+  return `${now.getUTCFullYear() - MIN_AGE}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+};
 
 // Account settings in Hurak's four parts, each saved on its own: basic information (photo, name, date of birth, phone, the
 // "Verified" badge), address, email (needs the current password) and password (current, new, repeat). Then the marketing
@@ -37,6 +46,7 @@ export default function AccountProfile() {
       <EmailSection me={me.data} />
       <PasswordSection me={me.data} />
       <MarketingSection me={me.data} />
+      <BusinessSection me={me.data} />
       <CloseSection me={me.data} />
     </div>
   );
@@ -59,6 +69,9 @@ function Field({ id, label, error, hint, ...input }) {
 // One saved-on-its-own form: its values, errors, status and the server call, with the first error focused.
 function useSection(initial, mutation, check, toInput = (v) => v) {
   const [values, setValues] = useState(initial);
+  // what is saved: the form has unsaved changes while its values differ (leaving then asks first, lib/unsavedChanges.js)
+  const [base, setBase] = useState(initial);
+  useUnsavedChanges(JSON.stringify(values) !== JSON.stringify(base));
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [saved, setSaved] = useState("");
@@ -81,8 +94,15 @@ function useSection(initial, mutation, check, toInput = (v) => v) {
     setPending(true);
     try {
       const result = await mutation.mutateAsync(toInput(values));
+      setBase(values);
+      // a save's own tidying (a formatted postcode, a cleared password) counts as saved too
+      const tidy = (next) => {
+        const tidied = typeof next === "function" ? next(values) : next;
+        setValues(tidied);
+        setBase(tidied);
+      };
       await utils.me.get.invalidate();
-      setSaved(onDone ? onDone(result, setValues) || "" : copy.saved);
+      setSaved(onDone ? onDone(result, tidy) || "" : copy.saved);
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       setErrors(fields);
@@ -122,6 +142,7 @@ function BasicSection({ me }) {
       else if (!NAME_RE.test(v.lastName.trim())) e.lastName = "Your last name can only use letters, spaces, hyphens and apostrophes.";
       if (!v.dateOfBirth) e.dateOfBirth = "Enter your date of birth.";
       else if (v.dateOfBirth >= today() || v.dateOfBirth < "1900-01-01") e.dateOfBirth = "Enter a real date of birth in the past.";
+      else if (v.dateOfBirth > latestBirthday()) e.dateOfBirth = `You need to be at least ${MIN_AGE} to have a ReadTraining account.`;
       const digits = v.phone.replace(/\D/g, "").length;
       if (!v.phone.trim()) e.phone = "Enter your contact number.";
       else if (!/^\+?[\d\s()-]+$/.test(v.phone.trim()) || digits < 10 || digits > 15) e.phone = "Enter a phone number, like 07700 900 982.";
@@ -149,7 +170,7 @@ function BasicSection({ me }) {
         <div className="rt-field">
           <label htmlFor="rt-pf-dob">Date of birth</label>
           {s.errors.dateOfBirth && <p className="rt-q__err" id="rt-pf-dob-e"><span className="rt-sr">Error: </span>{s.errors.dateOfBirth}</p>}
-          <DateField id="rt-pf-dob" value={s.values.dateOfBirth} onChange={(v) => s.set("dateOfBirth")({ target: { value: v } })} min="1900-01-01" max={today()} invalid={Boolean(s.errors.dateOfBirth)} describedBy={s.errors.dateOfBirth ? "rt-pf-dob-e" : undefined} placeholder="Choose your date of birth" startView="decade" />
+          <DateField id="rt-pf-dob" value={s.values.dateOfBirth} onChange={(v) => s.set("dateOfBirth")({ target: { value: v } })} min="1900-01-01" max={latestBirthday()} invalid={Boolean(s.errors.dateOfBirth)} describedBy={s.errors.dateOfBirth ? "rt-pf-dob-e" : undefined} placeholder="Choose your date of birth" startView="decade" />
         </div>
         <Field id="rt-pf-phone" label="Contact number" error={s.errors.phone} type="tel" autoComplete="tel" value={s.values.phone} onChange={s.set("phone")} />
       </div>
@@ -165,6 +186,7 @@ function PhotoRow({ me }) {
   const removePhoto = api.me.removePhoto.useMutation();
   const input = useRef(null);
   const [state, setState] = useState({ busy: false, error: "", saved: "" });
+  const [asking, setAsking] = useState(false); // "Remove your photo?" is open
   const initials = `${me.profile.firstName[0] ?? ""}${me.profile.lastName[0] ?? ""}`.toUpperCase();
 
   const choose = async (e) => {
@@ -206,15 +228,16 @@ function PhotoRow({ me }) {
         <strong>{copy.photo.title}</strong>
         <span className="rt-acc__note" id="rt-pf-photo-hint">{copy.photo.hint}</span>
         <div className="rt-acc__photoactions">
-          <input ref={input} type="file" accept={PHOTO_ACCEPT} className="rt-sr" id="rt-pf-photo" onChange={choose} aria-describedby="rt-pf-photo-hint" tabIndex={-1} />
+          <input ref={input} type="file" accept={PHOTO_ACCEPT} className="rt-sr" id="rt-pf-photo" onChange={choose} tabIndex={-1} aria-hidden="true" />
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => input.current?.click()} disabled={state.busy} aria-busy={state.busy}>
             {state.busy ? copy.saving : me.profile.photoUrl ? copy.photo.change : copy.photo.add}
           </button>
-          {me.profile.photoUrl && !state.busy && <button type="button" className="rt-acc__linkbtn" onClick={remove}>{copy.photo.remove}</button>}
+          {me.profile.photoUrl && !state.busy && <button type="button" className="rt-acc__linkbtn" onClick={() => setAsking(true)} aria-haspopup="dialog">{copy.photo.remove}</button>}
         </div>
         <p className="rt-acc__savedmsg" role="status">{state.saved}</p>
         {state.error && <p className="rt-q__err" role="alert">{state.error}</p>}
       </div>
+      <Confirm open={asking} onClose={() => setAsking(false)} title="Remove your photo?" text="It comes off your account. Your initials show instead, and you can add a photo again at any time." confirmLabel="Remove photo" onConfirm={() => { setAsking(false); remove(); }} />
     </div>
   );
 }
@@ -339,6 +362,52 @@ function PasswordSection({ me }) {
         <p className="rt-acc__note">{copy.noPassword}</p>
       )}
     </form>
+  );
+}
+
+// ---- the business account this person owns ---------------------------------------------------------------------------------
+// A business account made by mistake, or to try it out, can be deleted by its owner while nobody else is on it (the API checks,
+// organisations.deleteBusiness, and says so if someone is). Their own login and learner account stay as they are.
+function BusinessSection({ me }) {
+  const utils = api.useUtils();
+  const router = useRouter();
+  const remove = api.organisations.deleteBusiness.useMutation();
+  const [asking, setAsking] = useState(false);
+  const [state, setState] = useState({ error: "", done: "" });
+  const business = (me.identities || []).find((i) => i.kind === "business" && i.role === "owner");
+  if (!business && !state.done) return null;
+  const confirm = async () => {
+    setAsking(false);
+    setState({ error: "", done: "" });
+    try {
+      await remove.mutateAsync({ organisationId: business.organisationId });
+      setState({ error: "", done: `${business.name || "Your business account"} has been deleted.` });
+      await utils.me.get.invalidate();
+      router.refresh(); // the switch-account menus and the business pages follow
+    } catch (err) {
+      setState({ error: errorsFrom(err).general, done: "" });
+    }
+  };
+  return (
+    <section className="rt-acc__card" aria-labelledby="rt-pf-biz-h">
+      <h2 className="rt-acc__h3" id="rt-pf-biz-h">Your business account</h2>
+      {state.done ? (
+        <p className="rt-acc__savedmsg" role="status">{state.done}</p>
+      ) : (
+        <>
+          <p className="rt-acc__note">
+            <b>{business.name}</b>. Made it by mistake, or only to try it out? You can delete it while nobody else is on its team. Your own account stays as it is.
+          </p>
+          {state.error && <p className="rt-q__err" role="alert">{state.error}</p>}
+          <div>
+            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={remove.isPending} aria-busy={remove.isPending || undefined}>
+              {remove.isPending ? "Deleting…" : "Delete business account"}
+            </button>
+          </div>
+          <Confirm open={asking} onClose={() => setAsking(false)} title={`Delete ${business.name}?`} text="The business account is removed for good. Your own account, bookings and settings stay as they are. This can't be undone." confirmLabel="Delete business account" onConfirm={confirm} />
+        </>
+      )}
+    </section>
   );
 }
 

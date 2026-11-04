@@ -19,13 +19,14 @@ function groupTests(tests) {
     const m = x.title.match(TEST_N);
     const num = m ? Number(m[1] || m[2]) : null;
     const unit = m ? x.title.replace(TEST_N, "").trim() : null; // null = a test without a number
-    const row = { ...x, num, label: num ? `Test ${num}` : x.title };
+    const row = { ...x, numbered: Boolean(num) };
     const last = groups[groups.length - 1];
     if (last && last.unit === unit) last.rows.push(row);
     else groups.push({ unit, rows: [row] });
   });
-  // the tile shows the test's own number, or its place in the list when it has none
-  groups.forEach((g) => g.rows.forEach((r, i) => { r.n = r.num || i + 1; }));
+  // numbered by place in the group, not by the title's number: a test without questions yet isn't listed, so those numbers can
+  // have gaps (SIA Unit 2 would start at "Test 5")
+  groups.forEach((g) => g.rows.forEach((r, i) => { r.n = i + 1; r.label = r.numbered ? `Test ${r.n}` : r.title; }));
   return groups;
 }
 
@@ -96,7 +97,8 @@ export default function SubjectTests({ heading, pageTitle, subject, tests }) {
                           </span>
                         )}
                       </span>
-                      <SubjectTestStatus subject={subject} test={x.slug} />
+                      {/* progress is kept under the test's own address (its owner), wherever it is listed */}
+                      <SubjectTestStatus subject={x.owner || subject} test={x.slug} />
                       <span className="rt-tps__row-go" aria-hidden="true"><i className="icon-arrow-right"></i></span>
                     </Link>
                   </li>

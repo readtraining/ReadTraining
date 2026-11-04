@@ -17,7 +17,7 @@ import SubjectReviews from "@/components/testPrep/subject/SubjectReviews";
 import { TESTS_ID } from "@/components/testPrep/subject/scrollToTests";
 import { testPrepPage } from "@/data/testPrep";
 import { bookHref, getSubject, getSubjectCourses, getSubjectSlugs, moreSubjects, resolveTests, subjectHref } from "@/lib/testPrep";
-import { loadCatalogue } from "@/lib/catalogueServer";
+import { loadCatalogue, liveHref } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Test prep subject page (/test-prep/<slug>): one template for every subject, driven by data/testPrepSubjects.js.
@@ -112,7 +112,7 @@ export default async function TestPrepSubjectPage(props) {
           <SubjectSlimBar title={s.title} tag={t.cardEyebrow} facts={s.facts} links={slimLinks} startLabel={t.startLabel} />
 
           <SubjectHero crumbs={crumbs} title={s.title} lead={s.lead} label={s.category} top>
-            <SubjectActions bookHref={bookHref(slug)} />
+            <SubjectActions bookHref={await liveHref(bookHref(slug))} />
           </SubjectHero>
 
           <div className="rt-tps__page">

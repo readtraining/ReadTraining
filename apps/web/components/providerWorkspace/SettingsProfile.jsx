@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
+import { useWorkspace } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill } from "./providerParts";
 import { Confirm, Counter, Field, aria, isUrlOn } from "./settingsForm";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
 
@@ -48,13 +51,17 @@ const UNDER_REVIEW = ["pending", "changes_requested"];
 function InfoForm({ profile, say }) {
   const { organisationId, can } = useProviderAccess();
   const router = useRouter();
+  const workspace = useWorkspace();
   const utils = api.useUtils();
   const update = api.provider.profile.update.useMutation();
   const [f, setF] = useState({ name: profile.name, headline: profile.headline, bio: profile.bio, city: profile.city, facebook: profile.socials.facebook || "", linkedin: profile.socials.linkedin || "", youtube: profile.socials.youtube || "" });
   const [errors, setErrors] = useState({});
+  // what is saved (updated on a save, without waiting for the profile to load again): leaving with changes asks first
+  const [savedF, setSavedF] = useState(f);
   const formRef = useRef(null);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const locked = !can("provider.profile.edit");
+  useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
   const underReview = UNDER_REVIEW.includes(profile.status);
   const canRename = underReview && can("provider.profile.rename");
 
@@ -73,10 +80,14 @@ function InfoForm({ profile, say }) {
       { organisationId, ...(canRename ? { name: f.name.trim() } : {}), headline: f.headline.trim(), bio: f.bio.trim(), city: f.city.trim() || null, socials: Object.fromEntries(SOCIAL.map((x) => [x.key, f[x.key].trim()])) },
       {
         onSuccess: (r) => {
+          setSavedF(f);
           utils.provider.profile.get.invalidate({ organisationId });
           utils.provider.profile.review.invalidate({ organisationId });
-          // the name shows in the sidebar and the account menu, which come from the server
-          if (r.renamed) router.refresh();
+          // the name shows in the sidebar and the account menu: at once here, and from the server once it has caught up
+          if (r.renamed) {
+            workspace?.rename?.(f.name.trim());
+            router.refresh();
+          }
           say("Provider information saved");
         },
         onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general }); },
@@ -123,8 +134,7 @@ function InfoForm({ profile, say }) {
 
 // ---- company logo ----------------------------------------------------------------------------------------------------------
 
-const LOGO_MAX = 2 * 1024 * 1024; // the course-media bucket's limit
-const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+// the rule every picture upload follows (lib/images.js): PNG, JPG or WebP up to 15 MB, made smaller for you, at least 200 × 200
 
 export function LogoTab({ say }) {
   return <WithProfile>{(p) => <LogoForm profile={p} say={say} />}</WithProfile>;
@@ -138,44 +148,66 @@ function LogoForm({ profile, say }) {
   const removeLogo = api.provider.profile.removeLogo.useMutation();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // What the box shows: the picture just chosen (from the file itself, at once) or none just removed (null), until the saved logo
+  // has loaded in the browser; then the profile's own address. So it never goes blank while the saved copy loads.
+  // `local`: { url (the chosen picture, or null once removed), was (the profile's logo when the change started) }
+  const [local, setLocal] = useState(null);
+  const logoUrl = local ? local.url : profile.logoUrl;
+  useEffect(() => {
+    if (!local || profile.logoUrl === local.was) return; // the profile hasn't caught up with the change yet
+    if (!profile.logoUrl) return void setLocal(null); // removed, and the profile agrees
+    let live = true;
+    whenLoaded(profile.logoUrl).then(() => {
+      if (!live) return;
+      if (local.url?.startsWith("blob:")) URL.revokeObjectURL(local.url); // the chosen file's preview isn't needed any more
+      setLocal(null); // the saved copy can show now
+    });
+    return () => {
+      live = false;
+    };
+  }, [profile.logoUrl, local]);
   const fileRef = useRef(null);
   const locked = !can("provider.profile.edit");
-  const done = (message) => { utils.provider.profile.get.invalidate({ organisationId }); say(message); };
 
-  // the picture's size, checked before it is uploaded
-  const measure = (file) => new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const img = new window.Image();
-    img.onload = () => { resolve({ w: img.width, h: img.height }); URL.revokeObjectURL(url); };
-    img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
-    img.src = url;
-  });
   const pick = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!LOGO_TYPES.includes(file.type)) return setError("Choose a PNG, JPG or WebP image.");
-    if (file.size > LOGO_MAX) return setError("Choose an image smaller than 2 MB.");
-    const size = await measure(file);
-    if (!size) return setError("That image could not be read. Try another file.");
-    if (size.w < 200 || size.h < 200) return setError("The logo must be at least 200 × 200 pixels.");
     setError("");
+    let picture;
+    try {
+      picture = await prepareImage(file, "logo");
+    } catch (err) {
+      return setError(err.message);
+    }
+    const before = local;
+    const preview = URL.createObjectURL(picture.blob);
+    setLocal({ url: preview, was: profile.logoUrl }); // the chosen logo shows straight away
     setBusy(true);
     try {
-      const { path, token } = await uploadUrl.mutateAsync({ organisationId, contentType: file.type });
-      const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, file, { contentType: file.type });
+      const { path, token } = await uploadUrl.mutateAsync({ organisationId, contentType: picture.type });
+      const { error: upError } = await getSupabase().storage.from("course-media").uploadToSignedUrl(path, token, picture.blob, { contentType: picture.type });
       if (upError) throw new Error("The logo didn't upload. Please try again.");
       await setLogo.mutateAsync({ organisationId, path });
-      done("Logo saved");
+      utils.provider.profile.get.invalidate({ organisationId });
+      say("Logo saved");
     } catch (err) {
+      setLocal(before);
+      URL.revokeObjectURL(preview);
       setError(err?.data ? firstError(err) : err.message || "The logo didn't upload. Please try again.");
     } finally {
       setBusy(false);
     }
   };
+  const [asking, setAsking] = useState(false); // "Remove your logo?" is open
   const remove = () => {
+    setAsking(false);
     setBusy(true);
-    removeLogo.mutate({ organisationId }, { onSuccess: () => done("Logo removed"), onError: (er) => setError(firstError(er)), onSettled: () => setBusy(false) });
+    removeLogo.mutate({ organisationId }, {
+      onSuccess: () => { setLocal({ url: null, was: profile.logoUrl }); utils.provider.profile.get.invalidate({ organisationId }); say("Logo removed"); },
+      onError: (er) => setError(firstError(er)),
+      onSettled: () => setBusy(false),
+    });
   };
 
   return (
@@ -183,19 +215,20 @@ function LogoForm({ profile, say }) {
       {error && <p className="rt-q__err" id="rt-set-logo-e" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
       <div className="rt-pws-set__logo">
         <span className="rt-pws-set__logobox">
-          {profile.logoUrl ? <img src={profile.logoUrl} alt="Your logo" width={96} height={96} /> : <span aria-hidden="true">{profile.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>}
+          {logoUrl ? <img src={logoUrl} alt="Your logo" width={96} height={96} /> : <span aria-hidden="true">{profile.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>}
         </span>
         <div className="rt-pws-set__logoside">
-          <input ref={fileRef} id="rt-set-logo" type="file" accept={LOGO_TYPES.join(",")} className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={pick} />
+          <input ref={fileRef} id="rt-set-logo" type="file" accept={acceptFor("logo")} className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={pick} />
           {!locked && (
             <div className="rt-pws-set__actions">
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Saving…" : profile.logoUrl ? "Change logo" : "Upload logo"}</button>
-              {profile.logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={remove} disabled={busy}>Remove logo</button>}
+              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy && !removeLogo.isPending ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}</button>
+              {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
             </div>
           )}
-          <p className="rt-field__hint">At least 200 × 200 pixels. PNG, JPG or WebP, up to 2 MB. It is saved as soon as you choose it.</p>
+          <p className="rt-field__hint">{hintFor("logo")} It is saved as soon as you choose it.</p>
         </div>
       </div>
+      <Confirm open={asking} onClose={() => setAsking(false)} title="Remove your logo?" text="It comes off your public profile and course pages, and your initials show instead. You can upload a logo again at any time." confirmLabel="Remove logo" onConfirm={remove} />
     </div>
   );
 }
@@ -211,19 +244,19 @@ function TermsForms({ profile, say }) {
   const utils = api.useUtils();
   const update = api.provider.profile.updateTerms.useMutation();
   const locked = !can("provider.terms.edit");
-  // each form saves only its own text
-  const save = (patch, saved, onError) => update.mutate(
+  // each form saves only its own text; `onSaved` runs once it has (the form then counts as saved)
+  const save = (patch, saved, onError, onSaved) => update.mutate(
     { organisationId, ...patch },
-    { onSuccess: () => { utils.provider.profile.get.invalidate({ organisationId }); say(saved); }, onError: (er) => onError(firstError(er)) },
+    { onSuccess: () => { onSaved?.(); utils.provider.profile.get.invalidate({ organisationId }); say(saved); }, onError: (er) => onError(firstError(er)) },
   );
   return (
     <div className="rt-acc__stack">
       <TextDoc id="rt-set-policy" title="Cancellation policy" required value={profile.cancellationPolicy} locked={locked} busy={update.isPending}
         text="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain."
-        onSave={(v, onError) => save({ cancellationPolicy: v }, "Cancellation policy saved", onError)} />
+        onSave={(v, onError, onSaved) => save({ cancellationPolicy: v }, "Cancellation policy saved", onError, onSaved)} />
       <TextDoc id="rt-set-terms" title="Booking terms" value={profile.bookingTerms} locked={locked} busy={update.isPending}
         text="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms."
-        onSave={(v, onError) => save({ bookingTerms: v || null }, "Booking terms saved", onError)} />
+        onSave={(v, onError, onSaved) => save({ bookingTerms: v || null }, "Booking terms saved", onError, onSaved)} />
     </div>
   );
 }
@@ -232,6 +265,9 @@ function TextDoc({ id, title, text, value, required, locked, busy, onSave }) {
   const max = id === "rt-set-terms" ? 20000 : 10000;
   const [v, setV] = useState(value || "");
   const [error, setError] = useState("");
+  // what is saved (set on a save, before the profile loads again)
+  const [savedV, setSavedV] = useState(value || "");
+  useUnsavedChanges(!locked && v.trim() !== savedV.trim());
   const formRef = useRef(null);
   const submit = (e) => {
     e.preventDefault();
@@ -240,17 +276,18 @@ function TextDoc({ id, title, text, value, required, locked, busy, onSave }) {
       return focusFirstError(formRef.current);
     }
     setError("");
-    onSave(v.trim(), setError);
+    const sent = v.trim();
+    onSave(sent, setError, () => setSavedV(sent));
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
       <Field id={id} label={`${title}${required ? "" : " (optional)"}`} hint={text} error={error} count={<Counter value={v} max={max} />}>
-        <textarea {...aria(id, error, true)} rows={9} maxLength={max} autoComplete="off" value={v} onChange={(e) => setV(e.target.value)} disabled={locked} />
+        <textarea {...aria(id, error, true)} rows={9} maxLength={max} autoComplete="off" value={v} onChange={(e) => { setV(e.target.value); if (error) setError(""); }} disabled={locked} />
       </Field>
       {!locked && (
         <div className="rt-pws-set__foot">
           <span></span>
-          <button type="submit" className="button -md -outline-purple-1 text-purple-1" disabled={busy || v.trim() === (value || "")}>Save {title.toLowerCase()}</button>
+          <button type="submit" className="button -md -outline-purple-1 text-purple-1" disabled={busy || v.trim() === (value || "")} aria-busy={busy || undefined}>{busy ? "Saving…" : `Save ${title.toLowerCase()}`}</button>
         </div>
       )}
     </form>
@@ -270,6 +307,12 @@ export function VenuesTab({ say }) {
   const remove = api.provider.venues.remove.useMutation();
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = new, a venue = edit it
   const [removing, setRemoving] = useState(null);
+  const [archiving, setArchiving] = useState(null);
+  const toggleActive = (v) =>
+    setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, {
+      onSuccess: () => { setArchiving(null); refresh(); say(v.active ? "Venue archived" : "Venue restored"); },
+      onError: (e) => { setArchiving(null); say(firstError(e)); },
+    });
   const [blocked, setBlocked] = useState("");
   const edit = can("provider.cohorts.edit");
   const refresh = () => utils.provider.venues.list.invalidate({ organisationId });
@@ -294,8 +337,10 @@ export function VenuesTab({ say }) {
                 {edit && (
                   <div className="rt-adm-list__side">
                     <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => setEditing(v)}>Edit<span className="rt-sr"> {v.name}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={setActive.isPending} onClick={() => setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, { onSuccess: () => { refresh(); say(v.active ? "Venue archived" : "Venue restored"); }, onError: (e) => say(firstError(e)) })}>{v.active ? "Archive" : "Restore"}<span className="rt-sr"> {v.name}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => { setBlocked(""); setRemoving(v); }}>Delete<span className="rt-sr"> {v.name}</span></button>
+                    {/* archiving takes the venue out of new dates, so it asks first; restoring doesn't */}
+                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={setActive.isPending} aria-busy={(setActive.isPending && setActive.variables?.venueId === v.id) || undefined} onClick={() => (v.active ? setArchiving(v) : toggleActive(v))}>{setActive.isPending && setActive.variables?.venueId === v.id ? (v.active ? "Archiving…" : "Restoring…") : v.active ? "Archive" : "Restore"}<span className="rt-sr"> {v.name}</span></button>
+                    {/* a venue a date has used can't be deleted (its dates keep it): only archived, so Delete isn't offered */}
+                    {!v.used && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => { setBlocked(""); setRemoving(v); }}>Delete<span className="rt-sr"> {v.name}</span></button>}
                   </div>
                 )}
               </li>
@@ -305,7 +350,8 @@ export function VenuesTab({ say }) {
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : "Venue saved, but we couldn't find its postcode on the map"); }} />
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked}
+      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked} busy={remove.isPending}
         onConfirm={() => remove.mutate({ organisationId, venueId: removing.id }, { onSuccess: () => { setRemoving(null); refresh(); say("Venue deleted"); }, onError: (e) => setBlocked(firstError(e)) })} />
     </div>
   );
@@ -327,6 +373,8 @@ export function VenueForm({ venue = null, onSaved, onCancel, inline = false, idP
   const save = api.provider.venues.save.useMutation();
   const [f, setF] = useState(() => (venue ? { name: venue.name, street: venue.street, city: venue.city, postcode: venue.postcode || "" } : { name: "", street: "", city: "", postcode: "" }));
   const [errors, setErrors] = useState({});
+  const [start] = useState(f);
+  useUnsavedChanges(JSON.stringify(f) !== JSON.stringify(start)); // typed into but not saved (the form closes once saved)
   const ref = useRef(null);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const submit = (e) => {

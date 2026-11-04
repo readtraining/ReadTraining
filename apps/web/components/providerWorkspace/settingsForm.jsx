@@ -43,14 +43,15 @@ export function isUrlOn(v, hosts = []) {
 export const isMoney = (v, { zero = false } = {}) => /^\d+(\.\d{1,2})?$/.test(String(v).trim()) && (zero || Number(v) > 0);
 
 // A question before something that can't be undone. `blocked`: a message shown instead of the confirm button.
-export function Confirm({ open, onClose, title, text, confirmLabel, onConfirm, blocked }) {
+// `busy`: the action is running, so the button can't be pressed twice (a second "Delete" would say it was blocked).
+export function Confirm({ open, onClose, title, text, confirmLabel, onConfirm, blocked, busy = false }) {
   return (
     <Sheet open={open} onClose={onClose} title={title} closeLabel="Close" className="rt-pws-set__confirm">
       <div className="rt-pws-set__confirmbody">
         {text && <p className="rt-acc__note">{text}</p>}
         {blocked && <p className="rt-adm-item__block" role="alert">{blocked}</p>}
         <div className="rt-pws-set__actions">
-          {!blocked && <button type="button" className="button -md -purple-1 text-white" onClick={onConfirm}>{confirmLabel}</button>}
+          {!blocked && <button type="button" className="button -md -purple-1 text-white" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>{confirmLabel}</button>}
           <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>{blocked ? "Close" : "Cancel"}</button>
         </div>
       </div>

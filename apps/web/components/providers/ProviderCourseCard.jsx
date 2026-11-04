@@ -9,7 +9,7 @@ export default function ProviderCourseCard({ course: c, as: H = "h3" }) {
   return (
     <Link href={c.href} className="rt-ucard">
       <div className="rt-ucard__image">
-        {c.imageSrc ? <Image width={500} height={300} src={c.imageSrc} alt="" /> : <span className="rt-ucard__noimg" aria-hidden="true"></span>}
+        {c.imageSrc ? <Image width={500} height={300} src={c.imageSrc} alt={c.title} /> : <span className="rt-ucard__noimg" aria-hidden="true"></span>}
       </div>
       <H className="rt-ucard__title">{c.title}</H>
       <p className="rt-ucard__meta">{c.duration}</p>

@@ -77,7 +77,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: abs("/") },
       { "@type": "ListItem", position: 2, name: "All courses", item: abs(CATALOGUE_HREF) },
-      ...(subject ? [{ "@type": "ListItem", position: 3, name: subject, item: abs(`${CATALOGUE_HREF}?subject=${course.subject}`) }] : []),
+      ...(subject ? [{ "@type": "ListItem", position: 3, name: subject, item: abs(`${CATALOGUE_HREF}/${course.subject}`) }] : []),
       { "@type": "ListItem", position: subject ? 4 : 3, name: course.title, item: abs(path) },
     ],
   };

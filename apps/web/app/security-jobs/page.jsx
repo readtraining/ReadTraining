@@ -17,7 +17,7 @@ import JobsTraining from "@/components/securityJobs/JobsTraining";
 import { securityJobs as s } from "@/data/securityJobs";
 import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
-import { courseCards } from "@/lib/catalogueServer";
+import { courseCards, liveLinks } from "@/lib/catalogueServer";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 
@@ -52,7 +52,7 @@ export default async function SecurityJobsPage() {
           <JobsChecks checks={s.checks} />
           <StepsSection workflow={s.how} />
           <JobsConsent consent={s.consent} />
-          <JobsGrow grow={s.grow} />
+          <JobsGrow grow={{ ...s.grow, adds: await liveLinks(s.grow.adds) }} />
           <JobsApplication />
           <JobsTraining training={s.training} courses={courses} />
           <FaqSection eyebrow={s.faq.eyebrow} title={s.faq.title} items={faq} idPrefix="jobs-faq" className="layout-pt-lg layout-pb-lg bg-light-4 rt-jobs__anchor" id="faqs" />
