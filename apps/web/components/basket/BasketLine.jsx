@@ -116,7 +116,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
             <label className={`rt-bk__opt${item.firstAid === "add" ? " is-on" : ""}`}>
               <input type="radio" name={`${id}-fa`} value="add" checked={item.firstAid === "add"} onChange={() => onChange({ firstAid: "add" })} />
               <span>
-                <b>{fa.add.label} <em>+{formatPrice(fa.add.price)}<s>{formatPrice(fa.add.wasPrice)}</s></em></b>
+                <b>{fa.add.label} <em>+{formatPrice(fa.add.price)}{fa.add.wasPrice > fa.add.price && <s>{formatPrice(fa.add.wasPrice)}</s>}</em></b>
                 <small>{fa.add.note}</small>
               </span>
             </label>
