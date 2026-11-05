@@ -20,6 +20,7 @@ const TONES = {
   course: { draft: "neutral", pending: "warning", changes: "info", live: "success", paused: "neutral" },
   decision: { approved: "success", changes: "info", rejected: "neutral" },
   catalogue: { retired: "neutral" },
+  content: { missing: "warning" },
   session: { sent: "success", notSent: "warning", notSentLater: "neutral", cancelled: "neutral" },
   change: { provider: "info", approved: "warning", evidence: "warning", refunded: "success", moved: "success", rejected: "neutral", won: "success", lost: "neutral" },
   review: { challenge: "warning", hidden: "neutral" },

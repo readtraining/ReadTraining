@@ -292,6 +292,10 @@ async function removeUnusedImages(db: typeof Db, paths: string[]) {
   await removeMedia(paths.filter((p) => !keep.has(p)))
 }
 
+// An image change moves the course's version on (after `onLog` has checked the editor's `seen`), so another tab still showing the
+// old images is refused instead of saving its list over the new one and deleting the image just added.
+const touchCourse = (tx: Writer, courseId: number) => tx.update(courses).set({ updatedAt: new Date() }).where(eq(courses.id, courseId))
+
 export async function addCourseImage(db: typeof Db, course: Course, path: string, alt: string | undefined, onLog: OnLog) {
   if (!path.startsWith(`${imageFolder(course)}/`)) throw new TRPCError({ code: 'FORBIDDEN' })
   // one uploaded file is one image: attaching it again is refused (and the file, still in use, is left alone)
@@ -312,6 +316,7 @@ export async function addCourseImage(db: typeof Db, course: Course, path: string
     return await db.transaction(async (tx) => {
       const [img] = await tx.insert(courseImages).values({ courseId: course.id, position: n.n, path, alt: alt || null }).returning({ id: courseImages.id })
       await onLog(tx)
+      await touchCourse(tx, course.id)
       return { id: img.id, url: mediaUrl(path) }
     })
   } catch (error) {
@@ -337,6 +342,7 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
     if (gone.length) await tx.delete(courseImages).where(inArray(courseImages.id, gone.map((i) => i.id)))
     for (const [i, img] of images.entries()) await tx.update(courseImages).set({ position: i, alt: img.alt || null }).where(eq(courseImages.id, img.id))
     await onLog(tx, { kept: images.length, removed: gone.length })
+    await touchCourse(tx, course.id)
     return gone
   })
   await removeUnusedImages(db, removed.map((i) => i.path))
@@ -517,7 +523,11 @@ export const providerCoursesRouter = createTRPCRouter({
       if (keys.some((k) => !PAGE_ONLY.has(k)) && !can(ctx.actor, 'provider.courses.edit', { organisationId })) await refuse(ctx, 'provider.courses.edit', organisationId, path)
       if (keys.some((k) => PRICING.has(k)) && !can(ctx.actor, 'provider.pricing.edit', { organisationId })) await refuse(ctx, 'provider.pricing.edit', organisationId, path)
       const course = await ownCourse(ctx.db, organisationId, courseId)
+      // the category, sub-category and topic change together (the editor always sends all three), so a course is never filed
+      // under one category with another's sub-category
       if (fields.subcategory !== undefined && fields.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
+      if (fields.category !== undefined && fields.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
+      if (fields.topic !== undefined && fields.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')
 
       // how it is taught can change only while the course has no dates
       if (fields.method !== undefined && fields.method !== course.method) {

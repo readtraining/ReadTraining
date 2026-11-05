@@ -301,7 +301,7 @@ function EmailSection({ me }) {
     return copy.email.sent.replace("{email}", result.pendingEmail);
   };
   return (
-    <form className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pf-email-h" ref={s.formRef}>
+    <form method="post" className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pf-email-h" ref={s.formRef}>
       <h2 className="rt-acc__h2" id="rt-pf-email-h">{copy.email.title}</h2>
       <p className="rt-acc__note">{copy.email.lead}</p>
       {me.pendingEmail && <p className="rt-acc__notice" role="status">{(returned ? copy.email.oneMore : copy.email.pending).replace("{email}", me.pendingEmail)}</p>}
@@ -345,7 +345,7 @@ function PasswordSection({ me }) {
   };
   const type = shown ? "text" : "password";
   return (
-    <form className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pw-h" ref={s.formRef}>
+    <form method="post" className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pw-h" ref={s.formRef}>
       <h2 className="rt-acc__h2" id="rt-pw-h">{copy.password.title}</h2>
       <p className="rt-acc__note">{copy.password.lead}</p>
       {me.hasPassword ? (
@@ -490,7 +490,7 @@ function CloseSection({ me }) {
       <p className="rt-acc__savedmsg" role="status">{said}</p>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={c.sheet.title} closeLabel="Close" fallbackFocus={openRef}>
-        <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={formRef}>
+        <form method="post" className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={formRef}>
           {c.sheet.what.map((w) => <p key={w} className="rt-acc__note">{w}</p>)}
           <div className="rt-field">
             <label htmlFor="rt-pf-close-reason">{c.sheet.reason}</label>

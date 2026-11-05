@@ -16,5 +16,15 @@ export function safeNext(value, fallback = "/account", origin) {
   }
   if (/[\u0000-\u001f\u007f]/.test(candidate)) return fallback;
   if (!candidate.startsWith("/") || candidate.startsWith("//") || candidate.startsWith("/\\")) return fallback;
-  return candidate;
+  // Browsers tidy a path before following it ("/.//evil.com" and "/admin/.././/evil.com" become "//evil.com", another site), so
+  // the tidied path is what is checked and returned.
+  const base = "http://same.invalid";
+  let tidy;
+  try {
+    tidy = new URL(candidate, base);
+  } catch {
+    return fallback;
+  }
+  if (tidy.origin !== base || tidy.pathname.startsWith("//") || tidy.pathname.includes("\\")) return fallback;
+  return tidy.pathname + tidy.search + tidy.hash;
 }

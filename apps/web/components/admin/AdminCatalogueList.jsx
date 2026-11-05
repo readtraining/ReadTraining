@@ -71,7 +71,7 @@ export default function AdminCatalogueList() {
             ...(i < siblings.length - 1 ? [{ label: copy.down, onClick: () => run(() => move.mutateAsync({ kind, key: row.key, direction: "down" }), copy.saved.move), phone: true }] : []),
             ...(RENAMEABLE.has(kind) ? [{ label: copy.rename, onClick: () => setSheet({ mode: "rename", kind, key: row.key, name: row.name }) }] : []),
             row.active
-              ? { label: copy.retire, danger: true, onClick: () => setRetiring({ kind, key: row.key, name: row.name }) }
+              ? { label: copy.retire, danger: true, onClick: () => setRetiring({ kind, key: row.key, name: row.name, live: row.live }) }
               : { label: copy.restore, onClick: () => run(() => setActive.mutateAsync({ kind, key: row.key, active: true }), copy.saved.restore) },
             // a retired entry nothing uses can be deleted for good (the API refuses, saying where, if anything uses it)
             ...(!row.active ? [{ label: "Delete", danger: true, onClick: () => setDeleting({ kind, key: row.key, name: row.name }) }] : []),
@@ -85,6 +85,7 @@ export default function AdminCatalogueList() {
       <span className="rt-adm-strong">{row.name}</span>
       {!row.active && <AdminStatus kind="catalogue" status="retired">{copy.retired}</AdminStatus>}
       <small>{row.slug}</small>
+      {row.live > 0 && <small>{liveCourses(row.live)}</small>}
     </span>
   );
   const addButton = (kind, parent, where) => canEdit && (
@@ -161,10 +162,22 @@ export default function AdminCatalogueList() {
       <NameSheet sheet={sheet} onClose={() => setSheet(null)} onDone={changed} />
       {/* retiring takes an entry out of the menus, filters and the provider editor's choices: asked first (restoring isn't) */}
       <Confirm open={Boolean(deleting)} onClose={() => setDeleting(null)} title={deleting ? `Delete ${deleting.name}?` : ""} text={deleting ? `It is removed for good${deleting.kind === "category" ? ", with its sub-categories and topics" : deleting.kind === "subcategory" ? ", with its topics" : ""}. Only an entry nothing has used can be deleted: if a course, review, coupon or the site content uses it, you'll be told and it stays retired. This can't be undone.` : ""} confirmLabel="Delete" onConfirm={() => { const d = deleting; setDeleting(null); run(() => remove.mutateAsync({ kind: d.kind, key: d.key }), `${d.name} deleted`); }} />
-      <Confirm open={Boolean(retiring)} onClose={() => setRetiring(null)} title={retiring ? `Retire ${retiring.name}?` : ""} text="It leaves the site's menus and filters, and providers can't choose it for a course. Nothing is deleted: you can restore it later. (An entry with live courses can't be retired; you'll be told which.)" confirmLabel="Retire" onConfirm={() => { const r = retiring; setRetiring(null); run(() => setActive.mutateAsync({ kind: r.kind, key: r.key, active: false }), copy.saved.retire); }} />
+      {/* an entry with live courses filed under it can't be retired (API setActive): the pop-up says so at once, with nothing to confirm */}
+      <Confirm
+        open={Boolean(retiring)}
+        onClose={() => setRetiring(null)}
+        title={retiring ? (retiring.live ? `${retiring.name} can't be retired` : `Retire ${retiring.name}?`) : ""}
+        text={retiring?.live ? "" : "It leaves the site's menus and filters, and providers can't choose it for a course. Nothing is deleted: you can restore it later."}
+        blocked={retiring?.live ? `${liveCourses(retiring.live)} ${retiring.live === 1 ? "is" : "are"} filed under it. Move ${retiring.live === 1 ? "it" : "them"} to another ${WORD[retiring.kind]}, or pause ${retiring.live === 1 ? "it" : "them"}, first. Nothing has been changed.` : undefined}
+        confirmLabel="Retire"
+        onConfirm={() => { const r = retiring; setRetiring(null); run(() => setActive.mutateAsync({ kind: r.kind, key: r.key, active: false }), copy.saved.retire); }}
+      />
     </div>
   );
 }
+
+const WORD = { category: "category", subcategory: "sub-category", topic: "topic", method: "delivery method", level: "level" };
+const liveCourses = (n) => `${n} live ${n === 1 ? "course" : "courses"}`;
 
 // Add an entry (its name; the address is made from it) or rename one. Errors inline, focus on the field.
 function NameSheet({ sheet, onClose, onDone }) {

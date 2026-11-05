@@ -26,11 +26,12 @@ async function ask(path: string): Promise<Answer> {
 
 // "Stoke-on-Trent", "stoke on trent" and "Stoke on Trent, Staffordshire" read the same
 const placeKey = (v: string) => v.split(',')[0].toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim()
-// "Newcastle" is the start of "Newcastle upon Tyne"
+// "Newcastle" is short for "Newcastle upon Tyne" and "Stoke" for "Stoke-on-Trent", but "North" isn't "North Reddish": a short name
+// matches only a longer one that goes on with upon, on, under, in, le or by
 const sameTown = (typed: string, name: string | null | undefined) => {
   const a = placeKey(typed)
   const b = placeKey(name ?? '')
-  return Boolean(a && b) && (a === b || b.startsWith(`${a} `))
+  return Boolean(a && b) && (a === b || /^(upon|on|under|in|le|by) /.test(b.startsWith(`${a} `) ? b.slice(a.length + 1) : ''))
 }
 const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
   const r = (d: number) => (d * Math.PI) / 180
@@ -53,7 +54,9 @@ export async function placeVenue(postcode: string, town: string): Promise<{ at: 
   if (pc.ok) {
     const r = pc.result as { latitude?: number | null; longitude?: number | null; admin_district?: string; admin_county?: string; admin_ward?: string; parish?: string; region?: string }
     if (typeof r.latitude === 'number' && typeof r.longitude === 'number') at = { lat: r.latitude, lng: r.longitude }
-    areas = [r.admin_district, r.admin_county, r.admin_ward, r.parish?.replace(/, unparished area$/i, ''), r.region]
+    areas = [r.admin_district, r.admin_county, r.admin_ward, r.parish?.replace(/, unparished area$/i, '')]
+    // the region only as a whole name ("London"): its first word alone ("South" of "South East") is no town
+    if (r.region && placeKey(town) === placeKey(r.region)) return { at, problem: null }
   } else {
     // a postcode that is no longer used (M1 1AA since 2009) can't be found on the map: refused. One too new for the open data
     // yet is saved without a position, as before.
