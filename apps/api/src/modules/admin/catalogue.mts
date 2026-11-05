@@ -98,6 +98,13 @@ export const catalogueAdminRouter = createTRPCRouter({
       const [before] = await ctx.db.execute<{ name: string }>(sql`select name from ${TABLE[input.kind]} where id = ${input.key}::uuid`)
       if (!before) throw new TRPCError({ code: 'NOT_FOUND', message: 'That part of the list no longer exists. Reload the page.' })
       if (before.name === input.name) return { ok: true }
+      // two entries side by side (same parent) can't share a name: nobody could tell them apart in the menus and filters
+      const parent = input.kind === 'category' ? null : PARENT[input.kind]
+      const [clash] = await ctx.db.execute<{ name: string }>(sql`
+        select n.name from ${TABLE[input.kind]} n, ${TABLE[input.kind]} me
+        where me.id = ${input.key}::uuid and n.id <> me.id and ${parent ? sql`n.${parent} = me.${parent}` : sql`true`}
+          and lower(trim(n.name)) = ${input.name.trim().toLowerCase()}`)
+      if (clash) throw fieldError('name', `There is already a ${WORD[input.kind]} called “${clash.name}” here. Choose another name.`)
       await ctx.db.transaction(async (tx) => {
         await tx.execute(sql`update ${TABLE[input.kind]} set name = ${input.name} where id = ${input.key}::uuid`)
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', action: 'admin.catalogue_renamed', targetType: input.kind, targetId: input.key, metadata: { kind: input.kind, from: before.name, to: input.name }, ip: ctx.ip })
