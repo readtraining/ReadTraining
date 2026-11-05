@@ -284,8 +284,19 @@ export async function courseImageUploadUrl(course: Course, contentType: keyof ty
   return up
 }
 
+// deletes stored pictures no course image uses any more (a file attached twice stays while one copy is left)
+async function removeUnusedImages(db: typeof Db, paths: string[]) {
+  if (!paths.length) return
+  const used = await db.select({ path: courseImages.path }).from(courseImages).where(inArray(courseImages.path, paths))
+  const keep = new Set(used.map((u) => u.path))
+  await removeMedia(paths.filter((p) => !keep.has(p)))
+}
+
 export async function addCourseImage(db: typeof Db, course: Course, path: string, alt: string | undefined, onLog: OnLog) {
   if (!path.startsWith(`${imageFolder(course)}/`)) throw new TRPCError({ code: 'FORBIDDEN' })
+  // one uploaded file is one image: attaching it again is refused (and the file, still in use, is left alone)
+  const [used] = await db.select({ id: courseImages.id }).from(courseImages).where(eq(courseImages.path, path)).limit(1)
+  if (used) throw bad('That picture is already on this course.')
   // the picture itself must be at least 500 × 300 pixels (checked on the stored file, whatever the browser said); a smaller or
   // unreadable one is deleted again
   const size = await storedImageSize(path)
@@ -304,7 +315,7 @@ export async function addCourseImage(db: typeof Db, course: Course, path: string
       return { id: img.id, url: mediaUrl(path) }
     })
   } catch (error) {
-    await removeMedia([path]) // not added (the course changed elsewhere, or the save failed): the uploaded file goes too
+    await removeUnusedImages(db, [path]) // not added (the course changed elsewhere, or the save failed): the uploaded file goes too
     throw error
   }
 }
@@ -328,7 +339,7 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
     await onLog(tx, { kept: images.length, removed: gone.length })
     return gone
   })
-  await removeMedia(removed.map((i) => i.path))
+  await removeUnusedImages(db, removed.map((i) => i.path))
   return { ok: true }
 }
 
@@ -344,7 +355,7 @@ export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog) 
     await onLog(tx, { title: course.title })
     return paths
   })
-  await removeMedia(images.map((i) => i.path))
+  await removeUnusedImages(db, images.map((i) => i.path))
   return { ok: true }
 }
 
