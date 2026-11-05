@@ -3713,7 +3713,9 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-dd__chosen { display: flex; flex-direction: column; min-width: 0; margin: 0; font-size: 13px; line-height: 1.45; color: var(--cd-muted); }
 .rt-dd__chosen strong { font-size: 15px; font-weight: 700; color: var(--cd-text); }
 .rt-dd__foot .button { flex: none; }
-.rt-dd__foot .button:disabled { opacity: 0.45; cursor: not-allowed; } /* no date chosen yet: it must not look ready to press */
+.rt-dd__foot .button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* a course Preview: Add to basket looks switched off (a click still says why: booking is off in a preview) */
+.button.rt-btn-off { opacity: 0.45; cursor: not-allowed; } /* no date chosen yet: it must not look ready to press */
 @media (max-width: 575px) { .rt-dd__foot { flex-direction: column; align-items: stretch; gap: 10px; } .rt-dd__foot .button { width: 100%; } }
 .rt-bk__side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
 .rt-bk__qty { display: inline-flex; align-items: center; height: 40px; overflow: hidden; border: 1px solid var(--color-light-5); border-radius: 10px; background: #fff; }

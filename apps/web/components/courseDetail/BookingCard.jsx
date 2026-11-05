@@ -178,8 +178,9 @@ export default function BookingCard() {
             <button
               ref={cardButtonRef}
               type="button"
-              className={`button -md -purple-1 text-white rt-btn-block${status === "added" ? " is-added" : ""}`}
+              className={`button -md -purple-1 text-white rt-btn-block${status === "added" ? " is-added" : ""}${course.preview ? " rt-btn-off" : ""}`}
               onClick={addToBasket}
+              aria-disabled={course.preview || undefined}
               disabled={status === "loading"}
               aria-busy={status === "loading"}
             >
