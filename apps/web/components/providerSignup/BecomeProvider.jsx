@@ -114,7 +114,7 @@ export default function BecomeProvider() {
     );
   } else {
     body = (
-      <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
+      <form method="post" className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
         <div className="rt-contact__pair">
           {field("firstName", "First name", { type: "text", autoComplete: "given-name" })}
           {field("lastName", "Last name", { type: "text", autoComplete: "family-name" })}

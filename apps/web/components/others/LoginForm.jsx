@@ -140,7 +140,7 @@ export default function LoginForm() {
         </>
       }
     >
-      <form className="rt-auth__form" onSubmit={handleSubmit} noValidate ref={formRef}>
+      <form method="post" className="rt-auth__form" onSubmit={handleSubmit} noValidate ref={formRef}>
         {info && !formError && <AuthNotice tone="info">{info}</AuthNotice>}
         {formError && (
           <AuthNotice>
