@@ -99,6 +99,8 @@ export default function AdminCourse({ id }) {
   const busy = decide.isPending;
   const sheetTitle = { approve: ap.approve, changes: ap.requestChanges, approveChange: ap.approveChange, rejectChange: ap.rejectChange, pause: ap.pause, resume: ap.resume }[asking] || "";
   const own = Boolean(c.ownCourse || c.ownChange);
+  // a course (or a change) waiting for a decision opens every section of its page: the admin reads it all before deciding
+  const reviewing = c.status === "pending" || Boolean(c.pendingChanges);
   const place = [categoryName(c.category), subcategoryName(c.category, c.subcategory), topicName(c.category, c.subcategory, c.topic)].filter(Boolean).join(" › ");
 
   return (
@@ -199,26 +201,19 @@ export default function AdminCourse({ id }) {
         </section>
       </div>
 
-      <section className="rt-acc__card rt-adm-read" aria-labelledby="rt-adm-cc-h">
+      <section className="rt-acc__card" aria-labelledby="rt-adm-cc-h">
         <h2 className="rt-acc__h2" id="rt-adm-cc-h">The course page</h2>
-        <h3 className="rt-adm-h3">Short description</h3>
-        <Text v={c.summary} />
-        <h3 className="rt-adm-h3">Description</h3>
-        <Text v={c.description} />
-        <h3 className="rt-adm-h3">Who it&apos;s for</h3>
-        <Text v={c.audience} />
-        <h3 className="rt-adm-h3">Entry requirements</h3>
-        <Text v={c.entryRequirements} />
-        <h3 className="rt-adm-h3">What learners will learn</h3>
-        <Value k="outcomes" v={c.outcomes} c={c} />
-        <h3 className="rt-adm-h3">Features</h3>
-        <Value k="features" v={c.features} c={c} />
-        <h3 className="rt-adm-h3">Syllabus</h3>
-        <Value k="units" v={c.units} c={c} />
-        <h3 className="rt-adm-h3">Exam and assessment</h3>
-        <Value k="exams" v={c.exams} c={c} />
-        <h3 className="rt-adm-h3">FAQs</h3>
-        <Value k="faqs" v={c.faqs} c={c} />
+        <dl className="rt-adm-dl rt-adm-read">
+          <Row label="Short description" v={c.summary}><Text v={c.summary} /></Row>
+          <Row label="Description" v={c.description}><Text v={c.description} /></Row>
+          <Row label="Who it's for" v={c.audience}><Text v={c.audience} /></Row>
+          <Row label="Entry requirements" v={c.entryRequirements}><Text v={c.entryRequirements} /></Row>
+          <Row label="What learners will learn" v={c.outcomes}><Bullets items={c.outcomes} /></Row>
+          <Row label="Features" v={c.features}><Bullets items={c.features} /></Row>
+          <Row label="Syllabus" v={c.units}><Fold open={reviewing} label={count(c.units, "unit")}><Units units={c.units} /></Fold></Row>
+          <Row label="Exam and assessment" v={c.exams}><Fold open={reviewing} label={count(c.exams, "exam")}><Exams exams={c.exams} /></Fold></Row>
+          <Row label="FAQs" v={c.faqs}><Fold open={reviewing} label={count(c.faqs, "question")}><Faqs faqs={c.faqs} /></Fold></Row>
+        </dl>
       </section>
 
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={`${sheetTitle}: ${c.title}`} closeLabel="Close">
@@ -246,10 +241,61 @@ export default function AdminCourse({ id }) {
   );
 }
 
-// a paragraph field: blank lines start new paragraphs; empty shows as such
+// The course page's words, read as rows like Details: a gap shows as "Not written" in amber, so it is noticed. The long parts
+// (syllabus, exams, FAQs) fold to a count on a live course and open while it waits for a decision.
+const isEmpty = (v) => v === null || v === undefined || (typeof v === "string" ? !v.trim() : Array.isArray(v) && !v.length);
+function Row({ label, v, children }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>{isEmpty(v) ? <AdminStatus kind="content" status="missing">Not written</AdminStatus> : children}</dd>
+    </div>
+  );
+}
+const count = (list, word) => `${list.length} ${word}${list.length === 1 ? "" : "s"}`;
+const Fold = ({ open, label, children }) => (
+  <details className="rt-adm-fold" open={open || undefined}>
+    <summary>{label}</summary>
+    {children}
+  </details>
+);
+const Bullets = ({ items }) => <ul className="rt-adm-read__list">{items.map((x, i) => <li key={i}>{x}</li>)}</ul>;
+// each unit numbered, its topics (one per line, as written) as bullets under it
+const Units = ({ units }) => (
+  <ol className="rt-adm-read__list">
+    {units.map((u, i) => {
+      const lines = (u.body || "").split("\n").map((l) => l.replace(/^\s*[-•*]\s*/, "").trim()).filter(Boolean);
+      return (
+        <li key={i}>
+          <b>{u.title}</b>
+          {lines.length > 1 ? <Bullets items={lines} /> : lines.length === 1 && <p className="rt-adm-read__p">{lines[0]}</p>}
+        </li>
+      );
+    })}
+  </ol>
+);
+const Exams = ({ exams }) => (
+  <div className="rt-biz__tablecard rt-adm-read__table">
+    <table className="rt-biz__table rt-adm-table">
+      <thead><tr><th scope="col">Exam</th><th scope="col">Pass mark</th><th scope="col">Duration</th></tr></thead>
+      <tbody>
+        {exams.map((e, i) => (
+          <tr key={i}>
+            <td data-label="Exam">{e.unit}</td>
+            <td data-label="Pass mark">{e.passMark || "–"}</td>
+            <td data-label="Duration">{e.duration || "–"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+const Faqs = ({ faqs }) => <ul className="rt-adm-read__faqs">{faqs.map((f, i) => <li key={i}><b>{f.question}</b><Text v={f.answer} /></li>)}</ul>;
+
+// a paragraph field: blank lines start new paragraphs
 function Text({ v }) {
   if (!v) return <p className="rt-adm-muted">Not written.</p>;
-  return v.split(/\n\s*\n/).map((p, i) => <p key={i} className="rt-adm-read__p">{p}</p>);
+  return v.split(/\n\s*\n/).map((p, i) => <p key={i} className="rt-adm-read__p rt-adm-read__pre">{p}</p>);
 }
 
 // any course field, as it reads: text, lists, units, exam rows, FAQs, catalogue places

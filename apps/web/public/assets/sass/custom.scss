@@ -4871,13 +4871,26 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 0 0 12px; padding: 0; list-style: none; }
 .rt-adm-thumbs li { display: grid; gap: 4px; justify-items: start; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-adm-thumbs img { width: 100%; aspect-ratio: 16 / 10; border-radius: var(--rt-radius-sm); object-fit: cover; background: var(--rt-c-soft); }
-.rt-adm-read .rt-adm-h3 { margin: 20px 0 6px; }
-.rt-adm-read .rt-adm-h3:first-of-type { margin-top: 8px; }
+.rt-adm-read > div { padding: 14px 0; }
+.rt-adm-read dd > * { max-width: 75ch; } /* comfortable reading lines, however wide the card */
 .rt-adm-read__p { margin: 0 0 8px; font-size: var(--rt-text-sm); line-height: 1.6; color: var(--rt-c-text); }
-.rt-adm-read__list { display: grid; gap: 8px; margin: 0; padding-left: 20px; font-size: var(--rt-text-sm); line-height: 1.5; list-style: disc; }
-ol.rt-adm-read__list { list-style: decimal; }
-.rt-adm-read__list li { display: list-item; }
-.rt-adm-read__list li b { display: block; }
+.rt-adm-read__p:last-child { margin-bottom: 0; }
+.rt-adm-read__list { display: grid; gap: 6px; margin: 0; padding-left: 20px; font-size: var(--rt-text-sm); line-height: 1.5; }
+/* the template's reset (ul, li { list-style: none }) sits on each item, so the markers are set on the items */
+.rt-adm-read__list > li { display: list-item; list-style: disc; }
+ol.rt-adm-read__list { gap: 14px; }
+ol.rt-adm-read__list > li { list-style: decimal; }
+.rt-adm-read__list > li::marker { color: var(--rt-c-muted); }
+ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
+.rt-adm-read__list li b { display: block; color: var(--rt-c-text); }
+.rt-adm-read__list .rt-adm-read__list { margin-top: 6px; gap: 2px; }
+.rt-adm-read__list li > .rt-adm-read__p { margin-top: 4px; }
+.rt-adm-read__faqs { display: grid; gap: 14px; margin: 0; padding: 0; }
+.rt-adm-read__faqs > li { list-style: none; }
+.rt-adm-read__faqs b { display: block; margin-bottom: 2px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-adm-read__table { margin: 0; }
+.rt-adm-fold summary { width: fit-content; cursor: pointer; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-brand); }
+.rt-adm-fold[open] summary { margin-bottom: 10px; }
 .rt-adm-read__pre { white-space: pre-line; }
 @media (max-width: 575px) { .rt-adm-dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .rt-adm-inline__row { display: flex; align-items: center; gap: 8px; }
