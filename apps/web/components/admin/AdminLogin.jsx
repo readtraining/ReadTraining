@@ -205,7 +205,7 @@ export default function AdminLogin() {
   if (step === "password") {
     return (
       <AdminAuthPage title="Admin sign-in" lead="For ReadTraining staff only.">
-        <form className="rt-auth__form" onSubmit={submitPassword} noValidate ref={formRef}>
+        <form method="post" className="rt-auth__form" onSubmit={submitPassword} noValidate ref={formRef}>
           {info && !notice && <AuthNotice tone="info">{info}</AuthNotice>}
           {notice && <AuthNotice>{notice}</AuthNotice>}
           <AuthField id="rt-adm-email" label="Email address" icon={<MailIcon />} error={errors.email} name="email" type="email" autoComplete="username" value={values.email} onChange={set} disabled={busy} />
@@ -235,7 +235,7 @@ export default function AdminLogin() {
       title={enrolling ? "Set up two-step sign-in" : "Enter your code"}
       lead={enrolling ? "Admin accounts need a code from an authenticator app (for example Google Authenticator or Microsoft Authenticator) each time they sign in." : "Open your authenticator app and enter the 6-digit code for ReadTraining."}
     >
-      <form className="rt-auth__form" onSubmit={submitCode} noValidate ref={formRef}>
+      <form method="post" className="rt-auth__form" onSubmit={submitCode} noValidate ref={formRef}>
         {notice && <AuthNotice>{notice}</AuthNotice>}
         {enrolling && factor?.qr && (
           <ol className="rt-adm-auth__steps">

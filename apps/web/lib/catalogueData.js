@@ -82,6 +82,7 @@ export function toCourseDetail(page, related = []) {
         courseId: o.courseId,
         courseSlug: o.slug,
         days: d.days,
+        places: d.capacity || null, // the date's places (no booking takes any yet: payments come later)
         details: d.details,
         price: pounds(d.pricePence),
         wasPrice: pounds(d.wasPricePence),

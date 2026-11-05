@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { RowMenu } from "@/components/admin/adminParts";
 import NavIcon from "@/components/admin/navIcons";
@@ -78,9 +79,12 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   }, [meName, meEmail, workspace?.name]);
   const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
   const logOut = async () => {
+    if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     await signOut();
-    router.replace("/");
-    router.refresh();
+    leaveWithoutAsking(() => {
+      router.replace("/");
+      router.refresh();
+    });
   };
 
   return (

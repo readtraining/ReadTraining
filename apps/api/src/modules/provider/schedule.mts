@@ -76,14 +76,19 @@ export const providerVenuesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const postcode = formatPostcode(input.postcode)
       const before = input.venueId ? await ownVenue(ctx.db, input.organisationId, input.venueId) : null
-      // the same place twice (same postcode, and the same name or street) would show twice in every venue list: refused
-      const [twin] = await ctx.db.execute<{ name: string }>(sql`
-        select name from public.venues
-        where organisation_id = ${input.organisationId}::uuid and ${before ? sql`id <> ${before.id}::uuid` : sql`true`}
-          and upper(replace(coalesce(postcode, ''), ' ', '')) = ${postcode.replace(/\s/g, '').toUpperCase()}
-          and (lower(trim(name)) = ${input.name.trim().toLowerCase()} or lower(trim(street)) = ${input.street.trim().toLowerCase()})
-        limit 1`)
-      if (twin) throw new TRPCError({ code: 'BAD_REQUEST', message: `You already have this venue: ${twin.name}, ${postcode}. Edit that one instead.`, cause: Object.assign(new Error('duplicate venue'), { field: 'name' }) })
+      // the same place twice (same postcode, and the same name or street) would show twice in every venue list: refused. Checked
+      // first for a quick answer, and again inside the save under a lock on the provider's venues, so two saves at the same moment
+      // can't both pass.
+      const refuseTwin = async (db: Pick<typeof ctx.db, 'execute'>) => {
+        const [twin] = await db.execute<{ name: string }>(sql`
+          select name from public.venues
+          where organisation_id = ${input.organisationId}::uuid and ${before ? sql`id <> ${before.id}::uuid` : sql`true`}
+            and upper(replace(coalesce(postcode, ''), ' ', '')) = ${postcode.replace(/\s/g, '').toUpperCase()}
+            and (lower(trim(name)) = ${input.name.trim().toLowerCase()} or lower(trim(street)) = ${input.street.trim().toLowerCase()})
+          limit 1`)
+        if (twin) throw new TRPCError({ code: 'BAD_REQUEST', message: `You already have this venue: ${twin.name}, ${postcode}. Edit that one instead.`, cause: Object.assign(new Error('duplicate venue'), { field: 'name' }) })
+      }
+      await refuseTwin(ctx.db)
       // look the place up when the postcode or the town is new or changed: the postcode must be in use and the town a UK place near
       // it (lib/postcode.mts placeVenue), since the town becomes a public town page
       const same = before && before.postcode === postcode && before.city.trim().toLowerCase() === input.city.trim().toLowerCase() && before.lat !== null
@@ -92,6 +97,8 @@ export const providerVenuesRouter = createTRPCRouter({
       const where = place.at
       const values = { name: input.name, street: input.street, city: input.city, postcode, lat: where?.lat ?? null, lng: where?.lng ?? null, updatedAt: new Date() }
       return ctx.db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`readtraining.venues:${input.organisationId}`}))`)
+        await refuseTwin(tx)
         const [v] = before
           ? await tx.update(venues).set(values).where(eq(venues.id, before.id)).returning({ id: venues.id })
           : await tx.insert(venues).values({ ...values, organisationId: input.organisationId }).returning({ id: venues.id })

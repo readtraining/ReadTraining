@@ -30,6 +30,7 @@ import {
   refuseIfChanged,
   resolveCatalogue,
   REVIEWED,
+  sameSubject,
   seenVersion,
   setCourseImages,
 } from '../provider/courses.mjs'
@@ -40,6 +41,15 @@ import {
 // published (no approval). Each decision saves the reason (the provider sees it), is logged, and emails the provider's owner.
 
 type Course = typeof courses.$inferSelect
+// The course (as it is about to be approved) and its shared course page must have the same subject (sameSubject).
+async function refuseOtherSubject(tx: Parameters<Parameters<typeof Db.transaction>[0]>[0], courseId: number) {
+  const [c] = await tx.select({ parentId: courses.parentId, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, courseId))
+  if (!c?.parentId) return
+  const [page] = await tx.select({ title: courses.title, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, c.parentId))
+  if (page && !sameSubject(page, c))
+    throw new TRPCError({ code: 'CONFLICT', message: `This would file the course under a different subject from its shared course page “${page.title}”. Ask the provider to choose a matching page (or none) first, or send the change back.` })
+}
+
 type Decision = 'approve' | 'changes' | 'approveChange' | 'rejectChange' | 'pause' | 'resume'
 
 const id = z.number().int().positive()
@@ -291,6 +301,8 @@ export const adminCoursesRouter = createTRPCRouter({
         }
         // never live under a retired category, method or level (a change may move it into one retired since it was sent)
         if (input.decision === 'approve' || input.decision === 'resume' || (input.decision === 'approveChange' && locked.status === 'live')) await refuseRetired(tx, course.id, 'admin')
+        // a course on a shared course page keeps the page's subject: the shared page may have been chosen after the change was sent
+        if (input.decision === 'approve' || input.decision === 'approveChange') await refuseOtherSubject(tx, course.id)
         if (input.decision === 'rejectChange') {
           await tx.update(courseRevisions).set({ status: 'rejected', note: message, decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
           // the course's version moves on (it would otherwise fall back to before the change, and an editor still showing the
@@ -341,6 +353,8 @@ export const adminCoursesRouter = createTRPCRouter({
       const { courseId, seoTitle, seoDescription, seoKeywords, listed, seen, ...rest } = input
       void courseId
       if (rest.subcategory !== undefined && rest.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
+      if (rest.category !== undefined && rest.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
+      if (rest.topic !== undefined && rest.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')
       const reviewed = Object.fromEntries(Object.entries(rest).filter(([k, v]) => v !== undefined && (REVIEWED as readonly string[]).includes(k)))
       const version = await ctx.db.transaction(async (tx) => {
         // two staff (or two tabs) on the same page: a save over a newer version is refused (lock the row so they take turns)

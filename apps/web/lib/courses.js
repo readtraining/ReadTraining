@@ -4,7 +4,7 @@ import { categoryName, methodName, subcategoryName } from "@/lib/taxonomy";
 // server, lib/catalogueData.js for their shapes). Light enough for the browser.
 
 // booking modes live in lib/courseModes.js, re-exported here for server code
-export { bookableModes, firstSession, defaultMode } from "@/lib/courseModes";
+export { bookableModes, firstSession, defaultMode, cheapestMode } from "@/lib/courseModes";
 
 // A catalogue course (lib/catalogueData.js toCatalogueCourse) in the shape home's course card (HomeCourseCard) reads.
 export const toCourseCard = (c) => ({

@@ -43,7 +43,7 @@ export default function SignUpFormv2() {
         </p>
       ) : (
         <>
-          <form className="rt-auth__form" onSubmit={submit} noValidate ref={formRef}>
+          <form method="post" className="rt-auth__form" onSubmit={submit} noValidate ref={formRef}>
             {status === "success" && <AuthNotice tone="success">Your account has been created. Taking you to your account…</AuthNotice>}
             {formError && <AuthNotice>{formError}</AuthNotice>}
             <div className="rt-auth__pair">

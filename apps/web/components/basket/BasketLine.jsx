@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { basket as copy } from "@/data/basket";
-import { MAX_DELEGATES, bundleOf, firstAidInBundle, hasDate, hasPackages, isSelected, lineParts, modeLabel, needsFirstAid } from "@/lib/basket";
+import { MAX_DELEGATES, maxDelegates, bundleOf, firstAidInBundle, hasDate, hasPackages, isSelected, lineParts, modeLabel, needsFirstAid } from "@/lib/basket";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
@@ -19,7 +19,8 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
   const courseHref = coursePath(item.slug || item.id);
   const id = `bk-${item.id}-${item.sessionId || "x"}`;
   const fa = copy.firstAid;
-  const setQuantity = (next) => onChange({ quantity: Math.min(MAX_DELEGATES, Math.max(1, next)) });
+  const max = maxDelegates(item);
+  const setQuantity = (next) => onChange({ quantity: Math.min(max, Math.max(1, next)) });
   const on = isSelected(item);
   // the course page package this line was booked with (its price is already in the line's price)
   const bundle = bundleOf(item);
@@ -66,7 +67,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
           <div className="rt-bk__qty" role="group" aria-label={`Delegates for ${item.title}`}>
             <button type="button" aria-label="Remove one delegate" disabled={quantity <= 1} onClick={() => setQuantity(quantity - 1)}>−</button>
             <output aria-live="polite"><span className="rt-sr">Delegates: </span>{quantity}</output>
-            <button type="button" aria-label="Add one delegate" disabled={quantity >= MAX_DELEGATES} onClick={() => setQuantity(quantity + 1)}>+</button>
+            <button type="button" aria-label="Add one delegate" disabled={quantity >= max} onClick={() => setQuantity(quantity + 1)}>+</button>
           </div>
           <p className="rt-bk__price">
             <strong>{formatPrice(total)}</strong>
@@ -79,8 +80,8 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
         </div>
       </div>
 
-      {quantity >= MAX_DELEGATES && (
-        <p className="rt-bk__note">Need more than {MAX_DELEGATES} places? <Link href={`${QUOTE_HREF}?course=${item.id}`} className="fb-textlink">Ask for a group quote</Link></p>
+      {quantity >= max && (
+        <p className="rt-bk__note">{max < MAX_DELEGATES ? `This date has ${max} places. Need more?` : `Need more than ${MAX_DELEGATES} places?`} <Link href={`${QUOTE_HREF}?course=${item.id}`} className="fb-textlink">Ask for a group quote</Link></p>
       )}
 
       {dated && hasPackages(item) && (

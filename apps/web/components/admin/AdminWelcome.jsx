@@ -131,7 +131,7 @@ export default function AdminWelcome() {
 
   return (
     <AdminAuthPage title="Set up your admin account" lead={`You've been invited to the ReadTraining admin as a${/^[aeiou]/i.test(invite.role) ? "n" : ""} ${invite.role} admin. Add your name and choose a password for ${invite.email}.`}>
-      <form className="rt-auth__form" onSubmit={submit} noValidate ref={formRef}>
+      <form method="post" className="rt-auth__form" onSubmit={submit} noValidate ref={formRef}>
         {notice && <AuthNotice>{notice}</AuthNotice>}
         <AuthField id="rt-adm-first" label="First name" icon={<UserIcon />} error={errors.firstName} name="firstName" type="text" autoComplete="given-name" value={values.firstName} onChange={set} disabled={busy} maxLength={50} />
         <AuthField id="rt-adm-last" label="Last name" icon={<UserIcon />} error={errors.lastName} name="lastName" type="text" autoComplete="family-name" value={values.lastName} onChange={set} disabled={busy} maxLength={50} />

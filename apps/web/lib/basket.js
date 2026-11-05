@@ -7,6 +7,8 @@ import { basket as copy } from "@/data/basket";
 // a course page package (`bundle`, data/courseGuides.js) is part of the line: the same date as another package is another line
 export const lineKey = (item) => `${item.id}:${item.sessionId || ""}${item.bundle?.key ? `:${item.bundle.key}` : ""}`;
 export const MAX_DELEGATES = 20;
+// the most delegates one line can have: 20, or fewer when its date has fewer places
+export const maxDelegates = (item) => Math.min(MAX_DELEGATES, Number(item.places) || MAX_DELEGATES);
 // A ticked line is part of this booking; unticked lines stay in the basket for later and are left out of the total and payment.
 export const isSelected = (item) => item.selected !== false;
 
@@ -29,6 +31,7 @@ export const lineFor = (course, session) => ({
   postcode: session.postcode,
   provider: session.provider,
   skillSaver: Boolean(session.skillSaver), // in Skill Saver: the learner's discount comes off this line
+  places: session.places ?? null,
 });
 
 // One line per course and date: an undated line goes once the same course has a dated one, and the same course on the same date
@@ -38,7 +41,7 @@ export function mergeLines(list) {
   for (const item of list) {
     if (!item.sessionId && list.some((o) => o.id === item.id && o.sessionId)) continue;
     const twin = out.find((o) => lineKey(o) === lineKey(item));
-    if (twin) twin.quantity = Math.min(MAX_DELEGATES, (Number(twin.quantity) || 1) + (Number(item.quantity) || 1));
+    if (twin) twin.quantity = Math.min(maxDelegates(twin), (Number(twin.quantity) || 1) + (Number(item.quantity) || 1));
     else out.push({ ...item });
   }
   return out;
@@ -71,7 +74,7 @@ export function lineParts(item) {
   const addOnWas = addOn && copy.firstAid.add.wasPrice > addOn ? copy.firstAid.add.wasPrice : 0;
   const unit = basePrice(item) + pkg + bundle + addOn;
   const unitWas = wasBase(item) ? wasBase(item) + pkg + bundle + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
-  const quantity = Math.max(1, Number(item.quantity) || 1);
+  const quantity = Math.min(maxDelegates(item), Math.max(1, Number(item.quantity) || 1)); // a date changed to one with fewer places
   return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, pkg, bundle, addOn };
 }
 

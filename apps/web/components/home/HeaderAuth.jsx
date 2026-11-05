@@ -4,6 +4,7 @@ import { AUTH_ROUTES } from "@/lib/routes";
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import { account } from "@/data/account";
 import { signOut, useAuthUser } from "@/lib/auth/authClient";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
@@ -43,9 +44,12 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
 
   const leave = async () => {
     setOpen(false);
+    if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     await signOut();
-    router.replace("/");
-    router.refresh();
+    leaveWithoutAsking(() => {
+      router.replace("/");
+      router.refresh();
+    });
   };
 
   if (person === undefined) return <div className={mobile ? "rt-hauth-mobile" : "rt-hauth"} aria-hidden="true"></div>;

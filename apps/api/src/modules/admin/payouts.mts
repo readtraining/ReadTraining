@@ -33,10 +33,13 @@ const heldFrom = (open: SQL) => sql`(select coalesce(sum(round(x.amount_pence::n
   join ${ledgerEntries} lp on lp.order_id = o.id and lp.type = 'purchase'
   where o.provider_id = g.id)::int`
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
+// What each provider is owed up to `periodEnd`: what it earned before the end of that day, less every payout already sent. A
+// payout's ledger line is dated when it was marked sent, often after its period, so it counts whatever its date: otherwise a
+// second run for the same (or an earlier) period would find that money owed again.
 async function owed(db: typeof Db | Tx, periodEnd: string) {
   const rows = await db.execute<{ id: string; name: string; slug: string; status: string; balance: number; held_refunds: number; held_disputes: number; waiting: number }>(sql`
     select g.id, g.name, g.slug, g.status,
-      (select coalesce(sum(l.provider_pence), 0) from ${ledgerEntries} l where l.provider_id = g.id and l.at < ${endOf(periodEnd)})::int balance,
+      (select coalesce(sum(l.provider_pence), 0) from ${ledgerEntries} l where l.provider_id = g.id and (l.at < ${endOf(periodEnd)} or l.type = 'payout'))::int balance,
       ${heldFrom(sql`select r.order_id, r.amount_pence from public.refunds r where r.status = 'requested'`)} held_refunds,
       ${heldFrom(sql`select d.order_id, d.amount_pence from public.disputes d where d.status = 'open'`)} held_disputes,
       (select coalesce(sum(amount_pence), 0) from ${payouts} w where w.provider_id = g.id and w.status <> 'sent')::int waiting

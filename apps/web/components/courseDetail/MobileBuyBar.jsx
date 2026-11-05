@@ -54,7 +54,7 @@ export default function MobileBuyBar() {
             <strong>{formatPrice(price)}</strong>
             <span>{bundle && bundle.add > 0 ? `${bundle.name} · ` : ""}{mode === "ondemand" ? session.time : formatShortDate(session.date)}, {session.location}</span>
           </div>
-          <button type="button" className={`button -md -purple-1 text-white rt-bar__btn${status === "added" ? " is-added" : ""}`} onClick={addToBasket} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
+          <button type="button" className={`button -md -purple-1 text-white rt-bar__btn${status === "added" ? " is-added" : ""}${course.preview ? " rt-btn-off" : ""}`} onClick={addToBasket} aria-disabled={course.preview || undefined} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
             {label}
           </button>
         </>

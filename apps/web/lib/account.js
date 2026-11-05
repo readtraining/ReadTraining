@@ -135,7 +135,7 @@ export function getLearning() {
   const now = today();
   return getBookings()
     .filter((b) => b.status !== "cancelled")
-    .flatMap((b) => b.lines.map((l, i) => ({ ...l, key: `${b.reference}-${i}`, reference: b.reference, requested: Boolean(b.cancellation), state: (l.endDate || l.date) >= now ? "upcoming" : "completed" })))
+    .flatMap((b) => b.lines.map((l, i) => ({ ...l, key: `${b.reference}-${i}`, reference: b.reference, demo: Boolean(b.demo), requested: Boolean(b.cancellation), state: (l.endDate || l.date) >= now ? "upcoming" : "completed" })))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
