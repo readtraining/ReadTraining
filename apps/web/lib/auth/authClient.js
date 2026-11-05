@@ -5,6 +5,7 @@ import { getHumanCheck } from "@/lib/humanCheck";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { safeNext } from "@/lib/safeNext";
+import { forgetSavedCourses } from "@/lib/wishlist";
 
 // Auth through Supabase Auth (email and password; the project requires email confirmation). The log in, sign up, forgot and reset
 // password screens only depend on these functions: each resolves on success and throws an Error with a message people can act on.
@@ -115,9 +116,11 @@ export async function registerAccount({ firstName, lastName, email, password, ma
 
 export const signUpWithProvider = (provider, next) => socialSignIn(provider, next, true);
 
+// Signs out this browser only; the person's other devices stay signed in. Their saved courses (kept in the browser) go too.
 export async function signOut() {
   if (!isSupabaseConfigured) return;
-  await getSupabase().auth.signOut();
+  await getSupabase().auth.signOut({ scope: "local" });
+  forgetSavedCourses();
 }
 
 // The signed-in person as the site shows them: { id, email, firstName, lastName, name } or null; undefined while loading.

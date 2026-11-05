@@ -202,7 +202,7 @@ export const tests = [
   { slug: "citb-mock-test-50-questions", title: "CITB Mock Test", category: "Construction" },
   { slug: "cscs-green-card-mock-test", title: "CSCS Green Card Mock Test", category: "Construction", banner: "CSCS Green Card Course Mock Tests – {tests} free practice exams with {questions} questions for learners at ReadTraining" },
   { slug: "personal-licence-mock-exam", title: "Personal Licence Mock Exam", category: "Licensing" },
-  { slug: "fire-marshal-test", title: "Fire Banksman (Marshal) Mock Exam 2025", category: "Fire" },
+  { slug: "fire-marshal-test", title: "Fire Banksman (Marshal) Mock Exam", category: "Fire" },
   { slug: "sia-mock-test", title: "SIA Licence Training Mock Exams 2026", category: "Security", banner: "Start free SIA Mock Tests with ReadTraining – {tests} practice tests and {questions} questions available" },
   { slug: "smsts-mock-test", title: "SMSTS Mock Tests 2026", category: "Construction", banner: "Free SMSTS mock tests from ReadTraining: {tests} practice exams with {questions} questions to prepare for the SMSTS course exam" },
   { slug: "sssts-mock-test", title: "SSSTS Mock Tests 2026", category: "Construction", banner: "{tests} free SSSTS mock tests with {questions} practice exam questions to prepare for the CITB Site Supervision Safety Training Scheme assessment." },

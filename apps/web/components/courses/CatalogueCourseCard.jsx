@@ -5,7 +5,7 @@ import { useContextElement } from "@/context/Context";
 import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
-import { bookableModes, defaultMode, firstSession, formatShortDate } from "@/lib/courses";
+import { bookableModes, cheapestMode, firstSession, formatShortDate } from "@/lib/courses";
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
@@ -42,9 +42,9 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     }
   };
 
-  // ---- add to basket: a course always goes in with a date. The button opens the date pop-up with the course page's first choice
-  // already marked (the cheapest date, matching the "From" price), so one more click adds it; another date or study method can be
-  // picked first. A course that runs only on demand has no date to choose and goes straight in.
+  // ---- add to basket: a course always goes in with a date. The button opens the date pop-up on the study method of the card's
+  // "From" price (its cheapest date), and the visitor picks a date there or under another study method. A course that runs only
+  // on demand has no date to choose and goes straight in.
   // States: idle > loading > added (2s) > in basket, with a "Try again" error state.
   const [status, setStatus] = useState("idle");
   const [dates, setDates] = useState(null); // { detail, mode } while the pop-up is in use
@@ -78,7 +78,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     const modes = detail ? bookableModes(detail) : [];
     if (!modes.length) return onNotify?.({ message: "We could not load the dates for this course. Please try again." });
     if (modes.length === 1 && modes[0] === "ondemand") return add(detail, firstSession(detail, "ondemand"));
-    setDates({ detail, mode: defaultMode(detail) });
+    setDates({ detail, mode: cheapestMode(detail) });
     setDatesOpen(true);
   };
   const confirmDate = (id) => {

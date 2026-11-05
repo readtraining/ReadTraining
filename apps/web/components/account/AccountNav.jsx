@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import { account as copy } from "@/data/account";
 import { businessAccount } from "@/data/businessAccount";
 import { signOut } from "@/lib/auth/authClient";
@@ -53,9 +54,12 @@ export default function AccountNav({ area = "account", current }) {
     </>
   );
   const leave = async () => {
+    if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     await signOut();
-    router.replace("/");
-    router.refresh();
+    leaveWithoutAsking(() => {
+      router.replace("/");
+      router.refresh();
+    });
   };
 
   return (

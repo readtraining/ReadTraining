@@ -170,7 +170,7 @@ export const subjects = {
       passMark: 90,
       minutes: 45
     },
-    lead: "Passing your CSCS Green Card exam in 2025 starts here. Our free mock tests include over 1,000 essential questions and answers to help you prepare with confidence.",
+    lead: "Passing your CSCS Green Card exam starts here. Our free mock tests include over 1,000 essential questions and answers to help you prepare with confidence.",
     mockHeading: "CITB HS&E test for operatives",
     tests: [
       {
@@ -713,7 +713,7 @@ export const subjects = {
       minutes: 60
     },
     lead: "The CSCS Green Card mock test consists of {questions} multiple choice questions covering safety practices, accident prevention and the use of protective equipment. To pass this test, {passCount} out of {questions} questions must be correct. At the end of the test, a page will display your score and the incorrect answers.",
-    mockHeading: "2024 CSCS Green Card Mock Exam Test",
+    mockHeading: "CSCS Green Card Mock Exam Test",
     tests: [
       {
         slug: "citb-hs-and-e-mock-test-1",
@@ -945,8 +945,8 @@ export const subjects = {
     more: [],
     sections: [
       {
-        id: "personal-licence-mock-exam-2024",
-        heading: "Personal Licence Mock Exam 2024",
+        id: "personal-licence-mock-exam",
+        heading: "Personal Licence Mock Exam",
         blocks: [
           {
             type: "p",
@@ -975,7 +975,7 @@ export const subjects = {
       minutes: 40
     },
     lead: "The Fire Banksman (Marshal) Mock Exam consists of {questions} multiple-choice questions to practice. You must answer {passCount} questions correctly to pass this test. At the end of the test, a page will display your score and the incorrect answers.",
-    mockHeading: "Fire Marshal Mock Exam 2024",
+    mockHeading: "Fire Marshal Mock Exam",
     tests: [
       {
         slug: "firemarshal-mock-test",
@@ -985,8 +985,8 @@ export const subjects = {
     more: [],
     sections: [
       {
-        id: "fire-marshal-fire-warden-mock-test-2025",
-        heading: "Fire Marshal (Fire Warden) Mock Test 2025",
+        id: "fire-marshal-fire-warden-mock-test",
+        heading: "Fire Marshal (Fire Warden) Mock Test",
         blocks: [
           {
             type: "p",
@@ -999,8 +999,8 @@ export const subjects = {
         ]
       },
       {
-        id: "key-areas-covered-in-the-fire-banksman-mock-test-2024",
-        heading: "Key Areas Covered in the Fire Banksman Mock Test 2024",
+        id: "key-areas-covered-in-the-fire-banksman-mock-test",
+        heading: "Key Areas Covered in the Fire Banksman Mock Test",
         blocks: [
           {
             type: "p",
@@ -1578,7 +1578,7 @@ export const subjects = {
           {
             type: "ul",
             items: [
-              "CSCS Gold Card: If you want to learn how to get the CSCS Gold Card, read our blog, CSCS Gold Card � Requirements, Application, Cost (2023) ."
+              "CSCS Gold Card: If you want to learn how to get the CSCS Gold Card, read our blog, CSCS Gold Card: Requirements, Application and Cost."
             ]
           },
           {

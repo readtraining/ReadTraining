@@ -36,7 +36,7 @@ const details = z
   })
   .superRefine((d, ctx) => {
     if (d.kind === 'percent' && (!Number.isInteger(d.value) || d.value > 100)) ctx.addIssue({ code: 'custom', path: ['value'], message: 'Enter a whole percentage from 1 to 100.' })
-    if (d.kind === 'amount' && (Math.round(d.value * 100) !== d.value * 100 || d.value > 100_000)) ctx.addIssue({ code: 'custom', path: ['value'], message: 'Enter an amount in pounds and pence, up to £100,000.' })
+    if (d.kind === 'amount' && (Math.abs(d.value * 100 - Math.round(d.value * 100)) > 1e-6 || d.value > 100_000)) ctx.addIssue({ code: 'custom', path: ['value'], message: 'Enter an amount in pounds and pence, up to £100,000.' })
     if (d.startsOn && d.endsOn && d.endsOn < d.startsOn) ctx.addIssue({ code: 'custom', path: ['endsOn'], message: 'The last day must be on or after the first day.' })
     if (d.scope === 'categories' && !d.categories.length) ctx.addIssue({ code: 'custom', path: ['categories'], message: 'Choose at least one category.' })
     if (d.scope === 'courses' && !d.courses.length) ctx.addIssue({ code: 'custom', path: ['courses'], message: 'Choose at least one course.' })

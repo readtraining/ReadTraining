@@ -2,6 +2,7 @@
 
 import React from "react";
 import { lineKey, mergeLines } from "@/lib/basket";
+import { isDay } from "@/lib/format";
 import { useContext ,useEffect ,useRef ,useState } from "react";
 const dataContext = React.createContext();
 export const useContextElement = () => {
@@ -22,8 +23,9 @@ export const useContextElement = () => {
         try {
             const saved = JSON.parse(window.localStorage.getItem(CART_KEY) || "null")
             if (saved) {
-                // a line from the old sample catalogue (course numbers below 1000, no address) can't be booked: it is dropped
-                if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses.filter((c) => Number(c.id) >= 1000 && c.slug)))
+                // a line from the old sample catalogue (course numbers below 1000, no address) can't be booked: it is dropped, and so is
+                // one whose date isn't a real day (an older saved shape or a hand edit)
+                if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses.filter((c) => c && Number(c.id) >= 1000 && c.slug && (c.date == null || isDay(c.date)))))
                 if (Array.isArray(saved.products)) setCartProducts(saved.products)
                 if (Array.isArray(saved.events)) setCartEvents(saved.events)
             }

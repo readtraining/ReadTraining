@@ -67,7 +67,7 @@ export default function ResetPasswordForm() {
           <Link href={AUTH_ROUTES.forgotPassword} className="button -md -purple-1 text-white rt-btn-block">Send a new link</Link>
         </>
       ) : (
-        <form className="rt-auth__form" onSubmit={submit} noValidate ref={formRef}>
+        <form method="post" className="rt-auth__form" onSubmit={submit} noValidate ref={formRef}>
           {formError && <AuthNotice>{formError}</AuthNotice>}
           <AuthField id="reset-password" label="New password" hint={PASSWORD_ERROR} icon={<LockIcon />} error={errors.password} type={show ? "text" : "password"} autoComplete="new-password" value={values.password} onChange={set("password")} disabled={status === "saving"} />
           <AuthField id="reset-confirm" label="Confirm new password" icon={<LockIcon />} error={errors.confirm} type={show ? "text" : "password"} autoComplete="new-password" value={values.confirm} onChange={set("confirm")} disabled={status === "saving"} />

@@ -126,9 +126,9 @@ export const providerProfileRouter = createTRPCRouter({
       if (rename) {
         if (!can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId })) await refuse(ctx, 'provider.profile.rename', input.organisationId, path)
         if (!UNDER_REVIEW.includes(o.status)) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is approved, so its name can only be changed by our team. Contact us to change it.' })
-        await refuseTakenProviderName(ctx.db, input.name!, input.organisationId)
       }
       return ctx.db.transaction(async (tx) => {
+        if (rename) await refuseTakenProviderName(tx, input.name!, input.organisationId)
         await tx
           .update(organisations)
           .set({ ...(rename ? { name: input.name } : {}), headline: input.headline || null, bio: input.bio || null, city: input.city || null, socials, updatedAt: new Date() })

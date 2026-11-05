@@ -1,6 +1,6 @@
 import { SITE_URL } from "@/lib/seo";
 import { getPostSlugs } from "@/lib/blog";
-import { getCoursePageSlugs, getCourseTownParams } from "@/lib/coursePages";
+import { getCoursePage, getCoursePageSlugs, getCourseTownParams } from "@/lib/coursePages";
 import { getHelpArticleSlugs, getHelpTopicSlugs } from "@/lib/help";
 import { getLicenceSlugs } from "@/lib/licences";
 import { getProviderDirectory } from "@/lib/publicProvider";
@@ -31,7 +31,8 @@ export default async function sitemap() {
   const paths = [
     ...STATIC,
     ...courses.map((c) => coursePath(c.slug)),
-    ...getCoursePageSlugs().map((s) => `/courses/${s}`),
+    // only the course pages with a live course (an empty one asks search engines not to index it)
+    ...getCoursePageSlugs().filter((s) => getCoursePage(s, courses)?.courses.length).map((s) => `/courses/${s}`),
     ...getCourseTownParams(courses).map((p) => `/courses/${p.slug}/${p.town}`),
     ...getLicenceSlugs().map((s) => `/licences/${s}`),
     ...getSubjectSlugs().map((s) => `/test-prep/${s}`),

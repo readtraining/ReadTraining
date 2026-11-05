@@ -14,6 +14,13 @@ const readWishlist = () => {
 // Every saved course id, in the order saved (the account's saved courses page).
 export const savedCourseIds = () => readWishlist();
 
+// Signing out forgets them, so the next person on a shared computer doesn't see them.
+export function forgetSavedCourses() {
+  try {
+    window.localStorage.removeItem(WISHLIST_KEY);
+  } catch {}
+}
+
 // Returns [saved, toggle]. toggle() flips the state at once and returns true (now saved) or false (now removed);
 // if the browser refuses to store it, the state is put back and the error is thrown for the caller to report.
 export function useWishlist(id) {

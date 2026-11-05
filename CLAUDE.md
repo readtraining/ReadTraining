@@ -91,7 +91,7 @@ The schema is built on a development Supabase project and replayed later on the 
 - On the server, verify the user with `supabase.auth.getClaims()` (it checks the JWT signature locally), never `getSession()`. Use `getUser()` only when fresh user data is needed.
 - Only the publishable key reaches the browser. The service-role key stays in the API, for admin tasks only.
 - Email links (confirm, reset) use the token-hash flow at `/auth/confirm`. Google/Facebook use `/auth/callback` (PKCE code exchange).
-- A `next` redirect is accepted only if it starts with `/` and not `//`.
+- A `next` redirect is accepted only if it starts with `/` and not `//`, checked again after `.` and `..` are tidied away (`/.//evil.com` becomes `//evil.com`), one rule for all: `lib/safeNext.js`.
 - Forgot password always shows the same message, so it never reveals whether an email exists.
 - Changing email or password requires the current password.
 - The tRPC client sends `Authorization: Bearer <access_token>`, and the API verifies it with `getClaims(token)` (issuer, audience and role checked). A protected call also needs the session to still exist and the account not to be banned or deleted (`isSessionLive`), since a token stays valid until it expires.

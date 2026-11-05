@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import { account } from "@/data/account";
 import { api } from "@/lib/trpc/react";
 import { useMe } from "@/lib/useMe";
@@ -30,11 +31,12 @@ export function useSwitchAccount(current) {
 
   const go = async (entry) => {
     if (entry.current) return;
+    if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     if (entry.kind !== "add") {
       // the switch is recorded in the activity log; a failed log never stops the switch
       await log.mutateAsync({ to: entry.kind, organisationId: entry.organisationId }).catch(() => {});
     }
-    router.push(entry.href);
+    leaveWithoutAsking(() => router.push(entry.href));
   };
   return { ready: Boolean(data), entries, go, title: c.title, currentLabel: c.current };
 }

@@ -60,15 +60,16 @@ const inMemory = (name: LimitName, key: string) => {
   return w.count <= LIMITS[name].requests
 }
 
-/** True when `key` (an IP address or a user id) may go ahead under `name`. Never throws: if Upstash can't be reached the
- *  request goes ahead, because a counter outage must not lock real people out (the Vercel Firewall still caps each IP). */
+/** True when `key` (an IP address or a user id) may go ahead under `name`. Never throws: if Upstash can't be reached (down, or a
+ *  wrong or rotated token) this copy's memory counts instead, so the limits still hold per server copy and nobody is locked out.
+ *  The error is logged each time, so a broken token shows in the logs. */
 export async function allowed(name: LimitName, key: string | null | undefined): Promise<boolean> {
   const k = key || 'unknown'
   if (!redis) return inMemory(name, k)
   try {
     return (await upstash(name).limit(k)).success
   } catch (e) {
-    console.error(`rate limit ${name}: counter unavailable (${e instanceof Error ? e.message.split('\n')[0] : 'error'})`)
-    return true
+    console.error(`rate limit ${name}: counter unavailable, counting in memory (${e instanceof Error ? e.message.split('\n')[0] : 'error'})`)
+    return inMemory(name, k)
   }
 }
