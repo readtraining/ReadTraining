@@ -37,7 +37,8 @@ export async function generateMetadata(props) {
   const { slug } = await props.params;
   const page = getCoursePage(slug, await realCourses());
   if (!page) return { title: "Courses not found | ReadTraining" };
-  return pageMetadata({ title: `${page.title} | ReadTraining`, description: page.description, path: page.href });
+  // a page with no live course yet ("No courses here yet") is kept out of search until one is listed
+  return pageMetadata({ title: `${page.title} | ReadTraining`, description: page.description, path: page.href, noindex: !page.courses.length });
 }
 
 export default async function CoursePage(props) {
