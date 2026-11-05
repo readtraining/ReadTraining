@@ -5,6 +5,10 @@ import Link from "next/link";
 // or { type: "ul" | "table", ... }. Text may hold [label](href) links and **bold**; nothing else is parsed,
 // so content can never inject markup.
 const INLINE = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
+// a link goes to a page of this site (/…, never //…, which is another site), a heading (#…), a web address, an email or a phone
+// number; anything else (data:, javascript:, //other-site) shows as plain words
+const SITE = /^(\/(?![/\\])|#)/;
+const OUTSIDE = /^(https?:\/\/|mailto:|tel:)/i;
 
 export function Inline({ text }) {
   const out = [];
@@ -15,8 +19,9 @@ export function Inline({ text }) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const key = `${m.index}`;
     if (m[3]) out.push(<strong key={key}>{m[3]}</strong>);
-    else if (/^(\/|#)/.test(m[2])) out.push(<Link key={key} href={m[2]}>{m[1]}</Link>);
-    else out.push(<a key={key} href={m[2]}>{m[1]}</a>);
+    else if (SITE.test(m[2])) out.push(<Link key={key} href={m[2]}>{m[1]}</Link>);
+    else if (OUTSIDE.test(m[2])) out.push(<a key={key} href={m[2]}>{m[1]}</a>);
+    else out.push(m[1]);
     last = INLINE.lastIndex;
   }
   if (last < text.length) out.push(text.slice(last));
