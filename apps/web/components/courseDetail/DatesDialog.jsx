@@ -65,40 +65,47 @@ function DateRow({ s, selected, onSelect, classroom }) {
   );
 }
 
-// A venue: its name, address and map link, its lowest price, and a "Show dates" button that opens its dates below (a click
-// anywhere on the venue's header does the same; the map link only opens the map).
-function VenueCard({ v, current, onSelect, open, onToggle }) {
+// A venue shows its first dates straight away; more than FOLD_AT are folded under "Show N more dates".
+const SHOWN = 3;
+const FOLD_AT = 4;
+
+// A venue: its name, address and map link, its lowest price when it has several dates, and its dates (each row picks one).
+function VenueCard({ v, current, onSelect, more, onMore }) {
   const has = v.sessions.some((s) => s.id === current);
   const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
-  const onHead = (e) => {
-    if (!e.target.closest("a, button")) onToggle();
-  };
+  const folds = v.sessions.length > FOLD_AT;
+  const shown = folds && !more ? v.sessions.slice(0, SHOWN) : v.sessions;
+  const hidden = v.sessions.length - SHOWN;
   return (
-    <section className={`rt-dd__vcard${has ? " is-selected" : ""}${open ? " is-open" : ""}`} aria-labelledby={id}>
-      <div className="rt-dd__vhead" onClick={onHead}>
+    <section className={`rt-dd__vcard${has ? " is-selected" : ""}`} aria-labelledby={id}>
+      <div className="rt-dd__vhead">
         <span className="rt-dd__vpin" aria-hidden="true"><PinIcon /></span>
         <div className="rt-dd__vinfo">
           <h3 id={id}>{v.venue || v.city}</h3>
           <p className="rt-dd__addr">
-            {[v.street, v.city, v.postcode].filter(Boolean).join(", ")} ·{" "}
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.name, v.postcode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener">Map<span className="rt-cd__sr"> (opens in a new tab)</span></a>
+            {[v.street, v.city].filter(Boolean).join(", ")}
+            {v.postcode && <>{(v.street || v.city) && ", "}<span className="rt-nowrap">{v.postcode}</span></>}
+            <span className="rt-nowrap">
+              {" "}·{" "}
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.name, v.postcode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener">Map<span className="rt-cd__sr"> (opens in a new tab)</span></a>
+            </span>
           </p>
         </div>
-        <div className="rt-dd__vside">
-          {v.sessions.length > 1 && (
-            <p className="rt-dd__vfrom">
-              <span>{v.sessions.length} dates from</span>
-              <strong>{formatPrice(v.from)}</strong>
-            </p>
-          )}
-          <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={onToggle}>
-            {open ? "Hide dates" : `Show dates (${v.sessions.length})`} <Chevron />
-          </button>
-        </div>
+        {v.sessions.length > 1 && (
+          <p className="rt-dd__vfrom">
+            <span>{v.sessions.length} dates from</span>
+            <strong>{formatPrice(v.from)}</strong>
+          </p>
+        )}
       </div>
-      <ul className="rt-dd__slots" id={`${id}-dates`} hidden={!open} aria-label={`Dates at ${v.venue || v.city}`}>
-        {v.sessions.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom />)}
+      <ul className="rt-dd__slots" id={`${id}-dates`} aria-label={`Dates at ${v.venue || v.city}`}>
+        {shown.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom />)}
       </ul>
+      {folds && (
+        <button type="button" className="rt-dd__more" aria-expanded={more} aria-controls={`${id}-dates`} onClick={onMore}>
+          {more ? "Show fewer dates" : `Show ${hidden} more ${hidden === 1 ? "date" : "dates"}`} <Chevron />
+        </button>
+      )}
     </section>
   );
 }
@@ -132,8 +139,8 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   const [input, setInput] = useState(saved?.q || "");
   const [q, setQ] = useState(saved?.q || "");
   const [sort, setSort] = useState(sorts.some(([v]) => v === saved?.sort) ? saved.sort : DEFAULT_SORT);
-  // venues showing their dates: the one holding the chosen date starts open, the rest open on "Show dates"
-  const [open, setOpen] = useState(() => {
+  // venues showing all their dates: the one holding the chosen date starts unfolded, so the chosen date is never hidden
+  const [more, setMore] = useState(() => {
     const s = course.sessions.find((x) => x.id === selectedId && x.mode === mode);
     return s ? [`${s.address}|${s.postcode}`] : [];
   });
@@ -144,9 +151,9 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   }, [input]);
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(key, JSON.stringify({ q, sort, open }));
+      window.sessionStorage.setItem(key, JSON.stringify({ q, sort }));
     } catch {}
-  }, [key, q, sort, open]);
+  }, [key, q, sort]);
 
   const list = useMemo(() => {
     if (!classroom) {
@@ -166,7 +173,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
     setQ("");
     setSort(DEFAULT_SORT);
   };
-  const toggle = (k) => setOpen((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));
+  const toggle = (k) => setMore((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));
   const pick = useCallback((id) => (confirm ? setChosen(id) : onPick(id)), [confirm, onPick]);
   const current = confirm ? chosen : selectedId;
   const chosenSession = course.sessions.find((s) => s.id === chosen);
@@ -197,7 +204,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
           {classroom && (
             <label className="rt-field rt-dd__search">
               <PinIcon />
-              <input type="search" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Address or postcode" aria-label="Address or postcode" data-initial={isDesktop ? "" : undefined} autoComplete="off" />
+              <input type="search" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" data-initial={isDesktop ? "" : undefined} autoComplete="off" />
             </label>
           )}
           {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}
@@ -216,7 +223,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
           <EmptyState inCard title="No venues match." text="Try another town or postcode." />
         ) : classroom ? (
           <div className="rt-dd__venues">
-            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} open={open.includes(v.key)} onToggle={() => toggle(v.key)} />)}
+            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} more={more.includes(v.key)} onMore={() => toggle(v.key)} />)}
           </div>
         ) : (
           <ul className="rt-dd__slots rt-dd__slots--flat">
@@ -235,7 +242,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
                 <span>{[chosenSession.location, formatPrice(chosenSession.price)].join(" · ")}</span>
               </>
             ) : (
-              <span>Choose a date</span>
+              <span>No date chosen yet</span>
             )}
           </p>
           <button type="button" className="button -md -purple-1 text-white" disabled={!chosenSession} onClick={() => confirm.onConfirm(chosen)}>{confirm.label}</button>

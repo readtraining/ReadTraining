@@ -2322,19 +2322,17 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dd__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
 /* The date pop-up's list (DatesDialog): one card per venue with its dates shown at once, each date a row that picks it. */
 .rt-dd__list { background: var(--cd-band); padding: 16px 18px 20px; }
-/* one size whatever the study method or how many dates: the panel keeps its height and the list scrolls (phones: full screen) */
-@media (min-width: 576px) { .rt-dd__panel:has(.rt-dd__list) { height: min(680px, 88dvh); } }
+/* desktop: the panel fits a short list (no empty band under two dates) but keeps a steady minimum, so switching study method
+   barely moves it; a long list scrolls (phones: full screen) */
+@media (min-width: 576px) { .rt-dd__panel:has(.rt-dd__list) { min-height: min(520px, 88dvh); max-height: min(680px, 88dvh); } }
 .rt-dd__venues { display: flex; flex-direction: column; gap: 12px; }
 .rt-dd__vcard { padding: 16px; background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: var(--cd-card-radius); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .rt-dd__vcard.is-selected { border-color: var(--cd-brand); box-shadow: 0 0 0 1px var(--cd-brand); }
-.rt-dd__vhead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; cursor: pointer; }
-.rt-dd__vcard.is-open .rt-dd__vhead { margin-bottom: 12px; }
-.rt-dd__vcard .rt-dd__slots[hidden] { display: none; }
-.rt-dd__vside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.rt-dd__vtoggle { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--cd-brand); border-radius: var(--rt-radius-sm); background: var(--cd-surface); font-size: 13px; line-height: 18px; font-weight: 600; color: var(--cd-brand); white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease; }
-.rt-dd__vtoggle:hover { background: var(--cd-brand-subtle); }
-.rt-dd__vtoggle .rt-cd__icon { font-size: 10px; transition: transform 0.2s ease; }
-.rt-dd__vtoggle[aria-expanded="true"] .rt-cd__icon { transform: rotate(180deg); }
+.rt-dd__vhead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; margin-bottom: 12px; }
+.rt-dd__more { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 0; border: 0; background: none; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--cd-brand); cursor: pointer; }
+.rt-dd__more:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rt-dd__more .rt-cd__icon { font-size: 10px; transition: transform 0.2s ease; }
+.rt-dd__more[aria-expanded="true"] .rt-cd__icon { transform: rotate(180deg); }
 .rt-dd__vpin { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rt-radius-sm); background: var(--cd-brand-subtle); color: var(--cd-brand); font-size: 16px; }
 .rt-dd__vinfo { min-width: 0; }
 .rt-dd__vinfo h3 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
@@ -2371,13 +2369,13 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
   .rt-dd__vcard { padding: 12px; }
   .rt-dd__vpin { display: none; }
   .rt-dd__vhead { grid-template-columns: minmax(0, 1fr) auto; }
-  .rt-dd__slot { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 8px 10px 8px 8px; }
-  .rt-dd__tick { display: none; }
+  .rt-dd__slot { gap: 10px; padding: 8px 10px 8px 8px; }
+  .rt-dd__tick { width: 20px; height: 20px; }
   .rt-dd__tile { width: 46px; }
   .rt-dd__controls:has(.rt-dd__search) .rt-dd__sort { flex-basis: 128px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rt-dd, .rt-dd__panel, .rt-dd__slot, .rt-dd__vcard, .rt-dd__tick, .rt-dd__vtoggle, .rt-dd__vtoggle .rt-cd__icon { transition: none; }
+  .rt-dd, .rt-dd__panel, .rt-dd__slot, .rt-dd__vcard, .rt-dd__tick, .rt-dd__more .rt-cd__icon { transition: none; }
 }
 
 /* Radio circles removed from the Learning options cards and the booking card (the real radio inputs stay for keyboard and screen readers) */
@@ -3715,6 +3713,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-dd__chosen { display: flex; flex-direction: column; min-width: 0; margin: 0; font-size: 13px; line-height: 1.45; color: var(--cd-muted); }
 .rt-dd__chosen strong { font-size: 15px; font-weight: 700; color: var(--cd-text); }
 .rt-dd__foot .button { flex: none; }
+.rt-dd__foot .button:disabled { opacity: 0.45; cursor: not-allowed; } /* no date chosen yet: it must not look ready to press */
 @media (max-width: 575px) { .rt-dd__foot { flex-direction: column; align-items: stretch; gap: 10px; } .rt-dd__foot .button { width: 100%; } }
 .rt-bk__side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
 .rt-bk__qty { display: inline-flex; align-items: center; height: 40px; overflow: hidden; border: 1px solid var(--color-light-5); border-radius: 10px; background: #fff; }
