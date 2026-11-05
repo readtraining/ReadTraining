@@ -11,9 +11,12 @@ type Runner = Pick<typeof Db, 'execute'>
 // anywhere), but its owner applying again is checked like anyone else. `except`: the provider being renamed.
 export async function refuseTakenProviderName(db: Runner, name: string, except?: string) {
   const key = name.trim().replace(/\s+/g, ' ').toLowerCase()
+  // inside a transaction, two people choosing a name at the same moment wait for each other until it commits
+  await db.execute(sql`select pg_advisory_xact_lock(hashtext('readtraining.provider-name'))`)
+  // '[[:space:]]', not '\s': a backslash inside the sql`` template is dropped before Postgres sees it ('\s' became 's')
   const [taken] = await db.execute<{ name: string }>(sql`
     select name from public.organisations
-    where type = 'provider' and status <> 'rejected' and lower(regexp_replace(trim(name), '\s+', ' ', 'g')) = ${key}
+    where type = 'provider' and status <> 'rejected' and lower(regexp_replace(trim(name), '[[:space:]]+', ' ', 'g')) = ${key}
       and ${except ? sql`id <> ${except}::uuid` : sql`true`}
     limit 1`)
   if (taken)
