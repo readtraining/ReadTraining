@@ -341,6 +341,8 @@ export const adminCoursesRouter = createTRPCRouter({
       const { courseId, seoTitle, seoDescription, seoKeywords, listed, seen, ...rest } = input
       void courseId
       if (rest.subcategory !== undefined && rest.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
+      if (rest.category !== undefined && rest.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
+      if (rest.topic !== undefined && rest.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')
       const reviewed = Object.fromEntries(Object.entries(rest).filter(([k, v]) => v !== undefined && (REVIEWED as readonly string[]).includes(k)))
       const version = await ctx.db.transaction(async (tx) => {
         // two staff (or two tabs) on the same page: a save over a newer version is refused (lock the row so they take turns)

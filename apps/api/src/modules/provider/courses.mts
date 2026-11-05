@@ -512,7 +512,11 @@ export const providerCoursesRouter = createTRPCRouter({
       if (keys.some((k) => !PAGE_ONLY.has(k)) && !can(ctx.actor, 'provider.courses.edit', { organisationId })) await refuse(ctx, 'provider.courses.edit', organisationId, path)
       if (keys.some((k) => PRICING.has(k)) && !can(ctx.actor, 'provider.pricing.edit', { organisationId })) await refuse(ctx, 'provider.pricing.edit', organisationId, path)
       const course = await ownCourse(ctx.db, organisationId, courseId)
+      // the category, sub-category and topic change together (the editor always sends all three), so a course is never filed
+      // under one category with another's sub-category
       if (fields.subcategory !== undefined && fields.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
+      if (fields.category !== undefined && fields.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
+      if (fields.topic !== undefined && fields.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')
 
       // how it is taught can change only while the course has no dates
       if (fields.method !== undefined && fields.method !== course.method) {
