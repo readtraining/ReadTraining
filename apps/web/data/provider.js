@@ -133,6 +133,21 @@ export const provider = {
     ],
     calc: { title: "Estimate your payout", note: "Illustrative. 20% marketplace fee plus 3% card transaction charge." },
   },
+  // a training provider's own review, word for word (Proshield Training, sent by the client with permission to use it,
+  // docs/project website.docx); the home page's provider section quotes one sentence of it
+  review: {
+    eyebrow: "From a provider",
+    title: "What providers say about ReadTraining",
+    rating: 5,
+    headline: "Excellent results, great value",
+    text: [
+      "We’ve been advertising our courses with Read Training and couldn’t be happier with the service. Within a short time of listing, we saw a steady stream of enquiries and bookings, and we’ve filled a good number of places on our courses through their site.",
+      "The team made the listing process simple and straightforward, and their platform puts our courses in front of the right audience: people who are actively looking to train and book. The fees are very reasonable for the results we’ve received, which makes it a cost-effective way for us to reach new learners.",
+      "We’d highly recommend Read Training to any training provider looking to grow their bookings and fill course places.",
+    ],
+    author: "Proshield Training",
+    role: "Training provider",
+  },
   faq: {
     eyebrow: "Questions providers ask",
     title: "Questions providers ask.",

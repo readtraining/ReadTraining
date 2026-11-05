@@ -21,7 +21,7 @@ export const providerTerms = {
       id: "words-we-use",
       title: "Words we use",
       blocks: [
-        "In these terms, \"ReadTraining\", \"we\" and \"us\" mean [Company legal name] Ltd, which runs the ReadTraining website. \"You\" and \"provider\" mean the organisation or instructor who delivers and develops a course and offers it on ReadTraining.",
+        "In these terms, \"ReadTraining\", \"we\" and \"us\" mean Read Education Services Limited, which runs the ReadTraining website. \"You\" and \"provider\" mean the organisation or instructor who delivers and develops a course and offers it on ReadTraining.",
         {
           type: "ul",
           items: [

@@ -46,7 +46,7 @@ function QuoteFormFields({ courseTitle, backHref }) {
     return (
       <div className="rt-q__done" role="status">
         <h2>Thanks, we have your request</h2>
-        <p>We will email {values.email.trim()} within one working day with a quote{courseTitle ? ` for ${courseTitle}` : ""}.</p>
+        <p>We will email {values.email.trim()} the same working day with a quote{courseTitle ? ` for ${courseTitle}` : ""}.</p>
         <Link href={backHref} className="rt-cd__link">Back to the course</Link>
       </div>
     );

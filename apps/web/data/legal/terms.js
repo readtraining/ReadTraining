@@ -18,7 +18,7 @@ export const terms = {
       id: "introduction",
       title: "Introduction",
       blocks: [
-        "ReadTraining is an online marketplace for training courses, run by [Company legal name] Ltd (\"ReadTraining\", \"we\", \"us\"). By using the ReadTraining website, you agree to these terms. If you do not agree with them, please do not use the website.",
+        "ReadTraining is an online marketplace for training courses, run by Read Education Services Limited (\"ReadTraining\", \"we\", \"us\"). By using the ReadTraining website, you agree to these terms. If you do not agree with them, please do not use the website.",
       ],
     },
     {
