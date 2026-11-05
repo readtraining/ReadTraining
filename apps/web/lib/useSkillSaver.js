@@ -4,9 +4,10 @@ import { useAuthUser } from "@/lib/auth/authClient";
 import { getLearning } from "@/lib/account";
 import { skillSaverStatus } from "@/lib/skillSaver";
 
-// The end dates of the courses this learner has completed. DEMO: read from the account's bookings in the browser
-// (lib/account.js); with a backend the learner's level comes from the server instead.
-export const completedCourseDates = () => getLearning().filter((l) => l.state === "completed").map((l) => l.endDate || l.date);
+// The end dates of the courses this learner has completed: read from the account's bookings in the browser (lib/account.js);
+// with a backend the learner's level comes from the server instead. The account pages' made-up demo bookings never count, so
+// nobody sees progress (or a discount) for courses they didn't take.
+export const completedCourseDates = () => getLearning().filter((l) => l.state === "completed" && !l.demo).map((l) => l.endDate || l.date);
 
 // The signed-in learner's Skill Saver level (lib/skillSaver.js skillSaverStatus): undefined while it is being worked out,
 // null when nobody is signed in. The basket and the checkout use it for the discount.
