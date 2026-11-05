@@ -109,6 +109,11 @@ function update() {
   }
 }
 
+/** For a button that leaves in code (sign out, switch account): true when nothing is unsaved, or the person agrees to leave. */
+export function confirmLeave() {
+  return !anyDirty() || window.confirm(LEAVE_MESSAGE);
+}
+
 /** Leave in code without asking (a save or a delete that then opens another page): `go` runs the navigation. */
 export function leaveWithoutAsking(go) {
   dirty.clear();

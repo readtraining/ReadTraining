@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
 import NavIcon from "./navIcons";
@@ -56,10 +57,13 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const demoOff = !SHOW_DEMO && page?.demo === true ? A.demoOff[current] : null;
   const demoTag = demo && <span className="rt-demo-tag" title={demo.note}>{demo.label}<span className="rt-sr">: {demo.note}</span></span>;
   const signOut = async () => {
+    if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     setLeaving(true);
     await getSupabase().auth.signOut().catch(() => {});
-    router.replace(AUTH_ROUTES.adminLogin);
-    router.refresh();
+    leaveWithoutAsking(() => {
+      router.replace(AUTH_ROUTES.adminLogin);
+      router.refresh();
+    });
   };
 
   return (
