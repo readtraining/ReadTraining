@@ -88,7 +88,7 @@ function ContactFormFields({ form }) {
   }
 
   const showReference = values.topic === "booking";
-  const showCompany = values.topic === "business" || values.topic === "provider";
+  const showCompany = ["business", "demo", "provider"].includes(values.topic);
   const field = (name, label, props = {}, hint) => {
     const describedBy = [hint && `rt-c-${name}-hint`, errors[name] && `rt-c-${name}-e`].filter(Boolean).join(" ") || undefined;
     const common = { id: `rt-c-${name}`, name, value: values[name], onChange: set(name), "aria-invalid": errors[name] ? true : undefined, "aria-describedby": describedBy };

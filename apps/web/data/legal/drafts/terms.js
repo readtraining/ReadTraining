@@ -64,11 +64,11 @@ export const terms = {
       title: "Who we are and our role",
       summary: "We run the marketplace. The provider runs the course, and your training contract is with them.",
       clauses: [
-        ["ReadTraining is a trading name of [Company legal name] Ltd, registered in England and Wales under company number [Company number], with its registered office at [Registered office address]. Our VAT number is [VAT number]."],
+        ["ReadTraining is a trading name of Read Education Services Limited, registered in England and Wales under company number [Company number], with its registered office at [Registered office address]. Our VAT number is [VAT number]."],
         ["ReadTraining is an online marketplace. We list courses from independent providers, take your booking and payment, and support you before and after your course."],
         ["When you book a course, your contract for the training is with the provider named on the course page. The provider is responsible for delivering the course, its content, its trainers and its venue."],
         ["We are responsible for running the website, handling your booking and payment correctly, and the other services we provide to you under these terms."],
-        ["You can contact us by email at [info@readtraining.co.uk](mailto:info@readtraining.co.uk) or by phone on [020 3488 5052](tel:+442034885052), Monday to Saturday, 9:00am to 6:00pm."],
+        ["You can contact us by email at [info@readtraining.co.uk](mailto:info@readtraining.co.uk) or by phone on [020 3488 5052](tel:+442034885052), Monday to Saturday, 8:00am to 6:00pm."],
       ],
     },
     {

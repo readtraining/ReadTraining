@@ -1,7 +1,8 @@
 import { AUTH_ROUTES, CATALOGUE_HREF } from "@/lib/routes";
 // "For business" page content. Same functionality as the client's current site, our own copy and UI.
 const signup = { label: "Create a Business account", href: AUTH_ROUTES.signUp };
-// the hero's and closing banner's second button, as Hurak Business: straight to the courses
+// the hero's second button: a demo of the Business account (the client offers demos); the closing banner's: straight to the courses
+const demo = { label: "Book a demo", href: "/contact-us?topic=demo#contact-form" };
 const browse = { label: "Browse training", href: CATALOGUE_HREF };
 
 export const business = {
@@ -10,7 +11,7 @@ export const business = {
     title: "Train your whole team. Track every certificate.",
     text: "Open a Business account, buy course places for your team, hand them out now or hold them for later, and keep learners, progress, certificates and renewals together in one place.",
     primary: signup,
-    secondary: browse,
+    secondary: demo,
     points: ["No contract", "Invoice billing", "Group pricing", "Assign places later"],
     image: { src: "/assets/img/business/dashboard.png", alt: "Business account dashboard" },
     floats: [
@@ -129,6 +130,7 @@ export const business = {
       { q: "What can we see after assigning training?", a: "Your Business account brings learners and purchased courses together. For courses with trackable learning activity, you can review each learner's progress from the Business area." },
       { q: "Can we access learner certificates and expiry dates?", a: "Where certificate data is available for the course, the Business area shows certificates with their issue and expiry dates, so you can see which training is approaching renewal." },
       { q: "Can more than one colleague manage the Business account?", a: "Yes. Business accounts support team members with roles, so administration can be shared with the right colleagues." },
+      { q: "Can we see a demo first?", a: "Yes. We can show you the Business account and how buying, assigning and tracking training works, at a time that suits you. [Book a demo](/contact-us?topic=demo#contact-form) or call us." },
       { q: "How do Business credit accounts work?", a: "Credit facilities are available to eligible regular Business customers. The amount is agreed individually and can depend on the length and value of the relationship. Eligible customers purchase within the facility and settle invoices under their account terms." },
       { q: "Can we manage training bought elsewhere?", a: "The Business area is designed around training purchased through ReadTraining. It keeps those places, learners, progress, certificates and purchases connected in one workflow." },
     ],

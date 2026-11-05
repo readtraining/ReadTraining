@@ -756,7 +756,7 @@ export const licences = [
       points: [
         { title: "Your truck and experience", text: "Novice, experienced or refresher, on counterbalance, reach or other trucks." },
         { title: "Your site or ours", text: "Training at a centre near you, or on site for your team." },
-        { title: "A quote by email", text: "Usually the same day." },
+        { title: "A quote by email", text: "The same working day." },
       ],
       panel: { label: "Forklift training", title: "Novice, experienced or refresher", price: null, items: ["Accredited instructors", "At a centre or on your site", "Free quote, no obligation"], cta: "Request training", action: "request" },
     },
@@ -887,7 +887,7 @@ export const licencesHub = {
       notes: "Anything else? (optional)",
       submit: "Request a quote",
       doneTitle: "Request received",
-      doneText: "Your reference is {ref}. We will email a quote to {email}, usually the same day.",
+      doneText: "Your reference is {ref}. We will email a quote to {email} the same working day.",
     },
     close: "Close",
     sending: "Sending",
