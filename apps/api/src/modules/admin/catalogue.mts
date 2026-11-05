@@ -43,13 +43,17 @@ const name = z
 const kind = z.enum(KINDS)
 const key = z.string().min(1).max(80)
 
-type Row = { key: string; parent: string | null; slug: string; name: string; position: number; active: boolean }
+type Row = { key: string; parent: string | null; slug: string; name: string; position: number; active: boolean; live: number }
 
-// one kind's rows: its key (id, or the address for methods and levels), parent, address, name, place and whether it's in use
+// one kind's rows: its key (id, or the address for methods and levels), parent, address, name, place, whether it's in use, and
+// how many live courses are filed under it (such an entry can't be retired: setActive)
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
 async function rows(db: typeof Db | Tx, k: Kind): Promise<Row[]> {
   const parent = k === 'subcategory' || k === 'topic' ? sql`${PARENT[k]}::text` : sql`null`
-  return db.execute<Row>(sql`select ${byKey(k)}::text "key", ${parent} parent, slug, name, position, active from ${TABLE[k]} order by position, name`)
+  return db.execute<Row>(sql`
+    select ${byKey(k)}::text "key", ${parent} parent, slug, name, position, active,
+      (select count(*)::int from public.courses c where c.status = 'live' and c.${FILED[k]} = t.${byKey(k)}::text) live
+    from ${TABLE[k]} t order by position, name`)
 }
 
 export const catalogueAdminRouter = createTRPCRouter({
