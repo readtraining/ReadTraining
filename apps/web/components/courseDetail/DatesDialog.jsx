@@ -13,14 +13,12 @@ import { EmptyState } from "@/components/states/States";
 const SORTS = { classroom: [["cheapest", "Cheapest"], ["soonest", "Soonest"], ["name", "Name (A to Z)"]], online: [["cheapest", "Cheapest"], ["soonest", "Soonest"]] };
 const DEFAULT_SORT = "cheapest";
 
-const CalendarIcon = () => <Icon name="calendar" />;
 const PinIcon = () => <Icon name="location" />;
 const CloseIcon = () => <Icon name="close" />;
 const Chevron = () => <Icon name="chevron-down" />;
 
 // Self-paced has no date: it starts whenever the learner likes.
 const whenLabel = (s) => (s.mode === "ondemand" ? s.time : formatDateRange(s.date, s.endDate));
-const dayLabel = (iso) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 const norm = (v) => String(v || "").toLowerCase().replace(/\s+/g, "");
 const storeKey = (course, mode) => `rt-dates:${course.id}:${mode}`;
 const readStore = (key) => {
@@ -31,19 +29,77 @@ const readStore = (key) => {
   }
 };
 
+const tile = (iso) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const f = (o) => new Intl.DateTimeFormat("en-GB", { ...o, timeZone: "UTC" }).format(d);
+  return { month: f({ month: "short" }), day: f({ day: "numeric" }), weekday: f({ weekday: "short" }) };
+};
+
+// One date: the whole row picks it (a calendar tile, the dates, how long and when, the price, and a tick once chosen).
 function DateRow({ s, selected, onSelect, classroom }) {
+  const t = s.mode === "ondemand" ? null : tile(s.date);
+  const was = s.wasPrice > s.price ? s.wasPrice : null;
+  const meta = [s.days ? `${s.days} ${s.days === 1 ? "day" : "days"}` : "", s.mode === "ondemand" ? "Online" : s.time, !classroom && s.mode === "online" ? "Live online" : ""].filter(Boolean).join(" · ");
   return (
-    <li className={`rt-dd__date${selected ? " is-selected" : ""}`}>
-      <div className="rt-dd__date-main">
-        <strong>{whenLabel(s)}</strong>
-        <span>{s.mode === "ondemand" ? "Online" : s.time}</span>
-      </div>
-      <div className="rt-dd__date-price">{formatPrice(s.price)}</div>
-      <button type="button" className={selected ? "button -sm -purple-1 text-white" : "button -sm -outline-purple-1 text-purple-1"} aria-pressed={selected} onClick={() => onSelect(s.id)}>
-        {selected ? "Selected" : "Select"}
-        <span className="rt-cd__sr">{` ${whenLabel(s)}${classroom ? `, ${s.address}` : ""}`}</span>
+    <li>
+      <button type="button" className={`rt-dd__slot${selected ? " is-selected" : ""}`} aria-pressed={selected} onClick={() => onSelect(s.id)}>
+        {t && (
+          <span className="rt-dd__tile" aria-hidden="true">
+            <span className="rt-dd__tile-m">{t.month}</span>
+            <span className="rt-dd__tile-d">{t.day}</span>
+            <span className="rt-dd__tile-w">{t.weekday}</span>
+          </span>
+        )}
+        <span className="rt-dd__slot-main">
+          <strong>{whenLabel(s)}</strong>
+          {meta && <span>{meta}</span>}
+        </span>
+        <span className="rt-dd__slot-price">
+          <strong>{formatPrice(s.price)}</strong>
+          {was && <s><span className="rt-cd__sr">was </span>{formatPrice(was)}</s>}
+        </span>
+        <span className="rt-dd__tick" aria-hidden="true">{selected && <Icon name="check" />}</span>
+        <span className="rt-cd__sr">{selected ? ", selected" : ""}{classroom ? `, ${s.address}` : ""}</span>
       </button>
     </li>
+  );
+}
+
+// A venue: its name, address and map link, its lowest price, and a "Show dates" button that opens its dates below (a click
+// anywhere on the venue's header does the same; the map link only opens the map).
+function VenueCard({ v, current, onSelect, open, onToggle }) {
+  const has = v.sessions.some((s) => s.id === current);
+  const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
+  const onHead = (e) => {
+    if (!e.target.closest("a, button")) onToggle();
+  };
+  return (
+    <section className={`rt-dd__vcard${has ? " is-selected" : ""}${open ? " is-open" : ""}`} aria-labelledby={id}>
+      <div className="rt-dd__vhead" onClick={onHead}>
+        <span className="rt-dd__vpin" aria-hidden="true"><PinIcon /></span>
+        <div className="rt-dd__vinfo">
+          <h3 id={id}>{v.venue || v.city}</h3>
+          <p className="rt-dd__addr">
+            {[v.street, v.city, v.postcode].filter(Boolean).join(", ")} ·{" "}
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.name, v.postcode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener">Map<span className="rt-cd__sr"> (opens in a new tab)</span></a>
+          </p>
+        </div>
+        <div className="rt-dd__vside">
+          {v.sessions.length > 1 && (
+            <p className="rt-dd__vfrom">
+              <span>{v.sessions.length} dates from</span>
+              <strong>{formatPrice(v.from)}</strong>
+            </p>
+          )}
+          <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={onToggle}>
+            {open ? "Hide dates" : `Show dates (${v.sessions.length})`} <Chevron />
+          </button>
+        </div>
+      </div>
+      <ul className="rt-dd__slots" id={`${id}-dates`} hidden={!open} aria-label={`Dates at ${v.venue || v.city}`}>
+        {v.sessions.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom />)}
+      </ul>
+    </section>
   );
 }
 
@@ -63,7 +119,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
     const map = new Map();
     all.forEach((s) => {
       const k = `${s.address}|${s.postcode}`;
-      if (!map.has(k)) map.set(k, { key: k, name: s.address, city: s.city, postcode: s.postcode, sessions: [] });
+      if (!map.has(k)) map.set(k, { key: k, name: s.address, venue: s.venue, street: s.venue && s.address.startsWith(`${s.venue}, `) ? s.address.slice(s.venue.length + 2) : s.address === s.venue ? "" : s.address, city: s.city, postcode: s.postcode, sessions: [] });
       map.get(k).sessions.push(s);
     });
     return [...map.values()].map((v) => {
@@ -76,7 +132,11 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   const [input, setInput] = useState(saved?.q || "");
   const [q, setQ] = useState(saved?.q || "");
   const [sort, setSort] = useState(sorts.some(([v]) => v === saved?.sort) ? saved.sort : DEFAULT_SORT);
-  const [open, setOpen] = useState([]); // every venue starts closed: no preselected date is shown when the pop-up opens
+  // venues showing their dates: the one holding the chosen date starts open, the rest open on "Show dates"
+  const [open, setOpen] = useState(() => {
+    const s = course.sessions.find((x) => x.id === selectedId && x.mode === mode);
+    return s ? [`${s.address}|${s.postcode}`] : [];
+  });
 
   useEffect(() => {
     const t = setTimeout(() => setQ(input.trim()), 150);
@@ -111,13 +171,16 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   const current = confirm ? chosen : selectedId;
   const chosenSession = course.sessions.find((s) => s.id === chosen);
 
-  const count = classroom ? `${list.length} ${list.length === 1 ? "venue" : "venues"}` : `${list.length} ${list.length === 1 ? "date" : "dates"}`;
+  const dates = classroom ? list.reduce((n, v) => n + v.sessions.length, 0) : list.length;
+  const count = [classroom ? `${list.length} ${list.length === 1 ? "venue" : "venues"}` : "", `${dates} ${dates === 1 ? "date" : "dates"}`].filter(Boolean).join(" · ");
 
   return (
     <>
       <div className="rt-dd__head">
-        <span className="rt-dd__mode">{classroom ? <PinIcon /> : <CalendarIcon />}</span>
-        <h2 id="rt-dd-title" className="rt-dd__title" tabIndex={-1} data-initial={isDesktop ? undefined : ""}>{modes ? course.title : modeLabel(mode)}</h2>
+        <div className="rt-dd__heading">
+          <h2 id="rt-dd-title" className="rt-dd__title" tabIndex={-1} data-initial={isDesktop ? undefined : ""}>Choose a date</h2>
+          <p className="rt-dd__sub">{modes ? course.title : `${course.title} · ${modeLabel(mode)}`}</p>
+        </div>
         <button type="button" className="rt-icon-btn rt-dd__close" aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </div>
 
@@ -152,28 +215,11 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
         {list.length === 0 ? (
           <EmptyState inCard title="No venues match." text="Try another town or postcode." />
         ) : classroom ? (
-          list.map((v) => {
-            const on = open.includes(v.key);
-            const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
-            return (
-              <section key={v.key} className="rt-dd__venue">
-                <div className="rt-dd__venue-info">
-                  <h3>{v.name}</h3>
-                  <p className="rt-dd__addr">{v.city}, {v.postcode} · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.postcode)}`} target="_blank" rel="noopener">View map</a></p>
-                  <p className="rt-dd__next">Next course: <strong>{dayLabel(v.next)}</strong></p>
-                  <p className="rt-dd__from"><strong>From {formatPrice(v.from)}</strong> <span>All inc</span></p>
-                </div>
-                <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-dd__show" aria-expanded={on} aria-controls={id} onClick={() => toggle(v.key)}>
-                  Show dates ({v.sessions.length}) <Chevron />
-                </button>
-                <ul className="rt-dd__dates" id={id} hidden={!on}>
-                  {v.sessions.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} classroom />)}
-                </ul>
-              </section>
-            );
-          })
+          <div className="rt-dd__venues">
+            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} open={open.includes(v.key)} onToggle={() => toggle(v.key)} />)}
+          </div>
         ) : (
-          <ul className="rt-dd__dates rt-dd__dates--flat">
+          <ul className="rt-dd__slots rt-dd__slots--flat">
             {list.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} />)}
           </ul>
         )}
@@ -284,8 +330,14 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
 }
 
 // The course page's pop-up for Classroom and Live online, on the page's booking state (choosing applies the date and closes).
+// When the course runs both, the pop-up's own tabs switch between their dates; the page follows only once a date is chosen.
 export default function DatesDialog() {
   const { course, mode, session, selectSession, datesOpen, closeDates } = useBooking();
+  const dated = useMemo(() => ["classroom", "online"].filter((m) => course.sessions.some((s) => s.mode === m)), [course]);
+  const [view, setView] = useState(mode);
+  useEffect(() => {
+    if (datesOpen) setView(mode); // every opening starts on the page's study method
+  }, [datesOpen, mode]);
   const pick = useCallback(
     (id) => {
       selectSession(id);
@@ -295,5 +347,6 @@ export default function DatesDialog() {
   );
   if (mode === "ondemand" || mode === "inhouse") return null;
   if (!session) return null;
-  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={mode} selectedId={session.id} onPick={pick} />;
+  const shown = dated.includes(view) ? view : mode;
+  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={shown} modes={dated.length > 1 ? dated : undefined} onMode={setView} selectedId={session.id} onPick={pick} />;
 }
