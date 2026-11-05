@@ -284,6 +284,10 @@ export async function courseImageUploadUrl(course: Course, contentType: keyof ty
   return up
 }
 
+// An image change moves the course's version on (after `onLog` has checked the editor's `seen`), so another tab still showing the
+// old images is refused instead of saving its list over the new one and deleting the image just added.
+const touchCourse = (tx: Writer, courseId: number) => tx.update(courses).set({ updatedAt: new Date() }).where(eq(courses.id, courseId))
+
 export async function addCourseImage(db: typeof Db, course: Course, path: string, alt: string | undefined, onLog: OnLog) {
   if (!path.startsWith(`${imageFolder(course)}/`)) throw new TRPCError({ code: 'FORBIDDEN' })
   // the picture itself must be at least 500 × 300 pixels (checked on the stored file, whatever the browser said); a smaller or
@@ -301,6 +305,7 @@ export async function addCourseImage(db: typeof Db, course: Course, path: string
     return await db.transaction(async (tx) => {
       const [img] = await tx.insert(courseImages).values({ courseId: course.id, position: n.n, path, alt: alt || null }).returning({ id: courseImages.id })
       await onLog(tx)
+      await touchCourse(tx, course.id)
       return { id: img.id, url: mediaUrl(path) }
     })
   } catch (error) {
@@ -326,6 +331,7 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
     if (gone.length) await tx.delete(courseImages).where(inArray(courseImages.id, gone.map((i) => i.id)))
     for (const [i, img] of images.entries()) await tx.update(courseImages).set({ position: i, alt: img.alt || null }).where(eq(courseImages.id, img.id))
     await onLog(tx, { kept: images.length, removed: gone.length })
+    await touchCourse(tx, course.id)
     return gone
   })
   await removeMedia(removed.map((i) => i.path))
