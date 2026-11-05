@@ -1007,6 +1007,16 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
 /* ===== For providers page ===== */
 .pr-pricing { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 20px; }
 .pr-tier { background: #fff; border: 1px solid var(--color-light-5); border-radius: var(--rt-radius-card); padding: var(--rt-pad-card); display: flex; flex-direction: column; }
+
+/* For providers: a provider's review of ReadTraining, in full (ProReview) */
+.pr-review { max-width: 760px; margin-inline: auto; background: var(--rt-c-surface); border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); padding: var(--rt-pad-panel); color: var(--rt-c-text); }
+.pr-review__headline { margin-top: 12px; font-size: var(--rt-app-h3); font-weight: 700; line-height: 1.3; }
+.pr-review__text { margin: 16px 0 0; }
+.pr-review__text p { font-size: var(--rt-text); line-height: 1.65; color: var(--rt-c-text); }
+.pr-review__text p + p { margin-top: 12px; }
+.pr-review__who { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--rt-c-line); font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.pr-review__who b { color: var(--rt-c-text); }
+@media (max-width: 575px) { .pr-review { padding: var(--rt-pad-card); } }
 .pr-tier.-mkt { background: var(--color-dark-1); border-color: var(--color-dark-1); color: #fff; }
 .pr-tier.-mkt .bz-card__label { color: rgba(255, 255, 255, 0.6); }
 .pr-tier__value { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; color: var(--color-dark-1); margin-top: 8px; }

@@ -13,14 +13,14 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 // the form in a frame), so it no longer stands out as a bare form. The form is QuoteForm (simulated sending: lib/quote.js).
 
 const copy = {
-  hero: { eyebrow: "Group training", title: ["Get a group quote"], lead: "Tell us how many people need training and we will reply within one working day." },
+  hero: { eyebrow: "Group training", title: ["Get a group quote"], lead: "Tell us how many people need training and we will reply the same working day." },
   how: {
     eyebrow: "How it works",
     title: "Training for your whole team",
     text: "One quote for everyone, on our dates or at your workplace.",
     steps: [
       { icon: "icon-person-3", title: "Tell us about your team", text: "How many people, which course and any dates or places that suit you." },
-      { icon: "icon-wall-clock", title: "Get your quote in one working day", text: "A fixed price per person, with the venue and dates we can offer." },
+      { icon: "icon-wall-clock", title: "Get your quote the same day", text: "A fixed price per person, with the venue and dates we can offer." },
       { icon: "icon-calendar", title: "Book and send your team", text: "Confirm by email. We send joining instructions to each learner." },
     ],
   },
@@ -29,7 +29,7 @@ const copy = {
 
 export const metadata = pageMetadata({
   title: "Get a group quote | ReadTraining",
-  description: "Tell us how many people need training and we will send a quote for your team within one working day.",
+  description: "Tell us how many people need training and we will send a quote for your team the same working day.",
   path: QUOTE_HREF,
 });
 

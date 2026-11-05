@@ -14,8 +14,8 @@ export const topBar = {
   phone: "020 3488 5052",
   phoneHref: "tel:+442034885052",
   email: "info@readtraining.co.uk",
-  hours: "Mon to Sat, 9:00am to 6:00pm",
-  hoursLong: "Monday to Saturday, 9:00am to 6:00pm",
+  hours: "Mon to Sat, 8:00am to 6:00pm",
+  hoursLong: "Monday to Saturday, 8:00am to 6:00pm",
   // our WhatsApp number (the client's mobile; WhatsApp only), opened through wa.me
   whatsapp: { number: "07405 098062", href: "https://wa.me/447405098062" },
 };

@@ -71,7 +71,7 @@ export const courseGuides = [
       ],
       account: "Approved business accounts pay by invoice on 30-day terms.",
       signIn: "Already have a business account?",
-      quote: { title: "Get a business quote", text: "We reply the same day.", cta: "Request a business quote" },
+      quote: { title: "Get a business quote", text: "We reply the same working day.", cta: "Request a business quote" },
     },
     licence: {
       title: "From booking to badge in 5 steps",

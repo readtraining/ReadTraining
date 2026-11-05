@@ -68,6 +68,7 @@ export const contact = {
       { value: "course", label: "Choosing or booking a course" },
       { value: "booking", label: "A booking I have made" },
       { value: "business", label: "Training for my team or business" },
+      { value: "demo", label: "A demo of the Business account" },
       { value: "provider", label: "Listing courses as a training provider" },
       { value: "other", label: "Something else" },
     ],
