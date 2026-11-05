@@ -13,6 +13,8 @@ import type { TRPCContext } from './context.mjs'
 
 const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
+  // error answers carry the code's stack (file paths) only on a developer's computer, never on Vercel (live or preview)
+  isDev: process.env.NODE_ENV !== 'production' && !process.env.VERCEL,
   errorFormatter({ shape, error }) {
     return {
       ...shape,
