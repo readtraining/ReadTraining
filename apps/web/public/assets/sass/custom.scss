@@ -5218,7 +5218,6 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-adm--platform .rt-adm-toolbar > :not(.rt-acc__tabs):not(.rt-adm-search),
 .rt-adm--platform .rt-adm-toolbar__end:has(.rt-adm-search) > :not(.rt-adm-search) { order: 2; }
 .rt-adm--platform .rt-adm-toolbar:has(> .rt-acc__tabs):not(:has(.rt-adm-search)) { justify-content: flex-end; }
-.rt-adm--platform .rt-adm-toolbar:has(.rt-adm-activity__dates) { align-items: flex-end; }
 /* the search keeps enough width for its full placeholder; on a phone it takes the whole row */
 @media (min-width: 576px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 0 1 340px; min-width: 260px; } }
 @media (max-width: 575px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 1 1 100%; margin-right: 0; } }
@@ -7317,3 +7316,17 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-adm--platform.is-sideclosed .rt-adm__link > span:not(.rt-adm__count) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .rt-adm--platform.is-sideclosed .rt-adm__link .rt-adm__count { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; line-height: 18px; }
 }
+/* Dashboard: 20px between cards, tiles padded like the cards, queue counts as right-aligned count badges */
+.rt-adm--platform .rt-adm-dash, .rt-adm--platform .rt-adm-dash__col { gap: 20px; }
+.rt-adm--platform .rt-acc__stats .rt-tps__keyfact { padding: 24px; }
+.rt-adm--platform .rt-adm-queue__label { flex: 1 1 auto; }
+.rt-adm--platform .rt-adm-queue__n.rt-adm__count { min-width: 28px; margin-left: 0; text-align: center; }
+.rt-adm--platform .rt-adm-queue:not(.is-clear) .rt-adm-queue__n.rt-adm__count { background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
+/* Activity log: From and To sit inside their fields, so the toolbar is one even row; the person's role tag sits beside their
+   name instead of under it, and the name lines stay left aligned at every width */
+.rt-datefield__prefix { font-weight: 600; color: var(--rt-c-text); }
+.rt-datefield__pop.-right { right: 0; left: auto; }
+.rt-adm--platform .rt-adm-activity__dates label.rt-sr + .rt-datefield { margin: 0; }
+.rt-adm--platform .rt-adm-activity__dates .rt-datefield { min-width: 170px; }
+.rt-adm--platform .rt-adm-activity__who { display: inline-block; vertical-align: top; text-align: left; }
+.rt-adm--platform .rt-adm-activity__as { display: inline-block; margin: 0 0 0 8px; vertical-align: top; }

@@ -102,9 +102,9 @@ export default function AdminDashboard() {
               {queues.map((q) => (
                 <li key={q.key}>
                   <Link href={copy.queueItems[q.key].href} className={`rt-adm-queue${q.n ? "" : " is-clear"}`}>
-                    <span className="rt-adm-queue__n">{q.n}</span>
                     <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
                     {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
+                    <span className="rt-adm-queue__n rt-adm__count">{q.n}</span>
                     <i className="icon-chevron-right text-12" aria-hidden="true"></i>
                   </Link>
                 </li>
@@ -137,6 +137,10 @@ export default function AdminDashboard() {
           </section>
           )}
 
+        </div>
+        {/* what happened, then the latest orders: the right column balances the left (queues, sessions at risk) */}
+        <div className="rt-adm-dash__col">
+          <RecentActivity />
           {seesMoney && (
             <section className="rt-acc__card" aria-labelledby="rt-adm-latest-h">
               <div className="rt-acc__cardhead">
@@ -163,9 +167,6 @@ export default function AdminDashboard() {
               )}
             </section>
           )}
-        </div>
-        <div className="rt-adm-dash__col">
-          <RecentActivity />
         </div>
       </div>
     </div>

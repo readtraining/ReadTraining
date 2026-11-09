@@ -93,12 +93,12 @@ export default function AdminActivity() {
         <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
         <div className="rt-adm-activity__dates">
           <div className="rt-field">
-            <label htmlFor="rt-adm-a-from">{copy.from}</label>
-            <DateField id="rt-adm-a-from" compact clearable placeholder="Any day" max={to || today()} value={from} onChange={(v) => { setFrom(v); paging.restart(); }} />
+            <label htmlFor="rt-adm-a-from" className="rt-sr">{copy.from}</label>
+            <DateField id="rt-adm-a-from" compact clearable prefix={copy.from} placeholder="Any day" max={to || today()} value={from} onChange={(v) => { setFrom(v); paging.restart(); }} />
           </div>
           <div className="rt-field">
-            <label htmlFor="rt-adm-a-to">{copy.to}</label>
-            <DateField id="rt-adm-a-to" compact clearable placeholder="Any day" min={from || undefined} max={today()} value={to} onChange={(v) => { setTo(v); paging.restart(); }} />
+            <label htmlFor="rt-adm-a-to" className="rt-sr">{copy.to}</label>
+            <DateField id="rt-adm-a-to" compact clearable prefix={copy.to} placeholder="Any day" min={from || undefined} max={today()} value={to} onChange={(v) => { setTo(v); paging.restart(); }} />
           </div>
         </div>
       </div>

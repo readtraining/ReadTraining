@@ -881,6 +881,8 @@ export const admin = {
     title: "Emails",
     lead: "Every email the platform sends automatically: who gets it, when, and what it says.",
     columns: { name: "Email", audience: "Sent to", trigger: "When", status: "Status" },
+    search: "Search by email, subject or when it is sent",
+    none: "No emails match.",
     statuses: { live: "Sending now", later: "Starts with bookings", auth: "Sent by sign-in" },
     statusNotes: {
       later: "Ready to go. It starts sending when bookings and payments are connected.",

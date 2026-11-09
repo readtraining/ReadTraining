@@ -16,7 +16,7 @@ const local = (iso) => {
 };
 
 // `startView` "decade" opens on the years around 30 years ago (a date of birth), when no date is chosen yet.
-export default function DateField({ id, value, onChange, min, max, invalid = false, describedBy, disabled = false, clearable = false, placeholder = "Choose a date", compact = false, startView }) {
+export default function DateField({ id, value, onChange, min, max, invalid = false, describedBy, disabled = false, clearable = false, placeholder = "Choose a date", compact = false, startView, prefix }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef(null);
   const btn = useRef(null);
@@ -42,14 +42,22 @@ export default function DateField({ id, value, onChange, min, max, invalid = fal
     btn.current?.focus();
   };
 
+  // the calendar opens under the field; where it would run past the right edge of the window it lines up with the field's
+  // right edge instead (the Activity log's "To" field sits near the edge)
+  const fitPop = (el) => {
+    if (!el) return;
+    el.classList.remove("-right");
+    if (el.getBoundingClientRect().right > window.innerWidth - 8) el.classList.add("-right");
+  };
+
   return (
     <div className={`rt-datefield${compact ? " -compact" : ""}${open ? " is-open" : ""}`} ref={wrap}>
       <button type="button" id={id} ref={btn} className="rt-datefield__btn" onClick={() => setOpen((o) => !o)} disabled={disabled} aria-haspopup="dialog" aria-expanded={open} aria-invalid={invalid || undefined} aria-describedby={describedBy}>
-        <span className={value ? "" : "rt-datefield__placeholder"}>{value ? shown.format(toDate(value)) : placeholder}</span>
+        <span className={value ? "" : "rt-datefield__placeholder"}>{prefix && <b className="rt-datefield__prefix">{prefix}: </b>}{value ? shown.format(toDate(value)) : placeholder}</span>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
       </button>
       {open && (
-        <div className="rt-datefield__pop" role="dialog" aria-label="Choose a date">
+        <div className="rt-datefield__pop" role="dialog" aria-label="Choose a date" ref={fitPop}>
           <Calendar
             locale="en-GB"
             value={value ? local(value) : null}
