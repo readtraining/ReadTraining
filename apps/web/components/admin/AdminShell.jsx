@@ -47,7 +47,9 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const courses = api.admin.courses.counts.useQuery(undefined, { staleTime: 30000 });
   // refunds to decide, open disputes and payouts to approve are real too (for admins who can see orders)
   const money = api.admin.orders.summary.useQuery(undefined, { staleTime: 30000, retry: false, enabled: Boolean(me?.permissions?.includes("orders.view")) });
-  const counts = { ...(SHOW_DEMO ? data?.counts || {} : {}), applications: providers.data?.applications ?? 0, approvals: courses.data?.waiting ?? 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0 };
+  // account closure requests waiting (for admins who can close accounts)
+  const closures = api.admin.closures.counts.useQuery(undefined, { staleTime: 30000, retry: false, enabled: Boolean(me?.permissions?.includes("suspend")) });
+  const counts = { ...(SHOW_DEMO ? data?.counts || {} : {}), applications: providers.data?.applications ?? 0, approvals: courses.data?.waiting ?? 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0, closures: closures.data?.open ?? 0 };
   // pages behind an admin switch are listed only for admins who have it
   const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => !x.permission || me?.permissions?.includes(x.permission)) })).filter((g) => g.items.length);
   const items = nav.flatMap((g) => g.items);

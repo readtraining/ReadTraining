@@ -51,6 +51,22 @@ export async function updatePasswordAsUser(accessToken: string, password: string
   return String(body.error_code ?? body.code ?? res.status)
 }
 
+/**
+ * Adds a first password for someone who signs in with Google or Facebook (they have none, so no current password is sent), as
+ * that person: this device stays signed in. Returns null, or Supabase's error code.
+ */
+export async function setFirstPasswordAsUser(accessToken: string, password: string): Promise<string | null> {
+  if (!url || !publishableKey) return 'not_configured'
+  const res = await fetch(`${url.replace(/\/$/, '')}/auth/v1/user`, {
+    method: 'PUT',
+    headers: { apikey: publishableKey, authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ password }),
+  })
+  if (res.ok) return null
+  const body = (await res.json().catch(() => ({}))) as { error_code?: string; code?: string | number }
+  return String(body.error_code ?? body.code ?? res.status)
+}
+
 // Verifies access tokens only. Uses the publishable key: verification needs no secret, and the service role stays out of it.
 const verifier = url && publishableKey ? createClient(url, publishableKey, { auth: { persistSession: false, autoRefreshToken: false } }) : null
 const issuer = url ? `${url.replace(/\/$/, '')}/auth/v1` : null

@@ -3,13 +3,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { account } from "@/data/account";
+import { topBar } from "@/data/home";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom, useMe } from "@/lib/useMe";
 import { getSupabase } from "@/lib/supabase/client";
 import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
+import { loginWithProvider } from "@/lib/auth/authClient";
 import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
@@ -324,7 +326,14 @@ function EmailSection({ me }) {
 
 // ---- password ---------------------------------------------------------------------------------------------------------------
 
+// Someone with a password changes it; someone who signs in with Google or Facebook can add one. Once added, the change form
+// takes its place, with a line saying it worked.
 function PasswordSection({ me }) {
+  const [justSet, setJustSet] = useState(false);
+  return me.hasPassword ? <ChangePassword justSet={justSet} /> : <SetPassword me={me} onSet={() => setJustSet(true)} />;
+}
+
+function ChangePassword({ justSet }) {
   const [shown, setShown] = useState(false);
   const s = useSection(
     { currentPassword: "", newPassword: "", confirm: "" },
@@ -348,19 +357,58 @@ function PasswordSection({ me }) {
     <form method="post" className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pw-h" ref={s.formRef}>
       <h2 className="rt-acc__h2" id="rt-pw-h">{copy.password.title}</h2>
       <p className="rt-acc__note">{copy.password.lead}</p>
-      {me.hasPassword ? (
-        <>
-          <Field id="rt-pw-current" label="Current password" error={s.errors.currentPassword} type={type} autoComplete="current-password" value={s.values.currentPassword} onChange={s.set("currentPassword")} />
-          <div className="rt-contact__pair">
-            <Field id="rt-pw-new" label="New password" hint={copy.password.hint} error={s.errors.newPassword} type={type} autoComplete="new-password" value={s.values.newPassword} onChange={s.set("newPassword")} />
-            <Field id="rt-pw-confirm" label="Repeat password" error={s.errors.confirm} type={type} autoComplete="new-password" value={s.values.confirm} onChange={s.set("confirm")} />
-          </div>
-          <label className="rt-bk__check" htmlFor="rt-pw-show"><input id="rt-pw-show" type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} /><span>{copy.password.show}</span></label>
-          <Foot busy={s.busy} label={copy.password.save} saved={s.saved} general={s.general} outline />
-        </>
-      ) : (
-        <p className="rt-acc__note">{copy.noPassword}</p>
+      {justSet && <p className="rt-acc__notice -ok" role="status">{copy.password.setDone}</p>}
+      <Field id="rt-pw-current" label="Current password" error={s.errors.currentPassword} type={type} autoComplete="current-password" value={s.values.currentPassword} onChange={s.set("currentPassword")} />
+      <div className="rt-contact__pair">
+        <Field id="rt-pw-new" label="New password" hint={copy.password.hint} error={s.errors.newPassword} type={type} autoComplete="new-password" value={s.values.newPassword} onChange={s.set("newPassword")} />
+        <Field id="rt-pw-confirm" label="Repeat password" error={s.errors.confirm} type={type} autoComplete="new-password" value={s.values.confirm} onChange={s.set("confirm")} />
+      </div>
+      <label className="rt-bk__check" htmlFor="rt-pw-show"><input id="rt-pw-show" type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} /><span>{copy.password.show}</span></label>
+      <Foot busy={s.busy} label={copy.password.save} saved={s.saved} general={s.general} outline />
+    </form>
+  );
+}
+
+// A first password (me.setPassword): new and repeat, as the change form. The API takes it only within 15 minutes of signing in;
+// otherwise this says so, with a button to sign in with Google (or Facebook) again, which comes back here.
+function SetPassword({ me, onSet }) {
+  const p = copy.password;
+  const [shown, setShown] = useState(false);
+  const via = me.socialSignIn?.[0] === "facebook" ? "facebook" : "google";
+  const name = via === "facebook" ? "Facebook" : "Google";
+  const s = useSection(
+    { newPassword: "", confirm: "" },
+    api.me.setPassword.useMutation(),
+    (v) => {
+      const e = {};
+      if (v.newPassword.length < 8 || !/[a-z]/i.test(v.newPassword) || !/\d/.test(v.newPassword)) e.newPassword = "Enter a new password of at least 8 characters, with a letter and a number.";
+      else if (v.confirm !== v.newPassword) e.confirm = "The passwords do not match.";
+      return e;
+    },
+    ({ newPassword }) => ({ newPassword }),
+  );
+  const done = () => {
+    onSet();
+    return "";
+  };
+  const again = () => leaveWithoutAsking(() => loginWithProvider(via, "/account/settings#rt-pw-h"));
+  const type = shown ? "text" : "password";
+  return (
+    <form method="post" className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pw-h" ref={s.formRef}>
+      <h2 className="rt-acc__h2" id="rt-pw-h">{p.title}</h2>
+      <p className="rt-acc__note">{p.setLead.replace("{via}", name)}</p>
+      <div className="rt-contact__pair">
+        <Field id="rt-pw-new" label="New password" hint={p.hint} error={s.errors.newPassword} type={type} autoComplete="new-password" value={s.values.newPassword} onChange={s.set("newPassword")} />
+        <Field id="rt-pw-confirm" label="Repeat password" error={s.errors.confirm} type={type} autoComplete="new-password" value={s.values.confirm} onChange={s.set("confirm")} />
+      </div>
+      <label className="rt-bk__check" htmlFor="rt-pw-show"><input id="rt-pw-show" type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} /><span>{p.show}</span></label>
+      {s.errors.reauth && (
+        <div className="rt-acc__notice rt-acc__reauth" role="alert">
+          <p>{p.reauth.replace("{via}", name)}</p>
+          <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={again}>{p.reauthButton.replace("{via}", name)}</button>
+        </div>
       )}
+      <Foot busy={s.busy} label={p.set} saved={s.saved} general={s.general} outline />
     </form>
   );
 }
@@ -389,8 +437,8 @@ function BusinessSection({ me }) {
     }
   };
   return (
-    <section className="rt-acc__card" aria-labelledby="rt-pf-biz-h">
-      <h2 className="rt-acc__h3" id="rt-pf-biz-h">Your business account</h2>
+    <section className="rt-acc__card rt-acc__form" aria-labelledby="rt-pf-biz-h">
+      <h2 className="rt-acc__h2" id="rt-pf-biz-h" tabIndex={-1}>Your business account</h2>
       {state.done ? (
         <p className="rt-acc__savedmsg" role="status">{state.done}</p>
       ) : (
@@ -399,8 +447,8 @@ function BusinessSection({ me }) {
             <b>{business.name}</b>. Made it by mistake, or only to try it out? You can delete it while nobody else is on its team. Your own account stays as it is.
           </p>
           {state.error && <p className="rt-q__err" role="alert">{state.error}</p>}
-          <div>
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={remove.isPending} aria-busy={remove.isPending || undefined}>
+          <div className="rt-acc__formfoot">
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={remove.isPending} aria-busy={remove.isPending || undefined}>
               {remove.isPending ? "Deleting…" : "Delete business account"}
             </button>
           </div>
@@ -473,38 +521,93 @@ function CloseSection({ me }) {
     }
   };
 
+  // "Go to your business account": the pop-up closes, then the business section above comes into view with its heading focused
+  const toBusiness = () => {
+    setOpen(false);
+    setTimeout(() => {
+      const h = document.getElementById("rt-pf-biz-h");
+      h?.scrollIntoView({ behavior: "smooth", block: "center" });
+      h?.focus({ preventScroll: true });
+    }, 300);
+  };
+
   return (
-    <section className="rt-acc__card" aria-labelledby="rt-pf-close-h">
-      <h2 className="rt-acc__h3" id="rt-pf-close-h">{c.title}</h2>
+    <section className="rt-acc__card rt-acc__form" aria-labelledby="rt-pf-close-h">
+      <h2 className="rt-acc__h2" id="rt-pf-close-h">{c.title}</h2>
       {me.closure ? (
-        <>
-          <p className="rt-acc__notice -warn" role="status">{c.requested.replace("{date}", day(me.closure.requestedAt))}</p>
-          <button type="button" className="rt-acc__linkbtn" onClick={takeBack} disabled={withdraw.isPending} aria-busy={withdraw.isPending}>{c.withdraw}</button>
-        </>
+        <p className="rt-acc__notice -warn" role="status">{c.requested.replace("{date}", day(me.closure.requestedAt))}</p>
       ) : (
-        <>
-          <p className="rt-acc__note">{c.text}</p>
-          <button type="button" ref={openRef} className="button -md -outline-purple-1 text-purple-1" aria-haspopup="dialog" onClick={() => { setErrors({}); setOpen(true); }}>{c.cta}</button>
-        </>
+        <p className="rt-acc__note">{c.text}</p>
       )}
-      <p className="rt-acc__savedmsg" role="status">{said}</p>
+      {/* the page's action row, as the other sections' Save buttons */}
+      <div className="rt-acc__formfoot">
+        {me.closure ? (
+          <button type="button" className="rt-acc__linkbtn" onClick={takeBack} disabled={withdraw.isPending} aria-busy={withdraw.isPending}>{c.withdraw}</button>
+        ) : (
+          <button type="button" ref={openRef} className="button -md -outline-purple-1 text-purple-1" aria-haspopup="dialog" onClick={() => { setErrors({}); setOpen(true); }}>{c.cta}</button>
+        )}
+        <p className="rt-acc__savedmsg" role="status">{said}</p>
+      </div>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={c.sheet.title} closeLabel="Close" fallbackFocus={openRef}>
-        <form method="post" className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={formRef}>
-          {c.sheet.what.map((w) => <p key={w} className="rt-acc__note">{w}</p>)}
-          <div className="rt-field">
-            <label htmlFor="rt-pf-close-reason">{c.sheet.reason}</label>
-            {errors.reason && <p className="rt-q__err" id="rt-pf-close-reason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
-            <textarea id="rt-pf-close-reason" rows={3} maxLength={1000} value={values.reason} onChange={(e) => setValues((v) => ({ ...v, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-pf-close-reason-e" : undefined} />
-          </div>
-          {me.hasPassword && (
-            <Field id="rt-pf-close-pw" label={c.sheet.password} error={errors.currentPassword} type="password" autoComplete="current-password" value={values.currentPassword} onChange={(e) => { const v = e.target.value; setValues((x) => ({ ...x, currentPassword: v })); }} />
-          )}
-          {errors.form && <p className="rt-q__err" role="alert">{errors.form}</p>}
-          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={request.isPending} aria-busy={request.isPending}>{request.isPending ? c.sheet.sending : c.sheet.submit}</button>
-        </form>
+        {/* something in the way (an admin, a provider or business they own): what to do first, instead of the form */}
+        {me.closureBlockers?.length ? (
+          <ClosureBlockers blockers={me.closureBlockers} onBusiness={toBusiness} onClose={() => setOpen(false)} />
+        ) : (
+          <form method="post" className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={formRef}>
+            {c.sheet.what.map((w) => <p key={w} className="rt-acc__note">{w}</p>)}
+            <div className="rt-field">
+              <label htmlFor="rt-pf-close-reason">{c.sheet.reason}</label>
+              {errors.reason && <p className="rt-q__err" id="rt-pf-close-reason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
+              <textarea id="rt-pf-close-reason" rows={3} maxLength={1000} value={values.reason} onChange={(e) => setValues((v) => ({ ...v, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-pf-close-reason-e" : undefined} />
+            </div>
+            {me.hasPassword && (
+              <Field id="rt-pf-close-pw" label={c.sheet.password} error={errors.currentPassword} type="password" autoComplete="current-password" value={values.currentPassword} onChange={(e) => { const v = e.target.value; setValues((x) => ({ ...x, currentPassword: v })); }} />
+            )}
+            {errors.form && <p className="rt-q__err" role="alert">{errors.form}</p>}
+            <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={request.isPending} aria-busy={request.isPending}>{request.isPending ? c.sheet.sending : c.sheet.submit}</button>
+          </form>
+        )}
       </Sheet>
     </section>
+  );
+}
+
+// Shown in the pop-up when they press Close account and something has to happen first, each with its next step: a
+// business account they can delete themselves (the section above on this page), anything else through our team or another admin.
+// It goes once they've done it (me.get), and the pop-up shows the request form again.
+function ClosureBlockers({ blockers, onBusiness, onClose }) {
+  const b = copy.delete.blocked;
+  const contact = b.contactHint.replace("{phone}", topBar.phone).replace("{hours}", topBar.hours).replace("{email}", topBar.email);
+  // the account's name in bold
+  const named = (text, name) => text.split("{name}").flatMap((part, i) => (i ? [<b key={i}>{name}</b>, part] : [part]));
+  const line = (x) => {
+    if (x.kind === "admin") return { key: "admin", text: b.admin };
+    if (x.kind === "provider") return { key: x.name, text: named(b.provider, x.name), contact: true };
+    if (x.others) return { key: x.name, text: named(b.businessTeam.replace("{others}", x.others).replace("{people}", x.others === 1 ? "person" : "people"), x.name), contact: true };
+    return { key: x.name, text: named(b.business, x.name), business: true };
+  };
+  const lines = blockers.map(line);
+  return (
+    <div className="rt-biz__sheetform rt-acc__blocked">
+      <p className="rt-acc__note"><strong>{b.lead}</strong></p>
+      <ul className="rt-acc__blockers">
+        {lines.map((l) => (
+          <li key={l.key}>
+            <p className="rt-acc__note">{l.text}</p>
+            {l.business && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onBusiness}>{b.toBusiness}</button>}
+            {l.contact && (
+              <>
+                <a href="/contact-us" className="button -md -outline-purple-1 text-purple-1">{b.contact}</a>
+                <p className="rt-acc__note">{contact}</p>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="rt-acc__note">{b.after}</p>
+      <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={onClose}>{b.close}</button>
+    </div>
   );
 }
 

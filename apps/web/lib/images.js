@@ -27,11 +27,11 @@ const listTypes = (types) => {
 };
 /** The file types a kind accepts, for <input accept>. */
 export const acceptFor = (kind) => IMAGE_KINDS[kind].types.join(",");
-/** The hint under an upload button: what can be chosen. */
+/** The hint under an upload button: only what helps someone choose a file (the preview shows the rest). */
 export const hintFor = (kind) => {
   const k = IMAGE_KINDS[kind];
   const size = k.min.width > 1 ? `At least ${k.min.width} × ${k.min.height} pixels. ` : "";
-  return `${size}${listTypes(k.types)}, up to 15 MB: big pictures are made smaller for you.`;
+  return `${size}${listTypes(k.types)}, up to 15 MB.`;
 };
 
 const fail = (message) => Object.assign(new Error(message), { friendly: true });

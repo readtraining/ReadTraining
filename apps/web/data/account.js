@@ -205,7 +205,7 @@ export const account = {
     saved: "Your changes have been saved.",
     failed: { title: "We couldn't load your settings", text: "Check your connection, then try again." },
     basic: { title: "Basic information", lead: "Used for your account and on your bookings.", verified: "Verified" },
-    photo: { title: "Profile photo", hint: "JPG, PNG or WebP, up to 15 MB: big pictures are made smaller for you. A square one works best (we use the middle of it).", add: "Add a photo", change: "Change photo", remove: "Remove photo", saved: "Your photo has been updated.", removed: "Your photo has been removed." },
+    photo: { title: "Profile photo", hint: "JPG, PNG or WebP, up to 15 MB.", add: "Add a photo", change: "Change photo", remove: "Remove photo", saved: "Your photo has been updated.", removed: "Your photo has been removed." },
     address: { title: "Address", lead: "Your billing address." },
     email: {
       title: "Email",
@@ -223,14 +223,20 @@ export const account = {
       show: "Show passwords",
       save: "Change password",
       saved: "Your password has been changed. Other devices have been signed out.",
+      // someone who signs in with Google or Facebook adds a first password (me.setPassword)
+      setLead: "You log in with {via}. Add a password so you can also log in with your email address and password.",
+      set: "Set password",
+      setDone: "Your password is set. You can now log in with your email address and password too.",
+      reauth: "For your security, sign in with {via} again, then set your password.",
+      reauthButton: "Sign in with {via} again",
     },
-    noPassword: "You log in with Google or Facebook, so there's no password here yet. To add one, use \"Forgot password\" on the log in page.",
+    noPassword: "You log in with Google or Facebook, so there's no password here yet. Set one under Password below, then you can change your email here.",
     marketing: { title: "Emails from us", label: "Send me offers and news about new courses", note: "You can change this at any time. We always email you about your bookings." },
     // a request our team handles within one month (UK GDPR); it can be withdrawn until then
     delete: {
       title: "Close your account",
-      text: "Ask us to close your account and delete your personal details. We keep the booking and payment records the law asks us to keep, without your login.",
-      cta: "Request account closure",
+      text: "Ask us to close your account and delete your personal details. We keep only the booking and payment records the law requires.",
+      cta: "Close account",
       sheet: {
         title: "Close your account",
         what: ["We close your account and delete your personal details within one month, and email you when it’s done.", "We keep the booking and payment records the law asks us to keep, without your login.", "Until then you can still sign in, and withdraw the request here."],
@@ -243,6 +249,19 @@ export const account = {
       withdraw: "Withdraw request",
       withdrawn: "Your request is withdrawn. Your account stays open.",
       sent: "Request sent. We’ve emailed you a confirmation.",
+      // something has to happen first (me.get closureBlockers): what it is and what to do, instead of the request button
+      blocked: {
+        lead: "Before we can close your account:",
+        business: "You own {name} (business account). Delete it first, then come back here.",
+        businessTeam: "You own {name} (business account), and {others} other {people} on its team. Contact us to hand it over or close it first.",
+        provider: "You own {name} (provider account). Provider accounts are closed by our team, so contact us to close it first.",
+        admin: "You’re on the ReadTraining admin team. Ask a Full admin to remove you from the team first (Admin › Admin team).",
+        toBusiness: "Go to your business account",
+        contact: "Contact us",
+        contactHint: "Call {phone} ({hours}) or email {email}.",
+        after: "Once that’s done, you can ask us to close your account here.",
+        close: "Close",
+      },
     },
   },
 
