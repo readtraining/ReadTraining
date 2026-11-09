@@ -1,7 +1,7 @@
 "use client";
-import React from "react";
+import React, { useRef } from "react";
 
-import HomeSearch from "./HomeSearch";
+import HomeSearch, { SEARCH_WIDTH } from "./HomeSearch";
 import CartToggle from "@/components/layout/component/CartToggle";
 import HomeMenu from "./HomeMenu";
 import Link from "next/link";
@@ -18,6 +18,29 @@ import { headerNav } from "@/data/headerNav";
 
 export default function HomeHeader() {
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
+  // the search box opening: the menu slides left by just the room it needs (to the space beside the logo at most), and where
+  // even that isn't enough the box opens narrower; closing slides the menu back
+  const headerRef = useRef(null);
+  const [menuShift, setMenuShift] = useState(0);
+  const [searchWidth, setSearchWidth] = useState(SEARCH_WIDTH);
+  const searchOpened = (open) => {
+    const header = headerRef.current;
+    const items = header ? [...header.querySelectorAll(".menu__nav > li")].map((li) => li.getBoundingClientRect()).filter((r) => r.width) : [];
+    if (!open || !items.length) {
+      setMenuShift(0);
+      setSearchWidth(SEARCH_WIDTH);
+      return;
+    }
+    const GAP = 16; // between the menu's last item and the box
+    const right = header.querySelector(".header-right").getBoundingClientRect().left; // where the box's right side sits
+    const logo = header.querySelector(".header__logo").getBoundingClientRect().right;
+    const menuLeft = Math.min(...items.map((r) => r.left));
+    const menuRight = Math.max(...items.map((r) => r.right));
+    const need = Math.max(0, menuRight + GAP - (right - SEARCH_WIDTH)); // how far the menu must move for the full box
+    const room = Math.max(0, menuLeft - logo - 24); // how far it can move before reaching the logo
+    setMenuShift(Math.min(need, room));
+    setSearchWidth(need > room ? Math.max(180, SEARCH_WIDTH - (need - room)) : SEARCH_WIDTH);
+  };
   // the four menus: the open one's card shows under the header, with the page dimmed behind it
   const menu = useNavMenu();
   const section = headerNav.sections.find((s) => s.id === menu.open);
@@ -26,7 +49,7 @@ export default function HomeHeader() {
   return (
     <>
       <HomeTopBar />
-      <header className="header -type-1 " style={{ position: "sticky", top: 0 }} data-rt-nav>
+      <header ref={headerRef} className="header -type-1 " style={{ position: "sticky", top: 0, "--rt-menu-shift": `${menuShift}px` }} data-rt-nav>
         <div className="header__container">
           <div className="row justify-between items-center">
             <div className="col-auto">
@@ -55,7 +78,7 @@ export default function HomeHeader() {
               <div className="header-right d-flex items-center">
                 <div className="header-right__icons text-white d-flex items-center">
                   {/* search toggle start */}
-                  <HomeSearch />
+                  <HomeSearch onOpenChange={searchOpened} width={searchWidth} />
                   {/* search toggle end */}
 
                   {/* cart toggle start */}
