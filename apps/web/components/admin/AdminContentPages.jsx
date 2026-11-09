@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { blocksToText, textToBlocks } from "@/lib/legalText";
 import { errorsFrom } from "@/lib/useMe";
-import { SaveRow, describedBy, field, newRowId, useSave } from "./contentParts";
+import { SaveRow, describedBy, field, newRowId, useSave, RowTools } from "./contentParts";
 import DateField from "./DateField";
 
 const copy = A.content;
@@ -76,11 +76,7 @@ export function FaqForm({ contentKey, set, value, canEdit }) {
           <div className="rt-acc__cardhead">
             <h2 className="rt-acc__h2" id={`rt-adm-fq-${x.id}`}>{c.itemTitle.replace("{n}", i + 1)}</h2>
             {canEdit && (
-              <div className="rt-adm-content__rowtools">
-                <button type="button" className="rt-cd__link" onClick={() => setItems((xs) => moved(xs, i, -1))} disabled={i === 0}>{c.up}<span className="rt-sr">: {c.itemTitle.replace("{n}", i + 1)}</span></button>
-                <button type="button" className="rt-cd__link" onClick={() => setItems((xs) => moved(xs, i, 1))} disabled={i === items.length - 1}>{c.down}<span className="rt-sr">: {c.itemTitle.replace("{n}", i + 1)}</span></button>
-                {items.length > 1 && <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setItems((xs) => xs.filter((y) => y.id !== x.id))}>{c.remove}<span className="rt-sr">: {c.itemTitle.replace("{n}", i + 1)}</span></button>}
-              </div>
+              <RowTools what={c.itemTitle.replace("{n}", i + 1)} first={i === 0} last={i === items.length - 1} onUp={() => setItems((xs) => moved(xs, i, -1))} onDown={() => setItems((xs) => moved(xs, i, 1))} onRemove={items.length > 1 ? () => setItems((xs) => xs.filter((y) => y.id !== x.id)) : null} removeLabel={c.remove} />
             )}
           </div>
           {field(`rt-adm-fqq-${x.id}`, c.question, "", errors[`q${i}`], <input id={`rt-adm-fqq-${x.id}`} type="text" maxLength={200} value={x.q} readOnly={!canEdit} onChange={(e) => edit(x.id, { q: e.target.value })} aria-invalid={errors[`q${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-fqq-${x.id}`, "", errors[`q${i}`])} />)}
@@ -88,7 +84,7 @@ export function FaqForm({ contentKey, set, value, canEdit }) {
         </section>
       ))}
       {canEdit && (items.length < 30
-        ? <button type="button" className="rt-cd__link" onClick={() => setItems((xs) => [...xs, { id: newRowId(), q: "", a: "" }])}>+ {c.add}</button>
+        ? <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-adm-addrow" onClick={() => setItems((xs) => [...xs, { id: newRowId(), q: "", a: "" }])}>+ {c.add}</button>
         : <p className="rt-acc__note">{c.max}</p>)}
       <SaveRow canEdit={canEdit} saving={saving} error={general} saved={saved} />
     </form>
@@ -182,19 +178,15 @@ export function LegalForm({ contentKey, doc, value, canEdit }) {
           <div className="rt-acc__cardhead">
             <h2 className="rt-acc__h2" id={`rt-adm-ls-${s.rid}`}>{c.sectionTitle.replace("{n}", i + 1)}</h2>
             {canEdit && (
-              <div className="rt-adm-content__rowtools">
-                <button type="button" className="rt-cd__link" onClick={() => setSections((xs) => moved(xs, i, -1))} disabled={i === 0}>{c.up}<span className="rt-sr">: {s.title}</span></button>
-                <button type="button" className="rt-cd__link" onClick={() => setSections((xs) => moved(xs, i, 1))} disabled={i === sections.length - 1}>{c.down}<span className="rt-sr">: {s.title}</span></button>
-                {sections.length > 1 && <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setSections((xs) => xs.filter((y) => y.rid !== s.rid))}>{c.removeSection}<span className="rt-sr">: {s.title}</span></button>}
-              </div>
+              <RowTools what={s.title || c.sectionTitle.replace("{n}", i + 1)} first={i === 0} last={i === sections.length - 1} onUp={() => setSections((xs) => moved(xs, i, -1))} onDown={() => setSections((xs) => moved(xs, i, 1))} onRemove={sections.length > 1 ? () => setSections((xs) => xs.filter((y) => y.rid !== s.rid)) : null} removeLabel={c.removeSection} />
             )}
           </div>
           {field(`rt-adm-lst-${s.rid}`, c.heading, "", errors[`title${i}`], <input id={`rt-adm-lst-${s.rid}`} type="text" maxLength={120} value={s.title} readOnly={!canEdit} onChange={(e) => editSection(s.rid, { title: e.target.value })} aria-invalid={errors[`title${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-lst-${s.rid}`, "", errors[`title${i}`])} />)}
-          {field(`rt-adm-lsx-${s.rid}`, c.text, i === 0 ? c.textHint : "", errors[`text${i}`], <textarea id={`rt-adm-lsx-${s.rid}`} className="rt-adm-content__legal" rows={Math.min(18, Math.max(5, s.text.split("\n").length + 1))} value={s.text} readOnly={!canEdit} onChange={(e) => editSection(s.rid, { text: e.target.value })} aria-invalid={errors[`text${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-lsx-${s.rid}`, i === 0 ? "x" : "", errors[`text${i}`])} />)}
+          {field(`rt-adm-lsx-${s.rid}`, c.text, i === 0 ? c.textHint : "", errors[`text${i}`], <textarea id={`rt-adm-lsx-${s.rid}`} className="rt-adm-content__legal" rows={6} value={s.text} readOnly={!canEdit} onChange={(e) => editSection(s.rid, { text: e.target.value })} aria-invalid={errors[`text${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-lsx-${s.rid}`, i === 0 ? "x" : "", errors[`text${i}`])} />)}
         </section>
       ))}
       {canEdit && (sections.length < 60
-        ? <button type="button" className="rt-cd__link" onClick={() => setSections((xs) => [...xs, { rid: newRowId(), id: "", title: "", text: "" }])}>+ {c.addSection}</button>
+        ? <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-adm-addrow" onClick={() => setSections((xs) => [...xs, { rid: newRowId(), id: "", title: "", text: "" }])}>+ {c.addSection}</button>
         : <p className="rt-acc__note">{c.maxSections}</p>)}
       <SaveRow canEdit={canEdit} saving={saving} error={general} saved={saved} />
     </form>

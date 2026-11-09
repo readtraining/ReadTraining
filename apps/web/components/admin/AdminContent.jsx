@@ -126,8 +126,8 @@ export default function AdminContent() {
         </div>
       )}
 
-      <div className="rt-adm-content__status">
-        <p className="rt-acc__note rt-adm-help">{when ? copy.lastChanged.replace("{when}", formatWhen(Date.parse(when.at))).replace("{who}", when.by || "an admin") : <BuiltInNote contentKey={contentKey} />}</p>
+      <div className="rt-acc__notice rt-adm-content__status">
+        <p className="rt-acc__note">{when ? copy.lastChanged.replace("{when}", formatWhen(Date.parse(when.at))).replace("{who}", when.by || "an admin") : <BuiltInNote contentKey={contentKey} />}</p>
         {when && canEdit && <button type="button" className="rt-cd__link" onClick={() => setConfirming(true)}>{copy.reset}</button>}
       </div>
       <History contentKey={contentKey} canEdit={canEdit} onUse={(v) => { setLoaded(v); setSaid(""); }} />

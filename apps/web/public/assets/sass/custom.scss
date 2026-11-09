@@ -7282,3 +7282,20 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 }
 /* N9: a cell's lines stay left aligned (numbers stay right) */
 @media (min-width: 576px) { .rt-adm--platform .rt-adm-table td { text-align: left; } .rt-adm--platform .rt-adm-table td.rt-adm-num-cell { text-align: right; } }
+/* C18, N4: form blocks inside a card are 20px apart; side-by-side fields keep their inputs level whatever their hint; a date
+   field with a button beside it (Legal: Last updated + Today) is as wide as the one next to it */
+.rt-adm--platform .rt-acc__card > :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) + :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) { margin-top: 20px; }
+.rt-adm--platform .rt-acc__card > .rt-acc__cardhead + .rt-field { margin-top: 0; }
+.rt-adm--platform .rt-adm-fees__grid { align-items: end; }
+.rt-adm--platform .rt-adm-inline__row .rt-datefield { flex: 1 1 auto; }
+/* one textarea size: it starts at 120px and grows with its words (to 480px, then scrolls) */
+.rt-adm--platform .rt-field textarea { min-height: 120px; max-height: 480px; field-sizing: content; }
+/* C11: the card's row tools line up as one group of 32px buttons; "+ Add" is a small button under the cards */
+.rt-adm--platform .rt-adm-content__rowtools { display: flex; align-items: center; gap: 6px; }
+.rt-adm--platform .rt-adm-addrow { justify-self: start; }
+/* C14: the status line is a notice; Site content's cards are 20px apart */
+.rt-adm--platform .rt-adm-content__status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.rt-adm--platform .rt-adm-content__status .rt-acc__note { margin: 0; color: inherit; }
+.rt-adm--platform .rt-acc__stack { gap: 20px; }
+/* an empty "saved" line takes no room until it has something to say (it stays in the page for screen readers) */
+.rt-adm--platform .rt-acc__stack > p[role="status"]:empty { position: absolute; }
