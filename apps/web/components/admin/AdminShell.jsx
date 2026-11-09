@@ -37,6 +37,11 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const me = useAdminAccess();
   const [leaving, setLeaving] = useState(false);
   const [folded, fold] = useFoldedGroups("rt-adm-nav-folded"); // the groups this admin folded
+  // the admin's pop-ups open outside this page (at the end of <body>), so <body> says the admin is open: they take its sizes too
+  useEffect(() => {
+    document.body.classList.add("rt-adm-open");
+    return () => document.body.classList.remove("rt-adm-open");
+  }, []);
   // the group holding the page you are on always opens, so its link is never hidden
   const hereGroup = A.nav.find((g) => g.items.some((x) => x.key === current))?.group;
   useEffect(() => {

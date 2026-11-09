@@ -7334,3 +7334,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm--platform .rt-biz__table td small.rt-adm-rv__text { -webkit-line-clamp: 1; }
 /* Course reviews: 20px between review cards */
 .rt-adm--platform .rt-adm-items { gap: 20px; }
+/* C1, C2: the admin's pop-ups (outside its page, marked by body.rt-adm-open) use its sizes: 40px buttons, 44px fields */
+.rt-adm-open .rt-tq-sheet .button.-md { height: 40px; padding: 0 16px; font-size: 14px; }
+.rt-adm-open .rt-tq-sheet .rt-field select, .rt-adm-open .rt-tq-sheet .rt-field input:not([type="checkbox"]):not([type="radio"]),
+.rt-adm-open .rt-tq-sheet .rt-field-dd .rt-cat-dd__trigger, .rt-adm-open .rt-tq-sheet .rt-datefield__btn { height: 44px; }
