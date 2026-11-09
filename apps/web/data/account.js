@@ -230,7 +230,7 @@ export const account = {
     delete: {
       title: "Close your account",
       text: "Ask us to close your account and delete your personal details. We keep only the booking and payment records the law requires.",
-      cta: "Request account closure",
+      cta: "Close account",
       sheet: {
         title: "Close your account",
         what: ["We close your account and delete your personal details within one month, and email you when it’s done.", "We keep the booking and payment records the law asks us to keep, without your login.", "Until then you can still sign in, and withdraw the request here."],

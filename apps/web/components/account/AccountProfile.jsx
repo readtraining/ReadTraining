@@ -526,7 +526,7 @@ function CloseSection({ me }) {
   );
 }
 
-// Shown in the pop-up when they press Request account closure and something has to happen first, each with its next step: a
+// Shown in the pop-up when they press Close account and something has to happen first, each with its next step: a
 // business account they can delete themselves (the section above on this page), anything else through our team or another admin.
 // It goes once they've done it (me.get), and the pop-up shows the request form again.
 function ClosureBlockers({ blockers, onBusiness, onClose }) {
