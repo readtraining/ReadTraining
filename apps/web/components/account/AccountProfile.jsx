@@ -495,7 +495,10 @@ function CloseSection({ me }) {
       ) : (
         <>
           <p className="rt-acc__note">{c.text}</p>
-          <button type="button" ref={openRef} className="button -md -outline-purple-1 text-purple-1" aria-haspopup="dialog" onClick={() => { setErrors({}); setOpen(true); }}>{c.cta}</button>
+          {/* laid out as the business account box above: the button in its own row, small */}
+          <div>
+            <button type="button" ref={openRef} className="button -sm -outline-purple-1 text-purple-1" aria-haspopup="dialog" onClick={() => { setErrors({}); setOpen(true); }}>{c.cta}</button>
+          </div>
         </>
       )}
       <p className="rt-acc__savedmsg" role="status">{said}</p>

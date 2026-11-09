@@ -229,7 +229,7 @@ export const account = {
     // a request our team handles within one month (UK GDPR); it can be withdrawn until then
     delete: {
       title: "Close your account",
-      text: "Ask us to close your account and delete your personal details. We keep the booking and payment records the law asks us to keep, without your login.",
+      text: "Ask us to close your account and delete your personal details. We keep only the booking and payment records the law requires.",
       cta: "Request account closure",
       sheet: {
         title: "Close your account",
