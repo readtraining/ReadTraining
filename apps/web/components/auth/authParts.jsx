@@ -74,13 +74,16 @@ export function AuthCheck({ id, label, ...input }) {
   );
 }
 
-// Google, and Facebook once it is switched on in Supabase (until then its button would end on Supabase's error page). Where
-// Google's own button can be used (the site's address and localhost) it takes Google's cell, so Google names our site; elsewhere
-// (Vercel previews) our own Google button goes through Supabase as before.
+// Google and Facebook. The Facebook button always shows; until Facebook sign-in is switched on in Supabase (it needs Meta's
+// business verification) pressing it says so on our page instead of going to Supabase's error page, and once it is on the same
+// button signs in. Where Google's own button can be used (the site's address and localhost) it takes Google's cell, so Google
+// names our site; elsewhere (Vercel previews) our own Google button goes through Supabase as before.
+const FACEBOOK_OFF = "Facebook sign-in isn't available yet. Please use Google or your email address.";
 export function SocialSignIn({ onSocial, disabled, onError, signingUp = false }) {
   const googleHere = useGoogleButton();
   const [googleFailed, setGoogleFailed] = useState(false);
-  const [facebook, setFacebook] = useState(false);
+  const [facebook, setFacebook] = useState(null); // null while Supabase's settings are being read
+  const [facebookNote, setFacebookNote] = useState(false);
   useEffect(() => {
     let live = true;
     authProviders().then((p) => live && setFacebook(p.facebook === true));
@@ -91,14 +94,16 @@ export function SocialSignIn({ onSocial, disabled, onError, signingUp = false })
   return (
     <>
       <p className="rt-auth__or"><span>Or continue with</span></p>
-      <div className={`rt-auth__social${facebook ? "" : " -one"}`}>
+      <div className="rt-auth__social">
         {googleHere && !googleFailed ? (
           <GoogleButton signingUp={signingUp} onError={onError} onUnavailable={() => setGoogleFailed(true)} />
         ) : (
           <button type="button" className="rt-auth__socialbtn" onClick={() => onSocial("google")} disabled={disabled}><GoogleIcon /> Google</button>
         )}
-        {facebook && <button type="button" className="rt-auth__socialbtn" onClick={() => onSocial("facebook")} disabled={disabled}><FacebookIcon /> Facebook</button>}
+        <button type="button" className="rt-auth__socialbtn" onClick={() => (facebook === false ? setFacebookNote(true) : onSocial("facebook"))} disabled={disabled}><FacebookIcon /> Facebook</button>
       </div>
+      {/* right under the buttons, where they are looking (the form's own messages sit at its top) */}
+      {facebookNote && <AuthNotice tone="info">{FACEBOOK_OFF}</AuthNotice>}
     </>
   );
 }
