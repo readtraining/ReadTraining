@@ -254,6 +254,7 @@ export const account = {
         contact: "Contact us",
         contactHint: "Call {phone} ({hours}) or email {email}.",
         after: "Once that’s done, you can ask us to close your account here.",
+        close: "Close",
       },
     },
   },

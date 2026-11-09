@@ -391,7 +391,7 @@ function BusinessSection({ me }) {
   };
   return (
     <section className="rt-acc__card" aria-labelledby="rt-pf-biz-h">
-      <h2 className="rt-acc__h3" id="rt-pf-biz-h">Your business account</h2>
+      <h2 className="rt-acc__h3" id="rt-pf-biz-h" tabIndex={-1}>Your business account</h2>
       {state.done ? (
         <p className="rt-acc__savedmsg" role="status">{state.done}</p>
       ) : (
@@ -474,6 +474,16 @@ function CloseSection({ me }) {
     }
   };
 
+  // "Go to your business account": the pop-up closes, then the business section above comes into view with its heading focused
+  const toBusiness = () => {
+    setOpen(false);
+    setTimeout(() => {
+      const h = document.getElementById("rt-pf-biz-h");
+      h?.scrollIntoView({ behavior: "smooth", block: "center" });
+      h?.focus({ preventScroll: true });
+    }, 300);
+  };
+
   return (
     <section className="rt-acc__card" aria-labelledby="rt-pf-close-h">
       <h2 className="rt-acc__h3" id="rt-pf-close-h">{c.title}</h2>
@@ -482,8 +492,6 @@ function CloseSection({ me }) {
           <p className="rt-acc__notice -warn" role="status">{c.requested.replace("{date}", day(me.closure.requestedAt))}</p>
           <button type="button" className="rt-acc__linkbtn" onClick={takeBack} disabled={withdraw.isPending} aria-busy={withdraw.isPending}>{c.withdraw}</button>
         </>
-      ) : me.closureBlockers?.length ? (
-        <ClosureBlockers blockers={me.closureBlockers} />
       ) : (
         <>
           <p className="rt-acc__note">{c.text}</p>
@@ -493,27 +501,33 @@ function CloseSection({ me }) {
       <p className="rt-acc__savedmsg" role="status">{said}</p>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={c.sheet.title} closeLabel="Close" fallbackFocus={openRef}>
-        <form method="post" className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={formRef}>
-          {c.sheet.what.map((w) => <p key={w} className="rt-acc__note">{w}</p>)}
-          <div className="rt-field">
-            <label htmlFor="rt-pf-close-reason">{c.sheet.reason}</label>
-            {errors.reason && <p className="rt-q__err" id="rt-pf-close-reason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
-            <textarea id="rt-pf-close-reason" rows={3} maxLength={1000} value={values.reason} onChange={(e) => setValues((v) => ({ ...v, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-pf-close-reason-e" : undefined} />
-          </div>
-          {me.hasPassword && (
-            <Field id="rt-pf-close-pw" label={c.sheet.password} error={errors.currentPassword} type="password" autoComplete="current-password" value={values.currentPassword} onChange={(e) => { const v = e.target.value; setValues((x) => ({ ...x, currentPassword: v })); }} />
-          )}
-          {errors.form && <p className="rt-q__err" role="alert">{errors.form}</p>}
-          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={request.isPending} aria-busy={request.isPending}>{request.isPending ? c.sheet.sending : c.sheet.submit}</button>
-        </form>
+        {/* something in the way (an admin, a provider or business they own): what to do first, instead of the form */}
+        {me.closureBlockers?.length ? (
+          <ClosureBlockers blockers={me.closureBlockers} onBusiness={toBusiness} onClose={() => setOpen(false)} />
+        ) : (
+          <form method="post" className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={formRef}>
+            {c.sheet.what.map((w) => <p key={w} className="rt-acc__note">{w}</p>)}
+            <div className="rt-field">
+              <label htmlFor="rt-pf-close-reason">{c.sheet.reason}</label>
+              {errors.reason && <p className="rt-q__err" id="rt-pf-close-reason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
+              <textarea id="rt-pf-close-reason" rows={3} maxLength={1000} value={values.reason} onChange={(e) => setValues((v) => ({ ...v, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-pf-close-reason-e" : undefined} />
+            </div>
+            {me.hasPassword && (
+              <Field id="rt-pf-close-pw" label={c.sheet.password} error={errors.currentPassword} type="password" autoComplete="current-password" value={values.currentPassword} onChange={(e) => { const v = e.target.value; setValues((x) => ({ ...x, currentPassword: v })); }} />
+            )}
+            {errors.form && <p className="rt-q__err" role="alert">{errors.form}</p>}
+            <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={request.isPending} aria-busy={request.isPending}>{request.isPending ? c.sheet.sending : c.sheet.submit}</button>
+          </form>
+        )}
       </Sheet>
     </section>
   );
 }
 
-// What has to happen before the account can be closed, each with its next step: a business account they can delete themselves
-// (the section above on this page), anything else through our team or another admin. It goes once they've done it (me.get).
-function ClosureBlockers({ blockers }) {
+// Shown in the pop-up when they press Request account closure and something has to happen first, each with its next step: a
+// business account they can delete themselves (the section above on this page), anything else through our team or another admin.
+// It goes once they've done it (me.get), and the pop-up shows the request form again.
+function ClosureBlockers({ blockers, onBusiness, onClose }) {
   const b = copy.delete.blocked;
   const contact = b.contactHint.replace("{phone}", topBar.phone).replace("{hours}", topBar.hours).replace("{email}", topBar.email);
   // the account's name in bold
@@ -522,17 +536,17 @@ function ClosureBlockers({ blockers }) {
     if (x.kind === "admin") return { key: "admin", text: b.admin };
     if (x.kind === "provider") return { key: x.name, text: named(b.provider, x.name), contact: true };
     if (x.others) return { key: x.name, text: named(b.businessTeam.replace("{others}", x.others).replace("{people}", x.others === 1 ? "person" : "people"), x.name), contact: true };
-    return { key: x.name, text: named(b.business, x.name), href: "#rt-pf-biz-h", label: b.toBusiness };
+    return { key: x.name, text: named(b.business, x.name), business: true };
   };
   const lines = blockers.map(line);
   return (
-    <div className="rt-acc__notice -warn">
+    <div className="rt-biz__sheetform rt-acc__blocked">
       <p><b>{b.lead}</b></p>
       <ul className="rt-acc__blockers">
         {lines.map((l) => (
           <li key={l.key}>
             <p>{l.text}</p>
-            {l.href && <a href={l.href} className="button -sm -outline-purple-1 text-purple-1">{l.label}</a>}
+            {l.business && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={onBusiness}>{b.toBusiness}</button>}
             {l.contact && (
               <>
                 <a href="/contact-us" className="button -sm -outline-purple-1 text-purple-1">{b.contact}</a>
@@ -542,7 +556,8 @@ function ClosureBlockers({ blockers }) {
           </li>
         ))}
       </ul>
-      <p>{b.after}</p>
+      <p className="rt-acc__note">{b.after}</p>
+      <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={onClose}>{b.close}</button>
     </div>
   );
 }

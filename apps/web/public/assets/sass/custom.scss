@@ -4118,9 +4118,9 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__notice { margin: 0; padding: 12px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-acc__notice.-ok { background: var(--rt-c-success-soft); }
 .rt-acc__notice.-warn { border-left: 3px solid var(--color-orange-6); background: var(--color-orange-7); }
-/* Close your account: what has to happen first, each with its next step */
-.rt-acc__notice > p { margin: 0; }
-.rt-acc__blockers { display: grid; gap: 12px; margin: 10px 0; padding: 0; list-style: none; }
+/* Close your account's pop-up: what has to happen first, each with its next step */
+.rt-acc__blocked > p { margin: 0; }
+.rt-acc__blockers { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
 .rt-acc__blockers > li { display: grid; justify-items: start; gap: 8px; list-style: none; }
 .rt-acc__blockers > li > p { margin: 0; }
 .rt-acc__state { display: grid; justify-items: start; gap: 10px; }
