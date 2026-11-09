@@ -1,32 +1,29 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Search, Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
-import AdminLearnerList from "./AdminLearnerList";
+import { Search, Said, TableSkeleton } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
-import { SHOW_DEMO } from "@/lib/demo";
 
-const copy = A.learners;
-export const CertPill = ({ cert, now }) => {
+const copy = A.certificates;
+const CertPill = ({ cert, now }) => {
   const st = certState(cert, now);
-  return <AdminStatus kind="certificate" status={st}>{copy.certStates[st]}</AdminStatus>;
+  return <AdminStatus kind="certificate" status={st}>{copy.states[st]}</AdminStatus>;
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Learners and certificates. Learners: the real accounts (AdminLearnerList), each opening the learner's record.
-// Certificates: the register (number, holder, course, issued, expires, state), search, "Issue certificate" (holder, course, issue
-// date; the number is made, never a duplicate) and Revoke (with a reason) / Reinstate. Tab in the address.
-export default function AdminLearners() {
+// The certificate register (still DEMO records, lib/admin.js, until certificates are issued for real; on the live site the page
+// shows its empty state instead, AdminShell's demoOff): number, holder, course, issued, expires, state; search, "Issue certificate"
+// (holder, course, issue date; the number is made, never a duplicate) and Revoke (with a reason) / Reinstate.
+export default function AdminCertificates() {
   const data = useAdmin();
-  const [tab, setTab] = useState("learners");
   const [q, setQ] = useState("");
   const [revoking, setRevoking] = useState(null);
   const [issuing, setIssuing] = useState(false);
@@ -34,15 +31,12 @@ export default function AdminLearners() {
   const [errors, setErrors] = useState({});
   const [said, setSaid] = useState("");
   const formRef = useRef(null);
-  useEffect(() => {
-    if (SHOW_DEMO && getQuery("tab") === "certificates") setTab("certificates");
-  }, []);
   if (!data) return <TableSkeleton />;
 
   const { certificates, catalogue, now } = data;
   const needle = q.trim().toLowerCase();
   const certs = certificates.filter((c) => !needle || `${c.number} ${c.holder}`.toLowerCase().includes(needle));
-  const cc = copy.certColumns;
+  const cc = copy.columns;
 
   const openRevoke = (c) => {
     setRevoking(c);
@@ -79,46 +73,39 @@ export default function AdminLearners() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Tabs tabs={[{ key: "learners", label: copy.tabs.learners }, ...(SHOW_DEMO ? [{ key: "certificates", label: copy.tabs.certificates, count: certificates.length }] : [])]} value={tab} onChange={(t) => { setTab(t); setQ(""); setQuery("tab", t === "certificates" ? t : ""); setQuery("q", ""); setQuery("show", ""); }} label="Show" />
-        {tab === "certificates" && <div className="rt-adm-toolbar__end">
-          <Search value={q} onChange={setQ} label={copy.certSearch} />
+        <div className="rt-adm-toolbar__end">
+          <Search value={q} onChange={setQ} label={copy.search} />
           <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setIssuing(true); setErrors({}); setForm({ holder: "", courseId: "", issued: today() }); }}>{copy.issue}</button>
-        </div>}
+        </div>
       </div>
       <Said text={said} />
 
-      {tab === "learners" ? (
-        <AdminLearnerList />
-      ) : (
-        <>
-          <p className="rt-acc__note rt-adm-help">{copy.checkerNote}</p>
-          {certs.length ? (
-            <div className="rt-acc__card rt-biz__tablecard">
-              <table className="rt-biz__table rt-adm-table">
-                <thead>
-                  <tr><th scope="col">{cc.number}</th><th scope="col">{cc.holder}</th><th scope="col">{cc.course}</th><th scope="col">{cc.expires}</th><th scope="col">{cc.status}</th><th scope="col"><span className="rt-sr">Action</span></th></tr>
-                </thead>
-                <tbody>
-                  {certs.map((c) => (
-                    <tr key={c.number}>
-                      <td data-label={cc.number}><span className="rt-adm-strong">{c.number}</span><small>Issued {formatDate(c.issued)}</small></td>
-                      <td data-label={cc.holder}>{c.holder}</td>
-                      <td data-label={cc.course}>{c.course}<small>{c.provider}</small></td>
-                      <td data-label={cc.expires}>{c.expires ? formatDate(c.expires) : <span className="rt-adm-muted">No expiry</span>}</td>
-                      <td data-label={cc.status}><CertPill cert={c} now={now} />{c.revoked && c.revokeReason && <small>{c.revokeReason}</small>}</td>
-                      <td className="rt-biz__act">
-                        {c.revoked
-                          ? <button type="button" className="rt-cd__link" onClick={() => { reinstateCertificate(c); setSaid(`Reinstated ${c.number}`); }}>{copy.reinstate}</button>
-                          : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => openRevoke(c)}>{copy.revoke}</button>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <EmptyState title="No certificates match." />}
-        </>
-      )}
+      <p className="rt-acc__note rt-adm-help">{copy.checkerNote}</p>
+      {certs.length ? (
+        <div className="rt-acc__card rt-biz__tablecard">
+          <table className="rt-biz__table rt-adm-table">
+            <thead>
+              <tr><th scope="col">{cc.number}</th><th scope="col">{cc.holder}</th><th scope="col">{cc.course}</th><th scope="col">{cc.expires}</th><th scope="col">{cc.status}</th><th scope="col"><span className="rt-sr">Action</span></th></tr>
+            </thead>
+            <tbody>
+              {certs.map((c) => (
+                <tr key={c.number}>
+                  <td data-label={cc.number}><span className="rt-adm-strong">{c.number}</span><small>Issued {formatDate(c.issued)}</small></td>
+                  <td data-label={cc.holder}>{c.holder}</td>
+                  <td data-label={cc.course}>{c.course}<small>{c.provider}</small></td>
+                  <td data-label={cc.expires}>{c.expires ? formatDate(c.expires) : <span className="rt-adm-muted">No expiry</span>}</td>
+                  <td data-label={cc.status}><CertPill cert={c} now={now} />{c.revoked && c.revokeReason && <small>{c.revokeReason}</small>}</td>
+                  <td className="rt-biz__act">
+                    {c.revoked
+                      ? <button type="button" className="rt-cd__link" onClick={() => { reinstateCertificate(c); setSaid(`Reinstated ${c.number}`); }}>{copy.reinstate}</button>
+                      : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => openRevoke(c)}>{copy.revoke}</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <EmptyState title="No certificates match." />}
 
       <Sheet open={Boolean(revoking)} onClose={() => setRevoking(null)} title={copy.revokeTitle} closeLabel="Close">
         {revoking && (

@@ -25,6 +25,7 @@ export const admin = {
     businesses: ["No business accounts yet", "Companies that book training for their teams show here once business bookings are live."],
     jobs: ["No candidates yet", "Applications from the Security Jobs page arrive here once that form is connected."],
     reviews: ["No reviews yet", "Learners' reviews of their courses arrive here once real courses are booked and finished."],
+    certificates: ["No certificates yet", "Certificates learners earn on their courses show here once real courses are booked and finished."],
   },
   // the sidebar, in the plan's groups (later phases join it as they are built)
   nav: [
@@ -49,8 +50,9 @@ export const admin = {
       { key: "coupons", label: "Coupons", href: "/admin/coupons" },
     ] },
     { group: "Customers", items: [
-      { key: "learners", label: "Learners & certificates", href: "/admin/learners", demo: "partly" },
+      { key: "learners", label: "Learners", href: "/admin/learners" },
       { key: "closures", label: "Closure requests", href: "/admin/closure-requests", permission: "suspend", badge: "closures" },
+      { key: "certificates", label: "Certificates", href: "/admin/certificates", demo: true },
       { key: "businesses", label: "Business accounts", href: "/admin/businesses", badge: "credit", demo: true },
       { key: "jobs", label: "Security Jobs", href: "/admin/jobs", badge: "candidates", demo: true },
       { key: "reviews", label: "Reviews", href: "/admin/reviews", badge: "reviews", demo: true },
@@ -751,10 +753,9 @@ export const admin = {
   },
 
   learners: {
-    title: "Learners and certificates",
-    lead: "Everyone with a ReadTraining account, and the certificate register.",
-    tabs: { learners: "Learners", certificates: "Certificates" },
-    // Learners: real accounts (API admin.students)
+    title: "Learners",
+    lead: "Everyone with a ReadTraining account.",
+    // real accounts (API admin.students)
     search: "Search by name, email or phone",
     filters: { all: "All", unconfirmed: "Email not confirmed", blocked: "Blocked", providers: "Providers", businesses: "Businesses" },
     states: { active: "Active", unconfirmed: "Email not confirmed", blocked: "Blocked" },
@@ -763,17 +764,6 @@ export const admin = {
     none: "No learners match.",
     empty: "No one has signed up yet.",
     clear: "Clear filters",
-    // Certificates: the demo register until certificates are issued for real
-    certSearch: "Search by certificate number or name",
-    certColumns: { number: "Certificate", holder: "Holder", course: "Course", issued: "Issued", expires: "Expires", status: "Status" },
-    certStates: { valid: "Valid", expiring: "Expires soon", expired: "Expired", revoked: "Revoked", none: "No expiry" },
-    issue: "Issue certificate",
-    revoke: "Revoke",
-    reinstate: "Reinstate",
-    revokeTitle: "Revoke certificate",
-    revokeReason: "Reason",
-    revokeError: "Enter why this certificate is being revoked.",
-    checkerNote: "The public certificate checker reads this register once the backend is connected.",
     // one learner's record
     detail: {
       back: "All learners",
@@ -813,6 +803,22 @@ export const admin = {
       selfNote: "This is your own account, so you can't block it.",
       closeAccount: "Close account",
     },
+  },
+
+  // The certificate register: demo records until certificates are issued for real (components/admin/AdminCertificates)
+  certificates: {
+    title: "Certificates",
+    lead: "Every certificate learners have earned: check one, issue one, or revoke one issued by mistake.",
+    search: "Search by certificate number or name",
+    columns: { number: "Certificate", holder: "Holder", course: "Course", issued: "Issued", expires: "Expires", status: "Status" },
+    states: { valid: "Valid", expiring: "Expires soon", expired: "Expired", revoked: "Revoked", none: "No expiry" },
+    issue: "Issue certificate",
+    revoke: "Revoke",
+    reinstate: "Reinstate",
+    revokeTitle: "Revoke certificate",
+    revokeReason: "Reason",
+    revokeError: "Enter why this certificate is being revoked.",
+    checkerNote: "The public certificate checker reads this register once the backend is connected.",
   },
 
   // Account closure requests (API admin.closures): a learner asks in Account settings; UK GDPR gives one month to carry it out.
