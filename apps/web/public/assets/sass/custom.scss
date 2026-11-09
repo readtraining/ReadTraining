@@ -7214,7 +7214,11 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* Dashboard: two columns that stack their own cards (work on the left, what happened on the right) */
 .rt-adm-dash { display: grid; gap: 16px; align-items: stretch; }
 .rt-adm-dash > * { min-width: 0; }
-@media (min-width: 1100px) { .rt-adm-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) {
+  .rt-adm-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* a card left alone in the last row (live hides the demo Sessions at risk card) takes the full width, so no empty slot beside it */
+  .rt-adm-dash > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
 /* cards side by side are the same height */
 .rt-adm--platform .rt-adm-grid2 { align-items: stretch; }
 /* Categories: rows line up with their 32px buttons, the description has room, and a group shows that it opens */
