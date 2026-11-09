@@ -50,6 +50,7 @@ export const admin = {
     ] },
     { group: "Customers", items: [
       { key: "learners", label: "Learners & certificates", href: "/admin/learners", demo: "partly" },
+      { key: "closures", label: "Closure requests", href: "/admin/closure-requests", permission: "suspend", badge: "closures" },
       { key: "businesses", label: "Business accounts", href: "/admin/businesses", badge: "credit", demo: true },
       { key: "jobs", label: "Security Jobs", href: "/admin/jobs", badge: "candidates", demo: true },
       { key: "reviews", label: "Reviews", href: "/admin/reviews", badge: "reviews", demo: true },
@@ -217,6 +218,8 @@ export const admin = {
       "admin.two_step_reset": "Two-step sign-in reset",
       "admin.account_blocked": "Account blocked",
       "admin.account_unblocked": "Account unblocked",
+      "admin.account_closed": "Closed an account, as its owner asked",
+      "email.closure_done_sent": "\"Account closed\" email sent",
       "admin.data_exported": "Downloaded the person's data",
       "admin.provider_approved": "Approved a provider",
       "admin.own_request_decided": "Decided on their own request (as the only admin who could)",
@@ -808,7 +811,43 @@ export const admin = {
       unblocked: "Account unblocked",
       adminNote: "This person is on the admin team, so their account can't be blocked here. Remove them from the admin team first (System → Admin team).",
       selfNote: "This is your own account, so you can't block it.",
+      closeAccount: "Close account",
     },
+  },
+
+  // Account closure requests (API admin.closures): a learner asks in Account settings; UK GDPR gives one month to carry it out.
+  closures: {
+    title: "Closure requests",
+    lead: "People who have asked us to close their account and delete their personal details. The law gives us one month from the day they asked.",
+    tabs: { open: "To do", done: "Closed", withdrawn: "Withdrawn" },
+    asked: "Asked {date}",
+    deadline: "Deadline {date}",
+    closedOn: "Closed {date} by {name}",
+    closedOnNoName: "Closed {date}",
+    withdrawnOn: "Withdrawn {date}",
+    reason: "Their reason",
+    noReason: "They didn't give a reason.",
+    gone: "Their login has already been deleted.",
+    open: "Open their account",
+    close: "Close account",
+    emptyTabs: {
+      open: ["Nothing to do", "Nobody is waiting for their account to be closed."],
+      done: ["No accounts closed yet", "Accounts closed at their owner's request show here."],
+      withdrawn: ["No withdrawn requests", "Requests the person took back show here."],
+    },
+    // the "are you sure?" step
+    sheet: {
+      title: "Close {name}'s account?",
+      what: [
+        "Their login is deleted, with their name, phone, address, photo and settings, and they're taken out of any provider or business account they belong to.",
+        "Bookings and payments stay, as the law asks, without their login.",
+        "We email them that it's done. This can't be undone.",
+      ],
+      confirm: "Close account",
+      closing: "Closing…",
+      cancel: "Cancel",
+    },
+    closed: "Account closed. We've emailed them that it's done.",
   },
 
   settings: {
