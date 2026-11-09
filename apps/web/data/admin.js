@@ -193,6 +193,8 @@ export const admin = {
       "auth.account_deleted": "Account deleted",
       "account.closure_requested": "Asked to close their account",
       "account.closure_withdrawn": "Withdrew their request to close their account",
+      "account.password_set": "Added a password to their account",
+      "email.password_added_sent": "\"Password added\" email sent",
       "email.closure_received_sent": "\"Closure request received\" email sent",
       "email.admins_told": "Admins were told by email",
       "email.welcome_sent": "Welcome email sent",

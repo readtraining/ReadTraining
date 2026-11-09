@@ -10,7 +10,8 @@ import { getSupabase } from "@/lib/supabase/client";
 import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
+import { loginWithProvider } from "@/lib/auth/authClient";
 import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
@@ -325,7 +326,14 @@ function EmailSection({ me }) {
 
 // ---- password ---------------------------------------------------------------------------------------------------------------
 
+// Someone with a password changes it; someone who signs in with Google or Facebook can add one. Once added, the change form
+// takes its place, with a line saying it worked.
 function PasswordSection({ me }) {
+  const [justSet, setJustSet] = useState(false);
+  return me.hasPassword ? <ChangePassword justSet={justSet} /> : <SetPassword me={me} onSet={() => setJustSet(true)} />;
+}
+
+function ChangePassword({ justSet }) {
   const [shown, setShown] = useState(false);
   const s = useSection(
     { currentPassword: "", newPassword: "", confirm: "" },
@@ -349,19 +357,58 @@ function PasswordSection({ me }) {
     <form method="post" className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pw-h" ref={s.formRef}>
       <h2 className="rt-acc__h2" id="rt-pw-h">{copy.password.title}</h2>
       <p className="rt-acc__note">{copy.password.lead}</p>
-      {me.hasPassword ? (
-        <>
-          <Field id="rt-pw-current" label="Current password" error={s.errors.currentPassword} type={type} autoComplete="current-password" value={s.values.currentPassword} onChange={s.set("currentPassword")} />
-          <div className="rt-contact__pair">
-            <Field id="rt-pw-new" label="New password" hint={copy.password.hint} error={s.errors.newPassword} type={type} autoComplete="new-password" value={s.values.newPassword} onChange={s.set("newPassword")} />
-            <Field id="rt-pw-confirm" label="Repeat password" error={s.errors.confirm} type={type} autoComplete="new-password" value={s.values.confirm} onChange={s.set("confirm")} />
-          </div>
-          <label className="rt-bk__check" htmlFor="rt-pw-show"><input id="rt-pw-show" type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} /><span>{copy.password.show}</span></label>
-          <Foot busy={s.busy} label={copy.password.save} saved={s.saved} general={s.general} outline />
-        </>
-      ) : (
-        <p className="rt-acc__note">{copy.noPassword}</p>
+      {justSet && <p className="rt-acc__notice -ok" role="status">{copy.password.setDone}</p>}
+      <Field id="rt-pw-current" label="Current password" error={s.errors.currentPassword} type={type} autoComplete="current-password" value={s.values.currentPassword} onChange={s.set("currentPassword")} />
+      <div className="rt-contact__pair">
+        <Field id="rt-pw-new" label="New password" hint={copy.password.hint} error={s.errors.newPassword} type={type} autoComplete="new-password" value={s.values.newPassword} onChange={s.set("newPassword")} />
+        <Field id="rt-pw-confirm" label="Repeat password" error={s.errors.confirm} type={type} autoComplete="new-password" value={s.values.confirm} onChange={s.set("confirm")} />
+      </div>
+      <label className="rt-bk__check" htmlFor="rt-pw-show"><input id="rt-pw-show" type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} /><span>{copy.password.show}</span></label>
+      <Foot busy={s.busy} label={copy.password.save} saved={s.saved} general={s.general} outline />
+    </form>
+  );
+}
+
+// A first password (me.setPassword): new and repeat, as the change form. The API takes it only within 15 minutes of signing in;
+// otherwise this says so, with a button to sign in with Google (or Facebook) again, which comes back here.
+function SetPassword({ me, onSet }) {
+  const p = copy.password;
+  const [shown, setShown] = useState(false);
+  const via = me.socialSignIn?.[0] === "facebook" ? "facebook" : "google";
+  const name = via === "facebook" ? "Facebook" : "Google";
+  const s = useSection(
+    { newPassword: "", confirm: "" },
+    api.me.setPassword.useMutation(),
+    (v) => {
+      const e = {};
+      if (v.newPassword.length < 8 || !/[a-z]/i.test(v.newPassword) || !/\d/.test(v.newPassword)) e.newPassword = "Enter a new password of at least 8 characters, with a letter and a number.";
+      else if (v.confirm !== v.newPassword) e.confirm = "The passwords do not match.";
+      return e;
+    },
+    ({ newPassword }) => ({ newPassword }),
+  );
+  const done = () => {
+    onSet();
+    return "";
+  };
+  const again = () => leaveWithoutAsking(() => loginWithProvider(via, "/account/settings#rt-pw-h"));
+  const type = shown ? "text" : "password";
+  return (
+    <form method="post" className="rt-acc__card rt-acc__form" onSubmit={s.submit(done)} noValidate aria-labelledby="rt-pw-h" ref={s.formRef}>
+      <h2 className="rt-acc__h2" id="rt-pw-h">{p.title}</h2>
+      <p className="rt-acc__note">{p.setLead.replace("{via}", name)}</p>
+      <div className="rt-contact__pair">
+        <Field id="rt-pw-new" label="New password" hint={p.hint} error={s.errors.newPassword} type={type} autoComplete="new-password" value={s.values.newPassword} onChange={s.set("newPassword")} />
+        <Field id="rt-pw-confirm" label="Repeat password" error={s.errors.confirm} type={type} autoComplete="new-password" value={s.values.confirm} onChange={s.set("confirm")} />
+      </div>
+      <label className="rt-bk__check" htmlFor="rt-pw-show"><input id="rt-pw-show" type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} /><span>{p.show}</span></label>
+      {s.errors.reauth && (
+        <div className="rt-acc__notice rt-acc__reauth" role="alert">
+          <p>{p.reauth.replace("{via}", name)}</p>
+          <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={again}>{p.reauthButton.replace("{via}", name)}</button>
+        </div>
       )}
+      <Foot busy={s.busy} label={p.set} saved={s.saved} general={s.general} outline />
     </form>
   );
 }

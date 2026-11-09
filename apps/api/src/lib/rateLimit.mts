@@ -18,6 +18,7 @@ export const LIMITS = {
   uploadHour: { requests: 30, window: '1 h', message: 'Too many uploads in a short time. Please wait a little and try again.' },
   uploadDay: { requests: 100, window: '1 d', message: 'You have reached today’s upload limit. Please try again tomorrow.' },
   closure: { requests: 5, window: '1 h', message: 'Too many requests in a short time. Please wait and try again later.' },
+  setPassword: { requests: 5, window: '1 h', message: 'Too many tries in a short time. Please wait and try again later.' },
 } as const satisfies Record<string, { requests: number; window: Window; message: string }>
 export type LimitName = keyof typeof LIMITS
 

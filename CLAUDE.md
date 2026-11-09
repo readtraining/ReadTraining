@@ -93,7 +93,7 @@ The schema is built on a development Supabase project and replayed later on the 
 - Email links (confirm, reset) use the token-hash flow at `/auth/confirm`. Google/Facebook use `/auth/callback` (PKCE code exchange).
 - A `next` redirect is accepted only if it starts with `/` and not `//`, checked again after `.` and `..` are tidied away (`/.//evil.com` becomes `//evil.com`), one rule for all: `lib/safeNext.js`.
 - Forgot password always shows the same message, so it never reveals whether an email exists.
-- Changing email or password requires the current password.
+- Changing email or password requires the current password. Someone who signs in with Google or Facebook (no password) can add one in Account settings › Password (`me.setPassword`): only within 15 minutes of signing in (otherwise the page offers "Sign in with Google again"), logged as `account.password_set`, and they are emailed (`password-added`).
 - The tRPC client sends `Authorization: Bearer <access_token>`, and the API verifies it with `getClaims(token)` (issuer, audience and role checked). A protected call also needs the session to still exist and the account not to be banned or deleted (`isSessionLive`), since a token stays valid until it expires.
 
 ## Identities, roles and permissions

@@ -518,6 +518,22 @@ export const TEMPLATES: Record<string, Template> = {
     },
     sample: { ...PERSON, date: '3 November 2026' },
   },
+  'password-added': {
+    name: 'Password added',
+    audience: 'Learner',
+    trigger: 'When someone who signs in with Google or Facebook adds a password in Account settings.',
+    status: 'live',
+    placeholders: ['firstName'],
+    link: (s) => `${s}/contact-us`,
+    footer: 'You are receiving this because a password was added to your ReadTraining account.',
+    words: {
+      subject: 'A password was added to your ReadTraining account',
+      heading: 'You can now log in with a password',
+      body: 'Hi {firstName},\n\nA password was just added to your ReadTraining account, so you can now also log in with your email address and that password.\n\nIf this wasn’t you, contact us straight away.',
+      button: 'Contact us',
+    },
+    sample: { ...PERSON },
+  },
   'closure-done': {
     name: 'Account closed',
     audience: 'Learner',

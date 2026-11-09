@@ -223,8 +223,14 @@ export const account = {
       show: "Show passwords",
       save: "Change password",
       saved: "Your password has been changed. Other devices have been signed out.",
+      // someone who signs in with Google or Facebook adds a first password (me.setPassword)
+      setLead: "You log in with {via}. Add a password so you can also log in with your email address and password.",
+      set: "Set password",
+      setDone: "Your password is set. You can now log in with your email address and password too.",
+      reauth: "For your security, sign in with {via} again, then set your password.",
+      reauthButton: "Sign in with {via} again",
     },
-    noPassword: "You log in with Google or Facebook, so there's no password here yet. To add one, use \"Forgot password\" on the log in page.",
+    noPassword: "You log in with Google or Facebook, so there's no password here yet. Set one under Password below, then you can change your email here.",
     marketing: { title: "Emails from us", label: "Send me offers and news about new courses", note: "You can change this at any time. We always email you about your bookings." },
     // a request our team handles within one month (UK GDPR); it can be withdrawn until then
     delete: {
