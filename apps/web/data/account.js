@@ -243,6 +243,18 @@ export const account = {
       withdraw: "Withdraw request",
       withdrawn: "Your request is withdrawn. Your account stays open.",
       sent: "Request sent. We’ve emailed you a confirmation.",
+      // something has to happen first (me.get closureBlockers): what it is and what to do, instead of the request button
+      blocked: {
+        lead: "Before we can close your account:",
+        business: "You own {name} (business account). Delete it first, then come back here.",
+        businessTeam: "You own {name} (business account), and {others} other {people} on its team. Contact us to hand it over or close it first.",
+        provider: "You own {name} (provider account). Provider accounts are closed by our team, so contact us to close it first.",
+        admin: "You’re on the ReadTraining admin team. Ask a Full admin to remove you from the team first (Admin › Admin team).",
+        toBusiness: "Go to your business account",
+        contact: "Contact us",
+        contactHint: "Call {phone} ({hours}) or email {email}.",
+        after: "Once that’s done, you can ask us to close your account here.",
+      },
     },
   },
 

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { sql } from '@readtraining/db'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { closureBlockers } from '../../lib/closureBlockers.mjs'
 import { notify } from '../../lib/notify.mjs'
 import { AVATARS, supabase } from '../../lib/supabase.mjs'
 import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
@@ -90,17 +91,13 @@ export const closuresRouter = createTRPCRouter({
         if (req.status === 'withdrawn') throw new TRPCError({ code: 'CONFLICT', message: 'They withdrew this request, so the account stays open.' })
         if (req.user_id === ctx.user.id) throw new TRPCError({ code: 'FORBIDDEN', message: 'You can’t close your own account here.' })
 
-        const [who] = await tx.execute<{ first_name: string | null; avatar_url: string | null; admin: boolean }>(sql`
-          select p.first_name, p.avatar_url, exists (select 1 from public.admin_users a where a.user_id = u.id and a.active) admin
-          from auth.users u left join public.profiles p on p.id = u.id where u.id = ${req.user_id}::uuid`)
-        if (who?.admin) throw new TRPCError({ code: 'FORBIDDEN', message: 'This person is on the admin team. Remove them from the admin team first.' })
-        const owns = await tx.execute<{ name: string; type: 'provider' | 'business' }>(sql`
-          select o.name, o.type from public.organisation_members m join public.organisations o on o.id = m.organisation_id
-          where m.user_id = ${req.user_id}::uuid and m.role = 'owner' order by o.name`)
-        if (owns.length) {
-          const list = owns.map((o) => `${o.name} (${o.type === 'provider' ? 'provider' : 'business'} account)`).join(', ')
-          throw new TRPCError({ code: 'CONFLICT', message: `They own ${list}. That account needs another owner, or to be closed, before theirs can be.` })
-        }
+        const [who] = await tx.execute<{ first_name: string | null; avatar_url: string | null }>(sql`
+          select p.first_name, p.avatar_url from auth.users u left join public.profiles p on p.id = u.id where u.id = ${req.user_id}::uuid`)
+        // the same checks Account settings shows the person (lib/closureBlockers.mts)
+        const blockers = who ? await closureBlockers(tx, req.user_id) : []
+        if (blockers.some((b) => b.kind === 'admin')) throw new TRPCError({ code: 'FORBIDDEN', message: 'This person is on the admin team. Remove them from the admin team first.' })
+        const owns = blockers.flatMap((b) => (b.kind === 'admin' ? [] : [`${b.name} (${b.kind} account)`]))
+        if (owns.length) throw new TRPCError({ code: 'CONFLICT', message: `They own ${owns.join(', ')}. That account needs another owner, or to be closed, before theirs can be.` })
 
         // the login goes (its profile, memberships and sessions with it); a login already gone just marks the request done
         if (who) await tx.execute(sql`delete from auth.users where id = ${req.user_id}::uuid`)

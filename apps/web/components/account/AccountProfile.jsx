@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { account } from "@/data/account";
+import { topBar } from "@/data/home";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom, useMe } from "@/lib/useMe";
 import { getSupabase } from "@/lib/supabase/client";
@@ -481,6 +482,8 @@ function CloseSection({ me }) {
           <p className="rt-acc__notice -warn" role="status">{c.requested.replace("{date}", day(me.closure.requestedAt))}</p>
           <button type="button" className="rt-acc__linkbtn" onClick={takeBack} disabled={withdraw.isPending} aria-busy={withdraw.isPending}>{c.withdraw}</button>
         </>
+      ) : me.closureBlockers?.length ? (
+        <ClosureBlockers blockers={me.closureBlockers} />
       ) : (
         <>
           <p className="rt-acc__note">{c.text}</p>
@@ -505,6 +508,42 @@ function CloseSection({ me }) {
         </form>
       </Sheet>
     </section>
+  );
+}
+
+// What has to happen before the account can be closed, each with its next step: a business account they can delete themselves
+// (the section above on this page), anything else through our team or another admin. It goes once they've done it (me.get).
+function ClosureBlockers({ blockers }) {
+  const b = copy.delete.blocked;
+  const contact = b.contactHint.replace("{phone}", topBar.phone).replace("{hours}", topBar.hours).replace("{email}", topBar.email);
+  // the account's name in bold
+  const named = (text, name) => text.split("{name}").flatMap((part, i) => (i ? [<b key={i}>{name}</b>, part] : [part]));
+  const line = (x) => {
+    if (x.kind === "admin") return { key: "admin", text: b.admin };
+    if (x.kind === "provider") return { key: x.name, text: named(b.provider, x.name), contact: true };
+    if (x.others) return { key: x.name, text: named(b.businessTeam.replace("{others}", x.others).replace("{people}", x.others === 1 ? "person" : "people"), x.name), contact: true };
+    return { key: x.name, text: named(b.business, x.name), href: "#rt-pf-biz-h", label: b.toBusiness };
+  };
+  const lines = blockers.map(line);
+  return (
+    <div className="rt-acc__notice -warn">
+      <p><b>{b.lead}</b></p>
+      <ul className="rt-acc__blockers">
+        {lines.map((l) => (
+          <li key={l.key}>
+            <p>{l.text}</p>
+            {l.href && <a href={l.href} className="button -sm -outline-purple-1 text-purple-1">{l.label}</a>}
+            {l.contact && (
+              <>
+                <a href="/contact-us" className="button -sm -outline-purple-1 text-purple-1">{b.contact}</a>
+                <p className="rt-acc__note">{contact}</p>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p>{b.after}</p>
+    </div>
   );
 }
 

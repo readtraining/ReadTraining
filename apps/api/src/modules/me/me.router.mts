@@ -8,6 +8,7 @@ import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { renderEmail, wordsFor } from '../../emails/templates.mjs'
+import { closureBlockers } from '../../lib/closureBlockers.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
 import { sendEmail } from '../../lib/email.mjs'
 import { notify, notifyAdmins, personOf } from '../../lib/notify.mjs'
@@ -89,6 +90,8 @@ export const meRouter = createTRPCRouter({
       hasPassword: auth?.has_password ?? false,
       // an open request to close the account (it shows on Account settings, with Withdraw)
       closure: closure ? { requestedAt: closure.requestedAt.toISOString() } : null,
+      // what has to happen before the account can be closed (Account settings says what to do instead of offering the request)
+      closureBlockers: closure ? [] : await closureBlockers(ctx.db, ctx.user.id),
       profile: {
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -138,6 +141,9 @@ export const meRouter = createTRPCRouter({
     .input(z.object({ reason: z.string().trim().max(1000, 'Keep your reason to 1,000 characters or fewer.').optional(), currentPassword: z.string().max(200).optional() }))
     .mutation(async ({ ctx, input }) => {
       await limit(ctx, 'closure')
+      // an admin, or the owner of a provider or business account, sorts that out first (Account settings says how)
+      if ((await closureBlockers(ctx.db, ctx.user.id)).length)
+        throw new TRPCError({ code: 'CONFLICT', message: 'Something needs doing before your account can be closed. Reload the page to see what.' })
       const [auth] = await ctx.db.execute<{ email: string; has_password: boolean }>(sql`select email, coalesce(encrypted_password, '') <> '' has_password from auth.users where id = ${ctx.user.id}::uuid`)
       if (auth?.has_password) {
         if (!input.currentPassword) throw fieldError('currentPassword', 'Enter your current password.')
