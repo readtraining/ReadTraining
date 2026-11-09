@@ -18,6 +18,7 @@ import { headerNav } from "@/data/headerNav";
 
 export default function HomeHeader() {
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
+  const [searching, setSearching] = useState(false); // the search box is open (on narrower screens it takes the menu's place)
   // the four menus: the open one's card shows under the header, with the page dimmed behind it
   const menu = useNavMenu();
   const section = headerNav.sections.find((s) => s.id === menu.open);
@@ -26,7 +27,7 @@ export default function HomeHeader() {
   return (
     <>
       <HomeTopBar />
-      <header className="header -type-1 " style={{ position: "sticky", top: 0 }} data-rt-nav>
+      <header className={`header -type-1${searching ? " is-searching" : ""}`} style={{ position: "sticky", top: 0 }} data-rt-nav>
         <div className="header__container">
           <div className="row justify-between items-center">
             <div className="col-auto">
@@ -55,7 +56,7 @@ export default function HomeHeader() {
               <div className="header-right d-flex items-center">
                 <div className="header-right__icons text-white d-flex items-center">
                   {/* search toggle start */}
-                  <HomeSearch />
+                  <HomeSearch onOpenChange={setSearching} />
                   {/* search toggle end */}
 
                   {/* cart toggle start */}

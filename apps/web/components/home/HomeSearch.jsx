@@ -27,7 +27,8 @@ function highlight(text, q) {
   );
 }
 
-export default function HomeSearch() {
+// `onOpenChange(open)`: the header hides its menu while the search is open on screens too narrow for both (HomeHeader).
+export default function HomeSearch({ onOpenChange }) {
   const router = useRouter();
   const [open, setOpen] = useState(false); // input visible
   const [focused, setFocused] = useState(false); // dropdown visible while the input has focus
@@ -40,7 +41,8 @@ export default function HomeSearch() {
       setFocused(false);
       inputRef.current?.blur();
     }
-  }, [open]);
+    onOpenChange?.(open);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- onOpenChange is the header's state setter
 
   useEffect(() => {
     if (!open) return;
