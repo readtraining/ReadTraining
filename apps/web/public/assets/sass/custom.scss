@@ -7130,7 +7130,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
 .rt-bk__inpkg i { color: var(--rt-c-success); }
 
-/* ===================================================================================================
+/* ============================================================================================
+
    ADMIN SIZES (platform admin only, .rt-adm--platform): one control height everywhere, so a toolbar row lines up.
    Buttons 40px (32px small, for table rows and cards), every toolbar control 40px (search, dropdowns, date fields, filter pills,
    the segmented control), form fields 44px. Colours, fonts and borders are unchanged; the public site, the learner and business
@@ -7384,3 +7385,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm--platform .rt-adm-feed li { align-items: center; }
 .rt-adm--platform .rt-acc__cardhead + .rt-adm-cardnote { margin-top: 0; }
 .rt-adm--platform .rt-acc__cardhead .fb-textlink { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
+
+/* Header: when the search box opens, the menu slides left just far enough to make room for it (HomeHeader sets
+   --rt-menu-shift), in step with the box, and slides back when it closes. The menu always stays visible. */
+.header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1); }
+@media (prefers-reduced-motion: reduce) { .header .menu__nav { transition: none; } }
