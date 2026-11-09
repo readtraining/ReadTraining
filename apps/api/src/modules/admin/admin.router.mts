@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase.mjs'
 import { createTRPCRouter, protectedProcedure } from '../../trpc/trpc.mjs'
 import { activityRouter } from './activity.mjs'
 import { catalogueAdminRouter } from './catalogue.mjs'
+import { closuresRouter } from './closures.mjs'
 import { commissionRouter } from './commission.mjs'
 import { couponsRouter } from './coupons.mjs'
 import { adminCoursesRouter } from './courses.mjs'
@@ -32,6 +33,7 @@ export const adminRouter = createTRPCRouter({
   team: teamRouter,
   activity: activityRouter,
   students: studentsRouter,
+  closures: closuresRouter,
   providers: providersRouter,
   courses: adminCoursesRouter,
   commission: commissionRouter,

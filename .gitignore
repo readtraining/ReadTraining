@@ -8,3 +8,5 @@ next-env.d.ts
 !.env.example
 # demo account passwords made by seed:demo (development only)
 demo-accounts.local.md
+# test emails written instead of sent (EMAIL_OUTBOX_DIR): they hold names and addresses
+.outbox*

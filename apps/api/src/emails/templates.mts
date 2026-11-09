@@ -518,6 +518,21 @@ export const TEMPLATES: Record<string, Template> = {
     },
     sample: { ...PERSON, date: '3 November 2026' },
   },
+  'closure-done': {
+    name: 'Account closed',
+    audience: 'Learner',
+    trigger: 'When an admin closes an account the person asked to close (Admin › Closure requests).',
+    status: 'live',
+    placeholders: ['firstName'],
+    footer: 'You are receiving this because you asked us to close your ReadTraining account.',
+    words: {
+      subject: 'Your ReadTraining account has been closed',
+      heading: 'Your account is closed',
+      body: 'Hi {firstName},\n\nAs you asked, we have closed your ReadTraining account and deleted your personal details. You can no longer sign in with it.\n\nWe keep the booking and payment records the law asks us to keep, without your login.\n\nYou are welcome to create a new account at any time.',
+      button: '',
+    },
+    sample: { ...PERSON },
+  },
   'admin-closure-request': {
     name: 'Account closure request',
     audience: 'Admin',
