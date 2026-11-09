@@ -9,7 +9,7 @@
 
 export const adminWork = {
   requests: {
-    title: "Requests and fulfilment",
+    title: "Requests",
     lead: "Everything visitors ask us for: \"apply for me\", training and group quotes, test bookings and contact messages.",
     search: "Search by reference, name or email",
     tabs: { open: "Open", mine: "Assigned to me", done: "Done", all: "All" },
@@ -46,7 +46,7 @@ export const adminWork = {
     sla: 1, // working days to first reply
   },
   jobs: {
-    title: "Security Jobs",
+    title: "Security jobs",
     lead: "Candidates from the Security Jobs page, the employers we work with and their open roles.",
     tabs: { candidates: "Candidates", roles: "Open roles", employers: "Employers" },
     search: "Search by reference, name or postcode",

@@ -102,7 +102,7 @@ export default function AdminContent() {
 
   return (
     <div className="rt-acc__stack">
-      <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key] }))} value={tab} onChange={pick} label="Show site content" />
+      <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key] }))} value={tab} onChange={pick} label="Show site content" sections />
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
 
       {tab === "faqs" && (
@@ -126,8 +126,8 @@ export default function AdminContent() {
         </div>
       )}
 
-      <div className="rt-adm-content__status">
-        <p className="rt-acc__note rt-adm-help">{when ? copy.lastChanged.replace("{when}", formatWhen(Date.parse(when.at))).replace("{who}", when.by || "an admin") : <BuiltInNote contentKey={contentKey} />}</p>
+      <div className="rt-acc__notice rt-adm-content__status">
+        <p className="rt-acc__note">{when ? copy.lastChanged.replace("{when}", formatWhen(Date.parse(when.at))).replace("{who}", when.by || "an admin") : <BuiltInNote contentKey={contentKey} />}</p>
         {when && canEdit && <button type="button" className="rt-cd__link" onClick={() => setConfirming(true)}>{copy.reset}</button>}
       </div>
       <History contentKey={contentKey} canEdit={canEdit} onUse={(v) => { setLoaded(v); setSaid(""); }} />

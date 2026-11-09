@@ -3,14 +3,14 @@
 import React, { useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, actionLabel } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 
@@ -39,7 +39,7 @@ export default function AdminProvider({ slug }) {
   const [refreshing, setRefreshing] = useState(false); // a decision was saved: no buttons until the new status has loaded
 
   if (record.isLoading) return <DetailSkeleton />;
-  if (record.error?.data?.code === "NOT_FOUND") return <EmptyState title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
+  if (record.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const p = record.data;
   const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));
@@ -70,11 +70,11 @@ export default function AdminProvider({ slug }) {
         </div>
         <div className="rt-adm-hero__actions">
           {!refreshing && decisions.map((k) => (
-            <button key={k} type="button" className={PRIMARY.has(k) ? "button -sm -purple-1 text-white" : DANGER.has(k) ? "rt-cd__link rt-adm-danger" : "button -sm -outline-purple-1 text-purple-1"} onClick={() => setDeciding(k)}>{d.actions[k]}</button>
+            <button key={k} type="button" className={PRIMARY.has(k) ? "button -md -purple-1 text-white" : DANGER.has(k) ? "button -md -outline-red-3 text-red-3" : "button -md -outline-purple-1 text-purple-1"} onClick={() => setDeciding(k)}>{d.actions[k]}</button>
           ))}
           {blockedNote && <p className="rt-acc__notice">{blockedNote}</p>}
           {soleNote && <p className="rt-acc__notice -warn">{soleNote}</p>}
-          {!["rejected", "suspended"].includes(p.status) && <Link href={`/providers/${p.slug}`} className="fb-textlink">{d.publicProfile}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>}
+          {!["rejected", "suspended"].includes(p.status) && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
         </div>
       </section>
 
@@ -92,31 +92,36 @@ export default function AdminProvider({ slug }) {
         </section>
       )}
 
-      <div className="rt-adm-grid2">
-        <section className="rt-acc__card" aria-labelledby="rt-adm-pd-h">
-          <h2 className="rt-acc__h2" id="rt-adm-pd-h">{d.details}</h2>
-          <dl className="rt-adm-dl">
-            <div><dt>{f.name}</dt><dd>{p.name}</dd></div>
-            <div><dt>{f.address}</dt><dd>/providers/{p.slug}</dd></div>
-            <div><dt>{f.phone}</dt><dd>{p.mobile || <span className="rt-adm-muted">–</span>}</dd></div>
-            <div><dt>{f.terms}</dt><dd>{p.termsAcceptedAt ? d.termsAccepted.replace("{v}", p.termsVersion || "").replace("{date}", formatDate(p.termsAcceptedAt.slice(0, 10))) : <span className="rt-adm-muted">{d.termsMissing}</span>}</dd></div>
-            <div><dt>{f.applied}</dt><dd>{formatWhen(Date.parse(p.appliedAt))}</dd></div>
-          </dl>
-        </section>
+      <div className="rt-adm-detail">
+        <div className="rt-adm-detail__main">
+          <section className="rt-acc__card" aria-labelledby="rt-adm-pd-h">
+            <h2 className="rt-acc__h2" id="rt-adm-pd-h">{d.details}</h2>
+            <dl className="rt-adm-dl">
+              <div><dt>{f.name}</dt><dd>{p.name}</dd></div>
+              <div><dt>{f.address}</dt><dd>/providers/{p.slug}</dd></div>
+              <div><dt>{f.phone}</dt><dd>{p.mobile || <span className="rt-adm-muted">–</span>}</dd></div>
+              <div><dt>{f.terms}</dt><dd>{p.termsAcceptedAt ? d.termsAccepted.replace("{v}", p.termsVersion || "").replace("{date}", formatDate(p.termsAcceptedAt.slice(0, 10))) : <span className="rt-adm-muted">{d.termsMissing}</span>}</dd></div>
+              <div><dt>{f.applied}</dt><dd>{formatWhen(Date.parse(p.appliedAt))}</dd></div>
+            </dl>
+          </section>
 
-        <CommissionCard provider={p} canChange={me?.permissions?.includes("finance.settings")} onSaved={(text) => { setSaid(text); utils.admin.providers.invalidate(); utils.admin.commission.invalidate(); utils.admin.activity.list.invalidate(); }} />
-
-        <section className="rt-acc__card" aria-labelledby="rt-adm-pt-h">
-          <h2 className="rt-acc__h2" id="rt-adm-pt-h">{d.team}</h2>
-          <ul className="rt-adm-list">
-            {p.team.map((m) => (
-              <li key={m.userId}>
-                <div><Link href={`/admin/learners/${m.userId}`} className="rt-adm-strong">{m.name}</Link><small>{m.email} · {roles[m.role] ?? m.role}</small></div>
-                {m.status !== "active" && <AdminStatus kind="provider" status="invited">Invited</AdminStatus>}
-              </li>
-            ))}
-          </ul>
-        </section>
+          <section className="rt-acc__card" aria-labelledby="rt-adm-pt-h">
+            <h2 className="rt-acc__h2" id="rt-adm-pt-h">{d.team}</h2>
+            {p.team.length ? (
+              <ul className="rt-adm-list">
+                {p.team.map((m) => (
+                  <li key={m.userId}>
+                    <div><Link href={`/admin/learners/${m.userId}`} className="rt-adm-strong">{m.name}</Link><small>{m.email} · {roles[m.role] ?? m.role}</small></div>
+                    {m.status !== "active" && <AdminStatus kind="provider" status="invited">Invited</AdminStatus>}
+                  </li>
+                ))}
+              </ul>
+            ) : <Empty inCard icon="team" title="No team members yet" text="People this provider adds to its team show here." />}
+          </section>
+        </div>
+        <aside className="rt-adm-detail__side">
+          <CommissionCard provider={p} canChange={me?.permissions?.includes("finance.settings")} onSaved={(text) => { setSaid(text); utils.admin.providers.invalidate(); utils.admin.commission.invalidate(); utils.admin.activity.list.invalidate(); }} />
+        </aside>
       </div>
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-pa-h">
@@ -129,7 +134,7 @@ export default function AdminProvider({ slug }) {
             {activity.data.entries.map((e) => (
               <li key={e.id}>
                 <div>
-                  <span className="rt-adm-strong">{A.activity.actions[e.action] ?? e.action}</span>
+                  <span className="rt-adm-strong">{actionLabel(e.action)}</span>
                   <small>{e.actor ? `${e.actor.name} · ` : ""}{formatWhen(Date.parse(e.at))}</small>
                 </div>
               </li>
@@ -138,7 +143,7 @@ export default function AdminProvider({ slug }) {
         ) : activity.isLoading ? null : <p className="rt-acc__note">{d.noActivity}</p>}
       </section>
 
-      <p className="rt-acc__note rt-adm-help">{d.later}</p>
+      <p className="rt-acc__notice">{d.later}</p>
 
       <DecisionSheet provider={p} decision={deciding} onClose={() => setDeciding(null)} onDone={decided} />
     </div>

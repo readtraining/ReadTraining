@@ -12,8 +12,8 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
-import { Said, DetailSkeleton, formatWhen } from "./adminParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { Said, DetailSkeleton, formatWhen, Empty } from "./adminParts";
+import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.catalogue;
@@ -42,7 +42,7 @@ export default function AdminCourse({ id }) {
   const formRef = useRef(null);
   const c = query.data;
 
-  if (!courseId || query.error?.data?.code === "NOT_FOUND") return <EmptyState title="This course was not found." text="It may have been deleted." action={{ href: "/admin/catalogue", label: d.back }} />;
+  if (!courseId || query.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title="This course was not found." action={{ href: "/admin/catalogue", label: d.back }} />;
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!c) return <DetailSkeleton />;
 
@@ -114,7 +114,7 @@ export default function AdminCourse({ id }) {
             {c.pendingChanges && <AdminStatus kind="course" status="pending">{d.change}</AdminStatus>}
             <span className="rt-adm-item__when">Number {c.id}{c.updatedAt ? ` · Last changed ${formatWhen(new Date(c.updatedAt).getTime())}` : ""}</span>
           </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name" id="rt-adm-course-h">{c.title}</h2>
+          <h1 className="rt-adm__h1 rt-adm-hero__name" id="rt-adm-course-h">{c.title}</h1>
           <p className="rt-acc__note">
             {c.provider ? <>{d.provider}: <Link href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</Link>{!providerReady && " (not approved yet)"}</> : "Written by our team"}
             {c.parent && <> · {d.sharedPage}: <Link href={`/admin/catalogue/${c.parent.id}`}>{c.parent.title}</Link></>}
@@ -125,14 +125,14 @@ export default function AdminCourse({ id }) {
           {canDecide && own && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownSole : ap.ownBlocked}</p>}
         </div>
         <div className="rt-adm-hero__actions">
-          {canDecide && c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
-          {canDecide && c.status === "pending" && allowedFor("changes") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
-          {canDecide && c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
-          {canDecide && c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
-          {canDecide && c.status === "live" && !c.pendingChanges && allowedFor("pause") && <button type="button" className="rt-cd__link rt-adm-danger" disabled={busy} onClick={() => act("pause")}>{ap.pause}</button>}
-          {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>}
-          {canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -sm -purple-1 text-white">{d.edit}</Link>}
-          {c.status === "live" && <Link href={`/course/${c.slug}`} className="button -sm -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{d.publicPage}</Link>}
+          {canDecide && c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
+          {canDecide && c.status === "pending" && allowedFor("changes") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
+          {canDecide && c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
+          {canDecide && c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
+          {canDecide && c.status === "live" && !c.pendingChanges && allowedFor("pause") && <button type="button" className="button -md -outline-red-3 text-red-3" disabled={busy} onClick={() => act("pause")}>{ap.pause}</button>}
+          {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>}
+          {canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -md -purple-1 text-white">{d.edit}</Link>}
+          {c.status === "live" && <Link href={`/course/${c.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{d.publicPage}</Link>}
         </div>
       </section>
 
@@ -169,11 +169,12 @@ export default function AdminCourse({ id }) {
                 </li>
               ))}
             </ul>
-          ) : <EmptyState inCard title={d.childrenNone} />}
+          ) : <Empty inCard title="No provider courses yet" text={d.childrenNone} />}
         </section>
       )}
 
-      <div className="rt-adm-grid2">
+      <div className="rt-adm-detail">
+        <div className="rt-adm-detail__main">
         <section className="rt-acc__card" aria-labelledby="rt-adm-cd-h">
           <h2 className="rt-acc__h2" id="rt-adm-cd-h">Details</h2>
           <dl className="rt-adm-dl">
@@ -190,16 +191,6 @@ export default function AdminCourse({ id }) {
           </dl>
           {c.missing.length > 0 && <p className="rt-acc__note">Still missing: {c.missing.join("; ")}.</p>}
         </section>
-        <section className="rt-acc__card" aria-labelledby="rt-adm-ci-h">
-          <h2 className="rt-acc__h2" id="rt-adm-ci-h">Images and video</h2>
-          {c.images.length ? (
-            <ul className="rt-adm-thumbs">
-              {c.images.map((i, n) => <li key={i.id}><img src={i.url} alt={i.alt || ""} />{n === 0 && <AdminTag>Cover</AdminTag>}<small>{i.alt || "No ALT text"}</small></li>)}
-            </ul>
-          ) : <p className="rt-adm-muted">No images.</p>}
-          {c.videoUrl ? <p className="rt-acc__note">Video: <a href={c.videoUrl} target="_blank" rel="noopener noreferrer" className="rt-pws-ce__url">{c.videoUrl}</a></p> : <p className="rt-adm-muted">No video.</p>}
-        </section>
-      </div>
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cc-h">
         <h2 className="rt-acc__h2" id="rt-adm-cc-h">The course page</h2>
@@ -215,6 +206,21 @@ export default function AdminCourse({ id }) {
           <Row label="FAQs" v={c.faqs}><Fold open={reviewing} label={count(c.faqs, "question")}><Faqs faqs={c.faqs} /></Fold></Row>
         </dl>
       </section>
+        </div>
+        <aside className="rt-adm-detail__side">
+        <section className="rt-acc__card" aria-labelledby="rt-adm-ci-h">
+          <h2 className="rt-acc__h2" id="rt-adm-ci-h">Images and video</h2>
+          {c.images.length ? (
+            <ul className="rt-adm-thumbs">
+              {c.images.map((i, n) => <li key={i.id}><img src={i.url} alt={i.alt || ""} />{n === 0 && <AdminTag>Cover</AdminTag>}<small>{i.alt || "No ALT text"}</small></li>)}
+            </ul>
+          ) : <Empty inCard icon="content" title="No images yet" text="Pictures added in the course editor show here; the first is the cover." />}
+          <dl className="rt-adm-dl rt-adm-mt">
+            <div><dt>Video</dt><dd>{c.videoUrl ? <a href={c.videoUrl} target="_blank" rel="noopener noreferrer" className="rt-pws-ce__url">{c.videoUrl}</a> : <span className="rt-adm-muted">–</span>}</dd></div>
+          </dl>
+        </section>
+        </aside>
+      </div>
 
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={`${sheetTitle}: ${c.title}`} closeLabel="Close">
         <form className="rt-q__form rt-biz__sheetform" onSubmit={send} noValidate ref={formRef}>

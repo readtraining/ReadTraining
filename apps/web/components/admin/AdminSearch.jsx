@@ -63,15 +63,18 @@ export default function AdminSearch({ pages }) {
   const seesOrders = Boolean(me?.permissions?.includes("orders.view"));
   const orders = api.admin.orders.list.useQuery({ q: term, limit: 5 }, { enabled: open && look && seesOrders, staleTime: 30000 });
   const coupons = api.admin.coupons.list.useQuery({ q: term }, { enabled: open && look, staleTime: 30000 });
+  // courses by title, address, number or provider (the catalogue's own search)
+  const courses = api.admin.courses.list.useQuery({ q: term }, { enabled: open && look, staleTime: 30000 });
   const needle = q.trim().toLowerCase();
   const results = [
     ...pages.filter((p) => !needle || p.label.toLowerCase().includes(needle)).slice(0, needle ? 6 : 8).map((p) => ({ group: copy.pages, key: `p-${p.key}`, label: p.label, href: p.href, icon: p.key })),
+    ...(look ? (courses.data ?? []).slice(0, 5).map((c) => ({ group: copy.courses, key: `k-${c.id}`, label: c.title, sub: [c.provider || A.catalogue.kind[c.kind], A.catalogue.statuses[c.status]].filter(Boolean).join(" · "), href: `/admin/catalogue/${c.id}`, icon: "catalogue" })) : []),
     ...(look ? (providers.data?.providers ?? []).map((p) => ({ group: copy.providers, key: `o-${p.id}`, label: p.name, sub: p.owner?.email || A.providers.statuses[p.status], href: `/admin/providers/${p.slug}`, icon: "providers" })) : []),
     ...(look ? (learners.data?.students ?? []).map((s) => ({ group: copy.learners, key: `l-${s.id}`, label: s.name, sub: s.email, href: `/admin/learners/${s.id}`, icon: "team" })) : []),
     ...(look && seesOrders ? (orders.data?.orders ?? []).map((o) => ({ group: copy.orders, key: `r-${o.id}`, label: `${o.ref} · ${o.buyer.name}`, sub: `${o.course} · ${formatPrice(o.gross)}`, href: `/admin/orders/${o.ref}`, icon: "orders" })) : []),
     ...(look ? (coupons.data?.coupons ?? []).slice(0, 5).map((c) => ({ group: copy.coupons, key: `c-${c.id}`, label: c.code, sub: A.coupons.statuses[c.status], href: `/admin/coupons?q=${encodeURIComponent(c.code)}`, icon: "coupons" })) : []),
   ];
-  const busy = look && (learners.isFetching || providers.isFetching || orders.isFetching || coupons.isFetching);
+  const busy = look && (learners.isFetching || providers.isFetching || orders.isFetching || coupons.isFetching || courses.isFetching);
   useEffect(() => setAt(0), [q, results.length]);
 
   const go = (r) => {

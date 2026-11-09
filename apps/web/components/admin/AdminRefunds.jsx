@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Said, TableSkeleton, Tabs, formatWhen } from "./adminParts";
+import { Said, TableSkeleton, Tabs, formatWhen, Empty } from "./adminParts";
 import { RefundDecision, useMoneyRefresh } from "./moneyParts";
 import { AdminStatus } from "./AdminStatus";
 
@@ -51,7 +51,7 @@ export function AdminRefunds() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
+        <Empty title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
       )}
     </div>
   );
@@ -110,7 +110,7 @@ export function AdminDisputes() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
+        <Empty title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
       )}
     </div>
   );

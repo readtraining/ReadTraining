@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
 import { formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 
@@ -59,24 +59,24 @@ export default function AdminProviders() {
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
-              <thead><tr><SortTh label={c.name} col="name" sorter={s} /><th scope="col">{c.owner}</th><SortTh label={c.applied} col="applied" sorter={s} numeric /><SortTh label={c.commission} col="commission" sorter={s} numeric /><SortTh label={c.status} col="status" sorter={s} /></tr></thead>
+              <thead><tr><SortTh label={c.name} col="name" sorter={s} /><th scope="col">{c.owner}</th><SortTh label={c.applied} col="applied" sorter={s} numeric /><SortTh label={c.commission} col="commission" sorter={s} numeric right /><SortTh label={c.status} col="status" sorter={s} /></tr></thead>
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.id}>
                     <td data-label={c.name}><Link href={`/admin/providers/${p.slug}`} className="rt-adm-strong">{p.name}</Link></td>
                     <td data-label={c.owner}>{p.owner ? <><Link href={`/admin/learners/${p.owner.id}`} className="rt-adm-strong">{p.owner.name}</Link><small>{p.owner.email}</small></> : <span className="rt-adm-muted">–</span>}</td>
                     <td data-label={c.applied}>{formatWhen(Date.parse(p.appliedAt))}</td>
-                    <td data-label={c.commission}>{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>
+                    <td data-label={c.commission} className="rt-adm-num-cell">{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>
                     <td data-label={c.status}><AdminStatus kind="provider" status={p.status}>{copy.statuses[p.status]}</AdminStatus></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <Pager paging={paging} total={list.data.total} label="providers" />
           </div>
-          <Pager paging={paging} total={list.data.total} label="providers" />
         </>
       ) : (
-        <EmptyState title={filtered ? copy.none : copy.empty} action={filtered ? { label: copy.clear, onClick: () => { setQ(""); setSearch(""); setTab("all"); paging.restart(); } } : undefined} />
+        <Empty kind={filtered ? "none" : "empty"} title={filtered ? copy.none : copy.empty} text={filtered ? undefined : "Training providers who apply show here."} action={filtered ? { label: copy.clear, onClick: () => { setQ(""); setSearch(""); setTab("all"); paging.restart(); } } : undefined} />
       )}
     </div>
   );

@@ -4,12 +4,12 @@ import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { CheckRow } from "@/components/courses/RadioRow";
 import { CardChoice } from "@/components/providerWorkspace/providerParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh } from "./adminParts";
+import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh, Empty, HeaderAction } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = A.team;
@@ -63,7 +63,7 @@ export default function AdminTeam() {
       <div className="rt-adm-toolbar">
         <p className="rt-acc__note rt-adm-team__count">{admins.length === 1 ? "1 admin" : `${admins.length} admins`}</p>
         {grantable.length ? (
-          <button type="button" className="button -sm -purple-1 text-white" onClick={() => setForm({ mode: "add", email: "", preset: firstPreset, permissions: [], refundLimit: "100" })}>{copy.add}</button>
+          <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setForm({ mode: "add", email: "", preset: firstPreset, permissions: [], refundLimit: "100" })}>{copy.add}</button></HeaderAction>
         ) : <p className="rt-acc__note">You can only give access you have yourself, so ask the super admin to invite people.</p>}
       </div>
       <Said text={said} />
@@ -80,7 +80,7 @@ export default function AdminTeam() {
                     <td data-label={c.name}><span className="rt-adm-strong">{a.name}{mine ? " (you)" : ""}</span>{a.name !== a.email && <small>{a.email}</small>}</td>
                     <td data-label={c.access}>{a.isSuper ? <span className="rt-adm-strong" title={copy.superNote}>{copy.superAdmin}</span> : copy.presets[a.preset].label}{a.isSuper && <small>{copy.presets.full.label}</small>}{a.preset === "custom" && <small>{a.permissions.length} of {switches.length} switches</small>}</td>
                     <td data-label={c.limit}>{a.preset === "full" ? <span className="rt-adm-muted">No limit</span> : a.permissions.includes("refunds") ? `£${a.refundLimit}` : <span className="rt-adm-muted">No refunds</span>}</td>
-                    <td data-label={c.twoStep}>{a.invite ? <span className="rt-adm-muted">—</span> : a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
+                    <td data-label={c.twoStep}>{a.invite ? <span className="rt-adm-muted">–</span> : a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
                     <td data-label={c.last}>
                       {a.invite ? (
                         <>
@@ -115,7 +115,7 @@ export default function AdminTeam() {
             </tbody>
           </table>
         </div>
-      ) : <EmptyState title={copy.empty} />}
+      ) : <Empty title={copy.empty} text="Admins you invite show here." />}
 
       <AccessSheet form={form} setForm={setForm} switches={switches.filter((s) => grantable.includes(s))} presets={presets} canGiveFull={!fullLocked} grantable={grantable} limited={grantable.length < switches.length} maxLimit={myRefundLimit ?? 100000} onDone={done} />
       <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} onDone={done} />

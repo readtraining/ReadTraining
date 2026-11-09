@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, actionLabel } from "./adminParts";
 import DateField from "./DateField";
 import { AdminTag } from "./AdminStatus";
 
@@ -93,12 +93,12 @@ export default function AdminActivity() {
         <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
         <div className="rt-adm-activity__dates">
           <div className="rt-field">
-            <label htmlFor="rt-adm-a-from">{copy.from}</label>
-            <DateField id="rt-adm-a-from" compact clearable placeholder="Any day" max={to || today()} value={from} onChange={(v) => { setFrom(v); paging.restart(); }} />
+            <label htmlFor="rt-adm-a-from" className="rt-sr">{copy.from}</label>
+            <DateField id="rt-adm-a-from" compact clearable prefix={copy.from} placeholder="Any day" max={to || today()} value={from} onChange={(v) => { setFrom(v); paging.restart(); }} />
           </div>
           <div className="rt-field">
-            <label htmlFor="rt-adm-a-to">{copy.to}</label>
-            <DateField id="rt-adm-a-to" compact clearable placeholder="Any day" min={from || undefined} max={today()} value={to} onChange={(v) => { setTo(v); paging.restart(); }} />
+            <label htmlFor="rt-adm-a-to" className="rt-sr">{copy.to}</label>
+            <DateField id="rt-adm-a-to" compact clearable prefix={copy.to} placeholder="Any day" min={from || undefined} max={today()} value={to} onChange={(v) => { setTo(v); paging.restart(); }} />
           </div>
         </div>
       </div>
@@ -126,7 +126,7 @@ export default function AdminActivity() {
                         <span className="rt-adm-activity__as" title={copy.identityNote}><AdminTag>{copy.identities[e.identity]}</AdminTag></span>
                       </td>
                       <td data-label={c.what}>
-                        <span className="rt-adm-strong">{copy.actions[e.action] ?? e.action}</span>
+                        <span className="rt-adm-strong">{actionLabel(e.action)}</span>
                         {more.length > 0 && (
                           <details className="rt-adm-activity__more">
                             <summary>{copy.details}</summary>
@@ -143,11 +143,11 @@ export default function AdminActivity() {
                 })}
               </tbody>
             </table>
+            <Pager paging={paging} total={list.data.total} label="activity" />
           </div>
-          <Pager paging={paging} total={list.data.total} label="activity" />
         </>
       ) : (
-        <EmptyState title={filtered ? copy.none : copy.empty} action={filtered ? { label: copy.clear, onClick: clear } : undefined} />
+        <Empty kind={filtered ? "none" : "empty"} title={filtered ? copy.none : copy.empty} text={filtered ? undefined : "Sign-ins, changes and refused attempts show here as they happen."} action={filtered ? { label: copy.clear, onClick: clear } : undefined} />
       )}
     </div>
   );
