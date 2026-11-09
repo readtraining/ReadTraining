@@ -60,7 +60,7 @@ export default function AdminCatalogue() {
 
   return (
     <div className="rt-acc__stack">
-      <Tabs tabs={tabs} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "courses" ? "" : t); }} label="Show catalogue" />
+      <Tabs tabs={tabs} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "courses" ? "" : t); }} label="Show catalogue" sections />
 
       {tab === "courses" && (
         <>

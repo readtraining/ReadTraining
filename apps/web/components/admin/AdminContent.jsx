@@ -102,7 +102,7 @@ export default function AdminContent() {
 
   return (
     <div className="rt-acc__stack">
-      <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key] }))} value={tab} onChange={pick} label="Show site content" />
+      <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key] }))} value={tab} onChange={pick} label="Show site content" sections />
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
 
       {tab === "faqs" && (

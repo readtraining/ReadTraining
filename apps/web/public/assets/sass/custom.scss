@@ -7338,3 +7338,23 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-open .rt-tq-sheet .button.-md { height: 40px; padding: 0 16px; font-size: 14px; }
 .rt-adm-open .rt-tq-sheet .rt-field select, .rt-adm-open .rt-tq-sheet .rt-field input:not([type="checkbox"]):not([type="radio"]),
 .rt-adm-open .rt-tq-sheet .rt-field-dd .rt-cat-dd__trigger, .rt-adm-open .rt-tq-sheet .rt-datefield__btn { height: 44px; }
+/* C4: a page's sections are an underline tab bar (the status filters stay pills) */
+.rt-adm--platform .rt-adm-sections { gap: 4px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-adm--platform .rt-adm-sections .rt-tr__filter { height: 40px; margin-bottom: -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--rt-c-muted); box-shadow: none; }
+.rt-adm--platform .rt-adm-sections .rt-tr__filter:hover { color: var(--rt-c-text); }
+.rt-adm--platform .rt-adm-sections .rt-tr__filter.is-on { border-bottom-color: var(--rt-c-brand); background: none; color: var(--rt-c-brand); }
+/* Financial settings: the three fees side by side (Payout day no longer alone in half a row) */
+@media (min-width: 992px) { .rt-adm--platform .rt-adm-fees .rt-adm-fees__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Platform settings: 16px after the notice, 20px after each counter, and the Google preview stays in view beside the fields */
+.rt-adm--platform .rt-acc__notice + .rt-adm-seo { margin-top: 16px; }
+.rt-adm--platform .rt-adm-seo__count { margin: 4px 0 20px; }
+@media (min-width: 1200px) { .rt-adm--platform .rt-adm-seo__preview { position: sticky; top: 84px; } }
+/* Transactions: the provider filter starts its row (not alone on the right), and its list is wide enough for long names */
+.rt-adm--platform .rt-adm-toolbar__end.-start { margin-left: 0; margin-right: auto; }
+.rt-adm--platform .rt-adm-select--wide .rt-cat-dd__trigger { min-width: 240px; }
+.rt-adm--platform .rt-adm-select--wide .rt-cat-dd__panel { min-width: 300px; }
+/* N11: on phones a number cell's breakdown (Payouts: Held back) goes on its own line under the value, right aligned */
+@media (max-width: 575px) {
+  .rt-adm--platform .rt-biz__table td.rt-adm-num-cell { flex-wrap: wrap; }
+  .rt-adm--platform .rt-biz__table td.rt-adm-num-cell small { flex-basis: 100%; margin: 2px 0 0; text-align: right; }
+}

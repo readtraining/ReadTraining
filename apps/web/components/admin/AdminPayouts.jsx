@@ -12,7 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Said, Stats, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty } from "./adminParts";
+import { HeaderAction, Said, Stats, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
 import { toPence, useMoneyRefresh } from "./moneyParts";
@@ -199,10 +199,11 @@ export function AdminTransactions() {
       <Said text={said} />
       <div className="rt-adm-toolbar">
         <Tabs tabs={[{ key: "all", label: L.all, count: list.data?.counts?.all }, ...Object.keys(L.types).map((key) => ({ key, label: L.types[key], count: list.data?.counts?.[key] }))]} value={type} onChange={pickType} label="Show transactions of this type" />
-        <div className="rt-adm-toolbar__end">
-          <div className="rt-adm-select"><FieldSelect id="rt-lg-provider" label={L.provider} value={providerId} onChange={pickProvider} options={options} compact /></div>
-          {canAdjust && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setAdjusting(true)}>{L.adjust}</button>}
+        {/* the filter starts the row under the pills; Adjust a balance is the page's action, top right */}
+        <div className="rt-adm-toolbar__end -start">
+          <div className="rt-adm-select rt-adm-select--wide"><FieldSelect id="rt-lg-provider" label={L.provider} value={providerId} onChange={pickProvider} options={options} compact /></div>
         </div>
+        {canAdjust && <HeaderAction><button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setAdjusting(true)}>{L.adjust}</button></HeaderAction>}
       </div>
       {totals && (
         <Stats

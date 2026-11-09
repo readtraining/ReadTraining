@@ -197,10 +197,11 @@ export function DetailSkeleton() {
   );
 }
 
-// Tabs as the account's filter chips, each with its count; the chosen tab is pressed.
-export function Tabs({ tabs, value, onChange, label }) {
+// Tabs as the account's filter chips, each with its count; the chosen tab is pressed. `sections`: the parts of one page
+// (Catalogue's Courses / Categories, Site content's tabs) as an underline tab bar, so they never look like a status filter.
+export function Tabs({ tabs, value, onChange, label, sections = false }) {
   return (
-    <div className="rt-acc__tabs" role="group" aria-label={label}>
+    <div className={`rt-acc__tabs${sections ? " rt-adm-sections" : ""}`} role="group" aria-label={label}>
       {tabs.map((t) => (
         <button key={t.key} type="button" className={`rt-tr__filter${value === t.key ? " is-on" : ""}`} aria-pressed={value === t.key} onClick={() => onChange(t.key)}>
           {t.label}
