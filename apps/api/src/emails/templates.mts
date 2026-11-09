@@ -91,7 +91,7 @@ export const TEMPLATES: Record<string, Template> = {
     words: {
       subject: '{provider} is approved on ReadTraining',
       heading: 'Your provider account is approved',
-      body: 'Hi {firstName},\n\nGood news: your provider account is approved. Your public profile can now appear in search, and the courses you publish can be booked once we have checked them.',
+      body: 'Hi {firstName},\n\nGood news: your provider account is approved.\n\nNext, add your courses and dates in your provider workspace and send them to us. Once we’ve checked a course, it goes live on ReadTraining, where learners can find it, and your provider profile appears in our list of training providers.',
       button: 'Open your provider workspace',
     },
     sample: PROVIDER,
