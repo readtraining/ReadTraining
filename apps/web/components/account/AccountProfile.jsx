@@ -390,8 +390,8 @@ function BusinessSection({ me }) {
     }
   };
   return (
-    <section className="rt-acc__card" aria-labelledby="rt-pf-biz-h">
-      <h2 className="rt-acc__h3" id="rt-pf-biz-h" tabIndex={-1}>Your business account</h2>
+    <section className="rt-acc__card rt-acc__form" aria-labelledby="rt-pf-biz-h">
+      <h2 className="rt-acc__h2" id="rt-pf-biz-h" tabIndex={-1}>Your business account</h2>
       {state.done ? (
         <p className="rt-acc__savedmsg" role="status">{state.done}</p>
       ) : (
@@ -400,8 +400,8 @@ function BusinessSection({ me }) {
             <b>{business.name}</b>. Made it by mistake, or only to try it out? You can delete it while nobody else is on its team. Your own account stays as it is.
           </p>
           {state.error && <p className="rt-q__err" role="alert">{state.error}</p>}
-          <div>
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={remove.isPending} aria-busy={remove.isPending || undefined}>
+          <div className="rt-acc__formfoot">
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={remove.isPending} aria-busy={remove.isPending || undefined}>
               {remove.isPending ? "Deleting…" : "Delete business account"}
             </button>
           </div>
@@ -485,23 +485,22 @@ function CloseSection({ me }) {
   };
 
   return (
-    <section className="rt-acc__card" aria-labelledby="rt-pf-close-h">
-      <h2 className="rt-acc__h3" id="rt-pf-close-h">{c.title}</h2>
+    <section className="rt-acc__card rt-acc__form" aria-labelledby="rt-pf-close-h">
+      <h2 className="rt-acc__h2" id="rt-pf-close-h">{c.title}</h2>
       {me.closure ? (
-        <>
-          <p className="rt-acc__notice -warn" role="status">{c.requested.replace("{date}", day(me.closure.requestedAt))}</p>
-          <button type="button" className="rt-acc__linkbtn" onClick={takeBack} disabled={withdraw.isPending} aria-busy={withdraw.isPending}>{c.withdraw}</button>
-        </>
+        <p className="rt-acc__notice -warn" role="status">{c.requested.replace("{date}", day(me.closure.requestedAt))}</p>
       ) : (
-        <>
-          <p className="rt-acc__note">{c.text}</p>
-          {/* laid out as the business account box above: the button in its own row, small */}
-          <div>
-            <button type="button" ref={openRef} className="button -sm -outline-purple-1 text-purple-1" aria-haspopup="dialog" onClick={() => { setErrors({}); setOpen(true); }}>{c.cta}</button>
-          </div>
-        </>
+        <p className="rt-acc__note">{c.text}</p>
       )}
-      <p className="rt-acc__savedmsg" role="status">{said}</p>
+      {/* the page's action row, as the other sections' Save buttons */}
+      <div className="rt-acc__formfoot">
+        {me.closure ? (
+          <button type="button" className="rt-acc__linkbtn" onClick={takeBack} disabled={withdraw.isPending} aria-busy={withdraw.isPending}>{c.withdraw}</button>
+        ) : (
+          <button type="button" ref={openRef} className="button -md -outline-purple-1 text-purple-1" aria-haspopup="dialog" onClick={() => { setErrors({}); setOpen(true); }}>{c.cta}</button>
+        )}
+        <p className="rt-acc__savedmsg" role="status">{said}</p>
+      </div>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={c.sheet.title} closeLabel="Close" fallbackFocus={openRef}>
         {/* something in the way (an admin, a provider or business they own): what to do first, instead of the form */}
