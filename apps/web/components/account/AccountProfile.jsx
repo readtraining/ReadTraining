@@ -543,15 +543,15 @@ function ClosureBlockers({ blockers, onBusiness, onClose }) {
   const lines = blockers.map(line);
   return (
     <div className="rt-biz__sheetform rt-acc__blocked">
-      <p><b>{b.lead}</b></p>
+      <p className="rt-acc__note"><strong>{b.lead}</strong></p>
       <ul className="rt-acc__blockers">
         {lines.map((l) => (
           <li key={l.key}>
-            <p>{l.text}</p>
-            {l.business && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={onBusiness}>{b.toBusiness}</button>}
+            <p className="rt-acc__note">{l.text}</p>
+            {l.business && <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onBusiness}>{b.toBusiness}</button>}
             {l.contact && (
               <>
-                <a href="/contact-us" className="button -sm -outline-purple-1 text-purple-1">{b.contact}</a>
+                <a href="/contact-us" className="button -md -outline-purple-1 text-purple-1">{b.contact}</a>
                 <p className="rt-acc__note">{contact}</p>
               </>
             )}
