@@ -20,6 +20,11 @@ const P = {
   businesses: <><rect x="4" y="3" width="16" height="18" rx="1.5" /><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-4h4v4" /></>,
   jobs: <><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z" /></>,
   reviews: <><path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8 6.6 19.7l1.1-6.1L3.2 9.4l6.1-.8z" /></>,
+  customerReviews: <><path d="M4 5h16v11H9l-5 4z" /><path d="M9 9.5h.01M15 9.5h.01M9 12.5c.8.8 1.8 1.2 3 1.2s2.2-.4 3-1.2" /></>,
+  closures: <><circle cx="10" cy="8" r="3.5" /><path d="M3.5 20a6.5 6.5 0 0 1 13 0" /><path d="M17 11h5" /></>,
+  certificates: <><circle cx="12" cy="9" r="5.5" /><path d="M8.6 13.4 7 21l5-2.6 5 2.6-1.6-7.6" /></>,
+  // not a page: "nothing matches" in an empty list
+  search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>,
   content: <><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></>,
   emails: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3.5 6.5 8.5 7 8.5-7" /></>,
   activity: <><path d="M3 12h4l3-8 4 16 3-8h4" /></>,

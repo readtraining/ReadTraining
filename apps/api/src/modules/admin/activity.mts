@@ -12,9 +12,12 @@ import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 const KINDS = {
   signin: sql`(l.action in ('auth.login', 'auth.logout', 'auth.two_step_verified', 'auth.password_check_failed', 'admin.login'))`,
   account: sql`(l.action like 'auth.%' or l.action like 'profile.%' or l.action like 'consent.%' or l.action like 'email.%') and l.action not in ('auth.login', 'auth.logout', 'auth.two_step_verified', 'auth.password_check_failed')`,
-  organisations: sql`(l.action like 'provider.%' or l.action like 'business.%' or l.action like 'identity.%')`,
+  organisations: sql`(l.action like 'provider.%' or l.action like 'business.%' or l.action like 'identity.%' or l.action like 'course.%' or l.action like 'cohort.%' or l.action like 'venue.%')`,
   admin: sql`(l.action like 'admin.%' and l.action <> 'admin.login')`,
   denied: sql`(l.action = 'access.denied')`,
+  // the Dashboard's Recent activity: what people did, without sign-ins, refused attempts, opening a workspace, switching
+  // account or the automatic emails (all still on the Activity log page)
+  work: sql`(l.action not like 'auth.%' and l.action not like 'email.%' and l.action not in ('admin.login', 'access.denied', 'identity.switched', 'provider.workspace.open', 'business.workspace.open'))`,
 } as const
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
@@ -41,7 +44,7 @@ export const activityRouter = createTRPCRouter({
     .input(
       z.object({
         q: z.string().trim().max(200).optional(), // a name, an email, or a reference (account id, organisation id, page…)
-        kind: z.enum(['signin', 'account', 'organisations', 'admin', 'denied']).optional(),
+        kind: z.enum(['signin', 'account', 'organisations', 'admin', 'denied', 'work']).optional(),
         from: day.optional(), // UK dates, both days included
         to: day.optional(),
         ...paging,

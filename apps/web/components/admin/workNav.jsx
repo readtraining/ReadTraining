@@ -20,7 +20,11 @@ export function SideMenuProvider({ closed: initial = false, children }) {
     document.cookie = `${SIDE_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
     setClosed(next);
     // the keyboard stays on the button, which has moved: the page's button when hidden, the sidebar's when shown
-    requestAnimationFrame(() => document.querySelector(next ? ".rt-adm__sideopen" : ".rt-adm__sidehide")?.focus());
+    // (the admin's sidebar becomes an icon rail and keeps its own button; the provider workspace's hides and uses the page's)
+    requestAnimationFrame(() => {
+      const page = document.querySelector(".rt-adm__sideopen");
+      (next && page?.offsetParent ? page : document.querySelector(".rt-adm__sidehide"))?.focus();
+    });
   };
   return <SideMenu.Provider value={{ closed, toggle }}>{children}</SideMenu.Provider>;
 }
@@ -29,11 +33,11 @@ export const useSideMenu = () => useContext(SideMenu);
 // The button that hides the sidebar (`where="side"`, at its top right) or brings it back (`where="page"`, the page's top left).
 export function SideMenuButton({ where, controls }) {
   const { closed, toggle } = useSideMenu();
-  const label = where === "side" ? "Hide menu" : "Show menu";
+  const label = where === "side" && !closed ? "Hide menu" : "Show menu";
   return (
     <button type="button" className={where === "side" ? "rt-adm__sidehide" : "rt-adm__sideopen"} onClick={toggle} aria-expanded={!closed} aria-controls={controls} title={label}>
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d={where === "side" ? "m15.5 10-2 2 2 2" : "m13.5 10 2 2-2 2"} />
+        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d={where === "side" && !closed ? "m15.5 10-2 2 2 2" : "m13.5 10 2 2-2 2"} />
       </svg>
       <span className="rt-sr">{label}</span>
     </button>

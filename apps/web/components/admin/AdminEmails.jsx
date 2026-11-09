@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Tabs, TableSkeleton, formatWhen, useSort, SortTh } from "./adminParts";
+import { Empty, Pager, Search, Tabs, TableSkeleton, formatWhen, useSort, SortTh, usePaging } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.emails;
@@ -20,20 +20,29 @@ const EMAIL_SORT = { name: (e) => e.name, audience: (e) => e.audience, status: (
 export default function AdminEmails() {
   const list = api.admin.emails.list.useQuery();
   const [who, setWho] = useState("all");
+  const [q, setQ] = useState("");
   const sorter = useSort();
+  const pages = usePaging({ key: "", dir: -1 }); // a page at a time, cut here (the list loads once)
   if (list.isLoading) return <TableSkeleton rows={8} />;
   if (list.error) return <ErrorState onRetry={() => list.refetch()} />;
-  const rows = sorter.apply(list.data.filter((e) => who === "all" || e.audience === who), EMAIL_SORT);
+  // search by the email's name, its subject or when it is sent
+  const needle = q.trim().toLowerCase();
+  const found = list.data.filter((e) => (who === "all" || e.audience === who) && (!needle || `${e.name} ${e.subject ?? ""} ${e.trigger}`.toLowerCase().includes(needle)));
+  const rows = sorter.apply(found, EMAIL_SORT);
   const c = copy.columns;
 
   return (
     <div className="rt-acc__stack">
-      <Tabs tabs={AUDIENCES.map((key) => ({ key, label: AUDIENCE_LABEL[key], count: key === "all" ? list.data.length : list.data.filter((e) => e.audience === key).length }))} value={who} onChange={setWho} label="Show emails sent to" />
+      <Tabs tabs={AUDIENCES.map((key) => ({ key, label: AUDIENCE_LABEL[key], count: key === "all" ? list.data.length : list.data.filter((e) => e.audience === key).length }))} value={who} onChange={(k) => { setWho(k); pages.restart(); }} label="Show emails sent to" />
+      <div className="rt-adm-toolbar">
+        <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
+      </div>
+      {rows.length ? (
       <div className="rt-acc__card rt-biz__tablecard">
         <table className="rt-biz__table rt-adm-table">
           <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.audience} col="audience" sorter={sorter} /><th scope="col">{c.trigger}</th><SortTh label={c.status} col="status" sorter={sorter} /></tr></thead>
           <tbody>
-            {rows.map((e) => (
+            {rows.slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((e) => (
               <tr key={e.key}>
                 <td data-label={c.name}>
                   {e.status === "auth" ? <span className="rt-adm-strong">{e.name}</span> : <Link href={`/admin/emails/${e.key}`} className="rt-adm-strong">{e.name}</Link>}
@@ -46,7 +55,9 @@ export default function AdminEmails() {
             ))}
           </tbody>
         </table>
+        <Pager paging={pages} total={rows.length} label="emails" />
       </div>
+      ) : <Empty kind="none" title={copy.none} />}
       <p className="rt-acc__note">{copy.statusNotes.later} {copy.statusNotes.auth}</p>
     </div>
   );

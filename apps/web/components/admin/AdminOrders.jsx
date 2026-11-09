@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { Choice } from "@/components/providerWorkspace/providerParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging } from "./adminParts";
+import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty, HeaderAction } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
@@ -47,13 +47,15 @@ export default function AdminOrders() {
   const s = paging.sorter;
   const c = copy.columns;
 
+  // nothing at all yet: the empty state has the button, so the toolbar doesn't repeat it
+  const blank = Boolean(list.data) && !rows.length && !search && tab === "all";
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
         <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: counts?.[key] }))} value={tab} onChange={pick} label="Show orders" />
         <div className="rt-adm-toolbar__end">
           <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
-          {canBook && <button type="button" className="button -md -purple-1 text-white" onClick={() => setBooking(true)}>{copy.book}</button>}
+          {canBook && !blank && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setBooking(true)}>{copy.book}</button></HeaderAction>}
         </div>
       </div>
 
@@ -65,7 +67,7 @@ export default function AdminOrders() {
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
-              <thead><tr><SortTh label={c.ref} col="booked" sorter={s} numeric /><SortTh label={c.buyer} col="buyer" sorter={s} /><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><SortTh label={c.total} col="total" sorter={s} numeric /><SortTh label={c.state} col="status" sorter={s} /></tr></thead>
+              <thead><tr><SortTh label={c.ref} col="booked" sorter={s} numeric /><SortTh label={c.buyer} col="buyer" sorter={s} /><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><SortTh label={c.total} col="total" sorter={s} numeric right /><SortTh label={c.state} col="status" sorter={s} /></tr></thead>
               <tbody>
                 {rows.map((o) => (
                   <tr key={o.id}>
@@ -73,19 +75,19 @@ export default function AdminOrders() {
                     <td data-label={c.buyer}>{o.buyer.name}<small>{o.buyer.company || o.buyer.email}</small></td>
                     <td data-label={c.course}>{o.course}<small>{o.startsOn ? `${formatDate(o.startsOn)} · ` : ""}{o.quantity} {o.quantity === 1 ? "place" : "places"}</small></td>
                     <td data-label={c.provider}>{o.provider}{o.bookedBy && <small>{copy.staff.replace("{name}", o.bookedBy)}</small>}</td>
-                    <td data-label={c.total}><span className="rt-adm-num-cell">{formatPrice(o.gross)}</span><small>{copy.methods[o.method]}</small></td>
+                    <td data-label={c.total} className="rt-adm-num-cell"><span className="rt-adm-num-cell">{formatPrice(o.gross)}</span><small>{copy.methods[o.method]}</small></td>
                     <td data-label={c.state}><AdminStatus kind="order" status={o.status}>{copy.statuses[o.status]}</AdminStatus></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <Pager paging={paging} total={list.data.total} label="orders" />
           </div>
-          <Pager paging={paging} total={list.data.total} label="orders" />
         </>
       ) : search || tab !== "all" ? (
-        <EmptyState title={copy.none} action={search ? { label: copy.clear, onClick: () => setQ("") } : undefined} />
+        <Empty kind="none" title={copy.none} action={search ? { label: copy.clear, onClick: () => setQ("") } : undefined} />
       ) : (
-        <EmptyState icon="icon-basket" title={copy.empty} text={copy.emptyText} action={canBook ? { label: copy.book, onClick: () => setBooking(true) } : undefined} />
+        <Empty title={copy.empty} text={copy.emptyText} action={canBook ? { label: copy.book, onClick: () => setBooking(true) } : undefined} />
       )}
 
       <Sheet open={booking} onClose={() => setBooking(false)} title={copy.bookSheet.title} closeLabel="Close">

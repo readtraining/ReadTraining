@@ -4,14 +4,13 @@ import React, { useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { EmptyState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { demoCourseHref } from "@/data/demoCourses";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { hideReview, keepReview, showReview } from "@/lib/adminReviews";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging } from "./adminParts";
+import { Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = A.reviews;
@@ -91,7 +90,7 @@ export default function AdminReviews() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={copy.none} action={{ label: copy.clear, onClick: clear }} />
+        <Empty kind="none" title={copy.none} action={{ label: copy.clear, onClick: clear }} />
       )}
       {list.length > 0 && <Pager paging={pages} total={list.length} label="reviews" />}
 

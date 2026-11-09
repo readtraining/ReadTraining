@@ -6,18 +6,21 @@ import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Stats, formatWhen, DetailSkeleton } from "./adminParts";
+import { Stats, formatWhen, DetailSkeleton, Empty, actionLabel } from "./adminParts";
 import { useAdminAccess } from "@/lib/adminContext";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { AdminStatus } from "./AdminStatus";
 import { SHOW_DEMO } from "@/lib/demo";
 
 const copy = A.dashboard;
+// "Approved a course" after a name reads "approved a course"; only the first letter changes, so names and quotes keep theirs
+const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 const demoTag = <span className="rt-demo-tag" title={A.demo.all.note}>{copy.demoTag}</span>;
 
-// The latest entries of the real activity log (API admin.activity.list): who did what, and when.
+// The latest things people did on the platform (API admin.activity.list, kind "work": no sign-ins, refused attempts or
+// automatic emails, which stay on the Activity log page): who did what, and when.
 function RecentActivity() {
-  const log = api.admin.activity.list.useQuery({ limit: 6 }, { staleTime: 30000 });
+  const log = api.admin.activity.list.useQuery({ limit: 6, kind: "work" }, { staleTime: 30000 });
   const entries = log.data?.entries ?? [];
   return (
     <section className="rt-acc__card" aria-labelledby="rt-adm-act-h" aria-busy={log.isLoading}>
@@ -37,14 +40,14 @@ function RecentActivity() {
             <li key={e.id}>
               <span className="rt-acc__avatar" aria-hidden="true">{(e.actor ? (e.actor.email ? e.actor.name : A.activity.deleted) : A.activity.system).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
               <div>
-                <p>{e.actor ? <><strong>{e.actor.email ? e.actor.name : A.activity.deleted}</strong> {(A.activity.actions[e.action] ?? e.action).toLowerCase()}</> : <strong>{A.activity.actions[e.action] ?? e.action}</strong>}{e.target?.label && e.target.type !== "session" ? <> · <span className="rt-adm-muted">{e.target.label}</span></> : null}</p>
+                <p>{e.actor ? <><strong>{e.actor.email ? e.actor.name : A.activity.deleted}</strong> {lowerFirst(actionLabel(e.action))}</> : <strong>{actionLabel(e.action)}</strong>}{e.target?.label && e.target.type !== "session" ? <> · <span className="rt-adm-muted">{e.target.label}</span></> : null}</p>
                 <small>{formatWhen(Date.parse(e.at))}</small>
               </div>
             </li>
           ))}
         </ul>
       ) : (
-        <EmptyState inCard title={copy.activityNone} />
+        <Empty inCard icon="activity" title="Nothing has happened yet" text={copy.activityNone} />
       )}
     </section>
   );
@@ -87,6 +90,11 @@ export default function AdminDashboard() {
       { key: "candidates", n: data.counts.candidates, overdue: 0 },
     ] : []),
   ];
+  // Queues lists only what has something waiting; a queue comes back as soon as it has work. Until every count has loaded it
+  // shows placeholders, so a queue is never left out just because its number hadn't arrived
+  const waiting = queues.filter((q) => q.n > 0);
+  const queuesLoading = providers.isLoading || courses.isLoading || (seesMoney && money.isLoading);
+  const queuesFailed = providers.error || courses.error || (seesMoney && money.error);
   // the same sessions as Sessions and venues > Next 7 days
   const soon = data.sessions.filter((s) => !s.cancelled && s.daysAway <= 7 && !s.joiningSent);
 
@@ -94,31 +102,44 @@ export default function AdminDashboard() {
     <div className="rt-acc__stack">
       <Stats items={stats} label="Today" />
 
-      <div className="rt-adm-grid2">
+      {/* one 2 × 2 grid in reading order: the cards in a row share their top and bottom edges. Sessions at risk (demo) and
+          Latest orders (admins who see money) aren't always there, so the cards fill the grid in order and leave no hole */}
+      <div className="rt-adm-dash">
         <section className="rt-acc__card" aria-labelledby="rt-adm-queues-h">
-          <h2 className="rt-acc__h2" id="rt-adm-queues-h">{copy.queues}</h2>
-          <ul className="rt-adm-queues">
-            {queues.map((q) => (
-              <li key={q.key}>
-                <Link href={copy.queueItems[q.key].href} className={`rt-adm-queue${q.n ? "" : " is-clear"}`}>
-                  <span className="rt-adm-queue__n">{q.n}</span>
-                  <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
-                  {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
-                  <i className="icon-chevron-right text-12" aria-hidden="true"></i>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className="rt-acc__cardhead">
+            <h2 className="rt-acc__h2" id="rt-adm-queues-h">{copy.queues}</h2>
+          </div>
+          {queuesFailed ? (
+            <ErrorState inCard onRetry={() => { providers.refetch(); courses.refetch(); if (seesMoney) money.refetch(); }} />
+          ) : queuesLoading ? (
+            <ul className="rt-adm-feed" aria-hidden="true">
+              {[0, 1, 2].map((i) => <li key={i}><span className="rt-skel rt-skel--line" style={{ width: "70%", height: 14 }}></span></li>)}
+            </ul>
+          ) : waiting.length ? (
+            <ul className="rt-adm-queues">
+              {waiting.map((q) => (
+                <li key={q.key}>
+                  <Link href={copy.queueItems[q.key].href} className="rt-adm-queue">
+                    <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
+                    {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
+                    <span className="rt-adm-queue__n rt-adm__count">{q.n}</span>
+                    <i className="icon-chevron-right text-12" aria-hidden="true"></i>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty inCard icon="approvals" title={copy.queuesNone.title} text={copy.queuesNone.text} />
+          )}
         </section>
         <RecentActivity />
-      </div>
-
-      <div className="rt-adm-grid2">
         {SHOW_DEMO && (
         <section className="rt-acc__card" aria-labelledby="rt-adm-risk-h">
           <div className="rt-acc__cardhead">
             <h2 className="rt-acc__h2" id="rt-adm-risk-h">{copy.atRisk}</h2>
             {demoTag}
+            {/* in the card's header, as Activity log and All orders */}
+            {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
           </div>
           <p className="rt-acc__note rt-adm-cardnote">{copy.atRiskNote}</p>
           {soon.length ? (
@@ -134,22 +155,23 @@ export default function AdminDashboard() {
               ))}
             </ul>
           ) : (
-            <EmptyState inCard title={copy.atRiskNone} />
+            <Empty inCard icon="sessions" title="All set" text={copy.atRiskNone} />
           )}
-          {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
         </section>
         )}
-
         {seesMoney && (
           <section className="rt-acc__card" aria-labelledby="rt-adm-latest-h">
-            <h2 className="rt-acc__h2" id="rt-adm-latest-h">{copy.recent}</h2>
+            <div className="rt-acc__cardhead">
+              <h2 className="rt-acc__h2" id="rt-adm-latest-h">{copy.recent}</h2>
+              <Link href="/admin/orders" className="fb-textlink">{copy.allOrders}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
+            </div>
             {latestOrders.data?.orders.length ? (
               <ul className="rt-adm-list">
                 {latestOrders.data.orders.map((o) => (
                   <li key={o.id}>
-                    <div>
+                    <div className="rt-adm-list__main">
                       <Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.buyer.name}</Link>
-                      <small>{o.course} · {o.ref}</small>
+                      <small title={`${o.course} · ${o.ref}`}>{o.course} · {o.ref}</small>
                     </div>
                     <div className="rt-adm-list__side">
                       <strong className="rt-adm-num-cell">{formatPrice(o.gross)}</strong>
@@ -159,9 +181,8 @@ export default function AdminDashboard() {
                 ))}
               </ul>
             ) : latestOrders.isLoading ? null : (
-              <EmptyState inCard title={A.orders.empty} text={A.orders.emptyText} />
+              <Empty inCard icon="orders" title={A.orders.empty} text={A.orders.emptyText} />
             )}
-            <Link href="/admin/orders" className="fb-textlink rt-adm-mt">{copy.allOrders}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
           </section>
         )}
       </div>

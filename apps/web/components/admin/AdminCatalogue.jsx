@@ -12,9 +12,9 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
-import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { SHOW_DEMO } from "@/lib/demo";
@@ -60,7 +60,7 @@ export default function AdminCatalogue() {
 
   return (
     <div className="rt-acc__stack">
-      <Tabs tabs={tabs} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "courses" ? "" : t); }} label="Show catalogue" />
+      <Tabs tabs={tabs} value={tab} onChange={(t) => { setTab(t); setQuery("tab", t === "courses" ? "" : t); }} label="Show catalogue" sections />
 
       {tab === "courses" && (
         <>
@@ -75,7 +75,7 @@ export default function AdminCatalogue() {
               <FieldSelect id="rt-adm-cstatus" label="Status" value={status} onChange={pick(setStatus, "status", "all")} options={[{ value: "all", label: "Every status" }, ...Object.entries(copy.statuses).map(([value, label]) => ({ value, label }))]} compact />
             </div>
             <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
-            {me?.permissions?.includes("catalogue") && <button type="button" className="button -sm -purple-1 text-white" onClick={() => setCreating(true)}>{copy.newShared}</button>}
+            {me?.permissions?.includes("catalogue") && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setCreating(true)}>{copy.newShared}</button></HeaderAction>}
           </div>
           <p className="rt-sr" aria-live="polite">{list.data ? `${rows.length} ${rows.length === 1 ? "course" : "courses"}` : ""}</p>
           {list.isError ? (
@@ -86,7 +86,7 @@ export default function AdminCatalogue() {
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table">
                 <thead>
-                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><th scope="col">{cols.status}</th><SortTh label={cols.providers} col="providers" sorter={sorter} numeric /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric /><SortTh label={cols.from} col="from" sorter={sorter} numeric /></tr>
+                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><th scope="col">{cols.status}</th><SortTh label={cols.providers} col="providers" sorter={sorter} numeric right /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric right /><SortTh label={cols.from} col="from" sorter={sorter} numeric right /></tr>
                 </thead>
                 <tbody>
                   {sorter.apply(rows, COURSE_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((c) => (
@@ -99,17 +99,17 @@ export default function AdminCatalogue() {
                         <AdminStatus kind="course" status={c.status}>{copy.statuses[c.status]}</AdminStatus>
                         {c.pendingChange && <small>Change waiting</small>}
                       </td>
-                      <td data-label={cols.providers}>{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
-                      <td data-label={cols.sessions}>{c.method === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
-                      <td data-label={cols.from}>{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
+                      <td data-label={cols.providers} className="rt-adm-num-cell">{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
+                      <td data-label={cols.sessions} className="rt-adm-num-cell">{c.method === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
+                      <td data-label={cols.from} className="rt-adm-num-cell">{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="rt-adm-more"><Pager paging={pages} total={rows.length} label="courses" /></div>
+              <Pager paging={pages} total={rows.length} label="courses" />
             </div>
           ) : (
-            <EmptyState title={copy.empty} action={me?.permissions?.includes("catalogue") && kind !== "provider" && !q && status === "all" ? { label: copy.newShared, onClick: () => setCreating(true) } : null} />
+            <Empty kind={q || status !== "all" || kind !== "all" ? "none" : "empty"} title={copy.empty} text={q || status !== "all" || kind !== "all" ? undefined : "Shared course pages and providers' courses show here."} action={me?.permissions?.includes("catalogue") && kind !== "provider" && !q && status === "all" ? { label: copy.newShared, onClick: () => setCreating(true) } : null} />
           )}
           <NewSharedPage open={creating} onClose={() => setCreating(false)} />
         </>

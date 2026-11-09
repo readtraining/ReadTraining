@@ -5,7 +5,7 @@ import React from "react";
 // data uses these instead of its own wording and layout.
 // - EmptyState: a short title, an optional line and an optional action ({ label, href } or { label, onClick }; `secondary`
 //   adds a second, outlined one where two ways out genuinely help, as "Remove last filter" next to "Clear all"), with an
-//   optional icon. On its own it is a card; `inCard` drops the card for a section that is already inside one; `large` is for a
+//   optional icon (an icon-font class, or a drawn icon); on its own it is a card; `inCard` drops the card for a section that is already inside one; `large` is for a
 //   whole page or tab (no card, bigger title and button, more space; `headingLevel` makes the title a heading).
 // - ErrorState: what happened, and "Try again" when the reader can retry (`onRetry`).
 
@@ -18,7 +18,7 @@ export function EmptyState({ title, text, action, secondary, icon, inCard = fals
   const Title = headingLevel ? `h${headingLevel}` : "p";
   return (
     <div className={`rt-state${inCard ? " -incard" : large ? " -large" : " rt-acc__card"}`} role={live ? "status" : undefined}>
-      {icon && <span className="rt-state__icon" aria-hidden="true"><i className={icon}></i></span>}
+      {icon && <span className="rt-state__icon" aria-hidden="true">{typeof icon === "string" ? <i className={icon}></i> : icon}</span>}
       <Title className="rt-state__title">{title}</Title>
       {text && <p className="rt-state__text">{text}</p>}
       {(action || secondary) && (

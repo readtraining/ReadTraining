@@ -1,16 +1,20 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Toast from "@/components/courses/Toast";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
+import NavIcon from "./navIcons";
+import { admin as A } from "@/data/admin";
 
 // Shared bits of the admin pages, all from the site's design system: the account's status pills (.rt-pill .rt-acc__status), the
 // filter chips with counts (.rt-tr__filter), the stats strip, the account card (.rt-acc__card) and the business account's table
 // (.rt-biz__table). The account, business, admin and provider pages all use these.
 
 // Stats strip, the account and admin dashboards': icon, number, label. `items` is [{ icon, value, label }]; `iconSize` is the
-// icon's text size (16, or 18 on the learner and business dashboards).
+// icon's text size (16, or 18 on the learner and business dashboards). An icon "nav:<name>" is one of the admin's drawn icons.
 // An item may have `hint` (a short line under the label, as "Ready to assign") and `href` (the whole card links to that section).
 export function Stats({ items, label, iconSize = 16 }) {
   return (
@@ -18,7 +22,7 @@ export function Stats({ items, label, iconSize = 16 }) {
       {items.map((s) => {
         const body = (
           <>
-            <span className="rt-benefit__icon" aria-hidden="true"><i className={`${s.icon} text-${iconSize}`}></i></span>
+            <span className="rt-benefit__icon" aria-hidden="true">{s.icon.startsWith("nav:") ? <NavIcon name={s.icon.slice(4)} /> : <i className={`${s.icon} text-${iconSize}`}></i>}</span>
             <span className="rt-tps__keyfact-text"><strong>{s.value}</strong><span className="rt-sr">, </span><span>{s.label}</span>{s.hint && <small className="rt-acc__stathint">{s.hint}</small>}</span>
           </>
         );
@@ -73,10 +77,11 @@ export function useSort(first = null) {
   const by = (key, numeric = false) => setSort((s) => (s?.key === key ? { key, dir: -s.dir } : { key, dir: numeric ? -1 : 1 }));
   return { sort, by, apply };
 }
-export function SortTh({ label, col, sorter, numeric = false }) {
+// `numeric`: sorts largest first (numbers, prices, dates); `right`: a number or price column, header and cells on the right.
+export function SortTh({ label, col, sorter, numeric = false, right = false }) {
   const on = sorter.sort?.key === col;
   return (
-    <th scope="col" aria-sort={on ? (sorter.sort.dir === 1 ? "ascending" : "descending") : "none"}>
+    <th scope="col" className={right ? "rt-adm-num" : undefined} aria-sort={on ? (sorter.sort.dir === 1 ? "ascending" : "descending") : "none"}>
       <button type="button" className={`rt-adm-sort${on ? " is-on" : ""}`} onClick={() => sorter.by(col, numeric)}>
         {label}
         <span className="rt-adm-sort__arrow" aria-hidden="true">{on ? (sorter.sort.dir === 1 ? "↑" : "↓") : "↕"}</span>
@@ -151,6 +156,25 @@ export function Pager({ paging, total, label = "results" }) {
   );
 }
 
+// The admin's one empty state: the shared EmptyState, always with an icon and a line saying what to do or what will show
+// here. `kind`: "empty" (nothing yet: the page's own menu icon, AdminShell's AdminPage; give `text`), "none" (filters or a
+// search found nothing: a magnifier, "Try a different search or filter."), "missing" (a record that isn't there).
+export const AdminPage = React.createContext(null);
+const EMPTY_TEXT = { none: "Try a different search or filter.", missing: "It may have been deleted, or the link may be wrong." };
+export function Empty({ kind = "empty", icon, text, ...rest }) {
+  const page = React.useContext(AdminPage);
+  const name = icon || (kind === "none" ? "search" : page);
+  return <EmptyState {...rest} text={text ?? EMPTY_TEXT[kind]} icon={name ? <NavIcon name={name} /> : undefined} />;
+}
+
+// A page's main action (Book for a customer, Create coupon, Invite an admin…), shown at the top right of the page header, in
+// line with the title (AdminShell's #rt-adm-actions), wherever in the page it is built, so it keeps the page's own state.
+export function HeaderAction({ children }) {
+  const [slot, setSlot] = React.useState(null);
+  React.useEffect(() => setSlot(document.getElementById("rt-adm-actions")), []);
+  return slot ? createPortal(children, slot) : null;
+}
+
 // Loading placeholders in the shape of what is coming (never a spinner): a table card's rows, or a record's page (its head card
 // and two cards). Hidden from screen readers; the page is marked busy instead.
 const bar = (w, h = 14) => <span className="rt-skel rt-skel--line" style={{ width: w, height: h }}></span>;
@@ -174,10 +198,11 @@ export function DetailSkeleton() {
   );
 }
 
-// Tabs as the account's filter chips, each with its count; the chosen tab is pressed.
-export function Tabs({ tabs, value, onChange, label }) {
+// Tabs as the account's filter chips, each with its count; the chosen tab is pressed. `sections`: the parts of one page
+// (Catalogue's Courses / Categories, Site content's tabs) as an underline tab bar, so they never look like a status filter.
+export function Tabs({ tabs, value, onChange, label, sections = false }) {
   return (
-    <div className="rt-acc__tabs" role="group" aria-label={label}>
+    <div className={`rt-acc__tabs${sections ? " rt-adm-sections" : ""}`} role="group" aria-label={label}>
       {tabs.map((t) => (
         <button key={t.key} type="button" className={`rt-tr__filter${value === t.key ? " is-on" : ""}`} aria-pressed={value === t.key} onClick={() => onChange(t.key)}>
           {t.label}
@@ -282,3 +307,11 @@ export const getQuery = (key) => {
 // A short date and time, en-GB: "12 Oct, 14:05"
 const dt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 export const formatWhen = (ms) => dt.format(new Date(ms));
+
+// What an activity log entry did, in words (data/admin.js); a code without wording yet still reads as words, never as a code
+export const actionLabel = (code) => {
+  const words = A.activity.actions[code];
+  if (words) return words;
+  const text = String(code).replace(/[._]+/g, " ").trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};

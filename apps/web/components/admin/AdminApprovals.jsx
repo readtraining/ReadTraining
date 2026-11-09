@@ -11,8 +11,8 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { methodName } from "@/lib/taxonomy";
-import { Tabs, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty } from "./adminParts";
+import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.approvals;
@@ -183,7 +183,7 @@ export default function AdminApprovals() {
           })}
         </ul>
       ) : (
-        <EmptyState title={type === "all" ? copy.empty[tab] : "Nothing of this type here."} />
+        type === "all" ? <Empty title={copy.empty[tab][0]} text={copy.empty[tab][1]} /> : <Empty kind="none" title="Nothing of this type here." />
       )}
 
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={asking ? `${asking.decision === "rejectChange" ? copy.rejectChange : copy.requestChanges}: ${asking.item.title}` : ""} closeLabel="Close">

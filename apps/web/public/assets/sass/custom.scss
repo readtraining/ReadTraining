@@ -4888,7 +4888,6 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm-queue__label { flex: 1; font-size: var(--rt-text-sm); font-weight: 600; }
 .rt-adm-queue i { color: var(--color-light-1); }
 @media (hover: hover) and (pointer: fine) { .rt-adm-queue:hover .rt-adm-queue__label { color: var(--color-purple-1); } }
-.rt-adm-queue.is-clear .rt-adm-queue__n, .rt-adm-queue.is-clear .rt-adm-queue__label { color: var(--rt-c-muted); font-weight: 500; }
 .rt-adm-feed { margin: 0; padding: 0; list-style: none; }
 .rt-adm-feed li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
 .rt-adm-feed li:first-child { padding-top: 0; border-top: 0; }
@@ -4976,7 +4975,6 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-adm-select .rt-field-dd, .rt-adm-select .rt-field-dd.-compact, .rt-adm-select .rt-field-dd.-compact .rt-cat-dd__trigger { width: 100%; }
 .rt-adm-toolbar .rt-field-dd .rt-cat-dd__trigger { background: var(--rt-c-surface); }
 @media (max-width: 575px) { .rt-adm-toolbar__end { width: 100%; margin-left: 0; } .rt-adm-select, .rt-adm-select.-inline { flex: 1 1 100%; width: auto; } .rt-adm-toolbar__end .rt-adm-search { flex: 1 1 100%; } }
-.rt-adm-more { display: flex; justify-content: center; padding: 16px 0 12px; border-top: 1px solid var(--color-light-5); }
 .rt-adm-tablenote { margin: 16px 0 4px; }
 .rt-adm-muted { font-size: var(--rt-text-xs); color: var(--color-light-1); }
 .rt-adm-price { font-size: var(--rt-app-h3); font-weight: 700; color: var(--color-dark-1); }
@@ -5219,7 +5217,6 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-adm--platform .rt-adm-toolbar > :not(.rt-acc__tabs):not(.rt-adm-search),
 .rt-adm--platform .rt-adm-toolbar__end:has(.rt-adm-search) > :not(.rt-adm-search) { order: 2; }
 .rt-adm--platform .rt-adm-toolbar:has(> .rt-acc__tabs):not(:has(.rt-adm-search)) { justify-content: flex-end; }
-.rt-adm--platform .rt-adm-toolbar:has(.rt-adm-activity__dates) { align-items: flex-end; }
 /* the search keeps enough width for its full placeholder; on a phone it takes the whole row */
 @media (min-width: 576px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 0 1 340px; min-width: 260px; } }
 @media (max-width: 575px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 1 1 100%; margin-right: 0; } }
@@ -6984,10 +6981,6 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-ltype.-refund, .rt-adm-ltype.-cancel, .rt-adm-ltype.-dispute, .rt-adm-ltype.-charge { background: var(--color-orange-7); }
 .rt-adm-ledger td.rt-adm-num-cell { white-space: nowrap; }
 .rt-adm-ledger td.-minus strong { color: var(--rt-c-error); }
-.rt-adm-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; margin: 0; overflow: hidden; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-line); }
-.rt-adm-totals > div { padding: 14px 18px; background: var(--rt-c-surface); }
-.rt-adm-totals dt { font-size: var(--rt-text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rt-c-muted); }
-.rt-adm-totals dd { margin: 4px 0 0; font-size: 20px; font-weight: 700; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
 .rt-adm-book__total { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 0 8px; padding: 12px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-soft); font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-adm-book__total strong { font-size: 20px; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
 .rt-adm-labelled { display: flex; align-items: center; gap: 10px; margin: 0; }
@@ -7017,13 +7010,16 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-pager__size { display: flex; align-items: center; gap: 8px; margin-right: auto; }
 .rt-adm-pager__size label { margin: 0; }
 .rt-adm-pager__size .rt-field-dd { width: 88px; }
-.rt-adm-pager__size .rt-cat-dd__trigger { height: 36px; background: var(--rt-c-surface); }
+.rt-adm-pager__size .rt-cat-dd__trigger { height: 32px; background: var(--rt-c-surface); }
 .rt-adm-pager__nav { display: flex; align-items: center; gap: 6px; }
-.rt-adm-pager__nav button { min-width: 36px; height: 36px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
+.rt-adm-pager__nav button { min-width: 32px; height: 32px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
 .rt-adm-pager__nav button:hover:not(:disabled) { border-color: var(--rt-c-brand); color: var(--rt-c-brand); }
 .rt-adm-pager__nav button:disabled { opacity: 0.45; cursor: default; }
 .rt-adm-pager__where { padding: 0 8px; white-space: nowrap; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
 @media (max-width: 575px) { .rt-adm-pager__nav { width: 100%; justify-content: space-between; } .rt-adm-pager__nav button[aria-label] { display: none; } }
+/* the table footer: inside the table card, under a divider, the count on the left and the pages on the right (every list) */
+.rt-biz__tablecard > .rt-adm-pager { margin: 0 -24px -8px; padding: 12px 24px; border-top: 1px solid var(--color-light-5); }
+@media (max-width: 575px) { .rt-biz__tablecard > .rt-adm-pager { margin: 0 -16px -4px; padding: 12px 16px; } }
 /* text links inside the admin ("Activity log →", "All orders →", "Public profile ↗"): the marketing pages' link style, at the admin's
    body size */
 .rt-adm .fb-textlink { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand) !important; text-decoration: none; }
@@ -7133,7 +7129,272 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
 .rt-bk__inpkg i { color: var(--rt-c-success); }
 
+/* ============================================================================================
+
+   ADMIN SIZES (platform admin only, .rt-adm--platform): one control height everywhere, so a toolbar row lines up.
+   Buttons 40px (32px small, for table rows and cards), every toolbar control 40px (search, dropdowns, date fields, filter pills,
+   the segmented control), form fields 44px. Colours, fonts and borders are unchanged; the public site, the learner and business
+   accounts and the provider workspace keep their own sizes.
+   =================================================================================================== */
+.rt-adm--platform .button.-md { height: 40px; padding: 0 16px; font-size: 14px; }
+.rt-adm--platform .button.-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+/* a page's main action is full size wherever it sits in a toolbar, even where it was drawn small */
+.rt-adm--platform .rt-adm-toolbar .button { height: 40px; padding: 0 16px; font-size: 14px; }
+.rt-adm--platform .rt-adm-search input { height: 40px; }
+.rt-adm--platform .rt-adm-toolbar .rt-cat-dd__trigger,
+.rt-adm--platform .rt-adm-toolbar .rt-field-dd.-compact .rt-cat-dd__trigger,
+.rt-adm--platform .rt-adm-toolbar .rt-datefield__btn { height: 40px; }
+.rt-adm--platform .rt-acc__tabs .rt-tr__filter { height: 40px; }
+.rt-adm--platform .rt-adm-seg { align-items: center; height: 40px; padding: 3px; gap: 2px; flex-wrap: nowrap; }
+.rt-adm--platform .rt-adm-seg button { height: 32px; padding: 0 12px; }
+/* form fields */
+.rt-adm--platform .rt-field select, .rt-adm--platform .rt-field input:not([type="checkbox"]):not([type="radio"]),
+.rt-adm--platform .rt-field-dd:not(.-compact) .rt-cat-dd__trigger, .rt-adm--platform .rt-datefield:not(.-compact) .rt-datefield__btn { height: 44px; }
+.rt-adm--platform .rt-adm-inline .button { height: 44px; } /* a Save next to a field matches the field */
+/* one notice in the admin: the same padding and radius, a left accent in its own colour and its icon (information, warning, done) */
+.rt-adm--platform .rt-acc__notice { position: relative; padding: 12px 16px 12px 44px; border-left: 3px solid var(--rt-c-brand); }
+.rt-adm--platform .rt-acc__notice::before { content: ""; position: absolute; left: 16px; top: 13px; width: 18px; height: 18px; background: var(--rt-c-brand); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+.rt-adm--platform .rt-acc__notice.-warn { border-left-color: var(--color-orange-6); }
+.rt-adm--platform .rt-acc__notice.-warn::before { background: var(--color-orange-6); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20z'/%3E%3Cpath d='M12 10v4M12 17v.01'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20z'/%3E%3Cpath d='M12 10v4M12 17v.01'/%3E%3C/svg%3E"); }
+.rt-adm--platform .rt-acc__notice.-ok { border-left-color: var(--rt-c-success); }
+.rt-adm--platform .rt-acc__notice.-ok::before { background: var(--rt-c-success); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8 12 3 3 5-6'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8 12 3 3 5-6'/%3E%3C/svg%3E"); }
+/* a heading between two cards (Payouts: Payout runs) */
+.rt-adm--platform .rt-adm-sectionh { margin: 12px 0 0; }
+
+/* ===================================================================================================
+   ADMIN STAGE 2 (platform admin only): tables, row actions, badges, stat cards, card headers and the page header's action.
+   =================================================================================================== */
+/* page header: the main action at the top right, in line with the title; a wider description so short ones stay on one line */
+.rt-adm--platform .rt-adm__head { align-items: flex-start; }
+.rt-adm--platform .rt-adm__lead { max-width: 860px; }
+.rt-adm__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.rt-adm__actions:empty { display: none; }
+.rt-adm--platform .rt-adm__actions .button { height: 40px; padding: 0 16px; font-size: 14px; white-space: nowrap; }
+@media (max-width: 575px) { .rt-adm__actions { width: 100%; } .rt-adm__actions .button { flex: 1 1 auto; } }
+/* tables: a 24px gutter between columns, numbers on the right, and a row that opens its record is one big link with a hover */
+@media (min-width: 576px) {
+  .rt-adm--platform .rt-adm-table { width: calc(100% + 32px); margin: 0 -16px; }
+  .rt-adm--platform .rt-adm-table th, .rt-adm--platform .rt-adm-table td { padding: 12px 16px; }
+  .rt-adm--platform .rt-adm-table th.rt-adm-num, .rt-adm--platform .rt-adm-table td.rt-adm-num-cell { text-align: right; }
+  .rt-adm--platform .rt-adm-table th.rt-adm-num .rt-adm-sort { margin-left: auto; }
+  .rt-adm--platform .rt-adm-table tbody tr { transition: background-color 120ms ease; }
+  .rt-adm--platform .rt-adm-table tbody tr:hover { background: var(--rt-c-soft); }
+  .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) { position: relative; cursor: pointer; }
+  .rt-adm--platform .rt-adm-table tbody td:first-child a.rt-adm-strong::after { content: ""; position: absolute; inset: 0; }
+  .rt-adm--platform .rt-adm-table tbody td :is(button, a, input, label, .rt-rowmenu):not(td:first-child > a.rt-adm-strong) { position: relative; z-index: 1; }
+  /* a row that opens a record ends in a chevron (unless its last cell holds row actions) */
+  .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) td:last-child:not(:has(.rt-rowmenu, button)) { padding-right: 40px; }
+  .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) td:last-child:not(:has(.rt-rowmenu, button))::after { content: ""; position: absolute; top: 50%; right: 14px; width: 14px; height: 14px; margin-top: -7px; background: var(--rt-c-muted); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; pointer-events: none; }
+}
+/* sort buttons are a proper touch target */
+.rt-adm--platform .rt-adm-sort { min-height: 24px; }
+@media (pointer: coarse) { .rt-adm--platform .rt-adm-sort { min-height: 32px; } }
+/* row actions: one 32px size (the "..." menu and the move arrows) */
+.rt-adm--platform .rt-rowmenu__btn { width: 32px; height: 32px; }
+.rt-adm--platform .rt-adm-cat__move { width: 32px; height: 32px; }
+/* status badges and tags: one 22px height */
+.rt-adm--platform .rt-adm-status, .rt-adm--platform .rt-adm-tag { padding: 1px 8px; line-height: 18px; }
+/* stat cards: the same padding as the cards under them */
+.rt-adm--platform .rt-acc__stats .rt-tps__keyfact { padding: 20px 24px; }
+.rt-adm--platform .rt-acc__stats .rt-benefit__icon svg { width: 18px; height: 18px; }
+/* card headers: title left, actions right, 16px to the body */
+.rt-adm--platform .rt-acc__cardhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin-bottom: 16px; }
+.rt-adm--platform .rt-acc__cardhead > .rt-acc__h2 { margin: 0; }
+
+/* ===================================================================================================
+   ADMIN STAGE 3 (platform admin only): detail pages, the Dashboard's columns, Categories, form rhythm and a sticky Save bar.
+   =================================================================================================== */
+/* detail pages (course, provider): a main column and a 340px side column, so cards of different heights never leave a hole */
+.rt-adm-detail { display: grid; gap: 16px; align-items: start; }
+.rt-adm-detail > div.rt-adm-detail__main, .rt-adm-detail > aside.rt-adm-detail__side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+@media (min-width: 1100px) { .rt-adm-detail { grid-template-columns: minmax(0, 1fr) 340px; } }
+.rt-adm--platform .rt-adm-hero .rt-adm__h1 { font-size: 24px; } /* one title size on every detail page */
+.rt-adm-ml { margin-left: 6px; }
+/* Dashboard: two columns that stack their own cards (work on the left, what happened on the right) */
+.rt-adm-dash { display: grid; gap: 16px; align-items: stretch; }
+.rt-adm-dash > * { min-width: 0; }
+@media (min-width: 1100px) {
+  .rt-adm-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* a card left alone in the last row (live hides the demo Sessions at risk card) takes the full width, so no empty slot beside it */
+  .rt-adm-dash > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+/* cards side by side are the same height */
+.rt-adm--platform .rt-adm-grid2 { align-items: stretch; }
+/* Categories: rows line up with their 32px buttons, the description has room, and a group shows that it opens */
+.rt-adm--platform .rt-adm-cat > li { align-items: center; }
+.rt-adm--platform .rt-adm-cat > li:has(> details) { align-items: start; }
+.rt-adm--platform .rt-adm-cat__group summary { min-height: 32px; list-style: none; }
+.rt-adm--platform .rt-adm-cat__group summary::-webkit-details-marker { display: none; }
+.rt-adm--platform .rt-adm-cat__group summary::before { content: ""; flex: none; width: 14px; height: 14px; background: var(--rt-c-muted); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; transition: transform 150ms ease; }
+.rt-adm--platform .rt-adm-cat__group[open] > summary::before { transform: rotate(90deg); }
+.rt-adm--platform .rt-acc__card > .rt-acc__note + .rt-adm-cat { margin-top: 16px; }
+.rt-adm--platform .rt-adm-cat__add { margin-top: 16px; }
+@media (prefers-reduced-motion: reduce) { .rt-adm--platform .rt-adm-cat__group summary::before { transition: none; } }
+/* forms: 20px between fields */
+.rt-adm--platform .rt-acc__form { gap: 20px; }
+/* long forms (Site content, Platform settings): the Save row stays in view at the bottom of the screen while the form is longer
+   than the window, then settles at the form's end */
+.rt-adm--platform .rt-adm-content__save { position: sticky; bottom: 0; z-index: 3; padding: 12px 16px; border: 1px solid var(--rt-c-line); border-radius: 12px; background: var(--rt-c-surface); box-shadow: 0 -6px 16px rgba(20, 3, 66, 0.06); }
+
+/* ===================================================================================================
+   ADMIN RE-CHECK FIXES (platform admin only), from the audit's re-check of stages 1 to 3.
+   =================================================================================================== */
+/* N5: the table footer's Rows select matches its 32px pager buttons; Payouts' date field in a card header is 40px (C2) */
+.rt-adm--platform .rt-adm-pager__size .rt-field-dd .rt-cat-dd__trigger { height: 32px; }
+.rt-adm--platform .rt-acc__cardhead .rt-datefield__btn { height: 40px; }
+/* C12: an empty state's line stays short and balanced (no lone last word) */
+.rt-adm--platform .rt-state__text { max-width: 420px; text-wrap: balance; }
+/* C15: the Demo data tag is a 22px tag like the others */
+.rt-adm--platform .rt-demo-tag { padding: 1px 10px; line-height: 18px; }
+/* N6: a notice is always the full width of its column */
+.rt-adm--platform .rt-acc__notice { align-self: stretch; }
+/* G7: the page content stops growing on wide screens */
+.rt-adm--platform .rt-adm__main > * { max-width: 1440px; }
+/* G8, G9, N3: one header height on desktop (tabs start at the same place on every page) and the main action stays at the top
+   right beside the title instead of dropping under the description */
+@media (min-width: 992px) {
+  .rt-adm--platform .rt-adm__head { flex-wrap: nowrap; min-height: 88px; }
+  .rt-adm--platform .rt-adm__head > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .rt-adm--platform .rt-adm__actions { flex: none; }
+}
+/* G10: a page's extra explanation is no wider than its description */
+.rt-adm--platform .rt-adm-help { max-width: 860px; }
+/* I2: a clear focus ring on search boxes; a focused link keeps its weight */
+.rt-adm--platform .rt-adm-search input:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; box-shadow: none; }
+.rt-adm--platform a.rt-adm-strong:focus, .rt-adm--platform a.rt-adm-strong:focus-visible { font-weight: 600; }
+/* I4: row menus: room for their longest item, 36px items, a divider above the destructive one */
+.rt-adm--platform .rt-rowmenu__list { min-width: 220px; }
+.rt-adm--platform .rt-rowmenu__list :is(button, a)[role="menuitem"] { min-height: 36px; }
+.rt-adm--platform .rt-rowmenu__list li:has(> .-danger) { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--rt-c-line); }
+.rt-adm--platform .rt-rowmenu__list li:has(> .-danger) ~ li:has(> .-danger) { margin-top: 0; padding-top: 0; border-top: 0; }
+/* I6: the chosen option in a dropdown shows its tick only, not a tick and a bar */
+.rt-adm--platform .rt-cat-dd__option.is-active::before { opacity: 0; }
+/* R7: the stat tiles are 2 x 2 between phone and wide desktop, never 3 + 1; R6: one column on the narrowest phones */
+@media (min-width: 576px) and (max-width: 1199px) { .rt-adm--platform .rt-acc__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 399px) { .rt-adm--platform .rt-acc__stats { grid-template-columns: minmax(0, 1fr); } }
+/* R8: below 1200px the top bar keeps the avatar only, so nothing wraps */
+@media (max-width: 1199px) { .rt-adm--platform .rt-adm__mewho, .rt-adm--platform .rt-adm__site { display: none; } }
+@media (max-width: 575px) {
+  /* R2: filter pills stay on one row that scrolls sideways */
+  .rt-adm--platform .rt-acc__tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .rt-adm--platform .rt-acc__tabs::-webkit-scrollbar { display: none; }
+  .rt-adm--platform .rt-acc__tabs .rt-tr__filter { flex: none; }
+  /* R1, R5, N9: in a table's phone cards the first column is the card's heading: full width, left aligned, its line below */
+  .rt-adm--platform .rt-biz__table td:first-child { display: block; text-align: left; }
+  .rt-adm--platform .rt-biz__table td:first-child small { display: block; margin: 2px 0 0; }
+}
+/* N9: a cell's lines stay left aligned (numbers stay right) */
+@media (min-width: 576px) { .rt-adm--platform .rt-adm-table td { text-align: left; } .rt-adm--platform .rt-adm-table td.rt-adm-num-cell { text-align: right; } }
+/* C18, N4: form blocks inside a card are 20px apart; side-by-side fields keep their inputs level whatever their hint; a date
+   field with a button beside it (Legal: Last updated + Today) is as wide as the one next to it */
+.rt-adm--platform .rt-acc__card > :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) + :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) { margin-top: 20px; }
+.rt-adm--platform .rt-acc__card > .rt-acc__cardhead + .rt-field { margin-top: 0; }
+.rt-adm--platform .rt-adm-fees__grid { align-items: end; }
+.rt-adm--platform .rt-adm-inline__row .rt-datefield { flex: 1 1 auto; }
+/* one textarea size: it starts at 120px and grows with its words (to 480px, then scrolls) */
+.rt-adm--platform .rt-field textarea { min-height: 120px; max-height: 480px; field-sizing: content; }
+/* C11: the card's row tools line up as one group of 32px buttons; "+ Add" is a small button under the cards */
+.rt-adm--platform .rt-adm-content__rowtools { display: flex; align-items: center; gap: 6px; }
+.rt-adm--platform .rt-adm-addrow { justify-self: start; }
+/* C14: the status line is a notice; Site content's cards are 20px apart */
+.rt-adm--platform .rt-adm-content__status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.rt-adm--platform .rt-adm-content__status .rt-acc__note { margin: 0; color: inherit; }
+.rt-adm--platform .rt-acc__stack { gap: 20px; }
+/* an empty "saved" line takes no room until it has something to say (it stays in the page for screen readers) */
+.rt-adm--platform .rt-acc__stack > p[role="status"]:empty { position: absolute; }
+/* G1, G2, G12: the admin sidebar (from 992px). Its hide button stays pinned at the top while the menu scrolls; hiding turns it
+   into a 64px rail of icons (each with its name as a tooltip) and the page keeps its 32px gutter; the top bar's search is
+   centred, so it no longer depends on the sidebar's width */
+@media (min-width: 992px) {
+  .rt-adm--platform .rt-adm__sidetools { position: sticky; top: -12px; z-index: 2; margin: -12px -12px 4px; padding: 12px 16px 4px; background: var(--rt-c-surface); }
+  .rt-adm--platform .rt-adm__find { margin: 0 auto; }
+  .rt-adm--platform.is-sideclosed .rt-adm__body { grid-template-columns: 64px minmax(0, 1fr); }
+  .rt-adm--platform.is-sideclosed .rt-adm__side { display: block; padding: 12px 8px 32px; overflow-x: hidden; }
+  .rt-adm--platform.is-sideclosed .rt-adm__main { padding-left: 32px; }
+  .rt-adm--platform.is-sideclosed .rt-adm__sideopen { display: none; }
+  .rt-adm--platform.is-sideclosed .rt-adm__sidetools { justify-content: center; margin: -12px -8px 4px; padding: 12px 0 4px; }
+  .rt-adm--platform.is-sideclosed .rt-adm__grouplabel { display: none; }
+  .rt-adm--platform.is-sideclosed .rt-adm__group ul[hidden] { display: block; }
+  .rt-adm--platform.is-sideclosed .rt-adm__group + .rt-adm__group { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rt-c-line); }
+  .rt-adm--platform.is-sideclosed .rt-adm__link { position: relative; justify-content: center; padding: 10px 0; }
+  .rt-adm--platform.is-sideclosed .rt-adm__link > span:not(.rt-adm__count) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rt-adm--platform.is-sideclosed .rt-adm__link .rt-adm__count { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; line-height: 18px; }
+}
+/* Dashboard: 20px between cards, tiles padded like the cards, queue counts as right-aligned count badges */
+.rt-adm--platform .rt-adm-dash { gap: 20px; }
+.rt-adm--platform .rt-acc__stats .rt-tps__keyfact { padding: 24px; }
+.rt-adm--platform .rt-adm-queue__label { flex: 1 1 auto; }
+.rt-adm--platform .rt-adm-queue__n.rt-adm__count { min-width: 28px; margin-left: 0; text-align: center; }
+/* Activity log: From and To sit inside their fields, so the toolbar is one even row; the person's role tag sits beside their
+   name instead of under it, and the name lines stay left aligned at every width */
+.rt-datefield__prefix { font-weight: 600; color: var(--rt-c-text); }
+.rt-datefield__pop.-right { right: 0; left: auto; }
+.rt-adm--platform .rt-adm-activity__dates label.rt-sr + .rt-datefield { margin: 0; }
+.rt-adm--platform .rt-adm-activity__dates .rt-datefield { min-width: 170px; }
+.rt-adm--platform .rt-adm-activity__who { display: inline-block; vertical-align: top; text-align: left; }
+.rt-adm--platform .rt-adm-activity__as { display: inline-block; margin: 0 0 0 8px; vertical-align: top; }
+/* Customer reviews: one line of the review's text in the list (the full text is in Edit), so rows stay one height */
+.rt-adm--platform .rt-biz__table td small.rt-adm-rv__text { -webkit-line-clamp: 1; }
+/* Course reviews: 20px between review cards */
+.rt-adm--platform .rt-adm-items { gap: 20px; }
+/* C1, C2: the admin's pop-ups (outside its page, marked by body.rt-adm-open) use its sizes: 40px buttons, 44px fields */
+.rt-adm-open .rt-tq-sheet .button.-md { height: 40px; padding: 0 16px; font-size: 14px; }
+.rt-adm-open .rt-tq-sheet .rt-field select, .rt-adm-open .rt-tq-sheet .rt-field input:not([type="checkbox"]):not([type="radio"]),
+.rt-adm-open .rt-tq-sheet .rt-field-dd .rt-cat-dd__trigger, .rt-adm-open .rt-tq-sheet .rt-datefield__btn { height: 44px; }
+/* C4: a page's sections are an underline tab bar (the status filters stay pills) */
+.rt-adm--platform .rt-adm-sections { gap: 4px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-adm--platform .rt-adm-sections .rt-tr__filter { height: 40px; margin-bottom: -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--rt-c-muted); box-shadow: none; }
+.rt-adm--platform .rt-adm-sections .rt-tr__filter:hover { color: var(--rt-c-text); }
+.rt-adm--platform .rt-adm-sections .rt-tr__filter.is-on { border-bottom-color: var(--rt-c-brand); background: none; color: var(--rt-c-brand); }
+/* Financial settings: the three fees side by side (Payout day no longer alone in half a row) */
+@media (min-width: 992px) { .rt-adm--platform .rt-adm-fees .rt-adm-fees__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Platform settings: 16px after the notice, 20px after each counter, and the Google preview stays in view beside the fields */
+.rt-adm--platform .rt-acc__notice + .rt-adm-seo { margin-top: 16px; }
+.rt-adm--platform .rt-adm-seo__count { margin: 4px 0 20px; }
+@media (min-width: 1200px) { .rt-adm--platform .rt-adm-seo__preview { position: sticky; top: 84px; } }
+/* Transactions: the provider filter starts its row (not alone on the right), and its list is wide enough for long names */
+.rt-adm--platform .rt-adm-toolbar__end.-start { margin-left: 0; margin-right: auto; }
+.rt-adm--platform .rt-adm-select--wide .rt-cat-dd__trigger { min-width: 240px; }
+.rt-adm--platform .rt-adm-select--wide .rt-cat-dd__panel { min-width: 300px; }
+/* N11: on phones a number cell's breakdown (Payouts: Held back) goes on its own line under the value, right aligned */
+@media (max-width: 575px) {
+  .rt-adm--platform .rt-biz__table td.rt-adm-num-cell { flex-wrap: wrap; }
+  .rt-adm--platform .rt-biz__table td.rt-adm-num-cell small { flex-basis: 100%; margin: 2px 0 0; text-align: right; }
+}
+/* Re-check 2. Course detail: the course's words at a comfortable reading width; a long video address on one line with "…" */
+.rt-adm--platform .rt-adm-detail__main .rt-adm-read dd { max-width: 760px; }
+.rt-adm--platform .rt-adm-detail__side .rt-pws-ce__url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+/* the icon rail's waiting counts are small dots above the icon's corner, not numbers over it */
+@media (min-width: 992px) {
+  .rt-adm--platform.is-sideclosed .rt-adm__link .rt-adm__count { top: 2px; right: 10px; min-width: 8px; width: 8px; height: 8px; padding: 0; overflow: hidden; font-size: 0; background: var(--rt-c-brand); }
+}
+/* Financial settings: every notice is the form's full width */
+.rt-adm--platform .rt-adm-fees > .rt-acc__notice { justify-self: stretch; }
+/* Activity log: the date stays on one line; a long email ends with "…" (the full one is in its tooltip); on phones the person
+   takes the card's full width, so the name stays on one line */
+.rt-adm--platform .rt-adm-table td:first-child:not(:has(a, button)) { white-space: nowrap; }
+.rt-adm--platform .rt-adm-activity__who { max-width: 100%; }
+.rt-adm--platform .rt-adm-activity__who small { display: block; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 575px) {
+  .rt-adm--platform .rt-biz__table td:has(> .rt-adm-activity__who) { flex-wrap: wrap; }
+  .rt-adm--platform .rt-biz__table td > .rt-adm-activity__who { flex: 1 1 100%; text-align: left; }
+}
+/* Dashboard (its own review): every row in a card's list is the same height (the first one keeps its top padding); activity
+   avatars sit in the middle of their row; a card's note sits 16px under its header like everything else; a header's link is a
+   32px target */
+.rt-adm--platform .rt-adm-queues li:first-child .rt-adm-queue { padding-top: 14px; }
+.rt-adm--platform .rt-adm-list li:first-child, .rt-adm--platform .rt-adm-feed li:first-child { padding-top: 12px; }
+.rt-adm--platform .rt-adm-feed li { align-items: center; }
+.rt-adm--platform .rt-acc__cardhead + .rt-adm-cardnote { margin-top: 0; }
+.rt-adm--platform .rt-acc__cardhead .fb-textlink { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
+
 /* Header: when the search box opens, the menu slides left just far enough to make room for it (HomeHeader sets
    --rt-menu-shift), in step with the box, and slides back when it closes. The menu always stays visible. */
 .header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1); }
 @media (prefers-reduced-motion: reduce) { .header .menu__nav { transition: none; } }
+/* Dashboard: the latest orders' course and reference stay on one line, ending with "…" (the full line is in its tooltip) */
+.rt-adm--platform .rt-adm-list__main { flex: 1 1 auto; min-width: 0; }
+.rt-adm--platform .rt-adm-list__main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-adm--platform .rt-adm-list__side { flex: 0 0 auto; flex-wrap: nowrap; }
+/* Dashboard grid: every card header is the height of its header link, so the titles in a row line up */
+.rt-adm--platform .rt-adm-dash .rt-acc__cardhead { min-height: 32px; }

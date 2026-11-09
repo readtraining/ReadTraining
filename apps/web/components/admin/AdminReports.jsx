@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { EmptyState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { modeLabel } from "@/lib/courseModes";
 import { formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { Said, Stats, TableSkeleton, Tabs, useSort, SortTh } from "./adminParts";
+import { Said, Stats, TableSkeleton, Tabs, useSort, SortTh, Empty, HeaderAction } from "./adminParts";
 
 const copy = A.reports;
 const DAY = 86400000;
@@ -82,7 +81,7 @@ export default function AdminReports() {
       <Said text={said} />
       <div className="rt-adm-toolbar">
         <Tabs tabs={RANGES.map((key) => ({ key, label: copy.ranges[key] }))} value={range} onChange={setRange} label={copy.range} />
-        <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={download} disabled={!groups.length}>{copy.export}</button>
+        <HeaderAction><button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={download} disabled={!groups.length}>{copy.export}</button></HeaderAction>
       </div>
       <Stats
         label={copy.ranges[range]}
@@ -114,15 +113,15 @@ export default function AdminReports() {
         </div>
         {groups.length ? (
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><SortTh label={copy.groups[by]} col="name" sorter={sorter} /><SortTh label={copy.columns.orders} col="orders" sorter={sorter} numeric /><SortTh label={copy.columns.sales} col="sales" sorter={sorter} numeric /><SortTh label={copy.columns.commission} col="commission" sorter={sorter} numeric /><th scope="col">{copy.columns.share}</th></tr></thead>
+            <thead><tr><SortTh label={copy.groups[by]} col="name" sorter={sorter} /><SortTh label={copy.columns.orders} col="orders" sorter={sorter} numeric right /><SortTh label={copy.columns.sales} col="sales" sorter={sorter} numeric right /><SortTh label={copy.columns.commission} col="commission" sorter={sorter} numeric right /><th scope="col" className="rt-adm-num">{copy.columns.share}</th></tr></thead>
             <tbody>
               {sorter.apply(groups, REPORT_SORT).map((g) => (
                 <tr key={g.name}>
                   <td data-label={copy.groups[by]}><span className="rt-adm-strong">{g.name}</span></td>
-                  <td data-label={copy.columns.orders}>{g.orders}</td>
-                  <td data-label={copy.columns.sales}>{formatPrice(g.sales)}</td>
-                  <td data-label={copy.columns.commission}>{formatPrice(g.commission)}</td>
-                  <td data-label={copy.columns.share}>
+                  <td data-label={copy.columns.orders} className="rt-adm-num-cell">{g.orders}</td>
+                  <td data-label={copy.columns.sales} className="rt-adm-num-cell">{formatPrice(g.sales)}</td>
+                  <td data-label={copy.columns.commission} className="rt-adm-num-cell">{formatPrice(g.commission)}</td>
+                  <td data-label={copy.columns.share} className="rt-adm-num-cell">
                     <span className="rt-adm-share"><span style={{ width: `${(g.sales / sales) * 100}%` }} aria-hidden="true"></span></span>
                     <small>{Math.round((g.sales / sales) * 100)}%</small>
                   </td>
@@ -131,7 +130,7 @@ export default function AdminReports() {
             </tbody>
           </table>
         ) : (
-          <EmptyState inCard title={copy.none} />
+          <Empty inCard kind="none" title={copy.none} text="Try a different date range." />
         )}
         <p className="rt-acc__note rt-adm-mt">{copy.commissionNote}</p>
       </section>

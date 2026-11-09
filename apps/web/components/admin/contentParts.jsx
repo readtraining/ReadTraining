@@ -43,6 +43,17 @@ export const field = (id, label, hint, error, input) => (
 );
 export const describedBy = (id, hint, error) => [hint && `${id}-hint`, error && `${id}-e`].filter(Boolean).join(" ") || undefined;
 
+// A card's Move up / Move down / Remove, as 32px icon buttons (the Categories arrows' look); `what` names the card for screen readers.
+export function RowTools({ what, onUp, onDown, onRemove, first, last, removeLabel = "Remove" }) {
+  return (
+    <div className="rt-adm-content__rowtools">
+      <button type="button" className="rt-adm-cat__move" onClick={onUp} disabled={first} aria-label={`Move up: ${what}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
+      <button type="button" className="rt-adm-cat__move" onClick={onDown} disabled={last} aria-label={`Move down: ${what}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
+      {onRemove && <button type="button" className="rt-adm-cat__move rt-adm-danger" onClick={onRemove} aria-label={`${removeLabel}: ${what}`}><i className="icon-bin text-14" aria-hidden="true"></i></button>}
+    </div>
+  );
+}
+
 // A short stable id for a row in a list that can be reordered
 let rowId = 0;
 export const newRowId = () => `r${++rowId}`;
