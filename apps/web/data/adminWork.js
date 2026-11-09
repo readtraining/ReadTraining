@@ -9,7 +9,7 @@
 
 export const adminWork = {
   requests: {
-    title: "Requests and fulfilment",
+    title: "Requests",
     lead: "Everything visitors ask us for: \"apply for me\", training and group quotes, test bookings and contact messages.",
     search: "Search by reference, name or email",
     tabs: { open: "Open", mine: "Assigned to me", done: "Done", all: "All" },

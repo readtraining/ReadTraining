@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
 import DateField from "./DateField";
 import { AdminTag } from "./AdminStatus";
 
@@ -143,11 +143,11 @@ export default function AdminActivity() {
                 })}
               </tbody>
             </table>
+            <Pager paging={paging} total={list.data.total} label="activity" />
           </div>
-          <Pager paging={paging} total={list.data.total} label="activity" />
         </>
       ) : (
-        <EmptyState title={filtered ? copy.none : copy.empty} action={filtered ? { label: copy.clear, onClick: clear } : undefined} />
+        <Empty kind={filtered ? "none" : "empty"} title={filtered ? copy.none : copy.empty} text={filtered ? undefined : "Sign-ins, changes and refused attempts show here as they happen."} action={filtered ? { label: copy.clear, onClick: clear } : undefined} />
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { Choice } from "@/components/providerWorkspace/providerParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -12,7 +12,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery } from "./adminParts";
+import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery, Empty } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -91,6 +91,8 @@ export default function AdminCoupons() {
   const rows = sorter.apply(list.data?.coupons ?? [], COUPON_SORT);
   const c = copy.columns;
 
+  // nothing at all yet: the empty state has the button, so the toolbar doesn't repeat it
+  const blank = Boolean(list.data) && !rows.length && !search && tab === "all";
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
@@ -98,7 +100,7 @@ export default function AdminCoupons() {
         <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: key === "all" ? total : counts?.[key] }))} value={tab} onChange={setTab} label="Show coupons" />
         <div className="rt-adm-toolbar__end">
           <Search value={q} onChange={setQ} label={copy.search} />
-          {canEdit && <button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button>}
+          {canEdit && !blank && <button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button>}
         </div>
       </div>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
@@ -131,9 +133,9 @@ export default function AdminCoupons() {
           </table>
         </div>
       ) : search || tab !== "all" ? (
-        <EmptyState title={copy.none} action={search ? { label: copy.clear, onClick: () => setQ("") } : undefined} />
+        <Empty kind="none" title={copy.none} action={search ? { label: copy.clear, onClick: () => setQ("") } : undefined} />
       ) : (
-        <EmptyState icon="icon-coupon" title={copy.empty} text={copy.emptyText} action={canEdit ? { label: copy.add, onClick: () => setSheet({}) } : undefined} />
+        <Empty title={copy.empty} text={copy.emptyText} action={canEdit ? { label: copy.add, onClick: () => setSheet({}) } : undefined} />
       )}
       {rows.length > 0 && <p className="rt-acc__note">{copy.usedNote}</p>}
 

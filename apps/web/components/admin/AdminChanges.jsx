@@ -4,8 +4,7 @@ import React, { useEffect, useState } from "react";
 import { admin as A } from "@/data/admin";
 import { actOnChange, ago, useAdmin } from "@/lib/admin";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Tabs, formatWhen, getQuery, setQuery, Said, TableSkeleton } from "./adminParts";
-import { EmptyState } from "@/components/states/States";
+import { Tabs, formatWhen, getQuery, setQuery, Said, TableSkeleton, Empty } from "./adminParts";
 import { AdminStatus, AdminTag, AdminDue } from "./AdminStatus";
 
 const copy = A.changes;
@@ -75,7 +74,7 @@ export default function AdminChanges() {
           })}
         </ul>
       ) : (
-        <EmptyState title={copy.empty} />
+        <Empty title={copy.empty} text="Cancellations, date changes and card disputes on bookings show here." />
       )}
     </div>
   );

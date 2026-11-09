@@ -8,9 +8,8 @@ import { addRequestNote, advanceRequest, assignRequest, cancelRequest, nextLabel
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { formatWhen, Said, DetailSkeleton } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { EmptyState } from "@/components/states/States";
 import { AdminStatus, AdminDue } from "./AdminStatus";
 
 const copy = W.requests;
@@ -34,7 +33,7 @@ export default function AdminRequest({ reference }) {
   const noteRef = useRef(null);
   if (!data) return <DetailSkeleton />;
   const r = data.requests.find((x) => x.ref === reference);
-  if (!r) return <EmptyState title="This request was not found." action={{ href: "/admin/requests", label: d.back }} />;
+  if (!r) return <Empty kind="missing" title="This request was not found." action={{ href: "/admin/requests", label: d.back }} />;
 
   const steps = copy.steps[r.kind];
   const at = steps.indexOf(r.status);

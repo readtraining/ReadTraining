@@ -6,9 +6,9 @@ import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Stats, formatWhen, DetailSkeleton } from "./adminParts";
+import { Stats, formatWhen, DetailSkeleton, Empty } from "./adminParts";
 import { useAdminAccess } from "@/lib/adminContext";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { AdminStatus } from "./AdminStatus";
 import { SHOW_DEMO } from "@/lib/demo";
 
@@ -44,7 +44,7 @@ function RecentActivity() {
           ))}
         </ul>
       ) : (
-        <EmptyState inCard title={copy.activityNone} />
+        <Empty inCard icon="activity" title="Nothing has happened yet" text={copy.activityNone} />
       )}
     </section>
   );
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
               ))}
             </ul>
           ) : (
-            <EmptyState inCard title={copy.atRiskNone} />
+            <Empty inCard icon="sessions" title="All set" text={copy.atRiskNone} />
           )}
           {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
         </section>
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
                 ))}
               </ul>
             ) : latestOrders.isLoading ? null : (
-              <EmptyState inCard title={A.orders.empty} text={A.orders.emptyText} />
+              <Empty inCard icon="orders" title={A.orders.empty} text={A.orders.emptyText} />
             )}
             <Link href="/admin/orders" className="fb-textlink rt-adm-mt">{copy.allOrders}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
           </section>

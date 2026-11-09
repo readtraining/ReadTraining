@@ -4,14 +4,14 @@ import React, { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { CloseAccountSheet } from "./AdminClosures";
 
@@ -35,7 +35,7 @@ export default function AdminLearner({ id }) {
   const [said, setSaid] = useState("");
 
   if (record.isLoading) return <DetailSkeleton />;
-  if (record.error?.data?.code === "NOT_FOUND" || record.error?.data?.code === "BAD_REQUEST") return <EmptyState title={d.notFound} action={{ href: "/admin/learners", label: d.back }} />;
+  if (record.error?.data?.code === "NOT_FOUND" || record.error?.data?.code === "BAD_REQUEST") return <Empty kind="missing" title={d.notFound} action={{ href: "/admin/learners", label: d.back }} />;
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const l = record.data;
   const can = (p) => me?.permissions?.includes(p);

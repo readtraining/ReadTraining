@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
 import { formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 
@@ -72,11 +72,11 @@ export default function AdminProviders() {
                 ))}
               </tbody>
             </table>
+            <Pager paging={paging} total={list.data.total} label="providers" />
           </div>
-          <Pager paging={paging} total={list.data.total} label="providers" />
         </>
       ) : (
-        <EmptyState title={filtered ? copy.none : copy.empty} action={filtered ? { label: copy.clear, onClick: () => { setQ(""); setSearch(""); setTab("all"); paging.restart(); } } : undefined} />
+        <Empty kind={filtered ? "none" : "empty"} title={filtered ? copy.none : copy.empty} text={filtered ? undefined : "Training providers who apply show here."} action={filtered ? { label: copy.clear, onClick: () => { setQ(""); setSearch(""); setTab("all"); paging.restart(); } } : undefined} />
       )}
     </div>
   );

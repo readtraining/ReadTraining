@@ -6,8 +6,7 @@ import { admin as A } from "@/data/admin";
 import { cancelSession, markJoiningSent, setSalesClosed, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu } from "./adminParts";
-import { EmptyState } from "@/components/states/States";
+import { Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = A.sessions;
@@ -137,10 +136,10 @@ export default function AdminSessions() {
               ))}
             </tbody>
           </table>
-          <div className="rt-adm-more"><Pager paging={pages} total={list.length} label="sessions" /></div>
+          <Pager paging={pages} total={list.length} label="sessions" />
         </div>
       ) : (
-        <EmptyState title="No sessions here." />
+        <Empty title="No sessions here." text="Course dates from every provider show here." />
       )}
 
       <Sheet open={Boolean(cancelling)} onClose={() => setCancelling(null)} title={copy.cancelTitle} closeLabel="Close">

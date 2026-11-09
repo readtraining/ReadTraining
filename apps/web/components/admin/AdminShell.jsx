@@ -17,7 +17,7 @@ import { actAsAdmin } from "@/lib/adminStore";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { getSupabase } from "@/lib/supabase/client";
 import { SHOW_DEMO } from "@/lib/demo";
-import { EmptyState } from "@/components/states/States";
+import { AdminPage, Empty } from "./adminParts";
 
 const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -159,7 +159,8 @@ export default function AdminShell({ current, title, lead, actions = null, detai
               {actions}
             </div>
           )}
-          {demoOff ? <EmptyState title={demoOff[0]} text={demoOff[1]} /> : children}
+          {/* the page key lets an empty state show this page's own icon */}
+          <AdminPage.Provider value={current}>{demoOff ? <Empty title={demoOff[0]} text={demoOff[1]} /> : children}</AdminPage.Provider>
         </main>
       </div>
     </div>

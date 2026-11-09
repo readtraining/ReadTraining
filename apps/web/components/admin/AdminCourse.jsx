@@ -12,8 +12,8 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
-import { Said, DetailSkeleton, formatWhen } from "./adminParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { Said, DetailSkeleton, formatWhen, Empty } from "./adminParts";
+import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.catalogue;
@@ -42,7 +42,7 @@ export default function AdminCourse({ id }) {
   const formRef = useRef(null);
   const c = query.data;
 
-  if (!courseId || query.error?.data?.code === "NOT_FOUND") return <EmptyState title="This course was not found." text="It may have been deleted." action={{ href: "/admin/catalogue", label: d.back }} />;
+  if (!courseId || query.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title="This course was not found." action={{ href: "/admin/catalogue", label: d.back }} />;
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!c) return <DetailSkeleton />;
 
@@ -169,7 +169,7 @@ export default function AdminCourse({ id }) {
                 </li>
               ))}
             </ul>
-          ) : <EmptyState inCard title={d.childrenNone} />}
+          ) : <Empty inCard title="No provider courses yet" text={d.childrenNone} />}
         </section>
       )}
 

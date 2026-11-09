@@ -320,7 +320,12 @@ export const admin = {
     ownQueue: "Sent by you",
     ownQueueSole: "You sent this yourself. Open it to decide, with a reason.",
     dueDays: 2,
-    empty: { waiting: "Nothing waiting. New courses and changes providers send show here.", changes: "No courses are waiting on their provider.", decided: "Nothing decided yet." },
+    // each tab's empty state: [title, line]
+    empty: {
+      waiting: ["Nothing waiting", "New courses, and changes to live courses, show here when providers send them."],
+      changes: ["Nothing waiting on providers", "Courses sent back for changes show here until the provider sends them again."],
+      decided: ["Nothing decided yet", "Courses you approve or send back show here."],
+    },
   },
 
   providers: {
@@ -535,6 +540,7 @@ export const admin = {
     covers: "What it covers",
     coversLink: "See what it covers",
     nothingPayable: "Nothing is payable yet.",
+    runs: "Payout runs",
     noOwed: "No provider has money in the ledger yet.",
   },
 

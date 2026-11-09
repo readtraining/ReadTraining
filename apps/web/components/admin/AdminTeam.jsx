@@ -4,12 +4,12 @@ import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { CheckRow } from "@/components/courses/RadioRow";
 import { CardChoice } from "@/components/providerWorkspace/providerParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh } from "./adminParts";
+import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = A.team;
@@ -115,7 +115,7 @@ export default function AdminTeam() {
             </tbody>
           </table>
         </div>
-      ) : <EmptyState title={copy.empty} />}
+      ) : <Empty title={copy.empty} text="Admins you invite show here." />}
 
       <AccessSheet form={form} setForm={setForm} switches={switches.filter((s) => grantable.includes(s))} presets={presets} canGiveFull={!fullLocked} grantable={grantable} limited={grantable.length < switches.length} maxLimit={myRefundLimit ?? 100000} onDone={done} />
       <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} onDone={done} />

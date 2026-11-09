@@ -4976,7 +4976,6 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-adm-select .rt-field-dd, .rt-adm-select .rt-field-dd.-compact, .rt-adm-select .rt-field-dd.-compact .rt-cat-dd__trigger { width: 100%; }
 .rt-adm-toolbar .rt-field-dd .rt-cat-dd__trigger { background: var(--rt-c-surface); }
 @media (max-width: 575px) { .rt-adm-toolbar__end { width: 100%; margin-left: 0; } .rt-adm-select, .rt-adm-select.-inline { flex: 1 1 100%; width: auto; } .rt-adm-toolbar__end .rt-adm-search { flex: 1 1 100%; } }
-.rt-adm-more { display: flex; justify-content: center; padding: 16px 0 12px; border-top: 1px solid var(--color-light-5); }
 .rt-adm-tablenote { margin: 16px 0 4px; }
 .rt-adm-muted { font-size: var(--rt-text-xs); color: var(--color-light-1); }
 .rt-adm-price { font-size: var(--rt-app-h3); font-weight: 700; color: var(--color-dark-1); }
@@ -7017,13 +7016,16 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-pager__size { display: flex; align-items: center; gap: 8px; margin-right: auto; }
 .rt-adm-pager__size label { margin: 0; }
 .rt-adm-pager__size .rt-field-dd { width: 88px; }
-.rt-adm-pager__size .rt-cat-dd__trigger { height: 36px; background: var(--rt-c-surface); }
+.rt-adm-pager__size .rt-cat-dd__trigger { height: 32px; background: var(--rt-c-surface); }
 .rt-adm-pager__nav { display: flex; align-items: center; gap: 6px; }
-.rt-adm-pager__nav button { min-width: 36px; height: 36px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
+.rt-adm-pager__nav button { min-width: 32px; height: 32px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
 .rt-adm-pager__nav button:hover:not(:disabled) { border-color: var(--rt-c-brand); color: var(--rt-c-brand); }
 .rt-adm-pager__nav button:disabled { opacity: 0.45; cursor: default; }
 .rt-adm-pager__where { padding: 0 8px; white-space: nowrap; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
 @media (max-width: 575px) { .rt-adm-pager__nav { width: 100%; justify-content: space-between; } .rt-adm-pager__nav button[aria-label] { display: none; } }
+/* the table footer: inside the table card, under a divider, the count on the left and the pages on the right (every list) */
+.rt-biz__tablecard > .rt-adm-pager { margin: 0 -24px -8px; padding: 12px 24px; border-top: 1px solid var(--color-light-5); }
+@media (max-width: 575px) { .rt-biz__tablecard > .rt-adm-pager { margin: 0 -16px -4px; padding: 12px 16px; } }
 /* text links inside the admin ("Activity log →", "All orders →", "Public profile ↗"): the marketing pages' link style, at the admin's
    body size */
 .rt-adm .fb-textlink { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand) !important; text-decoration: none; }
@@ -7132,3 +7134,34 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-bk__tags .rt-pill.-accent small { margin-left: 4px; font-weight: 400; }
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
 .rt-bk__inpkg i { color: var(--rt-c-success); }
+
+/* ===================================================================================================
+   ADMIN SIZES (platform admin only, .rt-adm--platform): one control height everywhere, so a toolbar row lines up.
+   Buttons 40px (32px small, for table rows and cards), every toolbar control 40px (search, dropdowns, date fields, filter pills,
+   the segmented control), form fields 44px. Colours, fonts and borders are unchanged; the public site, the learner and business
+   accounts and the provider workspace keep their own sizes.
+   =================================================================================================== */
+.rt-adm--platform .button.-md { height: 40px; padding: 0 16px; font-size: 14px; }
+.rt-adm--platform .button.-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+/* a page's main action is full size wherever it sits in a toolbar, even where it was drawn small */
+.rt-adm--platform .rt-adm-toolbar .button { height: 40px; padding: 0 16px; font-size: 14px; }
+.rt-adm--platform .rt-adm-search input { height: 40px; }
+.rt-adm--platform .rt-adm-toolbar .rt-cat-dd__trigger,
+.rt-adm--platform .rt-adm-toolbar .rt-field-dd.-compact .rt-cat-dd__trigger,
+.rt-adm--platform .rt-adm-toolbar .rt-datefield__btn { height: 40px; }
+.rt-adm--platform .rt-acc__tabs .rt-tr__filter { height: 40px; }
+.rt-adm--platform .rt-adm-seg { align-items: center; height: 40px; padding: 3px; gap: 2px; flex-wrap: nowrap; }
+.rt-adm--platform .rt-adm-seg button { height: 32px; padding: 0 12px; }
+/* form fields */
+.rt-adm--platform .rt-field select, .rt-adm--platform .rt-field input:not([type="checkbox"]):not([type="radio"]),
+.rt-adm--platform .rt-field-dd:not(.-compact) .rt-cat-dd__trigger, .rt-adm--platform .rt-datefield:not(.-compact) .rt-datefield__btn { height: 44px; }
+.rt-adm--platform .rt-adm-inline .button { height: 44px; } /* a Save next to a field matches the field */
+/* one notice in the admin: the same padding and radius, a left accent in its own colour and its icon (information, warning, done) */
+.rt-adm--platform .rt-acc__notice { position: relative; padding: 12px 16px 12px 44px; border-left: 3px solid var(--rt-c-brand); }
+.rt-adm--platform .rt-acc__notice::before { content: ""; position: absolute; left: 16px; top: 13px; width: 18px; height: 18px; background: var(--rt-c-brand); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+.rt-adm--platform .rt-acc__notice.-warn { border-left-color: var(--color-orange-6); }
+.rt-adm--platform .rt-acc__notice.-warn::before { background: var(--color-orange-6); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20z'/%3E%3Cpath d='M12 10v4M12 17v.01'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20z'/%3E%3Cpath d='M12 10v4M12 17v.01'/%3E%3C/svg%3E"); }
+.rt-adm--platform .rt-acc__notice.-ok { border-left-color: var(--rt-c-success); }
+.rt-adm--platform .rt-acc__notice.-ok::before { background: var(--rt-c-success); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8 12 3 3 5-6'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8 12 3 3 5-6'/%3E%3C/svg%3E"); }
+/* a heading between two cards (Payouts: Payout runs) */
+.rt-adm--platform .rt-adm-sectionh { margin: 12px 0 0; }

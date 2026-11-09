@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import ReviewStars from "@/components/customerReviews/ReviewStars";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { refreshReviews } from "@/app/admin/actions";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -13,7 +13,7 @@ import { formatDate } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, Said, TableSkeleton, Tabs } from "./adminParts";
+import { Pager, RowMenu, Said, TableSkeleton, Tabs, Empty, usePaging } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
@@ -56,6 +56,8 @@ export default function AdminCustomerReviews() {
   const setStatus = api.admin.reviews.setStatus.useMutation();
   const remove = api.admin.reviews.remove.useMutation();
   const list = api.admin.reviews.list.useQuery({ status: tab === "all" ? undefined : tab }, { placeholderData: (prev) => prev });
+  // a page at a time (there are hundreds): the list loads once, the pages are cut here
+  const pages = usePaging({ key: "", dir: -1 });
   const topics = useTopicOptions();
   const courseOf = (topic) => (topic ? topics.find((t) => t.value === topic)?.short || topic : copy.general);
 
@@ -89,15 +91,17 @@ export default function AdminCustomerReviews() {
   const c = copy.columns;
   const tabs = ["all", "published", "hidden", ...(counts?.pending ? ["pending"] : [])];
 
+  // nothing at all yet: the empty state has the button, so the toolbar doesn't repeat it
+  const blank = Boolean(list.data) && !rows.length && tab === "all";
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
       <p className="rt-acc__note rt-adm-help">{copy.legal}</p>
       <div className="rt-adm-toolbar">
-        <Tabs tabs={tabs.map((key) => ({ key, label: copy.tabs[key], count: counts ? (key === "all" ? counts.published + counts.hidden + counts.pending : counts[key]) : undefined }))} value={tab} onChange={setTab} label="Show reviews" />
+        <Tabs tabs={tabs.map((key) => ({ key, label: copy.tabs[key], count: counts ? (key === "all" ? counts.published + counts.hidden + counts.pending : counts[key]) : undefined }))} value={tab} onChange={(t) => { setTab(t); pages.restart(); }} label="Show reviews" />
         <div className="rt-adm-toolbar__end">
           {counts && <span className="rt-adm-muted">{copy.homeCount.replace("{n}", counts.home).replace("{max}", list.data.homeMax)}</span>}
-          {canEdit && <button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button>}
+          {canEdit && !blank && <button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button>}
         </div>
       </div>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
@@ -111,7 +115,7 @@ export default function AdminCustomerReviews() {
           <table className="rt-biz__table rt-adm-table">
             <thead><tr><th scope="col">{c.name}</th><th scope="col">{c.course}</th><th scope="col">{c.date}</th><th scope="col">{c.home}</th><th scope="col">{c.status}</th>{canEdit && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
             <tbody>
-              {rows.map((x) => (
+              {rows.slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((x) => (
                 <tr key={x.id}>
                   <td data-label={c.name} className="rt-adm-rv__who">
                     <span className="rt-adm-strong">{x.name}</span>
@@ -120,7 +124,7 @@ export default function AdminCustomerReviews() {
                   </td>
                   <td data-label={c.course}>{courseOf(x.topic)}</td>
                   <td data-label={c.date}>{dateText(x)}</td>
-                  <td data-label={c.home}>{x.onHome ? copy.onHome : "—"}</td>
+                  <td data-label={c.home}>{x.onHome ? copy.onHome : "–"}</td>
                   <td data-label={c.status}><AdminStatus kind="siteReview" status={x.status}>{copy.statuses[x.status]}</AdminStatus></td>
                   {canEdit && (
                     <td data-label="Actions">
@@ -138,11 +142,12 @@ export default function AdminCustomerReviews() {
               ))}
             </tbody>
           </table>
+          <Pager paging={pages} total={rows.length} label="reviews" />
         </div>
       ) : tab !== "all" ? (
-        <EmptyState title={copy.none} />
+        <Empty kind="none" title={copy.none} />
       ) : (
-        <EmptyState icon="icon-star" title={copy.empty} text={copy.emptyText} action={canEdit ? { label: copy.add, onClick: () => setSheet({}) } : undefined} />
+        <Empty title={copy.empty} text={copy.emptyText} action={canEdit ? { label: copy.add, onClick: () => setSheet({}) } : undefined} />
       )}
 
       <Sheet open={Boolean(sheet)} onClose={() => setSheet(null)} title={sheet?.review ? copy.sheet.edit : copy.sheet.add} closeLabel="Close">

@@ -3,14 +3,14 @@
 import React, { useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Said, SortTh, formatWhen } from "./adminParts";
+import { DetailSkeleton, Said, SortTh, formatWhen, Empty } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { DisputeForm, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -31,7 +31,7 @@ export default function AdminOrder({ reference }) {
   const [sheet, setSheet] = useState(null); // "refund" | "dispute" | "cancel"
   const [said, setSaid] = useState("");
   if (order.isLoading) return <DetailSkeleton />;
-  if (order.error?.data?.code === "NOT_FOUND") return <EmptyState title={d.notFound} action={{ href: "/admin/orders", label: d.back }} />;
+  if (order.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title={d.notFound} action={{ href: "/admin/orders", label: d.back }} />;
   if (order.error) return <ErrorState onRetry={() => order.refetch()} />;
   const o = order.data;
   const open = !["cancelled", "refunded"].includes(o.status);

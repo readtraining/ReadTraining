@@ -3,13 +3,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSavedSnapshot } from "@/lib/unsavedChanges";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Said, formatWhen } from "./adminParts";
+import { DetailSkeleton, Said, formatWhen, Empty } from "./adminParts";
 import { History, describedBy, field, useSave } from "./contentParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 
@@ -33,7 +33,7 @@ export default function AdminEmail({ templateKey }) {
   }, [record.data, words]);
 
   if (record.isLoading || (record.data && !words)) return <DetailSkeleton />;
-  if (record.error?.data?.code === "NOT_FOUND") return <EmptyState title={copy.notFound} action={{ href: "/admin/emails", label: copy.back }} />;
+  if (record.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title={copy.notFound} action={{ href: "/admin/emails", label: copy.back }} />;
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const when = changes.data?.[`email:${templateKey}`];
   return (

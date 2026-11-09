@@ -5,14 +5,14 @@ import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { Choice } from "@/components/providerWorkspace/providerParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Said, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging } from "./adminParts";
+import { Said, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
 import { toPence, useMoneyRefresh } from "./moneyParts";
@@ -68,11 +68,11 @@ export function AdminPayouts() {
               <label htmlFor="rt-po-day">{P.upTo}</label>
               <DateField id="rt-po-day" compact max={today()} value={day} onChange={(v) => v && setDay(v)} />
             </div>
-            {perms.includes("payouts") && <button type="button" className="button -md -purple-1 text-white" disabled={run.isPending || !payable} onClick={() => act(async () => { const r = await run.mutateAsync({ periodEnd: day }); if (!r.created) throw new Error(P.runNone); setTab("draft"); return r; }, P.runDone.replace("{n}", owed.data.filter((r) => r.payable > 0).length))}>{P.run}{payable ? ` (${formatPrice(payable)})` : ""}</button>}
+            {perms.includes("payouts") && <button type="button" className="button -md -purple-1 text-white" disabled={run.isPending || !payable} title={owed.data && !payable ? P.nothingPayable : undefined} onClick={() => act(async () => { const r = await run.mutateAsync({ periodEnd: day }); if (!r.created) throw new Error(P.runNone); setTab("draft"); return r; }, P.runDone.replace("{n}", owed.data.filter((r) => r.payable > 0).length))}>{P.run}{payable ? ` (${formatPrice(payable)})` : ""}</button>}
           </div>
         </div>
-        {perms.includes("payouts") && owed.data && !payable && <p className="rt-adm-item__hint">{P.nothingPayable}</p>}
-        <p className="rt-acc__note rt-adm-cardnote">{P.owedNote}</p>
+        {/* why Create payouts is off is part of the card's line (and the button's tooltip), not a loose line under it */}
+        <p className="rt-acc__note rt-adm-cardnote">{P.owedNote}{perms.includes("payouts") && owed.data && !payable ? ` ${P.nothingPayable}` : ""}</p>
         {owed.error ? <ErrorState inCard onRetry={() => owed.refetch()} /> : owed.isLoading ? <TableSkeleton rows={3} /> : owed.data.length ? (
           <table className="rt-biz__table rt-adm-table">
             <thead><tr><SortTh label={c.provider} col="provider" sorter={sorter} /><SortTh label={c.balance} col="balance" sorter={sorter} numeric /><SortTh label={c.held} col="held" sorter={sorter} numeric /><SortTh label={c.waiting} col="waiting" sorter={sorter} numeric /><SortTh label={c.payable} col="payable" sorter={sorter} numeric /></tr></thead>
@@ -88,9 +88,10 @@ export function AdminPayouts() {
               ))}
             </tbody>
           </table>
-        ) : <EmptyState inCard title={P.noOwed} />}
+        ) : <Empty inCard title="Nothing owed yet" text={P.noOwed} />}
       </section>
 
+      <h2 className="rt-acc__h2 rt-adm-sectionh">{P.runs}</h2>
       <Tabs tabs={Object.keys(P.tabs).map((key) => ({ key, label: P.tabs[key], count: list.data?.counts?.[key] }))} value={tab} onChange={setTab} label="Show payouts" />
       {list.error ? <ErrorState onRetry={() => list.refetch()} /> : list.isLoading ? <TableSkeleton rows={3} /> : list.data.payouts.length ? (
         <ul className="rt-adm-items">
@@ -121,7 +122,7 @@ export function AdminPayouts() {
             </li>
           ))}
         </ul>
-      ) : <EmptyState title={P.emptyTabs[tab][0]} text={P.emptyTabs[tab][1]} />}
+      ) : <Empty title={P.emptyTabs[tab][0]} text={P.emptyTabs[tab][1]} />}
 
       <Sheet open={Boolean(holding)} onClose={() => setHolding(null)} title={P.holdTitle} closeLabel="Close">
         {holding && <HoldForm payout={holding} onDone={(m) => { setHolding(null); setSaid(m); }} />}
@@ -213,10 +214,9 @@ export function AdminTransactions() {
       )}
       {list.error ? <ErrorState onRetry={() => list.refetch()} /> : list.isPending ? <TableSkeleton /> : entries.length ? (
         <>
-          <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}><LedgerTable entries={entries} showOrder sorter={paging.sorter} /></div>
-          <Pager paging={paging} total={list.data.total} label="transactions" />
+          <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}><LedgerTable entries={entries} showOrder sorter={paging.sorter} /><Pager paging={paging} total={list.data.total} label="transactions" /></div>
         </>
-      ) : <EmptyState title={L.empty} />}
+      ) : <Empty icon="ledger" title={L.empty} text="Every payment, refund, fee and payout is recorded here." />}
 
       <Sheet open={adjusting} onClose={() => setAdjusting(false)} title={L.adjustTitle} closeLabel="Close">
         {adjusting && <AdjustForm providers={options.slice(1)} onDone={(m) => { setAdjusting(false); setSaid(m); }} />}

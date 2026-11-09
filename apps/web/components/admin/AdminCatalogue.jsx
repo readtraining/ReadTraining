@@ -12,9 +12,9 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
-import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { SHOW_DEMO } from "@/lib/demo";
@@ -106,10 +106,10 @@ export default function AdminCatalogue() {
                   ))}
                 </tbody>
               </table>
-              <div className="rt-adm-more"><Pager paging={pages} total={rows.length} label="courses" /></div>
+              <Pager paging={pages} total={rows.length} label="courses" />
             </div>
           ) : (
-            <EmptyState title={copy.empty} action={me?.permissions?.includes("catalogue") && kind !== "provider" && !q && status === "all" ? { label: copy.newShared, onClick: () => setCreating(true) } : null} />
+            <Empty kind={q || status !== "all" || kind !== "all" ? "none" : "empty"} title={copy.empty} text={q || status !== "all" || kind !== "all" ? undefined : "Shared course pages and providers' courses show here."} action={me?.permissions?.includes("catalogue") && kind !== "provider" && !q && status === "all" ? { label: copy.newShared, onClick: () => setCreating(true) } : null} />
           )}
           <NewSharedPage open={creating} onClose={() => setCreating(false)} />
         </>

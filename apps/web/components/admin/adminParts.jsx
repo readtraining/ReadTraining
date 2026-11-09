@@ -4,6 +4,8 @@ import React from "react";
 import Link from "next/link";
 import Toast from "@/components/courses/Toast";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { EmptyState } from "@/components/states/States";
+import NavIcon from "./navIcons";
 
 // Shared bits of the admin pages, all from the site's design system: the account's status pills (.rt-pill .rt-acc__status), the
 // filter chips with counts (.rt-tr__filter), the stats strip, the account card (.rt-acc__card) and the business account's table
@@ -149,6 +151,17 @@ export function Pager({ paging, total, label = "results" }) {
       </div>
     </nav>
   );
+}
+
+// The admin's one empty state: the shared EmptyState, always with an icon and a line saying what to do or what will show
+// here. `kind`: "empty" (nothing yet: the page's own menu icon, AdminShell's AdminPage; give `text`), "none" (filters or a
+// search found nothing: a magnifier, "Try a different search or filter."), "missing" (a record that isn't there).
+export const AdminPage = React.createContext(null);
+const EMPTY_TEXT = { none: "Try a different search or filter.", missing: "It may have been deleted, or the link may be wrong." };
+export function Empty({ kind = "empty", icon, text, ...rest }) {
+  const page = React.useContext(AdminPage);
+  const name = icon || (kind === "none" ? "search" : page);
+  return <EmptyState {...rest} text={text ?? EMPTY_TEXT[kind]} icon={name ? <NavIcon name={name} /> : undefined} />;
 }
 
 // Loading placeholders in the shape of what is coming (never a spinner): a table card's rows, or a record's page (its head card

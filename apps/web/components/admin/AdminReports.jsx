@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { EmptyState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { modeLabel } from "@/lib/courseModes";
 import { formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { Said, Stats, TableSkeleton, Tabs, useSort, SortTh } from "./adminParts";
+import { Said, Stats, TableSkeleton, Tabs, useSort, SortTh, Empty } from "./adminParts";
 
 const copy = A.reports;
 const DAY = 86400000;
@@ -131,7 +130,7 @@ export default function AdminReports() {
             </tbody>
           </table>
         ) : (
-          <EmptyState inCard title={copy.none} />
+          <Empty inCard kind="none" title={copy.none} text="Try a different date range." />
         )}
         <p className="rt-acc__note rt-adm-mt">{copy.commissionNote}</p>
       </section>

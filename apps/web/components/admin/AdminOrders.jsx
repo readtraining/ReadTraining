@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { Choice } from "@/components/providerWorkspace/providerParts";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging } from "./adminParts";
+import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
@@ -47,13 +47,15 @@ export default function AdminOrders() {
   const s = paging.sorter;
   const c = copy.columns;
 
+  // nothing at all yet: the empty state has the button, so the toolbar doesn't repeat it
+  const blank = Boolean(list.data) && !rows.length && !search && tab === "all";
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
         <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: counts?.[key] }))} value={tab} onChange={pick} label="Show orders" />
         <div className="rt-adm-toolbar__end">
           <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
-          {canBook && <button type="button" className="button -md -purple-1 text-white" onClick={() => setBooking(true)}>{copy.book}</button>}
+          {canBook && !blank && <button type="button" className="button -md -purple-1 text-white" onClick={() => setBooking(true)}>{copy.book}</button>}
         </div>
       </div>
 
@@ -79,13 +81,13 @@ export default function AdminOrders() {
                 ))}
               </tbody>
             </table>
+            <Pager paging={paging} total={list.data.total} label="orders" />
           </div>
-          <Pager paging={paging} total={list.data.total} label="orders" />
         </>
       ) : search || tab !== "all" ? (
-        <EmptyState title={copy.none} action={search ? { label: copy.clear, onClick: () => setQ("") } : undefined} />
+        <Empty kind="none" title={copy.none} action={search ? { label: copy.clear, onClick: () => setQ("") } : undefined} />
       ) : (
-        <EmptyState icon="icon-basket" title={copy.empty} text={copy.emptyText} action={canBook ? { label: copy.book, onClick: () => setBooking(true) } : undefined} />
+        <Empty title={copy.empty} text={copy.emptyText} action={canBook ? { label: copy.book, onClick: () => setBooking(true) } : undefined} />
       )}
 
       <Sheet open={booking} onClose={() => setBooking(false)} title={copy.bookSheet.title} closeLabel="Close">

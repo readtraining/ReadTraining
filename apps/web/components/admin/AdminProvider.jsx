@@ -3,14 +3,14 @@
 import React, { useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 
@@ -39,7 +39,7 @@ export default function AdminProvider({ slug }) {
   const [refreshing, setRefreshing] = useState(false); // a decision was saved: no buttons until the new status has loaded
 
   if (record.isLoading) return <DetailSkeleton />;
-  if (record.error?.data?.code === "NOT_FOUND") return <EmptyState title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
+  if (record.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const p = record.data;
   const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));

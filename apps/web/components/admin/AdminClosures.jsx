@@ -3,11 +3,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Said, TableSkeleton, Tabs } from "./adminParts";
+import { Said, TableSkeleton, Tabs, Empty } from "./adminParts";
 import { AdminDue } from "./AdminStatus";
 
 const c = A.closures;
@@ -61,7 +61,7 @@ export function AdminClosures() {
           ))}
         </ul>
       ) : (
-        <EmptyState title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
+        <Empty title={c.emptyTabs[tab][0]} text={c.emptyTabs[tab][1]} />
       )}
       <CloseAccountSheet request={closing} onClose={() => setClosing(null)} onDone={() => setSaid(c.closed)} />
     </div>

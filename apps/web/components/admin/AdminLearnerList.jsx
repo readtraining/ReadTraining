@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { EmptyState, ErrorState } from "@/components/states/States";
+import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = A.learners;
@@ -77,11 +77,11 @@ export default function AdminLearnerList() {
                 ))}
               </tbody>
             </table>
+            <Pager paging={paging} total={list.data.total} label="learners" />
           </div>
-          <Pager paging={paging} total={list.data.total} label="learners" />
         </>
       ) : (
-        <EmptyState title={filtered ? copy.none : copy.empty} action={filtered ? { label: copy.clear, onClick: () => { setQ(""); setSearch(""); setFilter("all"); paging.restart(); } } : undefined} />
+        <Empty kind={filtered ? "none" : "empty"} title={filtered ? copy.none : copy.empty} text={filtered ? undefined : "People who sign up on the website show here."} action={filtered ? { label: copy.clear, onClick: () => { setQ(""); setSearch(""); setFilter("all"); paging.restart(); } } : undefined} />
       )}
     </>
   );

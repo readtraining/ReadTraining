@@ -6,9 +6,8 @@ import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Search, Said, TableSkeleton } from "./adminParts";
+import { Search, Said, TableSkeleton, Empty } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { EmptyState } from "@/components/states/States";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
 
@@ -105,7 +104,7 @@ export default function AdminCertificates() {
             </tbody>
           </table>
         </div>
-      ) : <EmptyState title="No certificates match." />}
+      ) : <Empty kind="none" title="No certificates match." />}
 
       <Sheet open={Boolean(revoking)} onClose={() => setRevoking(null)} title={copy.revokeTitle} closeLabel="Close">
         {revoking && (

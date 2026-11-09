@@ -5,8 +5,7 @@ import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/format";
-import { Search, Tabs, getQuery, setQuery, useSort, SortTh, TableSkeleton } from "./adminParts";
-import { EmptyState } from "@/components/states/States";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, TableSkeleton, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = W.businesses;
@@ -56,7 +55,7 @@ export default function AdminBusinesses() {
             </tbody>
           </table>
         </div>
-      ) : <EmptyState title="No business accounts here." />}
+      ) : <Empty title="No business accounts here." text="Companies that book training for their teams show here." />}
     </div>
   );
 }

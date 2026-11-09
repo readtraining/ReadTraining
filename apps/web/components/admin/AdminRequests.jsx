@@ -6,8 +6,7 @@ import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { currentAdmin } from "@/lib/adminStore";
-import { Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton } from "./adminParts";
-import { EmptyState } from "@/components/states/States";
+import { Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty } from "./adminParts";
 import { AdminStatus, AdminDue } from "./AdminStatus";
 
 const copy = W.requests;
@@ -64,10 +63,10 @@ export default function AdminRequests() {
               ))}
             </tbody>
           </table>
-          <div className="rt-adm-more"><Pager paging={pages} total={list.length} label="requests" /></div>
+          <Pager paging={pages} total={list.length} label="requests" />
         </div>
       ) : (
-        <EmptyState title="No requests here." />
+        <Empty title="No requests here." text="Quotes, test bookings and contact messages visitors send show here." />
       )}
     </div>
   );

@@ -4,8 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, useSort, SortTh } from "./adminParts";
-import { EmptyState } from "@/components/states/States";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, useSort, SortTh, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = W.jobs;
@@ -60,7 +59,7 @@ export default function AdminJobs() {
             </tbody>
           </table>
         </div>
-      ) : <EmptyState title="No candidates match." />)}
+      ) : <Empty kind="none" title="No candidates match." />)}
 
       {tab === "roles" && (
         <div className="rt-acc__card rt-biz__tablecard">
