@@ -12,7 +12,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery, Empty } from "./adminParts";
+import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery, Empty, HeaderAction } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -100,7 +100,7 @@ export default function AdminCoupons() {
         <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: key === "all" ? total : counts?.[key] }))} value={tab} onChange={setTab} label="Show coupons" />
         <div className="rt-adm-toolbar__end">
           <Search value={q} onChange={setQ} label={copy.search} />
-          {canEdit && !blank && <button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button>}
+          {canEdit && !blank && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button></HeaderAction>}
         </div>
       </div>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}

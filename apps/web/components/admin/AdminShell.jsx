@@ -156,7 +156,8 @@ export default function AdminShell({ current, title, lead, actions = null, detai
                 </div>
                 {lead && <p className="rt-adm__lead">{lead}</p>}
               </div>
-              {actions}
+              {/* the page's main action, top right (adminParts HeaderAction puts it here) */}
+              <div className="rt-adm__actions" id="rt-adm-actions">{actions}</div>
             </div>
           )}
           {/* the page key lets an empty state show this page's own icon */}

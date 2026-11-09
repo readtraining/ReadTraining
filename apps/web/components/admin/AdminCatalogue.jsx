@@ -12,7 +12,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
-import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { ErrorState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
@@ -75,7 +75,7 @@ export default function AdminCatalogue() {
               <FieldSelect id="rt-adm-cstatus" label="Status" value={status} onChange={pick(setStatus, "status", "all")} options={[{ value: "all", label: "Every status" }, ...Object.entries(copy.statuses).map(([value, label]) => ({ value, label }))]} compact />
             </div>
             <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
-            {me?.permissions?.includes("catalogue") && <button type="button" className="button -sm -purple-1 text-white" onClick={() => setCreating(true)}>{copy.newShared}</button>}
+            {me?.permissions?.includes("catalogue") && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setCreating(true)}>{copy.newShared}</button></HeaderAction>}
           </div>
           <p className="rt-sr" aria-live="polite">{list.data ? `${rows.length} ${rows.length === 1 ? "course" : "courses"}` : ""}</p>
           {list.isError ? (

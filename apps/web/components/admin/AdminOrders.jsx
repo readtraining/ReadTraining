@@ -13,7 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty } from "./adminParts";
+import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty, HeaderAction } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
@@ -55,7 +55,7 @@ export default function AdminOrders() {
         <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: counts?.[key] }))} value={tab} onChange={pick} label="Show orders" />
         <div className="rt-adm-toolbar__end">
           <Search value={q} onChange={(v) => { setQ(v); paging.restart(); }} label={copy.search} />
-          {canBook && !blank && <button type="button" className="button -md -purple-1 text-white" onClick={() => setBooking(true)}>{copy.book}</button>}
+          {canBook && !blank && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setBooking(true)}>{copy.book}</button></HeaderAction>}
         </div>
       </div>
 

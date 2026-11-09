@@ -12,7 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Said, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty } from "./adminParts";
+import { Said, Stats, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
 import { toPence, useMoneyRefresh } from "./moneyParts";
@@ -205,12 +205,15 @@ export function AdminTransactions() {
         </div>
       </div>
       {totals && (
-        <dl className="rt-adm-totals" aria-label={L.totals}>
-          <div><dt>{L.columns.gross}</dt><dd>{formatPrice(totals.gross)}</dd></div>
-          <div><dt>{L.columns.fee}</dt><dd>{formatPrice(totals.fee)}</dd></div>
-          <div><dt>{L.columns.commission}</dt><dd>{formatPrice(totals.commission)}</dd></div>
-          <div><dt>{L.columns.share}</dt><dd>{formatPrice(totals.provider)}</dd></div>
-        </dl>
+        <Stats
+          label={L.totals}
+          items={[
+            { icon: "nav:orders", value: formatPrice(totals.gross), label: L.columns.gross },
+            { icon: "nav:ledger", value: formatPrice(totals.fee), label: L.columns.fee },
+            { icon: "nav:settings", value: formatPrice(totals.commission), label: L.columns.commission },
+            { icon: "nav:providers", value: formatPrice(totals.provider), label: L.columns.share },
+          ]}
+        />
       )}
       {list.error ? <ErrorState onRetry={() => list.refetch()} /> : list.isPending ? <TableSkeleton /> : entries.length ? (
         <>

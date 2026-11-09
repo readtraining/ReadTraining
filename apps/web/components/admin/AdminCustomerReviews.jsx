@@ -13,7 +13,7 @@ import { formatDate } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pager, RowMenu, Said, TableSkeleton, Tabs, Empty, usePaging } from "./adminParts";
+import { Pager, RowMenu, Said, TableSkeleton, Tabs, Empty, usePaging, HeaderAction } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
@@ -101,7 +101,7 @@ export default function AdminCustomerReviews() {
         <Tabs tabs={tabs.map((key) => ({ key, label: copy.tabs[key], count: counts ? (key === "all" ? counts.published + counts.hidden + counts.pending : counts[key]) : undefined }))} value={tab} onChange={(t) => { setTab(t); pages.restart(); }} label="Show reviews" />
         <div className="rt-adm-toolbar__end">
           {counts && <span className="rt-adm-muted">{copy.homeCount.replace("{n}", counts.home).replace("{max}", list.data.homeMax)}</span>}
-          {canEdit && !blank && <button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button>}
+          {canEdit && !blank && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button></HeaderAction>}
         </div>
       </div>
       {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}

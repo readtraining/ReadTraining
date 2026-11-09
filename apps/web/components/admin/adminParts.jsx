@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Toast from "@/components/courses/Toast";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -12,7 +13,7 @@ import NavIcon from "./navIcons";
 // (.rt-biz__table). The account, business, admin and provider pages all use these.
 
 // Stats strip, the account and admin dashboards': icon, number, label. `items` is [{ icon, value, label }]; `iconSize` is the
-// icon's text size (16, or 18 on the learner and business dashboards).
+// icon's text size (16, or 18 on the learner and business dashboards). An icon "nav:<name>" is one of the admin's drawn icons.
 // An item may have `hint` (a short line under the label, as "Ready to assign") and `href` (the whole card links to that section).
 export function Stats({ items, label, iconSize = 16 }) {
   return (
@@ -20,7 +21,7 @@ export function Stats({ items, label, iconSize = 16 }) {
       {items.map((s) => {
         const body = (
           <>
-            <span className="rt-benefit__icon" aria-hidden="true"><i className={`${s.icon} text-${iconSize}`}></i></span>
+            <span className="rt-benefit__icon" aria-hidden="true">{s.icon.startsWith("nav:") ? <NavIcon name={s.icon.slice(4)} /> : <i className={`${s.icon} text-${iconSize}`}></i>}</span>
             <span className="rt-tps__keyfact-text"><strong>{s.value}</strong><span className="rt-sr">, </span><span>{s.label}</span>{s.hint && <small className="rt-acc__stathint">{s.hint}</small>}</span>
           </>
         );
@@ -78,7 +79,7 @@ export function useSort(first = null) {
 export function SortTh({ label, col, sorter, numeric = false }) {
   const on = sorter.sort?.key === col;
   return (
-    <th scope="col" aria-sort={on ? (sorter.sort.dir === 1 ? "ascending" : "descending") : "none"}>
+    <th scope="col" className={numeric ? "rt-adm-num" : undefined} aria-sort={on ? (sorter.sort.dir === 1 ? "ascending" : "descending") : "none"}>
       <button type="button" className={`rt-adm-sort${on ? " is-on" : ""}`} onClick={() => sorter.by(col, numeric)}>
         {label}
         <span className="rt-adm-sort__arrow" aria-hidden="true">{on ? (sorter.sort.dir === 1 ? "↑" : "↓") : "↕"}</span>
@@ -162,6 +163,14 @@ export function Empty({ kind = "empty", icon, text, ...rest }) {
   const page = React.useContext(AdminPage);
   const name = icon || (kind === "none" ? "search" : page);
   return <EmptyState {...rest} text={text ?? EMPTY_TEXT[kind]} icon={name ? <NavIcon name={name} /> : undefined} />;
+}
+
+// A page's main action (Book for a customer, Create coupon, Invite an admin…), shown at the top right of the page header, in
+// line with the title (AdminShell's #rt-adm-actions), wherever in the page it is built, so it keeps the page's own state.
+export function HeaderAction({ children }) {
+  const [slot, setSlot] = React.useState(null);
+  React.useEffect(() => setSlot(document.getElementById("rt-adm-actions")), []);
+  return slot ? createPortal(children, slot) : null;
 }
 
 // Loading placeholders in the shape of what is coming (never a spinner): a table card's rows, or a record's page (its head card

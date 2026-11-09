@@ -998,7 +998,7 @@ export const admin = {
     columns: { name: "Reviewer", course: "Course", date: "Date", home: "Home page", status: "Status" },
     statuses: { published: "Published", hidden: "Hidden", pending: "Waiting" },
     general: "General",
-    noDate: "No date",
+    noDate: "–", // the one empty value every admin table uses
     about: "About {date}",
     onHome: "On the home page",
     homeCount: "{n} of {max} on the home page",

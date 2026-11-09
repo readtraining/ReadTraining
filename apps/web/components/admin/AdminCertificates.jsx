@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Search, Said, TableSkeleton, Empty } from "./adminParts";
+import { Search, Said, TableSkeleton, Empty, HeaderAction } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
@@ -74,7 +74,7 @@ export default function AdminCertificates() {
       <div className="rt-adm-toolbar">
         <div className="rt-adm-toolbar__end">
           <Search value={q} onChange={setQ} label={copy.search} />
-          <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setIssuing(true); setErrors({}); setForm({ holder: "", courseId: "", issued: today() }); }}>{copy.issue}</button>
+          <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => { setIssuing(true); setErrors({}); setForm({ holder: "", courseId: "", issued: today() }); }}>{copy.issue}</button></HeaderAction>
         </div>
       </div>
       <Said text={said} />
