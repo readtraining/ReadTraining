@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
+import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, actionLabel } from "./adminParts";
 import DateField from "./DateField";
 import { AdminTag } from "./AdminStatus";
 
@@ -126,7 +126,7 @@ export default function AdminActivity() {
                         <span className="rt-adm-activity__as" title={copy.identityNote}><AdminTag>{copy.identities[e.identity]}</AdminTag></span>
                       </td>
                       <td data-label={c.what}>
-                        <span className="rt-adm-strong">{copy.actions[e.action] ?? e.action}</span>
+                        <span className="rt-adm-strong">{actionLabel(e.action)}</span>
                         {more.length > 0 && (
                           <details className="rt-adm-activity__more">
                             <summary>{copy.details}</summary>

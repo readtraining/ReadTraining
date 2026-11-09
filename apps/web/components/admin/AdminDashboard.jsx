@@ -6,18 +6,21 @@ import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Stats, formatWhen, DetailSkeleton, Empty } from "./adminParts";
+import { Stats, formatWhen, DetailSkeleton, Empty, actionLabel } from "./adminParts";
 import { useAdminAccess } from "@/lib/adminContext";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus } from "./AdminStatus";
 import { SHOW_DEMO } from "@/lib/demo";
 
 const copy = A.dashboard;
+// "Approved a course" after a name reads "approved a course"; only the first letter changes, so names and quotes keep theirs
+const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 const demoTag = <span className="rt-demo-tag" title={A.demo.all.note}>{copy.demoTag}</span>;
 
-// The latest entries of the real activity log (API admin.activity.list): who did what, and when.
+// The latest things people did on the platform (API admin.activity.list, kind "work": no sign-ins, refused attempts or
+// automatic emails, which stay on the Activity log page): who did what, and when.
 function RecentActivity() {
-  const log = api.admin.activity.list.useQuery({ limit: 6 }, { staleTime: 30000 });
+  const log = api.admin.activity.list.useQuery({ limit: 6, kind: "work" }, { staleTime: 30000 });
   const entries = log.data?.entries ?? [];
   return (
     <section className="rt-acc__card" aria-labelledby="rt-adm-act-h" aria-busy={log.isLoading}>
@@ -37,7 +40,7 @@ function RecentActivity() {
             <li key={e.id}>
               <span className="rt-acc__avatar" aria-hidden="true">{(e.actor ? (e.actor.email ? e.actor.name : A.activity.deleted) : A.activity.system).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
               <div>
-                <p>{e.actor ? <><strong>{e.actor.email ? e.actor.name : A.activity.deleted}</strong> {(A.activity.actions[e.action] ?? e.action).toLowerCase()}</> : <strong>{A.activity.actions[e.action] ?? e.action}</strong>}{e.target?.label && e.target.type !== "session" ? <> · <span className="rt-adm-muted">{e.target.label}</span></> : null}</p>
+                <p>{e.actor ? <><strong>{e.actor.email ? e.actor.name : A.activity.deleted}</strong> {lowerFirst(actionLabel(e.action))}</> : <strong>{actionLabel(e.action)}</strong>}{e.target?.label && e.target.type !== "session" ? <> · <span className="rt-adm-muted">{e.target.label}</span></> : null}</p>
                 <small>{formatWhen(Date.parse(e.at))}</small>
               </div>
             </li>
@@ -152,9 +155,9 @@ export default function AdminDashboard() {
                 <ul className="rt-adm-list">
                   {latestOrders.data.orders.map((o) => (
                     <li key={o.id}>
-                      <div>
+                      <div className="rt-adm-list__main">
                         <Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.buyer.name}</Link>
-                        <small>{o.course} · {o.ref}</small>
+                        <small title={`${o.course} · ${o.ref}`}>{o.course} · {o.ref}</small>
                       </div>
                       <div className="rt-adm-list__side">
                         <strong className="rt-adm-num-cell">{formatPrice(o.gross)}</strong>

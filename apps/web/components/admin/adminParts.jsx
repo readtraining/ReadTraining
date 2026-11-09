@@ -7,6 +7,7 @@ import Toast from "@/components/courses/Toast";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import NavIcon from "./navIcons";
+import { admin as A } from "@/data/admin";
 
 // Shared bits of the admin pages, all from the site's design system: the account's status pills (.rt-pill .rt-acc__status), the
 // filter chips with counts (.rt-tr__filter), the stats strip, the account card (.rt-acc__card) and the business account's table
@@ -306,3 +307,11 @@ export const getQuery = (key) => {
 // A short date and time, en-GB: "12 Oct, 14:05"
 const dt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 export const formatWhen = (ms) => dt.format(new Date(ms));
+
+// What an activity log entry did, in words (data/admin.js); a code without wording yet still reads as words, never as a code
+export const actionLabel = (code) => {
+  const words = A.activity.actions[code];
+  if (words) return words;
+  const text = String(code).replace(/[._]+/g, " ").trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
