@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
@@ -12,6 +13,7 @@ import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
 import { formatWhen, Said, DetailSkeleton } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
+import { CloseAccountSheet } from "./AdminClosures";
 
 const copy = A.learners;
 const d = copy.detail;
@@ -27,7 +29,9 @@ export default function AdminLearner({ id }) {
   const record = api.admin.students.get.useQuery({ userId: id }, { retry: (n, e) => e?.data?.code !== "NOT_FOUND" && n < 2 });
   const activity = api.admin.activity.list.useQuery({ q: id, limit: 8 });
   const exporter = api.admin.students.export.useMutation();
+  const router = useRouter();
   const [sheet, setSheet] = useState(null); // "block" | "unblock"
+  const [closing, setClosing] = useState(null); // their closure request, while "Close account?" is open
   const [said, setSaid] = useState("");
 
   if (record.isLoading) return <DetailSkeleton />;
@@ -67,6 +71,12 @@ export default function AdminLearner({ id }) {
         <p className="rt-acc__notice -warn" role="status">
           <strong>Asked to close their account</strong> on {new Date(l.closureRequest.requestedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}. Close it and delete their personal details by {((x) => (x.setMonth(x.getMonth() + 1), x))(new Date(l.closureRequest.requestedAt)).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}, then email them.
           {l.closureRequest.reason && <><br />Their reason: {l.closureRequest.reason}</>}
+          {can("suspend") && !mine && (
+            <>
+              <br />
+              <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setClosing({ id: l.closureRequest.id, name: l.name, email: l.email })}>{d.closeAccount}</button>
+            </>
+          )}
         </p>
       )}
 
@@ -173,6 +183,8 @@ export default function AdminLearner({ id }) {
       )}
 
       <BlockSheet learner={l} kind={sheet} onClose={() => setSheet(null)} onDone={changed} />
+      {/* once closed the record is gone, so the list of closed requests opens */}
+      <CloseAccountSheet request={closing} onClose={() => setClosing(null)} onDone={() => router.replace("/admin/closure-requests")} />
     </div>
   );
 }

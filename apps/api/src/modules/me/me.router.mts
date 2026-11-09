@@ -8,11 +8,12 @@ import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { renderEmail, wordsFor } from '../../emails/templates.mjs'
+import { closureBlockers } from '../../lib/closureBlockers.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
 import { sendEmail } from '../../lib/email.mjs'
 import { notify, notifyAdmins, personOf } from '../../lib/notify.mjs'
 import { newPassword, personName } from '../../lib/rules.mjs'
-import { AVATARS, requestEmailChange, signedPhotoUrl, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
+import { AVATARS, requestEmailChange, setFirstPasswordAsUser, signedPhotoUrl, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
 import { createTRPCRouter, limit, protectedProcedure } from '../../trpc/trpc.mjs'
 
 // Account settings, in Hurak's four parts: basic information, address, email (needs the current password) and password
@@ -66,10 +67,11 @@ export const meRouter = createTRPCRouter({
     if (!profile) throw new TRPCError({ code: 'NOT_FOUND', message: 'Profile not found' })
     // an email change is waiting while one of its two links still works; Supabase clears both links when the password is changed
     // (and they run out) but keeps the address, so a change with no link left is reported as lapsed, not as waiting
-    const [auth] = await ctx.db.execute<{ email: string; email_confirmed_at: string | null; email_change: string | null; email_change_live: boolean; has_password: boolean }>(sql`
+    const [auth] = await ctx.db.execute<{ email: string; email_confirmed_at: string | null; email_change: string | null; email_change_live: boolean; has_password: boolean; methods: string[] | null }>(sql`
       select email, email_confirmed_at, nullif(email_change, '') as email_change,
              coalesce(email_change_token_current, '') <> '' or coalesce(email_change_token_new, '') <> '' as email_change_live,
-             coalesce(encrypted_password, '') <> '' as has_password
+             coalesce(encrypted_password, '') <> '' as has_password,
+             array(select jsonb_array_elements_text(coalesce(raw_app_meta_data->'providers', '[]'::jsonb))) methods
       from auth.users where id = ${ctx.user.id}::uuid`)
     const [closure] = await ctx.db
       .select({ requestedAt: accountClosureRequests.requestedAt })
@@ -87,8 +89,12 @@ export const meRouter = createTRPCRouter({
       pendingEmail: auth?.email_change_live ? auth.email_change : null,
       lapsedEmail: auth?.email_change && !auth.email_change_live ? auth.email_change : null,
       hasPassword: auth?.has_password ?? false,
+      // how they can sign in besides a password: "google", "facebook" (Account settings names them)
+      socialSignIn: (auth?.methods ?? []).filter((m) => m === 'google' || m === 'facebook'),
       // an open request to close the account (it shows on Account settings, with Withdraw)
       closure: closure ? { requestedAt: closure.requestedAt.toISOString() } : null,
+      // what has to happen before the account can be closed (Account settings says what to do instead of offering the request)
+      closureBlockers: closure ? [] : await closureBlockers(ctx.db, ctx.user.id),
       profile: {
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -138,6 +144,9 @@ export const meRouter = createTRPCRouter({
     .input(z.object({ reason: z.string().trim().max(1000, 'Keep your reason to 1,000 characters or fewer.').optional(), currentPassword: z.string().max(200).optional() }))
     .mutation(async ({ ctx, input }) => {
       await limit(ctx, 'closure')
+      // an admin, or the owner of a provider or business account, sorts that out first (Account settings says how)
+      if ((await closureBlockers(ctx.db, ctx.user.id)).length)
+        throw new TRPCError({ code: 'CONFLICT', message: 'Something needs doing before your account can be closed. Reload the page to see what.' })
       const [auth] = await ctx.db.execute<{ email: string; has_password: boolean }>(sql`select email, coalesce(encrypted_password, '') <> '' has_password from auth.users where id = ${ctx.user.id}::uuid`)
       if (auth?.has_password) {
         if (!input.currentPassword) throw fieldError('currentPassword', 'Enter your current password.')
@@ -223,6 +232,26 @@ export const meRouter = createTRPCRouter({
       if (problem) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: "We couldn't change your password. Please try again." })
       return { ok: true }
     }),
+
+  // A first password for someone who signs in with Google or Facebook, so they can also log in with their email address. Only
+  // within 15 minutes of signing in (as GitHub's "sudo mode"): a computer left signed in can't be used to add one; the page then
+  // asks them to sign in with Google again. Logged, and they are emailed in case it wasn't them.
+  setPassword: protectedProcedure.input(z.object({ newPassword })).mutation(async ({ ctx, input }) => {
+    await limit(ctx, 'setPassword')
+    const [row] = await ctx.db.execute<{ has_password: boolean; recent: boolean }>(sql`
+      select coalesce(u.encrypted_password, '') <> '' has_password,
+             coalesce((select s.created_at > now() - interval '15 minutes' from auth.sessions s where s.id = ${ctx.user.sessionId}::uuid and s.user_id = u.id), false) recent
+      from auth.users u where u.id = ${ctx.user.id}::uuid`)
+    if (row?.has_password) throw new TRPCError({ code: 'CONFLICT', message: 'You already have a password. Reload the page to change it.' })
+    if (!row?.recent) throw new TRPCError({ code: 'FORBIDDEN', message: 'For your security, sign in again first, then set your password.', cause: Object.assign(new Error('reauth'), { field: 'reauth' }) })
+    const problem = await setFirstPasswordAsUser(ctx.accessToken!, input.newPassword)
+    if (problem === 'weak_password') throw fieldError('newPassword', 'Choose a stronger password: at least 8 characters, with letters and numbers.')
+    if (problem === 'reauthentication_needed') throw new TRPCError({ code: 'FORBIDDEN', message: 'For your security, sign in again first, then set your password.', cause: Object.assign(new Error('reauth'), { field: 'reauth' }) })
+    if (problem) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: "We couldn't set your password. Please try again." })
+    await logActivity(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'student', action: 'account.password_set', targetType: 'account', targetId: ctx.user.id, ip: ctx.ip })
+    await notify(ctx.db, 'password-added', await personOf(ctx.db, ctx.user.id), {}, { targetType: 'account', targetId: ctx.user.id, action: 'email.password_added_sent' })
+    return { ok: true }
+  }),
 
   // Profile photo: a one-time upload address for the browser, then `setPhoto` with the uploaded path.
   photoUploadUrl: protectedProcedure.input(z.object({ contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']) })).mutation(async ({ ctx, input }) => {

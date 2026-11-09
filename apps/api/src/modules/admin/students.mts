@@ -121,14 +121,14 @@ export const studentsRouter = createTRPCRouter({
         select o.id, o.type, o.name, o.status, m.role, m.job_title, m.created_at joined_at
         from public.organisation_members m join public.organisations o on o.id = m.organisation_id
         where m.user_id = ${input.userId}::uuid order by o.type, o.name`)
-      const [closure] = await ctx.db.execute<{ requested_at: string; reason: string | null }>(sql`
-        select requested_at, reason from public.account_closure_requests where user_id = ${input.userId}::uuid and status = 'open'`)
+      const [closure] = await ctx.db.execute<{ id: string; requested_at: string; reason: string | null }>(sql`
+        select id, requested_at, reason from public.account_closure_requests where user_id = ${input.userId}::uuid and status = 'open'`)
       return {
         id: r.id,
         name: nameOf(r),
         email: r.email,
         // an open request to close the account and delete their data (UK GDPR: within one month)
-        closureRequest: closure ? { requestedAt: iso(closure.requested_at)!, reason: closure.reason } : null,
+        closureRequest: closure ? { id: closure.id, requestedAt: iso(closure.requested_at)!, reason: closure.reason } : null,
         photoUrl: await signedPhotoUrl(r.avatar_url),
         dateOfBirth: r.date_of_birth,
         phone: r.phone,

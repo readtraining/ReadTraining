@@ -102,6 +102,8 @@ const nextConfig: NextConfig = {
       // the account's pages renamed to the client's menu (My learning, Purchase history, Account settings)
       { source: '/account/bookings', destination: '/account/purchases', permanent: true },
       { source: '/account/profile', destination: '/account/settings', permanent: true },
+      // certificates had a tab on the learners page; they have their own page now
+      { source: '/admin/learners', has: [{ type: 'query', key: 'tab', value: 'certificates' }], destination: '/admin/certificates', permanent: true },
       // learners have no notifications page (Hurak's has one): the nearest is the emails they get, in Account settings
       { source: '/account/notifications', destination: '/account/settings#rt-pf-mkt-h', permanent: false },
       // the old provider workspace prototype

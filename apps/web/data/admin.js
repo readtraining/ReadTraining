@@ -25,6 +25,7 @@ export const admin = {
     businesses: ["No business accounts yet", "Companies that book training for their teams show here once business bookings are live."],
     jobs: ["No candidates yet", "Applications from the Security Jobs page arrive here once that form is connected."],
     reviews: ["No reviews yet", "Learners' reviews of their courses arrive here once real courses are booked and finished."],
+    certificates: ["No certificates yet", "Certificates learners earn on their courses show here once real courses are booked and finished."],
   },
   // the sidebar, in the plan's groups (later phases join it as they are built)
   nav: [
@@ -49,7 +50,9 @@ export const admin = {
       { key: "coupons", label: "Coupons", href: "/admin/coupons" },
     ] },
     { group: "Customers", items: [
-      { key: "learners", label: "Learners & certificates", href: "/admin/learners", demo: "partly" },
+      { key: "learners", label: "Learners", href: "/admin/learners" },
+      { key: "closures", label: "Closure requests", href: "/admin/closure-requests", permission: "suspend", badge: "closures" },
+      { key: "certificates", label: "Certificates", href: "/admin/certificates", demo: true },
       { key: "businesses", label: "Business accounts", href: "/admin/businesses", badge: "credit", demo: true },
       { key: "jobs", label: "Security Jobs", href: "/admin/jobs", badge: "candidates", demo: true },
       { key: "reviews", label: "Reviews", href: "/admin/reviews", badge: "reviews", demo: true },
@@ -190,6 +193,8 @@ export const admin = {
       "auth.account_deleted": "Account deleted",
       "account.closure_requested": "Asked to close their account",
       "account.closure_withdrawn": "Withdrew their request to close their account",
+      "account.password_set": "Added a password to their account",
+      "email.password_added_sent": "\"Password added\" email sent",
       "email.closure_received_sent": "\"Closure request received\" email sent",
       "email.admins_told": "Admins were told by email",
       "email.welcome_sent": "Welcome email sent",
@@ -217,6 +222,8 @@ export const admin = {
       "admin.two_step_reset": "Two-step sign-in reset",
       "admin.account_blocked": "Account blocked",
       "admin.account_unblocked": "Account unblocked",
+      "admin.account_closed": "Closed an account, as its owner asked",
+      "email.closure_done_sent": "\"Account closed\" email sent",
       "admin.data_exported": "Downloaded the person's data",
       "admin.provider_approved": "Approved a provider",
       "admin.own_request_decided": "Decided on their own request (as the only admin who could)",
@@ -748,10 +755,9 @@ export const admin = {
   },
 
   learners: {
-    title: "Learners and certificates",
-    lead: "Everyone with a ReadTraining account, and the certificate register.",
-    tabs: { learners: "Learners", certificates: "Certificates" },
-    // Learners: real accounts (API admin.students)
+    title: "Learners",
+    lead: "Everyone with a ReadTraining account.",
+    // real accounts (API admin.students)
     search: "Search by name, email or phone",
     filters: { all: "All", unconfirmed: "Email not confirmed", blocked: "Blocked", providers: "Providers", businesses: "Businesses" },
     states: { active: "Active", unconfirmed: "Email not confirmed", blocked: "Blocked" },
@@ -760,17 +766,6 @@ export const admin = {
     none: "No learners match.",
     empty: "No one has signed up yet.",
     clear: "Clear filters",
-    // Certificates: the demo register until certificates are issued for real
-    certSearch: "Search by certificate number or name",
-    certColumns: { number: "Certificate", holder: "Holder", course: "Course", issued: "Issued", expires: "Expires", status: "Status" },
-    certStates: { valid: "Valid", expiring: "Expires soon", expired: "Expired", revoked: "Revoked", none: "No expiry" },
-    issue: "Issue certificate",
-    revoke: "Revoke",
-    reinstate: "Reinstate",
-    revokeTitle: "Revoke certificate",
-    revokeReason: "Reason",
-    revokeError: "Enter why this certificate is being revoked.",
-    checkerNote: "The public certificate checker reads this register once the backend is connected.",
     // one learner's record
     detail: {
       back: "All learners",
@@ -808,7 +803,59 @@ export const admin = {
       unblocked: "Account unblocked",
       adminNote: "This person is on the admin team, so their account can't be blocked here. Remove them from the admin team first (System → Admin team).",
       selfNote: "This is your own account, so you can't block it.",
+      closeAccount: "Close account",
     },
+  },
+
+  // The certificate register: demo records until certificates are issued for real (components/admin/AdminCertificates)
+  certificates: {
+    title: "Certificates",
+    lead: "Every certificate learners have earned: check one, issue one, or revoke one issued by mistake.",
+    search: "Search by certificate number or name",
+    columns: { number: "Certificate", holder: "Holder", course: "Course", issued: "Issued", expires: "Expires", status: "Status" },
+    states: { valid: "Valid", expiring: "Expires soon", expired: "Expired", revoked: "Revoked", none: "No expiry" },
+    issue: "Issue certificate",
+    revoke: "Revoke",
+    reinstate: "Reinstate",
+    revokeTitle: "Revoke certificate",
+    revokeReason: "Reason",
+    revokeError: "Enter why this certificate is being revoked.",
+    checkerNote: "The public certificate checker reads this register once the backend is connected.",
+  },
+
+  // Account closure requests (API admin.closures): a learner asks in Account settings; UK GDPR gives one month to carry it out.
+  closures: {
+    title: "Closure requests",
+    lead: "People who have asked us to close their account and delete their personal details. The law gives us one month from the day they asked.",
+    tabs: { open: "To do", done: "Closed", withdrawn: "Withdrawn" },
+    asked: "Asked {date}",
+    deadline: "Deadline {date}",
+    closedOn: "Closed {date} by {name}",
+    closedOnNoName: "Closed {date}",
+    withdrawnOn: "Withdrawn {date}",
+    reason: "Their reason",
+    noReason: "They didn't give a reason.",
+    gone: "Their login has already been deleted.",
+    open: "Open their account",
+    close: "Close account",
+    emptyTabs: {
+      open: ["Nothing to do", "Nobody is waiting for their account to be closed."],
+      done: ["No accounts closed yet", "Accounts closed at their owner's request show here."],
+      withdrawn: ["No withdrawn requests", "Requests the person took back show here."],
+    },
+    // the "are you sure?" step
+    sheet: {
+      title: "Close {name}'s account?",
+      what: [
+        "Their login is deleted, with their name, phone, address, photo and settings, and they're taken out of any provider or business account they belong to.",
+        "Bookings and payments stay, as the law asks, without their login.",
+        "We email them that it's done. This can't be undone.",
+      ],
+      confirm: "Close account",
+      closing: "Closing…",
+      cancel: "Cancel",
+    },
+    closed: "Account closed. We've emailed them that it's done.",
   },
 
   settings: {
