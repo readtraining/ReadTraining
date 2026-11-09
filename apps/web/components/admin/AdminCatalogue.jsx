@@ -86,7 +86,7 @@ export default function AdminCatalogue() {
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table">
                 <thead>
-                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><th scope="col">{cols.status}</th><SortTh label={cols.providers} col="providers" sorter={sorter} numeric /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric /><SortTh label={cols.from} col="from" sorter={sorter} numeric /></tr>
+                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><th scope="col">{cols.status}</th><SortTh label={cols.providers} col="providers" sorter={sorter} numeric right /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric right /><SortTh label={cols.from} col="from" sorter={sorter} numeric right /></tr>
                 </thead>
                 <tbody>
                   {sorter.apply(rows, COURSE_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((c) => (
@@ -99,9 +99,9 @@ export default function AdminCatalogue() {
                         <AdminStatus kind="course" status={c.status}>{copy.statuses[c.status]}</AdminStatus>
                         {c.pendingChange && <small>Change waiting</small>}
                       </td>
-                      <td data-label={cols.providers}>{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
-                      <td data-label={cols.sessions}>{c.method === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
-                      <td data-label={cols.from}>{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
+                      <td data-label={cols.providers} className="rt-adm-num-cell">{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
+                      <td data-label={cols.sessions} className="rt-adm-num-cell">{c.method === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
+                      <td data-label={cols.from} className="rt-adm-num-cell">{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
                     </tr>
                   ))}
                 </tbody>

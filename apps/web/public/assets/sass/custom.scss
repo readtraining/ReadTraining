@@ -7174,8 +7174,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 @media (max-width: 575px) { .rt-adm__actions { width: 100%; } .rt-adm__actions .button { flex: 1 1 auto; } }
 /* tables: a 24px gutter between columns, numbers on the right, and a row that opens its record is one big link with a hover */
 @media (min-width: 576px) {
-  .rt-adm--platform .rt-adm-table { width: calc(100% + 24px); margin: 0 -12px; }
-  .rt-adm--platform .rt-adm-table th, .rt-adm--platform .rt-adm-table td { padding: 12px; }
+  .rt-adm--platform .rt-adm-table { width: calc(100% + 32px); margin: 0 -16px; }
+  .rt-adm--platform .rt-adm-table th, .rt-adm--platform .rt-adm-table td { padding: 12px 16px; }
   .rt-adm--platform .rt-adm-table th.rt-adm-num, .rt-adm--platform .rt-adm-table td.rt-adm-num-cell { text-align: right; }
   .rt-adm--platform .rt-adm-table th.rt-adm-num .rt-adm-sort { margin-left: auto; }
   .rt-adm--platform .rt-adm-table tbody tr { transition: background-color 120ms ease; }
@@ -7183,7 +7183,13 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) { position: relative; cursor: pointer; }
   .rt-adm--platform .rt-adm-table tbody td:first-child a.rt-adm-strong::after { content: ""; position: absolute; inset: 0; }
   .rt-adm--platform .rt-adm-table tbody td :is(button, a, input, label, .rt-rowmenu):not(td:first-child > a.rt-adm-strong) { position: relative; z-index: 1; }
+  /* a row that opens a record ends in a chevron (unless its last cell holds row actions) */
+  .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) td:last-child:not(:has(.rt-rowmenu, button)) { padding-right: 40px; }
+  .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) td:last-child:not(:has(.rt-rowmenu, button))::after { content: ""; position: absolute; top: 50%; right: 14px; width: 14px; height: 14px; margin-top: -7px; background: var(--rt-c-muted); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; pointer-events: none; }
 }
+/* sort buttons are a proper touch target */
+.rt-adm--platform .rt-adm-sort { min-height: 24px; }
+@media (pointer: coarse) { .rt-adm--platform .rt-adm-sort { min-height: 32px; } }
 /* row actions: one 32px size (the "..." menu and the move arrows) */
 .rt-adm--platform .rt-rowmenu__btn { width: 32px; height: 32px; }
 .rt-adm--platform .rt-adm-cat__move { width: 32px; height: 32px; }
@@ -7226,3 +7232,53 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* long forms (Site content, Platform settings): the Save row stays in view at the bottom of the screen while the form is longer
    than the window, then settles at the form's end */
 .rt-adm--platform .rt-adm-content__save { position: sticky; bottom: 0; z-index: 3; padding: 12px 16px; border: 1px solid var(--rt-c-line); border-radius: 12px; background: var(--rt-c-surface); box-shadow: 0 -6px 16px rgba(20, 3, 66, 0.06); }
+
+/* ===================================================================================================
+   ADMIN RE-CHECK FIXES (platform admin only), from the audit's re-check of stages 1 to 3.
+   =================================================================================================== */
+/* N5: the table footer's Rows select matches its 32px pager buttons; Payouts' date field in a card header is 40px (C2) */
+.rt-adm--platform .rt-adm-pager__size .rt-field-dd .rt-cat-dd__trigger { height: 32px; }
+.rt-adm--platform .rt-acc__cardhead .rt-datefield__btn { height: 40px; }
+/* C12: an empty state's line stays short and balanced (no lone last word) */
+.rt-adm--platform .rt-state__text { max-width: 420px; text-wrap: balance; }
+/* C15: the Demo data tag is a 22px tag like the others */
+.rt-adm--platform .rt-demo-tag { padding: 1px 10px; line-height: 18px; }
+/* N6: a notice is always the full width of its column */
+.rt-adm--platform .rt-acc__notice { align-self: stretch; }
+/* G7: the page content stops growing on wide screens */
+.rt-adm--platform .rt-adm__main > * { max-width: 1440px; }
+/* G8, G9, N3: one header height on desktop (tabs start at the same place on every page) and the main action stays at the top
+   right beside the title instead of dropping under the description */
+@media (min-width: 992px) {
+  .rt-adm--platform .rt-adm__head { flex-wrap: nowrap; min-height: 88px; }
+  .rt-adm--platform .rt-adm__head > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .rt-adm--platform .rt-adm__actions { flex: none; }
+}
+/* G10: a page's extra explanation is no wider than its description */
+.rt-adm--platform .rt-adm-help { max-width: 860px; }
+/* I2: a clear focus ring on search boxes; a focused link keeps its weight */
+.rt-adm--platform .rt-adm-search input:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; box-shadow: none; }
+.rt-adm--platform a.rt-adm-strong:focus, .rt-adm--platform a.rt-adm-strong:focus-visible { font-weight: 600; }
+/* I4: row menus: room for their longest item, 36px items, a divider above the destructive one */
+.rt-adm--platform .rt-rowmenu__list { min-width: 220px; }
+.rt-adm--platform .rt-rowmenu__list :is(button, a)[role="menuitem"] { min-height: 36px; }
+.rt-adm--platform .rt-rowmenu__list li:has(> .-danger) { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--rt-c-line); }
+.rt-adm--platform .rt-rowmenu__list li:has(> .-danger) ~ li:has(> .-danger) { margin-top: 0; padding-top: 0; border-top: 0; }
+/* I6: the chosen option in a dropdown shows its tick only, not a tick and a bar */
+.rt-adm--platform .rt-cat-dd__option.is-active::before { opacity: 0; }
+/* R7: the stat tiles are 2 x 2 between phone and wide desktop, never 3 + 1; R6: one column on the narrowest phones */
+@media (min-width: 576px) and (max-width: 1199px) { .rt-adm--platform .rt-acc__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 399px) { .rt-adm--platform .rt-acc__stats { grid-template-columns: minmax(0, 1fr); } }
+/* R8: below 1200px the top bar keeps the avatar only, so nothing wraps */
+@media (max-width: 1199px) { .rt-adm--platform .rt-adm__mewho, .rt-adm--platform .rt-adm__site { display: none; } }
+@media (max-width: 575px) {
+  /* R2: filter pills stay on one row that scrolls sideways */
+  .rt-adm--platform .rt-acc__tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .rt-adm--platform .rt-acc__tabs::-webkit-scrollbar { display: none; }
+  .rt-adm--platform .rt-acc__tabs .rt-tr__filter { flex: none; }
+  /* R1, R5, N9: in a table's phone cards the first column is the card's heading: full width, left aligned, its line below */
+  .rt-adm--platform .rt-biz__table td:first-child { display: block; text-align: left; }
+  .rt-adm--platform .rt-biz__table td:first-child small { display: block; margin: 2px 0 0; }
+}
+/* N9: a cell's lines stay left aligned (numbers stay right) */
+@media (min-width: 576px) { .rt-adm--platform .rt-adm-table td { text-align: left; } .rt-adm--platform .rt-adm-table td.rt-adm-num-cell { text-align: right; } }

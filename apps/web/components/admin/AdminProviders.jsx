@@ -59,14 +59,14 @@ export default function AdminProviders() {
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
-              <thead><tr><SortTh label={c.name} col="name" sorter={s} /><th scope="col">{c.owner}</th><SortTh label={c.applied} col="applied" sorter={s} numeric /><SortTh label={c.commission} col="commission" sorter={s} numeric /><SortTh label={c.status} col="status" sorter={s} /></tr></thead>
+              <thead><tr><SortTh label={c.name} col="name" sorter={s} /><th scope="col">{c.owner}</th><SortTh label={c.applied} col="applied" sorter={s} numeric /><SortTh label={c.commission} col="commission" sorter={s} numeric right /><SortTh label={c.status} col="status" sorter={s} /></tr></thead>
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.id}>
                     <td data-label={c.name}><Link href={`/admin/providers/${p.slug}`} className="rt-adm-strong">{p.name}</Link></td>
                     <td data-label={c.owner}>{p.owner ? <><Link href={`/admin/learners/${p.owner.id}`} className="rt-adm-strong">{p.owner.name}</Link><small>{p.owner.email}</small></> : <span className="rt-adm-muted">–</span>}</td>
                     <td data-label={c.applied}>{formatWhen(Date.parse(p.appliedAt))}</td>
-                    <td data-label={c.commission}>{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>
+                    <td data-label={c.commission} className="rt-adm-num-cell">{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>
                     <td data-label={c.status}><AdminStatus kind="provider" status={p.status}>{copy.statuses[p.status]}</AdminStatus></td>
                   </tr>
                 ))}

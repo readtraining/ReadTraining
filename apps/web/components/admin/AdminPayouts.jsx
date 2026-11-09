@@ -75,7 +75,7 @@ export function AdminPayouts() {
         <p className="rt-acc__note rt-adm-cardnote">{P.owedNote}{perms.includes("payouts") && owed.data && !payable ? ` ${P.nothingPayable}` : ""}</p>
         {owed.error ? <ErrorState inCard onRetry={() => owed.refetch()} /> : owed.isLoading ? <TableSkeleton rows={3} /> : owed.data.length ? (
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><SortTh label={c.provider} col="provider" sorter={sorter} /><SortTh label={c.balance} col="balance" sorter={sorter} numeric /><SortTh label={c.held} col="held" sorter={sorter} numeric /><SortTh label={c.waiting} col="waiting" sorter={sorter} numeric /><SortTh label={c.payable} col="payable" sorter={sorter} numeric /></tr></thead>
+            <thead><tr><SortTh label={c.provider} col="provider" sorter={sorter} /><SortTh label={c.balance} col="balance" sorter={sorter} numeric right /><SortTh label={c.held} col="held" sorter={sorter} numeric right /><SortTh label={c.waiting} col="waiting" sorter={sorter} numeric right /><SortTh label={c.payable} col="payable" sorter={sorter} numeric right /></tr></thead>
             <tbody>
               {sorter.apply(owed.data, OWED_SORT).map((r) => (
                 <tr key={r.providerId}>

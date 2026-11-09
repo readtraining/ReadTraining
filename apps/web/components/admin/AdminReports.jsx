@@ -113,15 +113,15 @@ export default function AdminReports() {
         </div>
         {groups.length ? (
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><SortTh label={copy.groups[by]} col="name" sorter={sorter} /><SortTh label={copy.columns.orders} col="orders" sorter={sorter} numeric /><SortTh label={copy.columns.sales} col="sales" sorter={sorter} numeric /><SortTh label={copy.columns.commission} col="commission" sorter={sorter} numeric /><th scope="col">{copy.columns.share}</th></tr></thead>
+            <thead><tr><SortTh label={copy.groups[by]} col="name" sorter={sorter} /><SortTh label={copy.columns.orders} col="orders" sorter={sorter} numeric right /><SortTh label={copy.columns.sales} col="sales" sorter={sorter} numeric right /><SortTh label={copy.columns.commission} col="commission" sorter={sorter} numeric right /><th scope="col" className="rt-adm-num">{copy.columns.share}</th></tr></thead>
             <tbody>
               {sorter.apply(groups, REPORT_SORT).map((g) => (
                 <tr key={g.name}>
                   <td data-label={copy.groups[by]}><span className="rt-adm-strong">{g.name}</span></td>
-                  <td data-label={copy.columns.orders}>{g.orders}</td>
-                  <td data-label={copy.columns.sales}>{formatPrice(g.sales)}</td>
-                  <td data-label={copy.columns.commission}>{formatPrice(g.commission)}</td>
-                  <td data-label={copy.columns.share}>
+                  <td data-label={copy.columns.orders} className="rt-adm-num-cell">{g.orders}</td>
+                  <td data-label={copy.columns.sales} className="rt-adm-num-cell">{formatPrice(g.sales)}</td>
+                  <td data-label={copy.columns.commission} className="rt-adm-num-cell">{formatPrice(g.commission)}</td>
+                  <td data-label={copy.columns.share} className="rt-adm-num-cell">
                     <span className="rt-adm-share"><span style={{ width: `${(g.sales / sales) * 100}%` }} aria-hidden="true"></span></span>
                     <small>{Math.round((g.sales / sales) * 100)}%</small>
                   </td>

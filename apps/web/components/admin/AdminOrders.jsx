@@ -67,7 +67,7 @@ export default function AdminOrders() {
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
-              <thead><tr><SortTh label={c.ref} col="booked" sorter={s} numeric /><SortTh label={c.buyer} col="buyer" sorter={s} /><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><SortTh label={c.total} col="total" sorter={s} numeric /><SortTh label={c.state} col="status" sorter={s} /></tr></thead>
+              <thead><tr><SortTh label={c.ref} col="booked" sorter={s} numeric /><SortTh label={c.buyer} col="buyer" sorter={s} /><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><SortTh label={c.total} col="total" sorter={s} numeric right /><SortTh label={c.state} col="status" sorter={s} /></tr></thead>
               <tbody>
                 {rows.map((o) => (
                   <tr key={o.id}>
@@ -75,7 +75,7 @@ export default function AdminOrders() {
                     <td data-label={c.buyer}>{o.buyer.name}<small>{o.buyer.company || o.buyer.email}</small></td>
                     <td data-label={c.course}>{o.course}<small>{o.startsOn ? `${formatDate(o.startsOn)} · ` : ""}{o.quantity} {o.quantity === 1 ? "place" : "places"}</small></td>
                     <td data-label={c.provider}>{o.provider}{o.bookedBy && <small>{copy.staff.replace("{name}", o.bookedBy)}</small>}</td>
-                    <td data-label={c.total}><span className="rt-adm-num-cell">{formatPrice(o.gross)}</span><small>{copy.methods[o.method]}</small></td>
+                    <td data-label={c.total} className="rt-adm-num-cell"><span className="rt-adm-num-cell">{formatPrice(o.gross)}</span><small>{copy.methods[o.method]}</small></td>
                     <td data-label={c.state}><AdminStatus kind="order" status={o.status}>{copy.statuses[o.status]}</AdminStatus></td>
                   </tr>
                 ))}

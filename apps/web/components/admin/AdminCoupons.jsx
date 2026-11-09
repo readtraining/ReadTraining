@@ -112,15 +112,15 @@ export default function AdminCoupons() {
       ) : rows.length ? (
         <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><SortTh label={c.code} col="code" sorter={sorter} /><SortTh label={c.discount} col="discount" sorter={sorter} numeric /><th scope="col">{c.applies}</th><SortTh label={c.dates} col="dates" sorter={sorter} /><SortTh label={c.used} col="used" sorter={sorter} numeric /><SortTh label={c.status} col="status" sorter={sorter} />{canEdit && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
+            <thead><tr><SortTh label={c.code} col="code" sorter={sorter} /><SortTh label={c.discount} col="discount" sorter={sorter} numeric right /><th scope="col">{c.applies}</th><SortTh label={c.dates} col="dates" sorter={sorter} /><SortTh label={c.used} col="used" sorter={sorter} numeric right /><SortTh label={c.status} col="status" sorter={sorter} />{canEdit && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
             <tbody>
               {rows.map((x) => (
                 <tr key={x.id}>
                   <td data-label={c.code}><AdminTag code>{x.code}</AdminTag>{x.createdBy && <small>{x.createdBy}</small>}</td>
-                  <td data-label={c.discount}>{discountText(x)}</td>
+                  <td data-label={c.discount} className="rt-adm-num-cell">{discountText(x)}</td>
                   <td data-label={c.applies}>{appliesText(x)}</td>
                   <td data-label={c.dates}>{datesText(x)}</td>
-                  <td data-label={c.used}>{x.usageLimit ? copy.of.replace("{used}", x.used).replace("{limit}", x.usageLimit) : copy.unlimited.replace("{used}", x.used)}</td>
+                  <td data-label={c.used} className="rt-adm-num-cell">{x.usageLimit ? copy.of.replace("{used}", x.used).replace("{limit}", x.usageLimit) : copy.unlimited.replace("{used}", x.used)}</td>
                   <td data-label={c.status}><AdminStatus kind="coupon" status={x.status}>{copy.statuses[x.status]}</AdminStatus></td>
                   {canEdit && (
                     <td data-label="Actions">

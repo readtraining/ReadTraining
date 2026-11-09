@@ -76,10 +76,11 @@ export function useSort(first = null) {
   const by = (key, numeric = false) => setSort((s) => (s?.key === key ? { key, dir: -s.dir } : { key, dir: numeric ? -1 : 1 }));
   return { sort, by, apply };
 }
-export function SortTh({ label, col, sorter, numeric = false }) {
+// `numeric`: sorts largest first (numbers, prices, dates); `right`: a number or price column, header and cells on the right.
+export function SortTh({ label, col, sorter, numeric = false, right = false }) {
   const on = sorter.sort?.key === col;
   return (
-    <th scope="col" className={numeric ? "rt-adm-num" : undefined} aria-sort={on ? (sorter.sort.dir === 1 ? "ascending" : "descending") : "none"}>
+    <th scope="col" className={right ? "rt-adm-num" : undefined} aria-sort={on ? (sorter.sort.dir === 1 ? "ascending" : "descending") : "none"}>
       <button type="button" className={`rt-adm-sort${on ? " is-on" : ""}`} onClick={() => sorter.by(col, numeric)}>
         {label}
         <span className="rt-adm-sort__arrow" aria-hidden="true">{on ? (sorter.sort.dir === 1 ? "↑" : "↓") : "↕"}</span>

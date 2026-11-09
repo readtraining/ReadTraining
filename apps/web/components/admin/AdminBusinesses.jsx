@@ -41,15 +41,15 @@ export default function AdminBusinesses() {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.places} col="places" sorter={sorter} numeric /><SortTh label={c.credit} col="credit" sorter={sorter} /><SortTh label={c.owed} col="owed" sorter={sorter} numeric /><SortTh label={c.overdue} col="overdue" sorter={sorter} numeric /></tr></thead>
+            <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.places} col="places" sorter={sorter} numeric right /><SortTh label={c.credit} col="credit" sorter={sorter} /><SortTh label={c.owed} col="owed" sorter={sorter} numeric right /><SortTh label={c.overdue} col="overdue" sorter={sorter} numeric right /></tr></thead>
             <tbody>
               {sorter.apply(list, BUSINESS_SORT).map((b) => (
                 <tr key={b.slug}>
                   <td data-label={c.name}><Link href={`/admin/businesses/${b.slug}`} className="rt-adm-strong">{b.name}</Link><small>{b.contact} · {b.city}</small></td>
-                  <td data-label={c.places}>{b.places.assigned} of {b.places.bought}<small>{b.places.bought - b.places.assigned} not assigned</small></td>
+                  <td data-label={c.places} className="rt-adm-num-cell">{b.places.assigned} of {b.places.bought}<small>{b.places.bought - b.places.assigned} not assigned</small></td>
                   <td data-label={c.credit}><AdminStatus kind="credit" status={b.credit}>{copy.credit[b.credit]}</AdminStatus>{b.limit > 0 && <small>Limit {formatPrice(b.limit)}</small>}{b.eligible && <small>Eligible for credit</small>}</td>
-                  <td data-label={c.owed}>{formatPrice(b.owed)}</td>
-                  <td data-label={c.overdue}>{b.overdue > 0 ? <span className="rt-adm-money-late">{formatPrice(b.overdue)}</span> : <span className="rt-adm-muted">–</span>}</td>
+                  <td data-label={c.owed} className="rt-adm-num-cell">{formatPrice(b.owed)}</td>
+                  <td data-label={c.overdue} className="rt-adm-num-cell">{b.overdue > 0 ? <span className="rt-adm-money-late">{formatPrice(b.overdue)}</span> : <span className="rt-adm-muted">–</span>}</td>
                 </tr>
               ))}
             </tbody>
