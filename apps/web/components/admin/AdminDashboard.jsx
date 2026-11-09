@@ -116,6 +116,8 @@ export default function AdminDashboard() {
             <div className="rt-acc__cardhead">
               <h2 className="rt-acc__h2" id="rt-adm-risk-h">{copy.atRisk}</h2>
               {demoTag}
+              {/* in the card's header, as Activity log and All orders */}
+              {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
             </div>
             <p className="rt-acc__note rt-adm-cardnote">{copy.atRiskNote}</p>
             {soon.length ? (
@@ -133,7 +135,6 @@ export default function AdminDashboard() {
             ) : (
               <Empty inCard icon="sessions" title="All set" text={copy.atRiskNone} />
             )}
-            {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
           </section>
           )}
 

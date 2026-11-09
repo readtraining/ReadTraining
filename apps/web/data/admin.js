@@ -571,7 +571,7 @@ export const admin = {
     note: "Taken from the gross of new orders before commission. Orders keep the fee they were booked with.",
     card: { label: "Card fee (%)", hint: "Also used for payment links." },
     bnpl: { label: "Klarna fee (%)", hint: "Buy now, pay later." },
-    payoutDay: { label: "Payout day of the month", hint: "1 to 28. The next working day when it falls on a weekend or bank holiday." },
+    payoutDay: { label: "Payout day of the month", hint: "1 to 28 (or the next working day)." },
     saved: "Fees saved",
     readOnly: "Changing these needs the “Fees and commission” switch.",
   },

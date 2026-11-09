@@ -174,7 +174,8 @@ export default function AdminCourse({ id }) {
       )}
 
       <div className="rt-adm-detail">
-        <section className="rt-acc__card rt-adm-detail__main" aria-labelledby="rt-adm-cd-h">
+        <div className="rt-adm-detail__main">
+        <section className="rt-acc__card" aria-labelledby="rt-adm-cd-h">
           <h2 className="rt-acc__h2" id="rt-adm-cd-h">Details</h2>
           <dl className="rt-adm-dl">
             <div><dt>Category</dt><dd>{place || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
@@ -190,18 +191,6 @@ export default function AdminCourse({ id }) {
           </dl>
           {c.missing.length > 0 && <p className="rt-acc__note">Still missing: {c.missing.join("; ")}.</p>}
         </section>
-        <section className="rt-acc__card rt-adm-detail__side" aria-labelledby="rt-adm-ci-h">
-          <h2 className="rt-acc__h2" id="rt-adm-ci-h">Images and video</h2>
-          {c.images.length ? (
-            <ul className="rt-adm-thumbs">
-              {c.images.map((i, n) => <li key={i.id}><img src={i.url} alt={i.alt || ""} />{n === 0 && <AdminTag>Cover</AdminTag>}<small>{i.alt || "No ALT text"}</small></li>)}
-            </ul>
-          ) : <Empty inCard icon="content" title="No images yet" text="Pictures added in the course editor show here; the first is the cover." />}
-          <dl className="rt-adm-dl rt-adm-mt">
-            <div><dt>Video</dt><dd>{c.videoUrl ? <a href={c.videoUrl} target="_blank" rel="noopener noreferrer" className="rt-pws-ce__url">{c.videoUrl}</a> : <span className="rt-adm-muted">–</span>}</dd></div>
-          </dl>
-        </section>
-      </div>
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cc-h">
         <h2 className="rt-acc__h2" id="rt-adm-cc-h">The course page</h2>
@@ -217,6 +206,21 @@ export default function AdminCourse({ id }) {
           <Row label="FAQs" v={c.faqs}><Fold open={reviewing} label={count(c.faqs, "question")}><Faqs faqs={c.faqs} /></Fold></Row>
         </dl>
       </section>
+        </div>
+        <aside className="rt-adm-detail__side">
+        <section className="rt-acc__card" aria-labelledby="rt-adm-ci-h">
+          <h2 className="rt-acc__h2" id="rt-adm-ci-h">Images and video</h2>
+          {c.images.length ? (
+            <ul className="rt-adm-thumbs">
+              {c.images.map((i, n) => <li key={i.id}><img src={i.url} alt={i.alt || ""} />{n === 0 && <AdminTag>Cover</AdminTag>}<small>{i.alt || "No ALT text"}</small></li>)}
+            </ul>
+          ) : <Empty inCard icon="content" title="No images yet" text="Pictures added in the course editor show here; the first is the cover." />}
+          <dl className="rt-adm-dl rt-adm-mt">
+            <div><dt>Video</dt><dd>{c.videoUrl ? <a href={c.videoUrl} target="_blank" rel="noopener noreferrer" className="rt-pws-ce__url">{c.videoUrl}</a> : <span className="rt-adm-muted">–</span>}</dd></div>
+          </dl>
+        </section>
+        </aside>
+      </div>
 
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={`${sheetTitle}: ${c.title}`} closeLabel="Close">
         <form className="rt-q__form rt-biz__sheetform" onSubmit={send} noValidate ref={formRef}>

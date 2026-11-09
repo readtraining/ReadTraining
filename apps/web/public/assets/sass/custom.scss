@@ -7358,3 +7358,29 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-adm--platform .rt-biz__table td.rt-adm-num-cell { flex-wrap: wrap; }
   .rt-adm--platform .rt-biz__table td.rt-adm-num-cell small { flex-basis: 100%; margin: 2px 0 0; text-align: right; }
 }
+/* Re-check 2. Course detail: the course's words at a comfortable reading width; a long video address on one line with "…" */
+.rt-adm--platform .rt-adm-detail__main .rt-adm-read dd { max-width: 760px; }
+.rt-adm--platform .rt-adm-detail__side .rt-pws-ce__url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+/* the icon rail's waiting counts are small dots above the icon's corner, not numbers over it */
+@media (min-width: 992px) {
+  .rt-adm--platform.is-sideclosed .rt-adm__link .rt-adm__count { top: 2px; right: 10px; min-width: 8px; width: 8px; height: 8px; padding: 0; overflow: hidden; font-size: 0; background: var(--rt-c-brand); }
+}
+/* Financial settings: every notice is the form's full width */
+.rt-adm--platform .rt-adm-fees > .rt-acc__notice { justify-self: stretch; }
+/* Activity log: the date stays on one line; a long email ends with "…" (the full one is in its tooltip); on phones the person
+   takes the card's full width, so the name stays on one line */
+.rt-adm--platform .rt-adm-table td:first-child:not(:has(a, button)) { white-space: nowrap; }
+.rt-adm--platform .rt-adm-activity__who { max-width: 100%; }
+.rt-adm--platform .rt-adm-activity__who small { display: block; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 575px) {
+  .rt-adm--platform .rt-biz__table td:has(> .rt-adm-activity__who) { flex-wrap: wrap; }
+  .rt-adm--platform .rt-biz__table td > .rt-adm-activity__who { flex: 1 1 100%; text-align: left; }
+}
+/* Dashboard (its own review): every row in a card's list is the same height (the first one keeps its top padding); activity
+   avatars sit in the middle of their row; a card's note sits 16px under its header like everything else; a header's link is a
+   32px target */
+.rt-adm--platform .rt-adm-queues li:first-child .rt-adm-queue { padding-top: 14px; }
+.rt-adm--platform .rt-adm-list li:first-child, .rt-adm--platform .rt-adm-feed li:first-child { padding-top: 12px; }
+.rt-adm--platform .rt-adm-feed li { align-items: center; }
+.rt-adm--platform .rt-acc__cardhead + .rt-adm-cardnote { margin-top: 0; }
+.rt-adm--platform .rt-acc__cardhead .fb-textlink { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
