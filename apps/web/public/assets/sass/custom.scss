@@ -7322,7 +7322,6 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm--platform .rt-acc__stats .rt-tps__keyfact { padding: 24px; }
 .rt-adm--platform .rt-adm-queue__label { flex: 1 1 auto; }
 .rt-adm--platform .rt-adm-queue__n.rt-adm__count { min-width: 28px; margin-left: 0; text-align: center; }
-.rt-adm--platform .rt-adm-queue:not(.is-clear) .rt-adm-queue__n.rt-adm__count { background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
 /* Activity log: From and To sit inside their fields, so the toolbar is one even row; the person's role tag sits beside their
    name instead of under it, and the name lines stay left aligned at every width */
 .rt-datefield__prefix { font-weight: 600; color: var(--rt-c-text); }
