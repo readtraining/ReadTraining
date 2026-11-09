@@ -4888,7 +4888,6 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm-queue__label { flex: 1; font-size: var(--rt-text-sm); font-weight: 600; }
 .rt-adm-queue i { color: var(--color-light-1); }
 @media (hover: hover) and (pointer: fine) { .rt-adm-queue:hover .rt-adm-queue__label { color: var(--color-purple-1); } }
-.rt-adm-queue.is-clear .rt-adm-queue__n, .rt-adm-queue.is-clear .rt-adm-queue__label { color: var(--rt-c-muted); font-weight: 500; }
 .rt-adm-feed { margin: 0; padding: 0; list-style: none; }
 .rt-adm-feed li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
 .rt-adm-feed li:first-child { padding-top: 0; border-top: 0; }
@@ -7393,9 +7392,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
    --rt-menu-shift), in step with the box, and slides back when it closes. The menu always stays visible. */
 .header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1); }
 @media (prefers-reduced-motion: reduce) { .header .menu__nav { transition: none; } }
-/* Dashboard: a queue with nothing waiting shows its 0 as quiet text, without the badge; the latest orders' course and
-   reference stay on one line, ending with "…" (the full line is in its tooltip) */
-.rt-adm--platform .rt-adm-queue.is-clear .rt-adm-queue__n.rt-adm__count { background: none; }
+/* Dashboard: the latest orders' course and reference stay on one line, ending with "…" (the full line is in its tooltip) */
 .rt-adm--platform .rt-adm-list__main { flex: 1 1 auto; min-width: 0; }
 .rt-adm--platform .rt-adm-list__main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-adm--platform .rt-adm-list__side { flex: 0 0 auto; flex-wrap: nowrap; }

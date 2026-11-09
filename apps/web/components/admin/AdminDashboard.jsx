@@ -90,6 +90,11 @@ export default function AdminDashboard() {
       { key: "candidates", n: data.counts.candidates, overdue: 0 },
     ] : []),
   ];
+  // Queues lists only what has something waiting; a queue comes back as soon as it has work. Until every count has loaded it
+  // shows placeholders, so a queue is never left out just because its number hadn't arrived
+  const waiting = queues.filter((q) => q.n > 0);
+  const queuesLoading = providers.isLoading || courses.isLoading || (seesMoney && money.isLoading);
+  const queuesFailed = providers.error || courses.error || (seesMoney && money.error);
   // the same sessions as Sessions and venues > Next 7 days
   const soon = data.sessions.filter((s) => !s.cancelled && s.daysAway <= 7 && !s.joiningSent);
 
@@ -104,18 +109,28 @@ export default function AdminDashboard() {
           <div className="rt-acc__cardhead">
             <h2 className="rt-acc__h2" id="rt-adm-queues-h">{copy.queues}</h2>
           </div>
-          <ul className="rt-adm-queues">
-            {queues.map((q) => (
-              <li key={q.key}>
-                <Link href={copy.queueItems[q.key].href} className={`rt-adm-queue${q.n ? "" : " is-clear"}`}>
-                  <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
-                  {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
-                  <span className="rt-adm-queue__n rt-adm__count">{q.n}</span>
-                  <i className="icon-chevron-right text-12" aria-hidden="true"></i>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {queuesFailed ? (
+            <ErrorState inCard onRetry={() => { providers.refetch(); courses.refetch(); if (seesMoney) money.refetch(); }} />
+          ) : queuesLoading ? (
+            <ul className="rt-adm-feed" aria-hidden="true">
+              {[0, 1, 2].map((i) => <li key={i}><span className="rt-skel rt-skel--line" style={{ width: "70%", height: 14 }}></span></li>)}
+            </ul>
+          ) : waiting.length ? (
+            <ul className="rt-adm-queues">
+              {waiting.map((q) => (
+                <li key={q.key}>
+                  <Link href={copy.queueItems[q.key].href} className="rt-adm-queue">
+                    <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
+                    {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
+                    <span className="rt-adm-queue__n rt-adm__count">{q.n}</span>
+                    <i className="icon-chevron-right text-12" aria-hidden="true"></i>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty inCard icon="approvals" title={copy.queuesNone.title} text={copy.queuesNone.text} />
+          )}
         </section>
         <RecentActivity />
         {SHOW_DEMO && (

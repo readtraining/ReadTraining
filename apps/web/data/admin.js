@@ -339,6 +339,7 @@ export const admin = {
     lead: "What needs attention today across the marketplace.",
     stats: { orders: "Orders in the last 7 days", revenue: "Sales in the last 7 days", refunds: "Refunds to decide", payouts: "Payouts to approve" },
     queues: "Queues",
+    queuesNone: { title: "All clear", text: "Nothing is waiting. A queue shows here as soon as something needs you." },
     queueItems: {
       refunds: { label: "Refunds to decide", href: "/admin/refunds" },
       disputes: { label: "Open disputes", href: "/admin/disputes" },
