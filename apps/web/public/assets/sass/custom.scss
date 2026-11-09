@@ -7212,8 +7212,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm--platform .rt-adm-hero .rt-adm__h1 { font-size: 24px; } /* one title size on every detail page */
 .rt-adm-ml { margin-left: 6px; }
 /* Dashboard: two columns that stack their own cards (work on the left, what happened on the right) */
-.rt-adm-dash { display: grid; gap: 16px; align-items: start; }
-.rt-adm-dash__col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.rt-adm-dash { display: grid; gap: 16px; align-items: stretch; }
+.rt-adm-dash > * { min-width: 0; }
 @media (min-width: 1100px) { .rt-adm-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* cards side by side are the same height */
 .rt-adm--platform .rt-adm-grid2 { align-items: stretch; }
@@ -7318,7 +7318,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-adm--platform.is-sideclosed .rt-adm__link .rt-adm__count { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; line-height: 18px; }
 }
 /* Dashboard: 20px between cards, tiles padded like the cards, queue counts as right-aligned count badges */
-.rt-adm--platform .rt-adm-dash, .rt-adm--platform .rt-adm-dash__col { gap: 20px; }
+.rt-adm--platform .rt-adm-dash { gap: 20px; }
 .rt-adm--platform .rt-acc__stats .rt-tps__keyfact { padding: 24px; }
 .rt-adm--platform .rt-adm-queue__label { flex: 1 1 auto; }
 .rt-adm--platform .rt-adm-queue__n.rt-adm__count { min-width: 28px; margin-left: 0; text-align: center; }
@@ -7396,3 +7396,5 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm--platform .rt-adm-list__main { flex: 1 1 auto; min-width: 0; }
 .rt-adm--platform .rt-adm-list__main small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-adm--platform .rt-adm-list__side { flex: 0 0 auto; flex-wrap: nowrap; }
+/* Dashboard grid: every card header is the height of its header link, so the titles in a row line up */
+.rt-adm--platform .rt-adm-dash .rt-acc__cardhead { min-height: 32px; }
