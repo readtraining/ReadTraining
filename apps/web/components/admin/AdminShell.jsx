@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -37,6 +37,11 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const me = useAdminAccess();
   const [leaving, setLeaving] = useState(false);
   const [folded, fold] = useFoldedGroups("rt-adm-nav-folded"); // the groups this admin folded
+  // the group holding the page you are on always opens, so its link is never hidden
+  const hereGroup = A.nav.find((g) => g.items.some((x) => x.key === current))?.group;
+  useEffect(() => {
+    if (hereGroup && folded.includes(hereGroup)) fold(hereGroup);
+  }, [hereGroup, folded]); // eslint-disable-line react-hooks/exhaustive-deps -- `fold` toggles; it runs once per folded group
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
   const { closed } = useSideMenu(); // the sidebar hidden, from 992px
   // the demo records (notes, history, the staff list) carry the real admin's name
@@ -113,7 +118,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
                 <ul id={id} hidden={shut}>
                   {g.items.map((x) => (
                     <li key={x.key}>
-                      <Link href={x.href} className={`rt-adm__link${x.key === current ? " is-active" : ""}`} aria-current={x.key === current ? "page" : undefined}>
+                      <Link href={x.href} className={`rt-adm__link${x.key === current ? " is-active" : ""}`} aria-current={x.key === current ? "page" : undefined} title={x.label}>
                         <NavIcon name={x.key} />
                         <span>{x.label}</span>
                         {x.badge && counts[x.badge] > 0 && <span className="rt-adm__count" aria-label={`${counts[x.badge]} waiting`}>{counts[x.badge]}</span>}
