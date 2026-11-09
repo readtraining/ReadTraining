@@ -89,7 +89,7 @@ export default function AdminCatalogueList() {
     </span>
   );
   const addButton = (kind, parent, where) => canEdit && (
-    <button type="button" className="rt-cd__link rt-adm-cat__add" onClick={() => setSheet({ mode: "add", kind, parent, where })}>+ {copy.add[kind]}</button>
+    <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-adm-cat__add" onClick={() => setSheet({ mode: "add", kind, parent, where })}>+ {copy.add[kind]}</button>
   );
 
   return (

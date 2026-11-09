@@ -94,76 +94,79 @@ export default function AdminDashboard() {
     <div className="rt-acc__stack">
       <Stats items={stats} label="Today" />
 
-      <div className="rt-adm-grid2">
-        <section className="rt-acc__card" aria-labelledby="rt-adm-queues-h">
-          <h2 className="rt-acc__h2" id="rt-adm-queues-h">{copy.queues}</h2>
-          <ul className="rt-adm-queues">
-            {queues.map((q) => (
-              <li key={q.key}>
-                <Link href={copy.queueItems[q.key].href} className={`rt-adm-queue${q.n ? "" : " is-clear"}`}>
-                  <span className="rt-adm-queue__n">{q.n}</span>
-                  <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
-                  {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
-                  <i className="icon-chevron-right text-12" aria-hidden="true"></i>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <RecentActivity />
-      </div>
-
-      <div className="rt-adm-grid2">
-        {SHOW_DEMO && (
-        <section className="rt-acc__card" aria-labelledby="rt-adm-risk-h">
-          <div className="rt-acc__cardhead">
-            <h2 className="rt-acc__h2" id="rt-adm-risk-h">{copy.atRisk}</h2>
-            {demoTag}
-          </div>
-          <p className="rt-acc__note rt-adm-cardnote">{copy.atRiskNote}</p>
-          {soon.length ? (
-            <ul className="rt-adm-list">
-              {soon.slice(0, 5).map((s) => (
-                <li key={s.id}>
-                  <div>
-                    <span className="rt-adm-strong">{s.course}</span>
-                    <small>{formatDate(s.date)} · {s.provider} · {s.city}</small>
-                  </div>
-                  <AdminStatus kind="queue" status="noJoining">{copy.noJoining}</AdminStatus>
+      <div className="rt-adm-dash">
+        <div className="rt-adm-dash__col">
+          <section className="rt-acc__card" aria-labelledby="rt-adm-queues-h">
+            <h2 className="rt-acc__h2" id="rt-adm-queues-h">{copy.queues}</h2>
+            <ul className="rt-adm-queues">
+              {queues.map((q) => (
+                <li key={q.key}>
+                  <Link href={copy.queueItems[q.key].href} className={`rt-adm-queue${q.n ? "" : " is-clear"}`}>
+                    <span className="rt-adm-queue__n">{q.n}</span>
+                    <span className="rt-adm-queue__label">{copy.queueItems[q.key].label}</span>
+                    {q.overdue > 0 && <AdminStatus kind="queue" status="overdue">{copy.overdueNote.replace("{n}", q.overdue)}</AdminStatus>}
+                    <i className="icon-chevron-right text-12" aria-hidden="true"></i>
+                  </Link>
                 </li>
               ))}
             </ul>
-          ) : (
-            <Empty inCard icon="sessions" title="All set" text={copy.atRiskNone} />
-          )}
-          {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
-        </section>
-        )}
-
-        {seesMoney && (
-          <section className="rt-acc__card" aria-labelledby="rt-adm-latest-h">
-            <h2 className="rt-acc__h2" id="rt-adm-latest-h">{copy.recent}</h2>
-            {latestOrders.data?.orders.length ? (
+          </section>
+          {SHOW_DEMO && (
+          <section className="rt-acc__card" aria-labelledby="rt-adm-risk-h">
+            <div className="rt-acc__cardhead">
+              <h2 className="rt-acc__h2" id="rt-adm-risk-h">{copy.atRisk}</h2>
+              {demoTag}
+            </div>
+            <p className="rt-acc__note rt-adm-cardnote">{copy.atRiskNote}</p>
+            {soon.length ? (
               <ul className="rt-adm-list">
-                {latestOrders.data.orders.map((o) => (
-                  <li key={o.id}>
+                {soon.slice(0, 5).map((s) => (
+                  <li key={s.id}>
                     <div>
-                      <Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.buyer.name}</Link>
-                      <small>{o.course} · {o.ref}</small>
+                      <span className="rt-adm-strong">{s.course}</span>
+                      <small>{formatDate(s.date)} · {s.provider} · {s.city}</small>
                     </div>
-                    <div className="rt-adm-list__side">
-                      <strong className="rt-adm-num-cell">{formatPrice(o.gross)}</strong>
-                      <AdminStatus kind="order" status={o.status}>{A.orders.statuses[o.status]}</AdminStatus>
-                    </div>
+                    <AdminStatus kind="queue" status="noJoining">{copy.noJoining}</AdminStatus>
                   </li>
                 ))}
               </ul>
-            ) : latestOrders.isLoading ? null : (
-              <Empty inCard icon="orders" title={A.orders.empty} text={A.orders.emptyText} />
+            ) : (
+              <Empty inCard icon="sessions" title="All set" text={copy.atRiskNone} />
             )}
-            <Link href="/admin/orders" className="fb-textlink rt-adm-mt">{copy.allOrders}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
+            {soon.length > 0 && <Link href="/admin/sessions?tab=week" className="fb-textlink rt-adm-mt">{soon.length > 5 ? `All ${soon.length} sessions` : "Open sessions"}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
           </section>
-        )}
+          )}
+
+          {seesMoney && (
+            <section className="rt-acc__card" aria-labelledby="rt-adm-latest-h">
+              <div className="rt-acc__cardhead">
+                <h2 className="rt-acc__h2" id="rt-adm-latest-h">{copy.recent}</h2>
+                <Link href="/admin/orders" className="fb-textlink">{copy.allOrders}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
+              </div>
+              {latestOrders.data?.orders.length ? (
+                <ul className="rt-adm-list">
+                  {latestOrders.data.orders.map((o) => (
+                    <li key={o.id}>
+                      <div>
+                        <Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.buyer.name}</Link>
+                        <small>{o.course} · {o.ref}</small>
+                      </div>
+                      <div className="rt-adm-list__side">
+                        <strong className="rt-adm-num-cell">{formatPrice(o.gross)}</strong>
+                        <AdminStatus kind="order" status={o.status}>{A.orders.statuses[o.status]}</AdminStatus>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : latestOrders.isLoading ? null : (
+                <Empty inCard icon="orders" title={A.orders.empty} text={A.orders.emptyText} />
+              )}
+            </section>
+          )}
+        </div>
+        <div className="rt-adm-dash__col">
+          <RecentActivity />
+        </div>
       </div>
     </div>
   );

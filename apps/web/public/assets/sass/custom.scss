@@ -7195,3 +7195,34 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* card headers: title left, actions right, 16px to the body */
 .rt-adm--platform .rt-acc__cardhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin-bottom: 16px; }
 .rt-adm--platform .rt-acc__cardhead > .rt-acc__h2 { margin: 0; }
+
+/* ===================================================================================================
+   ADMIN STAGE 3 (platform admin only): detail pages, the Dashboard's columns, Categories, form rhythm and a sticky Save bar.
+   =================================================================================================== */
+/* detail pages (course, provider): a main column and a 340px side column, so cards of different heights never leave a hole */
+.rt-adm-detail { display: grid; gap: 16px; align-items: start; }
+.rt-adm-detail > div.rt-adm-detail__main, .rt-adm-detail > aside.rt-adm-detail__side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+@media (min-width: 1100px) { .rt-adm-detail { grid-template-columns: minmax(0, 1fr) 340px; } }
+.rt-adm--platform .rt-adm-hero .rt-adm__h1 { font-size: 24px; } /* one title size on every detail page */
+.rt-adm-ml { margin-left: 6px; }
+/* Dashboard: two columns that stack their own cards (work on the left, what happened on the right) */
+.rt-adm-dash { display: grid; gap: 16px; align-items: start; }
+.rt-adm-dash__col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+@media (min-width: 1100px) { .rt-adm-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* cards side by side are the same height */
+.rt-adm--platform .rt-adm-grid2 { align-items: stretch; }
+/* Categories: rows line up with their 32px buttons, the description has room, and a group shows that it opens */
+.rt-adm--platform .rt-adm-cat > li { align-items: center; }
+.rt-adm--platform .rt-adm-cat > li:has(> details) { align-items: start; }
+.rt-adm--platform .rt-adm-cat__group summary { min-height: 32px; list-style: none; }
+.rt-adm--platform .rt-adm-cat__group summary::-webkit-details-marker { display: none; }
+.rt-adm--platform .rt-adm-cat__group summary::before { content: ""; flex: none; width: 14px; height: 14px; background: var(--rt-c-muted); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; transition: transform 150ms ease; }
+.rt-adm--platform .rt-adm-cat__group[open] > summary::before { transform: rotate(90deg); }
+.rt-adm--platform .rt-acc__card > .rt-acc__note + .rt-adm-cat { margin-top: 16px; }
+.rt-adm--platform .rt-adm-cat__add { margin-top: 16px; }
+@media (prefers-reduced-motion: reduce) { .rt-adm--platform .rt-adm-cat__group summary::before { transition: none; } }
+/* forms: 20px between fields */
+.rt-adm--platform .rt-acc__form { gap: 20px; }
+/* long forms (Site content, Platform settings): the Save row stays in view at the bottom of the screen while the form is longer
+   than the window, then settles at the form's end */
+.rt-adm--platform .rt-adm-content__save { position: sticky; bottom: 0; z-index: 3; padding: 12px 16px; border: 1px solid var(--rt-c-line); border-radius: 12px; background: var(--rt-c-surface); box-shadow: 0 -6px 16px rgba(20, 3, 66, 0.06); }
