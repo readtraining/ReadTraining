@@ -7132,3 +7132,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-bk__tags .rt-pill.-accent small { margin-left: 4px; font-weight: 400; }
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
 .rt-bk__inpkg i { color: var(--rt-c-success); }
+
+/* Header: when the search box opens, the menu slides left just far enough to make room for it (HomeHeader sets
+   --rt-menu-shift), in step with the box, and slides back when it closes. The menu always stays visible. */
+.header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1); }
+@media (prefers-reduced-motion: reduce) { .header .menu__nav { transition: none; } }

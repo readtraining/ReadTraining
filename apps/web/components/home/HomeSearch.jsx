@@ -27,7 +27,10 @@ function highlight(text, q) {
   );
 }
 
-export default function HomeSearch() {
+// `onOpenChange(open)` tells the header the search is opening or closing, so it can slide its menu left to make room
+// (HomeHeader); `width` is the open box's width (the header narrows it where even sliding the menu isn't enough).
+export const SEARCH_WIDTH = 230;
+export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
   const router = useRouter();
   const [open, setOpen] = useState(false); // input visible
   const [focused, setFocused] = useState(false); // dropdown visible while the input has focus
@@ -40,7 +43,8 @@ export default function HomeSearch() {
       setFocused(false);
       inputRef.current?.blur();
     }
-  }, [open]);
+    onOpenChange?.(open);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- onOpenChange is the header's state setter
 
   useEffect(() => {
     if (!open) return;
@@ -103,7 +107,7 @@ export default function HomeSearch() {
         style={{
           overflow: "hidden",
           transition: "width .3s cubic-bezier(.215,.61,.355,1), opacity .3s ease, padding .3s ease, border-color .15s",
-          width: open ? 230 : 0,
+          width: open ? width : 0,
           opacity: open ? 1 : 0,
           height: 36,
           borderRadius: 200,
