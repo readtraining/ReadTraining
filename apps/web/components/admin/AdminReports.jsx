@@ -6,7 +6,7 @@ import { useAdmin } from "@/lib/admin";
 import { modeLabel } from "@/lib/courseModes";
 import { formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { Said, Stats, TableSkeleton, Tabs, useSort, SortTh, Empty } from "./adminParts";
+import { Said, Stats, TableSkeleton, Tabs, useSort, SortTh, Empty, HeaderAction } from "./adminParts";
 
 const copy = A.reports;
 const DAY = 86400000;
@@ -81,7 +81,7 @@ export default function AdminReports() {
       <Said text={said} />
       <div className="rt-adm-toolbar">
         <Tabs tabs={RANGES.map((key) => ({ key, label: copy.ranges[key] }))} value={range} onChange={setRange} label={copy.range} />
-        <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={download} disabled={!groups.length}>{copy.export}</button>
+        <HeaderAction><button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={download} disabled={!groups.length}>{copy.export}</button></HeaderAction>
       </div>
       <Stats
         label={copy.ranges[range]}

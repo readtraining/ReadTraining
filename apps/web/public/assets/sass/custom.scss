@@ -7330,3 +7330,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm--platform .rt-adm-activity__dates .rt-datefield { min-width: 170px; }
 .rt-adm--platform .rt-adm-activity__who { display: inline-block; vertical-align: top; text-align: left; }
 .rt-adm--platform .rt-adm-activity__as { display: inline-block; margin: 0 0 0 8px; vertical-align: top; }
+/* Customer reviews: one line of the review's text in the list (the full text is in Edit), so rows stay one height */
+.rt-adm--platform .rt-biz__table td small.rt-adm-rv__text { -webkit-line-clamp: 1; }
+/* Course reviews: 20px between review cards */
+.rt-adm--platform .rt-adm-items { gap: 20px; }

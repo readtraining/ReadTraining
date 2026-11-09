@@ -16,7 +16,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { Pager, RowMenu, Said, TableSkeleton, Tabs, Empty, usePaging, HeaderAction } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
-import { AdminStatus } from "./AdminStatus";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.customerReviews;
 const f = copy.fields;
@@ -96,11 +96,12 @@ export default function AdminCustomerReviews() {
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
-      <p className="rt-acc__note rt-adm-help">{copy.legal}</p>
+      <p className="rt-acc__notice">{copy.legal}</p>
       <div className="rt-adm-toolbar">
         <Tabs tabs={tabs.map((key) => ({ key, label: copy.tabs[key], count: counts ? (key === "all" ? counts.published + counts.hidden + counts.pending : counts[key]) : undefined }))} value={tab} onChange={(t) => { setTab(t); pages.restart(); }} label="Show reviews" />
         <div className="rt-adm-toolbar__end">
-          {counts && <span className="rt-adm-muted">{copy.homeCount.replace("{n}", counts.home).replace("{max}", list.data.homeMax)}</span>}
+          {/* how many are on the home page: a tag at the toolbar's end, not a loose line */}
+          {counts && <AdminTag>{copy.homeCount.replace("{n}", counts.home).replace("{max}", list.data.homeMax)}</AdminTag>}
           {canEdit && !blank && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button></HeaderAction>}
         </div>
       </div>

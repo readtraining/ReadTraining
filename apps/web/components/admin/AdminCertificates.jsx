@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Search, Said, TableSkeleton, Empty, HeaderAction } from "./adminParts";
+import { Search, Said, TableSkeleton, Empty, HeaderAction, RowMenu } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
@@ -79,7 +79,7 @@ export default function AdminCertificates() {
       </div>
       <Said text={said} />
 
-      <p className="rt-acc__note rt-adm-help">{copy.checkerNote}</p>
+      <p className="rt-acc__notice">{copy.checkerNote}</p>
       {certs.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
@@ -96,8 +96,8 @@ export default function AdminCertificates() {
                   <td data-label={cc.status}><CertPill cert={c} now={now} />{c.revoked && c.revokeReason && <small>{c.revokeReason}</small>}</td>
                   <td className="rt-biz__act">
                     {c.revoked
-                      ? <button type="button" className="rt-cd__link" onClick={() => { reinstateCertificate(c); setSaid(`Reinstated ${c.number}`); }}>{copy.reinstate}</button>
-                      : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => openRevoke(c)}>{copy.revoke}</button>}
+                      ? <RowMenu label={`Actions for ${c.number}`} items={[{ label: copy.reinstate, onClick: () => { reinstateCertificate(c); setSaid(`Reinstated ${c.number}`); } }]} />
+                      : <RowMenu label={`Actions for ${c.number}`} items={[{ label: copy.revoke, onClick: () => openRevoke(c), danger: true }]} />}
                   </td>
                 </tr>
               ))}

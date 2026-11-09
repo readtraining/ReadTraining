@@ -6,7 +6,7 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
 import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
-import { AdminStatus } from "./AdminStatus";
+import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.learners;
 const FILTERS = Object.keys(copy.filters);
@@ -67,8 +67,8 @@ export default function AdminLearnerList() {
                     <td data-label={c.accounts}>
                       {st.organisations.length || st.admin ? (
                         <span className="rt-adm-learners__orgs">
-                          {st.organisations.map((o) => <span key={`${o.type}-${o.name}`}>{o.name}<small>{copy.detail.orgTypes[o.type]}</small></span>)}
-                          {st.admin && <span>ReadTraining<small>{copy.adminTag}</small></span>}
+                          {st.organisations.map((o) => <span key={`${o.type}-${o.name}`}>{o.name} <AdminTag>{copy.detail.orgTypes[o.type]}</AdminTag></span>)}
+                          {st.admin && <span>ReadTraining <AdminTag>{copy.adminTag}</AdminTag></span>}
                         </span>
                       ) : <span className="rt-adm-muted">–</span>}
                     </td>

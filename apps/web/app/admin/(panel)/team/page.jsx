@@ -1,7 +1,7 @@
 import React from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import AdminTeam from "@/components/admin/AdminTeam";
-import { EmptyState } from "@/components/states/States";
+import { Empty } from "@/components/admin/adminParts";
 import { admin as A } from "@/data/admin";
 import { getAdminAccess } from "@/lib/adminAccess";
 import { pageMetadata } from "@/lib/seo";
@@ -14,7 +14,7 @@ export default async function Page() {
   const me = await getAdminAccess();
   return (
     <AdminShell current="team" title={A.team.title} lead={A.team.lead}>
-      {me?.permissions.includes("admins") ? <AdminTeam /> : <EmptyState title="You don't have access to the admin team." text="Ask a Full admin if you need it." />}
+      {me?.permissions.includes("admins") ? <AdminTeam /> : <Empty kind="missing" icon="team" title="You don't have access to the admin team." text="Ask a Full admin if you need it." />}
     </AdminShell>
   );
 }

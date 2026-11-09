@@ -54,8 +54,8 @@ export const admin = {
       { key: "closures", label: "Closure requests", href: "/admin/closure-requests", permission: "suspend", badge: "closures" },
       { key: "certificates", label: "Certificates", href: "/admin/certificates", demo: true },
       { key: "businesses", label: "Business accounts", href: "/admin/businesses", badge: "credit", demo: true },
-      { key: "jobs", label: "Security Jobs", href: "/admin/jobs", badge: "candidates", demo: true },
-      { key: "reviews", label: "Reviews", href: "/admin/reviews", badge: "reviews", demo: true },
+      { key: "jobs", label: "Security jobs", href: "/admin/jobs", badge: "candidates", demo: true },
+      { key: "reviews", label: "Course reviews", href: "/admin/reviews", badge: "reviews", demo: true },
     ] },
     { group: "Content", items: [
       { key: "content", label: "Site content", href: "/admin/content" },
@@ -541,6 +541,7 @@ export const admin = {
     coversLink: "See what it covers",
     nothingPayable: "Nothing is payable yet.",
     runs: "Payout runs",
+    draftNoRun: "Payouts are worked out by an admin who can run payouts.",
     noOwed: "No provider has money in the ledger yet.",
   },
 
@@ -1026,7 +1027,7 @@ export const admin = {
 
   // Reviews (Part B, B3): DEMO until learners can leave reviews after real bookings
   reviews: {
-    title: "Reviews",
+    title: "Course reviews",
     lead: "Every review across every course and provider. Hide a review that breaks the rules, and settle a provider’s challenge either way.",
     tabs: { all: "All", unanswered: "No reply yet", challenged: "Challenged", hidden: "Hidden" },
     starOptions: { 0: "Any rating", 5: "5 stars", 4: "4 stars", 3: "3 stars", 2: "2 stars", 1: "1 star" },

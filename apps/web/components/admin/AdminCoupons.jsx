@@ -137,7 +137,7 @@ export default function AdminCoupons() {
       ) : (
         <Empty title={copy.empty} text={copy.emptyText} action={canEdit ? { label: copy.add, onClick: () => setSheet({}) } : undefined} />
       )}
-      {rows.length > 0 && <p className="rt-acc__note">{copy.usedNote}</p>}
+      {rows.length > 0 && <p className="rt-acc__notice">{copy.usedNote}</p>}
 
       <Sheet open={Boolean(sheet)} onClose={() => setSheet(null)} title={sheet?.coupon ? copy.sheet.edit : copy.sheet.add} closeLabel="Close">
         {sheet && <CouponForm coupon={sheet.coupon} onDone={(message) => { setSheet(null); setSaid(message); }} />}

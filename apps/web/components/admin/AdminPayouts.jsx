@@ -122,7 +122,7 @@ export function AdminPayouts() {
             </li>
           ))}
         </ul>
-      ) : <Empty title={P.emptyTabs[tab][0]} text={P.emptyTabs[tab][1]} />}
+      ) : <Empty title={P.emptyTabs[tab][0]} text={tab === "draft" && !perms.includes("payouts") ? P.draftNoRun : P.emptyTabs[tab][1]} />}
 
       <Sheet open={Boolean(holding)} onClose={() => setHolding(null)} title={P.holdTitle} closeLabel="Close">
         {holding && <HoldForm payout={holding} onDone={(m) => { setHolding(null); setSaid(m); }} />}
