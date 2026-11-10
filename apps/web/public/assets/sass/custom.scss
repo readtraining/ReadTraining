@@ -5298,16 +5298,10 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* keyboard focus on the white card: purple (the header's own outline is white) */
 .rt-nav-card :is(a, button, input):focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
 
-/* three 224px columns, 24px apart; a column can hold two groups, one under the other. Explore courses is two halves: the
-   subjects (two columns of 5 when there are more than 5) and the courses */
+/* three 224px columns, 24px apart; a column can hold two groups, one under the other */
 .rt-nav-cols { display: flex; gap: 24px; }
 .rt-nav-col { flex: 0 0 224px; min-width: 0; }
 .rt-nav-col.-stack { display: flex; flex-direction: column; gap: 24px; }
-.rt-nav-half { flex: 0 0 348px; min-width: 0; }
-.rt-nav-half.-two { flex-basis: 472px; }
-.rt-nav-half.-rest { flex: 1 1 0; }
-.rt-nav-twin { display: flex; gap: 24px; }
-.rt-nav-twin > .rt-nav-list { flex: 1 1 0; min-width: 0; }
 
 /* a group: an 18px icon and its heading, a thin dark line, then its links 16px below */
 .rt-nav-g { display: flex; align-items: center; gap: 10px; height: 28px; margin-bottom: 8px; color: var(--color-purple-1); }
@@ -5326,22 +5320,17 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-link__meta { display: block; font-size: var(--rt-text-xs); line-height: 18px; color: var(--rt-nav-muted); }
 .rt-nav-arrow { position: absolute; top: 50%; right: 20px; color: var(--color-purple-1); opacity: 0; transform: translateY(-50%); transition: opacity 0.3s ease, right 0.3s ease; pointer-events: none; }
 .rt-nav-link:hover .rt-nav-arrow, .rt-nav-link:focus-visible .rt-nav-arrow { right: 10px; opacity: 1; }
-/* a subject is a button that chooses it; the chosen one stays tinted with its arrow showing */
-.rt-nav-subject { width: 100%; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
-.rt-nav-subject.is-on { background: var(--rt-nav-hover); }
-.rt-nav-subject.is-on .rt-nav-link__name { color: var(--color-purple-1); }
-.rt-nav-subject.is-on .rt-nav-arrow { right: 10px; opacity: 1; }
-/* the chosen subject's button to all its courses: the site's small purple button, across the half */
-.rt-nav-cta { gap: 6px; margin: 16px 12px 0; font-weight: 600; }
-/* "All N subjects" ends with its own arrow */
-.rt-nav-link.-all .rt-nav-link__name { font-weight: 600; color: var(--color-purple-1); }
+/* a subject: its name and its number of courses on the right, which fades out as the arrow comes in */
+.rt-nav-link.-count { display: flex; align-items: baseline; gap: 8px; }
+.rt-nav-link__count { margin-left: auto; font-size: var(--rt-text-xs); line-height: 18px; color: var(--rt-nav-muted); transition: opacity 0.15s ease; }
+.rt-nav-link:hover .rt-nav-link__count, .rt-nav-link:focus-visible .rt-nav-link__count { opacity: 0; }
 
-/* the footer: one link across the card, a thin line above it; Explore courses' footer has the ways of study as buttons too */
+/* the footer: one link across the card, a thin line above it; Explore courses' footer has our phone number on the left */
 .rt-nav-foot { margin-top: 24px; padding: 16px 12px 0; border-top: 1px solid var(--rt-c-line); }
 .rt-nav-foot.-split { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-left: 0; }
-.rt-nav-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.rt-nav-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 13px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-pill); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-nav-ink-2) !important; text-decoration: none; transition: border-color 0.15s ease, color 0.15s ease; }
-.rt-nav-chip:hover { border-color: var(--color-purple-1); color: var(--color-purple-1) !important; }
+.rt-nav-help { margin: 0; padding-left: 12px; font-size: var(--rt-text-sm); line-height: 20px; color: var(--rt-nav-muted); }
+.rt-nav-tel { font-weight: 600; color: var(--rt-nav-ink-2) !important; text-decoration: none; white-space: nowrap; }
+.rt-nav-tel:hover { color: var(--color-purple-1) !important; text-decoration: underline; }
 .rt-nav-more { font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; }
 .rt-nav-more:hover { text-decoration: underline; }
 
@@ -5367,7 +5356,7 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 
 @media (prefers-reduced-motion: reduce) {
   .rt-nav-card, .rt-nav-fade, .rt-nav-dim { animation: none; }
-  .rt-nav-link, .rt-nav-link__name, .rt-nav-arrow, .rt-nav-chip { transition: none; }
+  .rt-nav-link, .rt-nav-link__name, .rt-nav-link__count, .rt-nav-arrow { transition: none; }
 }
 /* ---------- end SITE HEADER ---------- */
 
