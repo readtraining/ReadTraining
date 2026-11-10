@@ -597,11 +597,8 @@
   --rt-shadow-dialog: var(--rt-shadow-modal);                                       /* dialogs, sheets, menus */
 
   /* the site header's menus (components/home/HomeMenu, components/header/NavCard) */
-  --rt-nav-on-1: #D6D0F5;                  /* the menu labels on the header */
   --rt-nav-ink-2: #3F3C52;                 /* secondary text in the menu card */
   --rt-nav-muted: #6B6880;                 /* meta lines (5.3:1 on white) */
-  --rt-nav-icon: #A3A0B5;                  /* idle icons in the card (icons only, never text) */
-  --rt-nav-tint: #F1EEFF;                  /* icon tiles, pills */
   --rt-nav-hover: #F7F5FF;                 /* link hover */
 }
 /* end DESIGN TOKENS */
@@ -5268,86 +5265,88 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* ---------- SITE HEADER MENUS: the four menus (components/home/HomeMenu) and the card each opens (components/header/NavCard)
    ---------- */
 
-/* the four menus in the template's own row and type size. Pointing at a menu turns its text green (no filled box, which read as
-   a button); the open menu stays green and its arrow turns to point up, back down when it closes. A steady 24px gap between
-   the menus on laptop widths too (the template drops to 12px from 1200px to 1399px). Keyboard focus keeps its outline.
-   The green needs !important: the template forces every link to its parent's colour (a { color: inherit !important }). */
+/* the four menus in the template's own row and type size. Pointing at a closed menu turns its name green. A click opens it:
+   the open menu keeps its white name, gets a 5px green bar along the header's bottom edge (the width of its name) and its
+   arrow points up. A steady 24px gap between the menus on laptop widths too (the template drops to 12px from 1200px to
+   1399px). Keyboard focus keeps its outline. The green needs !important: the template forces every link to its parent's
+   colour (a { color: inherit !important }). */
 @media (min-width: 1200px) {
-  .header .header-menu .menu__nav > li:hover > a, .header .header-menu .menu__nav > li > a.is-open { background-color: transparent; color: var(--rt-c-accent) !important; }
+  /* the menu row starts 44px after the logo (the template centres it), so the cards have room to open under their names */
+  .header .header-menu .menu { left: 220px; transform: none; }
+  .header .header-menu .menu__nav > li { position: relative; }
+  .header .header-menu .menu__nav > li:hover > a:not(.is-open) { background-color: transparent; color: var(--rt-c-accent) !important; }
+  .header .header-menu .menu__nav > li > a.is-open { background-color: transparent; }
+  /* the item sits 7px above the header's bottom edge (8px from 1200px to 1399px), so the bar reaches down to that edge */
+  .header .header-menu .menu__nav > li:has(> a.is-open)::after { content: ""; position: absolute; right: 16px; bottom: -7px; left: 16px; height: 5px; background: var(--rt-c-accent); }
   .header .header-menu .menu__nav > li.menu-item-has-children > a .icon-chevron-right { transition: transform 0.2s cubic-bezier(0.215, 0.61, 0.355, 1); }
   .header .header-menu .menu__nav > li.menu-item-has-children > a.is-open .icon-chevron-right { transform: rotate(-90deg); }
 }
 @media (min-width: 1200px) and (max-width: 1399px) {
   .header .header-menu .menu__nav > li > a { padding: 6px 12px; }
+  .header .header-menu .menu__nav > li:has(> a.is-open)::after { right: 12px; bottom: -8px; left: 12px; }
 }
 @media (min-width: 1200px) and (prefers-reduced-motion: reduce) { .header .header-menu .menu__nav > li.menu-item-has-children > a .icon-chevron-right { transition: none; } }
 
-/* the menu card: floats 10px under the header, under the label you point at (it slides and resizes between menus); no border,
-   the system's menu shadow forms its edge, the corners of the site's own menus (--rt-radius-control); a soft band across the top
-   carries the menu's title and main link; the page is dimmed behind it */
-.rt-nav-dim { position: fixed; z-index: 1; right: 0; bottom: 0; left: 0; padding: 0; border: 0; background: rgba(20, 17, 43, 0.28); cursor: default; animation: rt-nav-fade 180ms ease-out; }
+/* the menu card: attached to the header's bottom edge, starting under its menu's name (NavCard places it), square top corners
+   and rounded bottom ones, no shadow; it opens with a quick fade and a 4px slide. The page behind is dimmed. */
+.rt-nav-dim { position: fixed; z-index: 1; right: 0; bottom: 0; left: 0; padding: 0; border: 0; background: rgba(20, 3, 66, 0.5); cursor: default; animation: rt-nav-fade 150ms ease-out; }
 @keyframes rt-nav-fade { from { opacity: 0; } }
-.rt-nav-card { position: absolute; z-index: 2; top: calc(100% + 10px); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); color: var(--color-dark-1); box-shadow: var(--rt-shadow-dialog); transition: left 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); animation: rt-nav-in 180ms ease-out; }
-@keyframes rt-nav-in { from { opacity: 0; transform: translateY(-6px); } }
-.rt-nav-fade { animation: rt-nav-fade 200ms ease-out; }
+.rt-nav-card { position: absolute; z-index: 2; top: 100%; box-sizing: border-box; padding: 32px; border-radius: 0 0 16px 16px; background: var(--rt-c-surface); color: var(--color-dark-1); animation: rt-nav-in 150ms ease-out; }
+@keyframes rt-nav-in { from { opacity: 0; transform: translateY(-4px); } }
+.rt-nav-fade { animation: rt-nav-fade 150ms ease-out; }
 .rt-nav-card h2, .rt-nav-card p { margin: 0; }
 /* keyboard focus on the white card: purple (the header's own outline is white) */
 .rt-nav-card :is(a, button, input):focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
-.rt-nav-pad { padding: var(--rt-pad-panel); }
-/* column headings and the "Top courses" label: small grey capitals, so the dark links under them stand out and purple stays for
-   what can be clicked */
-.rt-nav-h { font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rt-c-muted); }
-.rt-nav-card .rt-nav-eyebrow { margin-top: 14px; font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rt-c-muted); }
-.rt-nav-tile { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: var(--rt-nav-tint); color: var(--color-purple-1); transition: background-color 0.15s ease, color 0.15s ease; }
-.rt-nav-tile.-solid { width: 36px; height: 36px; border-radius: 10px; background: var(--color-purple-1); color: var(--color-white); }
-/* a link with a name and a grey line under it */
-.rt-nav-list { display: flex; flex-direction: column; gap: 2px; margin: 10px 0 0; padding: 0; list-style: none; }
-.rt-nav-link { display: flex; align-items: flex-start; gap: 11px; margin: 0 -8px; padding: 7px 8px; border-radius: 10px; text-decoration: none; transition: background-color 0.15s ease; }
-.rt-nav-link:hover { background: var(--rt-nav-hover); }
-.rt-nav-link:hover .rt-nav-tile { background: var(--color-purple-1); color: var(--color-white); }
-.rt-nav-link__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.rt-nav-link__name { font-size: var(--rt-text-sm); font-weight: 500; line-height: 1.35; color: var(--color-dark-1); transition: color 0.15s ease; }
-.rt-nav-link:hover .rt-nav-link__name { color: var(--color-purple-1); }
-.rt-nav-link__meta { font-size: var(--rt-text-xs); line-height: 1.45; color: var(--rt-nav-muted); }
-.rt-nav-more { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; }
-.rt-nav-more:hover { text-decoration: underline; }
-.rt-nav-band { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; padding: 10px var(--rt-pad-panel); border-bottom: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control) var(--rt-radius-control) 0 0; background: var(--rt-c-soft); }
-.rt-nav-band__title { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
-.rt-nav-band__side { display: flex; align-items: center; gap: 8px; }
-.rt-nav-band__side .rt-nav-more { margin: 0 0 0 8px; }
-.rt-nav-band .rt-nav-chip { background: var(--rt-c-surface); }
-.rt-nav-cols { display: grid; gap: 26px; }
-.rt-nav-cols.-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.rt-nav-cols.-four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 
-/* the preview's courses: one line each (the full name on hover), their length and study methods under it */
-.rt-nav-list.-preview .rt-nav-link__name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.rt-nav-list.-preview .rt-nav-link__text { flex: 1; }
+/* three 224px columns, 24px apart; a column can hold two groups, one under the other. Explore courses is two halves: the
+   subjects (two columns of 5 when there are more than 5) and the courses */
+.rt-nav-cols { display: flex; gap: 24px; }
+.rt-nav-col { flex: 0 0 224px; min-width: 0; }
+.rt-nav-col.-stack { display: flex; flex-direction: column; gap: 24px; }
+.rt-nav-half { flex: 0 0 348px; min-width: 0; }
+.rt-nav-half.-two { flex-basis: 472px; }
+.rt-nav-half.-rest { flex: 1 1 0; }
+.rt-nav-twin { display: flex; gap: 24px; }
+.rt-nav-twin > .rt-nav-list { flex: 1 1 0; min-width: 0; }
 
-/* Explore courses: the subjects, and the panel that shows the popular courses or the clicked subject's courses */
+/* a group: an 18px icon and its heading, a thin dark line, then its links 16px below */
+.rt-nav-g { display: flex; align-items: center; gap: 10px; height: 28px; margin-bottom: 8px; color: var(--color-purple-1); }
+.rt-nav-g svg { flex: none; }
+.rt-nav-h { font-size: var(--rt-text-sm); font-weight: 600; line-height: 24px; color: var(--rt-c-text); }
+.rt-nav-rule { height: 1px; background: var(--rt-c-text); }
+.rt-nav-list { display: flex; flex-direction: column; margin: 16px 0 0; padding: 0; list-style: none; }
+
+/* a link: its name and a short line (or two) under it. Pointing at it (or keyboard focus) tints it, turns the name purple and
+   slides the arrow in at its end (it starts 20px from the edge, invisible, and ends 10px from it); the space on the right is
+   kept for the arrow, so it never sits on the text */
+.rt-nav-link { position: relative; display: block; padding: 8px 32px 8px 12px; border-radius: 8px; text-decoration: none; transition: background-color 0.15s ease; }
+.rt-nav-link:hover, .rt-nav-link:focus-visible { background: var(--rt-nav-hover); }
+.rt-nav-link__name { display: block; font-size: var(--rt-text-sm); font-weight: 500; line-height: 18px; color: var(--rt-nav-ink-2); transition: color 0.15s ease; }
+.rt-nav-link:hover .rt-nav-link__name, .rt-nav-link:focus-visible .rt-nav-link__name { color: var(--color-purple-1); }
+.rt-nav-link__meta { display: block; font-size: var(--rt-text-xs); line-height: 18px; color: var(--rt-nav-muted); }
+.rt-nav-arrow { position: absolute; top: 50%; right: 20px; color: var(--color-purple-1); opacity: 0; transform: translateY(-50%); transition: opacity 0.3s ease, right 0.3s ease; pointer-events: none; }
+.rt-nav-link:hover .rt-nav-arrow, .rt-nav-link:focus-visible .rt-nav-arrow { right: 10px; opacity: 1; }
+/* a subject is a button that chooses it; the chosen one stays tinted with its arrow showing */
+.rt-nav-subject { width: 100%; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.rt-nav-subject.is-on { background: var(--rt-nav-hover); }
+.rt-nav-subject.is-on .rt-nav-link__name { color: var(--color-purple-1); }
+.rt-nav-subject.is-on .rt-nav-arrow { right: 10px; opacity: 1; }
+/* the chosen subject's button to all its courses: the site's small purple button, across the half */
+.rt-nav-cta { gap: 6px; margin: 16px 12px 0; font-weight: 600; }
+/* "All N subjects" ends with its own arrow */
+.rt-nav-link.-all .rt-nav-link__name { font-weight: 600; color: var(--color-purple-1); }
+
+/* the footer: one link across the card, a thin line above it; Explore courses' footer has the ways of study as buttons too */
+.rt-nav-foot { margin-top: 24px; padding: 16px 12px 0; border-top: 1px solid var(--rt-c-line); }
+.rt-nav-foot.-split { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-left: 0; }
+.rt-nav-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .rt-nav-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 13px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-pill); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-nav-ink-2) !important; text-decoration: none; transition: border-color 0.15s ease, color 0.15s ease; }
 .rt-nav-chip:hover { border-color: var(--color-purple-1); color: var(--color-purple-1) !important; }
-.rt-nav-courses { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 32px; }
-.rt-nav-subjects { display: grid; align-content: start; gap: 4px 14px; margin: 0; padding: 0; list-style: none; } /* columns: NavCard */
-.rt-nav-subject { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: 10px; background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color 0.15s ease; }
-.rt-nav-subject:hover { background: var(--rt-nav-hover); }
-.rt-nav-subject:hover .rt-nav-tile, .rt-nav-subject.is-on .rt-nav-tile { background: var(--color-purple-1); color: var(--color-white); }
-.rt-nav-subject.is-on { background: var(--rt-nav-tint); }
-.rt-nav-subject__name { min-width: 0; overflow: hidden; font-size: var(--rt-text-sm); font-weight: 500; line-height: 1.3; white-space: nowrap; text-overflow: ellipsis; color: var(--color-dark-1); transition: color 0.15s ease; }
-.rt-nav-subject:hover .rt-nav-subject__name, .rt-nav-subject.is-on .rt-nav-subject__name { color: var(--color-purple-1); }
-.rt-nav-subject__chev { flex: none; margin-left: auto; color: var(--rt-nav-icon); }
-.rt-nav-subject.is-on .rt-nav-subject__chev { color: var(--color-purple-1); }
-.rt-nav-card .rt-nav-subject:focus-visible { outline-offset: 0; }
-.rt-nav-preview { min-height: 342px; padding: 18px 18px 16px; border-radius: var(--rt-radius-sm); background: var(--rt-c-soft); }
-.rt-nav-preview__head { display: flex; align-items: center; gap: 11px; }
-.rt-nav-preview__title { font-size: var(--rt-text); font-weight: 700; color: var(--color-dark-1); }
-.rt-nav-card .rt-nav-preview__hint { margin-top: 2px; font-size: var(--rt-text-xs); color: var(--rt-nav-muted); }
-/* the subject's button: the site's purple button (button -sm -purple-1), full width, on one line */
-.rt-nav-cta { gap: 6px; width: 100%; margin-top: 12px; font-weight: 600; white-space: nowrap; }
+.rt-nav-more { font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; }
+.rt-nav-more:hover { text-decoration: underline; }
 
-/* Near you: the search, the cities, and the courses that need no venue */
-.rt-nav-near { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.8fr); gap: 30px; }
-.rt-nav-near__form { display: flex; flex-direction: column; gap: 10px; }
+/* Location: the town or postcode search, in one column */
+.rt-nav-near__form { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; padding: 0 12px; }
 .rt-nav-field { display: flex; flex-direction: column; gap: 6px; }
 .rt-nav-field > label { margin: 0; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-nav-ink-2); }
 .rt-nav-field input { height: 44px; padding: 0 14px; border: 1px solid var(--color-light-5); border-radius: var(--rt-radius-control); background: var(--color-light-4); font: inherit; font-size: var(--rt-text-sm); font-weight: 500; color: var(--color-dark-1); }
@@ -5358,23 +5357,17 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-card .rt-nav-field input:focus-visible { border-color: var(--color-dark-1); outline: none; background: var(--color-white); }
 .rt-nav-field input[aria-invalid="true"] { border-color: var(--color-red-3); }
 .rt-nav-field__error { font-size: var(--rt-text-xs); font-weight: 500; color: var(--color-red-3); }
-.rt-nav-near__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
-.rt-nav-near__actions .button { padding: 0 18px; } /* the site button, narrower, so it fits beside "Use my location" */
-.rt-nav-btn { display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--color-white); font: inherit; font-size: var(--rt-text-sm); font-weight: 500; white-space: nowrap; color: var(--color-dark-1); cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.rt-nav-near__actions { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+.rt-nav-near__actions > * { width: 100%; justify-content: center; }
+.rt-nav-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--color-white); font: inherit; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-nav-ink-2); cursor: pointer; }
 .rt-nav-btn svg { color: var(--color-purple-1); }
 .rt-nav-btn:hover { border-color: var(--color-purple-1); }
 .rt-nav-btn:disabled { cursor: progress; opacity: 0.7; }
 .rt-nav-near__note { margin: 0; font-size: var(--rt-text-xs); line-height: 1.4; color: var(--rt-nav-ink-2); }
-.rt-nav-cities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 12px; margin: 10px 0 0; padding: 0; list-style: none; }
-.rt-nav-city { display: flex; align-items: center; gap: 7px; padding: 8px; border-radius: 10px; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-nav-ink-2) !important; text-decoration: none; transition: background-color 0.15s ease; }
-.rt-nav-city svg { flex: none; color: var(--rt-nav-icon); transition: color 0.15s ease; }
-.rt-nav-city:hover { background: var(--rt-nav-hover); color: var(--color-purple-1) !important; }
-.rt-nav-city:hover svg { color: var(--color-purple-1); }
-.rt-nav-near__side { padding-left: 26px; border-left: 1px solid var(--rt-c-line); }
 
 @media (prefers-reduced-motion: reduce) {
   .rt-nav-card, .rt-nav-fade, .rt-nav-dim { animation: none; }
-  .rt-nav-card, .rt-nav-tile, .rt-nav-link, .rt-nav-link__name, .rt-nav-subject, .rt-nav-subject__name, .rt-nav-chip, .rt-nav-city, .rt-nav-btn { transition: none; }
+  .rt-nav-link, .rt-nav-link__name, .rt-nav-arrow, .rt-nav-chip { transition: none; }
 }
 /* ---------- end SITE HEADER ---------- */
 

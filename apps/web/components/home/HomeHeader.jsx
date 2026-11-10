@@ -111,7 +111,7 @@ export default function HomeHeader() {
         {section && (
           <>
             <button type="button" className="rt-nav-dim" style={{ top: dimTop }} aria-label={headerNav.menu.close} tabIndex={-1} onClick={() => menu.close()}></button>
-            <NavCard section={section} trigger={menu.trigger} cardProps={menu.cardProps} />
+            <NavCard section={section} trigger={menu.trigger} />
           </>
         )}
       </header>
