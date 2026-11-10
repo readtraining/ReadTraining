@@ -5259,6 +5259,10 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-hauth-mobile { display: flex; align-items: center; min-height: 24px; }
 .rt-hauth__out { padding: 0; border: 0; background: none; font-size: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .rt-hauth__menu { animation: none; } .rt-hauth__btn { transition: none; } }
+/* the header's mini basket (the template's toggle-element, used only there): closed, it is also hidden (out of the Tab order and
+   from screen readers) once its fade has finished */
+.toggle-element { visibility: hidden; transition: all 0.2s cubic-bezier(0.215, 0.61, 0.355, 1), visibility 0s linear 0.2s; }
+.toggle-element.-is-el-visible { visibility: visible; transition: all 0.2s cubic-bezier(0.215, 0.61, 0.355, 1), visibility 0s; }
 /* ---------- end HEADER ACCOUNT MENU ---------- */
 
 /* ---------- SITE HEADER MENUS: the four menus (components/home/HomeMenu) and the card each opens (components/header/NavCard)
