@@ -5,8 +5,9 @@ import { AUTH_ROUTES } from "@/lib/routes";
 import { headerNav as N } from "@/data/headerNav";
 
 // The navbar's four menus (Explore courses, Licences, Location, Help & guides), in the template's own menu row: white
-// labels with a down arrow, the open one on a light background. Each opens its card (components/header/NavCard), which
-// HomeHeader shows under the header; `menu` is HomeHeader's useNavMenu.
+// labels with a down arrow. A click opens one; the open one has a green bar along the header's bottom edge and its arrow
+// points up. Each opens its card (components/header/NavCard), which HomeHeader shows under the header; `menu` is
+// HomeHeader's useNavMenu.
 export default function HomeMenu({ allClasses, headerPosition, menu }) {
   return (
     <div className={`header-menu js-mobile-menu-toggle ${headerPosition ? headerPosition : ""}`}>
