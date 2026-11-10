@@ -14,61 +14,67 @@ export const headerNav = {
   ],
   menu: { close: "Close menu" },
 
-  // the four menus; `width` is the card's width on a wide screen (it never goes past the page's 32px gutters)
+  // the four menus, each opening a card of three 224px columns (components/header/NavCard)
   sections: [
-    { id: "courses", label: "Explore courses", width: 1180 },
-    { id: "licences", label: "Licences", width: 1000 },
-    { id: "near", label: "Location", width: 980 },
-    { id: "help", label: "Help & guides", width: 900 },
+    { id: "courses", label: "Explore courses" },
+    { id: "licences", label: "Licences" },
+    { id: "near", label: "Location" },
+    { id: "help", label: "Help & guides" },
   ],
 
+  // the subjects, methods and featured courses come from the live catalogue (useNav)
   courses: {
-    title: "Browse by subject",
-    topTitle: "Top courses",
+    subjects: { title: "Subjects", icon: "book", all: (n) => `All ${n} subjects` },
+    // the chosen subject's side: its name and number of courses, its top courses and a button to all of them
+    chosen: { icon: "book", count: (n) => `${n} ${n === 1 ? "course" : "courses"}`, all: (label) => `All ${label} courses` },
+    // "featured", not "popular": the order comes from providers and dates, not from bookings (say "popular" once bookings exist)
+    featured: { title: "Featured courses", icon: "growth", count: 4 },
+    methods: { title: "How you study" }, // the phone menu's heading for the study methods (the card shows them as buttons)
     all: { label: "Browse all courses", href: CATALOGUE_HREF },
-    // the subjects, methods and popular courses come from the live catalogue (useNav)
-    popular: { title: "Popular courses", hint: "Choose a subject to see its courses", count: 4 },
-    allOf: (label) => `All ${label} courses`,
   },
 
-  // what each licence or card needs, in one line (the guides in data/licences.js have the detail)
+  // each licence or card: what it needs on the first line, its fee (or a second fact) on the second (the guides in
+  // data/licences.js have the detail). Security first and Other last; the third column holds Construction with Other under it.
   licences: {
-    title: "Licences and cards",
     groups: [
       {
         title: "Security (SIA)",
+        icon: "shield",
         items: [
-          { label: "Door Supervisor", need: "6-day course, first aid certificate, £204 SIA fee", href: lic("sia-door-supervisor-licence") },
-          { label: "Security Guard", need: "4-day course, first aid certificate, £204 SIA fee", href: lic("sia-security-guard-licence") },
-          { label: "CCTV Operator", need: "3-day course and the £204 SIA fee", href: lic("sia-cctv-licence") },
-          { label: "Close Protection", need: "18-day Level 3 course, Level 3 first aid, £204 fee", href: lic("sia-close-protection-licence") },
-        ],
-      },
-      {
-        title: "Construction",
-        items: [
-          { label: "CSCS cards", need: "The right qualification, the CITB HS&E test, £36 card fee", href: lic("cscs-cards") },
-          { label: "CITB HS&E test", need: "Book the touch-screen test", href: HSE_TEST_HREF },
+          { label: "Door Supervisor", need: ["6 days · First aid certificate", "£204 SIA fee"], href: lic("sia-door-supervisor-licence") },
+          { label: "Security Guard", need: ["4 days · First aid certificate", "£204 SIA fee"], href: lic("sia-security-guard-licence") },
+          { label: "CCTV Operator", need: ["3 days", "£204 SIA fee"], href: lic("sia-cctv-licence") },
+          { label: "Close Protection", need: ["18 days · Level 3 first aid", "£204 SIA fee"], href: lic("sia-close-protection-licence") },
         ],
       },
       {
         title: "Alcohol licensing",
+        icon: "glass",
         items: [
-          { label: "Personal Licence (APLH)", need: "APLH course, basic DBS check, £37 council fee", href: lic("personal-licence") },
-          { label: "Premises Licence", need: "Council application and a premises supervisor", href: lic("premises-licence") },
-          { label: "Occasional Licence", need: "Scotland, events up to 14 days, £10 fee", href: lic("occasional-licence") },
+          { label: "Personal Licence (APLH)", need: ["APLH course · Basic DBS check", "£37 council fee"], href: lic("personal-licence") },
+          { label: "Premises Licence", need: ["Council application", "Premises supervisor"], href: lic("premises-licence") },
+          { label: "Occasional Licence", need: ["Scotland · Up to 14 days", "£10 fee"], href: lic("occasional-licence") },
+        ],
+      },
+      {
+        title: "Construction",
+        icon: "helmet",
+        items: [
+          { label: "CSCS cards", need: ["Qualification · CITB HS&E test", "£36 card fee"], href: lic("cscs-cards") },
+          { label: "CITB HS&E test", need: ["Book the touch-screen test"], href: HSE_TEST_HREF },
         ],
       },
       {
         title: "Other",
-        items: [{ label: "Forklift", need: "No official licence: accredited operator training", href: lic("forklift-licence") }],
+        icon: "tag",
+        items: [{ label: "Forklift", need: ["No official licence", "Accredited operator training"], href: lic("forklift-licence") }],
       },
     ],
     all: { label: "Compare all licences and cards", href: "/licences" },
   },
 
   near: {
-    title: "Find a course near you",
+    find: { title: "Find a course near you", icon: "pin" },
     town: { label: "Town or postcode", placeholder: "e.g. Leeds or LS1 4AP" },
     course: { label: "Course", any: "Any course" },
     submit: "Find courses",
@@ -77,42 +83,46 @@ export const headerNav = {
     locateFailed: "We couldn't get your location. Type your town or postcode instead.",
     // the towns with live dates (useNav), most courses first
     citiesTitle: "Towns with courses",
-    cities: 12,
+    citiesIcon: "town",
+    cities: 8,
     online: {
       title: "No venue near you?",
+      icon: "screen",
       items: [
         { label: "Live online courses", meta: "With a tutor, from home", href: "/courses/live-online" },
         { label: "Self-paced courses", meta: "Start any time", href: "/courses/self-paced" },
       ],
     },
-    all: { label: "Browse all courses", href: CATALOGUE_HREF },
+    all: { label: "Search all courses near you", href: CATALOGUE_HREF },
   },
 
   help: {
-    title: "Help and guides",
     groups: [
       {
         title: "Prepare",
+        icon: "check",
         items: [
-          { label: "Test prep and mock exams", meta: "Practise for SIA and CSCS tests", icon: "book", href: "/test-prep" },
-          { label: "CITB HS&E test", meta: "Book your touch-screen test", icon: "helmet", href: HSE_TEST_HREF },
-          { label: "Licence guides", meta: "What each licence needs", icon: "card", href: "/licences" },
+          { label: "Test prep and mock exams", meta: "Practise for SIA and CSCS tests", href: "/test-prep" },
+          { label: "CITB HS&E test", meta: "Book your touch-screen test", href: HSE_TEST_HREF },
+          { label: "Licence guides", meta: "What each licence needs", href: "/licences" },
         ],
       },
       {
         title: "Guides",
+        icon: "document",
         items: [
-          { label: "How to renew your SIA licence", meta: "When and how to apply", icon: "document", href: "/blog/how-to-renew-your-sia-licence" },
-          { label: "Door supervisor or security guard?", meta: "Which licence you need", icon: "document", href: "/blog/door-supervisor-or-security-guard" },
-          { label: "All articles", meta: "Training guides and advice", icon: "book", href: "/blog" },
+          { label: "Renew your SIA licence", meta: "When and how to apply", href: "/blog/how-to-renew-your-sia-licence" },
+          { label: "Which SIA licence?", meta: "Door supervisor or guard", href: "/blog/door-supervisor-or-security-guard" },
+          { label: "All articles", meta: "Training guides and advice", href: "/blog" },
         ],
       },
       {
         title: "Help",
+        icon: "help",
         items: [
-          { label: "Help centre", meta: "Booking and course answers", icon: "help", href: "/help-centre" },
-          { label: "Contact us", meta: "Phone, email or message", icon: "mail", href: "/contact-us" },
-          { label: "Check a certificate", meta: "Is a certificate genuine?", icon: "check", href: "/certificate-checker" },
+          { label: "Help centre", meta: "Booking and course answers", href: "/help-centre" },
+          { label: "Contact us", meta: "Phone, email or message", href: "/contact-us" },
+          { label: "Check a certificate", meta: "Is a certificate genuine?", href: "/certificate-checker" },
         ],
       },
     ],
@@ -127,8 +137,8 @@ export const mobileMenu = (nav) => [
   {
     title: N.sections[0].label,
     links: [
-      { title: N.courses.title, links: nav.subjects.map((s) => ({ label: s.label, href: s.href })) },
-      { title: "Study method", links: nav.methods.map((m) => ({ label: m.name, href: m.href })) },
+      { title: N.courses.subjects.title, links: nav.subjects.map((s) => ({ label: s.label, href: s.href })) },
+      { title: N.courses.methods.title, links: nav.methods.map((m) => ({ label: m.name, href: m.href })) },
       { label: N.courses.all.label, href: N.courses.all.href },
     ],
   },
