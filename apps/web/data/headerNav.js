@@ -24,12 +24,13 @@ export const headerNav = {
 
   // the subjects, methods and featured courses come from the live catalogue (useNav)
   courses: {
-    subjects: { title: "Subjects", icon: "book", all: (n) => `All ${n} subjects` },
-    // the chosen subject's side: its name and number of courses, its top courses and a button to all of them
-    chosen: { icon: "book", count: (n) => `${n} ${n === 1 ? "course" : "courses"}`, all: (label) => `All ${label} courses` },
+    // up to `max` subjects; more than that: the ones with the most courses, then "All N subjects"
+    subjects: { title: "Subjects", icon: "book", max: 9, count: (n) => `${n} ${n === 1 ? "course" : "courses"}`, all: (n) => `All ${n} subjects` },
+    // the ways of study in use, each with a short line (by the method's slug; one without a line shows its name only)
+    methods: { title: "How you study", icon: "cap", meta: { classroom: "At a venue near you", "live-online": "With a tutor, from home", "self-paced": "Start any time" } },
     // "featured", not "popular": the order comes from providers and dates, not from bookings (say "popular" once bookings exist)
     featured: { title: "Featured courses", icon: "growth", count: 4 },
-    methods: { title: "How you study" }, // the phone menu's heading for the study methods (the card shows them as buttons)
+    help: "Not sure which course? Call",
     all: { label: "Browse all courses", href: CATALOGUE_HREF },
   },
 

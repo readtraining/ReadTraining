@@ -5,8 +5,8 @@ import Link from "next/link";
 import { headerNav as N } from "@/data/headerNav";
 import { useNav } from "@/lib/navContext";
 import { subjectName } from "@/lib/nav";
-import { CATALOGUE_HREF, coursePath } from "@/lib/routes";
-import { methodName } from "@/lib/taxonomy";
+import { CATALOGUE_HREF } from "@/lib/routes";
+import { topBar } from "@/data/home";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { NavIcon } from "./navIcons";
 import { useNearYou } from "./useNearYou";
@@ -61,70 +61,44 @@ function Foot({ label, href }) {
   );
 }
 
-// Explore courses, in two halves. Left: the subjects, one line each: up to 5 in one column, 6 to 10 in two columns of 5, more than
-// 10: the 9 with the most courses, then "All N subjects"; A to Z down each column. A click chooses a subject: the right half
-// then shows its name and number of courses, its top courses and a button to all of them (a second click goes back). Right,
-// otherwise: the featured courses. The footer has the ways of study and "Browse all courses". All of it is the live
-// catalogue's (useNav, lib/nav.js), so a new subject shows once it has a course.
+// Explore courses, in three columns like the other menus: the subjects (one line each with its number of courses; more than
+// `max`: the ones with the most courses, then "All N subjects"; A to Z), the ways of study, and the featured courses. The
+// footer has our phone number for anyone unsure which course, and "Browse all courses". All of it is the live catalogue's
+// (useNav, lib/nav.js), so a new subject shows once it has a course.
 function CoursesPanel() {
   const C = N.courses;
   const nav = useNav();
-  const [chosen, setChosen] = useState(null);
   const total = nav.subjects.length;
-  const shown = total > 10 ? [...nav.subjects].sort((a, b) => b.count - a.count).slice(0, 9) : nav.subjects;
+  const shown = total > C.subjects.max ? [...nav.subjects].sort((a, b) => b.count - a.count).slice(0, C.subjects.max - 1) : nav.subjects;
   const subjects = [...shown].sort((a, b) => a.label.localeCompare(b.label));
-  const sub = nav.subjects.find((x) => x.slug === chosen);
+  const methods = nav.methods.map((m) => ({ label: m.name, href: m.href, meta: C.methods.meta[m.slug] }));
   const featured = nav.courses.slice(0, C.featured.count).map((c) => ({ label: c.title, href: c.href, meta: subjectName(nav, c.subject) }));
-  const top = sub ? sub.top.map((c) => ({ label: c.title, href: coursePath(c.slug), meta: [...new Set([c.duration, ...c.methods.map(methodName)])].filter(Boolean).join(" · ") })) : [];
-  const subject = (x) => {
-    const on = x.slug === chosen;
-    return (
-      <li key={x.slug}>
-        <button type="button" className={`rt-nav-link rt-nav-subject${on ? " is-on" : ""}`} aria-pressed={on} aria-controls="rt-nav-chosen" onClick={() => setChosen(on ? null : x.slug)}>
-          <span className="rt-nav-link__name">{x.label}</span>
-          {ARROW}
-        </button>
-      </li>
-    );
-  };
-  const more = total > 10 && (
-    <li>
-      <Link href={CATALOGUE_HREF} className="rt-nav-link -all">
-        <span className="rt-nav-link__name">{C.subjects.all(total)} →</span>
-      </Link>
-    </li>
-  );
   return (
     <>
       <div className="rt-nav-cols">
-        <div className={`rt-nav-half${total > 5 ? " -two" : ""}`}>
+        <div className="rt-nav-col">
           <Group title={C.subjects.title} icon={C.subjects.icon}>
-            <div className="rt-nav-twin">
-              <ul className="rt-nav-list">{subjects.slice(0, 5).map(subject)}</ul>
-              {total > 5 && (
-                <ul className="rt-nav-list">
-                  {subjects.slice(5).map(subject)}
-                  {more}
-                </ul>
-              )}
-            </div>
+            <ul className="rt-nav-list">
+              {subjects.map((x) => (
+                <li key={x.slug}>
+                  <Link href={x.href} className="rt-nav-link -count" aria-label={`${x.label}, ${C.subjects.count(x.count)}`}>
+                    <span className="rt-nav-link__name">{x.label}</span>
+                    <span className="rt-nav-link__count" aria-hidden="true">{x.count}</span>
+                    {ARROW}
+                  </Link>
+                </li>
+              ))}
+              {total > C.subjects.max && <Row href={CATALOGUE_HREF} label={C.subjects.all(total)} />}
+            </ul>
           </Group>
         </div>
-        <div className="rt-nav-half -rest" id="rt-nav-chosen" aria-live="polite">
-          {sub ? (
-            <div key={sub.slug} className="rt-nav-fade">
-              <Group title={`${sub.label} · ${C.chosen.count(sub.count)}`} icon={C.chosen.icon}><List items={top} /></Group>
-              <Link href={sub.href} className="button -sm -purple-1 text-white rt-nav-cta">{C.chosen.all(sub.label)} →</Link>
-            </div>
-          ) : (
-            featured.length > 0 && <Group title={C.featured.title} icon={C.featured.icon}><List items={featured} /></Group>
-          )}
-        </div>
+        <div className="rt-nav-col">{methods.length > 0 && <Group title={C.methods.title} icon={C.methods.icon}><List items={methods} /></Group>}</div>
+        <div className="rt-nav-col">{featured.length > 0 && <Group title={C.featured.title} icon={C.featured.icon}><List items={featured} /></Group>}</div>
       </div>
       <div className="rt-nav-foot -split">
-        <div className="rt-nav-chips">
-          {nav.methods.map((m) => <Link key={m.href} href={m.href} className="rt-nav-chip">{m.name}</Link>)}
-        </div>
+        <p className="rt-nav-help">
+          {C.help} <a href={topBar.phoneHref} className="rt-nav-tel">{topBar.phone}</a>
+        </p>
         <Link href={C.all.href} className="rt-nav-more">{C.all.label} →</Link>
       </div>
     </>
@@ -242,57 +216,43 @@ function HelpPanel() {
 const PANELS = { courses: CoursesPanel, licences: LicencesPanel, near: NearPanel, help: HelpPanel };
 
 const GUTTER = 32; // the card never comes closer than this to the window's edges
-const APART = 16; // two menus' cards never start closer than this when another place fits
 const WIDTH = 32 * 2 + 224 * 3 + 24 * 2; // three 224px columns, 24px apart, 32px padding
-const WIDE = 32 * 2 + 224 * 2 + 24 + 24 + 348; // Explore courses with its subjects in two columns, beside the courses
 
-// Where each menu's card sits (as Pluralsight's): its left edge under the start of the menu's name; a card too wide for the
-// window moves left only as far as it must. If that would put it where an earlier menu's card starts, it lines its right edge
-// up with the end of its own name instead (at most to the page's left margin, with its name still over the card), so no two
-// menus open in the same place. All four are worked out in order, so a menu's place is the same whichever one is open.
-function cardPlaces(trigger, page, widths) {
-  const taken = [];
-  const places = {};
-  for (const s of N.sections) {
-    const btn = trigger(s.id);
-    if (!btn) continue;
-    const width = Math.min(widths[s.id] ?? WIDTH, page - GUTTER * 2);
-    const room = page - GUTTER - width; // the furthest right this card can start
-    const r = btn.getBoundingClientRect();
-    const pad = parseFloat(getComputedStyle(btn).paddingLeft) || 0;
-    const start = r.left + pad;
-    const end = r.right - pad;
-    const underEnd = Math.max(GUTTER, end - width);
-    const choices = start <= room ? [start] : [room, ...(end <= underEnd + width ? [underEnd] : [])];
-    const left = choices.find((x) => !taken.some((t) => Math.abs(t - x) < APART)) ?? choices[0];
-    taken.push(left);
-    places[s.id] = { left: Math.round(left), width };
-  }
-  return places;
+// Where a menu's card sits (as Pluralsight's): its left edge under the start of the menu's name. On a smaller screen, a card
+// that would run past the window's right margin starts where the menu row starts instead (under Explore courses), so it is
+// never pinned to the right edge and never jumps to the far left; its name is still over the card.
+function cardPlace(id, trigger, page) {
+  const startOf = (btn) => btn.getBoundingClientRect().left + (parseFloat(getComputedStyle(btn).paddingLeft) || 0);
+  const btn = trigger(id);
+  const first = trigger(N.sections[0].id);
+  if (!btn || !first) return null;
+  const width = Math.min(WIDTH, page - GUTTER * 2);
+  const room = page - GUTTER - width; // the furthest right a card can start
+  const start = startOf(btn);
+  const left = start <= room ? start : Math.max(GUTTER, Math.min(startOf(first), room));
+  return { left: Math.round(left), width };
 }
 
 // The open card's place, measured again when the window changes size. `trigger(id)` is a menu's name element.
-function useCardPlace(section, trigger, widths) {
+function useCardPlace(section, trigger) {
   const [place, setPlace] = useState(null);
   useLayoutEffect(() => {
     const measure = () => {
-      const p = cardPlaces(trigger, document.documentElement.clientWidth, widths)[section.id];
+      const p = cardPlace(section.id, trigger, document.documentElement.clientWidth);
       if (p) setPlace(p);
     };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section.id, widths.courses]);
+  }, [section.id]);
   return place;
 }
 
 // The open menu: one card attached to the header's bottom edge.
 export default function NavCard({ section, trigger }) {
   const Panel = PANELS[section.id];
-  const nav = useNav();
-  const widths = { courses: nav.subjects.length > 5 ? WIDE : WIDTH };
-  const place = useCardPlace(section, trigger, widths);
+  const place = useCardPlace(section, trigger);
   return (
     <section
       id="rt-nav-card"
