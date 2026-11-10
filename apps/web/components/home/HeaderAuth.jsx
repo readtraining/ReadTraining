@@ -72,8 +72,8 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
   if (!person) {
     return (
       <div className="rt-hauth">
-        <Link href={AUTH_ROUTES.login} className="button -underline text-white">Log in</Link>
-        <Link href={AUTH_ROUTES.signUp} className="button -sm -white text-dark-1 ml-30">Sign up</Link>
+        <Link href={AUTH_ROUTES.login} className="button -sm -outline-white text-white">Log in</Link>
+        <Link href={AUTH_ROUTES.signUp} className="button -sm -purple-1 text-white ml-10">Sign up</Link>
       </div>
     );
   }
