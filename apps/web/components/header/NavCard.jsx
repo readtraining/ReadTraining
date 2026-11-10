@@ -57,7 +57,16 @@ function CoursesPanel() {
   const live = sub ? { count: sub.count, top: sub.top } : null;
   const top = live ? live.top.map((c) => ({ label: c.title, href: coursePath(c.slug), meta: [...new Set([c.duration, ...c.methods.map(methodName)])].filter(Boolean).join(" · ") })) : [];
   const popular = nav.courses.slice(0, C.popular.count).map((c) => ({ label: c.title, href: c.href, meta: subjectName(nav, c.subject) }));
-  const rows = Math.ceil(nav.subjects.length / 3);
+  // the subjects in even columns, read A to Z down each one: two columns up to 8 subjects, three from 9, and the columns' lengths
+  // differ by one at most (7 is 4 + 3, 10 is 4 + 3 + 3), so no subject is ever left alone in a column
+  const n = nav.subjects.length;
+  const cols = Math.min(n, n > 8 ? 3 : 2) || 1;
+  const place = [];
+  for (let col = 0, row = 0, i = 0; i < n; i++) {
+    place.push({ gridColumn: col + 1, gridRow: row + 1 });
+    row += 1;
+    if (row === Math.floor(n / cols) + (col < n % cols ? 1 : 0)) { col += 1; row = 0; }
+  }
   return (
     <div>
       <Band title={C.title}>
@@ -65,12 +74,11 @@ function CoursesPanel() {
         <More {...C.all} />
       </Band>
       <div className="rt-nav-pad rt-nav-courses">
-        {/* three columns, read A to Z down each one */}
-        <ul className="rt-nav-subjects" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
-          {nav.subjects.map((s) => {
+        <ul className="rt-nav-subjects" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          {nav.subjects.map((s, i) => {
             const on = s.slug === subjectId;
             return (
-              <li key={s.slug}>
+              <li key={s.slug} style={place[i]}>
                 <button type="button" title={s.label} className={`rt-nav-subject${on ? " is-on" : ""}`} aria-pressed={on} aria-controls="rt-nav-preview" onClick={() => setSubjectId(on ? null : s.slug)}>
                   <span className="rt-nav-tile"><NavIcon name={s.icon} size={16} /></span>
                   <span className="rt-nav-subject__name">{s.label}</span>
