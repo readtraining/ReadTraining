@@ -37,9 +37,16 @@ export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
   const [q, setQ] = useState("");
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
+  const openBtnRef = useRef(null);
+  // closing with the close button or Escape puts focus back on the search button (a click elsewhere on the page leaves it there)
+  const closeToButton = () => {
+    setOpen(false);
+    requestAnimationFrame(() => openBtnRef.current?.focus());
+  };
 
   useEffect(() => {
-    if (!open) {
+    if (open) inputRef.current?.focus(); // opening moves focus into the box
+    else {
       setFocused(false);
       inputRef.current?.blur();
     }
@@ -51,7 +58,7 @@ export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
     const onDown = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
     };
-    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    const onKey = (e) => e.key === "Escape" && closeToButton();
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -106,9 +113,11 @@ export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
         className="d-flex items-center bg-white"
         style={{
           overflow: "hidden",
-          transition: "width .3s cubic-bezier(.215,.61,.355,1), opacity .3s ease, padding .3s ease, border-color .15s",
+          // closed, it is also hidden (out of the Tab order and from screen readers) once its fade has finished
+          transition: `width .3s cubic-bezier(.215,.61,.355,1), opacity .3s ease, padding .3s ease, border-color .15s, visibility 0s linear ${open ? "0s" : ".3s"}`,
           width: open ? width : 0,
           opacity: open ? 1 : 0,
+          visibility: open ? "visible" : "hidden",
           height: 36,
           borderRadius: 200,
           border: focused ? "1px solid var(--color-purple-1)" : "1px solid var(--color-light-5)",
@@ -134,7 +143,7 @@ export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setOpen(false)}
+          onClick={closeToButton}
           aria-label="Close search"
           className="d-flex justify-center items-center rounded-full bg-purple-1 text-white"
           style={{ width: 28, height: 28, flex: "0 0 auto" }}
@@ -144,6 +153,7 @@ export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
       </form>
 
       <button
+        ref={openBtnRef}
         type="button"
         onClick={() => setOpen(true)}
         className="d-flex items-center text-white"
