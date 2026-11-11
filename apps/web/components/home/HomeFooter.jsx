@@ -10,6 +10,7 @@ import { company } from "@/data/legal/company";
 import WhatsAppIcon from "@/components/common/WhatsAppIcon";
 import { hasReviews } from "@/lib/siteContent";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { shortCourseName } from "@/lib/nav";
 import { useNav } from "@/lib/navContext";
 
 // Footer built on the template's FooterEight (type-5) layout: brand + contact left, link columns right,
@@ -22,20 +23,11 @@ const REVIEWS_HREF = "/customer-reviews";
 // short, as on most sites: the full list of subjects is in the Explore menu and the course search.
 const LINKS = 8;
 const POPULAR = 6;
-// a course's footer name: its title without the bracketed detail ("Personal Licence (Level 2 Award …)" → "Personal Licence"),
-// keeping an acronym with its body ("CITB Site Management Safety Training Scheme (SMSTS)" → "CITB SMSTS")
-const shortName = (title) => {
-  const m = title.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
-  if (!m) return title;
-  const [, base, inner] = m;
-  const body = base.split(" ")[0];
-  return /^[A-Z0-9]{2,8}$/.test(inner) && /^[A-Z]{2,6}$/.test(body) ? `${body} ${inner}` : base;
-};
 const linksOf = (col, nav) =>
   col.live === "find"
     ? [...[...nav.methods.map((m) => ({ label: `${m.name} courses`, href: m.href })), ...[...nav.subjects].sort((a, b) => b.count - a.count).map((s) => ({ label: s.label, href: s.href }))].slice(0, LINKS), { label: "All courses", href: CATALOGUE_HREF, more: true }]
     : col.live === "popular"
-      ? nav.courses.slice(0, POPULAR).map((c) => ({ label: shortName(c.title), href: c.href, title: c.title }))
+      ? nav.courses.slice(0, POPULAR).map((c) => ({ label: shortCourseName(c.title), href: c.href, title: c.title }))
       : col.links;
 
 export default function HomeFooter() {

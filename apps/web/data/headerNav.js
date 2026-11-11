@@ -2,6 +2,7 @@
 // the courses you can search for near you are the live catalogue's (lib/nav.js, useNav), so every link has something behind it;
 // the licence and help links are fixed pages.
 import { CATALOGUE_HREF, HSE_TEST_HREF } from "@/lib/routes";
+import { TEAM } from "@/lib/teamTraining";
 
 const lic = (s) => `/licences/${s}`;
 
@@ -22,15 +23,21 @@ export const headerNav = {
     { id: "help", label: "Help & guides" },
   ],
 
-  // the subjects, methods and featured courses come from the live catalogue (useNav)
+  // the subjects, methods and popular courses come from the live catalogue (useNav)
   courses: {
-    // up to `max` subjects; more than that: the ones with the most courses, then "All N subjects"
-    subjects: { title: "Subjects", icon: "book", max: 9, count: (n) => `${n} ${n === 1 ? "course" : "courses"}`, all: (n) => `All ${n} subjects` },
+    // up to `perColumn` subjects in one column, more in two; more than `max`: the ones with the most courses, then "All N subjects"
+    subjects: { title: "Subjects", icon: "book", perColumn: 7, max: 14, all: (n) => `All ${n} subjects` },
     // the ways of study in use, each with a short line (by the method's slug; one without a line shows its name only)
-    methods: { title: "How you study", icon: "cap", meta: { classroom: "At a venue near you", "live-online": "With a tutor, from home", "self-paced": "Start any time" } },
-    // "featured", not "popular": the order comes from providers and dates, not from bookings (say "popular" once bookings exist)
-    featured: { title: "Featured courses", icon: "growth", count: 4 },
-    help: "Not sure which course? Call",
+    methods: {
+      title: "How you study",
+      icon: "cap",
+      meta: { classroom: "At a venue near you", "live-online": "With a tutor, from home", "self-paced": "Start any time" },
+      // after the catalogue's methods: training for a team at their workplace (a quote, on the For Business page)
+      inhouse: { label: "In-house", meta: TEAM.short, href: "/for-business" },
+    },
+    // the catalogue's order: most providers first, then most upcoming dates; before launch it must count bookings or the
+    // client's own booking records (QA fix list, item 21), or it can't be called "popular"
+    popular: { title: "Popular courses", icon: "growth", count: 4 },
     all: { label: "Browse all courses", href: CATALOGUE_HREF },
   },
 
@@ -139,7 +146,7 @@ export const mobileMenu = (nav) => [
     title: N.sections[0].label,
     links: [
       { title: N.courses.subjects.title, links: nav.subjects.map((s) => ({ label: s.label, href: s.href })) },
-      { title: N.courses.methods.title, links: nav.methods.map((m) => ({ label: m.name, href: m.href })) },
+      { title: N.courses.methods.title, links: [...nav.methods.map((m) => ({ label: m.name, href: m.href })), { label: N.courses.methods.inhouse.label, href: N.courses.methods.inhouse.href }] },
       { label: N.courses.all.label, href: N.courses.all.href },
     ],
   },
