@@ -1,9 +1,9 @@
-import { LEVEL_ALIASES, METHOD_ALIASES, categoryName, getTaxonomy, subcategoriesOf } from "@/lib/taxonomy";
+import { LEVEL_ALIASES, METHOD_ALIASES, categoryName, getTaxonomy, subcategoriesOf, subcategoryName, topicName } from "@/lib/taxonomy";
 
 // The course search (/courses and the category, method and town pages): the filter groups, the sort options and the pure
 // filter, sort and URL helpers. They read the shape lib/catalogueData.js toCatalogueCourse gives a listing:
 // { id, title, description, subject, sub, methods[], level, venues[{ city, postcode, lat, lng }], providers, popularity,
-//   addedAt (ISO date), price (pounds, or null with no dates yet), wasPrice?, duration }
+//   addedAt (ISO date), price (pounds, or null with no dates yet), wasPrice?, prices[{ method, venue, price, wasPrice }], duration }
 
 export const PROJECT_NAME = "ReadTraining";
 export const PAGE_SIZE = 6;
@@ -33,8 +33,13 @@ export const closestSortOption = { value: "closest", label: "Closest" };
 const allSortValues = [...sortOptions.map((o) => o.value), closestSortOption.value];
 
 // --- location matching -------------------------------------------------------
-const norm = (s) => s.toLowerCase().replace(/\s+/g, "");
-const outward = (s) => s.trim().toLowerCase().split(/\s+/)[0];
+const norm = (s) => (s || "").toLowerCase().replace(/\s+/g, "");
+const outward = (s) => (s || "").trim().toLowerCase().split(/\s+/)[0];
+// what a typed location is: a postcode area on its own (L, LS), an outward code (L1, LS10), a full postcode, or a town's name
+const AREA = /^[a-z]{1,2}$/i;
+const OUTCODE = /^[a-z]{1,2}\d[a-z\d]?$/i;
+const FULL = /^[a-z]{1,2}\d[a-z\d]?\s*\d[a-z]{2}$/i;
+const areaOf = (postcode) => (/^[a-z]{1,2}/i.exec(postcode || "")?.[0] || "").toLowerCase();
 
 // A course can be taken from anywhere when it runs without a venue (live online, self-paced), even if it also has classroom
 // dates somewhere else. A classroom-only course needs a venue near the place; with no dates yet it has none, so a location
@@ -43,19 +48,20 @@ const outward = (s) => s.trim().toLowerCase().split(/\s+/)[0];
 export const takenAnywhere = (course, methods = []) =>
   (course.methods || []).some((m) => m !== "classroom" && (!methods.length || methods.includes(m)));
 
-// One of the course's venues is in the typed town, or at the typed postcode.
-export function venueIn(course, query) {
-  const q = (query || "").trim();
+// A venue is in the typed place by its words (used until the place is found on the map, or when it can't be): one or two
+// letters are a postcode area (L is Liverpool's, not every town starting with L), an outward code or a full postcode matches
+// the venue's outward code, and anything else is a town matched from the start of its name ("leed" finds Leeds, "ford" not
+// Stafford).
+function venueMatches(venue, query) {
+  const q = (query || "").trim().toLowerCase();
   if (!q) return false;
-  const qn = norm(q);
-  const hasSpace = /\s/.test(q);
-  return course.venues.some(
-    (v) =>
-      norm(v.city).includes(qn) ||
-      norm(v.postcode).startsWith(qn) ||
-      (hasSpace && outward(v.postcode) === outward(q)),
-  );
+  if (AREA.test(q)) return areaOf(venue.postcode) === q;
+  if (FULL.test(q)) return outward(venue.postcode) === q.replace(/\s+/g, "").slice(0, -3);
+  if (OUTCODE.test(q)) return outward(venue.postcode) === q;
+  return norm(venue.city).startsWith(norm(q));
 }
+/** One of the course's venues is in the typed town, postcode area or postcode (see venueMatches). */
+export const venueIn = (course, query) => course.venues.some((v) => venueMatches(v, query));
 
 // A course matches a location when a venue is there, or when it can be taken online from anywhere.
 export function matchesLocation(course, query, methods = []) {
@@ -63,38 +69,83 @@ export function matchesLocation(course, query, methods = []) {
   return !q || takenAnywhere(course, methods) || venueIn(course, q);
 }
 
-// --- filtering / sorting -----------------------------------------------------
-// Keyword matches title, subject and description, case-insensitive.
+// --- keyword search ------------------------------------------------------------
+// Every word typed must be found in the course's title, subject, sub-subject, topic or summary (or be the initials of its title
+// or topic: "efaw" is Emergency First Aid at Work). Words that say nothing about which course (course, training, and) are left
+// out and a hyphen is a space ("first-aid"). A short word (three letters or fewer) must be a whole word, so "SIA" doesn't find
+// "Asia" and "aid" doesn't find "paid"; a longer one matches the start of a word ("supervis" finds Supervisor).
+const FILLER = new Set(["course", "courses", "training", "and"]);
+const SMALL = new Set(["a", "an", "and", "at", "for", "in", "of", "on", "the", "to"]);
+const plain = (t) => (t || "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+const initials = (t) => {
+  const w = plain(t).split(" ").filter(Boolean);
+  return [w.map((x) => x[0]).join(""), w.filter((x) => !SMALL.has(x)).map((x) => x[0]).join("")];
+};
+const searchText = new WeakMap();
+function textOf(course) {
+  if (!searchText.has(course)) {
+    const topic = topicName(course.subject, course.sub, course.topic);
+    searchText.set(course, {
+      words: ` ${plain([course.title, categoryName(course.subject), subcategoryName(course.subject, course.sub), topic, course.description].join(" "))} `,
+      initials: new Set([...initials(course.title), ...(topic ? initials(topic) : [])].filter((x) => x.length > 1)),
+    });
+  }
+  return searchText.get(course);
+}
 export const matchesKeyword = (course, q) => {
-  const needle = (q || "").trim().toLowerCase();
-  if (!needle) return true;
-  return [course.title, categoryName(course.subject), course.description].some((t) => (t || "").toLowerCase().includes(needle));
+  const words = plain(q).split(" ").filter((w) => w && !FILLER.has(w));
+  if (!words.length) return true;
+  const text = textOf(course);
+  return words.every((w) => text.initials.has(w) || text.words.includes(w.length <= 3 ? ` ${w} ` : ` ${w}`));
 };
 
 // Within this distance of where the learner is (a town or postcode found on the map), a classroom venue counts as near.
 export const NEAR_KM = 50;
+const venueNear = (venue, point) => venue.lat != null && distanceKm(point, venue) <= NEAR_KM;
 // A course is near `point` ({ lat, lng }) when one of its venues is within NEAR_KM, or it can be taken online (anywhere).
-const nearPoint = (course, point, methods = []) => takenAnywhere(course, methods) || course.venues.some((v) => v.lat != null && distanceKm(point, v) <= NEAR_KM);
+const nearPoint = (course, point, methods = []) => takenAnywhere(course, methods) || course.venues.some((v) => venueNear(v, point));
 
+// --- the "From" price where the visitor is looking ---------------------------------
+// The cheapest price the course can be booked at under the search's ways of study and place: a classroom page counts only
+// classroom dates, a town only venues near it (or, until it is found on the map, matching its words) and what is taken online,
+// and a self-paced price only when self-paced counts. The card, the price filter and the price sort all read it. Null when none.
+function priceWhere(course, method, location, point) {
+  const loc = (location || "").trim();
+  let best = null;
+  for (const p of course.prices || []) {
+    if (method.length && !method.includes(p.method)) continue;
+    const venue = p.venue == null ? null : course.venues[p.venue];
+    if (loc && p.method === "classroom" && !(venue && (point ? venueNear(venue, point) : venueMatches(venue, loc)))) continue;
+    if (!best || p.price < best.price) best = p;
+  }
+  return best;
+}
+
+// --- filtering / sorting -----------------------------------------------------
 // subject, sub, method and level are arrays of ticked values. Inside a group a course matches ANY ticked value (OR);
 // between groups every group must match (AND). An empty array means "no filter" for that group. The price slider's ends mean
 // "no limit" (a course dearer than the slider still shows until a top price is set); a course with no price yet (no dates)
 // shows unless a price range is set. `point`: where the typed location is on the map (catalogue.locate), when found; without it
-// the location matches a venue's town or postcode by its words.
+// the location matches a venue's town or postcode by its words. Each course comes back with its price where the visitor is
+// looking (priceWhere): `price`, `wasPrice` and `priceMethod`, the way of study of that price.
 export function filterCourses(courses, { subject = [], sub = [], method = [], level = [], location, min, max, q }, point = null) {
   const low = min !== undefined && min > PRICE_BOUNDS.min;
   const high = max !== undefined && max < PRICE_BOUNDS.max;
-  return courses.filter(
-    (course) =>
-      matchesKeyword(course, q) &&
-      (!subject.length || subject.includes(course.subject)) &&
-      (!sub.length || sub.includes(course.sub)) &&
-      (!method.length || course.methods.some((m) => method.includes(m))) &&
-      (!level.length || level.includes(course.level)) &&
-      (!low || (course.price != null && course.price >= min)) &&
-      (!high || (course.price != null && course.price <= max)) &&
-      (point && location ? nearPoint(course, point, method) : matchesLocation(course, location, method)),
-  );
+  return courses
+    .filter(
+      (course) =>
+        matchesKeyword(course, q) &&
+        (!subject.length || subject.includes(course.subject)) &&
+        (!sub.length || sub.includes(course.sub)) &&
+        (!method.length || course.methods.some((m) => method.includes(m))) &&
+        (!level.length || level.includes(course.level)) &&
+        (point && location ? nearPoint(course, point, method) : matchesLocation(course, location, method)),
+    )
+    .map((course) => {
+      const p = priceWhere(course, method, location, point);
+      return { ...course, price: p?.price ?? null, wasPrice: p?.wasPrice ?? null, priceMethod: p?.method ?? null };
+    })
+    .filter((course) => (!low || (course.price != null && course.price >= min)) && (!high || (course.price != null && course.price <= max)));
 }
 
 // a course with no price yet goes last either way
@@ -115,18 +166,6 @@ const distanceKm = (a, b) => {
   return Math.sqrt(x * x + y * y) * 6371;
 };
 
-// Reference point for "closest": the first venue that matches the typed town or postcode.
-function locationPoint(courses, location) {
-  for (const course of courses) {
-    const v = course.venues.find((venue) => venueIn({ venues: [venue] }, location));
-    if (v) return v;
-  }
-  return null;
-}
-
-// Where "closest" measures from: the typed place on the map (catalogue.locate), or else the first venue in that town or postcode.
-export const referencePoint = (all, location, found = null) => found || (location ? locationPoint(all, location) : null);
-
 // The course's venue nearest `point`, with how far it is ({ km, city }); null when it has no venue on the map.
 export function nearestVenue(course, point) {
   if (!point) return null;
@@ -146,11 +185,12 @@ export function distanceLabel(near) {
   return miles < 1 ? `Less than a mile away${town}` : `About ${Math.round(miles)} ${Math.round(miles) === 1 ? "mile" : "miles"} away${town}`;
 }
 
-export function sortCourses(courses, sort, location = "", all = courses, found = null) {
+// "closest" measures from the place on the map (catalogue.locate); until it is found (or if it can't be), the courses with a
+// venue matching the typed words come first.
+export function sortCourses(courses, sort, location = "", point = null) {
   if (sort === "closest") {
-    const point = referencePoint(all, location, found);
-    if (!point) return sorters.popular ? [...courses].sort(sorters.popular) : courses;
-    const dist = (c) => (c.venues.some((v) => v.lat != null) ? Math.min(...c.venues.filter((v) => v.lat != null).map((v) => distanceKm(point, v))) : Infinity);
+    const dist = (c) =>
+      point ? Math.min(Infinity, ...c.venues.filter((v) => v.lat != null).map((v) => distanceKm(point, v))) : venueIn(c, location) ? 0 : Infinity;
     return [...courses].sort((a, b) => dist(a) - dist(b) || b.popularity - a.popularity);
   }
   const fn = sorters[sort];
@@ -174,6 +214,8 @@ export const defaultSort = (location) => (location ? "closest" : "popular");
 
 // --- URL state -----------------------------------------------------------------
 // `base` is a course page's fixed choice ({ subject }: /courses/first-aid). Its sub-subjects are valid without ?subject=.
+// `base.fixed` lists the filters the page sets itself or doesn't offer ("subject", "sub", "method", "level", "price"): the
+// address can't set them (/courses/first-aid?subject=security would otherwise list nothing under a filter nobody can see).
 export function parseCatalogueParams(params, base = {}) {
   const [subjectG, methodG, levelG] = catalogueFilterGroups();
   const sort = params.get("sort");
@@ -185,14 +227,15 @@ export function parseCatalogueParams(params, base = {}) {
     const n = parseFloat(params.get(key));
     return Number.isFinite(n) ? Math.min(Math.max(n, PRICE_BOUNDS.min), PRICE_BOUNDS.max) : fallback;
   };
-  let min = num("min", PRICE_BOUNDS.min);
-  let max = num("max", PRICE_BOUNDS.max);
+  const fixed = new Set(base.fixed || []);
+  let min = fixed.has("price") ? PRICE_BOUNDS.min : num("min", PRICE_BOUNDS.min);
+  let max = fixed.has("price") ? PRICE_BOUNDS.max : num("max", PRICE_BOUNDS.max);
   if (min > max) [min, max] = [max, min];
 
   // Checkbox groups hold several values: ?subject=first-aid,security. Unknown values are dropped, duplicates removed
   // and the rest sorted, so the same selection always makes the same URL.
   const many = (key, allowed, map = (v) => v) =>
-    [...new Set((params.get(key) || "").split(",").map((v) => map(v.trim().toLowerCase())).filter((v) => allowed.has(v)))].sort();
+    fixed.has(key) ? [] : [...new Set((params.get(key) || "").split(",").map((v) => map(v.trim().toLowerCase())).filter((v) => allowed.has(v)))].sort();
   const subject = many("subject", new Set(subjectG.options.map((o) => o.value)));
   const allowedSubs = new Set([...subject, ...(base.subject ? [base.subject] : [])].flatMap((sv) => subcategoriesOf(sv).map((x) => x.slug)));
   return {

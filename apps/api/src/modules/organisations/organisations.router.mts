@@ -284,7 +284,20 @@ export const organisationsRouter = createTRPCRouter({
     }
   }),
 
-  // The public directory of providers (/providers): every approved provider, A to Z, with its town, headline, logo, how many
-  // courses it runs and in which categories.
-  providerDirectory: publicProcedure.query(({ ctx }) => loadProviderDirectory(ctx.db)),
+  // The public directory of providers (/providers): every approved provider with a live course, A to Z, with its town, headline,
+  // logo, how many courses it runs, in which categories and the towns its upcoming dates are in (`towns`, so a search for a
+  // town finds the providers that run courses there, not only those based there).
+  providerDirectory: publicProcedure.query(async ({ ctx }) => {
+    const list = await loadProviderDirectory(ctx.db)
+    const rows = await ctx.db.execute<{ slug: string; towns: string[] }>(sql`
+      select o.slug, array_agg(distinct v.city order by v.city) towns
+      from public.organisations o
+      join public.courses c on c.organisation_id = o.id and c.kind = 'provider' and c.status = 'live' and c.is_public and c.listed
+      join public.cohorts k on k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date
+      join public.venues v on v.id = k.venue_id and coalesce(v.city, '') <> ''
+      where o.type = 'provider' and o.status = 'active'
+      group by o.slug`)
+    const towns = new Map(rows.map((r) => [r.slug, r.towns]))
+    return list.map((p) => ({ ...p, towns: towns.get(p.slug) ?? [] }))
+  }),
 })

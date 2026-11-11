@@ -4,9 +4,10 @@
 import { courseSearch } from "@/data/courseTopics";
 import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
 
-// a route opens the course finder searched for its words (`slug` keeps the client's original path)
-// a route that searches the courses for some words (`q`); the finder shows it only while a live course matches them
-const course = (words, slug) => ({ slug, q: words, href: courseSearch(words) });
+// a route that searches the courses for some words (`q`: one or more ways the course is named, the first that a live course
+// has is searched for); the finder shows it only while a live course matches one of them. `slug` keeps the client's original
+// path.
+const course = (words, slug) => ({ slug, q: [].concat(words) });
 
 // How to reach the team, used across the site. The phone is the landline on the client's Google listing (so the site and the
 // listing match); the mobile is for WhatsApp only. Hours as on the Google listing.
@@ -78,14 +79,14 @@ export const bookingOptions = {
   cta: { label: "Find course options", href: CATALOGUE_HREF },
 };
 
-// "What do you need training for?" course finder: four goals, each with its own routes.
+// "What do you need training for?" course finder: four goals (each with its own icon), each with its own routes.
 export const courseFinder = {
   eyebrow: "Course finder",
   title: "What do you need training for?",
   text: "Start with your goal, or browse training by subject.",
   goals: [
     {
-      label: "Get an SIA licence", text: "Find the training required for a new SIA licence.",
+      label: "Get an SIA licence", text: "Find the training required for a new SIA licence.", icon: "icon-badge",
       panelTitle: "Which security role are you training for?", panelText: "Choose the licence route that matches the work you want to do.",
       routes: [
         { title: "Door Supervisor", text: "Work in licensed premises, events and many public-facing security roles.", ...course("Door Supervisor", "/course/sia-door-supervisor-training") },
@@ -93,31 +94,31 @@ export const courseFinder = {
         { title: "CCTV Operator", text: "Monitor public space surveillance systems.", ...course("CCTV Operator", "/course/sia-cctv-operator-training") },
         { title: "Close Protection", text: "Train for specialist personal-protection work.", ...course("Close Protection", "/course/close-protection") },
       ],
-      allLabel: "Browse all SIA courses", allHref: CATALOGUE_HREF,
+      allLabel: "Browse all SIA courses", allHref: "/courses/security",
     },
     {
-      label: "Renew my SIA licence", text: "Find the correct refresher training.",
+      label: "Renew my SIA licence", text: "Find the correct refresher training.", icon: "icon-time-management",
       panelTitle: "Which qualification do you need to renew?", panelText: "Select your current licence type to find the relevant refresher course.",
+      // providers name renewal training "Refresher" or "Top-Up" (the catalogue's SIA top-up topics); a course's length is on its
+      // own page, as providers' differ
       routes: [
-        { title: "Door Supervisor Refresher", text: "2 days · Updated search procedures, terror threat awareness, vulnerability, spiking prevention and physical intervention.", ...course("Door Supervisor Refresher", "/course/sia-top-up-refresher-training-door-supervisor") },
-        { title: "Security Guard Refresher", text: "1 day · Updated search procedures, vulnerability awareness, supporting vulnerable people and current terror threat response.", ...course("Security Guard Refresher", "/course/sia-top-up-refresher-training-security-guard") },
-        { title: "Close Protection Refresher", text: "3 days · Incident analysis, threat management, protective cordons and ethical physical intervention techniques.", ...course("Close Protection Refresher", "/course/sia-close-protection-top-up-course") },
+        { title: "Door Supervisor", text: "Updated search procedures, terror threat awareness, vulnerability, spiking prevention and physical intervention.", ...course(["Door Supervisor Refresher", "Door Supervisor Top-Up"], "/course/sia-top-up-refresher-training-door-supervisor") },
+        { title: "Security Guard", text: "Updated search procedures, vulnerability awareness, supporting vulnerable people and current terror threat response.", ...course(["Security Guard Refresher", "Security Officer Refresher", "Security Guard Top-Up", "Security Officer Top-Up"], "/course/sia-top-up-refresher-training-security-guard") },
+        { title: "Close Protection", text: "Incident analysis, threat management, protective cordons and ethical physical intervention techniques.", ...course(["Close Protection Refresher", "Close Protection Top-Up"], "/course/sia-close-protection-top-up-course") },
       ],
-      allLabel: "Browse all SIA refresher courses", allHref: CATALOGUE_HREF,
+      allLabel: "Browse all SIA courses", allHref: "/courses/security",
     },
     {
-      label: "Get a CSCS card", text: "Find the qualification route for the card you need.",
+      label: "Get a CSCS card", text: "Find the qualification route for the card you need.", icon: "icon-document",
       panelTitle: "Which CSCS card or role are you working towards?", panelText: "Choose the route that best matches the work you want to do.",
+      // only the cards a course on the site leads to (the other cards need an NVQ or a degree, not a course booked here)
       routes: [
         { title: "Green Labourer Card", text: "For labouring roles requiring health and safety training and the relevant CITB test.", ...course("CSCS Green Card", "/course/cscs-green-card-labourers-card-course") },
-        { title: "Skilled Worker Card", text: "Usually requires an occupation-specific qualification or Level 2 NVQ.", ...course("CSCS", "/courses/cscs") },
-        { title: "Supervisor Card", text: "For site supervisors managing day-to-day operations on site.", ...course("CSCS", "/courses/cscs") },
-        { title: "Manager Card", text: "For site managers leading construction projects and teams.", ...course("CSCS", "/courses/cscs") },
       ],
-      allLabel: "Browse all construction courses", allHref: CATALOGUE_HREF,
+      allLabel: "Browse all construction courses", allHref: "/courses/construction",
     },
     {
-      label: "Need an NVQ", text: "Search NVQs by occupation, trade or level.",
+      label: "Need an NVQ", text: "Search NVQs by occupation, trade or level.", icon: "icon-graduate-cap",
       panelTitle: "What occupation or trade is the NVQ for?", panelText: "Search by occupation, trade or qualification level to find a relevant route.",
       routes: [
         { title: "Construction Site Supervision", text: "Level 4 NVQ Diploma", ...course("Construction Site Supervision", "/course/level-4-nvq-diploma-in-construction-site-supervision") },
@@ -130,15 +131,6 @@ export const courseFinder = {
   ],
   help: `Need personal guidance? Call ${topBar.phone}`,
 };
-
-// Slider tiles for the finder section (template feature cards): the four goals.
-export const roles = courseFinder.goals.map((g, i) => ({
-  id: i + 1,
-  iconSrc: `/assets/img/featureCards/${i + 1}.svg`,
-  title: g.label,
-  text: g.text,
-  href: g.allHref,
-}));
 
 // Customer stories block: the reviews ticked for the home page (admin › Customer reviews, lib/siteReviews.js). There are no
 // built-in reviews and no video story (the old ones were copied from another site): with none published the block is left

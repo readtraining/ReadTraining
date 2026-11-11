@@ -5,6 +5,7 @@ import { provider } from "@/data/provider";
 import { testPrepPage } from "@/data/testPrep";
 import { terms } from "@/data/legal/terms";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { contactHref, formReady } from "@/lib/forms";
 import { TEAM } from "@/lib/teamTraining";
 
 // The Help Centre (/help-centre): topics > articles, read through lib/help.js. The structure follows the client's current
@@ -80,7 +81,7 @@ export const helpTopics = [
         summary: "Group places, in-house courses, quotes and business accounts.",
         blocks: [
           fromAbout("Can I book training for my team?"),
-          `In-house training: ${TEAM.note.toLowerCase()}. [Ask for a quote](/contact-us?topic=business#contact-form) and tell us the course, how many people and roughly when.`,
+          `In-house training: ${TEAM.note.toLowerCase()}. [Ask for a quote](${contactHref("business")}) and tell us the course, how many people and roughly when.`,
           "To manage your team's places, learners and certificates in one place, see [Training for business](/for-business).",
         ],
       },
@@ -91,7 +92,7 @@ export const helpTopics = [
         blocks: [
           "Your training provider arranges your certificate, result or card application after you complete the course. The course page shows the qualification you will get.",
           "The Plus and Pro booking options include a faster result option.",
-          `If your certificate has not arrived, [send us a message](/contact-us?topic=booking#contact-form) with your booking reference or call us on ${tel}.`,
+          `If your certificate has not arrived, [send us a message](${contactHref("booking")}) with your booking reference or call us on ${tel}.`,
         ],
       },
       {
@@ -114,7 +115,7 @@ export const helpTopics = [
         summary: "Refunds follow the training provider's policy. Ask us before you book and we will tell you what it is.",
         blocks: [
           termsRefunds[0],
-          "To cancel, [send us a message](/contact-us?topic=booking#contact-form) with your booking reference. We will explain your options under the provider's policy and handle any refund due through us.",
+          `To cancel, [send us a message](${contactHref("booking")}) with your booking reference. We will explain your options under the provider's policy and handle any refund due through us.`,
           "Read the full [refunds and cancellations terms](/terms-and-conditions#refunds-and-cancellations).",
         ],
       },
@@ -124,7 +125,7 @@ export const helpTopics = [
         summary: "Move to another date, depending on the provider's policy and your booking option.",
         blocks: [
           "Whether you can move to another date depends on the training provider's rescheduling policy and your booking option. The Plus and Pro booking options include flexible date rescheduling.",
-          "To change your date, [send us a message](/contact-us?topic=booking#contact-form) with your booking reference and the dates that suit you.",
+          `To change your date, [send us a message](${contactHref("booking")}) with your booking reference and the dates that suit you.`,
           "See [Compare booking options](/help-centre/booking-a-course/booking-options) for what each option includes.",
         ],
       },
@@ -177,7 +178,7 @@ export const helpTopics = [
       { slug: "track-learner-progress", title: "Track your learners' progress", summary: "Coming soon: see learners and their progress in your Business account.", blocks: [fromBusiness("What can we see after assigning training?")] },
       { slug: "certificates-and-expiry-dates", title: "See certificates and expiry dates", summary: "Coming soon: see which training is due for renewal.", blocks: [fromBusiness("Can we access learner certificates and expiry dates?")] },
       { slug: "share-your-account", title: "Share your Business account with colleagues", summary: "Coming soon: add team members with roles to share the admin.", blocks: [fromBusiness("Can more than one colleague manage the Business account?")] },
-      { slug: "business-credit", title: "Pay with a Business credit account", summary: "Credit facilities for eligible regular customers.", blocks: [fromBusiness("How do Business credit accounts work?"), "To ask about credit, [send us a message](/contact-us?topic=business#contact-form)."] },
+      { slug: "business-credit", title: "Pay with a Business credit account", summary: "Credit facilities for eligible regular customers.", blocks: [fromBusiness("How do Business credit accounts work?"), `To ask about credit, [send us a message](${contactHref("business")}).`] },
       { slug: "training-bought-elsewhere", title: "Training bought elsewhere", summary: "What the Business area will cover.", blocks: [fromBusiness("Can we manage training bought elsewhere?")] },
     ],
   },
@@ -213,7 +214,7 @@ export const helpTopics = [
       { slug: "your-personal-data", title: "See, correct or delete your data", summary: "Your rights over your personal information.", blocks: ["You can ask to see, correct, update or delete your personal information at any time by emailing [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request).", "Read our [Privacy Policy](/privacy-policy) for how we use your information."] },
       { slug: "cookies", title: "Manage cookies", summary: "Which cookies we use and how to change your choices.", blocks: ["Essential cookies make the site work and are always on. Analytics and advertising cookies are only used with your consent.", "Our [Cookie Policy](/cookie-policy) lists every cookie, what it does and how long it lasts, and explains how to change your choices."] },
       { slug: "accessibility", title: "Accessibility and other formats", summary: "Getting help using the website or information in another format.", blocks: ["If you have difficulty using any part of the website, or need information in a different format such as large print or audio, please tell us.", "Read our [Accessibility Statement](/accessibility-statement). " + contactLine] },
-      { slug: "contact-us", title: "Contact our team", summary: "Call, email or send us a message.", blocks: [`Call us on ${tel}, ${topBar.hoursLong}, or email [${topBar.email}](mailto:${topBar.email}). We reply within one working day.`, "You can also [send us a message](/contact-us#contact-form)."] },
+      { slug: "contact-us", title: "Contact our team", summary: "Call, email or send us a message.", blocks: [`Call us on ${tel}, ${topBar.hoursLong}, or email [${topBar.email}](mailto:${topBar.email}). We reply within one working day.`, ...(formReady("contact") ? [`You can also [send us a message](${contactHref()}).`] : [])] },
     ],
   },
 ];

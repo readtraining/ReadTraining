@@ -92,6 +92,7 @@ export const catalogueRouter = createTRPCRouter({
     }
   }),
 
-  // Where a typed town, place or postcode is, for "near me" search; null when it can't be found.
-  locate: publicProcedure.input(z.object({ q: z.string().trim().min(2).max(80) })).query(({ input }) => locate(input.q)),
+  // Where a typed town, place, postcode area (one or two letters: L, LS) or postcode is, for "near me" search; null when it
+  // can't be found.
+  locate: publicProcedure.input(z.object({ q: z.string().trim().min(1).max(80) })).query(({ input }) => locate(input.q)),
 })

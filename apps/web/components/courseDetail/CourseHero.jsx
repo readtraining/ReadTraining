@@ -26,7 +26,8 @@ export default function CourseHero({ course }) {
           ].filter(Boolean)}
         />
 
-        {course.skillSaver && <SaverBadge href="/skill-saver" className="rt-cd__saver" />}
+        {/* in Skill Saver on every date, or on some (the dates pop-up and the booking card then mark which) */}
+        {course.skillSaver && <SaverBadge href="/skill-saver" className="rt-cd__saver" label={course.skillSaver === "some" ? "Skill Saver on some dates" : undefined} />}
         <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
 

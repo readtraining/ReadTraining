@@ -2,8 +2,8 @@ import React from "react";
 import Link from "next/link";
 
 // "Find <courses> near you": the towns with a venue for a course page, as the catalogue's chips, each linking to its town page
-// (/courses/<page>/<town>). On a town page the current town is marked and the others stay links.
-export default function CourseTowns({ title, towns, current = "" }) {
+// (/courses/<page>/<town>). A town page lists the other towns.
+export default function CourseTowns({ title, towns }) {
   if (!towns.length) return null;
   return (
     <section className="rt-ctowns layout-pt-md" aria-labelledby="rt-ctowns-h">
@@ -12,9 +12,7 @@ export default function CourseTowns({ title, towns, current = "" }) {
         <ul className="rt-ctowns__list">
           {towns.map((t) => (
             <li key={t.slug}>
-              {t.slug === current
-                ? <span className="rt-tr__filter is-on" aria-current="page">{t.city}</span>
-                : <Link href={t.href} className="rt-tr__filter">{t.city}</Link>}
+              <Link href={t.href} className="rt-tr__filter">{t.city}</Link>
             </li>
           ))}
         </ul>

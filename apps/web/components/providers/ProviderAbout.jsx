@@ -3,8 +3,10 @@ import Image from "next/image";
 import ProviderLogo from "./ProviderLogo";
 import NameList from "./NameList";
 import { IconCheck } from "@/components/marketing/parts";
+import { paragraphs } from "@/lib/paragraphs";
 
-// "About {provider}": the about text and the approved badge on the left; on the right the provider's mark and a details list
+// "About {provider}": the about text (as the provider typed it: its paragraphs and line breaks; left out when it has none) and the
+// approved badge on the left; on the right the provider's mark and a details list
 // (where it is based, how it delivers, what it teaches, the cities it runs venues in), all worked out from its courses, in the
 // framed card (.fb-frame, as About's story) under a cover photo.
 export default function ProviderAbout({ provider: p, copy }) {
@@ -21,7 +23,11 @@ export default function ProviderAbout({ provider: p, copy }) {
           <div>
             <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{copy.eyebrow}</div>
             <h2 className="fb-title" id="rt-prov-about-h">{copy.title}</h2>
-            <p className="fb-lede">{p.about}</p>
+            {paragraphs(p.about).map((lines, i) => (
+              <p key={i} className="fb-lede rt-pabout__text">
+                {lines.map((line, j) => <React.Fragment key={j}>{j > 0 && <br />}{line}</React.Fragment>)}
+              </p>
+            ))}
             <p className="rt-pabout__badge"><span className="fb-chip -ok"><IconCheck />{copy.badge}</span></p>
           </div>
           <div className="fb-frame">

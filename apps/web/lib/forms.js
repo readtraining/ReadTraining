@@ -33,6 +33,16 @@ export const FORMS = {
 
 export const formReady = (key) => typeof FORMS[key]?.send === "function";
 
+// A link to the contact form with its topic chosen (/contact-us?topic=…#contact-form). While the form is switched off it is
+// the contact page's ways to reach us (phone, WhatsApp and email, beside the "coming soon" panel), so no link leads to a form
+// that isn't there; switched on, every such link opens the form again.
+// `more`: other details the form fills in (e.g. { reference }); left out while the form is off
+export const contactHref = (topic, more = {}) => {
+  if (!formReady("contact")) return "/contact-us#rt-contact-channels-h";
+  const q = new URLSearchParams({ ...(topic ? { topic } : {}), ...more }).toString();
+  return `/contact-us${q ? `?${q}` : ""}#contact-form`;
+};
+
 // Sends a ready form, with a fresh Turnstile token (`humanCheck`). Only ever called from a form <FormGate> showed, so its
 // `send` exists.
 export const sendForm = async (key, data) => FORMS[key].send({ ...data, humanCheck: await getHumanCheck() });

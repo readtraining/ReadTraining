@@ -40,7 +40,15 @@ export const courseGuides = [
     },
     exams: {
       columns: ["Unit", "Questions", "Time", "Pass mark"],
-      questions: ["72", "50", "20", "30", "—"],
+      // by the exam unit's name, as the provider names it (case and punctuation aside); a course with an exam row not listed
+      // here shows its table without this column
+      questions: {
+        "Principles of working in the private security industry": "72",
+        "Principles of working as a door supervisor": "50",
+        "Application of conflict management": "20",
+        "Application of physical intervention skills": "30",
+        "Practical assessments: searching, conflict management and physical intervention": "—",
+      },
       intro: ["You sit four multiple-choice exams on the final day, plus practical assessments in searching and physical intervention observed by your trainer. Many centres give results the same day."],
     },
     packages: {

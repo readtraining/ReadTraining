@@ -1,5 +1,5 @@
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
@@ -11,7 +11,7 @@ import ProviderAbout from "@/components/providers/ProviderAbout";
 import ProviderCourses from "@/components/providers/ProviderCourses";
 
 import { providerPages } from "@/data/providers";
-import { PROVIDERS_HREF, fillName, joinList, toProviderPage } from "@/lib/providers";
+import { PROVIDERS_HREF, fillName, joinList, providerHref, toProviderPage } from "@/lib/providers";
 import { getPublicProvider } from "@/lib/publicProvider";
 import { abs, breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
@@ -44,27 +44,30 @@ export async function generateMetadata(props) {
 export default async function ProviderPage(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
+  // a provider's address is in lower case: /providers/APEX-… goes to /providers/apex-…
+  if (slug !== slug.toLowerCase()) permanentRedirect(providerHref(slug.toLowerCase()));
   const r = await getPublicProvider(slug);
   if (!r) notFound();
   if (!ready(r)) return <NewProviderPage provider={r} />;
   const p = toProviderPage(r);
   const d = providerPages.detail;
 
+  const lead = p.headline || (p.subjects.length ? `Book ${joinList(p.subjects.slice(0, 3))} courses from ${p.name}${p.city ? `, based in ${p.city}` : ""}.` : `Training courses from ${p.name}.`);
   const hero = {
     eyebrow: d.eyebrow,
     title: [p.name],
-    lead: p.headline || (p.subjects.length ? `Book ${joinList(p.subjects.slice(0, 3))} courses from ${p.name}${p.city ? `, based in ${p.city}` : ""}.` : `Training courses from ${p.name}.`),
+    lead,
     primary: { label: "View courses", href: "#rt-prov-courses" },
     secondary: { label: "All providers", href: PROVIDERS_HREF },
   };
   const facts = [
-    { icon: "icon-book", value: p.courses.length, label: p.courses.length === 1 ? "Course to book" : "Courses to book" },
+    { icon: "icon-book", value: p.courses.length, label: p.courses.length === 1 ? "Course" : "Courses" },
     { icon: "icon-graduate-cap", value: p.subjects.length, label: p.subjects.length === 1 ? "Subject" : "Subjects" },
     { icon: "icon-online-learning-4", value: p.modes.length, label: p.modes.length === 1 ? "Way to learn" : "Ways to learn" },
     { icon: "icon-global-search", value: p.cities.length, label: p.cities.length === 1 ? "Venue city" : "Venue cities" },
   ];
   const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training providers", href: PROVIDERS_HREF }, { label: p.name }];
-  const orgLd = { "@context": "https://schema.org", "@type": "EducationalOrganization", name: p.name, url: abs(p.href), description: p.about, areaServed: "GB", ...(p.city ? { address: { "@type": "PostalAddress", addressLocality: p.city, addressCountry: "GB" } } : {}), ...(p.logoUrl ? { logo: p.logoUrl } : {}) };
+  const orgLd = { "@context": "https://schema.org", "@type": "EducationalOrganization", name: p.name, url: abs(p.href), description: p.about || lead, areaServed: "GB", ...(p.city ? { address: { "@type": "PostalAddress", addressLocality: p.city, addressCountry: "GB" } } : {}), ...(p.logoUrl ? { logo: p.logoUrl } : {}) };
   // the provider's own booking terms first, then the policies every provider follows
   const terms = [
     p.cancellationPolicy && { q: "Cancellation policy", a: p.cancellationPolicy },

@@ -25,6 +25,9 @@ export function toCatalogueCourse(l) {
     level: l.level || "",
     methods: l.methods,
     venues: l.venues.map((v) => ({ city: v.city, postcode: v.postcode || "", lat: v.lat, lng: v.lng })),
+    // every price it can be booked at (a date's, with its way of study and venue; a self-paced course's), for the search's "From"
+    // on a method or town page (lib/catalogueFilters.js priceWhere)
+    prices: (l.prices || []).map((p) => ({ method: p.method, venue: p.venue == null ? null : p.venue, price: pounds(p.pence), wasPrice: pounds(p.wasPence) })),
     providers: l.providers,
     popularity: l.popularity,
     upcoming: l.upcoming,
@@ -42,14 +45,90 @@ export function toCatalogueCourse(l) {
   };
 }
 
-// a YouTube or Vimeo link as an embeddable player address (null for anything else)
-export function videoEmbed(url) {
-  if (!url) return null;
-  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
-  if (yt) return `https://www.youtube-nocookie.com/embed/${yt[1]}`;
-  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-  return vm ? `https://player.vimeo.com/video/${vm[1]}` : null;
+// A link to one YouTube or Vimeo video as its player's address; null for anything else (a channel, a playlist, another site), so
+// the page never shows a player that can't play. The API refuses the same links with the same rules (videoEmbed in
+// apps/api/src/modules/provider/courses.mts): keep the two the same.
+// YouTube: watch?v= (in any place among the parameters), youtu.be/<id>, /embed/, /shorts/, /live/, /v/, on www. or m.
+// Vimeo: vimeo.com/<id>, an unlisted vimeo.com/<id>/<hash> (the hash goes to the player as ?h=), /channels/<name>/<id>,
+// /showcase|album/<name>/video/<id>, /groups/<name>/videos/<id>, player.vimeo.com/video/<id>.
+const YT_ID = /^[\w-]{11}$/;
+const VIMEO_ID = /^\d{1,12}$/;
+const VIMEO_HASH = /^[\da-f]{6,20}$/i;
+export function videoEmbed(link) {
+  let url;
+  try {
+    url = new URL(String(link || "").trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.toLowerCase().replace(/^(www|m)\./, "");
+  const path = url.pathname.split("/").filter(Boolean);
+  if (host === "youtube.com" || host === "youtu.be") {
+    const id = host === "youtu.be" ? (path.length === 1 ? path[0] : null) : path[0] === "watch" && path.length === 1 ? url.searchParams.get("v") : ["embed", "shorts", "live", "v"].includes(path[0]) && path.length === 2 ? path[1] : null;
+    // "videoseries" is 11 letters too: /embed/videoseries?list= is a playlist
+    return id && YT_ID.test(id) && id !== "videoseries" ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+  }
+  let id = null;
+  let hash = url.searchParams.get("h");
+  if (host === "player.vimeo.com") id = path[0] === "video" && path.length === 2 ? path[1] : null;
+  else if (host === "vimeo.com") {
+    if (path.length <= 2 && VIMEO_ID.test(path[0] || "")) [id, hash] = [path[0], path[1] || hash];
+    else if (path[0] === "video" && path.length === 2) id = path[1];
+    else if (path[0] === "channels" && path.length === 3) id = path[2];
+    else if (["showcase", "album"].includes(path[0]) && path[2] === "video" && path.length === 4) id = path[3];
+    else if (path[0] === "groups" && path[2] === "videos" && path.length === 4) id = path[3];
+  }
+  if (!id || !VIMEO_ID.test(id) || (hash && !VIMEO_HASH.test(hash))) return null;
+  return `https://player.vimeo.com/video/${id}${hash ? `?h=${hash}` : ""}`;
 }
+
+// When a date's sessions ({ date, end, from, to }) are. `time`: one time when every session has the same ("09:30 to 16:30"),
+// otherwise "Times vary by day". `schedule`: what the date's first and last day and that one time don't say, or "": the days
+// when they aren't one run in a row ("Sat 14, Sun 15, Sat 21, Sun 22 Nov"; three or more days in a row are joined: "Wed 11 to
+// Fri 13, Mon 16 to Wed 18 Nov"), or, when the times differ, every session with its own times.
+const utcDay = (iso) => new Date(`${iso}T00:00:00Z`);
+const dayText = (iso, month) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", ...(month ? { month: "short" } : {}) }).format(utcDay(iso)).replace(",", "");
+const monthOf = (iso) => iso.slice(0, 7);
+const nextDay = (iso) => {
+  const d = utcDay(iso);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
+// days (sorted ISO dates) as their runs, written out; the month goes after the last day of each month
+function daysText(days) {
+  const runs = [];
+  for (const day of days) {
+    const run = runs[runs.length - 1];
+    if (run && nextDay(run[run.length - 1]) === day) run.push(day);
+    else runs.push([day]);
+  }
+  const items = runs.flatMap((r) => (r.length >= 3 ? [[r[0], r[r.length - 1]]] : r.map((day) => [day])));
+  return items
+    .map(([from, to], i) => {
+      const month = i === items.length - 1 || monthOf(to || from) !== monthOf(items[i + 1][0]);
+      // a run over the end of a month names both months
+      const across = to && monthOf(from) !== monthOf(to);
+      return to ? `${dayText(from, across)} to ${dayText(to, month || across)}` : dayText(from, month);
+    })
+    .join(", ");
+}
+function timetable(list = []) {
+  if (!list.length) return { time: "", schedule: "" };
+  const sorted = [...list].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from));
+  const sameTimes = sorted.every((s) => s.from === sorted[0].from && s.to === sorted[0].to);
+  if (!sameTimes) {
+    const each = sorted.map((s) => `${s.end && s.end !== s.date ? `${dayText(s.date, monthOf(s.date) !== monthOf(s.end))} to ${dayText(s.end, true)}` : dayText(s.date, true)}, ${s.from} to ${s.to}`);
+    return { time: "Times vary by day", schedule: each.join("; ") };
+  }
+  const days = new Set();
+  for (const s of sorted) for (let d = s.date; d <= (s.end || s.date); d = nextDay(d)) days.add(d);
+  const all = [...days].sort();
+  const inARow = all.every((d, i) => i === 0 || nextDay(all[i - 1]) === d);
+  return { time: `${sorted[0].from} to ${sorted[0].to}`, schedule: inARow ? "" : daysText(all) };
+}
+
+const saverOf = (list) => (list.length && list.every((x) => x.skillSaver) ? "all" : list.some((x) => x.skillSaver) ? "some" : null);
 
 // A course page (catalogue.course) as the course page's parts read it. `related`: listings to show under it.
 export function toCourseDetail(page, related = []) {
@@ -62,14 +141,13 @@ export function toCourseDetail(page, related = []) {
       });
     }
     for (const d of o.dates) {
-      const first = d.sessions[0] || {};
       const v = d.venue;
       sessions.push({
         id: d.id,
         mode: d.method === "classroom" ? "classroom" : "online",
         date: d.startsOn,
         endDate: d.endsOn,
-        time: first.from ? `${first.from} to ${first.to}` : "",
+        ...timetable(d.sessions),
         location: v ? [v.city, v.postcode].filter(Boolean).join(", ") : "Live online",
         city: v?.city || "",
         venue: v?.name || "",
@@ -83,7 +161,7 @@ export function toCourseDetail(page, related = []) {
         courseSlug: o.slug,
         days: d.days,
         places: d.capacity || null, // the date's places (no booking takes any yet: payments come later)
-        details: d.details,
+        details: d.details, // what the provider wrote for learners about this date (shown under it)
         price: pounds(d.pricePence),
         wasPrice: pounds(d.wasPricePence),
         skillSaver: o.skillSaver, // the provider's course is in Skill Saver (its discount applies in the basket)
@@ -140,7 +218,9 @@ export function toCourseDetail(page, related = []) {
     price: cheapest?.price ?? null,
     wasPrice: cheapest?.wasPrice ?? null,
     duration: dated[0]?.days ? `${dated[0].days} ${dated[0].days === 1 ? "day" : "days"}` : methods.length === 1 && methods[0] === "self-paced" ? "Self-paced" : "",
-    skillSaver: page.offerings.some((o) => o.skillSaver),
+    // Skill Saver: "all" when every date (or, with none yet, every provider's course) is in it, "some" when only some are (the
+    // dates in it are then marked), else null
+    skillSaver: saverOf(sessions.length ? sessions : page.offerings),
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
     updatedAt: page.updatedAt,

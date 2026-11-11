@@ -23,7 +23,7 @@ export default function CourseFeatures({ features }) {
     <section className="rt-cd__fcard" aria-labelledby="rt-cd-features-h">
       <h2 id="rt-cd-features-h">Course features</h2>
       <ul className="rt-fx">
-        {features.slice(0, 8).map((f) => (
+        {features.map((f) => (
           <li key={f}>
             <Icon name={ICONS[iconFor(f)]} />
             <span>{f}</span>

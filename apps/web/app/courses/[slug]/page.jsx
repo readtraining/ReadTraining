@@ -10,7 +10,7 @@ import CourseCatalogue from "@/components/courses/CourseCatalogue";
 import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import PostCard from "@/components/blog/PostCard";
 import CourseTowns from "@/components/courses/CourseTowns";
-import { getCoursePage, getCoursePageSlugs, getCourseTowns } from "@/lib/coursePages";
+import { getCoursePage, getCoursePageSlugs, getCourseTowns, midSentence } from "@/lib/coursePages";
 import { BLOG_HREF } from "@/lib/blog";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
@@ -61,7 +61,7 @@ export default async function CoursePage(props) {
           <Suspense fallback={<CourseListSkeleton />}>
             <CourseCatalogue courses={page.courses} scope={page.scope} />
           </Suspense>
-          <CourseTowns title={`Find ${page.label.replace(/ courses$/i, "").toLowerCase()} courses near you`} towns={getCourseTowns(page.slug, courses)} />
+          <CourseTowns title={`Find ${midSentence(page.title)} near you`} towns={getCourseTowns(page.slug, courses)} />
           {page.guides.length > 0 && (
             <section className="rt-cpage__guides layout-pt-lg" aria-labelledby="rt-cpage-guides-h">
               <div className="container">

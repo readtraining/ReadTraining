@@ -12,12 +12,13 @@ import {
   sortCourses,
   venueIn,
   takenAnywhere,
-  referencePoint,
+  matchesKeyword,
   nearestVenue,
   distanceLabel,
   NEAR_KM,
   sortOptions,
 } from "@/lib/catalogueFilters";
+import { MODE_METHOD } from "@/lib/courseModes";
 import { subcategoryOptions } from "@/lib/taxonomy";
 import { trackEvent, toItem } from "@/lib/analytics";
 import { jsonLd } from "@/lib/seo";
@@ -35,28 +36,32 @@ import { ErrorState } from "@/components/states/States";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 
-// Quick links under the search: each applies the matching subject filter (no navigation). One whose subject has no live course
-// isn't shown, so none leads to an empty list.
-const popularSearches = [
-  { label: "Door Supervisor", subject: "security" },
-  { label: "CSCS Green Card", subject: "construction" },
-  { label: "First Aid at Work", subject: "first-aid" },
-  { label: "CCTV Operator", subject: "security" },
-  { label: "Health & Safety Level 1", subject: "health-and-safety" },
-];
+// Quick links under the search: each searches for its course by name (the words go in the search field). One that would find no
+// live course isn't shown, so none leads to an empty list.
+const popularSearches = ["Door Supervisor", "CSCS Green Card", "First Aid at Work", "CCTV Operator", "Health & Safety Level 1"];
+// a booking mode of the course page (?mode=) by its way of study, so a card on a method page opens the course on that method
+const MODE_OF = Object.fromEntries(Object.entries(MODE_METHOD).map(([mode, method]) => [method, mode]));
 
 const countLabel = (n) => `${n} ${n === 1 ? "course" : "courses"}`;
 
 // One reusable catalogue. The URL query string is the single source of truth for filters, search, sort and page
 // (see useCourseQuery). Everything below the hero scrolls with the page; only the filter panel is sticky.
 // `scope` makes it a course page for one category (/courses/[slug]; `courses` is then that category's list):
-// { title, lead, crumb, parent?: { label, href } (a town page's course page), location? (a town page's town), allHref, links: [{ label, href }], subject?, hide: ["method" | "subject"], filters: false for a short list, about: { title, text } }.
+// { title, lead, crumb, parent?: { label, title, href } (a town page's course page), location?, towns?, none? (a town page's town,
+// the page's towns and its empty title), allHref, links: [{ label, href }], subject?, method?, hide: ["method" | "subject"],
+// fixed (the filters the address can't set), filters: false for a short list, about: { title, text } }.
 // A subject page's `subject` replaces the Subject filter with its sub-subjects ("Course type").
 // The hero then shows the page's title and intro, and links to the other course pages instead of the popular searches.
 // `courses`: the real listings (lib/catalogueData.js toCatalogueCourse), given by the page from the server.
 export default function CourseCatalogue({ courses, scope = null }) {
   const taxonomy = useTaxonomy();
-  const { state, pathname, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery(scope?.subject, scope?.location);
+  const { state, pathname, base, update, toggleFilter, clearAll: clearAllRaw, setPage, undoLast, canUndo } = useCourseQuery({
+    subject: scope?.subject,
+    location: scope?.location,
+    fixed: scope?.fixed,
+    towns: scope?.towns,
+    parentHref: scope?.parent?.href,
+  });
   const [toast, setToast] = useState(null);
 
   const [locationDraft, setLocationDraft] = useState(state.location);
@@ -137,9 +142,11 @@ export default function CourseCatalogue({ courses, scope = null }) {
     }, 300);
     return () => clearTimeout(t);
   });
+  // A town page waits for Search: a different place is another page (its course page, or another town's), which mustn't open
+  // half way through typing.
   useEffect(() => {
     const next = locationDraft.trim();
-    if (next === pushedLocation.current) return;
+    if (next === pushedLocation.current || scope?.location) return;
     const t = setTimeout(() => {
       pushedLocation.current = next;
       update({ location: next }, { typing: "location" });
@@ -147,26 +154,32 @@ export default function CourseCatalogue({ courses, scope = null }) {
     return () => clearTimeout(t);
   });
 
-  // where the typed town or postcode is on the map (API catalogue.locate), so venues near it match, nearest first; until it is
-  // found (or if it isn't), the town or postcode is matched by its words
-  const located = api.catalogue.locate.useQuery({ q: state.location.trim() }, { enabled: state.location.trim().length >= 2, staleTime: Infinity, retry: false });
-  const point = state.location.trim().length >= 2 ? located.data ?? null : null;
+  // where the typed town, postcode area or postcode is on the map (API catalogue.locate), so venues near it match, nearest first;
+  // until it is found (or if it isn't, or can't be looked up), the town or postcode is matched by its words
+  const where = state.location.trim();
+  const located = api.catalogue.locate.useQuery({ q: where }, { enabled: Boolean(where), staleTime: Infinity, retry: false });
+  const point = where ? located.data ?? null : null;
   // the ways of study asked for: ticked, or a method page's own (/courses/classroom/leeds); a location only counts those
   const methods = state.method.length ? state.method : scope?.method ? [scope.method] : [];
-  const results = useMemo(() => sortCourses(filterCourses(courses, { ...state, method: methods }, point), state.sort, state.location, courses, point), [courses, state, point, methods.join()]); // eslint-disable-line react-hooks/exhaustive-deps -- methods by value
+  const results = useMemo(() => sortCourses(filterCourses(courses, { ...state, method: methods }, point), state.sort, state.location, point), [courses, state, point, methods.join()]); // eslint-disable-line react-hooks/exhaustive-deps -- methods by value
+  // With a place found on the map, each card says how far its nearest venue is (or that it is taken online). A distance is only
+  // ever measured from the place itself, never guessed from a venue whose name happens to match.
+  const distanceOf = (course) => {
+    if (!where) return "";
+    const anywhere = takenAnywhere(course, methods);
+    const near = point && nearestVenue(course, point);
+    if (!near) return anywhere && !venueIn(course, where) ? "Online, from anywhere" : "";
+    // a course with a venue within reach: how far; one taken online that has no venue near: online first, the nearest venue after
+    if (near.km <= NEAR_KM || !anywhere) return distanceLabel(near);
+    return `Online, from anywhere. Nearest venue: ${distanceLabel(near).replace(/^About/, "about")}`;
+  };
   // a town or postcode that isn't on the map and matches no venue: say so, rather than let the courses that can be taken online
   // (takenAnywhere) look like courses near it. Only those are left then, so the message can say they can be taken online.
-  // with a place entered, each card says how far its nearest venue is (or that it is taken online)
-  const from = state.location.trim() ? referencePoint(courses, state.location.trim(), point) : null;
-  const distanceOf = (course) => {
-    if (!from) return "";
-    const near = nearestVenue(course, from);
-    // a course with a venue within reach: how far; one taken online that has no venue near: online first, the nearest venue after
-    if (near && near.km <= NEAR_KM) return distanceLabel(near);
-    if (takenAnywhere(course, methods)) return near ? `Online, from anywhere. Nearest venue: ${distanceLabel(near).replace(/^About/, "about")}` : "Online, from anywhere";
-    return near ? distanceLabel(near) : "";
-  };
-  const placeUnknown = state.location.trim().length >= 2 && located.isSuccess && !located.data && !results.some((c) => venueIn(c, state.location));
+  const placeUnknown = Boolean(where) && located.isSuccess && !located.data && !results.some((c) => venueIn(c, where));
+  // the map can't be asked (postcodes.io down): venues are matched by the words typed, which finds few for a postcode
+  const lookupDown = Boolean(where) && located.isError;
+  // the place used, as the map names it, so the visitor can tell which Newport (or which postcode area) the results are near
+  const placeName = point ? [point.label, point.area].filter(Boolean).join(", ") : "";
   const noMatches = results.length === 0;
   // Only what matches: with zero matches the page says so plainly and offers to loosen the filters; it never fills the space
   // with courses that don't match (Milestone 2's rule for an empty filter).
@@ -182,13 +195,14 @@ export default function CourseCatalogue({ courses, scope = null }) {
   }, [state.page, page, setPage]);
 
   // Analytics: the list on screen (one event per page of results).
+  const listName = scope?.title || "All courses";
   useEffect(() => {
-    trackEvent("view_item_list", { item_list_name: scope?.title || "All courses", items: pageItems.map((c, i) => toItem(c, i)) });
+    trackEvent("view_item_list", { item_list_name: listName, items: pageItems.map((c, i) => toItem(c, i)) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, state.subject, state.sub, state.method, state.level, state.min, state.max, state.location, state.q, state.sort]);
 
   const pageHref = (p) => {
-    const query = buildCatalogueQuery({ ...state, page: p }, { ...(scope?.subject ? { subject: scope.subject } : {}), ...(scope?.location ? { location: scope.location } : {}) });
+    const query = buildCatalogueQuery({ ...state, page: p }, base);
     return query ? `${pathname}?${query}` : pathname;
   };
   // After a filter, sort, chip or clear action: if the user is scrolled below the top of the results, smoothly bring the
@@ -251,7 +265,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
     ...state.sub.map((v) => ({ key: `sub:${v}`, label: subLabels[v] })),
     ...state.level.map((v) => ({ key: `level:${v}`, label: optionLabel(levelGroup, v) })),
     priceActive && { key: "price", label: `\u00a3${state.min.toLocaleString("en-GB")} to \u00a3${state.max.toLocaleString("en-GB")}` },
-    state.location && { key: "location", label: state.location },
+    state.location && { key: "location", label: placeName ? `Near ${placeName}` : state.location },
   ].filter(Boolean);
   const hasFilters = chips.length > 0;
   // "Filters (n)": every ticked value, plus one for a price filter
@@ -272,15 +286,29 @@ export default function CourseCatalogue({ courses, scope = null }) {
     trackEvent("search", { search_term: pushedQ.current, location: pushedLocation.current });
     requestAnimationFrame(() => document.getElementById("rt-res-count")?.focus());
   };
-  // A course page keeps its own heading; otherwise one ticked subject names the page and none or several keep the general one.
-  const subjectTitle = state.subject.length === 1 ? optionLabel(subjectGroup, state.subject[0]) : "";
-  const heading = scope ? scope.title : subjectTitle ? `${subjectTitle.replace(/ and /g, " & ")} training courses` : "Find the right course for you";
+  // A course page keeps its own heading (one subject ticked on All courses opens that subject's page, useCourseQuery).
+  const heading = scope ? scope.title : "Find the right course for you";
   const showFilters = !scope || scope.filters !== false;
+  // a town page with nothing in reach and no filter of the visitor's own: say so for the town, and offer its course page and the
+  // nearest town with a venue, rather than "no courses match your search" for filters nobody set
+  const townEmpty = Boolean(scope?.location) && state.location === scope.location && chips.every((c) => c.key === "location");
+  const nearestTown =
+    townEmpty && point
+      ? (scope.towns || [])
+          .filter((t) => t.lat != null)
+          .map((t) => ({ ...t, km: nearestVenue({ venues: [t] }, point).km }))
+          .sort((a, b) => a.km - b.km)[0]
+      : null;
+  // a card on a method page (or with one method ticked) opens the course on that method's dates
+  const cardMode = methods.length === 1 ? MODE_OF[methods[0]] || "" : "";
 
   // "Remove last filter": undo the latest change; with no history (e.g. a shared URL) drop the last active chip.
+  // On a town page the town is the page's own, so the visitor's last filter goes first.
   const removeLast = () => {
+    const own = scope?.location ? chips.filter((c) => c.key !== "location") : [];
+    const last = (own.length ? own : chips).at(-1);
     if (canUndo) undoLast({ afterCommit });
-    else if (chips.length) removeChip(chips[chips.length - 1].key);
+    else if (last) removeChip(last.key);
   };
 
   // Live counts: for each checkbox option, how many courses match that option with ALL OTHER groups applied
@@ -371,9 +399,19 @@ export default function CourseCatalogue({ courses, scope = null }) {
             <div className="rt-cat-popular">
               <span className="rt-cat-popular__label">Popular searches:</span>
               <div className="rt-cat-popular__list">
-                {popularSearches.filter((item) => courses.some((c) => c.subject === item.subject)).map((item) => (
-                  <button key={item.label} type="button" className="rt-cat-popular__tag" onClick={() => applyPatch({ subject: [item.subject], sub: [] })}>
-                    {item.label}
+                {popularSearches.filter((words) => courses.some((c) => matchesKeyword(c, words))).map((words) => (
+                  <button
+                    key={words}
+                    type="button"
+                    className="rt-cat-popular__tag"
+                    aria-pressed={state.q === words}
+                    onClick={() => {
+                      setQDraft(words);
+                      pushedQ.current = words;
+                      applyPatch({ q: words });
+                    }}
+                  >
+                    {words}
                   </button>
                 ))}
               </div>
@@ -429,7 +467,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
                     state={state}
                     counts={counts}
                     hide={scope?.hide}
-                    baseSubject={scope?.subject}
+                    baseSubject={scope?.fixed?.includes("sub") ? "" : scope?.subject}
                     onToggle={toggle}
                     onPriceChange={(min, max, o) => update({ min, max }, { afterCommit, typing: o?.typing ? "price" : null })}
                   />
@@ -474,12 +512,25 @@ export default function CourseCatalogue({ courses, scope = null }) {
             <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} />
             {placeUnknown && (
               <p className="rt-res__place" role="status">
-                We couldn’t find “{state.location.trim()}”. Check the town or postcode.{results.length > 0 ? " The courses below can be taken online, from anywhere." : ""}
+                We couldn’t find “{where}”. Check the town or postcode.{results.length > 0 ? " The courses below can be taken online, from anywhere." : ""}
+              </p>
+            )}
+            {lookupDown && (
+              <p className="rt-res__place" role="status">
+                We can’t look up places right now, so only venues whose town or postcode matches “{where}” are shown. Please try again in a moment.
               </p>
             )}
 
             {noMatches &&
-              (hasFilters ? (
+              (townEmpty ? (
+                <EmptyState
+                  live
+                  title={scope.none}
+                  text="New courses are added as training providers join. See where these courses run now, or try a town nearby."
+                  action={{ label: scope.parent.title, href: scope.parent.href }}
+                  secondary={nearestTown ? { label: `Nearest: ${nearestTown.city}`, href: nearestTown.href } : undefined}
+                />
+              ) : hasFilters ? (
                 <EmptyState live title="No courses match your search" text={state.location.trim() ? "Nothing matches all of these filters. Try removing one, or search a wider area." : "Nothing matches all of these filters. Try removing one."} secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
               ) : (
                 <EmptyState live title="No courses here yet" text="New courses are added as training providers join. Check back soon, or contact us and we'll help you find one." action={{ label: "Contact us", href: "/contact-us" }} />
@@ -487,7 +538,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
 
             <div className="rt-res__list" id="rt-res-list" tabIndex={-1}>
               {pageItems.map((course, i) => (
-                <CatalogueCourseCard key={course.id} course={course} index={(page - 1) * PAGE_SIZE + i} onNotify={setToast} distance={distanceOf(course)} />
+                <CatalogueCourseCard key={course.id} course={course} index={(page - 1) * PAGE_SIZE + i} onNotify={setToast} distance={distanceOf(course)} listName={listName} mode={cardMode} />
               ))}
             </div>
 

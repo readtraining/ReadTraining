@@ -13,6 +13,7 @@ import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
+import { videoEmbed } from "@/lib/catalogueData";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
 import { CohortForm } from "./ProviderCohorts";
@@ -38,7 +39,6 @@ const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "pricing", "mode"]
 const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
 // course pictures follow the rule every picture upload does (lib/images.js): JPG, PNG, WebP or GIF up to 15 MB, big ones made
 // smaller for you, at least 500 × 300 (the API checks the stored file too: MIN_COURSE_IMAGE in apps/api/src/lib/media.mts)
-const VIDEO_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/\S+$/;
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
 // A pass mark, as the API checks it (apps/api/src/modules/provider/courses.mts passMarkProblem): a percentage up to 100%, a score
 // that isn't more than its total ("26 out of 40", "26/40"), or words ("Pass or fail"). Returns what is wrong, or "".
@@ -221,7 +221,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     const e = {};
     if (!draft.title.trim() || draft.title.trim().length < 3) e.title = "Enter a title of at least 3 characters.";
     if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
-    if (draft.videoUrl.trim() && !VIDEO_RE.test(draft.videoUrl.trim())) e.videoUrl = "Use a YouTube or Vimeo link, starting https://";
+    // the same rule as the course page's player and the API (videoEmbed): one YouTube or Vimeo video that can actually play
+    if (draft.videoUrl.trim() && !videoEmbed(draft.videoUrl.trim())) e.videoUrl = "Use a link to one YouTube or Vimeo video, starting https://";
     draft.exams.forEach((x, i) => {
       const problem = passMarkProblem(x.passMark);
       if (problem) e[`passMark${i}`] = problem;

@@ -18,6 +18,10 @@ type Row = Record<string, unknown>
 type Session = { date: string; end: string; from: string; to: string }
 
 export type Venue = { city: string; postcode: string | null; lat: number | null; lng: number | null }
+// One price a listing can be booked at: a date's (its way of study and venue, an index into the listing's `venues`; none online)
+// or a self-paced course's. The search works out "From" from the ones that pass its filters (a classroom page, a town), so a
+// card never shows a price that can't be booked there. Each price once per method and venue.
+export type Price = { method: string; venue: number | null; pence: number; wasPence: number | null }
 export type Listing = {
   id: number
   slug: string
@@ -30,6 +34,7 @@ export type Listing = {
   level: string | null
   methods: string[]
   venues: Venue[]
+  prices: Price[]
   providers: number
   upcoming: number
   fromPence: number | null
@@ -53,7 +58,8 @@ export function runLength(sessions: Session[]) {
 }
 const lengthText = (n: number) => (n ? `${n} ${n === 1 ? 'day' : 'days'}` : '')
 
-// The live offerings and their bookable dates (starting today or later, not cancelled, taking bookings).
+// The live offerings and their bookable dates (starting after today, the UK's date, so a course already under way isn't offered;
+// not cancelled, taking bookings).
 async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = false) {
   const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null }>(sql`
     select c.id, c.parent_id, c.slug, c.title, c.method, c.model, c.price_pence, c.skill_saver, c.is_public, c.listed, c.organisation_id,
@@ -66,7 +72,7 @@ async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = f
         select k.id, k.course_id, k.method, k.sessions, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.capacity, k.details, k.join_url,
                v.name venue_name, v.street, v.city, v.postcode, v.lat, v.lng
         from public.cohorts k left join public.venues v on v.id = k.venue_id
-        where k.course_id in ${sql.raw(`(${ids.map((n) => Number(n)).filter(Number.isInteger).join(',')})`)} and k.cancelled_at is null and k.bookable and k.starts_on >= current_date
+        where k.course_id in ${sql.raw(`(${ids.map((n) => Number(n)).filter(Number.isInteger).join(',')})`)} and k.cancelled_at is null and k.bookable and k.starts_on > (now() at time zone 'Europe/London')::date
         order by k.starts_on, k.price_pence`)
     : []
   return { offers, dates }
@@ -99,6 +105,16 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
     const cheapest = prices.sort((a, b) => a.p - b.p)[0]
     const venues = new Map<string, Venue>()
     for (const d of ds) if (d.city) venues.set(`${d.city}|${d.postcode}`, { city: d.city, postcode: d.postcode, lat: d.lat, lng: d.lng })
+    const venueAt = [...venues.keys()]
+    const priceList = new Map<string, Price>()
+    for (const x of [
+      ...ds.map((d) => ({ method: d.method, venue: d.city ? venueAt.indexOf(`${d.city}|${d.postcode}`) : null, pence: d.price_pence, wasPence: d.was_price_pence })),
+      ...selfPaced.map((o) => ({ method: 'self-paced', venue: null, pence: o.price_pence as number, wasPence: null })),
+    ]) {
+      const key = `${x.method}|${x.venue}`
+      const had = priceList.get(key)
+      if (!had || x.pence < had.pence) priceList.set(key, x)
+    }
     const first = ds[0]
     const methods = [...new Set(mine.map((o) => o.method).filter((m): m is string => Boolean(m)))]
     const providers = new Set(mine.map((o) => o.organisation_id)).size
@@ -114,6 +130,7 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
       level: p.level,
       methods,
       venues: [...venues.values()],
+      prices: [...priceList.values()],
       providers,
       upcoming: ds.length,
       fromPence: cheapest?.p ?? null,
@@ -228,8 +245,25 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
 // ---- where learners are: a town, place or postcode on the map (postcodes.io, Open Government Licence; only the words typed are sent)
 
 const OUTCODE = /^[A-Z]{1,2}\d[A-Z\d]?$/i
-const located = new Map<string, { lat: number; lng: number; label: string } | null>()
+// a postcode area on its own (L, M, LS, NE): looked up by its first district, the area's centre (L1 Liverpool, LS1 Leeds)
+const AREA = /^[A-Z]{1,2}$/i
+type Place = { lat: number; lng: number; label: string; area: string | null }
+const located = new Map<string, Place | null>()
 
+type PlaceRow = { name_1?: string; name_2?: string | null; name_2_lang?: string | null; local_type?: string; latitude?: number; longitude?: number; district_borough?: string | null; county_unitary?: string | null; region?: string | null; country?: string | null }
+// a place's English name (a Welsh place's name_1 is in Welsh: Casnewydd, name_2 Newport) and the English half of "Casnewydd - Newport"
+const english = (p: PlaceRow) => (p.name_2_lang === 'eng' && p.name_2 ? p.name_2 : p.name_1 ?? '')
+const englishPart = (v: string | null | undefined) => (v ? v.split(' - ').pop()!.trim() : '')
+// how big a place is, for picking one of several with the same name: a city first, then a town, then the rest
+const SIZE = ['city', 'town', 'suburban area', 'village', 'other settlement', 'hamlet']
+const size = (p: PlaceRow) => {
+  const i = SIZE.indexOf((p.local_type ?? '').toLowerCase())
+  return i < 0 ? SIZE.length : i
+}
+
+// Where a typed town, place, postcode area or postcode is, with the name the site shows for it (`label`) and, for a place, where
+// it is (`area`: its district, county or region), so the visitor can tell which Newport was used. Of several places with the
+// name, the biggest (a city before a town) wins.
 export async function locate(q: string) {
   const key = q.trim().toLowerCase()
   if (!key) return null
@@ -242,20 +276,36 @@ export async function locate(q: string) {
     if (!res?.ok) throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: "We can't look places up right now. Please try again in a moment." })
     return ((await res.json()) as { result?: unknown }).result
   }
-  let found: { lat: number; lng: number; label: string } | null = null
+  type Outcode = { latitude?: number; longitude?: number; admin_district?: string[] }
+  let found: Place | null = null
   if (POSTCODE.test(key)) {
     const r = (await get(`/postcodes/${encodeURIComponent(key.replace(/\s+/g, ''))}`)) as { latitude?: number; longitude?: number } | null
-    if (r?.latitude != null && r.longitude != null) found = { lat: r.latitude, lng: r.longitude, label: formatPostcode(key) }
+    if (r?.latitude != null && r.longitude != null) found = { lat: r.latitude, lng: r.longitude, label: formatPostcode(key), area: null }
   } else if (OUTCODE.test(key)) {
-    const r = (await get(`/outcodes/${encodeURIComponent(key)}`)) as { latitude?: number; longitude?: number } | null
-    if (r?.latitude != null && r.longitude != null) found = { lat: r.latitude, lng: r.longitude, label: key.toUpperCase() }
+    const r = (await get(`/outcodes/${encodeURIComponent(key)}`)) as Outcode | null
+    if (r?.latitude != null && r.longitude != null) found = { lat: r.latitude, lng: r.longitude, label: key.toUpperCase(), area: null }
+  } else if (AREA.test(key)) {
+    // most areas' centre is district 1; a few start at 10 (AB10) or split district 1 (WC1A)
+    for (const district of ['1', '10', '1A']) {
+      const r = (await get(`/outcodes/${encodeURIComponent(key + district)}`)) as Outcode | null
+      if (r?.latitude != null && r.longitude != null) {
+        found = { lat: r.latitude, lng: r.longitude, label: `${key.toUpperCase()} postcode area`, area: r.admin_district?.[0] ?? null }
+        break
+      }
+    }
   } else {
-    const r = (await get(`/places?q=${encodeURIComponent(key)}&limit=20`)) as { name_1?: string; latitude?: number; longitude?: number; local_type?: string }[] | null
-    // the place with exactly that name first (a town or city before a hamlet of the same name), then a town or city, then the first
-    const same = (p: { name_1?: string }) => (p.name_1 ?? '').toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() === key.replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
-    const town = (p: { local_type?: string }) => /city|town/i.test(p.local_type ?? '')
-    const best = r?.find((p) => same(p) && town(p)) ?? r?.find(same) ?? r?.find(town) ?? r?.[0]
-    if (best?.latitude != null && best.longitude != null) found = { lat: best.latitude, lng: best.longitude, label: best.name_1 ?? q.trim() }
+    const r = (await get(`/places?q=${encodeURIComponent(key)}&limit=50`)) as PlaceRow[] | null
+    const words = (v: string) => v.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+    const same = (p: PlaceRow) => [p.name_1, p.name_2].some((n) => n && words(n) === words(key))
+    // the biggest place with exactly that name; with none, the biggest whose name starts with the words (as the API lists them)
+    const pick = (list: PlaceRow[]) => list.reduce<PlaceRow | undefined>((best, p) => (!best || size(p) < size(best) ? p : best), undefined)
+    const best = pick((r ?? []).filter(same)) ?? pick(r ?? [])
+    if (best?.latitude != null && best.longitude != null) {
+      const label = english(best) || q.trim()
+      const isCity = size(best) === 0
+      const area = (isCity ? [englishPart(best.county_unitary), best.region, best.country] : [best.district_borough, englishPart(best.county_unitary), best.region]).find((a) => a && words(a) !== words(label)) ?? null
+      found = { lat: best.latitude, lng: best.longitude, label, area }
+    }
   }
   if (located.size > 2000) located.clear()
   located.set(key, found)

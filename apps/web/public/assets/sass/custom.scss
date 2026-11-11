@@ -2321,6 +2321,11 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dd__filters:not(:has(.rt-dd__search)) .rt-dd__meta { order: -1; margin-top: 0; }
 .rt-dd__meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; min-height: 20px; font-size: 13px; line-height: 20px; color: var(--cd-muted); }
 .rt-dd__meta .rt-cd__link { padding: 0; border: 0; background: none; font-size: 13px; cursor: pointer; }
+/* the place note and "Clear filter" sit side by side; the link never wraps. A date's own details sit under its days. */
+.rt-dd__meta { gap: 12px; }
+.rt-dd__meta .rt-cd__link { flex: none; white-space: nowrap; }
+.rt-dd__details { margin-top: 4px; color: var(--cd-text); white-space: pre-line; }
+.rt-dd__slot-price .rt-sv-badge { margin-top: 4px; }
 .rt-dd__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
 /* The date pop-up's list (DatesDialog): one card per venue with its dates shown at once, each date a row that picks it. */
 .rt-dd__list { background: var(--cd-band); padding: 16px 18px 20px; }
@@ -2432,6 +2437,8 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-cd h3, .rt-cd .rt-cd__h3, .rt-cd .rt-lo__h { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
 .rt-cd__prose p, .rt-cd__sec > p, .rt-cd .rt-cd__list li, .rt-cd__checks li, .rt-cd .rt-clamp p, .bz-acc__inner p, .rt-cd__mod-topics li, .rt-cd__table td { font-size: 15px; line-height: 1.7; font-weight: 400; color: var(--color-light-1); }
 .rt-cd .rt-cd__acc .bz-acc__btn { font-size: 17px; font-weight: 600; }
+/* a unit with no text, among units that open: a plain row in the list */
+.rt-cd .rt-cd__acc .rt-cd__unit { margin: 0; padding: 22px 4px; font-size: 17px; font-weight: 600; line-height: 1.4; color: var(--color-dark-1); }
 
 /* Course features: ONE line of badges. Badges that do not fit on the line are clipped away whole (the row is exactly one badge high),
    so the row never wraps onto a second line. Text uses the same style as the body (15px, 500). */
@@ -3307,7 +3314,7 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 /* the form card */
 .rt-contact__form, .rt-contact__done { padding: 28px; }
 .rt-contact__form-title { margin: 0 0 16px; font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); font-weight: var(--rt-heading-weight); color: var(--color-dark-1); }
-#contact-form { scroll-margin-top: calc(72px + 24px); }
+#contact-form, #rt-contact-channels-h { scroll-margin-top: calc(72px + 24px); }
 .rt-contact__form .rt-field select { width: 100%; }
 /* short fields in pairs from 576px; the inputs line up at the bottom even when only one of a pair has an error above it */
 .rt-contact__pair { display: grid; gap: 16px; }
@@ -3610,11 +3617,15 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-pcard { padding: 0; overflow: hidden; }
 .rt-plogo.-img { overflow: hidden; padding: 6px; background: var(--color-white); }
 .rt-plogo.-img img { width: 100%; height: 100%; object-fit: contain; }
-.rt-pcard__band { display: block; width: 100%; height: 100%; background: var(--rt-c-brand-soft); }
-.rt-pcard__cover:has(.rt-pcard__band) { aspect-ratio: 16 / 4; }
 .rt-prov__search { max-width: 560px; margin: 0 0 24px; }
 .rt-pcard__cover { border-radius: 0; aspect-ratio: 16 / 8; }
 .rt-pcard__body { display: flex; flex: 1; flex-direction: column; padding: 0 24px 24px; }
+/* a card with no cover photo starts with its logo */
+.rt-pcard--plain .rt-pcard__body { padding-top: 24px; }
+.rt-pcard--plain .rt-plogo { margin-top: 0; }
+@media (max-width: 575px) { .rt-pcard--plain .rt-pcard__body { padding-top: 20px; } }
+/* a provider's own words: long words and links wrap */
+.rt-pabout__text, .rt-prov-page .bz-acc__inner p { overflow-wrap: anywhere; }
 .rt-pcard .rt-plogo { position: relative; z-index: 2; margin-top: -32px; background: #fff; box-shadow: 0 4px 12px rgba(20, 3, 66, 0.10); }
 .rt-ucard__title.rt-pcard__name { margin: 16px 0 0; font-size: 18px; }
 .rt-pcard__meta { margin: 4px 0 0; font-size: 14px; }
@@ -6918,7 +6929,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-section-head .rt-faqsec__title { max-width: 26ch; }
 .rt-section-head .rt-faqsec__text { max-width: 640px; }
 .rt-cat__body--skeleton { padding-top: 48px; }
-.rt-cat__body--message { padding: 64px 0; }
+.rt-cat__body--message { padding-top: 64px; padding-bottom: 64px; }
 .rt-skel--eyebrow { width: 90px; height: 13px; }
 .rt-skel--title { width: 64%; height: 20px; }
 .rt-skel--text { width: 92%; height: 14px; }

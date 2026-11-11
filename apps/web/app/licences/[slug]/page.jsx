@@ -51,8 +51,9 @@ export default async function LicencePage(props) {
   const found = getLicence(slug);
   if (!found) notFound();
   // "Book … training" leads to the course search; with no live course for it yet, the button asks us instead (it opens the
-  // request form when it has no link), so it never lands on "No courses match"
-  const l = found.primary?.href && !(await searchFinds(found.primary.href)) ? { ...found, primary: { label: `Ask about ${found.short.replace(/^SIA /, "")} training`, href: null } } : found;
+  // pop-up's enquiry, titled with the button's words), so it never lands on "No courses match"
+  const ask = `Ask about ${found.short.replace(/^SIA /, "")} training`;
+  const l = found.primary?.href && !(await searchFinds(found.primary.href)) ? { ...found, primary: { label: ask, href: null, preset: { kind: "enquiry", title: ask } } } : found;
   const faqs = faqItems(`licence-${slug}`, l.faqs);
   const courses = await loadCatalogue(); // the live courses: this licence's training and its prices
 

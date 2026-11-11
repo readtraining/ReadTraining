@@ -17,8 +17,10 @@ import { safeNext } from "@/lib/safeNext";
 //   which never says why. The admin travels to the panel layout in the x-rt-admin header (set only here). An admin who opens
 //   /admin/login while already signed in goes straight to the panel.
 // - One address per subject: the search with one subject ticked (/courses?subject=security, as old links and shared searches
-//   have it) is that subject's own page, so it goes there for good (308), with the other filters kept. Two or more subjects stay
-//   on the search. Changes made on the search page itself don't reload it, so this only meets a page being opened.
+//   have it) is that subject's own page, so it goes there (307), with the other filters kept. Only a subject of the catalogue
+//   list has a page: an unknown or retired one (or a study method, ?subject=classroom) is dropped from the address instead. Two
+//   or more subjects stay on the search. Ticking one subject on the search opens its page too (useCourseQuery).
+// - Course page addresses are lower case: /courses/First-Aid/Leeds goes to /courses/first-aid/leeds (308).
 // /skill-saver only needs the fresh session: the page reads it on the server to show the right buttons and level.
 const PROTECTED = ["/account", "/business", "/provider"];
 const GUEST_ONLY = ["/login", "/signup"];
@@ -62,21 +64,46 @@ async function askApi(request, procedure, input, accessToken) {
   }
 }
 
-// /courses?subject=<one subject>&… → /courses/<subject>?…; null when the address is already the one to use
-function subjectPage(request) {
+// The catalogue's subjects (API catalogue.taxonomy), asked at most once a minute; the last list known when the API can't answer,
+// null when it never has.
+let subjectList = { at: 0, slugs: null };
+async function subjects(request) {
+  if (subjectList.slugs && Date.now() - subjectList.at < 60_000) return subjectList.slugs;
+  const api = process.env.NEXT_PUBLIC_API_URL || request.nextUrl.origin;
+  try {
+    const res = await fetch(`${api}/api/trpc/catalogue.taxonomy`, { cache: "no-store", signal: AbortSignal.timeout(3000) });
+    const categories = (await res.json())?.result?.data?.json?.categories;
+    if (Array.isArray(categories)) subjectList = { at: Date.now(), slugs: new Set(categories.map((c) => c.slug)) };
+  } catch {}
+  return subjectList.slugs;
+}
+
+// /courses?subject=<one subject>&… → /courses/<subject>?…, or the search without it when it isn't a subject; null when the
+// address is already the one to use (or the list of subjects can't be had: the search then drops an unknown one itself)
+async function subjectPage(request) {
   const params = new URLSearchParams(request.nextUrl.searchParams);
-  const subjects = params.getAll("subject");
-  if (subjects.length !== 1 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(subjects[0])) return null;
+  const asked = params.getAll("subject");
+  if (asked.length !== 1 || asked[0].includes(",")) return null;
+  const known = await subjects(request);
+  if (!known) return null;
+  const subject = asked[0].trim().toLowerCase();
   params.delete("subject");
   const rest = params.toString();
-  return new URL(`${CATALOGUE_HREF}/${subjects[0]}${rest ? `?${rest}` : ""}`, request.url);
+  return new URL(`${known.has(subject) ? `${CATALOGUE_HREF}/${subject}` : CATALOGUE_HREF}${rest ? `?${rest}` : ""}`, request.url);
 }
 
 export async function proxy(request) {
-  if (request.nextUrl.pathname === CATALOGUE_HREF) {
-    const to = subjectPage(request);
+  const { pathname } = request.nextUrl;
+  if (pathname === CATALOGUE_HREF) {
+    const to = await subjectPage(request);
     // 307, not 308: a browser keeps a permanent redirect, so a subject retired later would stay a dead end for anyone who had it
     return to ? NextResponse.redirect(to, 307) : NextResponse.next();
+  }
+  if (under(pathname, CATALOGUE_HREF)) {
+    if (pathname === pathname.toLowerCase()) return NextResponse.next();
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.toLowerCase();
+    return NextResponse.redirect(url, 308);
   }
   // nobody may send the workspace or admin header in from outside
   const headers = new Headers(request.headers);
@@ -164,5 +191,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/courses", "/account/:path*", "/business/:path*", "/provider/:path*", "/admin/:path*", "/login", "/signup", "/skill-saver"],
+  matcher: ["/courses/:path*", "/account/:path*", "/business/:path*", "/provider/:path*", "/admin/:path*", "/login", "/signup", "/skill-saver"],
 };

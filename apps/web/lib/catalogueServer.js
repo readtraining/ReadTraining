@@ -4,7 +4,8 @@ import { pickCourses, toCatalogueCourse } from "@/lib/catalogueData";
 import { toCourseCard } from "@/lib/courses";
 import { withLinks } from "@/lib/nav";
 import { coursePages } from "@/data/coursePages";
-import { matchesKeyword } from "@/lib/catalogueFilters";
+import { buildCatalogueQuery, filterCourses, matchesKeyword, parseCatalogueParams } from "@/lib/catalogueFilters";
+import { CATALOGUE_HREF, coursePath } from "@/lib/routes";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // Server side: the real catalogue from the API (catalogue.listings, catalogue.course), saved by Next for a minute under the tag
@@ -82,18 +83,51 @@ export async function liveHref(href, fallback = "/courses") {
   return (await searchFinds(href)) ? href : fallback;
 }
 
+// Where a typed town, postcode area or postcode is on the map (catalogue.locate): { lat, lng, label }; null when there is no such
+// place; undefined when the API can't be asked.
+export const locatePlace = cache(async (words) => {
+  try {
+    return await query("catalogue.locate", { q: String(words).trim().slice(0, 80) });
+  } catch {
+    return undefined;
+  }
+});
+
 // A town page's town with no venue there yet (lib/coursePages.js getCourseTownPage): the UK place of that name on the map
 // (catalogue.locate), with its proper name; null when there is none, so /courses/<page>/islamabad is "page not found";
 // undefined when the API can't be asked, so the page still shows.
 export const ukPlace = cache(async (townSlug) => {
   const name = String(townSlug).replace(/-/g, " ").slice(0, 80);
   if (name.length < 2) return null;
-  try {
-    const hit = await query("catalogue.locate", { q: name });
-    // "King's Lynn" and the address's "kings-lynn" read the same
-    const key = (v) => String(v || "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-    return hit && key(hit.label) === key(name) ? hit.label : null;
-  } catch {
-    return undefined;
-  }
+  const hit = await locatePlace(name);
+  if (hit === undefined) return undefined;
+  // "King's Lynn" and the address's "kings-lynn" read the same
+  const key = (v) => String(v || "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  return hit && key(hit.label) === key(name) ? hit.label : null;
 });
+
+// A course, or some words, in a place (the header's "Find a course near you", the home page's search, the old
+// /course-locations addresses): where to go so it never lands on "No courses match" because of the place. The search for it
+// there when that finds something (venues within NEAR_KM of the place on the map, or courses taken online, as the search
+// itself counts); otherwise a chosen course (`slug`) opens its own page, with every date it has, and words are searched for
+// everywhere. `method`: a way of study as the search reads it (?method=). Words no live course has stay as typed, so the
+// search says so.
+export async function nearHref({ slug = "", q = "", location = "", method = "" }) {
+  await loadTaxonomy(); // the subject names the search also matches
+  const all = await loadCatalogue();
+  const state = { ...parseCatalogueParams(new URLSearchParams({ q, location, method })), sort: undefined };
+  const point = state.location ? (await locatePlace(state.location)) || null : null;
+  const finds = (s) => filterCourses(all, s, point).length > 0;
+  const search = (s) => {
+    const qs = buildCatalogueQuery(s);
+    return qs ? `${CATALOGUE_HREF}?${qs}` : CATALOGUE_HREF;
+  };
+  if (slug) {
+    const course = all.find((c) => c.slug === slug);
+    const place = { ...state, q: "" };
+    // a course that has gone since the menu was loaded: what runs in the place, or every course
+    if (!course) return finds(place) ? search(place) : CATALOGUE_HREF;
+    return filterCourses([course], place, point).length ? search({ ...state, q: course.title }) : coursePath(course.slug);
+  }
+  return !state.location || finds(state) ? search(state) : search({ ...state, location: "" });
+}

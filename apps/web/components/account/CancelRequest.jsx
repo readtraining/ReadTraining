@@ -10,6 +10,7 @@ import { placeOf, whenOf } from "./BookingRow";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import { contactHref } from "@/lib/forms";
 
 const copy = account.cancel;
 
@@ -48,7 +49,7 @@ export default function CancelRequest({ reference }) {
     return (
       <div className="rt-acc__stack">
         {back}
-        <EmptyState large icon="icon-calendar" headingLevel={2} title={msg.title} text={msg.text} action={{ href: "/contact-us?topic=booking#contact-form", label: "Contact us" }} />
+        <EmptyState large icon="icon-calendar" headingLevel={2} title={msg.title} text={msg.text} action={{ href: contactHref("booking"), label: "Contact us" }} />
       </div>
     );
   }
@@ -68,7 +69,7 @@ export default function CancelRequest({ reference }) {
     );
   }
 
-  const change = `/contact-us?topic=booking&reference=${booking.reference}#contact-form`;
+  const change = contactHref("booking", { reference: booking.reference });
   const toggle = (i) => setChosen((c) => (c.includes(i) ? c.filter((x) => x !== i) : [...c, i]));
   const submit = async (e) => {
     e.preventDefault();

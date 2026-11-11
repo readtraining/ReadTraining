@@ -889,6 +889,16 @@ export const licencesHub = {
       doneTitle: "Request received",
       doneText: "Your reference is {ref}. We will email a quote to {email} the same working day.",
     },
+    // a licence's "Ask about … training" while its course has no live dates (the pop-up is titled with the button's words)
+    enquiry: {
+      note: "Tell us how many people and where, and we will email you when and where the training runs.",
+      people: "How many people?",
+      postcode: "Postcode where training is needed",
+      notes: "Anything else? (optional)",
+      submit: "Send enquiry",
+      doneTitle: "Enquiry received",
+      doneText: "Your reference is {ref}. We will email {email} within one working day.",
+    },
     close: "Close",
     sending: "Sending",
     failed: "We could not send your request. Please try again, or call us.",

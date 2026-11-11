@@ -4,7 +4,7 @@ import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 import MarketingHero from "@/components/marketing/MarketingHero";
-import ProviderDirectory from "@/components/providers/ProviderDirectory";
+import ProviderDirectory, { Directory } from "@/components/providers/ProviderDirectory";
 import { providerPages } from "@/data/providers";
 import { PROVIDERS_HREF, toProviderCard } from "@/lib/providers";
 import { getProviderDirectory } from "@/lib/publicProvider";
@@ -40,7 +40,8 @@ export default async function ProvidersPage() {
           <MarketingHero hero={p.hero} />
           <section className="fb-section -white" aria-label="Providers">
             <div className="container">
-              <Suspense fallback={null}>
+              {/* until the browser has the address, the first page (so search engines get the cards and the page links) */}
+              <Suspense fallback={<Directory providers={providers} params={null} />}>
                 <ProviderDirectory providers={providers} />
               </Suspense>
             </div>

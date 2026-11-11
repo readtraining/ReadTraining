@@ -19,8 +19,8 @@ export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 // Shared booking state for the whole detail page: delivery mode, location filter, the selected session and, on a course with
 // packages (data/courseGuides.js), the chosen package. BookingCard, DatesSection, MobileBuyBar and PackagePicker all read this
 // one source. It is mirrored to the URL (?mode=&session=&package=) with history.replaceState, so a shared link opens with the
-// same selection and nothing reloads or scrolls. A package adds its `add` to the date's price (`price`, `wasPrice`) and goes
-// into the basket with the date.
+// same selection and nothing reloads or scrolls. A package adds its `add` to the date's price (`price`; a was-price shows only
+// for the course alone) and goes into the basket with the date.
 export default function BookingProvider({ course, initialMode, initialSession, initialPackage, packages = null, children }) {
   const pathname = usePathname();
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
@@ -52,10 +52,11 @@ export default function BookingProvider({ course, initialMode, initialSession, i
 
   const isInHouse = mode === "inhouse";
   const session = course.sessions.find((s) => s.id === sessionId) || (mode ? firstOf(mode) : null) || course.sessions[0] || null;
-  // what one place costs with the chosen package (the date's price plus the package), and its was-price when the date has one
+  // what one place costs with the chosen package (the date's price plus the package), and the date's was-price when it has one,
+  // for the course alone only: the date's was-price plus a package was never a price anyone charged
   const extra = bundle?.add ?? 0;
   const price = session ? session.price + extra : null;
-  const wasPrice = session && session.wasPrice > session.price ? session.wasPrice + extra : null;
+  const wasPrice = session && !extra && session.wasPrice > session.price ? session.wasPrice : null;
 
   const writeUrl = useCallback(
     (nextMode, nextSession, nextBundle) => {

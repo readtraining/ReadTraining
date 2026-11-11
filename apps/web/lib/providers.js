@@ -26,6 +26,8 @@ export const toProviderCard = (d) => ({
   headline: d.headline,
   courseCount: d.courseCount,
   subjects: d.categories.map(categoryName).filter(Boolean),
+  // the towns its upcoming dates are in, which the directory's search also looks at
+  towns: d.towns || [],
 });
 
 // A public profile with its courses, as the provider page reads it

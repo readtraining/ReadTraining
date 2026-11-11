@@ -9,6 +9,9 @@ import CatalogueDropdown from "@/components/courses/CatalogueDropdown";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
+import SaverBadge from "@/components/skillSaver/SaverBadge";
+import { distanceLabel, nearestVenue } from "@/lib/catalogueFilters";
+import { api } from "@/lib/trpc/react";
 
 const SORTS = { classroom: [["cheapest", "Cheapest"], ["soonest", "Soonest"], ["name", "Name (A to Z)"]], online: [["cheapest", "Cheapest"], ["soonest", "Soonest"]] };
 const DEFAULT_SORT = "cheapest";
@@ -35,8 +38,9 @@ const tile = (iso) => {
   return { month: f({ month: "short" }), day: f({ day: "numeric" }), weekday: f({ weekday: "short" }) };
 };
 
-// One date: the whole row picks it (a calendar tile, the dates, how long and when, the price, and a tick once chosen).
-function DateRow({ s, selected, onSelect, classroom }) {
+// One date: the whole row picks it (a calendar tile, the dates, how long and when, the days themselves when they aren't all in a
+// row, what the provider wrote about the date, the price, Skill Saver when only some dates are in it, and a tick once chosen).
+function DateRow({ s, selected, onSelect, classroom, markSaver }) {
   const t = s.mode === "ondemand" ? null : tile(s.date);
   const was = s.wasPrice > s.price ? s.wasPrice : null;
   const meta = [s.days ? `${s.days} ${s.days === 1 ? "day" : "days"}` : "", s.mode === "ondemand" ? "Online" : s.time, !classroom && s.mode === "online" ? "Live online" : ""].filter(Boolean).join(" · ");
@@ -53,10 +57,13 @@ function DateRow({ s, selected, onSelect, classroom }) {
         <span className="rt-dd__slot-main">
           <strong>{whenLabel(s)}</strong>
           {meta && <span>{meta}</span>}
+          {s.schedule && <span>{s.schedule}</span>}
+          {s.details && <span className="rt-dd__details">{s.details}</span>}
         </span>
         <span className="rt-dd__slot-price">
           <strong>{formatPrice(s.price)}</strong>
           {was && <s><span className="rt-cd__sr">was </span>{formatPrice(was)}</s>}
+          {markSaver && s.skillSaver && <SaverBadge />}
         </span>
         <span className="rt-dd__tick" aria-hidden="true">{selected && <Icon name="check" />}</span>
         <span className="rt-cd__sr">{selected ? ", selected" : ""}{classroom ? `, ${s.address}` : ""}</span>
@@ -69,8 +76,9 @@ function DateRow({ s, selected, onSelect, classroom }) {
 const SHOWN = 3;
 const FOLD_AT = 4;
 
-// A venue: its name, address and map link, its lowest price when it has several dates, and its dates (each row picks one).
-function VenueCard({ v, current, onSelect, more, onMore }) {
+// A venue: its name, address, how far it is from the place searched for and map link, its lowest price when it has several
+// dates, and its dates (each row picks one).
+function VenueCard({ v, current, onSelect, more, onMore, markSaver }) {
   const has = v.sessions.some((s) => s.id === current);
   const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
   const folds = v.sessions.length > FOLD_AT;
@@ -85,6 +93,7 @@ function VenueCard({ v, current, onSelect, more, onMore }) {
           <p className="rt-dd__addr">
             {[v.street, v.city].filter(Boolean).join(", ")}
             {v.postcode && <>{(v.street || v.city) && ", "}<span className="rt-nowrap">{v.postcode}</span></>}
+            {v.near && <span className="rt-nowrap"> · {distanceLabel(v.near)}</span>}
             <span className="rt-nowrap">
               {" "}·{" "}
               <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.name, v.postcode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener">Map<span className="rt-cd__sr"> (opens in a new tab)</span></a>
@@ -99,7 +108,7 @@ function VenueCard({ v, current, onSelect, more, onMore }) {
         )}
       </div>
       <ul className="rt-dd__slots" id={`${id}-dates`} aria-label={`Dates at ${v.venue || v.city}`}>
-        {shown.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom />)}
+        {shown.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom markSaver={markSaver} />)}
       </ul>
       {folds && (
         <button type="button" className="rt-dd__more" aria-expanded={more} aria-controls={`${id}-dates`} onClick={onMore}>
@@ -126,7 +135,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
     const map = new Map();
     all.forEach((s) => {
       const k = `${s.address}|${s.postcode}`;
-      if (!map.has(k)) map.set(k, { key: k, name: s.address, venue: s.venue, street: s.venue && s.address.startsWith(`${s.venue}, `) ? s.address.slice(s.venue.length + 2) : s.address === s.venue ? "" : s.address, city: s.city, postcode: s.postcode, sessions: [] });
+      if (!map.has(k)) map.set(k, { key: k, name: s.address, venue: s.venue, street: s.venue && s.address.startsWith(`${s.venue}, `) ? s.address.slice(s.venue.length + 2) : s.address === s.venue ? "" : s.address, city: s.city, postcode: s.postcode, lat: s.lat, lng: s.lng, sessions: [] });
       map.get(k).sessions.push(s);
     });
     return [...map.values()].map((v) => {
@@ -146,7 +155,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   });
 
   useEffect(() => {
-    const t = setTimeout(() => setQ(input.trim()), 150);
+    const t = setTimeout(() => setQ(input.trim()), 300);
     return () => clearTimeout(t);
   }, [input]);
   useEffect(() => {
@@ -155,28 +164,48 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
     } catch {}
   }, [key, q, sort]);
 
+  // Where the typed town or postcode is on the map (API catalogue.locate, as the course search): found, every venue shows,
+  // nearest first, with how far it is ("Salford" finds the Manchester venues). Not found, or while it is being looked up, or
+  // when it can't be looked up, the venues are matched by the words typed.
+  const lookup = classroom && q.length >= 2 && q.length <= 80;
+  const located = api.catalogue.locate.useQuery({ q }, { enabled: lookup, staleTime: Infinity, retry: false });
+  const place = lookup ? located.data ?? null : null;
+  const looking = lookup && located.fetchStatus === "fetching" && located.data === undefined;
+  useEffect(() => {
+    if (place) setSort("nearest"); // a place found: nearest first, until another order is chosen
+  }, [place]);
+  const sortBy = sort === "nearest" && !place ? DEFAULT_SORT : sort;
+  const sortOptions = place ? [["nearest", "Nearest"], ...sorts] : sorts;
+
   const list = useMemo(() => {
     if (!classroom) {
       const rows = [...all];
-      rows.sort((a, b) => (sort === "soonest" ? (a.date < b.date ? -1 : 1) : a.price - b.price || (a.date < b.date ? -1 : 1)));
+      rows.sort((a, b) => (sortBy === "soonest" ? (a.date < b.date ? -1 : 1) : a.price - b.price || (a.date < b.date ? -1 : 1)));
       return rows;
     }
     const needle = norm(q);
-    const rows = venues.filter((v) => !needle || [v.name, v.city, v.name + v.city, v.postcode].some((f) => norm(f).includes(needle)));
-    rows.sort((a, b) => (sort === "soonest" ? (a.next < b.next ? -1 : 1) : sort === "name" ? a.name.localeCompare(b.name) : a.from - b.from || (a.next < b.next ? -1 : 1)));
+    const named = venues.filter((v) => !needle || [v.name, v.city, v.name + v.city, v.postcode].some((f) => norm(f).includes(needle)));
+    // while the place is looked up, no match by name keeps every venue showing (not a flash of "No venues match")
+    const rows = place ? venues.map((v) => ({ ...v, near: v.lat == null ? null : { km: nearestVenue({ venues: [v] }, place).km } })) : named.length || !looking ? named : [...venues];
+    const far = (v) => v.near?.km ?? Infinity; // a venue not on the map goes last
+    rows.sort((a, b) => (sortBy === "nearest" ? far(a) - far(b) : sortBy === "soonest" ? (a.next < b.next ? -1 : 1) : sortBy === "name" ? a.name.localeCompare(b.name) : a.from - b.from || (a.next < b.next ? -1 : 1)));
     return rows;
-  }, [all, venues, classroom, q, sort]);
+  }, [all, venues, classroom, q, sortBy, place, looking]);
 
-  const filtered = q !== "" || sort !== DEFAULT_SORT;
+  const filtered = q !== "" || sortBy !== DEFAULT_SORT;
   const clear = () => {
     setInput("");
     setQ("");
     setSort(DEFAULT_SORT);
   };
+  // which place the distances are from (the visitor can tell which Newport was used), or why the words typed are matched instead
+  const placeNote = !lookup ? "" : place ? `Nearest to ${[place.label, place.area].filter(Boolean).join(", ")} first` : located.isError ? "We can't look places up right now, so venues are matched by name." : "";
   const toggle = (k) => setMore((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));
   const pick = useCallback((id) => (confirm ? setChosen(id) : onPick(id)), [confirm, onPick]);
   const current = confirm ? chosen : selectedId;
   const chosenSession = course.sessions.find((s) => s.id === chosen);
+  // Skill Saver on only some of the course's dates: those dates are marked
+  const markSaver = course.skillSaver === "some";
 
   const dates = classroom ? list.reduce((n, v) => n + v.sessions.length, 0) : list.length;
   const count = [classroom ? `${list.length} ${list.length === 1 ? "venue" : "venues"}` : "", `${dates} ${dates === 1 ? "date" : "dates"}`].filter(Boolean).join(" · ");
@@ -209,25 +238,25 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
           )}
           {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}
           <div className="rt-dd__sort">
-            <CatalogueDropdown label="Sort by" options={sorts.map(([v, l]) => ({ value: v, label: l }))} value={sort} onChange={setSort} clearable={false} />
+            <CatalogueDropdown label="Sort by" options={sortOptions.map(([v, l]) => ({ value: v, label: l }))} value={sortBy} onChange={setSort} clearable={false} />
           </div>
         </div>
         <div className="rt-dd__meta">
-          <span aria-live="polite">{count}</span>
+          <span aria-live="polite">{count}{placeNote && ` · ${placeNote}`}</span>
           {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filter</button>}
         </div>
       </div>
 
       <div className="rt-dd__list rt-pill-scroll" ref={listRef}>
         {list.length === 0 ? (
-          <EmptyState inCard title="No venues match." text="Try another town or postcode." />
+          <EmptyState inCard title="No venues match." text={located.isSuccess && !place ? `We couldn't find ${q} on the map. Try another town or postcode.` : "Try another town or postcode."} />
         ) : classroom ? (
           <div className="rt-dd__venues">
-            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} more={more.includes(v.key)} onMore={() => toggle(v.key)} />)}
+            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} more={more.includes(v.key)} onMore={() => toggle(v.key)} markSaver={markSaver} />)}
           </div>
         ) : (
           <ul className="rt-dd__slots rt-dd__slots--flat">
-            {list.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} />)}
+            {list.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} markSaver={markSaver} />)}
           </ul>
         )}
       </div>

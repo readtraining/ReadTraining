@@ -59,7 +59,7 @@ export default async function CourseTownPage(props) {
           <Suspense fallback={<CourseListSkeleton />}>
             <CourseCatalogue courses={page.courses} scope={page.scope} />
           </Suspense>
-          <CourseTowns title={`${page.label.replace(/ courses$/i, "")} courses in other towns`} towns={getCourseTowns(slug, courses)} current={town} />
+          <CourseTowns title={`${page.scope.parent.title} in other towns`} towns={getCourseTowns(slug, courses).filter((t) => t.slug !== town)} />
           <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`ctown-faq-${slug}`} />
         </main>
         <HomeHelp />

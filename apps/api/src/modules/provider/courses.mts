@@ -63,6 +63,41 @@ export function passMarkProblem(text: string) {
   return ''
 }
 
+// A link to one YouTube or Vimeo video as its player's address, or null (a channel, a playlist, another site). The course page plays
+// only what this returns, with the same rules (videoEmbed in apps/web/lib/catalogueData.js): keep the two the same, so every link
+// a provider can save plays on the page.
+const YT_ID = /^[\w-]{11}$/
+const VIMEO_ID = /^\d{1,12}$/
+const VIMEO_HASH = /^[\da-f]{6,20}$/i
+export function videoEmbed(link: string): string | null {
+  let url: URL
+  try {
+    url = new URL(link.trim())
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'https:') return null
+  const host = url.hostname.toLowerCase().replace(/^(www|m)\./, '')
+  const path = url.pathname.split('/').filter(Boolean)
+  if (host === 'youtube.com' || host === 'youtu.be') {
+    const id = host === 'youtu.be' ? (path.length === 1 ? path[0] : null) : path[0] === 'watch' && path.length === 1 ? url.searchParams.get('v') : ['embed', 'shorts', 'live', 'v'].includes(path[0]) && path.length === 2 ? path[1] : null
+    // "videoseries" is 11 letters too: /embed/videoseries?list= is a playlist
+    return id && YT_ID.test(id) && id !== 'videoseries' ? `https://www.youtube-nocookie.com/embed/${id}` : null
+  }
+  let id: string | null = null
+  let hash = url.searchParams.get('h')
+  if (host === 'player.vimeo.com') id = path[0] === 'video' && path.length === 2 ? path[1] : null
+  else if (host === 'vimeo.com') {
+    if (path.length <= 2 && VIMEO_ID.test(path[0] || '')) [id, hash] = [path[0], path[1] || hash]
+    else if (path[0] === 'video' && path.length === 2) id = path[1]
+    else if (path[0] === 'channels' && path.length === 3) id = path[2]
+    else if (['showcase', 'album'].includes(path[0]) && path[2] === 'video' && path.length === 4) id = path[3]
+    else if (path[0] === 'groups' && path[2] === 'videos' && path.length === 4) id = path[3]
+  }
+  if (!id || !VIMEO_ID.test(id) || (hash && !VIMEO_HASH.test(hash))) return null
+  return `https://player.vimeo.com/video/${id}${hash ? `?h=${hash}` : ''}`
+}
+
 export const content = {
   title: line(80, 'title').min(3, 'Enter a title of at least 3 characters.'),
   summary: text(300, 'short description'),
@@ -79,7 +114,7 @@ export const content = {
     .string()
     .trim()
     .max(300)
-    .refine((v) => v === '' || /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/\S+$/.test(v), 'Use a YouTube or Vimeo link (https).')
+    .refine((v) => v === '' || videoEmbed(v) !== null, 'Use a link to one YouTube or Vimeo video, starting https://')
     .optional()
     .nullable(),
   units: z.array(z.object({ title: line(120, 'unit title').min(1, 'Give every unit a title.'), body: text(2000, 'unit text') })).max(40, 'Add up to 40 units.'),

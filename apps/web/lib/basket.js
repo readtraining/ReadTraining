@@ -73,7 +73,8 @@ export function lineParts(item) {
   const addOn = needsFirstAid(item) && item.firstAid === "add" ? copy.firstAid.add.price : 0;
   const addOnWas = addOn && copy.firstAid.add.wasPrice > addOn ? copy.firstAid.add.wasPrice : 0;
   const unit = basePrice(item) + pkg + bundle + addOn;
-  const unitWas = wasBase(item) ? wasBase(item) + pkg + bundle + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
+  // a course page package (bundle) has no "was" price: only the course alone had one (as BookingProvider shows)
+  const unitWas = bundle ? 0 : wasBase(item) ? wasBase(item) + pkg + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
   const quantity = Math.min(maxDelegates(item), Math.max(1, Number(item.quantity) || 1)); // a date changed to one with fewer places
   return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, pkg, bundle, addOn };
 }

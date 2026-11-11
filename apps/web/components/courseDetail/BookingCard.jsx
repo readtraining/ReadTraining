@@ -57,6 +57,7 @@ function SaveButton() {
 }
 
 const QUOTE_TEXT = TEAM.quoteText;
+const SAVER_DATE = "In Skill Saver: members get their discount";
 const IN_HOUSE_LINE = TEAM.line;
 
 // The booking card. SELECTED option on top (radio, price, info lines, link, button, trust items), then one row for every other
@@ -116,6 +117,8 @@ export default function BookingCard() {
   const onDemand = mode === "ondemand";
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const others = modes.filter((m) => m !== mode);
+  // in Skill Saver on some dates only (the hero says "on some dates"): say when the chosen one is
+  const saverDate = course.skillSaver === "some" && session?.skillSaver;
 
   return (
     <div className={`rt-bk${compact ? " is-compact" : ""}`}>
@@ -156,13 +159,20 @@ export default function BookingCard() {
             ) : onDemand ? (
               <>
                 <li><Icon name="calendar" /><span>{session.time}</span></li>
+                {saverDate && <li><Icon name="star" /><span>{SAVER_DATE}</span></li>}
                 <li><Icon name="coupon" /><span>Price includes VAT</span></li>
               </>
             ) : (
               <>
                 {withBundle && <li className="rt-bs__pkg"><Icon name="badge" /><span>{withBundle.name}<small> (+{formatPrice(withBundle.add)})</small></span></li>}
-                <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}</span></li>
+                {/* the dates, then the days themselves when they aren't all in a row (or each day's times when they differ) */}
+                <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}{session.schedule && <><br />{session.schedule}</>}</span></li>
+                {session.time && <li><Icon name="wall-clock" /><span>{session.time}</span></li>}
                 <li><Icon name="location" /><span>{session.location}</span></li>
+                {/* what the provider wrote for learners about this date */}
+                {session.details && <li><Icon name="document" /><span>{session.details}</span></li>}
+                {/* in Skill Saver on some dates only: say when the chosen one is */}
+                {saverDate && <li><Icon name="star" /><span>{SAVER_DATE}</span></li>}
                 <li><Icon name="coupon" /><span>Price includes VAT</span></li>
               </>
             )}
