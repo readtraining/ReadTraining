@@ -25,6 +25,16 @@ const SUBJECT_ICONS = {
 };
 // the header writes "and" as "&" in subject names (as Teaching & Academics), so none of them breaks onto two lines
 export const shortName = (name) => name.replace(/ and /g, " & ");
+// a course's short name in the footer and the header menu: its title without the bracketed detail ("Personal Licence (Level
+// 2 Award …)" → "Personal Licence"), keeping an acronym with its body ("CITB Site Management Safety Training Scheme (SMSTS)"
+// → "CITB SMSTS")
+export const shortCourseName = (title) => {
+  const m = title.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+  if (!m) return title;
+  const [, base, inner] = m;
+  const body = base.split(" ")[0];
+  return /^[A-Z0-9]{2,8}$/.test(inner) && /^[A-Z]{2,6}$/.test(body) ? `${body} ${inner}` : base;
+};
 export const cityHref = (town) => `${CATALOGUE_HREF}?location=${encodeURIComponent(town)}`;
 
 // every entry with its address: a subject's page (/courses/<slug>, one for every category), a method's own page when it has one

@@ -11,6 +11,9 @@ import { usePathname } from "next/navigation";
 // Keyboard: Enter, Space or the Down arrow on a section opens it and moves into its card; Tab goes through the card's links in
 // order (Tab from the open section's button goes into its card), and after the last one the card closes and focus moves to
 // the next section (Shift+Tab on the first goes back to the section's button), since the card comes after the whole header.
+// Only on a window 1200px wide or more, where the menu row is shown: below that the phone menu (HomeMobileMenu) has these menus,
+// so a menu never opens there, and an open one closes when the window narrows past 1200px.
+const DESKTOP = "(min-width: 1200px)";
 const FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled])";
 const intoCard = () => requestAnimationFrame(() => document.querySelector("#rt-nav-card")?.querySelector(FOCUSABLE)?.focus());
 export function useNavMenu() {
@@ -18,6 +21,17 @@ export function useNavMenu() {
   const triggers = useRef({});
   const openRef = useRef(null);
   openRef.current = open;
+  const desktop = useRef(false);
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP);
+    const sync = () => {
+      desktop.current = mq.matches;
+      if (!mq.matches) setOpen(null);
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const close = useCallback((focusTrigger = false) => {
     const was = openRef.current;
@@ -84,8 +98,11 @@ export function useNavMenu() {
 
     // a section's button
     triggerProps: (id) => ({
-      onClick: () => setOpen(openRef.current === id ? null : id),
+      onClick: () => {
+        if (desktop.current) setOpen(openRef.current === id ? null : id);
+      },
       onKeyDown: (e) => {
+        if (!desktop.current) return;
         // Enter, Space or the Down arrow open the section and move into it
         if (e.key !== "ArrowDown" && e.key !== "Enter" && e.key !== " ") return;
         e.preventDefault();

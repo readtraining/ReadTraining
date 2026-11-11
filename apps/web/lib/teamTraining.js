@@ -3,6 +3,7 @@
 // Every team action links to the same quote page with the current course (see quoteHref in BookingProvider).
 export const TEAM = {
   note: "For groups of 6 or more at your workplace",
+  short: "At your workplace, 6 or more", // the header menu's In-house line
   line: "In-house training is arranged on a date and at a place that suit your team. Choose Get a quote and we will confirm availability.",
   quoteText: "Contact us for a quote",
   cardTitle: "Team training solutions",
