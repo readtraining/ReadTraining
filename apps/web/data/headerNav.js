@@ -3,6 +3,7 @@
 // the licence and help links are fixed pages.
 import { CATALOGUE_HREF, HSE_TEST_HREF } from "@/lib/routes";
 import { TEAM } from "@/lib/teamTraining";
+import { shortCourseName } from "@/lib/nav";
 
 const lic = (s) => `/licences/${s}`;
 
@@ -138,21 +139,22 @@ export const headerNav = {
   },
 };
 
-// the same four menus in the phone menu (components/home/HomeMobileMenu): a section opens to its groups, a group to its links.
-// `nav` is the live catalogue's (useNav).
+// the same four menus in the phone menu (components/home/HomeMobileMenu): a section opens to its groups, a group to its links,
+// and each section ends with its "all …" link (`more`), as a desktop card's footer. `nav` is the live catalogue's (useNav).
 const N = headerNav;
 export const mobileMenu = (nav) => [
   {
     title: N.sections[0].label,
     links: [
       { title: N.courses.subjects.title, links: nav.subjects.map((s) => ({ label: s.label, href: s.href })) },
+      ...(nav.courses.length ? [{ title: N.courses.popular.title, links: nav.courses.slice(0, N.courses.popular.count).map((c) => ({ label: shortCourseName(c.title), href: c.href })) }] : []),
       { title: N.courses.methods.title, links: [...nav.methods.map((m) => ({ label: m.name, href: m.href })), { label: N.courses.methods.inhouse.label, href: N.courses.methods.inhouse.href }] },
-      { label: N.courses.all.label, href: N.courses.all.href },
+      { label: N.courses.all.label, href: N.courses.all.href, more: true },
     ],
   },
   {
     title: N.sections[1].label,
-    links: [...N.licences.groups.map((g) => ({ title: g.title, links: g.items.map((i) => ({ label: i.label, href: i.href })) })), { label: N.licences.all.label, href: N.licences.all.href }],
+    links: [...N.licences.groups.map((g) => ({ title: g.title, links: g.items.map((i) => ({ label: i.label, href: i.href })) })), { label: N.licences.all.label, href: N.licences.all.href, more: true }],
   },
   {
     title: N.sections[2].label,
@@ -160,11 +162,11 @@ export const mobileMenu = (nav) => [
       ...(nav.towns.length ? [{ title: N.near.citiesTitle, links: nav.towns.slice(0, N.near.cities).map((t) => ({ label: t.name, href: t.href })) }] : []),
       // "No venue near you?": the online ways of study in use; left out when there are none
       ...[{ title: N.near.online.title, links: N.near.online.items.filter((i) => nav.methods.some((m) => i.href.endsWith(m.slug))).map((i) => ({ label: i.label, href: i.href })) }].filter((g) => g.links.length),
-      { label: N.near.all.label, href: N.near.all.href },
+      { label: N.near.all.label, href: N.near.all.href, more: true },
     ],
   },
   {
     title: N.sections[3].label,
-    links: N.help.groups.map((g) => ({ title: g.title, links: g.items.map((i) => ({ label: i.label, href: i.href })) })),
+    links: [...N.help.groups.map((g) => ({ title: g.title, links: g.items.map((i) => ({ label: i.label, href: i.href })) })), { label: N.help.all.label, href: N.help.all.href, more: true }],
   },
 ];

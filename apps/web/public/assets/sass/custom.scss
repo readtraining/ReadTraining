@@ -5357,6 +5357,19 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-btn:disabled { cursor: progress; opacity: 0.7; }
 .rt-nav-near__note { margin: 0; font-size: var(--rt-text-xs); line-height: 1.4; color: var(--rt-nav-ink-2); }
 
+/* THE PHONE MENU (components/home/HomeMobileMenu). Its section and group titles are buttons; a section's "all …" link is the
+   desktop footer link (purple, the drawn arrow), lined up with the section's group titles. On a phone (below 576px) the menu
+   fills the screen and its close button sits inside it, on the row of Log in and Sign up. */
+.mobileMenu button.title { border: 0; background: none; font: inherit; color: inherit; text-align: left; }
+.mobileMenu .rt-mm-more { align-self: flex-start; margin-top: 6px; padding: 8px 0 8px 14px; font-size: 16px; }
+/* a closed section or group keeps its links out of the keyboard's way (they are only faded out and folded to no height) */
+.mobileMenu .toggle:not(.active), .mobileMenu .toggle:not(.active) * { visibility: hidden; }
+@media (max-width: 575px) {
+  .header .header-menu.js-mobile-menu-toggle, .header .header-menu .mobile-bg { width: 100vw; max-width: 100%; }
+  .header .header-menu .header-menu-close { top: 18px; right: 20px; z-index: 2; }
+  .header .header-menu .header-menu-close > span { box-shadow: inset 0 0 0 1px var(--rt-c-line); }
+}
+
 /* below 1200px the phone menu has the four menus: the menu row and its cards never show (useNavMenu doesn't open them) */
 @media (max-width: 1199px) {
   .rt-menu-row, .rt-nav-card, .rt-nav-dim { display: none !important; }

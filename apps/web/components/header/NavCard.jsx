@@ -8,20 +8,11 @@ import { shortCourseName, subjectName } from "@/lib/nav";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { NavIcon } from "./navIcons";
+import NavArrow from "./NavArrow";
 import { useNearYou } from "./useNearYou";
 
 // The open menu's card. Every menu has the same parts: groups with an icon, a heading and a thin line, then links with a short
 // line (or two) under the name; pointing at a link tints it and slides an arrow in at its end; one footer link across the card.
-
-// the menus' one arrow: the one that slides in on a link (rt-nav-arrow) and the one after a footer link (rt-nav-more__arrow)
-function Arrow({ className }) {
-  return (
-    <svg className={className} width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-      <path d="M1.5 6h12.5" />
-      <path d="M9.5 1.5 14 6l-4.5 4.5" />
-    </svg>
-  );
-}
 
 // a link: its name, up to two short lines under it, and the arrow
 function Row({ href, label, meta }) {
@@ -31,7 +22,7 @@ function Row({ href, label, meta }) {
       <Link href={href} className="rt-nav-link">
         <span className="rt-nav-link__name">{label}</span>
         {lines.map((l) => <span key={l} className="rt-nav-link__meta">{l}</span>)}
-        <Arrow className="rt-nav-arrow" />
+        <NavArrow className="rt-nav-arrow" />
       </Link>
     </li>
   );
@@ -58,7 +49,7 @@ function List({ items }) {
 function Foot({ label, href }) {
   return (
     <div className="rt-nav-foot">
-      <Link href={href} className="rt-nav-more">{label}<Arrow className="rt-nav-more__arrow" /></Link>
+      <Link href={href} className="rt-nav-more">{label}<NavArrow className="rt-nav-more__arrow" /></Link>
     </div>
   );
 }
