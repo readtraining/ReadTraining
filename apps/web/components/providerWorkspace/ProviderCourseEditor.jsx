@@ -8,7 +8,7 @@ import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { CourseEndpoints, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
+import { CourseEndpoints, isStale, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { getSupabase } from "@/lib/supabase/client";
@@ -37,23 +37,39 @@ const SECTIONS = [
 const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "pricing", "mode"];
 const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
+// how many of each list a course can have (the API's limits, provider/courses.mts `content`)
+const MOST = { features: 12, outcomes: 20, units: 40, exams: 20, faqs: 30 };
+const MAX_PRICE = 100000; // pounds (the API's pricePence limit)
+// The section that shows each field's error, by the API's names (a list's rows come under the list's name) and the editor's own
+// (passMark0, examUnit0: one exam row's fields). Saving with errors goes to the first section that has one.
+const SECTION_OF = {
+  model: "landing", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
+  features: "info", outcomes: "info", audience: "info", entryRequirements: "info",
+  units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", skillSaver: "pricing", method: "mode",
+};
+const sectionOf = (key) => SECTION_OF[key] || (/^(passMark|examUnit)\d+$/.test(key) ? "syllabus" : null);
 // course pictures follow the rule every picture upload does (lib/images.js): JPG, PNG, WebP or GIF up to 15 MB, big ones made
-// smaller for you, at least 500 × 300 (the API checks the stored file too: MIN_COURSE_IMAGE in apps/api/src/lib/media.mts)
+// smaller for you (a GIF is kept as it is, so it must be under 2 MB), at least 500 × 300 (the API checks the stored file too:
+// MIN_COURSE_IMAGE in apps/api/src/lib/media.mts)
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
 // A pass mark, as the API checks it (apps/api/src/modules/provider/courses.mts passMarkProblem): a percentage up to 100%, a score
-// that isn't more than its total ("26 out of 40", "26/40"), or words ("Pass or fail"). Returns what is wrong, or "".
+// that isn't more than its total ("26 out of 40", "26/40", "26 of 40 marks", decimals too), or words ("Pass or fail"; a bare "of"
+// is a score only at the end, so "Level 3 of 2 sections" is words). Returns what is wrong, or "". Keep the two the same.
+const NUM = String.raw`(\d+(?:\.\d+)?)`;
+const SCORE = new RegExp(String.raw`${NUM}\s*(?:out of|/)\s*${NUM}`);
+const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|points?|questions?|answers?))?\s*\.?$`);
 export function passMarkProblem(text) {
   const t = (text || "").trim().toLowerCase();
   if (!t) return "";
   const pct = t.match(/(\d+(?:\.\d+)?)\s*%/);
   if (pct && Number(pct[1]) > 100) return "A percentage pass mark can't be over 100%.";
-  const score = t.match(/(\d+)\s*(?:out of|\/|of)\s*(\d+)/);
+  const score = t.match(SCORE) || t.match(SCORE_OF);
   if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return "The pass mark can't be more than the total, like 26 out of 40.";
   return "";
 }
 const STATUS_NOTES = {
   draft: "This course is a draft. Only your team can see it.",
-  pending: "We're checking this course. If you change anything now, it comes back to you as a draft and you send it for approval again.",
+  pending: "We're checking this course. If you change it now (apart from its search and privacy settings), it comes back to you as a draft and you send it for approval again.",
   changes: "Our team has asked for changes. Make them, then send the course for approval again.",
   live: "This course is live. Changes to its wording are checked by our team before learners see them; prices, dates and settings change straight away.",
   paused: "This course is paused, so it doesn't show on ReadTraining. Put it back live from the course settings (the gear).",
@@ -64,6 +80,7 @@ const SHARED_NOTES = {
   paused: "This shared course page is off the site. Providers' courses on it don't show until it is published again.",
 };
 // fields only the page's wording (the "page" roles: course editor, marketing) may change; the rest need full course editing
+const NO_DATES_NOTE = "This course has no upcoming dates, so learners won't see a date to book until you add one.";
 const PAGE_FIELDS = ["title", "summary", "description", "audience", "entryRequirements", "outcomes", "features", "videoUrl"];
 const PRICE_FIELDS = ["price", "skillSaver"];
 
@@ -111,8 +128,16 @@ function stillNeeded(d, course) {
   if (!d.units.length) add("syllabus", "at least one syllabus unit");
   if (course.kind === "provider" && !d.method) add("mode", "how it is taught");
   if (course.kind === "provider" && d.method === "self-paced" && d.price === "") add("pricing", "a price");
+  // filed under something no longer offered (retired in Catalogue settings since it was chosen): the API refuses to send it
+  for (const entry of course.retired || []) {
+    const [, name, word] = entry.match(/^(.*) \(([^)]+)\)$/) || [];
+    const key = RETIRED_KEY[word];
+    if (key && d[key] === (course[key] || "")) add(key === "method" ? "mode" : "landing", `another ${word}: ${name} is no longer offered`);
+  }
   return out;
 }
+// the draft's field for each kind of catalogue entry the API names as retired ("Name (sub-category)": provider/courses.mts retired)
+const RETIRED_KEY = { category: "category", "sub-category": "subcategory", topic: "topic", level: "level", "delivery method": "method" };
 
 // What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together).
 function changes(draft, base, access) {
@@ -126,6 +151,13 @@ function changes(draft, base, access) {
     else out[k] = draft[k];
   }
   return out;
+}
+
+// Whether the course as loaded (`fresh`) already holds every change in `patch` (as the API took them; the API trims words).
+const tidy = (v) => (typeof v === "string" ? v.trim() : Array.isArray(v) ? v.map(tidy) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, tidy(x)])) : v);
+function alreadySaved(patch, fresh, access) {
+  const saved = changes(draftOf(fresh), {}, access);
+  return Object.keys(patch).every((k) => same(tidy(patch[k]), tidy(saved[k])));
 }
 
 // One course, as Hurak's editor: the "Publish your course" list on the left (one item per section, ticked when complete, kept in
@@ -212,28 +244,44 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const status = sent ? (ep.admin ? "live" : "pending") : course.status;
   const canSubmit = access.full && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
   const isLive = course.status === "live" || course.status === "paused";
+  // a course taught on dates can go live without one, but learners then have no date to book
+  const noDates = course.kind === "provider" && (course.method === "classroom" || course.method === "live-online") && !course.upcomingCohorts;
   const ticks = sections.map((x) => ({ ...x, ok: sectionOk(draft, course, x.key) }));
   const needed = stillNeeded(draft, course);
   const refresh = ep.refresh;
 
+  // shows a save's errors: each in its section, the editor going to the first section that has one (staying on this one if it
+  // has one too); one with no place of its own goes above the form
+  const showErrors = (e, general = "") => {
+    const stray = Object.keys(e).filter((k) => !sectionOf(k));
+    const form = general || stray.map((k) => e[k])[0] || "";
+    const hit = FORM_SECTIONS.filter((s) => Object.keys(e).some((k) => sectionOf(k) === s));
+    const where = hit.includes(tab) ? tab : hit[0];
+    if (where && where !== tab) changeTab(where);
+    setErrors({ ...e, form });
+    setSaid(form || Object.values(e)[0] || "");
+    requestAnimationFrame(() => focusFirstError(formRef.current));
+  };
   // checks what the API would refuse, so the provider is shown the field, then saves what changed
   const save = async () => {
     const e = {};
     if (!draft.title.trim() || draft.title.trim().length < 3) e.title = "Enter a title of at least 3 characters.";
     if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
+    else if (draft.price !== "" && Number(draft.price) > MAX_PRICE) e.price = "Enter a price of £100,000 or less.";
+    // a live self-paced course shows its price (the API refuses it without one)
+    else if (isLive && draft.method === "self-paced" && draft.price === "") e.price = "Enter the price per learner: a live self-paced course needs one.";
     // the same rule as the course page's player and the API (videoEmbed): one YouTube or Vimeo video that can actually play
     if (draft.videoUrl.trim() && !videoEmbed(draft.videoUrl.trim())) e.videoUrl = "Use a link to one YouTube or Vimeo video, starting https://";
     draft.exams.forEach((x, i) => {
+      if (!x.unit.trim()) e[`examUnit${i}`] = "Name this exam or unit, or remove the row.";
       const problem = passMarkProblem(x.passMark);
       if (problem) e[`passMark${i}`] = problem;
     });
-    setErrors(e);
     if (Object.keys(e).length) {
-      const where = e.price ? "pricing" : Object.keys(e).some((k) => k.startsWith("passMark")) && !e.title && !e.videoUrl ? "syllabus" : "landing";
-      if (tab !== where) changeTab(where);
-      requestAnimationFrame(() => focusFirstError(formRef.current));
+      showErrors(e);
       return false;
     }
+    setErrors({});
     const clean = { ...draft, title: draft.title.trim(), summary: draft.summary.trim(), videoUrl: draft.videoUrl.trim() };
     const patch = changes(clean, base, access);
     if (!Object.keys(patch).length) {
@@ -252,18 +300,31 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       setToast({ message });
       return true;
     } catch (error) {
-      // changed in another tab or by someone else: nothing was saved; say so where it can't be missed, with a way to catch up
-      if (error?.data?.code === "CONFLICT" && /changed somewhere else/i.test(error.message)) {
+      if (isStale(error)) {
+        // Refused as changed since this draft was loaded. If the course already holds exactly this change, it was this save
+        // after all (sent, then the answer lost when the connection dropped, then sent again): nothing to warn about, so the
+        // editor quietly takes the saved course.
+        const fresh = await ep.fetch().catch(() => null);
+        if (fresh && alreadySaved(patch, fresh, access)) {
+          const d = draftOf(fresh);
+          setDraft((current) => (current === draft ? d : current));
+          setBase(d);
+          ep.setVersion(fresh.version);
+          refresh();
+          setSaid("Course saved.");
+          setToast({ message: "Course saved." });
+          return true;
+        }
+        // changed in another tab or by someone else: nothing was saved; say so where it can't be missed, with a way to catch up
         setStale(true);
         setSaid(error.message);
         requestAnimationFrame(() => staleRef.current?.focus());
         return false;
       }
       const { fields, general } = errorsFrom(error);
-      setErrors({ ...fields, form: general });
-      if (fields.price || fields.pricePence) changeTab("pricing");
-      setSaid(general || Object.values(fields)[0] || "");
-      requestAnimationFrame(() => focusFirstError(formRef.current));
+      // the API's price is in pence; the editor's field is the price
+      const { pricePence, ...rest } = fields;
+      showErrors(pricePence ? { ...rest, price: pricePence } : rest, general);
       return false;
     }
   };
@@ -383,6 +444,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
           {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-adm-item__block"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
           {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-adm-item__block"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
+          {isLive && course.retired?.length > 0 && <p className="rt-adm-item__block"><b>No longer offered on ReadTraining:</b> {course.retired.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
+          {!ep.admin && isLive && noDates && <p className="rt-acc__note">{NO_DATES_NOTE}</p>}
         </div>
         <div className="rt-adm-hero__actions">
           {FORM_SECTIONS.includes(tab) && dirty && <span className="rt-pws-course-unsaved"><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
@@ -444,6 +507,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
               ) : submitError ? (
                 <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>
               ) : null}
+              {/* not needed to send it, but worth knowing first */}
+              {!ep.admin && noDates && <p className="rt-acc__note">{NO_DATES_NOTE} <button type="button" className="rt-cd__link" onClick={() => changeTab("mode")}>Go to Mode of study</button></p>}
             </>
           ) : (
             <>
@@ -497,11 +562,13 @@ const FieldErr = ({ id, text }) => (text ? <p className="rt-q__err" id={`${id}-e
 const useSet = (setDraft) => (key) => (value) => setDraft((d) => ({ ...d, [key]: value }));
 
 // A list of short lines added one at a time (features, learning outcomes), with Enter or the Add button; outcomes can be reordered.
-function LineList({ id, label, hint, items, onChange, max, placeholder, ordered = false, commas = false, disabled }) {
+// `max` is each line's length, `most` how many lines there can be (adding stops there, and says so); `error` a save's message.
+function LineList({ id, label, hint, items, onChange, max, most, placeholder, ordered = false, commas = false, disabled, error }) {
   const [value, setValue] = useState("");
+  const full = items.length >= most;
   const add = (text = value) => {
     const parts = (commas ? text.split(",") : [text]).map((x) => x.trim().slice(0, max)).filter(Boolean);
-    if (parts.length) onChange([...items, ...parts.filter((p) => !items.includes(p))]);
+    if (parts.length) onChange([...items, ...parts.filter((p) => !items.includes(p))].slice(0, most));
     setValue("");
   };
   const move = (i, by) => {
@@ -513,11 +580,12 @@ function LineList({ id, label, hint, items, onChange, max, placeholder, ordered 
   return (
     <div className="rt-field">
       <label htmlFor={id}>{label}</label>
-      <span className="rt-field__hint" id={`${id}-h`}>{hint}</span>
+      <span className="rt-field__hint" id={`${id}-h`}>{full && !disabled ? `That's the most a course can have (${most}). Remove one to add another.` : hint}</span>
+      <FieldErr id={id} text={error} />
       {!disabled && (
         <div className="rt-pws-course-addrow">
-          <input id={id} value={value} maxLength={max} onChange={(e) => (commas && e.target.value.includes(",") ? add(e.target.value) : setValue(e.target.value))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder={placeholder} aria-describedby={`${id}-h`} autoComplete="off" />
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => add()}>Add</button>
+          <input id={id} value={value} maxLength={max} disabled={full} onChange={(e) => (commas && e.target.value.includes(",") ? add(e.target.value) : setValue(e.target.value))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder={placeholder} aria-invalid={error ? true : undefined} aria-describedby={`${id}-h${error ? ` ${id}-e` : ""}`} autoComplete="off" />
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => add()} disabled={full}>Add</button>
         </div>
       )}
       {items.length > 0 && (ordered ? (
@@ -561,6 +629,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         <h2 className="rt-acc__h2" id="rt-pws-ce-basics-h">Course landing page</h2>
         {!shared && <CardChoice name="rt-pws-ce-model" legend="Performance model" value={draft.model} onChange={(v) => !full && set("model")(v)}
           options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: full && value !== draft.model }))} />}
+        <FieldErr id="rt-pws-ce-model" text={errors.model} />
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-title">Course title</label>
           <FieldErr id="rt-pws-ce-title" text={errors.title} />
@@ -592,13 +661,15 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
           </div>
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-topic">Course topic (optional)</label>
-            <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} />
+            <FieldErr id="rt-pws-ce-topic" text={errors.topic} />
+            <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} invalid={Boolean(errors.topic)} />
           </div>
         </div>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-details">Course description</label>
           <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs.</span>
-          <textarea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-details-h" autoComplete="off" />
+          <FieldErr id="rt-pws-ce-details" text={errors.description} />
+          <textarea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-invalid={errors.description ? true : undefined} aria-describedby={`rt-pws-ce-details-h${errors.description ? " rt-pws-ce-details-e" : ""}`} autoComplete="off" />
         </div>
       </section>
 
@@ -789,7 +860,7 @@ function ImagesCard({ course, disabled, onSaved }) {
 
 // ---- Course information ----------------------------------------------------------------------------------------------------
 
-function InfoSection({ draft, setDraft, access }) {
+function InfoSection({ draft, setDraft, access, errors }) {
   const set = useSet(setDraft);
   const page = !access.page;
   return (
@@ -797,17 +868,19 @@ function InfoSection({ draft, setDraft, access }) {
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-learn-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-learn-h">Course information</h2>
         <p className="rt-acc__note">These show on the public course page and help it perform in search.</p>
-        <LineList id="rt-pws-ce-feature" label="Course features" hint={'Short facts shown as tags, like "1 day" or "Certificate valid 3 years". Press Enter or type a comma to add.'} items={draft.features} onChange={set("features")} max={LIMITS.feature} commas disabled={page} />
-        <LineList id="rt-pws-ce-obj" label="What will learners learn?" hint={`Add at least 4, each starting with a verb. Press Enter to add. ${draft.outcomes.length} added${draft.outcomes.length < 4 ? `, ${4 - draft.outcomes.length} more to reach 4` : ""}.`} items={draft.outcomes} onChange={set("outcomes")} max={LIMITS.outcome} placeholder="For example: Give CPR to an adult" ordered disabled={page} />
+        <LineList id="rt-pws-ce-feature" label="Course features" hint={`Short facts shown as tags, like "1 day" or "Certificate valid 3 years". Press Enter or type a comma to add. Up to ${MOST.features}.`} items={draft.features} onChange={set("features")} max={LIMITS.feature} most={MOST.features} commas disabled={page} error={errors.features} />
+        <LineList id="rt-pws-ce-obj" label="What will learners learn?" hint={`Add at least 4 (up to ${MOST.outcomes}), each starting with a verb. Press Enter to add. ${draft.outcomes.length} added${draft.outcomes.length < 4 ? `, ${4 - draft.outcomes.length} more to reach 4` : ""}.`} items={draft.outcomes} onChange={set("outcomes")} max={LIMITS.outcome} most={MOST.outcomes} placeholder="For example: Give CPR to an adult" ordered disabled={page} error={errors.outcomes} />
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-aud">Who is it for? (optional)</label>
           <span className="rt-field__hint" id="rt-pws-ce-aud-h">The people and jobs the course suits.</span>
-          <textarea id="rt-pws-ce-aud" rows={3} maxLength={2000} value={draft.audience} onChange={(e) => set("audience")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-aud-h" autoComplete="off" />
+          <FieldErr id="rt-pws-ce-aud" text={errors.audience} />
+          <textarea id="rt-pws-ce-aud" rows={3} maxLength={2000} value={draft.audience} onChange={(e) => set("audience")(e.target.value)} disabled={page} aria-invalid={errors.audience ? true : undefined} aria-describedby={`rt-pws-ce-aud-h${errors.audience ? " rt-pws-ce-aud-e" : ""}`} autoComplete="off" />
         </div>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-req">Entry requirements (optional)</label>
           <span className="rt-field__hint" id="rt-pws-ce-req-h">What learners need before they book, like an age, ID or an earlier qualification. Leave it empty if there are none.</span>
-          <textarea id="rt-pws-ce-req" rows={3} maxLength={2000} value={draft.entryRequirements} onChange={(e) => set("entryRequirements")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-req-h" autoComplete="off" />
+          <FieldErr id="rt-pws-ce-req" text={errors.entryRequirements} />
+          <textarea id="rt-pws-ce-req" rows={3} maxLength={2000} value={draft.entryRequirements} onChange={(e) => set("entryRequirements")(e.target.value)} disabled={page} aria-invalid={errors.entryRequirements ? true : undefined} aria-describedby={`rt-pws-ce-req-h${errors.entryRequirements ? " rt-pws-ce-req-e" : ""}`} autoComplete="off" />
         </div>
       </section>
     </form>
@@ -837,9 +910,10 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-units-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
           <h2 className="rt-acc__h2" id="rt-pws-ce-units-h">Syllabus</h2>
-          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(null); setSheet(true); }}>Add unit</button>}
+          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(null); setSheet(true); }} disabled={draft.units.length >= MOST.units}>Add unit</button>}
         </div>
-        <p className="rt-acc__note">The course&apos;s units, in order. Learners open each one on the course page to see what it covers.</p>
+        <p className="rt-acc__note">The course&apos;s units, in order. Learners open each one on the course page to see what it covers.{draft.units.length >= MOST.units ? ` That's the most a course can have (${MOST.units}): remove one to add another.` : ""}</p>
+        <FieldErr id="rt-pws-ce-units" text={errors.units} />
         {draft.units.length ? (
           <ol className="rt-adm-list">
             {draft.units.map((u, i) => (
@@ -862,16 +936,18 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-exam-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
           <h2 className="rt-acc__h2" id="rt-pws-ce-exam-h">Exam and assessment (optional)</h2>
-          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => set("exams")([...draft.exams, { unit: "", passMark: "", duration: "" }])} disabled={draft.exams.length >= 20}>Add row</button>}
+          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => set("exams")([...draft.exams, { unit: "", passMark: "", duration: "" }])} disabled={draft.exams.length >= MOST.exams}>Add row</button>}
         </div>
-        <p className="rt-acc__note">If the course ends with an exam, one row per paper or practical: what it covers, the pass mark and how long it takes. Leave it empty if there is no exam.</p>
+        <p className="rt-acc__note">If the course ends with an exam, one row per paper or practical: what it covers, the pass mark and how long it takes. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
+        <FieldErr id="rt-pws-ce-exams" text={errors.exams} />
         {draft.exams.length ? (
           <ol className="rt-pws-ce__exams">
             {draft.exams.map((e, i) => (
               <li key={i} className="rt-pws-ce__exam">
                 <div className="rt-field">
                   <label htmlFor={`rt-pws-ce-ex-u${i}`}>Exam or unit</label>
-                  <input id={`rt-pws-ce-ex-u${i}`} value={e.unit} maxLength={120} onChange={(ev) => setExam(i, { unit: ev.target.value })} disabled={locked} placeholder="For example: Multiple choice paper" autoComplete="off" />
+                  <FieldErr id={`rt-pws-ce-ex-u${i}`} text={errors[`examUnit${i}`]} />
+                  <input id={`rt-pws-ce-ex-u${i}`} value={e.unit} maxLength={120} onChange={(ev) => setExam(i, { unit: ev.target.value })} disabled={locked} placeholder="For example: Multiple choice paper" autoComplete="off" aria-invalid={errors[`examUnit${i}`] ? true : undefined} aria-describedby={errors[`examUnit${i}`] ? `rt-pws-ce-ex-u${i}-e` : undefined} />
                 </div>
                 <div className="rt-field">
                   <label htmlFor={`rt-pws-ce-ex-p${i}`}>Pass mark</label>
@@ -889,8 +965,8 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         ) : <EmptyState inCard title="No exam on this course." />}
       </section>
 
-      <UnitSheet open={sheet} onClose={() => setSheet(false)} unit={editing === null ? null : draft.units[editing]} onSave={(rows) => {
-        if (editing === null) set("units")([...draft.units, ...rows].slice(0, 40));
+      <UnitSheet open={sheet} onClose={() => setSheet(false)} unit={editing === null ? null : draft.units[editing]} room={MOST.units - draft.units.length} onSave={(rows) => {
+        if (editing === null) set("units")([...draft.units, ...rows]);
         else set("units")(draft.units.map((u, i) => (i === editing ? rows[0] : u)));
         setSheet(false);
       }} />
@@ -899,8 +975,8 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
   );
 }
 
-// Add one or more units (a title and what it covers), or edit one.
-function UnitSheet({ open, onClose, unit, onSave }) {
+// Add one or more units (a title and what it covers), or edit one. `room`: how many more units the course can take.
+function UnitSheet({ open, onClose, unit, room, onSave }) {
   const [rows, setRows] = useState([{ title: "", body: "" }]);
   const [errors, setErrors] = useState({});
   const ref = useRef(null);
@@ -940,7 +1016,7 @@ function UnitSheet({ open, onClose, unit, onSave }) {
             {rows.length > 1 && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>Remove unit {i + 1}</button>}
           </fieldset>
         ))}
-        {!unit && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setRows((x) => [...x, { title: "", body: "" }])}>Add another</button>}
+        {!unit && (rows.length < room ? <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setRows((x) => [...x, { title: "", body: "" }])}>Add another</button> : <p className="rt-acc__note">That fills the syllabus: a course can have up to {MOST.units} units.</p>)}
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{unit ? "Save unit" : "Add to course"}</button>
       </form>
     </Sheet>
@@ -950,7 +1026,7 @@ function UnitSheet({ open, onClose, unit, onSave }) {
 // ---- FAQs ------------------------------------------------------------------------------------------------------------------
 
 // The course's own questions and answers, written for this course only (the brief: never one block copied across courses).
-function FaqSection({ draft, setDraft, access }) {
+function FaqSection({ draft, setDraft, access, errors }) {
   const set = useSet(setDraft);
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = a new one, a number = that FAQ
   const [removing, setRemoving] = useState(null); // the FAQ waiting for "Remove this question?": { index, name }
@@ -960,9 +1036,10 @@ function FaqSection({ draft, setDraft, access }) {
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-faqs-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
           <h2 className="rt-acc__h2" id="rt-pws-ce-faqs-h">FAQs</h2>
-          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(null)} disabled={draft.faqs.length >= 30}>Add FAQ</button>}
+          {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(null)} disabled={draft.faqs.length >= MOST.faqs}>Add FAQ</button>}
         </div>
-        <p className="rt-acc__note">Questions learners ask about this course, with your answers. They show on the course page.</p>
+        <p className="rt-acc__note">Questions learners ask about this course, with your answers. They show on the course page.{draft.faqs.length >= MOST.faqs ? ` That's the most a course can have (${MOST.faqs}).` : ""}</p>
+        <FieldErr id="rt-pws-ce-faqs" text={errors.faqs} />
         {draft.faqs.length ? (
           <ul className="rt-adm-list">
             {draft.faqs.map((f, i) => (
@@ -1044,10 +1121,11 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
           </label>
           <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link>
         </div>
+        <FieldErr id="rt-pws-ce-saver" text={errors.skillSaver} />
         {draft.method === "self-paced" ? (
           <div className="rt-field rt-pws-course-price">
             <label htmlFor="rt-pws-ce-pricein">Price per learner, including VAT</label>
-            <FieldErr id="rt-pws-ce-pricein" text={errors.price || errors.pricePence} />
+            <FieldErr id="rt-pws-ce-pricein" text={errors.price} />
             <div className="rt-pws-course-money">
               <span aria-hidden="true">£</span>
               <input id="rt-pws-ce-pricein" type="text" inputMode="decimal" value={draft.price} disabled={locked} onChange={(e) => set("price")(e.target.value.trim())} aria-invalid={errors.price ? true : undefined} aria-describedby={errors.price ? "rt-pws-ce-pricein-e" : undefined} autoComplete="off" />
@@ -1063,7 +1141,7 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
 
 // ---- Mode of study ---------------------------------------------------------------------------------------------------------
 
-function ModeSection({ course, draft, setDraft, access, onSaved }) {
+function ModeSection({ course, draft, setDraft, access, errors, onSaved }) {
   const set = useSet(setDraft);
   const [adding, setAdding] = useState(false);
   const utils = api.useUtils();
@@ -1078,7 +1156,8 @@ function ModeSection({ course, draft, setDraft, access, onSaved }) {
         {course.cohortCount > 0 && <p className="rt-adm-item__block">This course has dates, so how it is taught can&apos;t change. Remove its dates first, or create a new course for another mode of study.</p>}
         <CardChoice name="rt-pws-ce-format" legend="How is the course taught?" value={draft.method} onChange={(v) => !locked && set("method")(v)}
           options={pw.formats.map((f) => ({ value: f.key, label: methodName(f.key), text: f.text, disabled: locked && f.key !== draft.method }))} />
-        {draft.method !== course.method && <p className="rt-acc__note">Save to change how the course is taught.</p>}
+        <FieldErr id="rt-pws-ce-format" text={errors.method} />
+        {draft.method !== course.method && <p className="rt-acc__note">{draft.method === "self-paced" && (course.status === "live" || course.status === "paused") ? "Save to change how the course is taught. A live self-paced course needs its price: add it in Course pricing first." : "Save to change how the course is taught."}</p>}
       </form>
 
       {dated && draft.method === course.method && (

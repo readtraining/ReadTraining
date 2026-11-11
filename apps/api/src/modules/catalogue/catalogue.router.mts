@@ -8,11 +8,14 @@ import { loadCoursePage, loadListings, locate } from './listings.mjs'
 // The catalogue's one list (brief §4): categories > sub-categories > topics, delivery methods and levels. Public, read by
 // the website (filters, menus, course pages), the provider's course form and the admin alike. Retired entries are left out.
 
-// a town as the site writes it: as the provider typed it, with capitals when it was typed all in lower case ("bahria")
+// a town as the site writes it: as the provider typed it, with capitals when it was typed all in lower case ("bahria"); the
+// website's town pages write it the same way (apps/web/lib/coursePages.js townName)
 const townName = (city: string) => {
   const t = city.trim()
   return t === t.toLowerCase() ? t.replace(/\b([a-z])/g, (m) => m.toUpperCase()) : t
 }
+// one town however it was typed ("King's Lynn", "kings lynn"), as the website's town page addresses read it (/kings-lynn)
+const townKey = (city: string) => city.trim().toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
 
 export const catalogueRouter = createTRPCRouter({
   taxonomy: publicProcedure.query(async ({ ctx }) => {
@@ -55,7 +58,8 @@ export const catalogueRouter = createTRPCRouter({
   // search. Read once on the server for every page (the website's lib/catalogueServer.js loadNav, cached a minute).
   // - subjects: the active categories that have live courses, in the admin's order, with their number of courses and top three;
   // - methods: the active delivery methods that live courses use;
-  // - towns: the towns live dates run in (from their venues), most courses first, with where they are;
+  // - towns: the towns live dates run in (from their venues), most courses first, with where they are; a venue whose postcode
+  //   couldn't be checked (no map point) adds no town, as it gets no town page;
   // - courses: the live courses, most popular first, with their subject, picture and the towns they run in.
   nav: publicProcedure.query(async ({ ctx }) => {
     const [all, cats, methods] = await Promise.all([
@@ -75,11 +79,10 @@ export const catalogueRouter = createTRPCRouter({
     for (const l of all) {
       const seen = new Set<string>()
       for (const v of l.venues) {
-        const key = v.city.trim().toLowerCase()
-        if (!key || seen.has(key)) continue
+        const key = townKey(v.city)
+        if (!key || v.lat == null || v.lng == null || seen.has(key)) continue
         seen.add(key)
-        const t = towns.get(key) ?? { name: townName(v.city), lat: null, lng: null, courses: 0 }
-        if (t.lat == null && v.lat != null && v.lng != null) Object.assign(t, { lat: v.lat, lng: v.lng })
+        const t = towns.get(key) ?? { name: townName(v.city), lat: v.lat, lng: v.lng, courses: 0 }
         t.courses += 1
         towns.set(key, t)
       }

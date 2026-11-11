@@ -68,10 +68,10 @@ export default async function ProviderPage(props) {
   ];
   const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training providers", href: PROVIDERS_HREF }, { label: p.name }];
   const orgLd = { "@context": "https://schema.org", "@type": "EducationalOrganization", name: p.name, url: abs(p.href), description: p.about || lead, areaServed: "GB", ...(p.city ? { address: { "@type": "PostalAddress", addressLocality: p.city, addressCountry: "GB" } } : {}), ...(p.logoUrl ? { logo: p.logoUrl } : {}) };
-  // the provider's own booking terms first, then the policies every provider follows
+  // the provider's own booking terms first (as it typed them: plain text, never links), then the policies every provider follows
   const terms = [
-    p.cancellationPolicy && { q: "Cancellation policy", a: p.cancellationPolicy },
-    p.bookingTerms && { q: "Booking terms", a: p.bookingTerms },
+    p.cancellationPolicy && { q: "Cancellation policy", a: p.cancellationPolicy, plain: true },
+    p.bookingTerms && { q: "Booking terms", a: p.bookingTerms, plain: true },
   ].filter(Boolean);
 
   return (

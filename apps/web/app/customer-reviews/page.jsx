@@ -1,4 +1,5 @@
 import React from "react";
+import { connection } from "next/server";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
@@ -32,6 +33,7 @@ export async function generateMetadata() {
 }
 
 export default async function CustomerReviewsPage(props) {
+  await connection(); // the reviews come from the API, which isn't there while the site is built
   const { course } = (await props.searchParams) || {};
   const [, reviews] = await Promise.all([loadSiteContent(), loadReviews(), loadTaxonomy()]);
   const r = customerReviews(reviews);

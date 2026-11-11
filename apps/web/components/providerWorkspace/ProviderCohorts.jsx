@@ -102,18 +102,19 @@ export function useSchedule(when = "upcoming") {
   return { may, cohorts: may.dates ? cohorts : NONE, courses: may.courses ? courses : NONE, venues: may.venues ? venues : NONE, tutors: may.team ? tutors : NONE };
 }
 
-// the full set of a cohort's values, as the API's update takes them (to change one thing, like the tutor, from the list)
-export const cohortInput = (k) => ({
-  sessions: k.sessions, venueId: k.venueId, joinUrl: k.joinUrl || "", capacity: k.capacity, pricePence: k.pricePence, wasPricePence: k.wasPricePence,
-  details: k.details || "", tutorUserId: k.tutorUserId, bookable: k.bookable,
-});
-
-// A joining link: a Zoom, Microsoft Teams or Google Meet meeting address (https), as the API checks it (schedule.mts isMeetingLink)
-const MEETING_HOSTS = /^(?:[a-z0-9-]+\.)*(zoom\.us|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com)$/i;
+// A joining link: the https address of one Zoom, Microsoft Teams or Google Meet meeting, with no login in it, as the API checks it
+// (schedule.mts isMeetingLink): keep the two the same.
+const MEETINGS = [
+  [/^(?:[a-z0-9-]+\.)*zoom\.(?:us|com)$/, /^\/(?:(?:j|w)\/\d{9,13}|my\/[\w.-]+)\/?$/], // a Zoom meeting, webinar or personal room
+  [/^teams\.(?:microsoft|live)\.com$/, /^\/(?:l\/meetup-join\/.+|meet\/[\w-]+\/?)$/], // a Teams meeting's join link
+  [/^meet\.google\.com$/, /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/], // a Google Meet code
+];
 export function isMeetingLink(v) {
   try {
     const u = new URL(v);
-    return u.protocol === "https:" && MEETING_HOSTS.test(u.hostname) && u.pathname.length > 1;
+    if (u.protocol !== "https:" || u.username || u.password) return false;
+    const host = u.hostname.toLowerCase();
+    return MEETINGS.some(([h, path]) => h.test(host) && path.test(u.pathname));
   } catch {
     return false;
   }
@@ -143,7 +144,7 @@ export default function ProviderCohorts() {
   const change = (id, patch) => setChanging((x) => (patch ? { ...x, [id]: { ...x[id], ...patch } } : Object.fromEntries(Object.entries(x).filter(([k]) => k !== id))));
   const s = useSchedule(when);
   const utils = api.useUtils();
-  const update = api.provider.cohorts.update.useMutation();
+  const assignTutor = api.provider.cohorts.setTutor.useMutation();
   const bookable = api.provider.cohorts.setBookable.useMutation();
   const edit = can("provider.cohorts.edit");
 
@@ -219,9 +220,10 @@ export default function ProviderCohorts() {
   const refresh = () =>
     Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
   const fail = (e) => setToast({ message: errorsFrom(e).general || "We couldn't save that. Please try again." });
+  // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
   const setTutorOf = (k, v) => {
     change(k.id, { tutorUserId: v || null });
-    update.mutate({ organisationId, cohortId: k.id, ...cohortInput(k), tutorUserId: v || null }, {
+    assignTutor.mutate({ organisationId, cohortId: k.id, tutorUserId: v || null }, {
       onSuccess: async () => { setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); await refresh(); change(k.id, null); },
       onError: (e) => { change(k.id, null); fail(e); },
     });
@@ -333,7 +335,7 @@ export default function ProviderCohorts() {
                           {edit && !cancelled && tutors.length ? (
                             <div className="rt-field rt-adm-select -inline">
                               <label htmlFor={`rt-coh-tu-${k.id}`} className="rt-sr">Tutor for {name}</label>
-                              <FieldSelect id={`rt-coh-tu-${k.id}`} label={`Tutor for ${name}`} value={k.tutorUserId || ""} onChange={(v) => setTutorOf(k, v)} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.userId, label: t.name }))]} disabled={update.isPending} compact />
+                              <FieldSelect id={`rt-coh-tu-${k.id}`} label={`Tutor for ${name}`} value={k.tutorUserId || ""} onChange={(v) => setTutorOf(k, v)} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.userId, label: t.name }))]} disabled={assignTutor.isPending} compact />
                             </div>
                           ) : (tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>)}
                         </td>
@@ -447,6 +449,11 @@ export function DeleteSheet({ cohort, onClose, onDone }) {
 
 const money = (pence) => (pence == null ? "" : (pence / 100).toFixed(2).replace(/\.00$/, ""));
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
+const MAX_PRICE = 100000; // pounds (the API's limit)
+const MEETING_LINK_ERROR = "Use the https link to one Zoom, Microsoft Teams or Google Meet meeting, like https://zoom.us/j/1234567890.";
+// the API's names for the form's fields, where they differ
+const FIELD_OF = { pricePence: "price", wasPricePence: "wasPrice" };
+const FORM_FIELDS = new Set(["courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "capacity", "details", "tutorUserId"]);
 
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
 // `suggestCourseId`). `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on.
@@ -470,6 +477,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const tutorsQ = api.provider.cohorts.tutors.useQuery({ organisationId }, { ...on, retry: false });
   const create = api.provider.cohorts.create.useMutation();
   const update = api.provider.cohorts.update.useMutation();
+  const utils = api.useUtils();
   const courses = coursesQ.data || [];
   const courseOf = (id) => courses.find((c) => String(c.id) === String(id));
 
@@ -505,7 +513,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     await venuesQ.refetch();
     set({ venueId: r.id });
     setAddingVenue(false);
-    setVenueAdded(r.located ? "Venue added and chosen for these dates." : "Venue added and chosen. We couldn't find its postcode on the map, so check it in Settings › Venues.");
+    setVenueAdded(r.located ? "Venue added and chosen for these dates." : r.unchecked ? "Venue added and chosen. We couldn't check its town just now; we'll try again." : "Venue added and chosen. We couldn't find its postcode on the map, so check it in Settings › Venues.");
     setErrors((e) => ({ ...e, venueId: undefined }));
   };
   const venueForm = <VenueForm inline idPrefix="rt-cf-v" onSaved={venueSaved} onCancel={() => setAddingVenue(false)} />;
@@ -540,9 +548,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       else if ((s.end || s.date) === s.date && s.to <= s.from) err[`d${i}`] = "The end time must be after the start time.";
     });
     if (method === "classroom" && !f.venueId) err.venueId = "Choose the venue.";
-    if (method === "live-online" && f.joinUrl.trim() && !isMeetingLink(f.joinUrl.trim())) err.joinUrl = "Use the full https link to a Zoom, Microsoft Teams or Google Meet meeting, or leave it empty for now.";
+    if (method === "live-online" && !f.joinUrl.trim()) err.joinUrl = "Enter the joining link for these dates.";
+    else if (method === "live-online" && !isMeetingLink(f.joinUrl.trim())) err.joinUrl = MEETING_LINK_ERROR;
     if (!PRICE_RE.test(f.price) || Number(f.price) < 1) err.price = "Enter the price per learner in pounds, like 95.";
+    else if (Number(f.price) > MAX_PRICE) err.price = "Enter a price of £100,000 or less.";
     if (f.wasPrice && (!PRICE_RE.test(f.wasPrice) || Number(f.wasPrice) <= Number(f.price))) err.wasPrice = "Enter a “was” price higher than the price, or leave it empty.";
+    else if (f.wasPrice && Number(f.wasPrice) > MAX_PRICE) err.wasPrice = "Enter a “was” price of £100,000 or less.";
     const m = Number(f.capacity);
     if (!Number.isInteger(m) || m < 1 || m > 200) err.capacity = "Enter a whole number from 1 to 200.";
     setErrors(err);
@@ -560,7 +571,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       bookable: cohort ? cohort.bookable : true,
     };
     try {
-      const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
+      // an edit sends the version it was filled from, so one over a colleague's newer change is refused instead of undoing it
+      const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id, seen: cohort.updatedAt ? new Date(cohort.updatedAt).toISOString() : undefined }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
       if (another) {
         const first = values.sessions[0]?.date;
         setF((x) => {
@@ -579,7 +591,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       onSaved?.(id);
     } catch (error) {
       const { fields, general } = errorsFrom(error);
-      setErrors({ ...fields, form: general });
+      const named = Object.fromEntries(Object.entries(fields).map(([k, m]) => [FIELD_OF[k] || k, m]));
+      // one the form has no place for (it shouldn't happen) is said above the buttons, so no refusal goes unseen
+      const stray = Object.keys(named).filter((k) => !FORM_FIELDS.has(k)).map((k) => named[k])[0];
+      setErrors({ ...named, form: general || stray || "" });
+      // changed by someone else since the form was filled: the list and the dates load again, ready for when it is reopened
+      if (error?.data?.code === "CONFLICT" && /changed somewhere else/i.test(error.message)) Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.cohorts.get.invalidate()]);
       requestAnimationFrame(() => focusFirstError(formRef.current));
     }
   };
@@ -689,8 +706,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               )}
               {method === "live-online" && (
                 <div className="rt-field">
-                  <label htmlFor="rt-cf-joinUrl">Joining link (optional)</label>
-                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Meet link. You can add it later; once online booking opens, learners get it before the first session.</p>
+                  <label htmlFor="rt-cf-joinUrl">Joining link</label>
+                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Google Meet meeting learners join, like https://zoom.us/j/1234567890. Once online booking opens, learners get it before the first session.</p>
                   {err("joinUrl")}
                   <input id="rt-cf-joinUrl" type="url" inputMode="url" value={f.joinUrl} onChange={(e) => set({ joinUrl: e.target.value })} autoComplete="url" aria-invalid={errors.joinUrl ? true : undefined} aria-describedby={`rt-cf-joinUrl-h${errors.joinUrl ? " rt-cf-joinUrl-e" : ""}`} />
                 </div>
@@ -716,7 +733,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
             <div className="rt-field">
               <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
               <p className="rt-acc__note" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
-              <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-describedby="rt-cf-details-h" autoComplete="off" />
+              {err("details")}
+              <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-invalid={errors.details ? true : undefined} aria-describedby={`rt-cf-details-h${errors.details ? " rt-cf-details-e" : ""}`} autoComplete="off" />
             </div>
           </section>
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}

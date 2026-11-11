@@ -1,10 +1,11 @@
-import React, { Suspense } from "react";
+import React from "react";
+import { connection } from "next/server";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 import MarketingHero from "@/components/marketing/MarketingHero";
-import ProviderDirectory, { Directory } from "@/components/providers/ProviderDirectory";
+import ProviderDirectory from "@/components/providers/ProviderDirectory";
 import { providerPages } from "@/data/providers";
 import { PROVIDERS_HREF, toProviderCard } from "@/lib/providers";
 import { getProviderDirectory } from "@/lib/publicProvider";
@@ -14,7 +15,8 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 // Listed training providers (/providers), the footer's "Listed Training Providers" link, in the marketing-page language of
 // /about-us and /blog: centred dark hero (Get started goes to /for-providers) > a search, the providers as cards with the count,
 // Show all and page links (white band) > need help > footer. Every approved provider (API organisations.providerDirectory).
-// Copy: data/providers.js; reads: lib/publicProvider.js, shaped by lib/providers.js.
+// Copy: data/providers.js; reads: lib/publicProvider.js, shaped by lib/providers.js. Rendered for each request (its data from the
+// fetch cache), so it arrives with the providers its address asks for (?q=, ?page=, ?show=all), not a placeholder.
 
 const p = providerPages.directory;
 const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training providers" }];
@@ -22,6 +24,7 @@ const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training provider
 export const metadata = pageMetadata({ title: p.title, description: p.description, path: PROVIDERS_HREF });
 
 export default async function ProvidersPage() {
+  await connection();
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const providers = (await getProviderDirectory()).map(toProviderCard);
   const listLd = {
@@ -40,10 +43,7 @@ export default async function ProvidersPage() {
           <MarketingHero hero={p.hero} />
           <section className="fb-section -white" aria-label="Providers">
             <div className="container">
-              {/* until the browser has the address, the first page (so search engines get the cards and the page links) */}
-              <Suspense fallback={<Directory providers={providers} params={null} />}>
-                <ProviderDirectory providers={providers} />
-              </Suspense>
+              <ProviderDirectory providers={providers} />
             </div>
           </section>
         </main>

@@ -23,7 +23,6 @@ const TABS = Object.keys(copy.tabs);
 const MAX_TABS = 4;
 const MAX_PER_TAB = 4;
 const LEGAL = getLegalList();
-const faqOptions = faqGroups.flatMap((g) => g.sets.map((x) => ({ value: x.key, label: `${g.name}: ${x.label}` })));
 
 // Site content (Part B, B2): the numbers and featured courses the whole site shares (the customer reviews have
 // their own page, admin › Customer reviews), each page's
@@ -36,6 +35,8 @@ export default function AdminContent() {
   const canEdit = me?.permissions?.includes("content");
   const [tab, setTab] = useState("trust");
   const [faqKey, setFaqKey] = useState(faqSets[0].key);
+  // every FAQ set, the catalogue's subjects included (they come from the live catalogue, so built here, not when the file loads)
+  const faqOptions = faqGroups.flatMap((g) => g.sets.map((x) => ({ value: x.key, label: `${g.name}: ${x.label}` })));
   const [docSlug, setDocSlug] = useState(LEGAL[0].slug);
   const [version, setVersion] = useState(0); // a reset starts the tab's form again from the built-in values
   const [loaded, setLoaded] = useState(null); // an earlier version brought into the form: { key, id, at, value }

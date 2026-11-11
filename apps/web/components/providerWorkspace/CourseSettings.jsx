@@ -39,21 +39,24 @@ export function SeoPanel({ course, onSaved }) {
     if (add.length) setKeywords([...keywords, ...add].slice(0, 20));
     setWord("");
   };
+  // every field is optional: an empty title or description is saved as none (search engines then use the course's own title and
+  // short description, as the preview shows)
   const submit = (e) => {
     e.preventDefault();
     const all = word.trim() ? [...keywords, ...word.split(",").map((w) => w.trim().toLowerCase().slice(0, 40)).filter(Boolean)] : keywords;
-    const er = {};
-    if (!title.trim()) er.title = "Enter the SEO title.";
-    if (!desc.trim()) er.desc = "Enter the SEO description.";
-    setErrors(er);
-    if (Object.keys(er).length) return focusFirstError(ref.current);
     const seoKeywords = [...new Set(all)].slice(0, 20);
+    setErrors({});
     setKeywords(seoKeywords);
     setWord("");
     setBusy(true);
-    ep.update({ seoTitle: title.trim(), seoDescription: desc.trim(), seoKeywords })
+    ep.update({ seoTitle: title.trim() || null, seoDescription: desc.trim() || null, seoKeywords })
       .then(() => { setSaved({ title: title.trim(), desc: desc.trim(), keywords: seoKeywords }); setTitle(title.trim()); setDesc(desc.trim()); ep.refresh(); onSaved("SEO settings saved"); })
-      .catch((error) => setErrors({ form: errorsFrom(error).general || Object.values(errorsFrom(error).fields)[0] }))
+      .catch((error) => {
+        if (ep.stale(error)) return; // changed somewhere else: the editor's banner says so
+        const { fields, general } = errorsFrom(error);
+        setErrors({ title: fields.seoTitle, desc: fields.seoDescription, form: general || fields.seoKeywords || Object.values(fields)[0] });
+        requestAnimationFrame(() => focusFirstError(ref.current));
+      })
       .finally(() => setBusy(false));
   };
   const locked = !ep.access.page;
@@ -61,13 +64,13 @@ export function SeoPanel({ course, onSaved }) {
   return (
     <form className="rt-q__form" onSubmit={submit} noValidate ref={ref}>
       <div className="rt-field">
-        <label htmlFor="rt-pws-cset-st">SEO title</label>
+        <label htmlFor="rt-pws-cset-st">SEO title (optional)</label>
         <Err id="rt-pws-cset-st" text={errors.title} />
         <input id="rt-pws-cset-st" type="text" maxLength={60} autoComplete="off" value={title} onChange={(e) => setTitle(e.target.value)} aria-invalid={errors.title ? true : undefined} aria-describedby={`${errors.title ? "rt-pws-cset-st-e " : ""}rt-pws-cset-st-c`} />
         <small className="rt-field__hint rt-pws-cset__count" id="rt-pws-cset-st-c">{title.length} of 60 characters</small>
       </div>
       <div className="rt-field">
-        <label htmlFor="rt-pws-cset-sd">SEO description</label>
+        <label htmlFor="rt-pws-cset-sd">SEO description (optional)</label>
         <Err id="rt-pws-cset-sd" text={errors.desc} />
         <textarea id="rt-pws-cset-sd" rows={4} maxLength={320} autoComplete="off" value={desc} onChange={(e) => setDesc(e.target.value)} aria-invalid={errors.desc ? true : undefined} aria-describedby={`${errors.desc ? "rt-pws-cset-sd-e " : ""}rt-pws-cset-sd-c`} />
         <small className="rt-field__hint rt-pws-cset__count" id="rt-pws-cset-sd-c">{desc.length} of 320 characters</small>
@@ -223,6 +226,15 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   );
 }
 
+// "Take off the site?": the providers' live courses on the page leave the search with it, named here (up to five), and their
+// providers are emailed (API admin.courses.setSharedStatus)
+function offWarning(children = []) {
+  const live = children.filter((x) => x.status === "live").map((x) => `“${x.title}” (${x.provider})`);
+  if (!live.length) return "No provider has a live course on this page, so nothing else is hidden.";
+  const named = live.length > 5 ? `${live.slice(0, 5).join(", ")} and ${live.length - 5} more` : live.length > 1 ? `${live.slice(0, -1).join(", ")} and ${live[live.length - 1]}` : live[0];
+  return `This also hides ${named} from ReadTraining's search until the page is published again. We email ${live.length === 1 ? "that provider" : "each of those providers"}.`;
+}
+
 // The gear on a shared course page in the admin: the page's address, showing it in ReadTraining's search, taking it off the site or
 // publishing it, and deleting a page that has never been live and has no providers' courses on it.
 export function SharedGear({ course, open, onClose, onSaved }) {
@@ -271,7 +283,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
           <Toggle id="rt-adm-gear-listed" checked={course.listed} disabled={!edit || busy} onChange={(v) => run(() => ep.update({ listed: v }), v ? "The page shows in ReadTraining's search" : "The page is hidden from ReadTraining's search")} label="Show this page in ReadTraining's search" hint="If it is off, the page still works from its address." />
           {edit && course.status === "live" && (
             <div className="rt-field">
-              <p className="rt-acc__note">Taking the page off the site hides it and the providers' courses on it, until it is published again.</p>
+              <p className="rt-acc__note">{askOff ? offWarning(course.children) : "Taking the page off the site hides it and the providers' courses on it, until it is published again."}</p>
               {/* it hides every provider's course on the page too, so it asks first */}
               {askOff ? (
                 <div className="rt-adm-cellrow" role="group" aria-label="Take this page off the site?">

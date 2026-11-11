@@ -249,6 +249,7 @@ export const admin = {
       "provider.reapplied": "Applied again as a provider",
       "email.provider_decision_sent": "Decision email sent to the provider",
       "email.course_decision_sent": "Decision email sent to the provider",
+      "email.shared_page_paused_sent": "Told the provider by email that a course page is off the site",
       "email.application_received_sent": "\"Application received\" email sent to the provider",
       "email.course_received_sent": "\"Course received\" email sent to the provider",
       "email.business_ready_sent": "\"Business account ready\" email sent",
@@ -387,6 +388,15 @@ export const admin = {
     ownSole: "You sent this yourself. No other admin can approve it, so you can decide on it, with a reason. It is recorded in the activity log as your own request.",
     ownQueue: "Sent by you",
     ownQueueSole: "You sent this yourself. Open it to decide, with a reason.",
+    // your own published course: pausing it or putting it back live is a decision too
+    ownPublished: "You sent this course yourself, so another admin must pause it or put it back live.",
+    ownPublishedSole: "You sent this course yourself. No other admin can approve, so you can pause it or put it back live, with a reason. It is recorded in the activity log as your own request.",
+    providerPaused: "The provider paused this course themselves. They put it back live from their workspace.",
+    // after a decision: whether the provider was told by email
+    emailed: "The provider was emailed.",
+    emailOutbox: "This copy of the site doesn't send emails: the email to the provider was saved to the test outbox.",
+    notEmailed: "The decision is saved, but the email to the provider couldn't be sent. Contact them another way.",
+    notEmailedFor: (titles) => `The decision is saved, but the email to the provider couldn't be sent for ${titles}. Contact them another way.`,
     dueDays: 2,
     // each tab's empty state: [title, line]
     empty: {
@@ -423,6 +433,10 @@ export const admin = {
       },
       done: { approve: "Provider approved", changes: "Changes asked for", reject: "Provider not approved", suspend: "Provider suspended", reinstate: "Provider reinstated" },
       notEmailed: "The decision is saved, but the email to the owner couldn't be sent. Contact them another way.",
+      emailOutbox: "This copy of the site doesn't send emails: the email to the owner was saved to the test outbox.",
+      courses: "Courses",
+      coursesNone: "Courses this provider writes show here, whatever their status.",
+      coursesAll: (n) => `All ${n} courses`,
       ownRequest: "You opened this provider account yourself, so another admin must decide on it.",
       ownSole: "You opened this provider account yourself. No other admin can approve it, so you can decide on it, with a reason. It is recorded in the activity log as your own request.",
       noSwitch: "Your admin access doesn't include decisions on providers.",
@@ -764,6 +778,8 @@ export const admin = {
       back: "All courses",
       edit: "Edit page",
       publicPage: "Public page",
+      preview: "Preview",
+      previewChange: "Preview the change",
       provider: "Provider",
       sharedPage: "Shared page",
       otherSubject: (page) => `This course's subject doesn't match its shared page, “${page}”, so it is listed as a provider of a different course. Ask the provider to choose None (or a matching page) in the course settings before approving.`,

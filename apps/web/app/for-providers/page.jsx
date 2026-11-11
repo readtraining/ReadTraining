@@ -17,11 +17,13 @@ import ProCta from "@/components/provider/ProCta";
 import BecomeProvider from "@/components/providerSignup/BecomeProvider";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "ReadTraining for Training Providers | List courses, manage cohorts and learners",
   description: "Run your training business in one provider workspace and list eligible dates on the ReadTraining marketplace. No monthly subscription.",
-};
+  path: "/for-providers",
+});
 
 export default async function ForProvidersPage() {
   await loadSiteContent();

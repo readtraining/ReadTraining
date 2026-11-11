@@ -16,7 +16,9 @@ import { loadReviews } from "@/lib/siteReviewsServer";
 // /sitemap.xml: every public page (the same lists the pages build from), so search engines find them all. Private areas
 // (account, business, provider, admin, basket, checkout) are left out (see robots.js). A legal page
 // still marked as a draft (not yet reviewed by a solicitor) asks search engines not to index it, so it is left out too: listing
-// it would contradict that (Search Console reports "Submitted URL marked noindex").
+// it would contradict that (Search Console reports "Submitted URL marked noindex"). The courses, town pages and providers are the
+// live ones (a private course, a provider's course on a shared page and a town whose venue has no map point aren't listed); when
+// the API can't answer, the sitemap fails rather than leaving them out (lib/apiServer.js), and search engines ask again later.
 const STATIC = [
   "/", "/courses", "/for-business", "/for-providers", "/about-us", "/contact-us", "/customer-reviews", "/certificate-checker",
   "/security-jobs", "/skill-saver", "/provider-skill-saver", "/licences", "/test-prep", "/tests/citb-health-safety-and-environment-test",

@@ -21,7 +21,7 @@ import LicenceBand from "@/components/licences/LicenceBand";
 import LicenceCourses from "@/components/licences/LicenceCourses";
 import LicenceTiles from "@/components/licences/LicenceTiles";
 import { licencesHub as hub } from "@/data/licences";
-import { getGroup, getLicence, getLicenceSlugs, licenceCosts, licenceCourses, licenceHref, relatedLicences } from "@/lib/licences";
+import { getGroup, getLicence, licenceCosts, licenceCourses, licenceHref, relatedLicences } from "@/lib/licences";
 import { loadCatalogue, searchFinds } from "@/lib/catalogueServer";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
@@ -34,8 +34,10 @@ import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 // band (apply for you / jobs / request training) > training courses (#training) > related licences > FAQs > call to action.
 // "Apply for me" and "Request training" open the page's one pop-up (LicenceRequest).
 
+// None is built with the site: a guide shows the live courses (and which links find one), and the API isn't running while the site
+// is built, so each is built on its first visit and then saved and refreshed as any page (lib/apiServer.js).
 export function generateStaticParams() {
-  return getLicenceSlugs().map((slug) => ({ slug }));
+  return [];
 }
 
 export async function generateMetadata(props) {

@@ -21,7 +21,7 @@ import {
 import { MODE_METHOD } from "@/lib/courseModes";
 import { subcategoryOptions } from "@/lib/taxonomy";
 import { trackEvent, toItem } from "@/lib/analytics";
-import { jsonLd } from "@/lib/seo";
+import { abs, jsonLd } from "@/lib/seo";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import ActiveFilters from "./ActiveFilters";
 import CatalogueCourseCard from "./CatalogueCourseCard";
@@ -569,7 +569,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
               "@type": "ListItem",
               position: (page - 1) * PAGE_SIZE + i + 1,
               name: c.title,
-              url: c.detailsHref || undefined,
+              url: c.detailsHref ? abs(c.detailsHref) : undefined,
             })),
           }),
         }}

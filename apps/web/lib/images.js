@@ -31,7 +31,8 @@ export const acceptFor = (kind) => IMAGE_KINDS[kind].types.join(",");
 export const hintFor = (kind) => {
   const k = IMAGE_KINDS[kind];
   const size = k.min.width > 1 ? `At least ${k.min.width} × ${k.min.height} pixels. ` : "";
-  return `${size}${listTypes(k.types)}, up to 15 MB.`;
+  const gif = k.types.includes("image/gif") ? " A GIF must be under 2 MB." : "";
+  return `${size}${listTypes(k.types)}, up to 15 MB.${gif}`;
 };
 
 const fail = (message) => Object.assign(new Error(message), { friendly: true });

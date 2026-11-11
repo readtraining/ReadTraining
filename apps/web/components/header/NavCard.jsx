@@ -74,12 +74,12 @@ function CoursesPanel() {
     <>
       <div className="rt-nav-cols">
         <div className={`rt-nav-col${two ? " -two" : ""}`}>
-          <Group title={C.subjects.title} icon={C.subjects.icon}>
+          {subjects.length > 0 && <Group title={C.subjects.title} icon={C.subjects.icon}>
             <div className="rt-nav-twin">
               <ul className="rt-nav-list">{subjects.slice(0, half)}</ul>
               {two && <ul className="rt-nav-list">{subjects.slice(half)}</ul>}
             </div>
-          </Group>
+          </Group>}
         </div>
         <div className="rt-nav-col">{popular.length > 0 && <Group title={C.popular.title} icon={C.popular.icon}><List items={popular} /></Group>}</div>
         <div className="rt-nav-col"><Group title={C.methods.title} icon={C.methods.icon}><List items={methods} /></Group></div>

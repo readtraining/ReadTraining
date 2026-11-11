@@ -150,8 +150,10 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
 
 // One course page by its address: the course as written, its images and lists, and its offerings with their providers and dates.
 // A shared page's offerings are the providers' courses on it; a provider course's page shows its own dates (and names the shared
-// page it is on). Null when there is no such live page. A course number (an old numeric link, /course/1012) finds its course too;
-// the page then sends the visitor on to its address.
+// page it is on). Null when there is no such live page, and for a shared page no provider lists a course on (yet, or any more): it
+// isn't a listing either, so it never opens with nothing to book. A course number (an old numeric link, /course/1012) finds its
+// course too; the page then sends the visitor on to its address. `isPublic` and `listed`: a private or unlisted course still
+// opens from its address but is kept out of search engines (the website's app/course/[slug]).
 // `preview` (the editors' Preview, provider.courses.preview / admin.courses.preview): the course by its id whatever its status, a
 // provider course with its own dates even before it is live, and a change still waiting for approval (`pending`) shown as if
 // approved, so the page is the one learners will see. The caller checks who may see it.
@@ -177,6 +179,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
   ])
   // a shared page lists the providers' public, listed courses on it; a provider course is its own offering
   const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`, Boolean(preview) && c.kind === 'provider')
+  if (!preview && c.kind === 'shared' && !offers.length) return null
   const [parent] = c.parent_id ? await db.execute<{ slug: string; title: string }>(sql`select slug, title from public.courses where id = ${c.parent_id} and status = 'live'`) : []
   const [provider] = c.kind === 'provider'
     ? await db.execute<{ name: string; slug: string; logo_path: string | null; headline: string | null; city: string | null; booking_terms: string | null; cancellation_policy: string | null }>(sql`
@@ -200,6 +203,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     videoUrl: (c.video_url as string | null) ?? null,
     seoTitle: (c.seo_title as string | null) ?? null,
     seoDescription: (c.seo_description as string | null) ?? null,
+    isPublic: c.is_public as boolean,
+    listed: c.listed as boolean,
     publishedAt: c.published_at ? new Date(c.published_at as string).toISOString() : null,
     updatedAt: c.updated_at ? new Date(c.updated_at as string).toISOString() : null,
     images: images.map((i) => ({ url: mediaUrl(i.path)!, alt: i.alt ?? '' })),

@@ -7,7 +7,8 @@ import { paragraphs } from "@/lib/paragraphs";
    every marketing page, the course catalogue and For Business / For Providers, taking its content as props. One answer is open at a time;
    a closed answer is inert, so it cannot be tabbed into. An answer may hold [label](link) and **bold** (as the legal pages' text
    does) and nothing else, so what an admin writes can never inject markup; a blank line starts a new paragraph and a single
-   line break is kept (a provider's booking terms, as typed). */
+   line break is kept. An item marked `plain` (a provider's booking terms, as typed) is shown exactly as written: its words never
+   become links or bold, so a provider can't put a link to another site on our pages. */
 export default function FaqSection({ eyebrow, title, text, items, idPrefix = "faq", className = "layout-pt-lg layout-pb-lg", id, compact = false }) {
   const [open, setOpen] = useState(0);
   return (
@@ -36,7 +37,7 @@ export default function FaqSection({ eyebrow, title, text, items, idPrefix = "fa
                 <div className="bz-acc__panel" id={`${idPrefix}-${i}`} role="region" aria-labelledby={`${idPrefix}-btn-${i}`} inert={!isOpen}>
                   <div className="bz-acc__inner">
                     {paragraphs(it.a).map((lines, j) => (
-                      <p key={j}>{lines.map((line, k) => <Fragment key={k}>{k > 0 && <br />}<Inline text={line} /></Fragment>)}</p>
+                      <p key={j}>{lines.map((line, k) => <Fragment key={k}>{k > 0 && <br />}{it.plain ? line : <Inline text={line} />}</Fragment>)}</p>
                     ))}
                   </div>
                 </div>

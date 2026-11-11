@@ -20,13 +20,21 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 import { loadReviews } from "@/lib/siteReviewsServer";
+import { abs, jsonLd, pageMetadata } from "@/lib/seo";
 
 // the homepage's search-engine words (admin > Platform settings)
 export async function generateMetadata() {
   await loadSiteContent();
   const { homeTitle, homeDescription } = seoSettings();
-  return { title: homeTitle, description: homeDescription };
+  return pageMetadata({ title: homeTitle, description: homeDescription, path: "/" });
 }
+
+// Who runs the site and the site itself, for search engines (the name, address and logo they show for it). No rating or review
+// markup: Google ignores a site's reviews of itself, and the reviews are shown as a selection.
+const siteLd = [
+  { "@context": "https://schema.org", "@type": "Organization", name: "ReadTraining", url: abs("/"), logo: abs("/assets/img/general/readtraining-logo.svg") },
+  { "@context": "https://schema.org", "@type": "WebSite", name: "ReadTraining", url: abs("/"), inLanguage: "en-GB" },
+];
 
 // The featured courses as course cards, from the live courses on the server: the ones an admin picked (lib/siteContent.js; a
 // course no longer live is skipped), or each tab's subjects' most popular. A tab with no live course is left out, and the
@@ -70,6 +78,7 @@ export default async function HomePage() {
         </main>
         <HomeFooter />
       </div>
+      {siteLd.map((ld) => <script key={ld["@type"]} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ld) }} />)}
     </div>
   );
 }

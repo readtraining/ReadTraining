@@ -15,10 +15,10 @@ const FILTERS = ["q", "format", "enrolment", "category", "model", "status"];
 const formatOf = (key) => pw.formats.find((f) => f.key === key) || pw.formats[0];
 const enrolmentOf = (c) => (c.isPublic ? "public" : "private");
 
-// The provider's courses, from the API.
+// The provider's courses, from the API: asked for only by a role that may see them (the API would refuse, and log, the rest).
 export const useProviderCourses = () => {
-  const { organisationId } = useProviderAccess();
-  return api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
+  const { organisationId, can } = useProviderAccess();
+  return api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && can("provider.courses.view") });
 };
 
 // Every course the provider runs, with Hurak's filters (search, mode of study, enrolment type, and under Filters the category and
@@ -44,6 +44,7 @@ export default function ProviderCourses() {
     if (next.category || next.model) setMore(true);
   }, []);
 
+  if (!can("provider.courses.view")) return <EmptyState title="Courses aren't part of your role" text="Ask your provider's owner or an admin if you need to see the courses." />;
   if (query.isError) return <ErrorState title="We couldn't load your courses." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!courses) return <Loading rows={4} />;
   if (!courses.length) return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", href: "/provider/courses/new" } : null} />;
@@ -157,6 +158,7 @@ export function CoursesProfile() {
   const clearToast = useCallback(() => setToast(null), []);
   if (!workspace) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
   const org = { name: workspace.name, slug: workspace.slug };
+  const live = workspace.status === "active"; // the public profile opens once the account is approved
   const copyProfile = async () => {
     const profileUrl = `${window.location.origin}/providers/${org.slug}`;
     try {
@@ -175,7 +177,7 @@ export function CoursesProfile() {
         <p className="rt-cx-org__links">
           <Link href="/provider/profile">View</Link>
           <Link href="/provider/settings">Edit</Link>
-          <button type="button" onClick={copyProfile}>Copy Profile URL</button>
+          {live && <button type="button" onClick={copyProfile}>Copy Profile URL</button>}
         </p>
       </div>
       <dl className="rt-cx-org__stats">

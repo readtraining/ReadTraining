@@ -19,18 +19,14 @@ const viewHref = ({ q = "", page = 1, all = false }) => {
 };
 
 // The providers directory: a search (name, town, subject or headline, as you type), the count and a "Show all" toggle, the
-// providers as cards, then the page links. The address is written with the History API, which Next.js keeps in sync with
-// useSearchParams, so changing page does not reload.
-export default function ProviderDirectory({ providers }) {
-  return <Directory providers={providers} params={useSearchParams()} />;
-}
-
-// The directory for an address's `params` (null: the first page, with no search; the page's server-rendered stand-in until the
-// browser has the address, so search engines and a slow connection get the cards and the page links).
-export function Directory({ providers: all, params }) {
+// providers as cards, then the page links. The page is rendered for each request (app/providers/page.jsx), so it arrives with the
+// view its address asks for. The address is written with the History API, which Next.js keeps in sync with useSearchParams, so
+// changing page does not reload.
+export default function ProviderDirectory({ providers: all }) {
+  const params = useSearchParams();
   const resultsRef = useRef(null);
-  const urlQ = (params?.get("q") || "").trim().slice(0, 80);
-  const showAll = params?.get("show") === "all";
+  const urlQ = (params.get("q") || "").trim().slice(0, 80);
+  const showAll = params.get("show") === "all";
   const [q, setQ] = useState(urlQ);
   // Back or Forward to another search: the box shows it
   useEffect(() => setQ((typed) => (typed.trim() === urlQ ? typed : urlQ)), [urlQ]);
@@ -48,7 +44,7 @@ export function Directory({ providers: all, params }) {
 
   const totalPages = Math.max(1, Math.ceil(providers.length / PROVIDERS_PAGE_SIZE));
   // ?page= is a whole number from 1; anything else is page 1, and one past the end is the last page
-  const asked = Number(params?.get("page"));
+  const asked = Number(params.get("page"));
   const page = showAll || !Number.isInteger(asked) || asked < 1 ? 1 : Math.min(asked, totalPages);
   const shown = showAll ? providers : providers.slice((page - 1) * PROVIDERS_PAGE_SIZE, page * PROVIDERS_PAGE_SIZE);
 

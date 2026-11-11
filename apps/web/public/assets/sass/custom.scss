@@ -1655,7 +1655,6 @@ a.rt-card__title-link:hover, a.rt-card__title-link:focus-visible { color: var(--
 .rt-card .rt-card__btn--secondary:hover { border-color: var(--rt-card-text); color: var(--rt-card-btn-text); }
 .rt-card__spinner { width: 14px; height: 14px; border: 2px solid color-mix(in srgb, var(--rt-card-brand-fg) 45%, transparent); border-top-color: var(--rt-card-brand-fg); border-radius: 50%; animation: rt-spin 0.7s linear infinite; }
 .rt-card :focus-visible { outline: 2px solid var(--rt-card-focus); outline-offset: 2px; }
-.rt-card--skeleton .rt-card__image { position: absolute; inset: 0; }
 
 /* ---------- Tablet (641px to 1100px): 160px image; the price column moves below, spanning both columns ---------- */
 @media (max-width: 1100px) {
@@ -6925,18 +6924,10 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-dd__panel, .rt-mini__scroll { position: relative; }
 
 /* Sizes that used to sit in the JSX as inline styles (cleanup, 2026-10-14): the shared FAQ section's heading widths, and the
-   catalogue's loading skeleton and error message. Same values as before. */
+   catalogue's error message. Same values as before. */
 .rt-section-head .rt-faqsec__title { max-width: 26ch; }
 .rt-section-head .rt-faqsec__text { max-width: 640px; }
-.rt-cat__body--skeleton { padding-top: 48px; }
 .rt-cat__body--message { padding-top: 64px; padding-bottom: 64px; }
-.rt-skel--eyebrow { width: 90px; height: 13px; }
-.rt-skel--title { width: 64%; height: 20px; }
-.rt-skel--text { width: 92%; height: 14px; }
-.rt-skel--text2 { width: 74%; height: 14px; }
-.rt-skel--meta { width: 52%; height: 13px; margin-top: auto; }
-.rt-skel--from { width: 36px; height: 13px; }
-.rt-skel--price { width: 120px; height: 24px; }
 /* ---------- PART B3: emails, coupons, reports, reviews, platform settings (components/admin) ---------- */
 .rt-adm-emails__when { max-width: 360px; color: var(--rt-c-muted); }
 .rt-adm-email { display: grid; gap: 16px; align-items: start; }

@@ -33,6 +33,11 @@ export const addressOf = (name: string) =>
     .toLowerCase()
     .replace(/^-+|-+$/g, '')
 
+// The addresses of the course pages written for the site that are not a category's own page (apps/web/data/coursePages.js: the
+// study methods, CITB Site Safety Plus, Personal Licence). A category's page is /courses/<its address>, so a category with one of
+// these addresses would open the written page instead of its own. Keep this list in step with that file.
+const WRITTEN_PAGES = new Set(['classroom', 'live-online', 'self-paced', 'citb-site-safety-plus', 'personal-licence'])
+
 const fieldError = (field: string, message: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: Object.assign(new Error(message), { field }) })
 const name = z
   .string()
@@ -74,6 +79,7 @@ export const catalogueAdminRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const slug = addressOf(input.name)
       if (!slug) throw fieldError('name', 'Enter a name with letters in it.')
+      if (input.kind === 'category' && WRITTEN_PAGES.has(slug)) throw fieldError('name', 'That name is used by a page on the site. Choose another name.')
       const needsParent = input.kind === 'subcategory' || input.kind === 'topic'
       if (needsParent && !input.parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose where it goes.' })
       const where = needsParent ? sql`${PARENT[input.kind as 'subcategory' | 'topic']} = ${input.parent}::uuid` : sql`true`

@@ -1,5 +1,6 @@
-import React, { Suspense } from "react";
+import React from "react";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
@@ -7,10 +8,9 @@ import HomeFooter from "@/components/home/HomeFooter";
 import HomeTextLink from "@/components/home/HomeTextLink";
 import FaqSection from "@/components/marketing/FaqSection";
 import CourseCatalogue from "@/components/courses/CourseCatalogue";
-import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import PostCard from "@/components/blog/PostCard";
 import CourseTowns from "@/components/courses/CourseTowns";
-import { getCoursePage, getCoursePageSlugs, getCourseTowns, midSentence } from "@/lib/coursePages";
+import { getCoursePage, getCourseTowns, midSentence } from "@/lib/coursePages";
 import { BLOG_HREF } from "@/lib/blog";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
@@ -26,11 +26,8 @@ const realCourses = loadCatalogue;
 // catalogue scoped to the page (its title and intro in the hero, links to the other course pages, the same search, filters,
 // sorting and cards as All courses), then the towns with a venue (each with its own town page), the blog's guides on the topic, the page's FAQs, need help and the footer.
 // Every category of the catalogue list has one. Copy: data/coursePages.js; reads: lib/coursePages.js, on the real courses.
-
-export async function generateStaticParams() {
-  await loadTaxonomy();
-  return getCoursePageSlugs().map((slug) => ({ slug }));
-}
+// Rendered for each request, as All courses (app/courses/page.jsx), so it arrives with its courses for the address it was asked
+// for; none is built ahead of time (the API isn't running while the site is built).
 
 export async function generateMetadata(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
@@ -42,6 +39,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function CoursePage(props) {
+  await connection();
   await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
   const { slug } = await props.params;
   const courses = await realCourses();
@@ -58,9 +56,7 @@ export default async function CoursePage(props) {
       {/* No overflow-hidden here: it would stop the filter panel from sticking. */}
       <div className="content-wrapper js-content-wrapper">
         <main id="rt-cat-main">
-          <Suspense fallback={<CourseListSkeleton />}>
-            <CourseCatalogue courses={page.courses} scope={page.scope} />
-          </Suspense>
+          <CourseCatalogue courses={page.courses} scope={page.scope} />
           <CourseTowns title={`Find ${midSentence(page.title)} near you`} towns={getCourseTowns(page.slug, courses)} />
           {page.guides.length > 0 && (
             <section className="rt-cpage__guides layout-pt-lg" aria-labelledby="rt-cpage-guides-h">
@@ -84,13 +80,14 @@ export default async function CoursePage(props) {
               </div>
             </section>
           )}
-          <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`cpage-faq-${page.slug}`} />
+          {/* a subject with no questions written for it yet (admin › Site content › FAQs) has no FAQ section */}
+          {faq.length > 0 && <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`cpage-faq-${page.slug}`} />}
         </main>
         <HomeHelp />
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, page.href)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />
+      {faq.length > 0 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqPageLd(faq)) }} />}
     </div>
   );
 }

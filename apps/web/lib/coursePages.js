@@ -77,17 +77,25 @@ export function getCoursePage(slug, courses) {
 }
 
 // ---- town pages (/courses/<page>/<town>, as hurak.com/courses/first-aid/nottingham) ------------------------------------------
-// The towns where a page's courses have a classroom venue. Live online and self-paced pages have no towns.
-const townSlug = (city) => city.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+// The towns where a page's courses have a classroom venue. Live online and self-paced pages have no towns. A town is written as
+// the menus write it (API catalogue.nav townName: as typed, with capitals when typed all in lower case) and is one town however it
+// was typed: its address drops apostrophes and joins the words with "-" ("King's Lynn", "kings lynn": /kings-lynn, as ukPlace
+// reads it). A venue whose postcode couldn't be checked when it was saved (no map point) gives its town no page: it can't be
+// told apart from a typing mistake, and the page's "closest first" needs the point.
+const townName = (city) => {
+  const t = city.trim();
+  return t === t.toLowerCase() ? t.replace(/\b([a-z])/g, (m) => m.toUpperCase()) : t;
+};
+const townSlug = (city) => city.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 export function getCourseTowns(slug, courses) {
   const page = definition(slug);
   if (!page || (page.select.method && page.select.method !== "classroom")) return [];
   const towns = new Map();
   for (const c of select(courses, page.select).filter((c) => c.methods.includes("classroom"))) {
     for (const v of c.venues) {
-      const t = towns.get(v.city) || { city: v.city, slug: townSlug(v.city), href: `${coursePageHref(slug)}/${townSlug(v.city)}`, lat: null, lng: null };
-      if (t.lat == null && v.lat != null) Object.assign(t, { lat: v.lat, lng: v.lng });
-      towns.set(v.city, t);
+      const key = townSlug(v.city);
+      if (!key || v.lat == null || v.lng == null || towns.has(key)) continue;
+      towns.set(key, { city: townName(v.city), slug: key, href: `${coursePageHref(slug)}/${key}`, lat: v.lat, lng: v.lng });
     }
   }
   return [...towns.values()].sort((a, b) => a.city.localeCompare(b.city));
@@ -112,7 +120,6 @@ export function getCourseTownPage(slug, town, courses, placeName) {
   const found = getCourseTowns(slug, courses).find((t) => t.slug === town);
   if (!found && (placeName === null || !mayBeTownPage(slug, town))) return null;
   const place = found || { city: placeName || townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` };
-  if (!place) return null;
   const title = `${page.title} in ${place.city}`;
   return {
     ...page,
