@@ -75,33 +75,29 @@ export default function HomeHeader() {
             />
 
             <div className="col-auto">
-              <div className="header-right d-flex items-center">
-                <div className="header-right__icons text-white d-flex items-center">
-                  {/* search toggle start */}
-                  <HomeSearch onOpenChange={searchOpened} width={searchWidth} />
-                  {/* search toggle end */}
+              {/* search, basket, the phone menu button and the account in one row (rt-hactions): 18px apart when signed in,
+                  the old spacing when signed out (custom.scss) */}
+              <div className="header-right rt-hactions text-white d-flex items-center">
+                <HomeSearch onOpenChange={searchOpened} width={searchWidth} />
 
-                  {/* cart toggle start */}
-                  <CartToggle
-                    parentClassess={"relative ml-30 xl:ml-20"}
-                    allClasses={"d-flex items-center text-white"}
-                  />
-                  {/* cart toggle end */}
+                <CartToggle
+                  parentClassess={"relative"}
+                  allClasses={"d-flex items-center text-white"}
+                />
 
-                  <div className="d-none xl:d-block ml-20">
-                    <button
-                      onClick={() => setActiveMobileMenu(true)}
-                      className="text-white items-center"
-                      aria-label="Open menu"
-                      aria-expanded={activeMobileMenu}
-                      data-el-toggle=".js-mobile-menu-toggle"
-                    >
-                      <i className="text-11 icon icon-mobile-menu"></i>
-                    </button>
-                  </div>
+                <div className="d-none xl:d-block">
+                  <button
+                    onClick={() => setActiveMobileMenu(true)}
+                    className="text-white items-center"
+                    aria-label="Open menu"
+                    aria-expanded={activeMobileMenu}
+                    data-el-toggle=".js-mobile-menu-toggle"
+                  >
+                    <i className="text-11 icon icon-mobile-menu"></i>
+                  </button>
                 </div>
 
-                <div className="header-right__buttons d-flex items-center ml-30 md:d-none">
+                <div className="header-right__buttons rt-hactions__auth d-flex items-center md:d-none">
                   <HeaderAuth />
                 </div>
               </div>

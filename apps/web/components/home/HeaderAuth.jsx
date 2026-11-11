@@ -79,7 +79,7 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
   }
 
   return (
-    <div className="rt-hauth" ref={boxRef}>
+    <div className="rt-hauth rt-hauth--in" ref={boxRef}>
       {/* just the initials circle, like the provider workspace; the name and email are inside the menu. The button's name starts
           with the initials it shows, so someone using speech can say what they see ("click QP") */}
       <button type="button" ref={btnRef} className="rt-hauth__btn" aria-expanded={open} aria-controls="rt-hauth-menu" aria-label={`${initials(person)}, account menu for ${person.name}`} title={person.name} onClick={() => setOpen((v) => !v)}>
