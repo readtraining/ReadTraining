@@ -194,7 +194,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
               <FieldSelect id="rt-pws-gear-parent" label="Shared course page" value={course.parent ? String(course.parent.id) : ""} onChange={(v) => change({ parentId: v ? Number(v) : null }, v ? "Listed on the shared course page" : "The course now has its own page")} options={parentOptions} disabled={!edit || busy} describedBy="rt-pws-gear-parent-h" />
             </div>
           )}
-          <Toggle id="rt-pws-gear-market" checked={course.listed} disabled={!edit || busy} onChange={(v) => change({ listed: v }, v ? "The course shows in ReadTraining's search" : "The course is hidden from ReadTraining's search")} label="Show this course in ReadTraining's search" hint="If it is off, learners can still book through the course address you share." />
+          <Toggle id="rt-pws-gear-market" checked={course.listed} disabled={!edit || busy} onChange={(v) => change({ listed: v }, v ? "The course shows in ReadTraining's search" : "The course is hidden from ReadTraining's search")} label="Show this course in ReadTraining's search" hint="If it is off, the course page still opens from its address, so you can share it yourself." />
           {edit && (course.status === "live" || (course.status === "paused" && !course.statusNote)) && (
             <div className="rt-field">
               <p className="rt-acc__note">{course.status === "live" ? "Pausing takes the course off ReadTraining. Its dates stay, and you can put it back live at any time." : "This course is paused: it doesn't show on ReadTraining."}</p>

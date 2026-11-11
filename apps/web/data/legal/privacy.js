@@ -30,21 +30,21 @@ export const privacy = {
       id: "information-we-collect",
       title: "Information we collect",
       blocks: [
-        "We collect the personal information you give us, such as your name, email address and payment details, and information about how you use ReadTraining, such as the courses you view and book.",
+        "We collect the personal information you give us, such as your name and email address and, where you add them, your phone number, date of birth, address and profile photo, and information about how you use ReadTraining, such as the courses you view and book. We do not take payment details on the website yet: online booking and payment are coming soon.",
       ],
     },
     {
       id: "how-we-use-it",
       title: "How we use your information",
       blocks: [
-        "We use your information to run and improve ReadTraining, process your bookings and payments, and contact you about your account and bookings. We may also use it to personalise your experience and, where you have agreed, to send you news and offers.",
+        "We use your information to run and improve ReadTraining, arrange your bookings with training providers, and contact you about your account and bookings. We may also use it to personalise your experience and, where you have agreed, to send you news and offers.",
       ],
     },
     {
       id: "sharing",
       title: "Sharing your information",
       blocks: [
-        "We share your information only where we need to: with the training provider of the course you book, and with trusted service providers who host our website, analyse how it is used, process payments and help with our marketing.",
+        "We share your information only where we need to: with the training provider of the course you book, and with trusted service providers who host our website, send our emails, analyse how it is used and help with our marketing.",
       ],
     },
     {
@@ -65,7 +65,8 @@ export const privacy = {
       id: "your-rights",
       title: "Your rights",
       blocks: [
-        "You can ask to see, correct, update or delete your personal information at any time by emailing [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request).",
+        "You can ask to see, correct or update your personal information at any time by emailing [info@readtraining.co.uk](mailto:info@readtraining.co.uk?subject=Privacy%20request). You can change most of your details yourself in [Account settings](/account/settings).",
+        "To have your account and personal information deleted, ask us to close your account in [Account settings](/account/settings) (Close your account) or by email. We act on your request within one month and email you when it is done. Some records are kept after your account is closed, without your login: your orders, payment and other money records, which the law requires us to keep, and our security log of account activity.",
       ],
     },
     {

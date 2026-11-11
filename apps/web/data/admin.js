@@ -17,7 +17,6 @@ export const admin = {
   },
   // what a demo page says on the live site instead of its made-up records (lib/demo.js): [title, text]
   demoOff: {
-    approvals: ["No course approvals yet", "New course listings, new dates and price changes from providers arrive here once providers list real courses."],
     reports: ["No reports yet", "Sales and performance by provider, category, location and delivery method show here once bookings are live."],
     sessions: ["No sessions yet", "Every course date across every provider shows here once providers add real dates."],
     changes: ["No change requests yet", "Cancellations, date changes and card disputes on bookings arrive here once bookings are live."],
@@ -261,8 +260,8 @@ export const admin = {
       "course.images_changed": "Changed a course's pictures",
       "course.submitted": "Sent a course for approval",
       "course.review_withdrawn": "Took a course back from approval",
-      "course.change_submitted": "Sent changes to a live course for approval",
-      "course.change_withdrawn": "Withdrew changes to a live course",
+      "course.change_submitted": "Sent changes to a published course for approval",
+      "course.change_withdrawn": "Withdrew changes to a published course",
       "course.paused": "Paused a course",
       "course.resumed": "Put a course live again",
       "course.deleted": "Deleted a course",
@@ -285,8 +284,8 @@ export const admin = {
       "business.deleted": "Deleted a business account",
       "admin.course_approved": "Approved a course",
       "admin.course_changes_requested": "Asked for changes to a course",
-      "admin.course_change_approved": "Approved changes to a live course",
-      "admin.course_change_rejected": "Didn't approve changes to a live course",
+      "admin.course_change_approved": "Approved changes to a published course",
+      "admin.course_change_rejected": "Didn't approve changes to a published course",
       "admin.course_paused": "Paused a course",
       "admin.course_resumed": "Put a course live again",
       "admin.shared_course_created": "Created a shared course page",
@@ -365,12 +364,12 @@ export const admin = {
     demoTag: "Demo",
   },
 
-  // course approvals (real, API admin.courses): new courses and changes to live courses
+  // course approvals (real, API admin.courses): new courses and changes to published (live or paused) courses
   approvals: {
     title: "Approvals",
-    lead: "New courses and changes to live courses that providers sent for review, oldest first. Open one to check it, then approve it or say what to change.",
+    lead: "New courses and changes to published courses that providers sent for review, oldest first. Open one to check it, then approve it or say what to change.",
     tabs: { waiting: "Waiting", changes: "Changes asked", decided: "Decided" },
-    types: { new: "New course", change: "Change to a live course" },
+    types: { new: "New course", change: "Change to a published course" },
     outcomes: { approved: "Approved", changes: "Changes asked", rejected: "Not approved" },
     filterAll: "All types",
     review: "Review",
@@ -381,7 +380,9 @@ export const admin = {
     pause: "Pause course",
     resume: "Put back live",
     reasonLabel: "Your note (the provider sees it, and it is emailed to them)",
-    providerNotActive: "The provider isn't approved yet. Decide on the provider first.",
+    // a course can't be approved while its provider's account isn't active, by the provider's status
+    providerState: { pending: "not approved yet", changes_requested: "not approved yet", suspended: "suspended", rejected: "application turned down" },
+    providerNotActive: (status) => ({ suspended: "The provider's account is suspended. Decide on the provider first.", rejected: "The provider's application was turned down, so this course can't be approved." }[status] || "The provider isn't approved yet. Decide on the provider first."),
     ownBlocked: "You sent this yourself, so another admin must decide on it.",
     ownSole: "You sent this yourself. No other admin can approve it, so you can decide on it, with a reason. It is recorded in the activity log as your own request.",
     ownQueue: "Sent by you",
@@ -389,9 +390,9 @@ export const admin = {
     dueDays: 2,
     // each tab's empty state: [title, line]
     empty: {
-      waiting: ["Nothing waiting", "New courses, and changes to live courses, show here when providers send them."],
+      waiting: ["Nothing waiting", "New courses, and changes to published courses, show here when providers send them."],
       changes: ["Nothing waiting on providers", "Courses sent back for changes show here until the provider sends them again."],
-      decided: ["Nothing decided yet", "Courses you approve or send back show here."],
+      decided: ["Nothing decided yet", "Approved courses and decided changes show here."],
     },
   },
 
@@ -769,8 +770,8 @@ export const admin = {
       children: "Providers' courses on this page",
       childrenNone: "No provider has listed a course on this page yet.",
       change: "Waiting change",
-      changeNote: "What the provider changed, against the live version. Approving it makes it the live version.",
-      now: "Live now",
+      changeNote: "What the provider changed, against the current version. Approving it makes it the current version.",
+      now: "Current",
       proposed: "Proposed",
       fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
     },

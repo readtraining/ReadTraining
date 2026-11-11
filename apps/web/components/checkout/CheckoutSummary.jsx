@@ -63,7 +63,7 @@ export default function CheckoutSummary({ lines, totals, promo, walletUse = 0, p
         <span>{walletUse > 0 ? "To pay" : "Total"}</span>
         <strong>{formatPrice(due)}</strong>
       </div>
-      <p className="rt-bk__allinc">All inc. No booking fee.</p>
+      <p className="rt-bk__allinc">Prices include VAT. No booking fee.</p>
       <button type="submit" form={formId} className="button -md -purple-1 text-white rt-bk__go rt-ck__paybtn" disabled={paying} aria-busy={paying}>
         {paying ? copy.paying : due === 0 ? copy.complete : `${copy.pay} ${formatPrice(due)}`}
       </button>

@@ -49,7 +49,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
     { id: "learning-options", label: "Learning options" },
     { id: "overview", label: "Overview" },
     ...(course.modules.length ? [{ id: "content", label: "Course content" }] : []),
-    { id: "requirements", label: "Requirements" },
+    ...(requirements ? [{ id: "requirements", label: "Requirements" }] : []),
     ...(guide?.packages ? [{ id: "packages", label: "Packages" }] : []),
     ...(guide?.business ? [{ id: "business", label: "For business" }] : []),
     ...(guide?.licence ? [{ id: "licence", label: "Your licence" }] : []),
@@ -151,6 +151,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
 
                   <TickCard id="rt-cg-incl-h" title={guide?.included?.title} items={guide?.included?.items} />
 
+                  {requirements && (
                   <section className="rt-cd__sec" id="requirements" aria-labelledby="rt-cd-req-h">
                     <h2 id="rt-cd-req-h">{requirements.title}</h2>
                     <LongBody>
@@ -162,6 +163,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
                       )}
                     </LongBody>
                   </section>
+                  )}
 
                   {exams && (
                     <section className="rt-cd__sec" aria-labelledby="rt-cd-exams-h">

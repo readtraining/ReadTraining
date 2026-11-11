@@ -5,6 +5,7 @@ import { provider } from "@/data/provider";
 import { testPrepPage } from "@/data/testPrep";
 import { terms } from "@/data/legal/terms";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { TEAM } from "@/lib/teamTraining";
 
 // The Help Centre (/help-centre): topics > articles, read through lib/help.js. The structure follows the client's current
 // support hub (learners, businesses, providers); the answers are the site's own, imported from the pages that already give
@@ -79,7 +80,7 @@ export const helpTopics = [
         summary: "Group places, in-house courses, quotes and business accounts.",
         blocks: [
           fromAbout("Can I book training for my team?"),
-          "Group quotes start at 6 people. [Ask for a quote](/contact-us?topic=business#contact-form) and tell us the course, how many people and roughly when.",
+          `In-house training: ${TEAM.note.toLowerCase()}. [Ask for a quote](/contact-us?topic=business#contact-form) and tell us the course, how many people and roughly when.`,
           "To manage your team's places, learners and certificates in one place, see [Training for business](/for-business).",
         ],
       },
@@ -172,12 +173,12 @@ export const helpTopics = [
     title: "Business accounts",
     summary: "Buying places, managing learners, certificates and credit.",
     articles: [
-      { slug: "buy-places-before-naming-learners", title: "Buy places before you name learners", summary: "Hold course places and assign them when you are ready.", blocks: [fromBusiness("Can we buy training before we know which employee will attend?")] },
-      { slug: "track-learner-progress", title: "Track your learners' progress", summary: "See learners and their progress in your Business account.", blocks: [fromBusiness("What can we see after assigning training?")] },
-      { slug: "certificates-and-expiry-dates", title: "See certificates and expiry dates", summary: "Know which training is due for renewal.", blocks: [fromBusiness("Can we access learner certificates and expiry dates?")] },
-      { slug: "share-your-account", title: "Share your Business account with colleagues", summary: "Add team members with roles to share the admin.", blocks: [fromBusiness("Can more than one colleague manage the Business account?")] },
+      { slug: "buy-places-before-naming-learners", title: "Buy places before you name learners", summary: "Coming soon: hold course places and assign them when you are ready.", blocks: [fromBusiness("Can we buy training before we know which employee will attend?")] },
+      { slug: "track-learner-progress", title: "Track your learners' progress", summary: "Coming soon: see learners and their progress in your Business account.", blocks: [fromBusiness("What can we see after assigning training?")] },
+      { slug: "certificates-and-expiry-dates", title: "See certificates and expiry dates", summary: "Coming soon: see which training is due for renewal.", blocks: [fromBusiness("Can we access learner certificates and expiry dates?")] },
+      { slug: "share-your-account", title: "Share your Business account with colleagues", summary: "Coming soon: add team members with roles to share the admin.", blocks: [fromBusiness("Can more than one colleague manage the Business account?")] },
       { slug: "business-credit", title: "Pay with a Business credit account", summary: "Credit facilities for eligible regular customers.", blocks: [fromBusiness("How do Business credit accounts work?"), "To ask about credit, [send us a message](/contact-us?topic=business#contact-form)."] },
-      { slug: "training-bought-elsewhere", title: "Training bought elsewhere", summary: "What the Business area covers.", blocks: [fromBusiness("Can we manage training bought elsewhere?")] },
+      { slug: "training-bought-elsewhere", title: "Training bought elsewhere", summary: "What the Business area will cover.", blocks: [fromBusiness("Can we manage training bought elsewhere?")] },
     ],
   },
   {

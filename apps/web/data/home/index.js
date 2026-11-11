@@ -177,10 +177,10 @@ export const contentDefaults = {
 export const teamBooking = {
   eyebrow: "For employers",
   title: "Training for teams, arranged in one go.",
-  text: "Book several employees at once, get group pricing and choose a training centre, your workplace or live online.",
+  text: "Book several employees at once, ask us for a group quote by phone or email, and choose a training centre, your workplace or live online.",
   features: [
     { id: 1, title: "Book multiple employees", text: "Book several employees without repeating the booking process." },
-    { id: 2, title: "Business and group pricing", text: "Access suitable pricing for eligible group, repeat or larger bookings." },
+    { id: 2, title: "Group quotes", text: "Call or email us about a group, repeat or larger booking and we will put a quote together." },
     { id: 3, title: "Flexible training locations", text: "Arrange training at your workplace, a training centre or another suitable venue for your team." },
   ],
   button: "Book for your team",
@@ -212,7 +212,7 @@ export const providers = {
   text: "Put your dates, venues and prices in front of learners across the UK and manage every booking from one place.",
   points: [
     { title: "List every date, venue and price", text: "Create course pages with live availability, study methods and booking options." },
-    { title: "Bookings and learner details in one place", text: "New bookings, payments and learner records arrive in your provider account." },
+    { title: "Bookings and learner details in one place", text: "When online booking opens, new bookings and learner details will arrive in your provider account." },
     { title: "Be found by learners across the UK", text: "Appear in searches by course, location and study method, with no upfront cost." },
   ],
   button: "List your courses",

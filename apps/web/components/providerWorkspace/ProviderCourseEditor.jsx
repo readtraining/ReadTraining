@@ -1086,7 +1086,7 @@ function ModeSection({ course, draft, setDraft, access, onSaved }) {
             <h2 className="rt-acc__h2" id="rt-pws-ce-dates-h">Dates</h2>
             {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Add dates</button>}
           </div>
-          <p className="rt-acc__note">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}.` : "No upcoming dates yet."} Each date has its own {course.method === "classroom" ? "venue, " : "joining link, "}places and price. Learners can book once the course is live.</p>
+          <p className="rt-acc__note">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}.` : "No upcoming dates yet."} Each date has its own {course.method === "classroom" ? "venue, " : "joining link, "}places and price. Learners see the dates once the course is live; online booking opens in a later update.</p>
           <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>
         </section>
       )}

@@ -22,15 +22,11 @@ const hero_content = {
   title: hero.title,
   text_underline: hero.titleAccent,
   info_hero: hero.text,
-  starts: [
-    "icon-star text-yellow-1 text-11",
-    "icon-star text-yellow-1 text-11",
-    "icon-star text-yellow-1 text-11",
-    "icon-star text-yellow-1 text-11",
-    "icon-star text-yellow-1 text-11",
-  ],
 };
-const { title, text_underline, info_hero, starts } = hero_content;
+const { title, text_underline, info_hero } = hero_content;
+
+// How much of each of the five stars to fill for a rating (4.9: four full stars and the fifth nine-tenths filled).
+const starFills = (rating) => [0, 1, 2, 3, 4].map((i) => Math.max(0, Math.min(1, Number(rating) - i)));
 
 const HomeHero = () => {
   const trust = trustFigures();
@@ -141,24 +137,18 @@ const HomeHero = () => {
                   className="d-flex flex-wrap items-center pt-40"
                   style={{ gap: "14px 18px" }}
                 >
-                  <div className="d-flex items-center">
-                    {[1, 2, 3, 4, 5].map((n, i) => (
-                      <Image
-                        key={n}
-                        width={40}
-                        height={40}
-                        src={`/assets/img/avatars/small/${n}.png`}
-                        alt=""
-                        className="rounded-full"
-                        style={{ width: 40, height: 40, objectFit: "cover", border: "2px solid var(--color-dark-1)", marginLeft: i ? -12 : 0 }}
-                      />
-                    ))}
-                  </div>
                   <div>
                     <div className="d-flex items-center" style={{ gap: 8 }}>
-                      <div className="d-flex" style={{ gap: 2 }}>
-                        {starts.map((start, index) => (
-                          <div key={index} className={start}></div>
+                      <div className="d-flex" style={{ gap: 2 }} aria-hidden="true">
+                        {starFills(trust.rating).map((fill, index) => (
+                          <span key={index} style={{ position: "relative", display: "inline-block", lineHeight: 1 }}>
+                            <span className="icon-star text-11 d-block" style={{ color: "rgba(255,255,255,0.25)" }}></span>
+                            {fill > 0 && (
+                              <span style={{ position: "absolute", top: 0, left: 0, width: `${Math.round(fill * 100)}%`, overflow: "hidden", whiteSpace: "nowrap" }}>
+                                <span className="icon-star text-yellow-1 text-11 d-block"></span>
+                              </span>
+                            )}
+                          </span>
                         ))}
                       </div>
                       <span className="text-14 fw-500 text-white lh-1">{trust.ratingOutOf}</span>

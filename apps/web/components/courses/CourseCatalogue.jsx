@@ -480,7 +480,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
 
             {noMatches &&
               (hasFilters ? (
-                <EmptyState live title="No courses match your search" text="Nothing matches all of these filters. Try removing one, or search a wider area." secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
+                <EmptyState live title="No courses match your search" text={state.location.trim() ? "Nothing matches all of these filters. Try removing one, or search a wider area." : "Nothing matches all of these filters. Try removing one."} secondary={{ label: "Remove last filter", onClick: removeLast }} action={{ label: "Clear all filters", onClick: clearAll }} />
               ) : (
                 <EmptyState live title="No courses here yet" text="New courses are added as training providers join. Check back soon, or contact us and we'll help you find one." action={{ label: "Contact us", href: "/contact-us" }} />
               ))}
@@ -497,10 +497,10 @@ export default function CourseCatalogue({ courses, scope = null }) {
 
         <hr className="rt-cat__rule" />
         <section className="rt-cat__about-wrap" aria-labelledby="rt-about-title">
-        <h2 className="rt-cat__about-title" id="rt-about-title">{scope?.about.title || "About our training courses"}</h2>
+        <h2 className="rt-cat__about-title" id="rt-about-title">{scope?.about.title || "About the courses on ReadTraining"}</h2>
         <p className="rt-cat__about">
           {scope?.about.text ||
-            "Our affordable courses give you high-quality skills training, from essential compliance topics such as safeguarding, health & safety and food safety to personal development and wellbeing. Learn at the time, place and pace that suit you. Most of our courses are certified."}
+            "ReadTraining brings together courses from independent UK training providers, each approved by our team before it can list a course. Compare dates, venues and prices in one place, and check each course page for how it is taught and what it leads to."}
         </p>
         </section>
       </div>

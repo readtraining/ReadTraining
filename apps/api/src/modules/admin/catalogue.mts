@@ -197,11 +197,12 @@ export const catalogueAdminRouter = createTRPCRouter({
         const content = await count(sql`select count(*)::int n from public.site_content where ${sql.join(paths.map((p) => sql`value::text like ${'%"' + p + '%'}`), sql` or `)}`)
         if (content) uses.push('the site content (the home page’s featured courses)')
       }
-      if (courses) uses.unshift(`${courses} ${courses === 1 ? 'course' : 'courses'} (live, draft or paused)`)
+      if (courses) uses.unshift(`${courses} ${courses === 1 ? 'course' : 'courses'}`)
       if (pending) uses.push(`${pending} course ${pending === 1 ? 'change' : 'changes'} waiting for approval`)
       if (uses.length) {
-        const also = under.length > 1 ? ' (or its sub-categories and topics)' : ''
-        throw new TRPCError({ code: 'BAD_REQUEST', message: `${row.name} can't be deleted: ${uses.join(', ')} ${uses.length === 1 && !uses[0].includes('content') ? 'uses' : 'use'} it${also}. It stays retired, so nobody sees it.` })
+        const also = under.length > 1 ? ', with its sub-categories and topics,' : ''
+        const list = uses.length > 1 ? `${uses.slice(0, -1).join(', ')} and ${uses[uses.length - 1]}` : uses[0]
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `${row.name} can't be deleted. It${also} is used by: ${list}. It stays retired, so nobody sees it.` })
       }
       await ctx.db.transaction(async (tx) => {
         if (ids('topic').length) await tx.execute(sql`delete from public.topics where id::text in ${inList(ids('topic'))}`)

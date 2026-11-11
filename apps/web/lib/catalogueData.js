@@ -124,7 +124,8 @@ export function toCourseDetail(page, related = []) {
     learningOutcomes: page.outcomes,
     audience,
     showAudience: audience.length > 0,
-    requirements: { title: `Entry requirements for the ${page.title}`, paragraphs: entry.length ? entry : ["There are no entry requirements for this course."], list: [] },
+    // left blank, the provider hasn't said (not "none"), so the page leaves the section out
+    requirements: entry.length ? { title: `Entry requirements for the ${page.title}`, paragraphs: entry, list: [] } : null,
     modules: page.units.map((u) => ({ title: u.title, duration: "", topics: lines(u.body) })),
     exams: page.exams.length ? { title: "How will I be assessed?", intro: [], rows: page.exams, outro: [] } : undefined,
     faqs: page.faqs,

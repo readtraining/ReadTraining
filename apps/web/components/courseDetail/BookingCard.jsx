@@ -156,14 +156,14 @@ export default function BookingCard() {
             ) : onDemand ? (
               <>
                 <li><Icon name="calendar" /><span>{session.time}</span></li>
-                <li><Icon name="coupon" /><span>All inc</span></li>
+                <li><Icon name="coupon" /><span>Price includes VAT</span></li>
               </>
             ) : (
               <>
                 {withBundle && <li className="rt-bs__pkg"><Icon name="badge" /><span>{withBundle.name}<small> (+{formatPrice(withBundle.add)})</small></span></li>}
                 <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}</span></li>
                 <li><Icon name="location" /><span>{session.location}</span></li>
-                <li><Icon name="coupon" /><span>All inc</span></li>
+                <li><Icon name="coupon" /><span>Price includes VAT</span></li>
               </>
             )}
           </ul>

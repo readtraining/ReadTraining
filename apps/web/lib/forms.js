@@ -10,14 +10,15 @@ import { getHumanCheck } from "@/lib/humanCheck";
 // So the day a form's endpoint exists, put its function here: the "coming soon" goes away everywhere that form is used.
 // scripts/check-forms.mjs (run in CI with the typecheck) fails the build on a made-up reference, a simulated send, or a public
 // form that doesn't go through <FormGate>.
+// A panel's `text` names the email address once, as "{email}" (shown as its link); a text without it gets "Or email …" after it.
 export const FORMS = {
-  checkout: { send: null, title: "Online booking is coming soon", text: "To book a place now, call or email us and we’ll arrange it for you." },
-  contact: { send: null, title: "Our contact form is coming soon", text: "In the meantime, call or email us and we’ll get back to you." },
-  quote: { send: null, title: "Online quotes are coming soon", text: "For a group or team quote now, call or email us with the course, the number of people and where." },
-  jobs: { send: null, title: "Online applications are coming soon", text: "To register your interest now, email us your name, phone number and SIA licence details." },
-  hseTest: { send: null, title: "Online test booking is coming soon", text: "To book your CITB HS&E test now, call or email us with your preferred centre and dates." },
-  licence: { send: null, title: "Online applications are coming soon", text: "For help with your licence or card now, call or email us." },
-  certificate: { send: null, title: "Certificate checks are coming soon", text: "To confirm a certificate now, email us the certificate number and the holder’s full name." },
+  checkout: { send: null, title: "Online booking is coming soon", text: "To book a place now, call us or email {email} and we’ll arrange it for you." },
+  contact: { send: null, title: "Our contact form is coming soon", text: "In the meantime, call us or email {email} and we’ll get back to you." },
+  quote: { send: null, title: "Online quotes are coming soon", text: "For a group or team quote now, call us or email {email} with the course, the number of people and where." },
+  jobs: { send: null, title: "Online applications are coming soon", text: "To register your interest now, email {email} with your name, phone number and SIA licence details." },
+  hseTest: { send: null, title: "Online test booking is coming soon", text: "To book your CITB HS&E test now, call us or email {email} with your preferred centre and dates." },
+  licence: { send: null, title: "Online applications are coming soon", text: "For help with your licence or card now, call us or email {email}." },
+  certificate: { send: null, title: "Certificate checks are coming soon", text: "To confirm a certificate now, email {email} with the certificate number and the holder’s full name." },
   // the provider settings that have no server yet (VAT number, email addresses, questions and answers, integrations)
   providerSettings: { send: null, title: "This setting is coming soon", text: "To set it up now, call or WhatsApp us." },
   // the Business account's Team page (signed in, not public): inviting and removing colleagues

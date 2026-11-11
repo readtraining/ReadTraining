@@ -65,6 +65,8 @@ const DECISIONS: Record<Decision, { from: Course['status'][]; message: boolean; 
 }
 
 const CHANGED_SINCE = 'The provider changed this since you opened it. Reload the page to see the latest version.'
+// when the course (or its change) is no longer waiting: another admin may have decided on it, or the provider withdrawn it
+const DECIDED_OR_CHANGED = 'This has just been decided or changed. Reload the page to see where it stands.'
 // `seen` is when the version on the admin's screen was sent; anything else (or nothing) is not that version
 const notSeen = (seen: string | undefined, sentAt: Date | string | null) => !seen || !sentAt || new Date(seen).getTime() !== new Date(sentAt).getTime()
 
@@ -285,11 +287,12 @@ export const adminCoursesRouter = createTRPCRouter({
       await ctx.db.transaction(async (tx) => {
         // the provider's edits lock this row too (lockStatus in modules/provider/courses.mts): whichever comes second sees the other
         const [locked] = await tx.select({ status: courses.status, submittedAt: courses.submittedAt }).from(courses).where(eq(courses.id, course.id)).for('update')
-        if (!locked || !rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
+        if (!locked || !rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
         if (onWaiting && notSeen(input.seen, locked.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
         if (isChange) {
           const [rev] = await tx.select({ status: courseRevisions.status, submittedAt: courseRevisions.submittedAt }).from(courseRevisions).where(eq(courseRevisions.id, revision.id))
-          if (rev?.status !== 'pending' || notSeen(input.seen, rev.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
+          if (rev?.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
+          if (notSeen(input.seen, rev.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
         }
         if (input.decision === 'approve') await tx.update(courses).set({ status: 'live', statusNote: null, decidedAt: now, decidedBy: ctx.user.id, publishedAt: course.publishedAt ?? now, updatedAt: now }).where(eq(courses.id, course.id))
         if (input.decision === 'changes') await tx.update(courses).set({ status: 'changes', statusNote: message, decidedAt: now, decidedBy: ctx.user.id, updatedAt: now }).where(eq(courses.id, course.id))

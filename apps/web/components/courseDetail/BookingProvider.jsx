@@ -188,7 +188,7 @@ export default function BookingProvider({ course, initialMode, initialSession, i
   const addToBasket = useCallback(() => {
     if (status === "loading" || status === "added" || !session || isInHouse) return;
     // the editors' Preview of a course that may not be live yet: nothing goes in the basket
-    if (course.preview) return notify({ message: "This is a preview, so booking is off. Learners can book once the course is live." });
+    if (course.preview) return notify({ message: "This is a preview, so booking is off. Learners see the dates once the course is live; online booking opens in a later update." });
     setStatus("loading");
     later(() => {
       try {

@@ -63,7 +63,7 @@ export default function ProviderCohortDetail({ cohortId }) {
     const to = !k.bookable;
     setBookableNow(to);
     bookable.mutate({ organisationId, cohortId, bookable: to }, {
-      onSuccess: async () => { setToast({ message: to ? "Bookings turned on. Learners can book this cohort again." : "Bookings turned off. Learners can't book this cohort now." }); await refresh(); setBookableNow(null); },
+      onSuccess: async () => { setToast({ message: to ? "Bookings turned on. Learners can book this cohort once online booking opens." : "Bookings turned off. Learners can't book this cohort now." }); await refresh(); setBookableNow(null); },
       onError: (e) => { setBookableNow(null); setToast({ message: errorsFrom(e).general || "We couldn't change that. Please try again." }); },
     });
   };

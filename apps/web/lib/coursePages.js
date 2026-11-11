@@ -20,13 +20,13 @@ const categoryPage = (cat) => ({
   slug: cat.slug,
   label: `${cat.name} courses`,
   title: `${cat.name} courses`,
-  description: `Compare ${cat.name.toLowerCase()} courses from approved UK training providers: classroom, live online and self-paced, with their dates and prices.`,
-  lead: `Every ${cat.name.toLowerCase()} course on ReadTraining, from approved training providers. Compare dates, places and prices.`,
+  description: `Compare ${cat.name.toLowerCase()} courses from approved UK training providers, with their dates, venues and prices.`,
+  lead: `${cat.name} courses from approved training providers. Compare dates, venues and prices.`,
   select: { subject: cat.slug },
   hide: ["subject"],
   about: {
     title: `About ${cat.name.toLowerCase()} courses`,
-    text: `Each course is run by an approved training provider and checked by our team before it goes live. Compare the providers' dates, venues and prices, then book the one that suits you.`,
+    text: `Each course is run by an approved training provider and checked by our team before it goes live. Compare the providers' dates, venues and prices, and choose the one that suits you.`,
   },
   faq: [],
 });

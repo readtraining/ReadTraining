@@ -5,11 +5,11 @@
 export const providerPages = {
   directory: {
     title: "Listed training providers | ReadTraining",
-    description: "Browse the approved training providers listed on ReadTraining, see the courses each one runs and book directly through ReadTraining.",
+    description: "Browse the approved training providers listed on ReadTraining, see the courses each one runs and compare their dates and prices.",
     hero: {
       eyebrow: "Listed training providers",
       title: ["Approved training providers listed with ReadTraining"],
-      lead: "Whatever your learning goals, our training providers help you reach them, in a simple and seamless way. See our current partners below.",
+      lead: "Every provider here is an independent training company approved by our team. See who they are and compare the courses each one runs.",
       primary: { label: "Get started", href: "/for-providers" },
       secondary: { label: "Need support? Contact us", href: "/contact-us" },
     },
@@ -34,7 +34,7 @@ export const providerPages = {
       text: "These apply to courses booked with {name} through ReadTraining.",
       items: [
         { q: "Booking and payment", a: "Online booking is coming soon. Until then, call or email us and we'll book your place for you. The price shown for a date is the price you pay." },
-        { q: "Rescheduling and cancellation", a: "Date changes and cancellations follow the provider's own policy. Ask us before you book and we'll tell you what it is." },
+        { q: "Rescheduling and cancellation", a: "Date changes and cancellations follow the provider's own cancellation policy, shown above when they have added one. If it isn't shown, ask us before you book and we'll tell you what it is." },
         { q: "Results and certificates", a: "Your certificate is issued once you have completed the course and passed any assessment. Results from an awarding body can take up to 14 working days." },
         { q: "Conduct", a: "Learners are expected to follow the venue's rules and treat others with respect. A provider can ask someone to leave a course if their behaviour affects other learners." },
       ],

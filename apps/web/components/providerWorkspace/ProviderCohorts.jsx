@@ -229,7 +229,7 @@ export default function ProviderCohorts() {
   const toggleBookings = (k) => {
     change(k.id, { bookable: !k.bookable });
     bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
-      onSuccess: async () => { setToast({ message: k.bookable ? "Bookings turned off. Learners can't book this cohort now." : "Bookings turned on. Learners can book this cohort again." }); await refresh(); change(k.id, null); },
+      onSuccess: async () => { setToast({ message: k.bookable ? "Bookings turned off. Learners can't book this cohort now." : "Bookings turned on. Learners can book this cohort once online booking opens." }); await refresh(); change(k.id, null); },
       onError: (e) => { change(k.id, null); fail(e); },
     });
   };
@@ -242,7 +242,7 @@ export default function ProviderCohorts() {
       {nothingYet && mode !== "self-paced" ? (
         <EmptyState
           title="No upcoming dates"
-          text="A cohort is one run of a course on set dates. Add one so learners can book it once the course is live."
+          text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live; online booking opens in a later update."
           action={edit ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", href: "/provider/courses/new" }) : null}
         />
       ) : null}
@@ -690,7 +690,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               {method === "live-online" && (
                 <div className="rt-field">
                   <label htmlFor="rt-cf-joinUrl">Joining link (optional)</label>
-                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Meet link. You can add it later; learners get it before the first session.</p>
+                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Meet link. You can add it later; once online booking opens, learners get it before the first session.</p>
                   {err("joinUrl")}
                   <input id="rt-cf-joinUrl" type="url" inputMode="url" value={f.joinUrl} onChange={(e) => set({ joinUrl: e.target.value })} autoComplete="url" aria-invalid={errors.joinUrl ? true : undefined} aria-describedby={`rt-cf-joinUrl-h${errors.joinUrl ? " rt-cf-joinUrl-e" : ""}`} />
                 </div>

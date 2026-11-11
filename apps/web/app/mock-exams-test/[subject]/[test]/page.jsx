@@ -8,6 +8,7 @@ import HomeFooter from "@/components/home/HomeFooter";
 import SubjectHero from "@/components/testPrep/subject/SubjectHero";
 import TestRunner from "@/components/testPrep/runner/TestRunner";
 import CommentButton from "@/components/testPrep/runner/CommentButton";
+import FormGate from "@/components/forms/FormGate";
 import SubjectCourses from "@/components/testPrep/subject/SubjectCourses";
 import { testPrepPage } from "@/data/testPrep";
 import { bookHref, formatDuration, getSubject, getSubjectCourses, getSubjectSlugs, passCount, ownTests, subjectHref, testRedirect } from "@/lib/testPrep";
@@ -109,6 +110,8 @@ export default async function MockTestPage(props) {
             <div className="rt-tq__after">
             <SubjectCourses courses={courses} />
 
+            {/* the box asks for a comment, so it shows only once comments can be sent (lib/forms.js testComment) */}
+            <FormGate form="testComment">
             <section className="rt-tq__ask layout-pb-lg" aria-labelledby="rt-tq-ask-h">
               <div className="container">
                 <div className="rt-tps__rvempty">
@@ -121,6 +124,7 @@ export default async function MockTestPage(props) {
                 </div>
               </div>
             </section>
+            </FormGate>
             </div>
           </main>
           <HomeHelp />

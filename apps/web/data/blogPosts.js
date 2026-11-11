@@ -48,8 +48,7 @@ export const blogPosts = [
     title: "How to renew your SIA licence",
     summary: "When to apply, the refresher training and first aid you need, and how to avoid a gap in your licence.",
     lead: "A front-line SIA licence lasts three years. Renewing on time keeps you working, and the steps are simple once you know the order.",
-    published: "2026-09-22",
-    updated: "2026-10-01",
+    published: "2026-10-13",
     related: [TOPICS.doorTopUp, TOPICS.efaw, TOPICS.doorSupervisor],
     sources: [
       { label: "Renew your SIA licence (GOV.UK)", href: "https://www.gov.uk/guidance/renew-your-sia-licence" },
@@ -140,7 +139,7 @@ export const blogPosts = [
     title: "Door supervisor or security guard: which SIA licence do you need?",
     summary: "What each licence lets you do, how the training differs and which one gives you more choice of work.",
     lead: "Both licences start a career in security, but they open different doors. Here is how to choose the right one before you book.",
-    published: "2026-08-18",
+    published: "2026-10-13",
     related: [TOPICS.doorSupervisor, TOPICS.securityOfficer, TOPICS.conflict],
     sources: [{ label: "Security Industry Authority (GOV.UK)", href: "https://www.gov.uk/government/organisations/security-industry-authority" }],
     sections: [
@@ -226,7 +225,7 @@ export const blogPosts = [
     title: "How long is a first aid certificate valid in the UK?",
     summary: "How long workplace and paediatric first aid certificates last, and how to renew before they expire.",
     lead: "Most first aid certificates last three years. What you do before the expiry date decides whether you need a refresher or the full course again.",
-    published: "2026-09-08",
+    published: "2026-10-13",
     related: [TOPICS.efaw, TOPICS.faw, TOPICS.paediatric],
     sources: [
       { label: "First aid at work (HSE)", href: "https://www.hse.gov.uk/firstaid/" },
@@ -306,7 +305,7 @@ export const blogPosts = [
     title: "Emergency First Aid at Work or First Aid at Work: which course?",
     summary: "The difference between the 1-day and 3-day workplace first aid courses, and how employers choose.",
     lead: "Both courses train workplace first aiders. The right one depends on the risks in your workplace, not on which is quicker.",
-    published: "2026-07-21",
+    published: "2026-10-13",
     related: [TOPICS.efaw, TOPICS.faw, TOPICS.mentalHealth],
     sources: [
       { label: "First aid at work (HSE)", href: "https://www.hse.gov.uk/firstaid/" },
@@ -391,7 +390,7 @@ export const blogPosts = [
     title: "How to get a CSCS Labourer card",
     summary: "The qualification, the test and the application for the green CSCS card most labourers need on site.",
     lead: "Most building sites ask workers to show a CSCS card. For labouring work, that is the green Labourer card. Here is how to get one.",
-    published: "2026-08-04",
+    published: "2026-10-13",
     related: [TOPICS.cscsGreen, TOPICS.asbestos, TOPICS.trafficMarshal],
     sources: [
       { label: "Labourer card (CSCS)", href: "https://www.cscs.uk.com/card-type/labourer/" },
@@ -467,7 +466,7 @@ export const blogPosts = [
     title: "SMSTS or SSSTS: which site safety course do you need?",
     summary: "The CITB courses for site managers and supervisors compared: who each is for, how long they take and how to renew.",
     lead: "Both are CITB Site Safety Plus courses, and many principal contractors ask for one of them. The right one depends on your role on site.",
-    published: "2026-07-07",
+    published: "2026-10-13",
     related: [TOPICS.smsts, TOPICS.sssts, TOPICS.cscsGreen],
     sources: [{ label: "CITB", href: "https://www.citb.co.uk/" }],
     sections: [
@@ -530,7 +529,7 @@ export const blogPosts = [
     title: "What does a fire marshal do?",
     summary: "The duties of a fire marshal or fire warden, the law behind the role and the training that helps.",
     lead: "Fire marshals, also called fire wardens, help keep a workplace safe from fire and lead people out if the alarm sounds.",
-    published: "2026-08-25",
+    published: "2026-10-13",
     related: [TOPICS.fireMarshal, TOPICS.efaw, TOPICS.ioshManagingSafely],
     sources: [{ label: "Fire safety in the workplace (GOV.UK)", href: "https://www.gov.uk/workplace-fire-safety-your-responsibilities" }],
     sections: [
@@ -597,7 +596,7 @@ export const blogPosts = [
     title: "IOSH Managing Safely or NEBOSH General Certificate?",
     summary: "Two well-known health and safety qualifications compared: who they are for, what they involve and where they lead.",
     lead: "Both are respected health and safety qualifications, but they are aimed at different people. Choosing well saves you time and money.",
-    published: "2026-09-29",
+    published: "2026-10-13",
     related: [TOPICS.ioshManagingSafely, TOPICS.nebosh, TOPICS.manualHandling],
     sources: [
       { label: "IOSH", href: "https://iosh.com/" },
@@ -659,7 +658,7 @@ export const blogPosts = [
     title: "Do you need a personal licence to sell alcohol?",
     summary: "Who needs a personal licence in England and Wales, how to get one and what it lets you do.",
     lead: "Not everyone behind the bar needs a personal licence, but every sale of alcohol must be authorised by someone who has one.",
-    published: "2026-09-15",
+    published: "2026-10-13",
     related: [TOPICS.personalLicence, TOPICS.foodHygiene2, TOPICS.foodHygiene3],
     sources: [
       { label: "Personal licence to sell alcohol (GOV.UK)", href: "https://www.gov.uk/find-licences/personal-licence-to-sell-alcohol" },

@@ -38,7 +38,7 @@ export default function CourseHero({ course }) {
             <p className="rt-cd__hprice">
               <span className="rt-cd__hprice-from">From</span>
               <strong className="rt-cd__hprice-now">{formatPrice(lowest.price)}</strong>
-              <span className="rt-cd__hprice-inc">All inc</span>
+              <span className="rt-cd__hprice-inc">inc. VAT</span>
               {lowest.wasPrice > lowest.price && <s className="rt-cd__hprice-was"><span className="rt-cd__sr">was </span>{formatPrice(lowest.wasPrice)}</s>}
               {pct > 0 && <span className="rt-cd__hprice-off">{pct}% off</span>}
             </p>

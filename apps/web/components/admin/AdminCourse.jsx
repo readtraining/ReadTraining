@@ -68,7 +68,7 @@ export default function AdminCourse({ id }) {
       const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen });
       refresh();
       refreshCourses().catch(() => {});
-      const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the live version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
+      const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the current version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
       setSaid(`${text}.${r.emailed ? " The provider was emailed." : decision === "resume" ? "" : " The email to the provider could not be sent."}`);
       return "";
     } catch (e) {
@@ -98,7 +98,8 @@ export default function AdminCourse({ id }) {
   };
   const busy = decide.isPending;
   const sheetTitle = { approve: ap.approve, changes: ap.requestChanges, approveChange: ap.approveChange, rejectChange: ap.rejectChange, pause: ap.pause, resume: ap.resume }[asking] || "";
-  const own = Boolean(c.ownCourse || c.ownChange);
+  // the "you sent this yourself" notice: only while their own course, or their own change, waits for a decision
+  const own = Boolean((c.status === "pending" && c.ownCourse) || (c.pendingChanges && c.ownChange));
   // a course (or a change) waiting for a decision opens every section of its page: the admin reads it all before deciding
   const reviewing = c.status === "pending" || Boolean(c.pendingChanges);
   const place = [categoryName(c.category), subcategoryName(c.category, c.subcategory), topicName(c.category, c.subcategory, c.topic)].filter(Boolean).join(" › ");
@@ -116,12 +117,12 @@ export default function AdminCourse({ id }) {
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name" id="rt-adm-course-h">{c.title}</h1>
           <p className="rt-acc__note">
-            {c.provider ? <>{d.provider}: <Link href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</Link>{!providerReady && " (not approved yet)"}</> : "Written by our team"}
+            {c.provider ? <>{d.provider}: <Link href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</Link>{!providerReady && ` (${ap.providerState[c.provider.status] || "account not active"})`}</> : "Written by our team"}
             {c.parent && <> · {d.sharedPage}: <Link href={`/admin/catalogue/${c.parent.id}`}>{c.parent.title}</Link></>}
           </p>
           {c.parent && !c.parent.sameSubject && <p className="rt-acc__notice -warn">{d.otherSubject(c.parent.title)}</p>}
           {c.statusNote && (c.status === "changes" || c.status === "paused") && <p className="rt-adm-item__reason"><strong>{c.status === "changes" ? "Note to the provider:" : "Why it is paused:"}</strong> {c.statusNote}</p>}
-          {canDecide && c.status === "pending" && !providerReady && <p className="rt-adm-item__block">{ap.providerNotActive}</p>}
+          {canDecide && c.status === "pending" && !providerReady && <p className="rt-adm-item__block">{ap.providerNotActive(c.provider?.status)}</p>}
           {canDecide && own && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownSole : ap.ownBlocked}</p>}
         </div>
         <div className="rt-adm-hero__actions">

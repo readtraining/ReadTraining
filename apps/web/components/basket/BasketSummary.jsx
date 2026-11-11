@@ -79,7 +79,7 @@ export function BasketSummary({ totals, issues, promo, onPromo, count, signedOut
         <span>Total</span>
         <strong>{formatPrice(totals.total)}</strong>
       </div>
-      <p className="rt-bk__allinc">All inc. No booking fee.</p>
+      <p className="rt-bk__allinc">Prices include VAT. No booking fee.</p>
 
       {ready ? (
         <Link href={copy.checkout.href} className="button -md -purple-1 text-white rt-bk__go">{copy.checkout.label}<i className="icon-arrow-right text-13 ml-10" aria-hidden="true"></i></Link>
