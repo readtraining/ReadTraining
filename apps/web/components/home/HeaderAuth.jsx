@@ -63,8 +63,8 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
       </div>
     ) : (
       <div className="rt-hauth-mobile">
-        <Link href={AUTH_ROUTES.login} className={`text-dark-1 ${pathname === "/login" ? "activeMenu" : "inActiveMenu"}`}>Log in</Link>
-        <Link href={AUTH_ROUTES.signUp} className={`text-dark-1 ml-30 ${pathname === "/signup" ? "activeMenu" : "inActiveMenu"}`}>Sign Up</Link>
+        <Link href={AUTH_ROUTES.login} className="button -sm -outline-purple-1 text-purple-1" aria-current={pathname === "/login" ? "page" : undefined}>Log in</Link>
+        <Link href={AUTH_ROUTES.signUp} className="button -sm -purple-1 text-white" aria-current={pathname === "/signup" ? "page" : undefined}>Sign up</Link>
       </div>
     );
   }

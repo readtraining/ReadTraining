@@ -913,10 +913,14 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
 .rt-utility__right a:hover i { color: var(--color-green-1); }
 .rt-utility__sep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.18); }
 .rt-utility__hours { color: rgba(255, 255, 255, 0.45); }
-@media (max-width: 991px) { .rt-utility__hours, .rt-utility__left a:nth-child(3), .rt-utility__sep { display: none; } }
+/* one line at every width: nothing in it wraps; the opening hours go below 1280px, the email below 992px */
+.rt-utility__left > *, .rt-utility__right > * { white-space: nowrap; }
+@media (max-width: 1279px) { .rt-utility__hours { display: none; } }
+@media (max-width: 991px) { .rt-utility__left a:nth-child(3), .rt-utility__sep { display: none; } }
 /* WhatsApp in the top bar: its mark sized like the icon-font icons; left out on small screens with the email */
 .rt-utility__waicon { flex: none; font-size: 12px; color: var(--color-green-1); }
-@media (max-width: 991px) { .rt-utility__left .rt-utility__wa { display: none; } }
+/* WhatsApp: hidden from 576px to 991px, where the audience links need the room; on a phone (they are hidden) it shows */
+@media (min-width: 576px) and (max-width: 991px) { .rt-utility__left .rt-utility__wa { display: none; } }
 @media (max-width: 575px) { .rt-utility__right { display: none; } }
 
 /* ===== For business page ===== */
@@ -5253,7 +5257,7 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-hauth__menu a i { color: var(--color-light-1); }
 .rt-hauth__menu a:hover { background: var(--color-light-4); }
 .rt-hauth__signout { width: 100%; padding: 10px 12px; border: 0; border-top: 1px solid var(--color-light-5); background: none; font-size: 14px; font-weight: 600; text-align: left; color: var(--color-red-3); cursor: pointer; }
-.rt-hauth-mobile { display: flex; align-items: center; min-height: 24px; }
+.rt-hauth-mobile { display: flex; align-items: center; gap: 10px; min-height: 24px; }
 .rt-hauth__out { padding: 0; border: 0; background: none; font-size: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .rt-hauth__menu { animation: none; } .rt-hauth__btn { transition: none; } }
 /* the header's mini basket (the template's toggle-element, used only there): closed, it is also hidden (out of the Tab order and
@@ -5298,10 +5302,14 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* keyboard focus on the white card: purple (the header's own outline is white) */
 .rt-nav-card :is(a, button, input):focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
 
-/* three 224px columns, 24px apart; a column can hold two groups, one under the other */
+/* three 224px columns, 24px apart; a column can hold two groups, one under the other. Explore courses' subjects take two
+   columns (two lists of 5) when there are more than 5 */
 .rt-nav-cols { display: flex; gap: 24px; }
 .rt-nav-col { flex: 0 0 224px; min-width: 0; }
 .rt-nav-col.-stack { display: flex; flex-direction: column; gap: 24px; }
+.rt-nav-col.-two { flex-basis: 472px; }
+.rt-nav-twin { display: flex; gap: 24px; }
+.rt-nav-twin > .rt-nav-list { flex: 1 1 0; min-width: 0; }
 
 /* a group: an 18px icon and its heading, a thin dark line, then its links 16px below */
 .rt-nav-g { display: flex; align-items: center; gap: 10px; height: 28px; margin-bottom: 8px; color: var(--color-purple-1); }
@@ -5320,19 +5328,14 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-link__meta { display: block; font-size: var(--rt-text-xs); line-height: 18px; color: var(--rt-nav-muted); }
 .rt-nav-arrow { position: absolute; top: 50%; right: 20px; color: var(--color-purple-1); opacity: 0; transform: translateY(-50%); transition: opacity 0.3s ease, right 0.3s ease; pointer-events: none; }
 .rt-nav-link:hover .rt-nav-arrow, .rt-nav-link:focus-visible .rt-nav-arrow { right: 10px; opacity: 1; }
-/* a subject: its name and its number of courses on the right, which fades out as the arrow comes in */
-.rt-nav-link.-count { display: flex; align-items: baseline; gap: 8px; }
-.rt-nav-link__count { margin-left: auto; font-size: var(--rt-text-xs); line-height: 18px; color: var(--rt-nav-muted); transition: opacity 0.15s ease; }
-.rt-nav-link:hover .rt-nav-link__count, .rt-nav-link:focus-visible .rt-nav-link__count { opacity: 0; }
 
-/* the footer: one link across the card, a thin line above it; Explore courses' footer has our phone number on the left */
+/* the footer: one link across the card, a thin line above it */
 .rt-nav-foot { margin-top: 24px; padding: 16px 12px 0; border-top: 1px solid var(--rt-c-line); }
-.rt-nav-foot.-split { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-left: 0; }
-.rt-nav-help { margin: 0; padding-left: 12px; font-size: var(--rt-text-sm); line-height: 20px; color: var(--rt-nav-muted); }
-.rt-nav-tel { font-weight: 600; color: var(--rt-nav-ink-2) !important; text-decoration: none; white-space: nowrap; }
-.rt-nav-tel:hover { color: var(--color-purple-1) !important; text-decoration: underline; }
-.rt-nav-more { font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; }
+.rt-nav-more { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; }
 .rt-nav-more:hover { text-decoration: underline; }
+/* its arrow is the menus' drawn arrow (as on the links), in the link's purple; it nudges right on hover */
+.rt-nav-more__arrow { flex: none; transition: transform 0.2s ease; }
+.rt-nav-more:hover .rt-nav-more__arrow, .rt-nav-more:focus-visible .rt-nav-more__arrow { transform: translateX(3px); }
 
 /* Location: the town or postcode search, in one column */
 .rt-nav-near__form { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; padding: 0 12px; }
@@ -5354,9 +5357,15 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-btn:disabled { cursor: progress; opacity: 0.7; }
 .rt-nav-near__note { margin: 0; font-size: var(--rt-text-xs); line-height: 1.4; color: var(--rt-nav-ink-2); }
 
+/* below 1200px the phone menu has the four menus: the menu row and its cards never show (useNavMenu doesn't open them) */
+@media (max-width: 1199px) {
+  .rt-menu-row, .rt-nav-card, .rt-nav-dim { display: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rt-nav-card, .rt-nav-fade, .rt-nav-dim { animation: none; }
-  .rt-nav-link, .rt-nav-link__name, .rt-nav-link__count, .rt-nav-arrow { transition: none; }
+  .rt-nav-link, .rt-nav-link__name, .rt-nav-arrow, .rt-nav-more__arrow { transition: none; }
+  .rt-nav-more:hover .rt-nav-more__arrow, .rt-nav-more:focus-visible .rt-nav-more__arrow { transform: none; }
 }
 /* ---------- end SITE HEADER ---------- */
 
