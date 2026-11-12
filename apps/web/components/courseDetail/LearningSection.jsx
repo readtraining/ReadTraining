@@ -33,6 +33,8 @@ function DatesSummary({ rows, mode }) {
         {chosen ? (
           <>
             <strong>{formatDateRange(chosen.date, chosen.endDate)}</strong>
+            {/* the days themselves when they aren't all in a row, or each day's times when they differ */}
+            {chosen.schedule && <span>{chosen.schedule}</span>}
             <span>{classroom ? `${chosen.address}, ${chosen.postcode}` : chosen.time}</span>
           </>
         ) : (
@@ -92,6 +94,8 @@ export default function LearningSection() {
         </div>
       </fieldset>
 
+      {/* self-paced has nothing more to show here (no dates, no further points), so the part and its heading are left out */}
+      {mode !== "ondemand" && (
       <div className="rt-lo__dates">
         <div className="rt-lo__dates-head">
           <h3 className="rt-lo__h">Study options for the {course.title}</h3>
@@ -113,15 +117,14 @@ export default function LearningSection() {
               <Link href={quoteHref(course)} className="button -md -outline-purple-1 text-purple-1">{TEAM.cta}</Link>
             </div>
           </div>
-        ) : mode === "ondemand" ? null : rows.length === 0 ? (
+        ) : rows.length === 0 ? (
           <EmptyState inCard title="No dates in this location yet." text="Try another location." />
         ) : (
-          <>
-            <DatesSummary rows={rows} mode={mode} />
-          </>
+          <DatesSummary rows={rows} mode={mode} />
         )}
         <DatesDialog />
       </div>
+      )}
 
       <div className="rt-lo__xtra">
         <div className="rt-cd__staff">

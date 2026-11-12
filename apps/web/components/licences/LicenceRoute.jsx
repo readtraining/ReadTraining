@@ -57,7 +57,7 @@ export default function LicenceRoute({ licence: l, costs, copy }) {
                 {l.primary.href ? (
                   <Link href={l.primary.href} className="button -md -purple-1 text-white rt-btn-block">{l.primary.label}</Link>
                 ) : (
-                  <RequestButton className="button -md -purple-1 text-white rt-btn-block">{l.primary.label}</RequestButton>
+                  <RequestButton preset={l.primary.preset} className="button -md -purple-1 text-white rt-btn-block">{l.primary.label}</RequestButton>
                 )}
                 {l.testBooking && <Link href={l.testBooking.href} className="fb-textlink">{l.testBooking.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}
                 {l.mockTest && <Link href={l.mockTest.href} className="fb-textlink">{l.mockTest.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>}

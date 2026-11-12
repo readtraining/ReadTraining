@@ -13,11 +13,11 @@ import TestBooking, { BookTestButton } from "@/components/hseTest/TestBooking";
 import TestTypes from "@/components/hseTest/TestTypes";
 import BookingBand from "@/components/hseTest/BookingBand";
 import CentreFinder from "@/components/hseTest/CentreFinder";
-import { HSE_PRICE, hseTest as t } from "@/data/hseTest";
+import { hseTest as t } from "@/data/hseTest";
 import { licencesHub } from "@/data/licences";
 import { courseCards } from "@/lib/catalogueServer";
 import { HSE_TEST_HREF } from "@/lib/routes";
-import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
+import { breadcrumbLd, faqPageLd, jsonLd, pageMetadata } from "@/lib/seo";
 
 // The CITB HS&E test (/tests/citb-health-safety-and-environment-test, the Locations menu's "CITB HS&E Test"), in the licence
 // guides' language: dark hero (book, find a centre) > key facts > which test do I need (lavender) > book with us (dark band,
@@ -28,18 +28,9 @@ const crumbs = [{ label: "Home", href: "/" }, { label: "Licences & Cards", href:
 
 export const metadata = pageMetadata({ title: t.title, description: t.description, path: HSE_TEST_HREF });
 
-const productLd = {
-  "@context": "https://schema.org",
-  "@type": "Product",
-  name: "CITB Health, Safety and Environment test booking",
-  description: t.description,
-  offers: { "@type": "Offer", price: HSE_PRICE.toFixed(2), priceCurrency: "GBP", availability: "https://schema.org/InStock" },
-};
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: t.faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-};
+// No Product or Offer markup: booking the test is "coming soon" and its price isn't confirmed, so the page claims no price or
+// stock to search engines; only its breadcrumb and its questions.
+const faqLd = faqPageLd(t.faqs);
 
 export default async function HseTestPage() {
   const courses = await courseCards(t.courses.picks, 3); // the live CSCS and site safety courses
@@ -85,7 +76,6 @@ export default async function HseTestPage() {
         <HomeFooter />
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd(crumbs, HSE_TEST_HREF)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
     </div>
   );

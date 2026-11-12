@@ -17,7 +17,7 @@ export const pw = {
     pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. You can set up your courses while you wait.", action: { label: "View review", href: "/provider/review" }, dismissible: true },
     changes_requested: { tone: "warning", title: "A few changes are needed before we approve you", text: "Our team has asked for some changes to your account.", action: { label: "Review changes", href: "/provider/review" } },
     suspended: { tone: "critical", title: "Your account is suspended", text: "Your courses can't be booked and you can't make changes.", action: { label: "See why", href: "/provider/review" } },
-    approved: { tone: "success", title: "Your account is approved", text: "Learners can find you on ReadTraining. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" }, dismissible: true },
+    approved: { tone: "success", title: "Your account is approved", text: "Learners find you on ReadTraining once you have a live course. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" }, dismissible: true },
     reinstated: { tone: "success", title: "Your account is active again", text: "Everything works as before.", dismissible: true },
     hide: "Hide this message",
   },
@@ -29,7 +29,7 @@ export const pw = {
     statuses: {
       pending: { pill: "Being reviewed", tone: "info", title: "Our team is checking your details", text: "Most providers hear back within 2 working days. We'll email you with the decision." },
       changes_requested: { pill: "Changes needed", tone: "warn", title: "A few changes are needed", text: "Make the changes below, then send your account back to our team." },
-      active: { pill: "Approved", tone: "ok", title: "Your account is approved", text: "Learners can find you on ReadTraining, and your courses can be sent for approval." },
+      active: { pill: "Approved", tone: "ok", title: "Your account is approved", text: "Your courses can be sent for approval. Learners find you on ReadTraining once you have a live course." },
       suspended: { pill: "Suspended", tone: "late", title: "Your account is suspended", text: "Your courses can't be booked and you can't make changes. Contact us to sort it out." },
     },
     updated: "Updated",

@@ -25,8 +25,9 @@ const NOTE = new Set(["changes", "rejectChange", "pause"]);
 // One course for the admin (API admin.courses.get): what the provider (or our team, for a shared page) wrote, laid out to check,
 // with its status, provider and shared page. A change waiting on a live course shows field by field, live against proposed. The
 // decisions sit in the page head: approve or send back a new course, approve or turn down a change, pause a live course or put
-// back one the team paused (each note is shown to the provider and emailed). A shared page lists the providers' courses on it and
-// opens in the course editor to write it.
+// back one the team paused (each note is shown to the provider and emailed). A refusal (and an email that couldn't be sent) stays
+// in a notice at the top until the next decision. Preview opens the course as visitors will see it, with a waiting change shown
+// as if approved. A shared page lists the providers' courses on it and opens in the course editor to write it.
 export default function AdminCourse({ id }) {
   const me = useAdminAccess();
   const courseId = /^\d+$/.test(String(id)) ? Number(id) : 0;
@@ -39,6 +40,7 @@ export default function AdminCourse({ id }) {
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState("");
   const [said, setSaid] = useState("");
+  const [problem, setProblem] = useState(""); // a refused decision, or an email that couldn't be sent: shown until the next one
   const formRef = useRef(null);
   const c = query.data;
 
@@ -61,6 +63,7 @@ export default function AdminCourse({ id }) {
   const allowedFor = (decision) => !ownFor(decision) || c.soleApprover;
   const needsNote = (decision) => NOTE.has(decision);
   const run = async (decision, message, ownReason) => {
+    setProblem("");
     try {
       // the version on screen: when the change, or the course itself, was sent (the API refuses a decision on a newer one)
       const sent = decision === "approveChange" || decision === "rejectChange" ? c.change?.since : decision === "approve" || decision === "changes" ? c.submittedAt : null;
@@ -68,12 +71,14 @@ export default function AdminCourse({ id }) {
       const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen });
       refresh();
       refreshCourses().catch(() => {});
-      const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the live version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
-      setSaid(`${text}.${r.emailed ? " The provider was emailed." : decision === "resume" ? "" : " The email to the provider could not be sent."}`);
+      const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the current version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
+      setSaid(`${text}.${r.outbox ? ` ${ap.emailOutbox}` : r.emailed ? ` ${ap.emailed}` : ""}`);
+      if (!r.outbox && !r.emailed) setProblem(ap.notEmailed);
       return "";
     } catch (e) {
+      // a field's message (the note, the reason) or the refusal itself (a retired entry, something missing, another admin decided…)
       const { fields, general } = errorsFrom(e);
-      return fields.message || fields.ownReason || general;
+      return fields.message || fields.ownReason || general || Object.values(fields)[0] || "";
     }
   };
   const open = (decision) => {
@@ -83,8 +88,13 @@ export default function AdminCourse({ id }) {
     setReason("");
     setReasonError("");
   };
-  // a decision goes straight through, unless it needs a note for the provider or is on the admin's own request
-  const act = (decision) => (needsNote(decision) || ownFor(decision) ? open(decision) : run(decision));
+  // a decision goes straight through, unless it needs a note for the provider or is on the admin's own request; a refusal shows in
+  // the notice at the top
+  const act = async (decision) => {
+    if (needsNote(decision) || ownFor(decision)) return open(decision);
+    const failed = await run(decision);
+    if (failed) setProblem(failed);
+  };
   const send = async (e) => {
     e.preventDefault();
     const noteError = needsNote(asking) && !note.trim() ? { changes: "Enter what the provider needs to change.", rejectChange: "Enter why the change is not approved.", pause: "Enter why the course is paused. The provider sees it." }[asking] : "";
@@ -98,14 +108,21 @@ export default function AdminCourse({ id }) {
   };
   const busy = decide.isPending;
   const sheetTitle = { approve: ap.approve, changes: ap.requestChanges, approveChange: ap.approveChange, rejectChange: ap.rejectChange, pause: ap.pause, resume: ap.resume }[asking] || "";
-  const own = Boolean(c.ownCourse || c.ownChange);
+  // the "you sent this yourself" notice: while their own course, or their own change, waits for a decision; and on their own
+  // published course, which they pause or put back live only as the sole approver
+  const own = Boolean((c.status === "pending" && c.ownCourse) || (c.pendingChanges && c.ownChange));
+  const ownPublished = !own && c.ownCourse && (c.status === "live" || (c.status === "paused" && c.statusNote));
   // a course (or a change) waiting for a decision opens every section of its page: the admin reads it all before deciding
   const reviewing = c.status === "pending" || Boolean(c.pendingChanges);
   const place = [categoryName(c.category), subcategoryName(c.category, c.subcategory), topicName(c.category, c.subcategory, c.topic)].filter(Boolean).join(" › ");
+  // where a waiting change files the course: its proposed category and sub-category, or the current ones it leaves as they are
+  const proposedOf = (key) => c.change?.fields.find((f) => f.key === key);
+  const proposedPlace = { category: proposedOf("category") ? proposedOf("category").proposed : c.category, subcategory: proposedOf("subcategory") ? proposedOf("subcategory").proposed : c.subcategory };
 
   return (
     <div className="rt-acc__stack">
       <Said text={said} />
+      {problem && <p className="rt-acc__notice -warn" role="alert">{problem}</p>}
       <section className="rt-acc__card rt-adm-hero" aria-labelledby="rt-adm-course-h">
         <div className="rt-pws-course-herotext">
           <div className="rt-adm-item__top">
@@ -116,22 +133,25 @@ export default function AdminCourse({ id }) {
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name" id="rt-adm-course-h">{c.title}</h1>
           <p className="rt-acc__note">
-            {c.provider ? <>{d.provider}: <Link href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</Link>{!providerReady && " (not approved yet)"}</> : "Written by our team"}
+            {c.provider ? <>{d.provider}: <Link href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</Link>{!providerReady && ` (${ap.providerState[c.provider.status] || "account not active"})`}</> : "Written by our team"}
             {c.parent && <> · {d.sharedPage}: <Link href={`/admin/catalogue/${c.parent.id}`}>{c.parent.title}</Link></>}
           </p>
           {c.parent && !c.parent.sameSubject && <p className="rt-acc__notice -warn">{d.otherSubject(c.parent.title)}</p>}
           {c.statusNote && (c.status === "changes" || c.status === "paused") && <p className="rt-adm-item__reason"><strong>{c.status === "changes" ? "Note to the provider:" : "Why it is paused:"}</strong> {c.statusNote}</p>}
-          {canDecide && c.status === "pending" && !providerReady && <p className="rt-adm-item__block">{ap.providerNotActive}</p>}
+          {canDecide && c.status === "pending" && !providerReady && <p className="rt-adm-item__block">{ap.providerNotActive(c.provider?.status)}</p>}
           {canDecide && own && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownSole : ap.ownBlocked}</p>}
+          {canDecide && ownPublished && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownPublishedSole : ap.ownPublished}</p>}
+          {canDecide && c.status === "paused" && !c.statusNote && <p className="rt-acc__note">{ap.providerPaused}</p>}
         </div>
         <div className="rt-adm-hero__actions">
           {canDecide && c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
           {canDecide && c.status === "pending" && allowedFor("changes") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
           {canDecide && c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
           {canDecide && c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
-          {canDecide && c.status === "live" && !c.pendingChanges && allowedFor("pause") && <button type="button" className="button -md -outline-red-3 text-red-3" disabled={busy} onClick={() => act("pause")}>{ap.pause}</button>}
+          {canDecide && c.status === "live" && allowedFor("pause") && <button type="button" className="button -md -outline-red-3 text-red-3" disabled={busy} onClick={() => act("pause")}>{ap.pause}</button>}
           {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>}
           {canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -md -purple-1 text-white">{d.edit}</Link>}
+          {!shared && <Link href={`/admin/catalogue/${c.id}/preview`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{c.pendingChanges ? d.previewChange : d.preview}</Link>}
           {c.status === "live" && <Link href={`/course/${c.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{d.publicPage}</Link>}
         </div>
       </section>
@@ -147,8 +167,8 @@ export default function AdminCourse({ id }) {
                 {c.change.fields.map((f) => (
                   <tr key={f.key}>
                     <th scope="row" data-label="Field">{d.fields[f.key] || f.key}</th>
-                    <td data-label={d.now}><Value k={f.key} v={f.now} c={c} /></td>
-                    <td data-label={d.proposed}><Value k={f.key} v={f.proposed} c={c} /></td>
+                    <td data-label={d.now}><Value k={f.key} v={f.now} place={c} /></td>
+                    <td data-label={d.proposed}><Value k={f.key} v={f.proposed} place={proposedPlace} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -304,12 +324,13 @@ function Text({ v }) {
   return v.split(/\n\s*\n/).map((p, i) => <p key={i} className="rt-adm-read__p rt-adm-read__pre">{p}</p>);
 }
 
-// any course field, as it reads: text, lists, units, exam rows, FAQs, catalogue places
-function Value({ k, v, c }) {
+// any course field, as it reads: text, lists, units, exam rows, FAQs, catalogue places (`place`: the category and sub-category
+// the value sits under, the current ones or the change's)
+function Value({ k, v, place }) {
   if (v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length)) return <span className="rt-adm-muted">None</span>;
   if (k === "category") return categoryName(v) || v;
-  if (k === "subcategory") return subcategoryName(c.category, v) || v;
-  if (k === "topic") return topicName(c.category, c.subcategory, v) || v;
+  if (k === "subcategory") return subcategoryName(place.category, v) || v;
+  if (k === "topic") return topicName(place.category, place.subcategory, v) || v;
   if (k === "level") return levelName(v) || v;
   if (k === "units") return <ol className="rt-adm-read__list">{v.map((u, i) => <li key={i}><b>{u.title}</b>{u.body && <span className="rt-adm-read__pre">{u.body}</span>}</li>)}</ol>;
   if (k === "exams") return <ul className="rt-adm-read__list">{v.map((e, i) => <li key={i}><b>{e.unit}</b>{[e.passMark && `Pass mark: ${e.passMark}`, e.duration && `Duration: ${e.duration}`].filter(Boolean).join(" · ")}</li>)}</ul>;

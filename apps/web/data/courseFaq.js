@@ -3,28 +3,28 @@ export const courseFaqTitle = "General FAQs";
 
 export const courseFaq = [
   {
-    q: "What are the career prospects after a construction course?",
+    q: "Who runs the courses?",
     a:
-      "Completing a construction course can lead to many career options, including construction management, architecture, engineering, surveying, and trades such as carpentry and plumbing.",
+      "Independent UK training providers. Each provider is approved by our team before it can list courses, and each course is checked before it goes live.",
   },
   {
-    q: "Can I do a construction course online?",
+    q: "How do I choose a date and a venue?",
     a:
-      "Yes, at ReadTraining, all our construction courses are available online, so you can study from anywhere at your own pace.",
+      "Open a course to see its dates, venues and prices from every provider that runs it. Enter your town or postcode in the search to see the courses with a venue near you first.",
   },
   {
-    q: "How long does a typical construction course last?",
+    q: "How are the courses taught?",
     a:
-      "A typical construction course can last from a few weeks to several months, depending on the qualification level and the course provider.",
+      "It depends on the course. Some are taught in a classroom, some live online with a tutor and some at your own pace. Each course page shows the ways it is available.",
   },
   {
-    q: "What kinds of construction courses are available?",
+    q: "What are the entry requirements?",
     a:
-      "There is a wide range of construction courses available, including Construction Management, Building and Construction, Carpentry, Electrical Installation, Plumbing, and Surveying.",
+      "They depend on the course. Where a course has entry requirements, they are on its page. If you are not sure, ask us before you choose a course.",
   },
   {
-    q: "What are the entry requirements for a construction course?",
+    q: "How can I get help choosing a course?",
     a:
-      "Entry requirements depend on the course and institution, but most need a high school diploma or equivalent. Some courses may also ask for prior experience or specific qualifications.",
+      "Call us on 020 3488 5052 or email info@readtraining.co.uk, and our team will help you find the right course.",
   },
 ];

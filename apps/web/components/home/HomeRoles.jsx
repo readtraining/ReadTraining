@@ -5,12 +5,11 @@ import { courseFinder as d } from "@/data/home";
 import HomeTextLink from "./HomeTextLink";
 import { useNav } from "@/lib/navContext";
 import { subjectName } from "@/lib/nav";
+import { courseSearch } from "@/data/courseTopics";
 
-const icons = ["icon-badge", "icon-time-management", "icon-document", "icon-graduate-cap"];
-
-// Course finder: pick a goal (segmented tabs), then choose the route (cards). A route that searches for some words shows only
-// while a live course matches them the way the search does (the words in its title or subject; useNav), so none leads to an
-// empty search; a goal with no route left isn't shown.
+// Course finder: pick a goal (segmented tabs, each with its own icon), then choose the route (cards). A route searches for the
+// first of its words (`q`) that a live course matches the way the search does (the words in its title or subject; useNav), and
+// shows only while one does, so none leads to an empty search; a goal with no route left isn't shown.
 export default function HomeRoles() {
   const nav = useNav();
   const [active, setActive] = useState(0);
@@ -18,7 +17,9 @@ export default function HomeRoles() {
     const needle = q.toLowerCase();
     return nav.courses.some((c) => c.title.toLowerCase().includes(needle) || subjectName(nav, c.subject).replace(/&/g, "and").toLowerCase().includes(needle));
   };
-  const goals = d.goals.map((g) => ({ ...g, routes: g.routes.filter((r) => !r.q || has(r.q)) })).filter((g) => g.routes.length);
+  const goals = d.goals
+    .map((g) => ({ ...g, routes: g.routes.map((r) => ({ ...r, words: r.q.find(has) })).filter((r) => r.words) }))
+    .filter((g) => g.routes.length);
   const goal = goals[Math.min(active, goals.length - 1)];
   if (!goal) return null;
 
@@ -47,7 +48,7 @@ export default function HomeRoles() {
                 className={`rt-goal${active === i ? " is-active" : ""}`}
               >
                 <span className="rt-goal__step">{i + 1}</span>
-                <span className="rt-goal__icon"><i className={`${icons[i]} text-18`}></i></span>
+                <span className="rt-goal__icon"><i className={`${g.icon} text-18`}></i></span>
                 <span className="rt-goal__body">
                   <span className="rt-goal__title">{g.label}</span>
                   <span className="rt-goal__text">{g.text}</span>
@@ -70,7 +71,7 @@ export default function HomeRoles() {
 
             <div className="rt-routes">
               {goal.routes.map((r) => (
-                <Link key={r.title} href={r.href} className="rt-route">
+                <Link key={r.title} href={courseSearch(r.words)} className="rt-route">
                   <span className="rt-route__title">{r.title}</span>
                   <span className="rt-route__text">{r.text}</span>
                   <span className="rt-route__arrow"><i className="icon-arrow-right text-11"></i></span>

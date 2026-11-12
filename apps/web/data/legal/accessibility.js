@@ -58,7 +58,7 @@ export const accessibility = {
             "some older pages and content may not yet meet our standard;",
             "some documents from training providers, such as PDFs, may not be accessible;",
             "videos supplied by training providers may not have captions;",
-            "some features from other companies, such as live chat and payment pages, are outside our control.",
+            "some features from other companies, such as the security check on our sign-in pages and forms, are outside our control.",
           ],
         },
         "[Full list of issues to be added after the accessibility audit.] We are working to fix these. If you find a problem not listed here, please tell us.",

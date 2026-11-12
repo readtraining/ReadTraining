@@ -1,5 +1,6 @@
 import { help, topBar } from "@/data/home";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { contactHref } from "@/lib/forms";
 
 // Contact us (/contact-us). Contact details come from data/home (top bar, help section), so every page shows the same ones.
 // The routes follow the client's current contact page (hurak.com/contact-us: sales and help & support), the form follows the
@@ -15,7 +16,8 @@ export const contact = {
     title: ["Get in touch with ReadTraining"],
     lead: "Our UK team helps with choosing a course, managing a booking and arranging training for your business.",
   },
-  // where to start, by what people need (each link lands on the right page, or on the form with its topic chosen)
+  // where to start, by what people need (each link lands on the right page, or on the form with its topic chosen: contactHref,
+  // the ways to reach us while the form is switched off)
   routes: {
     eyebrow: "How can we help?",
     title: "Looking for something specific?",
@@ -27,7 +29,7 @@ export const contact = {
         text: "Compare courses, dates and prices, or ask us which course you need.",
         links: [
           { label: "Search courses", href: CATALOGUE_HREF },
-          { label: "Ask about a course", href: "?topic=course#contact-form" },
+          { label: "Ask about a course", href: contactHref("course") },
         ],
       },
       {
@@ -36,7 +38,7 @@ export const contact = {
         text: "Questions about a course you have booked, your joining details or your certificate.",
         links: [
           { label: "Visit the help centre", href: help.href },
-          { label: "Message us about a booking", href: "?topic=booking#contact-form" },
+          { label: "Message us about a booking", href: contactHref("booking") },
         ],
       },
       {
@@ -45,7 +47,7 @@ export const contact = {
         text: "Group bookings, in-house training, quotes and business accounts.",
         links: [
           { label: "Training for business", href: "/for-business" },
-          { label: "Ask for a quote", href: "?topic=business#contact-form" },
+          { label: "Ask for a quote", href: contactHref("business") },
         ],
       },
     ],

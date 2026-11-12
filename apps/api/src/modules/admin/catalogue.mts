@@ -33,6 +33,11 @@ export const addressOf = (name: string) =>
     .toLowerCase()
     .replace(/^-+|-+$/g, '')
 
+// The addresses of the course pages written for the site that are not a category's own page (apps/web/data/coursePages.js: the
+// study methods, CITB Site Safety Plus, Personal Licence). A category's page is /courses/<its address>, so a category with one of
+// these addresses would open the written page instead of its own. Keep this list in step with that file.
+const WRITTEN_PAGES = new Set(['classroom', 'live-online', 'self-paced', 'citb-site-safety-plus', 'personal-licence'])
+
 const fieldError = (field: string, message: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: Object.assign(new Error(message), { field }) })
 const name = z
   .string()
@@ -74,6 +79,7 @@ export const catalogueAdminRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const slug = addressOf(input.name)
       if (!slug) throw fieldError('name', 'Enter a name with letters in it.')
+      if (input.kind === 'category' && WRITTEN_PAGES.has(slug)) throw fieldError('name', 'That name is used by a page on the site. Choose another name.')
       const needsParent = input.kind === 'subcategory' || input.kind === 'topic'
       if (needsParent && !input.parent) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose where it goes.' })
       const where = needsParent ? sql`${PARENT[input.kind as 'subcategory' | 'topic']} = ${input.parent}::uuid` : sql`true`
@@ -197,11 +203,12 @@ export const catalogueAdminRouter = createTRPCRouter({
         const content = await count(sql`select count(*)::int n from public.site_content where ${sql.join(paths.map((p) => sql`value::text like ${'%"' + p + '%'}`), sql` or `)}`)
         if (content) uses.push('the site content (the home page’s featured courses)')
       }
-      if (courses) uses.unshift(`${courses} ${courses === 1 ? 'course' : 'courses'} (live, draft or paused)`)
+      if (courses) uses.unshift(`${courses} ${courses === 1 ? 'course' : 'courses'}`)
       if (pending) uses.push(`${pending} course ${pending === 1 ? 'change' : 'changes'} waiting for approval`)
       if (uses.length) {
-        const also = under.length > 1 ? ' (or its sub-categories and topics)' : ''
-        throw new TRPCError({ code: 'BAD_REQUEST', message: `${row.name} can't be deleted: ${uses.join(', ')} ${uses.length === 1 && !uses[0].includes('content') ? 'uses' : 'use'} it${also}. It stays retired, so nobody sees it.` })
+        const also = under.length > 1 ? ', with its sub-categories and topics,' : ''
+        const list = uses.length > 1 ? `${uses.slice(0, -1).join(', ')} and ${uses[uses.length - 1]}` : uses[0]
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `${row.name} can't be deleted. It${also} is used by: ${list}. It stays retired, so nobody sees it.` })
       }
       await ctx.db.transaction(async (tx) => {
         if (ids('topic').length) await tx.execute(sql`delete from public.topics where id::text in ${inList(ids('topic'))}`)

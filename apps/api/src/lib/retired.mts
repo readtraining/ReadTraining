@@ -43,6 +43,7 @@ export async function refuseRetired(db: typeof Db | Tx, courseId: number, who: '
     message:
       who === 'admin'
         ? `This course can't go live: ${list} ${one ? 'is' : 'are'} retired in Catalogue settings. Restore ${one ? 'it' : 'them'} there, or ask for the course to be moved, first.`
-        : `This course can't go back live: ${list} ${one ? 'is' : 'are'} no longer offered on ReadTraining. Edit the course to choose another, or contact us.`,
+        : // a paused course's new category or level waits for our team's approval, so it can't simply be re-chosen and resumed
+          `This course can't go back live: ${list} ${one ? 'is' : 'are'} no longer offered on ReadTraining. Choose another in the course editor and save: once our team has approved that change, you can put the course back live. Or contact us.`,
   })
 }

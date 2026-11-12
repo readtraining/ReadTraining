@@ -13,11 +13,13 @@ import { business } from "@/data/business";
 import FinalCta from "@/components/business/FinalCta";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "ReadTraining for Business | Buy, assign and manage team training",
   description: "Buy course places for your team, assign them now or later, and manage learners, certificates and renewals from one Business account.",
-};
+  path: "/for-business",
+});
 
 export default async function ForBusinessPage() {
   await loadSiteContent();

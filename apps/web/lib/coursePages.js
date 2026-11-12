@@ -15,18 +15,27 @@ export const coursePageHref = (slug) => `${COURSES_HREF}/${slug}`;
 const select = (courses, { method, subject, sub }) =>
   courses.filter((c) => (!method || c.methods.includes(method)) && (!subject || c.subject === subject) && (!sub || c.sub === sub));
 
+// the filters a page sets itself or doesn't show, which its address can't set either (lib/catalogueFilters.js parseCatalogueParams):
+// a page without the filter panel takes none; otherwise its hidden groups, and a page for one sub-category its sub-category
+const fixedFilters = (page) =>
+  page.filters === false ? ["subject", "sub", "method", "level", "price"] : [...(page.hide || []), ...(page.select.sub ? ["sub"] : [])];
+
+// "First aid training courses" in the middle of a sentence ("No first aid training courses near Leeds yet"); a name that starts
+// with an abbreviation keeps its capitals (CITB Site Safety Plus)
+export const midSentence = (title) => (/^[A-Z][a-z]/.test(title) ? title.charAt(0).toLowerCase() + title.slice(1) : title);
+
 // a category with no written page: a plain one in the same shape
 const categoryPage = (cat) => ({
   slug: cat.slug,
   label: `${cat.name} courses`,
   title: `${cat.name} courses`,
-  description: `Compare ${cat.name.toLowerCase()} courses from approved UK training providers: classroom, live online and self-paced, with their dates and prices.`,
-  lead: `Every ${cat.name.toLowerCase()} course on ReadTraining, from approved training providers. Compare dates, places and prices.`,
+  description: `Compare ${cat.name.toLowerCase()} courses from approved UK training providers, with their dates, venues and prices.`,
+  lead: `${cat.name} courses from approved training providers. Compare dates, venues and prices.`,
   select: { subject: cat.slug },
   hide: ["subject"],
   about: {
     title: `About ${cat.name.toLowerCase()} courses`,
-    text: `Each course is run by an approved training provider and checked by our team before it goes live. Compare the providers' dates, venues and prices, then book the one that suits you.`,
+    text: `Each course is run by an approved training provider and checked by our team before it goes live. Compare the providers' dates, venues and prices, and choose the one that suits you.`,
   },
   faq: [],
 });
@@ -59,6 +68,7 @@ export function getCoursePage(slug, courses) {
       subject: page.select.subject,
       method: page.select.method, // a method page's own way of study (a town page's location search counts only that one)
       hide: page.hide,
+      fixed: fixedFilters(page),
       filters: page.filters !== false,
       about: page.about,
     },
@@ -67,19 +77,34 @@ export function getCoursePage(slug, courses) {
 }
 
 // ---- town pages (/courses/<page>/<town>, as hurak.com/courses/first-aid/nottingham) ------------------------------------------
-// The towns where a page's courses have a classroom venue. Live online and self-paced pages have no towns.
-const townSlug = (city) => city.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+// The towns where a page's courses have a classroom venue. Live online and self-paced pages have no towns. A town is written as
+// the menus write it (API catalogue.nav townName: as typed, with capitals when typed all in lower case) and is one town however it
+// was typed: its address drops apostrophes and joins the words with "-" ("King's Lynn", "kings lynn": /kings-lynn, as ukPlace
+// reads it). A venue whose postcode couldn't be checked when it was saved (no map point) gives its town no page: it can't be
+// told apart from a typing mistake, and the page's "closest first" needs the point.
+const townName = (city) => {
+  const t = city.trim();
+  return t === t.toLowerCase() ? t.replace(/\b([a-z])/g, (m) => m.toUpperCase()) : t;
+};
+const townSlug = (city) => city.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 export function getCourseTowns(slug, courses) {
   const page = definition(slug);
   if (!page || (page.select.method && page.select.method !== "classroom")) return [];
-  const cities = select(courses, page.select).filter((c) => c.methods.includes("classroom")).flatMap((c) => c.venues.map((v) => v.city));
-  return [...new Set(cities)].sort().map((city) => ({ city, slug: townSlug(city), href: `${coursePageHref(slug)}/${townSlug(city)}` }));
+  const towns = new Map();
+  for (const c of select(courses, page.select).filter((c) => c.methods.includes("classroom"))) {
+    for (const v of c.venues) {
+      const key = townSlug(v.city);
+      if (!key || v.lat == null || v.lng == null || towns.has(key)) continue;
+      towns.set(key, { city: townName(v.city), slug: key, href: `${coursePageHref(slug)}/${key}`, lat: v.lat, lng: v.lng });
+    }
+  }
+  return [...towns.values()].sort((a, b) => a.city.localeCompare(b.city));
 }
 export const getCourseTownParams = (courses) => getCoursePageSlugs().flatMap((slug) => getCourseTowns(slug, courses).map((t) => ({ slug, town: t.slug })));
 
 // A course page narrowed to one town: the same catalogue with the town as its location, its own title and breadcrumb.
-// A town with no venue for this page yet still has a page (an old link, or a town typed into the address): it says so and shows
-// what can be taken online, instead of "page not found". It is kept out of search (`empty`) until a venue opens there. Only a
+// A town with no venue for this page yet still has a page (an old link, or a town typed into the address): it says so and lists
+// what is within reach or taken online (or, with nothing, its own empty state), instead of "page not found". It is kept out of search (`empty`) until a venue opens there. Only a
 // real UK place gets one: `placeName` is its name from the map (lib/catalogueServer.js ukPlace), null when there is no such
 // place (Islamabad: "page not found"), undefined when it couldn't be checked (the page shows, named from the address).
 const TOWN_SLUG = /^[a-z]+(-[a-z]+){0,4}$/;
@@ -95,25 +120,26 @@ export function getCourseTownPage(slug, town, courses, placeName) {
   const found = getCourseTowns(slug, courses).find((t) => t.slug === town);
   if (!found && (placeName === null || !mayBeTownPage(slug, town))) return null;
   const place = found || { city: placeName || townFromSlug(town), slug: town, href: `${coursePageHref(slug)}/${town}` };
-  if (!place) return null;
-  const what = page.label.replace(/ courses$/i, "");
-  const title = `${what} courses in ${place.city}`;
+  const title = `${page.title} in ${place.city}`;
   return {
     ...page,
     city: place.city,
     title,
     href: place.href,
     empty: !found,
-    description: `Compare ${what.toLowerCase()} courses in ${place.city}: venues, dates, prices and approved providers in one place.`,
+    description: `Compare ${midSentence(page.title)} in ${place.city}: venues, dates, prices and approved providers in one place.`,
     scope: {
       ...page.scope,
       title,
       lead: found
         ? `Courses with a venue in or near ${place.city}, closest first. Change the town or postcode to look somewhere else.`
-        : `No ${what.toLowerCase()} venues in ${place.city} yet. Courses you can take online, and venues within reach, are below; or change the town or postcode.`,
+        : `There's no venue for these courses in ${place.city} yet. Change the town or postcode to look somewhere else.`,
       crumb: place.city,
-      parent: { label: page.label, href: coursePageHref(slug) },
+      parent: { label: page.label, title: page.title, href: coursePageHref(slug) },
       location: place.city,
+      none: `No ${midSentence(page.title)} near ${place.city} yet`,
+      // the page's other towns: a location changed to one of them opens its page, any other the page's own (CourseCatalogue)
+      towns: getCourseTowns(slug, courses).map(({ city, href, lat, lng }) => ({ city, href, lat, lng })),
     },
   };
 }

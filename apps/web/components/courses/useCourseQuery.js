@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PRICE_BOUNDS, buildCatalogueQuery, defaultSort, parseCatalogueParams } from "@/lib/catalogueFilters";
+import { CATALOGUE_HREF } from "@/lib/routes";
 import { subcategoriesOf } from "@/lib/taxonomy";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 
@@ -24,18 +25,51 @@ const TICK_DEBOUNCE = 250;
 //   one history entry, so Back undoes exactly one change. Ticks made together in the debounce are one change; typing in a field
 //   (`typing: "q"` or "location") is one change for as long as they keep typing in it, so Back undoes the whole word, not a
 //   letter. Writing the address the page already has (or tidying it) adds no entry.
-// `baseSubject` is a course page's own subject (/courses/first-aid): its sub-subjects work without a ticked subject.
-// `baseLocation` is a town page's town (/courses/first-aid/leeds): the location until the visitor changes it.
+// The options are the course page's own choices (all optional):
+// - `subject`: a subject page's subject (/courses/first-aid): its sub-subjects work without a ticked subject;
+// - `location`: a town page's town (/courses/first-aid/leeds), the location the address leaves out;
+// - `fixed`: the filters the page sets itself or doesn't show, which the address can't set (lib/catalogueFilters.js);
+// - `towns` ([{ city, href }]) and `parentHref`: a town page's other towns and its course page.
+// One address per search: one subject ticked on All courses is that subject's page (/courses/security, as the proxy sends
+// /courses?subject=security), and a town page whose town is removed or changed is its course page with that location, or the
+// other town's page. Such a change opens that page (keeping the other filters) instead of rewriting this one's address.
 // The address is read against the catalogue list, so it is read again when the list arrives (a page built ahead of time
 // fetches it in the browser), and it is never tidied while the list is still unknown, or ?subject=… would be lost.
-export function useCourseQuery(baseSubject = "", baseLocation = "") {
+const NONE = [];
+export function useCourseQuery({ subject: baseSubject = "", location: baseLocation = "", fixed = NONE, towns = NONE, parentHref = "" } = {}) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const base = useMemo(() => ({ ...(baseSubject ? { subject: baseSubject } : {}), ...(baseLocation ? { location: baseLocation } : {}) }), [baseSubject, baseLocation]);
+  const fixedKey = fixed.join();
+  const base = useMemo(
+    () => ({ ...(baseSubject ? { subject: baseSubject } : {}), ...(baseLocation ? { location: baseLocation } : {}), fixed: fixedKey ? fixedKey.split(",") : [] }),
+    [baseSubject, baseLocation, fixedKey],
+  );
   const taxonomy = useTaxonomy();
   const listKnown = Boolean(taxonomy?.categories?.length);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const urlState = useMemo(() => parseCatalogueParams(searchParams, base), [searchParams, base, taxonomy]);
+
+  // the address of another page that a search belongs on (above), or null when it belongs here
+  const elsewhere = useCallback(
+    (next) => {
+      const at = (href, state, pageBase) => {
+        const query = buildCatalogueQuery(state, pageBase);
+        return query ? `${href}?${query}` : href;
+      };
+      if (!baseSubject && !baseLocation && pathname === CATALOGUE_HREF && next.subject.length === 1) {
+        return at(`${CATALOGUE_HREF}/${next.subject[0]}`, { ...next, subject: [] }, { subject: next.subject[0] });
+      }
+      if (baseLocation && parentHref && next.location !== baseLocation) {
+        const key = (v) => (v || "").trim().toLowerCase();
+        const town = next.location && towns.find((t) => key(t.city) === key(next.location));
+        const pageBase = baseSubject ? { subject: baseSubject } : {};
+        return town ? at(town.href, { ...next, location: town.city }, { ...pageBase, location: town.city }) : at(parentHref, next, pageBase);
+      }
+      return null;
+    },
+    [baseSubject, baseLocation, pathname, parentHref, towns],
+  );
 
   const [pending, setPending] = useState(null); // optimistic state while a debounced write is waiting
   const state = pending ?? urlState;
@@ -71,15 +105,18 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
     if (!timer.current) setPending(null);
   }, [urlState]);
 
-  // Tidy the address bar: unknown values, duplicates, unsorted lists and legacy names are rewritten to the clean form.
+  // Tidy the address bar: unknown values, duplicates, unsorted lists and legacy names are rewritten to the clean form, and a
+  // search that belongs on another page goes there.
   useEffect(() => {
     if (pending || !listKnown) return;
+    const away = elsewhere(urlState);
+    if (away) return router.replace(away, { scroll: false });
     const clean = buildCatalogueQuery(urlState, base);
     const current = searchParams.toString().replace(/%2C/g, ",");
     if (current && clean !== current) {
       if (parseCatalogueParams(new URLSearchParams(current), base).page === urlState.page) writeUrl(clean, "replace");
     }
-  }, [searchParams, urlState, pending, writeUrl, base, listKnown]);
+  }, [searchParams, urlState, pending, writeUrl, base, listKnown, elsewhere, router]);
 
   // Small history of filter changes so the latest single change can be undone ("Remove last filter").
   const history = useRef([]);
@@ -110,16 +147,18 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
       const waiting = Boolean(timer.current);
       clearTimeout(timer.current);
       const mode = waiting && commit.current.mode === "push" ? "push" : own;
-      commit.current = { query: buildCatalogueQuery(next, base), mode, after: afterCommit, typing };
+      commit.current = { state: next, query: buildCatalogueQuery(next, base), mode, after: afterCommit, typing };
       timer.current = setTimeout(() => {
         timer.current = null;
-        const { query, mode: m, after, typing: field } = commit.current;
+        const { state: committed, query, mode: m, after, typing: field } = commit.current;
+        const away = elsewhere(committed);
+        if (away) return m === "push" ? router.push(away, { scroll: false }) : router.replace(away, { scroll: false });
         writeUrl(query, m);
         typingIn.current = field || null;
         after?.();
       }, debounce);
     },
-    [writeUrl, base, baseSubject],
+    [writeUrl, base, baseSubject, elsewhere, router],
   );
 
   // Checkbox groups: add or remove ONE value (debounced). Unticking a subject also drops its sub-subjects.
@@ -159,5 +198,5 @@ export function useCourseQuery(baseSubject = "", baseLocation = "") {
     [update],
   );
 
-  return { state, pathname, update, toggleFilter, setFilter, setPrice, clearGroup, clearAll, setSort, setPage, undoLast, canUndo };
+  return { state, pathname, base, update, toggleFilter, setFilter, setPrice, clearGroup, clearAll, setSort, setPage, undoLast, canUndo };
 }

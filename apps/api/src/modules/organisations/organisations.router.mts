@@ -211,8 +211,9 @@ export const organisationsRouter = createTRPCRouter({
     }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and
-  // the account goes back to waiting for a decision.
-  resubmit: orgProcedure('provider.profile.edit')
+  // the account goes back to waiting for a decision. Only the owner and admins: they are the ones who read our team's message
+  // (PRIVATE_ROLES).
+  resubmit: orgProcedure('provider.review.send')
     .input(z.object({ organisationId: z.string().uuid(), reply: z.string().trim().max(1000, 'Keep your note to 1,000 characters or fewer.').optional() }))
     .mutation(async ({ ctx, input }) => {
       await limit(ctx, 'providerApply')
@@ -260,17 +261,17 @@ export const organisationsRouter = createTRPCRouter({
       return { ok: true }
     }),
 
-  // A provider's public profile (/providers/[slug]). New providers have one straight away; it stays out of search engines
-  // until the provider is approved. Rejected and suspended providers have none, and nor does one that was removed: null, an
-  // ordinary answer (not an error), so the website's saved copy of a profile that has gone is replaced by "not found".
+  // A provider's public profile (/providers/[slug]): only an approved (active) provider has one. A provider waiting for review
+  // (or asked for changes), rejected, suspended or removed has none, so words our team hasn't checked are never public: null, an
+  // ordinary answer (not an error), so the website's saved copy of a profile that has gone is replaced by "not found". The
+  // provider sees their own profile in their workspace (provider.profile), not here.
   providerProfile: publicProcedure.input(z.object({ slug: z.string().max(80) })).query(async ({ ctx, input }) => {
     const [org] = await ctx.db.select().from(organisations).where(and(eq(organisations.type, 'provider'), eq(organisations.slug, input.slug)))
-    if (!org || org.status === 'rejected' || org.status === 'suspended') return null
-    const approved = org.status === 'active'
+    if (!org || org.status !== 'active') return null
     return {
       name: org.name,
       slug: org.slug,
-      approved,
+      approved: true,
       since: org.createdAt,
       headline: org.headline ?? '',
       bio: org.bio ?? '',
@@ -279,12 +280,24 @@ export const organisationsRouter = createTRPCRouter({
       logoUrl: mediaUrl(org.logoPath),
       bookingTerms: org.bookingTerms ?? '',
       cancellationPolicy: org.cancellationPolicy ?? '',
-      // only an approved provider's live courses show
-      courses: approved ? await loadProviderCourses(ctx.db, org.id) : [],
+      courses: await loadProviderCourses(ctx.db, org.id),
     }
   }),
 
-  // The public directory of providers (/providers): every approved provider, A to Z, with its town, headline, logo, how many
-  // courses it runs and in which categories.
-  providerDirectory: publicProcedure.query(({ ctx }) => loadProviderDirectory(ctx.db)),
+  // The public directory of providers (/providers): every approved provider with a live course, A to Z, with its town, headline,
+  // logo, how many courses it runs, in which categories and the towns its upcoming dates are in (`towns`, so a search for a
+  // town finds the providers that run courses there, not only those based there).
+  providerDirectory: publicProcedure.query(async ({ ctx }) => {
+    const list = await loadProviderDirectory(ctx.db)
+    const rows = await ctx.db.execute<{ slug: string; towns: string[] }>(sql`
+      select o.slug, array_agg(distinct v.city order by v.city) towns
+      from public.organisations o
+      join public.courses c on c.organisation_id = o.id and c.kind = 'provider' and c.status = 'live' and c.is_public and c.listed
+      join public.cohorts k on k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date
+      join public.venues v on v.id = k.venue_id and coalesce(v.city, '') <> ''
+      where o.type = 'provider' and o.status = 'active'
+      group by o.slug`)
+    const towns = new Map(rows.map((r) => [r.slug, r.towns]))
+    return list.map((p) => ({ ...p, towns: towns.get(p.slug) ?? [] }))
+  }),
 })

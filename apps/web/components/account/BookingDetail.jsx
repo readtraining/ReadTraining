@@ -9,6 +9,7 @@ import { demoCourseHref } from "@/data/demoCourses";
 import { formatDay, formatPrice } from "@/lib/format";
 import { StatusPill, placeOf, whenOf } from "./BookingRow";
 import { EmptyState } from "@/components/states/States";
+import { contactHref } from "@/lib/forms";
 
 const copy = account.detail;
 
@@ -36,7 +37,7 @@ export default function BookingDetail({ reference }) {
 
   const state = bookingState(booking);
   const canCancel = cancellableLines(booking).length > 0;
-  const change = `/contact-us?topic=booking&reference=${booking.reference}#contact-form`;
+  const change = contactHref("booking", { reference: booking.reference });
   const tel = topBar.phone.replace(/\s+/g, "");
 
   return (

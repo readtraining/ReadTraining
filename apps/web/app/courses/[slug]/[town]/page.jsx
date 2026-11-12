@@ -1,14 +1,14 @@
-import React, { Suspense } from "react";
+import React from "react";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import Preloader from "@/components/common/Preloader";
 import HomeHeader from "@/components/home/HomeHeader";
 import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 import FaqSection from "@/components/marketing/FaqSection";
 import CourseCatalogue from "@/components/courses/CourseCatalogue";
-import CourseListSkeleton from "@/components/courses/CourseListSkeleton";
 import CourseTowns from "@/components/courses/CourseTowns";
-import { getCourseTownPage, getCourseTownParams, getCourseTowns, isCourseTown, mayBeTownPage } from "@/lib/coursePages";
+import { getCourseTownPage, getCourseTowns, isCourseTown, mayBeTownPage } from "@/lib/coursePages";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
@@ -24,12 +24,7 @@ const townPage = async (slug, town, courses) =>
 
 // A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds), as Hurak's course finder pages: the same
 // catalogue with the town as its location (courses with a venue there, closest first; the visitor can change the town), the
-// other towns, the page's FAQs. Reads: lib/coursePages.js (getCourseTownPage).
-
-export async function generateStaticParams() {
-  await loadTaxonomy();
-  return getCourseTownParams(await realCourses());
-}
+// other towns, the page's FAQs. Reads: lib/coursePages.js (getCourseTownPage). Rendered for each request, as its course page.
 
 export async function generateMetadata(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
@@ -41,6 +36,7 @@ export async function generateMetadata(props) {
 }
 
 export default async function CourseTownPage(props) {
+  await connection();
   await Promise.all([loadTaxonomy(), loadSiteContent()]); // catalogue names (categories, methods) and the site's content, on the server
   const { slug, town } = await props.params;
   const courses = await realCourses();
@@ -56,11 +52,9 @@ export default async function CourseTownPage(props) {
       <HomeHeader />
       <div className="content-wrapper js-content-wrapper">
         <main id="rt-cat-main">
-          <Suspense fallback={<CourseListSkeleton />}>
-            <CourseCatalogue courses={page.courses} scope={page.scope} />
-          </Suspense>
-          <CourseTowns title={`${page.label.replace(/ courses$/i, "")} courses in other towns`} towns={getCourseTowns(slug, courses)} current={town} />
-          <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`ctown-faq-${slug}`} />
+          <CourseCatalogue courses={page.courses} scope={page.scope} />
+          <CourseTowns title={`${page.scope.parent.title} in other towns`} towns={getCourseTowns(slug, courses).filter((t) => t.slug !== town)} />
+          {faq.length > 0 && <FaqSection eyebrow={page.label} title="Frequently asked questions" items={faq} idPrefix={`ctown-faq-${slug}`} />}
         </main>
         <HomeHelp />
         <HomeFooter />

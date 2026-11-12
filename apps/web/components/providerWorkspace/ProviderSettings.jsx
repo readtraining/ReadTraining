@@ -178,7 +178,9 @@ function EmailsTab({ data, say }) {
 // ---- affiliate -------------------------------------------------------------------------------------------------------------
 
 function AffiliateTab({ say }) {
-  const slug = useWorkspace()?.slug || "";
+  const workspace = useWorkspace();
+  const slug = workspace?.slug || "";
+  const live = workspace?.status === "active"; // the public profile opens once the account is approved
   const [url, setUrl] = useState("");
   React.useEffect(() => setUrl(`${window.location.origin}/providers/${slug}?ref=${slug}`), [slug]);
   const copy = async () => {
@@ -194,6 +196,7 @@ function AffiliateTab({ say }) {
     <div className="rt-acc__card rt-q__form rt-pws-set__form">
       <div className="rt-field">
         <label htmlFor="rt-set-aff">Recommended URL</label>
+        {!live && <p className="rt-field__hint">This link opens once your account is approved.</p>}
         <p className="rt-field__hint">Put it on your website, emails and social media. Learners who book through it count as your own customers, so no commission is taken.</p>
         <div className="rt-pws-course-addrow">
           <input id="rt-set-aff" value={url} readOnly onFocus={(e) => e.target.select()} />

@@ -10,7 +10,7 @@ import { RequestButton } from "./LicenceRequest";
 // scrolled out of view, the same two show in the fixed bottom bar (.rt-tps__bar).
 function Primary({ primary }) {
   const cls = "button -md -purple-1 text-white";
-  return primary.href ? <Link href={primary.href} className={cls}>{primary.label}</Link> : <RequestButton className={cls}>{primary.label}</RequestButton>;
+  return primary.href ? <Link href={primary.href} className={cls}>{primary.label}</Link> : <RequestButton preset={primary.preset} className={cls}>{primary.label}</RequestButton>;
 }
 
 export default function LicenceActions({ primary, secondary }) {

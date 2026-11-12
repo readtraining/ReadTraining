@@ -3,7 +3,8 @@ import { Icon } from "./Icon";
 import { formatNumber } from "@/lib/courses";
 
 // The white bar on the hero edge: a purple "Approved providers" block with what is true of every course here (each provider and
-// course is checked by our team), then the course at a glance from its own data: training providers, upcoming dates and its length.
+// course is checked by our team), then the course at a glance from its own data: training providers, upcoming dates (not on a
+// self-paced course) and its length.
 // (A rating takes the purple block's place once real reviews exist, in a later milestone; never a made-up one.)
 export default function StatsCard({ course }) {
   const selfPaced = course.duration === "Self-paced";
@@ -23,11 +24,14 @@ export default function StatsCard({ course }) {
         <strong>{formatNumber(course.providerCount)}</strong>
         <span>{course.providerCount === 1 ? "training provider" : "training providers"}</span>
       </div>
-      <div className="rt-stats__students">
-        <Icon name="calendar" />
-        <strong>{formatNumber(course.upcoming ?? 0)}</strong>
-        <span>upcoming {course.upcoming === 1 ? "date" : "dates"}</span>
-      </div>
+      {/* a self-paced course has no dates to count */}
+      {!selfPaced && (
+        <div className="rt-stats__students">
+          <Icon name="calendar" />
+          <strong>{formatNumber(course.upcoming ?? 0)}</strong>
+          <span>upcoming {course.upcoming === 1 ? "date" : "dates"}</span>
+        </div>
+      )}
       {course.duration && (
         <div className="rt-stats__students">
           <Icon name="time-management" />

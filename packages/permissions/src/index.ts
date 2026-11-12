@@ -86,6 +86,7 @@ const PROVIDER_RULES = {
   'provider.settings.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'marketing', 'assistant'] },
   'provider.profile.edit': { roles: ['owner', 'admin', 'marketing'] }, // headline, biography, socials, logo
   'provider.profile.rename': { roles: ['owner', 'admin'] }, // the provider's name, while its application is still being reviewed
+  'provider.review.send': { roles: ['owner', 'admin'] }, // send the account back for review after our team asked for changes (they read our note)
   'provider.terms.edit': { roles: ['owner', 'admin'] },
   'provider.faqs.edit': { roles: ['owner', 'admin', 'course_editor', 'marketing'] },
   'provider.qa.answer': { roles: ['owner', 'admin', 'course_editor', 'support'] },

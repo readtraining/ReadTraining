@@ -25,28 +25,28 @@ export const terms = {
       id: "who-can-use",
       title: "Who can use ReadTraining",
       blocks: [
-        "You must be 18 or over to use ReadTraining. By using the website, you confirm that you are 18 or over and able to enter into a binding agreement with us.",
+        "You must be 16 or over to use ReadTraining. By using the website, you confirm that you are 16 or over and able to enter into a binding agreement with us.",
       ],
     },
     {
       id: "course-listings",
       title: "Course listings",
       blocks: [
-        "Courses on ReadTraining are listed by independent training providers. We do not check or endorse every course or trainer in advance, and each provider is responsible for the content and accuracy of its listings and trainer profiles.",
+        "Courses on ReadTraining are listed by independent training providers. Our team approves each course before it appears on the website, but each provider remains responsible for the content and accuracy of its listings and for delivering its courses.",
       ],
     },
     {
       id: "booking-a-course",
       title: "Booking a course",
       blocks: [
-        "When you book a course, we ask for some personal and payment details. You confirm that the information you give us is accurate and complete.",
+        "When you book a course, we ask for some personal details, and payment details once online booking opens. You confirm that the information you give us is accurate and complete.",
       ],
     },
     {
       id: "refunds-and-cancellations",
       title: "Refunds and cancellations",
       blocks: [
-        "Each training provider sets its own refund policy, which you can read on the checkout page before you pay. Please check it before you book: refund requests and disputes are handled under that provider's policy.",
+        "Each training provider sets its own refund and cancellation policy. Where a provider has added one, it is shown on the provider's page on ReadTraining; if it isn't, ask us before you book and we will tell you what it is. Refund requests and disputes are handled under that provider's policy.",
         "For CITB test bookings, CSCS card applications and Personal Licence applications, a cancellation fee of 50% of the total payment applies. Once we have booked your test or submitted your application, the payment is non-refundable.",
       ],
     },
@@ -64,7 +64,7 @@ export const terms = {
       title: "Intellectual property",
       blocks: [
         "ReadTraining contains two kinds of content: content we create or own, and content uploaded by training providers. Our content, including the website's design, logo, software and written material, belongs to us or our licensors and is protected by copyright and trademark law.",
-        "Content uploaded by training providers, such as course descriptions, images, documents, prices and branding, belongs to that provider or its licensors. Providers confirm they have the right to use anything they upload. We do not check uploaded content in advance, but we will remove material that infringes someone else's rights when we receive a valid notice.",
+        "Content uploaded by training providers, such as course descriptions, images, documents, prices and branding, belongs to that provider or its licensors. Providers confirm they have the right to use anything they upload, and they remain responsible for it. We will remove material that infringes someone else's rights when we receive a valid notice.",
       ],
     },
     {

@@ -33,6 +33,7 @@ export default function AdminApprovals() {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [said, setSaid] = useState("");
+  const [unsent, setUnsent] = useState(""); // decisions saved whose email to the provider couldn't be sent: shown until the next run
   const [busy, setBusy] = useState(false);
   const formRef = useRef(null);
   const utils = api.useUtils();
@@ -75,15 +76,22 @@ export default function AdminApprovals() {
   const toggle = (key) => setPicked((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
   const run = async (list, decision, message) => {
     setBusy(true);
+    setUnsent("");
     let done = 0;
+    let outbox = false;
     const failed = [];
+    const notEmailed = [];
     for (const it of list) {
       try {
         // decided on the version listed (sent at it.at); a course or change the provider changed since is refused
-        await decide.mutateAsync({ courseId: it.courseId, decision, message, seen: it.at });
+        const r = await decide.mutateAsync({ courseId: it.courseId, decision, message, seen: it.at });
         done += 1;
+        if (r.outbox) outbox = true;
+        else if (!r.emailed) notEmailed.push(`“${it.title}”`);
       } catch (e) {
-        failed.push(`${it.title}: ${errorsFrom(e).general}`);
+        // the refusal itself (a retired entry, something missing, another admin decided…), or a field's message
+        const { fields, general } = errorsFrom(e);
+        failed.push(`${it.title}: ${general || Object.values(fields)[0] || "That didn’t work. Reload the page and try again."}`);
       }
     }
     setBusy(false);
@@ -91,7 +99,8 @@ export default function AdminApprovals() {
     refresh();
     if (done) refreshCourses().catch(() => {});
     const verb = { approve: "Approved", approveChange: "Change approved on", changes: "Asked for changes on", rejectChange: "Change turned down on" }[decision];
-    setSaid([done ? (list.length === 1 ? `${verb}: ${list[0].title}` : `${verb} ${done} courses`) : "", ...failed].filter(Boolean).join(". "));
+    setSaid([done ? (list.length === 1 ? `${verb}: ${list[0].title}` : `${verb} ${done} courses`) : "", done && outbox ? copy.emailOutbox.replace(/\.$/, "") : "", ...failed].filter(Boolean).join(". "));
+    if (notEmailed.length) setUnsent(copy.notEmailedFor(notEmailed.join(", ")));
     return failed;
   };
   const open = (item, decision) => {
@@ -135,6 +144,7 @@ export default function AdminApprovals() {
         )}
       </div>
       <Said text={said} />
+      {unsent && <p className="rt-acc__notice -warn" role="alert">{unsent}</p>}
 
       {shown.length ? (
         <ul className="rt-adm-items">
@@ -159,7 +169,7 @@ export default function AdminApprovals() {
                   </div>
                   <h3 className="rt-acc__h3"><Link href={`/admin/catalogue/${a.courseId}`} className="rt-adm-strong">{a.title}</Link></h3>
                   <p className="rt-acc__note">{[a.provider, methodName(a.method), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
-                  {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive}</p>}
+                  {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive(a.providerStatus)}</p>}
                   {a.note && <p className="rt-adm-item__reason"><strong>Note to the provider:</strong> {a.note}</p>}
                   {canDecide && tab === "waiting" && a.own && <p className="rt-adm-item__reason">{a.soleApprover ? copy.ownQueueSole : copy.ownBlocked}</p>}
                 </div>

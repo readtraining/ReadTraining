@@ -21,7 +21,8 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A blog article (/blog/<slug>), in the legal pages' reading layout (components/doc): the contents pinned beside the text from
 // 992px (a collapsible list above it on smaller screens), the header (breadcrumb, title, intro, author, dates, reading time),
-// the text in one 680px column and its official sources. After it, full width: the courses on the topic (home's course cards)
+// the text in one 680px column and its official sources. After it, full width: the courses on the topic or related ones (home's
+// course cards)
 // and more articles (the blog's cards), then need help and the footer.
 
 export function generateStaticParams() {
@@ -43,7 +44,11 @@ export default async function BlogArticlePage(props) {
   if (!post) notFound();
   const a = blogPage.article;
   const more = getMorePosts(post);
-  const courses = await courseCards(post.related || [], 3); // the live courses this post is about
+  // the courses under it: "on this topic" only when the course the article is about is live (it comes first), otherwise the
+  // related ones as "Related courses", so an article never shows other courses as if they were its own
+  const own = post.topic ? await courseCards([post.topic], 1) : [];
+  const courses = await courseCards([...(own.length ? [post.topic] : []), ...(post.related || [])], 3);
+  const coursesCopy = own.length ? a.courses : a.relatedCourses;
   const crumbs = [{ label: "Home", href: "/" }, { label: "Blog", href: BLOG_HREF }, { label: post.category.label, href: `${BLOG_HREF}?category=${post.category.key}` }, { label: post.title }];
   const toc = post.sections.map((s) => ({ id: s.id, label: s.title }));
   const meta = [
@@ -109,8 +114,8 @@ export default async function BlogArticlePage(props) {
           {courses.length > 0 && (
             <section className="rt-blog__courses layout-pt-lg layout-pb-lg bg-light-4" aria-labelledby="rt-blog-courses-h">
               <div className="container">
-                <h2 className="sectionTitle__title" id="rt-blog-courses-h">{a.courses.title}</h2>
-                <p className="sectionTitle__text mt-5">{a.courses.text}</p>
+                <h2 className="sectionTitle__title" id="rt-blog-courses-h">{coursesCopy.title}</h2>
+                <p className="sectionTitle__text mt-5">{coursesCopy.text}</p>
                 <div className="row y-gap-20 pt-30">
                   {courses.map((c) => <HomeCourseCard key={c.id} data={c} className="col-lg-4 col-md-6" />)}
                 </div>

@@ -13,6 +13,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { formatWhen, Said, DetailSkeleton, Empty, actionLabel } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
+import { methodName } from "@/lib/taxonomy";
 
 const copy = A.providers;
 const d = copy.detail;
@@ -25,7 +26,7 @@ const DANGER = new Set(["reject", "suspend"]);
 
 // One provider (API admin.providers.get): its status and the decisions it allows (approve, ask for changes, don't approve,
 // suspend, reinstate; each confirmed in a pop-up, with a message where the provider needs one), why it has its status, its
-// details and team, its commission (its own rate or the platform default; changed with the "fees and commission" switch), and
+// details, team and courses (each opening its admin page), its commission (its own rate or the platform default; changed with the "fees and commission" switch), and
 // its activity. An admin doesn't decide on a provider account they opened themselves, unless no other admin can: a Full admin
 // then decides with a reason, recorded as their own request (soleApprover, API lib/soleApprover.mts).
 export default function AdminProvider({ slug }) {
@@ -46,13 +47,13 @@ export default function AdminProvider({ slug }) {
   const decisions = p.ownRequest && !p.soleApprover ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
   const blockedNote = NEXT[p.status].length && !decisions.length ? (p.ownRequest && NEXT[p.status].some((k) => SWITCH[k] === "approve") ? d.ownRequest : d.noSwitch) : "";
   const soleNote = p.ownRequest && p.soleApprover && decisions.some((k) => SWITCH[k] === "approve") ? d.ownSole : "";
-  const decided = async (decision, emailed) => {
+  const decided = async (decision, { emailed, outbox }) => {
     setRefreshing(true);
     utils.admin.activity.list.invalidate();
     await utils.admin.providers.invalidate().catch(() => {});
     setRefreshing(false);
-    setSaid(d.done[decision]);
-    setWarning(emailed ? "" : d.notEmailed);
+    setSaid(outbox ? `${d.done[decision]}. ${d.emailOutbox}` : d.done[decision]);
+    setWarning(emailed || outbox ? "" : d.notEmailed);
   };
   const f = d.fields;
   const lastReply = p.status === "pending" && activity.data?.entries.find((e) => e.action === "provider.resubmitted");
@@ -74,7 +75,7 @@ export default function AdminProvider({ slug }) {
           ))}
           {blockedNote && <p className="rt-acc__notice">{blockedNote}</p>}
           {soleNote && <p className="rt-acc__notice -warn">{soleNote}</p>}
-          {!["rejected", "suspended"].includes(p.status) && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
+          {p.status === "active" && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
         </div>
       </section>
 
@@ -117,6 +118,26 @@ export default function AdminProvider({ slug }) {
                 ))}
               </ul>
             ) : <Empty inCard icon="team" title="No team members yet" text="People this provider adds to its team show here." />}
+          </section>
+
+          <section className="rt-acc__card" aria-labelledby="rt-adm-pcs-h">
+            <div className="rt-acc__cardhead">
+              <h2 className="rt-acc__h2" id="rt-adm-pcs-h">{d.courses}</h2>
+              {p.courseCount > p.courses.length && <Link href={`/admin/catalogue?kind=provider&q=${encodeURIComponent(p.name)}`} className="fb-textlink">{d.coursesAll(p.courseCount)}</Link>}
+            </div>
+            {p.courses.length ? (
+              <ul className="rt-adm-list">
+                {p.courses.map((c) => (
+                  <li key={c.id}>
+                    <div><Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link><small>Number {c.id}{c.method ? ` · ${methodName(c.method)}` : ""}</small></div>
+                    <span className="rt-adm-cellrow">
+                      {c.pendingChange && <AdminStatus kind="course" status="pending">{A.catalogue.detail.change}</AdminStatus>}
+                      <AdminStatus kind="course" status={c.status}>{A.catalogue.statuses[c.status]}</AdminStatus>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : <Empty inCard icon="catalogue" title="No courses yet" text={d.coursesNone} />}
           </section>
         </div>
         <aside className="rt-adm-detail__side">
@@ -204,7 +225,7 @@ function DecisionSheet({ provider, decision, onClose, onDone }) {
     if (msgError || ownError) return focusFirstError(ref.current);
     try {
       const res = await decide.mutateAsync({ organisationId: provider.id, decision, message: sheet.label ? message.trim() : undefined, ownReason: own ? reason.trim() : undefined });
-      onDone(decision, res.emailed);
+      onDone(decision, res);
       close();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);

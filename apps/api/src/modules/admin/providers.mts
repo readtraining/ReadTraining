@@ -5,11 +5,10 @@ import { organisations, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 import type { AdminAction } from '@readtraining/permissions'
 
-import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { logActivity } from '../../lib/activity.mjs'
-import { sendEmail } from '../../lib/email.mjs'
-import { OWN_REASON_ERROR, ownReasonOk, soleApprover } from '../../lib/soleApprover.mjs'
-import { siteUrl } from '../../lib/supabase.mjs'
+import { emailOutbox } from '../../lib/email.mjs'
+import { notify, ownerOf } from '../../lib/notify.mjs'
+import { OWN_REASON_ERROR, ownReasonOk, ownRequestRefused, soleApprover } from '../../lib/soleApprover.mjs'
 import { bps, defaultCommission, percent } from './commission.mjs'
 import { orderBy, paging, total, window } from '../../lib/paging.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
@@ -114,7 +113,8 @@ export const providersRouter = createTRPCRouter({
       }
     }),
 
-  // One provider: its details, why it has its status, its team. Its activity comes from admin.activity.list.
+  // One provider: its details, why it has its status, its team and its courses (newest change first). Its activity comes from
+  // admin.activity.list.
   get: adminProcedure('admin.panel.open')
     .input(z.object({ slug: z.string().max(80) }))
     .query(async ({ ctx, input }) => {
@@ -126,6 +126,10 @@ export const providersRouter = createTRPCRouter({
         select m.user_id, u.email, p.first_name, p.last_name, m.role, m.status, m.created_at
         from public.organisation_members m join auth.users u on u.id = m.user_id left join public.profiles p on p.id = m.user_id
         where m.organisation_id = ${o.id}::uuid order by (m.role = 'owner') desc, m.created_at`)
+      const courses = await ctx.db.execute<{ id: number; title: string; status: string; method: string | null; pending_change: boolean }>(sql`
+        select c.id, c.title, c.status, c.method, exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
+        from public.courses c where c.organisation_id = ${o.id}::uuid and c.kind = 'provider' order by c.updated_at desc limit 50`)
+      const [{ n: courseCount }] = await ctx.db.execute<{ n: number }>(sql`select count(*)::int n from public.courses where organisation_id = ${o.id}::uuid and kind = 'provider'`)
       return {
         id: o.id,
         name: o.name,
@@ -145,6 +149,9 @@ export const providersRouter = createTRPCRouter({
         ownRequest: o.created_by === ctx.user.id,
         soleApprover: o.created_by === ctx.user.id && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide')),
         team: team.map((m) => ({ userId: m.user_id, name: nameOf(m.first_name, m.last_name, m.email), email: m.email, role: m.role, status: m.status, joinedAt: iso(m.created_at)! })),
+        // up to 50 of its courses (`courseCount`: all of them)
+        courses: courses.map((c) => ({ id: c.id, title: c.title, status: c.status, method: c.method, pendingChange: c.pending_change })),
+        courseCount,
       }
     }),
 
@@ -159,7 +166,14 @@ export const providersRouter = createTRPCRouter({
       if (!o) throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider was not found.' })
       // their own request: only as the sole approver, with a reason (lib/soleApprover.mts)
       const own = rule.action === 'admin.approvals.decide' && Boolean(o.created_by) && o.created_by === ctx.user.id
-      if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, rule.action)) : !can(ctx.actor, rule.action, { createdBy: o.created_by ?? undefined })) await refuse(ctx, rule.action, o.id, path)
+      if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, rule.action)) : !can(ctx.actor, rule.action, { createdBy: o.created_by ?? undefined })) {
+        // logged as refused either way; an admin who may approve but opened this account themselves is told why (a sole approver may
+        // have lost the exception since the page loaded: another admin can approve now)
+        const why = own && can(ctx.actor, rule.action) ? new TRPCError({ code: 'FORBIDDEN', message: ownRequestRefused(ctx.actor) }) : null
+        await refuse(ctx, rule.action, o.id, path).catch((error) => {
+          throw why ?? error
+        })
+      }
       if (own && !ownReasonOk(input.ownReason)) throw new TRPCError({ code: 'BAD_REQUEST', message: OWN_REASON_ERROR, cause: Object.assign(new Error(OWN_REASON_ERROR), { field: 'ownReason' }) })
       if (!rule.from.includes(o.status)) throw statusConflict(o.status, rule.to)
       const message = input.message?.trim() || null
@@ -185,14 +199,16 @@ export const providersRouter = createTRPCRouter({
         if (own) await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: o.id, action: 'admin.own_request_decided', targetType: 'organisation', targetId: o.id, metadata: { decision: input.decision, reason: input.ownReason!.trim() }, ip: ctx.ip })
       })
 
-      const [owner] = await ctx.db.execute<{ email: string | null; first_name: string | null }>(sql`
-        select u.email, p.first_name from public.organisation_members m join auth.users u on u.id = m.user_id
-        left join public.profiles p on p.id = m.user_id where m.organisation_id = ${o.id}::uuid and m.role = 'owner' limit 1`)
-      const emailed = owner?.email
-        ? await sendEmail(renderEmail(DECISION_EMAIL[input.decision], await wordsFor(ctx.db, DECISION_EMAIL[input.decision]), { firstName: owner.first_name ?? '', provider: o.name, message: rule.message ? message ?? '' : '' }, siteUrl, owner.email))
-        : false
-      if (emailed) await logActivity(ctx.db, { actorUserId: null, actorIdentity: 'system', organisationId: o.id, action: 'email.provider_decision_sent', targetType: 'organisation', targetId: o.id, metadata: { decision: input.decision }, ip: null })
-      return { status: rule.to, emailed }
+      // after the commit, through lib/notify.mts: an email that can't be sent (or an owner who can't be looked up) never fails the
+      // decision; `emailed` says whether the owner was told, `outbox` that this copy of the site saves emails instead of sending them
+      let emailed = false
+      try {
+        const { to } = await ownerOf(ctx.db, o.id)
+        emailed = await notify(ctx.db, DECISION_EMAIL[input.decision], to, { provider: o.name, message: rule.message ? message ?? '' : '' }, { organisationId: o.id, targetType: 'organisation', targetId: o.id, action: 'email.provider_decision_sent' })
+      } catch (error) {
+        console.error('provider decision email: could not find the owner', error instanceof Error ? error.message : error)
+      }
+      return { status: rule.to, emailed, outbox: emailOutbox() }
     }),
 
   // A provider's own commission, or back to the platform default (null). Applies to bookings made after the change.
