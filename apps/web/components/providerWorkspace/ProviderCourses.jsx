@@ -120,7 +120,7 @@ export default function ProviderCourses() {
                   <tr key={c.id}>
                     <td data-label="Course">
                       <span className="rt-cx-course">
-                        {c.coverUrl ? <img src={c.coverUrl} alt="" className="rt-cx-course__img" /> : <Link href={href} className="rt-cx-course__img -none" title="Upload course image"><i className="icon-cloud text-16" aria-hidden="true"></i><span className="rt-sr">Upload course image for {c.title}</span></Link>}
+                        {c.coverUrl ? <img src={c.coverUrl} alt="" className="rt-cx-course__img" /> : can("provider.courses.editPage") ? <Link href={href} className="rt-cx-course__img -none" title="Upload course image"><i className="icon-cloud text-16" aria-hidden="true"></i><span className="rt-sr">Upload course image for {c.title}</span></Link> : <span className="rt-cx-course__img -none" aria-hidden="true"><i className="icon-cloud text-16"></i></span>}
                         <span className="rt-cx-course__text">
                           <Link href={href} className="rt-cx-course__title" title={c.title}>{c.title}</Link>
                           <small title={meta}>{meta}</small>
