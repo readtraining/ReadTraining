@@ -111,7 +111,7 @@ function buildBusinesses(saved, now) {
     const invoices = b.invoices.map(([no, issuedAgo, amount, status, po]) => {
       const issued = now - issuedAgo * DAY;
       const due = issued + B.termsDays * DAY;
-      const paid = s.paid?.includes(no) || status === "paid";
+      const paid = status === "paid";
       const late = Math.floor((now - due) / DAY);
       return { no, issued: isoDay(issued), due: isoDay(due), amount, po, late, status: paid ? "paid" : late > 0 ? "overdue" : "due", reminded: s.reminded?.[no] || null };
     });
@@ -155,7 +155,6 @@ export const offerCredit = (b, limit) => setBusiness(b, (cur) => ({ ...cur, cred
 export const changeCreditLimit = (b, limit) => setBusiness(b, (cur) => ({ ...cur, limit }));
 export const setCreditHold = (b, hold) => setBusiness(b, (cur) => ({ ...cur, credit: hold ? "suspended" : "approved" }));
 export const remindInvoice = (b, inv) => setBusiness(b, (cur) => ({ ...cur, reminded: { ...(cur.reminded || {}), [inv.no]: Date.now() } }));
-export const markInvoicePaid = (b, inv) => setBusiness(b, (cur) => ({ ...cur, paid: [...(cur.paid || []), inv.no] }));
 export const addBusinessNote = (b, text) => setBusiness(b, (cur) => ({ ...cur, notes: [{ at: Date.now(), who: "Sara Ahmed", text }, ...(cur.notes || [])] }));
 
 // everything Phase 2 adds to getAdmin()

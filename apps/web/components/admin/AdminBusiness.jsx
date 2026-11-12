@@ -4,7 +4,7 @@ import React, { useRef, useState } from "react";
 import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
-import { addBusinessNote, changeCreditLimit, offerCredit, markInvoicePaid, remindInvoice, setCreditHold } from "@/lib/adminWork";
+import { addBusinessNote, changeCreditLimit, offerCredit, remindInvoice, setCreditHold } from "@/lib/adminWork";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
@@ -142,10 +142,9 @@ export default function AdminBusiness({ slug }) {
                   <td data-label="Amount">{formatPrice(inv.amount)}</td>
                   <td data-label="Status"><AdminStatus kind="invoice" status={inv.status}>{copy.invoiceStatuses[inv.status]}</AdminStatus>{inv.status === "overdue" && <small>{inv.late} days late</small>}{inv.reminded && <small>Reminded {formatWhen(inv.reminded)}</small>}</td>
                   <td data-label="Actions">
-                    {inv.status !== "paid" && (
+                    {inv.status === "overdue" && (
                       <div className="rt-adm-rowactions">
-                        {inv.status === "overdue" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { remindInvoice(b, inv); setSaid("Reminder sent"); }}>{d.remind}<span className="rt-sr"> for {inv.no}</span></button>}
-                        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { markInvoicePaid(b, inv); setSaid(`${inv.no} marked paid`); }}>{d.markPaid}<span className="rt-sr">: {inv.no}</span></button>
+                        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { remindInvoice(b, inv); setSaid("Reminder sent"); }}>{d.remind}<span className="rt-sr"> for {inv.no}</span></button>
                       </div>
                     )}
                   </td>

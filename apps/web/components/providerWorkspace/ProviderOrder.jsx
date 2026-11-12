@@ -3,7 +3,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { addOrderNote, addonBooking, cancelOrder, customerName, decideRefund, learnerName, markOrderPaid, payInvoice, refundOrder, sendConfirmation, timeRange, uploadInvoice, upsellBooking, useProvider } from "@/lib/providerWorkspace";
+import { addOrderNote, addonBooking, cancelOrder, customerName, decideRefund, learnerName, payInvoice, refundOrder, sendConfirmation, timeRange, uploadInvoice, upsellBooking, useProvider } from "@/lib/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
@@ -21,7 +21,7 @@ import DateField from "@/components/admin/DateField";
 // details, the timeline with notes, the invoice (upload it, record when it was paid), the enrolled students (one card per
 // booking: reference, course, delivery, venue, dates, timings, price, pricing plan, learner, View cohort, and Reschedule / Resit /
 // Upsell / Addon) and the earning details. Actions: Initiate refund (full or partial), Send confirmation mail; an unpaid order can
-// be marked paid, its link sent again or cancelled; a disputed one answered with evidence.
+// have its link sent again or be cancelled (nothing is marked paid by hand: that comes with real payments); a disputed one answered with evidence.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -139,7 +139,6 @@ export default function ProviderOrder({ reference }) {
       <div className="rt-pws-ord__actions">
         {o.status === "incomplete" && (
           <>
-            <button type="button" className="button -sm -purple-1 text-white" onClick={() => { markOrderPaid(o.ref); say("Order marked as paid"); }}>Mark as paid</button>
             {o.payment === "link" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => resend(`Payment link sent again to ${o.customer.email}.`, "Payment link sent again")}>Resend payment link</button>}
             <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("cancel")}>Cancel order</button>
           </>

@@ -369,13 +369,6 @@ export const createOrder = ({ customer, lines, payment, receipt, joining }) => u
   }));
   return ref;
 });
-export const markOrderPaid = (ref) => updateProvider((s) => {
-  const o = s.orders.find((x) => x.ref === ref);
-  if (o && o.status === "incomplete") {
-    o.status = "paid";
-    o.notes.unshift({ at: Date.now(), who: s.me.name, text: "Marked as paid." });
-  }
-});
 export const cancelOrder = (ref, reason) => updateProvider((s) => {
   const o = s.orders.find((x) => x.ref === ref);
   if (!o || o.status !== "incomplete") return;
