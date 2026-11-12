@@ -14,6 +14,7 @@ import { errorsFrom } from "@/lib/useMe";
 import ProviderChecklist from "./ProviderChecklist";
 import { Loading, Pill, formatWhen } from "./providerParts";
 import { Counter, Field, aria } from "./settingsForm";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 
 const copy = pw.review;
 const REPLY_MAX = 1000;
@@ -74,6 +75,7 @@ function Changes({ review, onSent }) {
   const resubmit = api.organisations.resubmit.useMutation();
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
+  useUnsavedChanges(Boolean(reply.trim()) && !resubmit.isSuccess); // a note typed but not sent: leaving asks first
   const formRef = useRef(null);
   const canSend = can("provider.review.send"); // the rule organisations.resubmit checks: the owner and admins
   const c = copy.send;

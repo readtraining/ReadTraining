@@ -16,6 +16,7 @@ import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery, 
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus, AdminTag } from "./AdminStatus";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 
 const copy = A.coupons;
 const f = copy.fields;
@@ -160,6 +161,7 @@ function CouponForm({ coupon, onDone }) {
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [find, setFind] = useState("");
+  useSavedSnapshot(v); // leaving with unsaved changes asks first (the sheet closes once saved)
   const ref = useRef(null);
   const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value }));
   const pick = (k, item) => setV((x) => ({ ...x, [k]: x[k].includes(item) ? x[k].filter((y) => y !== item) : [...x[k], item] }));
