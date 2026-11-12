@@ -6,6 +6,8 @@ import { can } from '@readtraining/permissions'
 import type { AdminAction } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { emailOutbox } from '../../lib/email.mjs'
+import { notify, ownerOf } from '../../lib/notify.mjs'
 import { OWN_REASON_ERROR, ownReasonOk, ownRequestRefused, soleApprover } from '../../lib/soleApprover.mjs'
 import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
 import { syncPlanPrices } from '../provider/plans.mjs'
@@ -72,7 +74,9 @@ export const adminPlansRouter = createTRPCRouter({
       }
     }),
 
-  // Approve the waiting packages, or ask for changes (with a note the provider sees). `seen`: the version the admin looked at.
+  // Approve the waiting packages, or ask for changes (with a note the provider sees). `seen`: the version the admin looked at. The
+  // provider's owner is emailed after the commit (plan-approved / plan-changes): `emailed` says whether they were told, `outbox`
+  // that this copy of the site saves emails to its test outbox instead; an email that fails never undoes the decision.
   decide: adminProcedure('admin.panel.open')
     .input(z.object({ planId: z.string().uuid(), decision: z.enum(['approve', 'changes']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime() }))
     .mutation(async ({ ctx, input, path }) => {
@@ -90,7 +94,7 @@ export const adminPlansRouter = createTRPCRouter({
       const message = input.message?.trim() || null
       if (input.decision === 'changes' && !message) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Say what the provider needs to change.', cause: Object.assign(new Error('Say what the provider needs to change.'), { field: 'message' }) })
       const now = new Date()
-      return ctx.db.transaction(async (tx) => {
+      const status = await ctx.db.transaction(async (tx) => {
         // the provider's saves lock this row too (provider/plans.mts lockPlan): whichever comes second sees the other
         const [locked] = await tx.select().from(pricePlans).where(and(eq(pricePlans.id, p.id))).for('update')
         if (!locked || locked.status !== 'pending' || !locked.draft) throw new TRPCError({ code: 'CONFLICT', message: 'This plan has already been decided, or has nothing waiting. Reload the page.' })
@@ -105,7 +109,15 @@ export const adminPlansRouter = createTRPCRouter({
           logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: p.organisationId, action: a, targetType: 'price_plan', targetId: p.id, metadata, ip: ctx.ip })
         await log(input.decision === 'approve' ? 'admin.plan_approved' : 'admin.plan_changes_requested', { name: p.name, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })
         if (own) await log('admin.own_request_decided', { decision: input.decision, reason: input.ownReason!.trim() })
-        return { status: input.decision === 'approve' ? 'approved' : 'changes' }
+        return input.decision === 'approve' ? 'approved' : 'changes'
       })
+      let emailed = false
+      try {
+        const { to, provider } = await ownerOf(ctx.db, p.organisationId)
+        emailed = await notify(ctx.db, input.decision === 'approve' ? 'plan-approved' : 'plan-changes', to, { provider, plan: p.name, message: message ?? '' }, { organisationId: p.organisationId, targetType: 'price_plan', targetId: p.id, action: 'email.plan_decision_sent' })
+      } catch (error) {
+        console.error('email plan decision: could not find the provider\'s owner', error instanceof Error ? error.message : error)
+      }
+      return { status, emailed, outbox: emailOutbox() }
     }),
 })

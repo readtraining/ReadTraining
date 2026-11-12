@@ -85,10 +85,12 @@ export default function AdminPlanReview({ planId, canDecide, onClose, onDecided 
     decide.mutate(
       { planId: p.id, decision, message: decision === "changes" ? message.trim() : undefined, ownReason: p.own ? reason.trim() : undefined, seen: p.version },
       {
-        onSuccess: () => {
+        onSuccess: (r) => {
           // an approval moves the prices of the dates and courses on the plan: the public pages catch up at once
           if (decision === "approve") refreshCourses().catch(() => {});
-          onDecided(decision === "approve" ? `${copy.approved}: ${p.name} (${p.provider.name})` : `${copy.sentBack}: ${p.name} (${p.provider.name})`);
+          // and whether the provider was told by email (as for courses)
+          const told = r.outbox ? A.approvals.emailOutbox : r.emailed ? A.approvals.emailed : A.approvals.notEmailed;
+          onDecided(`${decision === "approve" ? copy.approved : copy.sentBack}: ${p.name} (${p.provider.name}). ${told}`);
         },
         onError: (e) => {
           const { fields, general } = errorsFrom(e);

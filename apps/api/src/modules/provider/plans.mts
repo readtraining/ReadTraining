@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { and, asc, cohorts, courses, eq, inArray, isNull, pricePlans, sql } from '@readtraining/db'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { notifyApprovers, ownerOf } from '../../lib/notify.mjs'
 import { createTRPCRouter, limit, orgProcedure } from '../../trpc/trpc.mjs'
 
 // A provider's price plans (Hurak's "Tiered Plans"): 2 to 4 packages a learner chooses between, each with its own full price per
@@ -143,19 +144,21 @@ export const providerPlansRouter = createTRPCRouter({
 
   // Create a plan, or change one. Its name changes at once (only the provider sees it); new or changed packages wait for our team,
   // while learners keep seeing the approved ones. `seen`: the version the form was opened on (a save over a newer one is refused).
+  // Our approvers are emailed once the save is in, when the plan starts waiting (new, or an approved or sent-back plan changed);
+  // saving again while it waits doesn't email again. The email never holds up or undoes the save.
   save: orgProcedure('provider.pricing.edit')
     .input(z.object({ planId: z.string().uuid().optional(), name: line(60, 'plan name').min(1, 'Name the plan.'), tiers: tiersInput, seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input }) => {
       if (!input.planId) await limit(ctx, 'plans')
       const now = new Date()
-      return ctx.db.transaction(async (tx) => {
+      const done = await ctx.db.transaction(async (tx) => {
         if (!input.planId) {
           const [made] = await tx
             .insert(pricePlans)
             .values({ organisationId: input.organisationId, name: input.name, draft: input.tiers, status: 'pending', submittedAt: now, submittedBy: ctx.user.id, createdBy: ctx.user.id })
             .returning()
           await log(tx, ctx, input.organisationId, 'plan.created', made.id, { name: input.name, packages: input.tiers.length })
-          return { id: made.id, pending: true, version: made.updatedAt.toISOString() }
+          return { id: made.id, pending: true, version: made.updatedAt.toISOString(), sent: true }
         }
         const p = await lockPlan(tx, input.organisationId, input.planId)
         if (input.seen && p.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: PLAN_CHANGED })
@@ -170,8 +173,18 @@ export const providerPlansRouter = createTRPCRouter({
         // a plan never approved prices its dates from the waiting packages (they don't show to learners until approved)
         if (changed && !p.tiers) await syncPlanPrices(tx, p.id)
         await log(tx, ctx, input.organisationId, changed && !back ? 'plan.change_submitted' : 'plan.updated', p.id, { name: input.name })
-        return { id: p.id, pending: saved.status === 'pending', version: saved.updatedAt.toISOString() }
+        return { id: p.id, pending: saved.status === 'pending', version: saved.updatedAt.toISOString(), sent: changed && !back && p.status !== 'pending' }
       })
+      if (done.sent) {
+        try {
+          const { provider } = await ownerOf(ctx.db, input.organisationId)
+          await notifyApprovers(ctx.db, 'admin-new-plan', { provider, plan: input.name }, { organisationId: input.organisationId, targetType: 'price_plan', targetId: done.id, action: 'email.approvers_told' }, ctx.user.id)
+        } catch (error) {
+          console.error('email admin-new-plan: could not tell the approvers', error instanceof Error ? error.message : error)
+        }
+      }
+      const { sent: _sent, ...out } = done
+      return out
     }),
 
   // Take back a change that is still waiting: learners keep the approved packages. A plan never approved has nothing to go back to.

@@ -249,6 +249,7 @@ export const admin = {
       "provider.reapplied": "Applied again as a provider",
       "email.provider_decision_sent": "Decision email sent to the provider",
       "email.course_decision_sent": "Decision email sent to the provider",
+      "email.plan_decision_sent": "Price plan decision email sent to the provider",
       "email.shared_page_paused_sent": "Told the provider by email that a course page is off the site",
       "email.application_received_sent": "\"Application received\" email sent to the provider",
       "email.course_received_sent": "\"Course received\" email sent to the provider",
