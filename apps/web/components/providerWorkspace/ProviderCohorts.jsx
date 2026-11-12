@@ -456,7 +456,7 @@ const MEETING_LINK_ERROR = "Use the https link to one Zoom, Microsoft Teams or G
 const FIELD_OF = { pricePence: "price", wasPricePence: "wasPrice" };
 const FORM_FIELDS = new Set(["courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "planId", "capacity", "details", "tutorUserId"]);
 // a plan's packages in one line, for the plan picker ("Basic £249 · Plus £299 · Pro £399")
-const planLine = (p) => (p.draft ?? p.tiers).map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ");
+const planLine = (p) => p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ");
 
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
 // `suggestCourseId`). `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on.
@@ -736,9 +736,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </p>
                 {err("planId")}
                 <FieldSelect id="rt-cf-planId" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => set({ planId: value })}
-                  options={plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}${p.tiers ? "" : " (waiting for approval)"}` }))}
+                  options={plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}` }))}
                   invalid={Boolean(errors.planId)} describedBy={`rt-cf-planId-h${errors.planId ? " rt-cf-planId-e" : ""}`} />
-                {plans.some((p) => p.id === f.planId && !p.tiers) && <p className="rt-acc__notice -warn">Our team hasn&apos;t approved this plan yet, so learners won&apos;t see these dates until it is.</p>}
               </div>
             )}
             <div className="rt-pws-coh__setgrid">

@@ -14,8 +14,8 @@ import { Field, aria, isMoney } from "./settingsForm";
 // A price plan, as Hurak's "Create New Plan": the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus,
 // Pro, Elite to start with), and for each package its name, price per delegate, an optional "Save £" amount (shown as a was-price),
 // a tagline, "Most popular" (one package at most) and its features, each included (✓) or not (✗) with an optional description.
-// Saving sends new or changed packages to our team (API provider.plans.save); learners keep the approved ones until then, and
-// when approved the dates on the plan take its cheapest package as their price. `planId`: the plan to edit, or none for a new one.
+// Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its cheapest package
+// as their price. `plan`: the plan to edit, or none for a new one.
 
 const NAMES = ["Basic", "Plus", "Pro", "Elite"];
 const MAX_FEATURES = 12;
@@ -24,7 +24,7 @@ const pence = (v) => Math.round(Number(String(v).trim()) * 100);
 const blankFeature = () => ({ title: "", description: "", included: true });
 const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false, features: [] });
 const toDraft = (plan) => {
-  const tiers = plan ? plan.draft ?? plan.tiers : null;
+  const tiers = plan ? plan.tiers : null;
   return {
     name: plan?.name ?? "",
     tiers: tiers
@@ -114,21 +114,15 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     );
   };
 
-  const waiting = plan?.status === "pending";
-  const sentBack = plan?.status === "changes";
   const used = plan ? plan.used.dates + plan.used.courses : 0;
   return (
     <Sheet open={open} onClose={onClose} title={plan ? "Edit price plan" : "Create price plan"} closeLabel="Close" className="rt-pws-pkg__sheet">
       <form className="rt-q__form rt-pws-pkg" onSubmit={submit} noValidate ref={formRef}>
         {general && <p className="rt-acc__notice -warn" tabIndex={-1} role="alert">{general}</p>}
-        {sentBack && plan.statusNote && (
-          <div className="rt-acc__notice -warn"><strong>Our team asked for changes:</strong> {plan.statusNote}</div>
-        )}
         <p className="rt-acc__note">
-          {plan?.tiers
-            ? `Learners see the approved packages until our team checks a change.${used ? ` When it is approved, the ${used === 1 ? "date or course" : `${used} dates and courses`} on this plan take its cheapest package as their price.` : ""}`
-            : "Our team checks a new plan before learners see it. Dates you put on it show to learners once it is approved."}
-          {waiting && (plan.tiers ? " A change is waiting for our team now." : " It is waiting for our team now.")}
+          {plan
+            ? `Changes show to learners as soon as you save.${used ? ` The ${used === 1 ? "date or course" : `${used} dates and courses`} on this plan take its cheapest package as their price.` : ""}`
+            : "Learners see the packages as soon as you put the plan on a date or a self-paced course. Its cheapest package is the price they show."}
         </p>
 
         <div className="rt-pws-pkg__top">
@@ -215,7 +209,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
         </div>
 
         <div className="rt-pws-set__actions">
-          <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : plan ? "Save and send for approval" : "Create and send for approval"}</button>
+          <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : plan ? "Save plan" : "Create plan"}</button>
           <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
         </div>
       </form>

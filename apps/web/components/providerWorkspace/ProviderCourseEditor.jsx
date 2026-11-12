@@ -1159,9 +1159,8 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
                 <p className="rt-acc__note" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. <Link href="/provider/packages" className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link></p>
                 <FieldErr id="rt-pws-ce-plan" text={errors.planId} />
                 <FieldSelect id="rt-pws-ce-plan" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={draft.planId} disabled={locked} onChange={set("planId")}
-                  options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${(p.draft ?? p.tiers).map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}${p.tiers ? "" : " (waiting for approval)"}` }))}
+                  options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}` }))}
                   invalid={Boolean(errors.planId)} describedBy="rt-pws-ce-plan-h" />
-                {plans.some((p) => p.id === draft.planId && !p.tiers) && <p className="rt-acc__notice -warn">Our team hasn&apos;t approved this plan yet, so learners won&apos;t see the course&apos;s price until it is.</p>}
               </div>
             ) : (
               <div className="rt-field rt-pws-course-price">
