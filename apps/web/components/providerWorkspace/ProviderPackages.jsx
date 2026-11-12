@@ -2,65 +2,67 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Toast from "@/components/courses/Toast";
-import { pw } from "@/data/providerWorkspace";
+import { api } from "@/lib/trpc/react";
+import { useProviderAccess } from "@/lib/providerAccess";
+import { errorsFrom } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
-import { clonePackage, deletePackage, setPackageActive, useProvider } from "@/lib/providerWorkspace";
 import PackageEditor from "./PackageEditor";
-import { Loading, RowMenu, Search, Toggle, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
-import { EmptyState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
 
-const ARCHIVE = [{ value: "", label: "All plans" }, { value: "active", label: "Active" }, { value: "archive", label: "Archive" }];
+const SHOW = [{ value: "", label: "In use" }, { value: "archive", label: "Archived" }, { value: "all", label: "All plans" }];
+const STATUS = {
+  approved: { label: "Approved", tone: "ok" },
+  pending: { label: "Waiting for approval", tone: "info" },
+  changes: { label: "Changes asked", tone: "warn" },
+};
+const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date" : "dates"}` : "", u.courses ? `${u.courses} self-paced ${u.courses === 1 ? "course" : "courses"}` : ""].filter(Boolean).join(" and ") || "Not used yet";
 
-// Pricing plans (Hurak's Packages): search by plan title, filter by course and by Active / Archive (kept in the address). The
-// table shows each plan's Saver, Flexi and Premium prices and whether it is archived; Edit, Clone package and Delete (blocked
-// while a course uses it). "Create package" opens the plan editor.
+// Price plans (Hurak's Tiered Plans), from the API (provider.plans): each plan's packages and prices, its status with our team,
+// and how many dates and courses use it. A date chooses its plan in its own form ("Tiered" pricing); a self-paced course in its
+// course pricing. Edit opens the plan; a waiting change can be withdrawn; a plan is archived (dates on it keep it) or, when nothing
+// ever used it, deleted. Search and the archive filter are kept in the address.
 export default function ProviderPackages() {
-  const data = useProvider();
+  const { organisationId, can } = useProviderAccess();
+  const edit = can("provider.pricing.edit");
+  const utils = api.useUtils();
+  const query = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
+  const archive = api.provider.plans.setArchived.useMutation();
+  const withdraw = api.provider.plans.withdraw.useMutation();
+  const remove = api.provider.plans.remove.useMutation();
   const [q, setQ] = useState("");
-  const [course, setCourse] = useState("");
-  const [archive, setArchive] = useState("");
-  const [editor, setEditor] = useState({ open: false, id: null });
+  const [show, setShow] = useState("");
+  const [editor, setEditor] = useState({ open: false, plan: null });
   const [removing, setRemoving] = useState(null);
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
   const say = (message) => setToast({ message });
+  const fail = (er) => say(errorsFrom(er).general || "That didn’t work. Please try again.");
+  const refresh = () => utils.provider.plans.list.invalidate();
 
   useEffect(() => {
     setQ(getQuery("q") || "");
-    setCourse(getQuery("course") || "");
-    const a = getQuery("archive");
-    if (ARCHIVE.some((x) => x.value === a)) setArchive(a);
+    const s = getQuery("show");
+    if (SHOW.some((x) => x.value === s)) setShow(s);
   }, []);
-  if (!data) return <Loading rows={3} />;
+  if (query.isError) return <ErrorState title="We couldn't load your price plans." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
+  if (!query.data) return <Loading rows={3} />;
 
-  const usedBy = (id) => data.courses.filter((c) => c.pricing.type === "tiered" && c.pricing.packageId === id);
+  const plans = query.data;
   const needle = q.trim().toLowerCase();
-  const list = data.packages
-    .filter((p) => !needle || (p.name || "").toLowerCase().includes(needle))
-    .filter((p) => !course || usedBy(p.id).some((c) => c.id === course))
-    .filter((p) => !archive || (archive === "archive" ? !p.active : p.active))
-    .sort((a, b) => b.created - a.created);
-  const filtered = Boolean(needle || course || archive);
+  const list = plans.filter((p) => !needle || p.name.toLowerCase().includes(needle)).filter((p) => (show === "all" ? true : show === "archive" ? p.archived : !p.archived));
+  const filtered = Boolean(needle || show);
   const setParam = (k, setter) => (v) => { setter(v); setQuery(k, k === "q" ? v.trim() : v); };
-  const clear = () => {
-    setQ(""); setCourse(""); setArchive("");
-    ["q", "course", "archive"].forEach((k) => setQuery(k, ""));
-  };
-  const create = () => setEditor({ open: true, id: null });
-  const clone = (p) => {
-    const id = clonePackage(p.id);
-    if (id) {
-      say(`Copy of ${p.name || "the plan"} created`);
-      setEditor({ open: true, id });
-    }
-  };
+  const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
+  const create = () => setEditor({ open: true, plan: null });
+  const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={(r) => say(r.pending ? "Saved and sent to our team for approval" : "Plan saved")} />;
 
-  if (!data.packages.length) {
+  if (!plans.length) {
     return (
       <>
-        <EmptyState title="No pricing plans yet" text="Create Saver, Flexi and Premium options once, then use them on any tiered course." action={{ label: "Create package", onClick: create }} />
-        <PackageEditor open={editor.open} packageId={editor.id} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={() => say("Package created")} />
+        <EmptyState title="No price plans yet" text="Create packages like Basic, Plus and Pro once, then choose the plan on any of your dates." action={edit ? { label: "Create price plan", onClick: create } : undefined} />
+        {editor_}
         <Toast toast={toast} onDone={clearToast} />
       </>
     );
@@ -69,12 +71,11 @@ export default function ProviderPackages() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Search value={q} onChange={setParam("q", setQ)} label="Search your plan title" />
+        <Search value={q} onChange={setParam("q", setQ)} label="Search your price plans" />
         <div className="rt-adm-toolbar__end">
-          <ToolSelect id="rt-pkg-course" label="Course" value={course} onChange={setParam("course", setCourse)} options={[{ value: "", label: "All courses" }, ...data.courses.map((c) => ({ value: c.id, label: c.title || "Untitled course" }))]} />
-          <ToolSelect id="rt-pkg-archive" label="Archive" value={archive} onChange={setParam("archive", setArchive)} options={ARCHIVE} />
+          <ToolSelect id="rt-plan-show" label="Show" value={show} onChange={setParam("show", setShow)} options={SHOW} />
           {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filters</button>}
-          <button type="button" className="button -md -purple-1 text-white" onClick={create}>Create package</button>
+          {edit && <button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button>}
         </div>
       </div>
       <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "plan" : "plans"}`}</p>
@@ -84,31 +85,41 @@ export default function ProviderPackages() {
           <table className="rt-biz__table rt-adm-table rt-pws-pkgs">
             <thead>
               <tr>
-                <th scope="col">Plan title</th>
-                {pw.tiers.map((t) => <th scope="col" key={t.key}>{t.label}</th>)}
-                <th scope="col">Archive</th>
+                <th scope="col">Plan</th>
+                <th scope="col">Packages</th>
+                <th scope="col">Status</th>
                 <th scope="col"><span className="rt-sr">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {list.map((p) => {
-                const used = usedBy(p.id);
+                const shown = p.draft ?? p.tiers;
+                const st = STATUS[p.status];
                 return (
                   <tr key={p.id}>
-                    <td data-label="Plan title">
-                      <button type="button" className="rt-pws-pkgs__name" onClick={() => setEditor({ open: true, id: p.id })}>{p.name || "Untitled plan"}</button>
-                      <small className="rt-adm-muted">{used.length ? `Used on ${used.map((c) => c.title || "Untitled course").join(", ")}` : "Not used on a course yet"}</small>
+                    <td data-label="Plan">
+                      {edit ? <button type="button" className="rt-pws-pkgs__name" onClick={() => setEditor({ open: true, plan: p })}>{p.name}</button> : <strong>{p.name}</strong>}
+                      <small className="rt-adm-muted">{p.archived ? "Archived · " : ""}{usedText(p.used)}</small>
                     </td>
-                    {pw.tiers.map((t) => <td key={t.key} data-label={t.label} className="rt-pws-money__num">{formatPrice(p.tiers[t.key]?.price || 0)}</td>)}
-                    <td data-label="Archive">
-                      <Toggle id={`rt-pkg-arc-${p.id}`} checked={!p.active} label={<span className="rt-sr">Archive {p.name}</span>} onChange={(on) => { setPackageActive(p.id, !on); say(on ? `${p.name} archived` : `${p.name} is active again`); }} />
+                    <td data-label="Packages">
+                      <ul className="rt-pws-pkgs__tiers">
+                        {shown.map((t) => <li key={t.name}><span>{t.name}</span> <b className="rt-pws-money__num">{formatPrice(t.pricePence / 100)}</b></li>)}
+                      </ul>
+                    </td>
+                    <td data-label="Status">
+                      <Pill tone={st.tone}>{st.label}</Pill>
+                      {p.status === "changes" && p.statusNote && <small className="rt-adm-muted rt-pws-pkgs__note">{p.statusNote}</small>}
+                      {p.status === "pending" && p.tiers && <small className="rt-adm-muted">Learners see the approved packages until then.</small>}
                     </td>
                     <td data-label="Actions">
-                      <RowMenu label={`Actions for ${p.name || "this plan"}`} items={[
-                        { label: "Edit", onClick: () => setEditor({ open: true, id: p.id }) },
-                        { label: "Clone package", onClick: () => clone(p) },
-                        { label: "Delete", onClick: () => setRemoving(p) },
-                      ]} />
+                      {edit && (
+                        <RowMenu label={`Actions for ${p.name}`} items={[
+                          { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
+                          ...(p.draft && p.tiers ? [{ label: "Withdraw the change", onClick: () => withdraw.mutate({ organisationId, planId: p.id }, { onSuccess: () => { refresh(); say("Change withdrawn: learners keep the approved packages"); }, onError: fail }) }] : []),
+                          { label: p.archived ? "Use again" : "Archive", onClick: () => archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} can be chosen again` : `${p.name} archived`); }, onError: fail }) },
+                          { label: "Delete", onClick: () => setRemoving(p) },
+                        ]} />
+                      )}
                     </td>
                   </tr>
                 );
@@ -119,13 +130,13 @@ export default function ProviderPackages() {
       ) : (
         <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
       )}
-      <p className="rt-acc__note">Archived plans stay on the courses that use them, but can&apos;t be picked for other courses.</p>
+      <p className="rt-acc__note">Choose a plan on a date (its pricing: Tiered) or on a self-paced course. Archived plans stay on the dates that use them, but can&apos;t be chosen for others.</p>
 
-      <PackageEditor open={editor.open} packageId={editor.id} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={() => say(editor.id ? "Package saved" : "Package created")} />
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this plan?" confirmLabel="Delete plan"
-        text={removing ? `${removing.name || "This plan"} and its perks will be deleted.` : ""}
-        blocked={removing && usedBy(removing.id).length ? `${usedBy(removing.id).length === 1 ? "1 course still uses" : `${usedBy(removing.id).length} courses still use`} this plan. Choose another price on ${usedBy(removing.id).length === 1 ? "that course" : "those courses"} first, or archive the plan.` : ""}
-        onConfirm={() => { if (deletePackage(removing.id) !== false) say("Plan deleted"); setRemoving(null); }} />
+      {editor_}
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this plan?" confirmLabel="Delete plan" busy={remove.isPending}
+        text={removing ? `${removing.name} and its packages will be deleted. This can’t be undone.` : ""}
+        blocked={removing && removing.used.dates + removing.used.courses ? `${usedText(removing.used)} use this plan, so it can’t be deleted. Archive it instead.` : ""}
+        onConfirm={() => remove.mutate({ organisationId, planId: removing.id }, { onSuccess: () => { refresh(); say("Plan deleted"); setRemoving(null); }, onError: (er) => { fail(er); setRemoving(null); } })} />
       <Toast toast={toast} onDone={clearToast} />
     </div>
   );

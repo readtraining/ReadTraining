@@ -89,7 +89,7 @@ export const pw = {
     { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/provider" },
     { key: "courses", label: "Courses", icon: "icon-book", items: [
       { label: "All courses", href: "/provider/courses" },
-      { label: "Pricing plans", href: "/provider/packages" },
+      { label: "Price plans", href: "/provider/packages" },
     ] },
     { key: "cohorts", label: "Cohorts", icon: "icon-online-learning-4", items: [
       { label: "Cohort list", href: "/provider/cohorts" },
@@ -124,7 +124,6 @@ export const pw = {
     orders: "These orders, customers and amounts are made up, to show how this page works. Your real orders show here once learners can book and pay.",
     learners: "These learners and their details are made up, to show how this page works. Your real learners show here once they book.",
     performance: "These figures, reviews and leads are made up, to show how this page works. Your real ones show here once learners book and review.",
-    packages: "These pricing plans are examples, kept only in this browser. They aren't used by your real courses yet.",
     notifications: "These notifications are made up, to show how this page works. Real ones show here once booking goes live.",
     requests: "These refund requests and disputes are made up, to show how this page works. Real ones show here once booking goes live.",
     cohort: "This is a sample cohort with made-up learners, to show how the register and results work. Your real cohorts are in the Cohort list.",
@@ -136,7 +135,7 @@ export const pw = {
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
     courses: { title: "Courses", lead: "Every course you run. New courses and changes are checked by our team before they go live." },
-    packages: { title: "Pricing plans", lead: "Saver, Flexi and Premium options you create once and use on any tiered course." },
+    packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates." },
     newCourse: { title: "New course", lead: "Five quick questions. You fill in the rest of the course in the editor." },
     course: { title: "Edit course" },
     cohorts: { title: "Cohorts", lead: "Each run of a course: its dates, venue, tutor and places. Open one to take the register and record results." },
