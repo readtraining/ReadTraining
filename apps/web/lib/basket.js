@@ -4,8 +4,8 @@ import { basket as copy } from "@/data/basket";
 // on one date (`sessionId`); `quantity` is its delegates; `selected` false leaves it out of this booking. Every way in adds a date;
 // an older saved line without one asks for it in the basket's date pop-up. Swap the promo lookup for an API call later.
 
-// the package a line was booked with (`bundle`: a course page package, data/courseGuides.js, or a package of a provider's price
-// plan) is part of the line: the same date with another package is another line
+// the package chosen on a date sold in packages (`bundle`: a provider's price plan's, or the client's own on a course page,
+// data/courseGuides.js) is part of the line: the same date with another package is another line
 export const lineKey = (item) => `${item.id}:${item.sessionId || ""}${item.bundle?.key ? `:${item.bundle.key}` : ""}`;
 export const MAX_DELEGATES = 20;
 // the most delegates one line can have: 20, or fewer when its date has fewer places
@@ -24,6 +24,7 @@ export const lineFor = (course, session, pkgKey = null) => ({
   subject: course.subject,
   ...priced(session, session.packages?.find((p) => p.key === pkgKey) ?? null),
   packages: session.packages ?? null,
+  ...(session.packages?.find((p) => p.key === pkgKey)?.firstAid ? { firstAid: "bundle" } : {}),
   sessionId: session.id,
   mode: session.mode,
   date: session.date,
@@ -69,13 +70,13 @@ function priced(session, pkg) {
 // A line sold in packages: the change that chooses package `key` (its price and name). Null when the line has no such package.
 export const choosePackage = (item, key) => {
   const pkg = item.packages?.find((p) => p.key === key);
-  return pkg ? { price: pkg.price, wasPrice: pkg.wasPrice ?? pkg.price, bundle: { key: pkg.key, name: pkg.name } } : null;
+  if (!pkg) return null;
+  const firstAid = pkg.firstAid ? "bundle" : item.firstAid === "bundle" ? undefined : item.firstAid;
+  return { price: pkg.price, wasPrice: pkg.wasPrice ?? pkg.price, bundle: { key: pkg.key, name: pkg.name }, firstAid };
 };
-// the package a line was booked with, or null for the date alone: a price plan's package ({ key, name }; the line's price is its
-// price) or a course page package ({ key, name, add }: `add` per delegate on top of the date's price)
+// the package a line was booked with ({ key, name }; the line's price is its price), or null
 export const bundleOf = (item) => (item.bundle?.key ? item.bundle : null);
-const addOf = (item) => (item.packages ? 0 : Number(item.bundle?.add) || 0);
-// first aid is part of the line's course page package: the basket doesn't ask about it, and it is never charged twice
+// first aid is part of the line's package: the basket doesn't ask about it, and it is never charged twice
 export const firstAidInBundle = (item) => item.firstAid === "bundle";
 // a line on a date sold in packages with none chosen yet (its date was changed in the basket to one on another plan)
 export const needsPackage = (item) => Boolean(item.packages?.length) && !item.packages.some((p) => p.key === item.bundle?.key);
@@ -84,12 +85,10 @@ export const needsPackage = (item) => Boolean(item.packages?.length) && !item.pa
 export function lineParts(item) {
   const addOn = needsFirstAid(item) && item.firstAid === "add" ? copy.firstAid.add.price : 0;
   const addOnWas = addOn && copy.firstAid.add.wasPrice > addOn ? copy.firstAid.add.wasPrice : 0;
-  const bundle = addOf(item);
-  const unit = basePrice(item) + bundle + addOn;
-  // a course page package has no "was" price: only the course alone had one (as BookingProvider shows)
-  const unitWas = bundle ? 0 : wasBase(item) ? wasBase(item) + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
+  const unit = basePrice(item) + addOn;
+  const unitWas = wasBase(item) ? wasBase(item) + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
   const quantity = Math.min(maxDelegates(item), Math.max(1, Number(item.quantity) || 1)); // a date changed to one with fewer places
-  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, bundle, addOn };
+  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, addOn };
 }
 
 // What stops a line from going to payment (shown on the line, and listed under the Proceed button).

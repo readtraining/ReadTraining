@@ -81,10 +81,8 @@ export default function BasketPage({ recommended }) {
     // date without it asks for a package on the line)
     const was = cartCourses.find((i) => lineKey(i) === dates.key);
     const next = lineFor(dates.detail, session, was?.bundle?.key);
-    // a course page package (the client's, with its `add`) stays on a date of one price; a date on a price plan takes the plan's
-    // packages instead, and first aid that package answered is asked again
-    if (!next.packages && was?.bundle?.add) next.bundle = was.bundle;
-    if (next.packages && was?.firstAid === "bundle") next.firstAid = undefined;
+    // first aid that the old package answered is asked again when the new date doesn't have that package
+    if (!next.firstAid && was?.firstAid === "bundle") next.firstAid = undefined;
     change(dates.key, next);
     setDatesOpen(false);
     setAnnounce(copy.dateChanged.replace("{date}", session.mode === "ondemand" ? session.time.toLowerCase() : formatShortDate(session.date)).replace("{place}", session.location));

@@ -7122,6 +7122,11 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
 .rt-cg__pkgs { padding: 0; list-style: none; }
 .rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
+/* the client's packages are information here (chosen when a date is booked): no pick on hover; Choose dates on the price row */
+.rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border); }
+.rt-cg__pkgs > li { margin: 0; list-style: none; }
+.rt-cg__pkg .rt-lc__price { flex-wrap: wrap; row-gap: 4px; }
+.rt-cg__pkgdates { margin-left: auto; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
@@ -7205,9 +7210,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-pk__note { margin: 14px 0 0; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
 .rt-pk__list { padding-top: 22px; } /* room for the Most popular badge above the first row */
 .rt-bs__from { font-size: 15px; font-weight: 600; color: var(--cd-muted); }
-/* the client's course page packages (PackagePicker, data/courseGuides.js): the chosen one in the booking card and the basket */
-.rt-bs__pkg span small { color: var(--cd-muted); font-weight: 400; }
-.rt-bk__tags .rt-pill.-accent small { margin-left: 4px; font-weight: 400; }
+/* a package that includes first aid: the basket line says so instead of asking */
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
 .rt-bk__inpkg i { color: var(--rt-c-success); }
 

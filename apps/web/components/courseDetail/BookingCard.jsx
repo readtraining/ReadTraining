@@ -86,7 +86,7 @@ function NoDatesCard({ course }) {
 }
 
 export default function BookingCard() {
-  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates, bundle, price, wasPrice, fromPrice } = useBooking();
+  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates, price, wasPrice, fromPrice } = useBooking();
   const [desktop, setDesktop] = useState(false);
   const [flashing, setFlashing] = useState(false);
 
@@ -111,8 +111,6 @@ export default function BookingCard() {
   if (!mode) return <NoDatesCard course={course} />;
   const label = status === "loading" ? "Booking" : status === "error" ? "Try again" : "Book now";
   const save = isInHouse ? 0 : savePercent(price, wasPrice);
-  // a course page package other than the course alone is named on the card (its price is already in `price`)
-  const withBundle = !fromPrice && bundle && bundle.add > 0 ? bundle : null;
   const trust = trustItems(course);
   const onDemand = mode === "ondemand";
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
@@ -165,7 +163,6 @@ export default function BookingCard() {
               </>
             ) : (
               <>
-                {withBundle && <li className="rt-bs__pkg"><Icon name="badge" /><span>{withBundle.name}<small> (+{formatPrice(withBundle.add)})</small></span></li>}
                 {/* the dates, then the days themselves when they aren't all in a row (or each day's times when they differ) */}
                 <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}{session.schedule && <><br />{session.schedule}</>}</span></li>
                 {session.time && <li><Icon name="wall-clock" /><span>{session.time}</span></li>}

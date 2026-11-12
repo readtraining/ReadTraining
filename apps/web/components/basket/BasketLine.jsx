@@ -9,9 +9,8 @@ import { formatDateRange, formatPrice } from "@/lib/format";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
 
-// One course on one date. Top: the picture, the title, when and where it runs, the package it was booked with (a course page
-// package with its "+£", or a provider price plan's package with "Change package", `onPackage`), and on the right the delegates
-// counter, the line's price and Remove. Under it, only for a security classroom course: the first aid qualification the licence
+// One course on one date. Top: the picture, the title, when and where it runs, the package chosen when the date is sold in
+// packages (with "Change package", `onPackage`), and on the right the delegates counter, the line's price and Remove. Under it, only for a security classroom course: the first aid qualification the licence
 // needs (.rt-bk__req), or a note when the course page package includes it. The tick box beside the
 // title puts the course in this booking or leaves it in the basket for later. The date is chosen and changed here, in the date
 // pop-up (`onDates`).
@@ -24,8 +23,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates, onPackag
   const max = maxDelegates(item);
   const setQuantity = (next) => onChange({ quantity: Math.min(max, Math.max(1, next)) });
   const on = isSelected(item);
-  // the package this line was booked with (its price is already in the line's); a price plan's package still to choose stops
-  // payment
+  // the package this line was booked with (the line's price is that package's); one still to choose stops payment
   const bundle = bundleOf(item);
   const planned = Boolean(item.packages);
   const pickPackage = needsPackage(item);
@@ -64,7 +62,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates, onPackag
               </ul>
               <div className="rt-bk__tags">
                 <span className="rt-pill">{modeLabel(item.mode)}</span>
-                {bundle && !pickPackage && <span className="rt-pill -accent"><span className="rt-sr">{copy.package.label}: </span>{bundle.name}{!planned && bundle.add > 0 && <small>+{formatPrice(bundle.add)}</small>}</span>}
+                {bundle && !pickPackage && <span className="rt-pill -accent"><span className="rt-sr">{copy.package.label}: </span>{bundle.name}</span>}
                 {item.skillSaver && <SaverBadge />}
                 <button type="button" className="fb-textlink rt-bk__change" aria-haspopup="dialog" onClick={onDates}>{copy.changeDate}<span className="rt-sr"> for {item.title}</span></button>
                 {planned && bundle && !pickPackage && <button type="button" className="fb-textlink rt-bk__change" aria-haspopup="dialog" onClick={onPackage}>{copy.package.change}<span className="rt-sr"> for {item.title}</span></button>}
