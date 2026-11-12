@@ -187,7 +187,7 @@ export default function TestPrepHub({ tests, initialCategory = "", initialQuery 
           <form className="rt-cat-search" role="search" noValidate onSubmit={(e) => { e.preventDefault(); toList(); }}>
             <div className="rt-cat-search__field">
               <i className="icon-search text-16 text-light-1" aria-hidden="true"></i>
-              <input type="search" value={query} onChange={(e) => searchFor(e.target.value)} placeholder={hero.searchPlaceholder} aria-label="Search tests" autoComplete="off" />
+              <input type="search" name="q" value={query} onChange={(e) => searchFor(e.target.value)} placeholder={hero.searchPlaceholder} aria-label="Search tests" autoComplete="off" />
               {query && (
                 <button type="button" className="rt-cat-search__clear" aria-label="Clear search" onClick={() => searchFor("")}>
                   <i className="icon-close text-9" aria-hidden="true"></i>

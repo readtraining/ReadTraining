@@ -2640,7 +2640,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* SCROLLING TABS (ScrollTabs): the site's .rt-tabs scroll sideways without a scrollbar. A soft fade shows on the side that has more tabs,
    and a round arrow button appears on that side so mouse users can scroll with one click. */
 
-/* TEST PREP SUBJECT PAGE (/test-prep/<slug>) and the coming-soon test page (/mock-exams-test/<subject>/<test>).
+/* TEST PREP SUBJECT PAGE (/test-prep/<slug>) and the mock test page (/mock-exams-test/<subject>/<test>).
    Built from existing parts: the hub hero (.rt-cat__hero), the hub's test card (.rt-card--test), .button,
    .rt-pill, the purple tick (.rt-cd__check), .rt-benefit__icon, home course cards, .bz-cta3 and the FAQ section.
    Only layout helpers here. Heading sizes are the content-page step of the site scale (as on the course page). */
@@ -2650,7 +2650,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
    container (the same fix as the course and catalogue pages) */
 :root:has(.rt-tps-page) body { overflow-x: clip; }
 .rt-tps-page main { overflow: clip; }
-/* the compact flat band of the test, result and coming-soon pages (SubjectHero without `band`): the theme's dark navy, the
+/* the compact flat band of the test and result pages (SubjectHero without `band`): the theme's dark navy, the
    course page's breadcrumb (bold, ">", light text) and the title at the content-page h2 step, so the questions start near the top.
    The breadcrumb stays on one line; the long names (subject, test) are cut with "…" (full name on hover). */
 .rt-tps__flat { background: var(--color-dark-1); color: var(--color-white); padding: 28px 0 32px; }
@@ -2664,11 +2664,8 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-tps__flat-crumbs a:hover { color: var(--color-white) !important; text-decoration: underline; text-underline-offset: 3px; }
 .rt-tps__flat-title { max-width: 900px; margin: 0; font-size: var(--rt-page-h2-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h2-ls); font-weight: var(--rt-heading-weight); color: var(--color-white); text-wrap: balance; }
 @media (max-width: 575px) { .rt-tps__flat { padding: 20px 0 24px; } }
-/* the body of the test, result and coming-soon pages (page tint); the facts checklist used on them */
+/* the body of the test and result pages (page tint) */
 .rt-tps__body { background: var(--color-light-4); padding: 32px 0 96px; }
-.rt-tps__facts { display: grid; gap: 8px; margin: 0 0 4px; padding: 0; list-style: none; }
-.rt-tps__facts li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; color: var(--color-light-1); list-style: none; }
-.rt-tps__facts .rt-cd__check { margin-top: 1px; }
 /* SUBJECT PAGE (/test-prep/<slug>): our own layout. A full-width dark hero (breadcrumb, category, title, intro and the two
    actions), a key facts strip on its lower edge (as the course page's stats card sits on its hero), then on the page tint:
    the mock exams first, the guide in a docs layout (pinned contents column + article), and more mock tests. */
@@ -2876,16 +2873,9 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
   .rt-tps-page { padding-bottom: 76px; } /* room for the bar under the footer */
 }
 @media (prefers-reduced-motion: reduce) { .rt-tps__bar, .rt-tps__otp-summary i { transition: none; } }
-/* coming-soon test page */
-.rt-tps__soon { padding: 48px 0 96px; }
-.rt-tps__soon-card { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 720px; padding: var(--rt-pad-card); border: 1px solid var(--color-light-5); border-radius: var(--rt-radius-card); background: var(--color-white); }
-.rt-tps__soon-card .rt-tps__h2 { margin: 0; }
-.rt-tps__soon-text { margin: 0; font-size: 16px; line-height: 1.7; color: var(--color-light-1); }
-.rt-tps__soon-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
-@media (max-width: 575px) { .rt-tps__soon-card { padding: 24px 20px; } .rt-tps__soon-actions .button { width: 100%; } }
 
 /* MOCK TEST (/mock-exams-test/<subject>/<test>) and its RESULT page (/result). Built from the subject page parts (hero,
-   .rt-tps__body, .rt-tps__h2, .rt-tps__facts), .button, .rt-pill, .rt-benefit__icon and the course page's pop-up shell (.rt-dd).
+   .rt-tps__body, .rt-tps__h2), .button, .rt-pill, .rt-benefit__icon and the course page's pop-up shell (.rt-dd).
    The chosen answer looks like a chosen Learning option card (2px purple border, purple-3 fill). Theme tokens only:
    pass = --color-success, fail = --color-error-2 on --color-orange-5, flag = --color-orange-1, time warning = --color-orange-6/7. */
 .rt-tq-page :focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }

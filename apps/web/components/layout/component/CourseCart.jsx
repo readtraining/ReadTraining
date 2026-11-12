@@ -4,10 +4,14 @@ import React, { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useContextElement } from "@/context/Context";
-import { basketTotals, hasDate, lineKey, lineParts } from "@/lib/basket";
+import { basketTotals, hasDate, lineKey, lineParts, modeLabel } from "@/lib/basket";
 import { formatPrice, formatShortDate } from "@/lib/format";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { BASKET_HREF, CATALOGUE_HREF, coursePath } from "@/lib/routes";
+
+// a line's date and place, as the basket shows them: a self-paced course its "start any time" wording; a dated one its start and
+// its town (or how it is taken, for a live online date)
+const when = (item) => (item.mode === "ondemand" ? item.time : hasDate(item) ? `${formatShortDate(item.date)} · ${item.city || modeLabel(item.mode)}` : "No date chosen");
 
 // The basket icon's dropdown (the header's mini basket): each course with its date and place, the delegates and the price, a
 // remove button, the total, and a way to the full basket. The basket page is where dates, packages and the first aid choice are
@@ -32,7 +36,7 @@ const CourseCart = () => {
                   </Link>
                   <div className="rt-mini__body">
                     <Link href={coursePath(item.slug || item.id)} className="rt-mini__title">{item.title}</Link>
-                    <span className="rt-mini__meta">{item.bundle?.name ? `${item.bundle.name} · ` : ""}{hasDate(item) ? `${formatShortDate(item.date)} · ${item.city || "Online"}` : "No date chosen"}</span>
+                    <span className="rt-mini__meta">{item.bundle?.name ? `${item.bundle.name} · ` : ""}{when(item)}</span>
                     <span className="rt-mini__price">{quantity > 1 ? `${quantity} × ` : ""}<b>{formatPrice(total)}</b></span>
                   </div>
                   <button type="button" className="rt-mini__remove" onClick={() => remove(item)} aria-label={`Remove ${item.title}`}>

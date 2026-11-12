@@ -77,6 +77,9 @@ async function findCourse(db: typeof Db, courseId: number) {
   if (!c) throw notFound()
   return c
 }
+// the fields that file a page in the catalogue (a retired entry must never hold a live page)
+const PLACEMENT = ['category', 'subcategory', 'topic', 'method', 'level']
+
 async function sharedPage(db: typeof Db, courseId: number) {
   const c = await findCourse(db, courseId)
   if (c.kind !== 'shared') throw notFound()
@@ -446,6 +449,10 @@ export const adminCoursesRouter = createTRPCRouter({
         await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
         await refuseIfChanged(tx, course.id, seen)
         if (Object.keys(reviewed).length) await applyContent(tx, course.id, reviewed)
+        // a live page moved to another category, sub-category, topic, method or level is live there at once: checked like any step
+        // that puts a page live, under a shared lock on its entries, so a retire at the same moment can't leave it filed under a
+        // retired one (lib/retired.mts)
+        if (course.status === 'live' && PLACEMENT.some((k) => k in reviewed)) await refuseRetired(tx, course.id, 'admin')
         const direct: Partial<typeof courses.$inferInsert> = {}
         if (seoTitle !== undefined) direct.seoTitle = seoTitle || null
         if (seoDescription !== undefined) direct.seoDescription = seoDescription || null

@@ -40,11 +40,11 @@ function CommentForm({ subject, test, onDone }) {
       <p className="rt-tq__dlg-text">{c.intro}</p>
       <label className="rt-field">
         <span>{c.nameLabel}</span>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" maxLength={60} />
+        <input name="name" type="text" value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" maxLength={60} />
       </label>
       <label className="rt-field">
         <span>{c.emailLabel}</span>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" maxLength={120} />
+        <input name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" maxLength={120} />
       </label>
       <div className="rt-field">
         <label htmlFor="rt-cm-text">{c.textLabel}</label>

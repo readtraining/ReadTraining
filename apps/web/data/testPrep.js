@@ -93,15 +93,9 @@ export const testPrepPage = {
     coursesLink: { label: "Browse all courses", href: CATALOGUE_HREF },
     faqTitle: "Frequently asked questions",
   },
-  comingSoon: {
-    eyebrow: "Coming soon",
-    title: "This test is coming soon",
-    text: "We are building this mock test now. Until it is ready, read about the exam on the test page, or book the course that prepares you for it.",
-    backLabel: "Back to the test page",
-    bookLabel: "Book a course",
-  },
   // the mock test itself (/mock-exams-test/<subject>/<test>)
   runner: {
+    bookLabel: "Book a course",
     introTitle: "Before you start",
     readyText: "Ready when you are. The timer starts when you press Start test.",
     keyFacts: { questions: "Questions", passMark: "Pass mark", correct: "{n} correct to pass", time: "Time limit", noLimit: "No time limit" },

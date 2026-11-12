@@ -62,7 +62,7 @@ const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|point
 export function passMarkProblem(text) {
   const t = (text || "").trim().toLowerCase();
   if (!t) return "";
-  const pct = t.match(/(\d+(?:\.\d+)?)\s*%/);
+  const pct = t.match(/(\d+(?:\.\d+)?)\s*(?:%|per\s*cent\b)/);
   if (pct && Number(pct[1]) > 100) return "A percentage pass mark can't be over 100%.";
   const score = t.match(SCORE) || t.match(SCORE_OF);
   if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return "The pass mark can't be more than the total, like 26 out of 40.";
@@ -700,12 +700,13 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
 
 // The course's images, uploaded straight away (not part of the draft) and shown in order; the first is the cover. Every change shows on screen at once, before the server answers: a chosen picture appears straight away
 // (marked "Uploading…") and becomes the saved image when the upload finishes; a removed image goes, and a new cover moves first,
-// the moment they are asked for. If the server refuses, the list goes back and says why. The course then loads again in the
-// background. Each action has its own label while it runs (Uploading…, Removing…, Saving…), and Remove asks first.
+// the moment they are asked for. If the server refuses, the list goes back to how it was (unsaved ALT text kept) and says why. The course then loads again in the
+// background. An upload and an ALT text save show their own label while they run (Uploading…, Saving…); every button waits while
+// one change is saving, and Remove asks first.
 function ImagesCard({ course, disabled, onSaved }) {
   const ep = useEndpoints();
   const [list, setList] = useState(course.images);
-  // what is running: null, "upload", "alt", or { kind: "remove" | "cover", id }
+  // what is running: null, "upload", "alt", "remove" or "cover"
   const [action, setAction] = useState(null);
   const [removing, setRemoving] = useState(null); // the image waiting for "Remove this image?"
   const [error, setError] = useState("");
@@ -782,11 +783,12 @@ function ImagesCard({ course, disabled, onSaved }) {
       setAction(null);
     }
   };
-  // the list as asked for shows at once; if the server refuses, it goes back to what is saved and says why
+  // the list as asked for shows at once; if the server refuses, it goes back to how it was (any ALT text still being typed kept,
+  // not wiped back to the saved words) and says why
   const saveList = async (next, message, running) => {
     setError("");
     setAction(running);
-    const before = saved;
+    const before = list;
     setList(next);
     try {
       await ep.setImages(next.map((i) => ({ id: i.id, alt: i.alt || "" })));
@@ -805,11 +807,10 @@ function ImagesCard({ course, disabled, onSaved }) {
   const doRemove = () => {
     const m = removing;
     setRemoving(null);
-    saveList(shown.filter((x) => x.id !== m.id), "Image removed", { kind: "remove", id: m.id });
+    saveList(shown.filter((x) => x.id !== m.id), "Image removed", "remove");
   };
   // the only image of a live (or paused) course can't go: the server refuses it, so the question says so instead
   const lastOfLive = shown.length === 1 && (course.status === "live" || course.status === "paused");
-  const runs = (kind, id) => action && typeof action === "object" && action.kind === kind && action.id === id;
 
   return (
     <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
@@ -833,12 +834,12 @@ function ImagesCard({ course, disabled, onSaved }) {
                   <div className="rt-pws-course-mediabody"><Pill tone="info">Uploading…</Pill></div>
                 ) : (
                 <div className="rt-pws-course-mediabody">
-                  {i === 0 ? <Pill tone="info">Cover</Pill> : !disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={busy} onClick={() => saveList([m, ...shown.filter((x) => x.id !== m.id)], "Cover image changed", { kind: "cover", id: m.id })}>{runs("cover", m.id) ? "Saving…" : "Make cover"}</button>}
+                  {i === 0 ? <Pill tone="info">Cover</Pill> : !disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={busy} onClick={() => saveList([m, ...shown.filter((x) => x.id !== m.id)], "Cover image changed", "cover")}>Make cover</button>}
                   <div className="rt-field">
                     <label htmlFor={`rt-pws-ce-alt-${i}`}>ALT text</label>
                     <input id={`rt-pws-ce-alt-${i}`} value={m.alt || ""} maxLength={140} disabled={disabled} onChange={(e) => setList(list.map((x) => (x.id === m.id ? { ...x, alt: e.target.value } : x)))} placeholder="For example: learners practising CPR on a manikin" autoComplete="off" />
                   </div>
-                  {!disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" disabled={busy} onClick={() => setRemoving(m)} aria-haspopup="dialog">{runs("remove", m.id) ? "Removing…" : "Remove"}<span className="rt-sr"> image {i + 1}</span></button>}
+                  {!disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" disabled={busy} onClick={() => setRemoving(m)} aria-haspopup="dialog">Remove<span className="rt-sr"> image {i + 1}</span></button>}
                 </div>
                 )}
               </li>
@@ -1145,7 +1146,7 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
         <h2 className="rt-acc__h2" id="rt-pws-ce-price-h">Course pricing</h2>
         <div className="rt-pws-ce__loyalty">
           <label className="rt-fp__opt">
-            <input type="checkbox" className="rt-fp__check" checked={draft.skillSaver} disabled={locked} onChange={(e) => set("skillSaver")(e.target.checked)} />
+            <input name="skillSaver" type="checkbox" className="rt-fp__check" checked={draft.skillSaver} disabled={locked} onChange={(e) => set("skillSaver")(e.target.checked)} />
             <span>Include this course in the Skill Saver loyalty programme</span>
           </label>
           <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link>

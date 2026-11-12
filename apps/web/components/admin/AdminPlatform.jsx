@@ -12,6 +12,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { TableSkeleton } from "./adminParts";
 import { SaveRow, describedBy, field, useSave } from "./contentParts";
 import { AdminStatus } from "./AdminStatus";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 
 const copy = A.platform;
 const LIMITS = { homeTitle: [10, 70], homeDescription: [50, 160], siteDescription: [50, 160] };
@@ -41,6 +42,7 @@ function SeoForm({ value }) {
   const [general, setGeneral] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const markSaved = useSavedSnapshot(v); // leaving with unsaved changes asks first
   const ref = useRef(null);
   const c = copy.seo;
 
@@ -58,6 +60,7 @@ function SeoForm({ value }) {
     setSaving(true);
     try {
       await save({ homeTitle: v.homeTitle.trim(), homeDescription: v.homeDescription.trim(), siteDescription: v.siteDescription.trim() });
+      markSaved();
       setSaved(true);
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);

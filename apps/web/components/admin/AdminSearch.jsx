@@ -102,7 +102,7 @@ export default function AdminSearch({ pages }) {
           <div className="rt-adm-find__panel" role="dialog" aria-modal="true" aria-label={copy.title} ref={panel}>
             <div className="rt-adm-find__bar">
               <i className="icon-search text-16" aria-hidden="true"></i>
-              <input
+              <input name="q"
                 ref={input}
                 type="text"
                 role="combobox"

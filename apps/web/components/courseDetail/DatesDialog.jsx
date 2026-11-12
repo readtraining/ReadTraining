@@ -296,7 +296,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
           {classroom && (
             <label className="rt-field rt-dd__search">
               <PinIcon />
-              <input type="search" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" data-initial={isDesktop ? "" : undefined} autoComplete="off" />
+              <input name="near" type="search" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" data-initial={isDesktop ? "" : undefined} autoComplete="off" />
             </label>
           )}
           {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}

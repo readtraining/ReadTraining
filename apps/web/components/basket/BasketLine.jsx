@@ -40,7 +40,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates, onPackag
         <div className="rt-bk__main">
           <div className="rt-bk__titlerow">
             <label className="rt-bk__check">
-              <input type="checkbox" checked={on} onChange={(e) => onChange({ selected: e.target.checked })} />
+              <input name="selected" type="checkbox" checked={on} onChange={(e) => onChange({ selected: e.target.checked })} />
               <span className="rt-sr">{copy.select.include.replace("{title}", item.title)}</span>
             </label>
             <h2 className="rt-bk__title" id={`${id}-t`}><Link href={courseHref}>{item.title}</Link></h2>

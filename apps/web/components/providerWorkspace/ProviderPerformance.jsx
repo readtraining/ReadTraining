@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { isoDay, replyReview, setLeadStatus, useProvider } from "@/lib/providerWorkspace";
+import { isoDay, replyReview, setLeadStatus, useProvider, editorHref } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Toast from "@/components/courses/Toast";
 import { Loading, Pill, RowMenu, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
@@ -263,7 +263,7 @@ function ReviewCard({ r, course, onSaved }) {
         <span className="rt-adm-item__when">{r.name} · {shortDay(isoDay(r.at))}</span>
         {!r.reply && <Pill tone="warn">Not answered</Pill>}
       </div>
-      <p className="rt-adm-muted rt-pws-perf__course">{course ? <Link href={`/provider/courses/${course.id}`} className="rt-adm-strong">{course.title}</Link> : "Course removed"}</p>
+      <p className="rt-adm-muted rt-pws-perf__course">{course ? (editorHref(course.id) ? <Link href={editorHref(course.id)} className="rt-adm-strong">{course.title}</Link> : <b className="rt-adm-strong">{course.title}</b>) : "Course removed"}</p>
       {r.text ? <p className="rt-pws-perf__text">{r.text}</p> : <p className="rt-adm-muted">No comment, rating only.</p>}
 
       {r.reply && !editing && (

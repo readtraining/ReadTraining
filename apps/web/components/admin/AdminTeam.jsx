@@ -163,11 +163,12 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
         onDone(
           invited
             ? outbox ? `${email} is invited.${test}` : emailed ? `Invite sent to ${email}` : `${email} is invited, but the email couldn't be sent. Use Resend invite on their row.`
-            : outbox ? `${email} added to the admin team.${test}` : emailed ? `${email} added to the admin team. We've let them know by email.` : `${email} added to the admin team.`,
+            : outbox ? `${email} added to the admin team.${test}` : emailed ? `${email} added to the admin team. We've let them know by email.` : `${email} added to the admin team, but the email telling them couldn't be sent. Let them know yourself.`,
         );
       } else {
-        await update.mutateAsync({ userId: form.userId, ...body });
-        onDone(`${form.name}'s access changed`);
+        const r = await update.mutateAsync({ userId: form.userId, ...body });
+        // already what was asked (saved twice, or someone else made the same change): say so, not "changed"
+        onDone(r.unchanged ? `${form.name} already has this access` : `${form.name}'s access changed`);
       }
       close();
     } catch (error) {

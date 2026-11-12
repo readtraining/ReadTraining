@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useNav } from "@/lib/navContext";
 import { subjectName } from "@/lib/nav";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 
 // Navbar search: the icon toggles an inline input (click again to close). A panel under the
 // input shows live matches as you type (nothing while it is empty).
@@ -79,10 +80,12 @@ export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
     return { courses, subs };
   }, [query, allCourses, subjects]);
 
+  // a search is a navigation made in code: with unsaved edits on the page it asks first, as a link would
   const submit = (e) => {
     e.preventDefault();
+    if (!confirmLeave()) return;
     setOpen(false);
-    router.push(`${CATALOGUE_HREF}?q=${encodeURIComponent(query)}`);
+    leaveWithoutAsking(() => router.push(`${CATALOGUE_HREF}?q=${encodeURIComponent(query)}`));
   };
 
   const Row = ({ href, title, subject, provider, img, kind }) => (

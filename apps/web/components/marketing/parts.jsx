@@ -9,9 +9,6 @@ export const IconCheck = () => (
 export const IconArrow = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7h9M8 3.5 11.5 7 8 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
-export const IconDownload = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 2.5v9M5 8l4 4 4-4M3 15h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
-);
 
 const tone = (s) => (/valid|complete|confirmed|assigned|active|published|ready|marketplace/i.test(s) ? "ok" : /due/i.test(s) ? "warn" : /progress/i.test(s) ? "info" : "muted");
 export const Chip = ({ children }) => <span className={`fb-chip -${tone(children)}`}>{children}</span>;
