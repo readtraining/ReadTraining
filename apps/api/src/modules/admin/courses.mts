@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { and, courseRevisions, courses, eq, sql } from '@readtraining/db'
+import { and, courseRevisions, courses, eq, inArray, pricePlans, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 import type { AdminAction } from '@readtraining/permissions'
 
@@ -131,6 +131,26 @@ async function retiredInChange(tx: Tx, change: Record<string, unknown>) {
 const andList = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0])
 
 // a waiting change shown against the live version, field by field, in the editor's shape (catalogue places as slugs)
+// What learners will pay, for the admin to check before approving: a self-paced course's price or price plan, or each upcoming
+// date's price (Flat: its own, with any was-price; Tiered: its plan's cheapest package), and every plan used, with all its packages.
+async function pricingView(db: typeof Db, course: { id: number; kind: string; method: string | null; planId: string | null; pricePence: number | null }) {
+  if (course.kind !== 'provider') return null
+  const dates =
+    course.method === 'self-paced'
+      ? []
+      : await db.execute<{ id: string; method: string; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; plan_id: string | null; bookable: boolean; venue: string | null; city: string | null; postcode: string | null }>(sql`
+          select k.id, k.method, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.plan_id, k.bookable, v.name venue, v.city, v.postcode
+          from public.cohorts k left join public.venues v on v.id = k.venue_id
+          where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= current_date order by k.starts_on`)
+  const planIds = [...new Set([course.method === 'self-paced' ? course.planId : null, ...dates.map((k) => k.plan_id)].filter((x): x is string => Boolean(x)))]
+  const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
+  return {
+    selfPaced: course.method === 'self-paced' ? { pricePence: course.pricePence, planId: course.planId } : null,
+    dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
+    plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
+  }
+}
+
 async function changeView(db: typeof Db, detail: Awaited<ReturnType<typeof courseDetail>>) {
   const proposed = (detail.pendingChanges?.content ?? null) as Record<string, unknown> | null
   if (!proposed) return null
@@ -275,6 +295,7 @@ export const adminCoursesRouter = createTRPCRouter({
         provider: provider ?? null,
         children,
         change: await changeView(ctx.db, detail),
+        pricing: await pricingView(ctx.db, course),
         // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver
         ownCourse,
         ownChange,
