@@ -3,7 +3,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { addOrderNote, addonBooking, cancelOrder, customerName, decideRefund, learnerName, payInvoice, refundOrder, sendConfirmation, timeRange, uploadInvoice, upsellBooking, useProvider } from "@/lib/providerWorkspace";
+import { addOrderNote, addonBooking, cancelOrder, customerName, decideRefund, learnerName, payInvoice, refundOrder, sendConfirmation, timeRange, uploadInvoice, upsellBooking, useProvider, editorHref } from "@/lib/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
@@ -253,7 +253,7 @@ export default function ProviderOrder({ reference }) {
                   )}
                 </div>
                 <dl className="rt-pws-ord__bookdl">
-                  <div><dt>Course title</dt><dd>{c ? <Link href={`/provider/courses/${c.id}`}>{c.title}</Link> : "Course removed"}</dd></div>
+                  <div><dt>Course title</dt><dd>{c ? (editorHref(c.id) ? <Link href={editorHref(c.id)}>{c.title}</Link> : c.title) : "Course removed"}</dd></div>
                   <div><dt>Delivery method</dt><dd>{methodName(c?.format) || "—"}</dd></div>
                   {k && <div><dt>Venue</dt><dd>{k.venue ? `${k.venue.name}, ${k.venue.street}, ${k.venue.city} ${k.venue.postcode}` : "Online"}</dd></div>}
                   {k && <div><dt>Course date</dt><dd>{dayRange(k.first, k.last)}</dd></div>}

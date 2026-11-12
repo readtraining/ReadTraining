@@ -175,7 +175,6 @@ function derive(s) {
       reviews: s.reviews.filter((r) => !r.reply).length,
       unread: s.notifications.filter((n) => !n.read).length,
       leads: s.leads.filter((l) => l.status === "new").length,
-      questions: s.qa.filter((q) => !q.answer).length,
     },
   };
 }
@@ -500,3 +499,7 @@ export const markRead = (id) => updateProvider((s) => {
 export const markAllRead = () => updateProvider((s) => {
   s.notifications.forEach((n) => (n.read = true));
 });
+
+// The course editor's address for a course a demo record names, or null: the demo records name made-up courses ("C1"), which
+// the editor can't open, so those show as plain text; only a real course (its number) links to the editor.
+export const editorHref = (courseId) => (/^\d+$/.test(String(courseId ?? "")) ? `/provider/courses/${courseId}` : null);

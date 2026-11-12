@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { learnerName, timeRange, useProvider } from "@/lib/providerWorkspace";
+import { learnerName, timeRange, useProvider, editorHref } from "@/lib/providerWorkspace";
 import { ORDER_TONE, Loading, Pill, RowMenu } from "./providerParts";
 import { dayRange } from "./ProviderCohorts";
 import { money } from "./charts";
@@ -64,7 +64,7 @@ export default function ProviderLearner({ learnerId }) {
                     <div className="rt-lr-booking__head">
                       <div>
                         <p className="rt-lr-booking__when">{k ? `${dayRange(k.first, k.last)} · ${[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}` : "Self-paced: starts when booked"}</p>
-                        <h3 className="rt-lr-booking__course">{e.course ? <Link href={`/provider/courses/${e.course.id}`}>{e.course.title}</Link> : "Course removed"}</h3>
+                        <h3 className="rt-lr-booking__course">{e.course ? (editorHref(e.course.id) ? <Link href={editorHref(e.course.id)}>{e.course.title}</Link> : e.course.title) : "Course removed"}</h3>
                       </div>
                       <div className="rt-lr-booking__side">
                         {o && <Pill tone={ORDER_TONE[o.status]}>{pw.orderStatuses[o.status]}</Pill>}
