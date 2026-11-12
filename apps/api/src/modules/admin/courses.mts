@@ -157,9 +157,10 @@ export const adminCoursesRouter = createTRPCRouter({
   // How many are waiting (the menu badge and the dashboard), and how many courses there are in each state.
   counts: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
     const [r] = await ctx.db.execute<{ waiting: number; overdue: number; changes: number; live: number; paused: number; draft: number; shared: number }>(sql`
-      select (select count(*)::int from public.courses where status = 'pending') + (select count(*)::int from public.course_revisions where status = 'pending') waiting,
+      select (select count(*)::int from public.courses where status = 'pending') + (select count(*)::int from public.course_revisions where status = 'pending') + (select count(*)::int from public.price_plans where status = 'pending') waiting,
              (select count(*)::int from public.courses where status = 'pending' and submitted_at < now() - interval '2 days')
-               + (select count(*)::int from public.course_revisions where status = 'pending' and submitted_at < now() - interval '2 days') overdue,
+               + (select count(*)::int from public.course_revisions where status = 'pending' and submitted_at < now() - interval '2 days')
+               + (select count(*)::int from public.price_plans where status = 'pending' and submitted_at < now() - interval '2 days') overdue,
              count(*) filter (where status = 'changes' and kind = 'provider')::int changes, count(*) filter (where status = 'live')::int live,
              count(*) filter (where status = 'paused')::int paused, count(*) filter (where status = 'draft')::int draft, count(*) filter (where kind = 'shared')::int shared
       from public.courses`)

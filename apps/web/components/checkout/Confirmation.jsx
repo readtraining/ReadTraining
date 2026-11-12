@@ -6,6 +6,7 @@ import { basket as basketCopy } from "@/data/basket";
 import { checkout as copy } from "@/data/checkout";
 import { ORDER_KEY, PAY_FAILED_KEY } from "@/lib/checkout";
 import { formatPrice } from "@/lib/format";
+import { bookingSteps } from "@/lib/basket";
 import BasketSteps from "@/components/basket/BasketSteps";
 import { SaverLine } from "@/components/basket/BasketSummary";
 import { EmptyState } from "@/components/states/States";
@@ -100,7 +101,7 @@ function OrderConfirmation() {
       <title>{`${c.title} | ReadTraining`}</title>
       <section className="rt-bk__head">
         <div className="container">
-          <BasketSteps steps={basketCopy.steps} current={basketCopy.steps.length} />
+          <BasketSteps steps={bookingSteps(order.lines.some((l) => l.package))} current={basketCopy.steps.length} />
         </div>
       </section>
       <section className="rt-bk layout-pt-md layout-pb-lg">

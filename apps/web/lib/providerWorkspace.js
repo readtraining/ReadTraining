@@ -141,7 +141,6 @@ export function cohortStatus(k, enrolments, today = todayIso()) {
   return "upcoming";
 }
 
-export const packageCourses = (s, id) => s.courses.filter((c) => c.pricing.type === "tiered" && c.pricing.packageId === id);
 
 // Everything the pages read, worked out once per change.
 function derive(s) {
@@ -485,35 +484,6 @@ export const deleteQuestion = (id) => updateProvider((s) => {
 
 export const saveOrg = (patch) => updateProvider((s) => {
   Object.assign(s.org, patch);
-});
-
-const emptyTier = () => ({ price: 0, discount: 0, perks: [] });
-export const savePackage = (p) => updateProvider((s) => {
-  if (p.id) {
-    const i = s.packages.findIndex((x) => x.id === p.id);
-    if (i >= 0) s.packages[i] = { ...s.packages[i], ...p };
-    return p.id;
-  }
-  const id = nextId("P", s.packages);
-  s.packages.push({ name: "", active: true, features: [], tiers: { saver: emptyTier(), flexi: emptyTier(), premium: emptyTier() }, ...p, id, created: Date.now() });
-  return id;
-});
-// "Clone package": a copy with the same prices and perks, named "Copy of …"
-export const clonePackage = (id) => updateProvider((s) => {
-  const p = s.packages.find((x) => x.id === id);
-  if (!p) return null;
-  const copy = { ...JSON.parse(JSON.stringify(p)), id: nextId("P", s.packages), name: `Copy of ${p.name || "untitled plan"}`.slice(0, 80), active: true, created: Date.now() };
-  s.packages.push(copy);
-  return copy.id;
-});
-export const setPackageActive = (id, active) => updateProvider((s) => {
-  const p = s.packages.find((x) => x.id === id);
-  if (p) p.active = active;
-});
-export const deletePackage = (id) => updateProvider((s) => {
-  if (packageCourses(s, id).length) return false;
-  s.packages = s.packages.filter((p) => p.id !== id);
-  return true;
 });
 
 export const inviteMember = (email, role) => updateProvider((s) => {

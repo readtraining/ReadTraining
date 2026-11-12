@@ -15,9 +15,10 @@ import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { videoEmbed } from "@/lib/catalogueData";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { formatPrice } from "@/lib/format";
 import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
 import { CohortForm } from "./ProviderCohorts";
-import { COURSE_TONE, CardChoice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, CardChoice, Choice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -45,7 +46,7 @@ const MAX_PRICE = 100000; // pounds (the API's pricePence limit)
 const SECTION_OF = {
   model: "landing", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
   features: "info", outcomes: "info", audience: "info", entryRequirements: "info",
-  units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", skillSaver: "pricing", method: "mode",
+  units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode",
 };
 const sectionOf = (key) => SECTION_OF[key] || (/^(passMark|examUnit)\d+$/.test(key) ? "syllabus" : null);
 // course pictures follow the rule every picture upload does (lib/images.js): JPG, PNG, WebP or GIF up to 15 MB, big ones made
@@ -82,7 +83,7 @@ const SHARED_NOTES = {
 // fields only the page's wording (the "page" roles: course editor, marketing) may change; the rest need full course editing
 const NO_DATES_NOTE = "This course has no upcoming dates, so learners won't see a date to book until you add one.";
 const PAGE_FIELDS = ["title", "summary", "description", "audience", "entryRequirements", "outcomes", "features", "videoUrl"];
-const PRICE_FIELDS = ["price", "skillSaver"];
+const PRICE_FIELDS = ["price", "planId", "skillSaver"];
 
 // The draft the editor works on: the saved course, with any change still waiting for approval on top (so the provider keeps
 // editing their latest version).
@@ -90,7 +91,7 @@ const draftOf = (c) => {
   const p = c.pendingChanges?.content || {};
   const pick = (k) => (p[k] !== undefined ? p[k] : c[k]);
   return {
-    model: c.model, method: c.method || "classroom", skillSaver: c.skillSaver, price: c.pricePence == null ? "" : (c.pricePence / 100).toFixed(2).replace(/\.00$/, ""),
+    model: c.model, method: c.method || "classroom", skillSaver: c.skillSaver, planId: c.planId || "", price: c.pricePence == null || c.planId ? "" : (c.pricePence / 100).toFixed(2).replace(/\.00$/, ""),
     title: pick("title") || "", summary: pick("summary") || "", description: pick("description") || "", audience: pick("audience") || "", entryRequirements: pick("entryRequirements") || "",
     outcomes: pick("outcomes") || [], features: pick("features") || [], category: pick("category") || "", subcategory: pick("subcategory") || "", topic: pick("topic") || "", level: pick("level") || "",
     videoUrl: pick("videoUrl") || "",
@@ -108,7 +109,7 @@ function sectionOk(d, course, key) {
   if (key === "syllabus") return d.units.length > 0;
   if (key === "faqs") return d.faqs.length > 0;
   // priced: a self-paced course has its own price; one on dates is priced on each date, so it has a price once it has a date
-  if (key === "pricing") return d.method === "self-paced" ? d.price !== "" : course.upcomingCohorts > 0;
+  if (key === "pricing") return d.method === "self-paced" ? d.price !== "" || Boolean(d.planId) : course.upcomingCohorts > 0;
   if (key === "mode") return Boolean(d.method);
   return Boolean(course.seoTitle && course.seoDescription);
 }
@@ -127,7 +128,7 @@ function stillNeeded(d, course) {
   if (d.outcomes.length < 4) add("info", `at least 4 things learners will learn (${d.outcomes.length} so far)`);
   if (!d.units.length) add("syllabus", "at least one syllabus unit");
   if (course.kind === "provider" && !d.method) add("mode", "how it is taught");
-  if (course.kind === "provider" && d.method === "self-paced" && d.price === "") add("pricing", "a price");
+  if (course.kind === "provider" && d.method === "self-paced" && d.price === "" && !d.planId) add("pricing", "a price or a price plan");
   // filed under something no longer offered (retired in Catalogue settings since it was chosen): the API refuses to send it
   for (const entry of course.retired || []) {
     const [, name, word] = entry.match(/^(.*) \(([^)]+)\)$/) || [];
@@ -146,7 +147,10 @@ function changes(draft, base, access) {
   for (const k of keys) {
     if (!access.full && !PAGE_FIELDS.includes(k)) continue;
     if (!access.pricing && PRICE_FIELDS.includes(k)) continue;
-    if (k === "price") out.pricePence = draft.price === "" ? null : Math.round(Number(draft.price) * 100);
+    if (k === "planId") out.planId = draft.planId || null;
+    else if (k === "price") {
+      if (!draft.planId) out.pricePence = draft.price === "" ? null : Math.round(Number(draft.price) * 100);
+    }
     else if (["category", "subcategory", "topic"].includes(k)) Object.assign(out, { category: draft.category, subcategory: draft.subcategory, topic: draft.topic || null });
     else out[k] = draft[k];
   }
@@ -269,7 +273,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
     else if (draft.price !== "" && Number(draft.price) > MAX_PRICE) e.price = "Enter a price of £100,000 or less.";
     // a live self-paced course shows its price (the API refuses it without one)
-    else if (isLive && draft.method === "self-paced" && draft.price === "") e.price = "Enter the price per learner: a live self-paced course needs one.";
+    else if (isLive && draft.method === "self-paced" && draft.price === "" && !draft.planId) {
+      e.price = "Enter the price per learner: a live self-paced course needs one.";
+      e.planId = "Choose a price plan: a live self-paced course needs a price.";
+    }
     // the same rule as the course page's player and the API (videoEmbed): one YouTube or Vimeo video that can actually play
     if (draft.videoUrl.trim() && !videoEmbed(draft.videoUrl.trim())) e.videoUrl = "Use a link to one YouTube or Vimeo video, starting https://";
     draft.exams.forEach((x, i) => {
@@ -1105,11 +1112,30 @@ function FaqSheet({ open, onClose, faq, onSave }) {
 
 // ---- Course pricing --------------------------------------------------------------------------------------------------------
 
-// Skill Saver, and the price: a self-paced course has one price; classroom and live online courses are priced on each date.
+// Skill Saver, and the price: a self-paced course has one price or a price plan; classroom and live online courses are priced on
+// each date.
 // Prices include VAT and change straight away, even on a live course.
 function PricingSection({ draft, setDraft, errors, access, course }) {
   const set = useSet(setDraft);
   const locked = !access.pricing;
+  const { organisationId } = useProviderAccess();
+  const plans = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && draft.method === "self-paced", retry: false }).data || [];
+  // Tiered is shown once chosen even before a plan is picked. Choosing it puts the flat price aside (so the course has no price
+  // until a plan is picked, and the editor knows something changed); picking Flat again clears the plan and brings the price back.
+  const [tieredPick, setTieredPick] = useState(Boolean(draft.planId));
+  const flatPrice = useRef(draft.price);
+  const tiered = tieredPick || Boolean(draft.planId);
+  const setTiered = (on) => {
+    if (on === tiered) return;
+    setTieredPick(on);
+    if (on) {
+      flatPrice.current = draft.price;
+      set("price")("");
+    } else {
+      set("planId")("");
+      set("price")(flatPrice.current);
+    }
+  };
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-price-h">
@@ -1123,14 +1149,31 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
         </div>
         <FieldErr id="rt-pws-ce-saver" text={errors.skillSaver} />
         {draft.method === "self-paced" ? (
-          <div className="rt-field rt-pws-course-price">
-            <label htmlFor="rt-pws-ce-pricein">Price per learner, including VAT</label>
-            <FieldErr id="rt-pws-ce-pricein" text={errors.price} />
-            <div className="rt-pws-course-money">
-              <span aria-hidden="true">£</span>
-              <input id="rt-pws-ce-pricein" type="text" inputMode="decimal" value={draft.price} disabled={locked} onChange={(e) => set("price")(e.target.value.trim())} aria-invalid={errors.price ? true : undefined} aria-describedby={errors.price ? "rt-pws-ce-pricein-e" : undefined} autoComplete="off" />
-            </div>
-          </div>
+          <>
+            {/* Hurak's pricing mode: Flat (one price) or Tiered (packages from a price plan) */}
+            <Choice name="rt-pws-ce-pricing" legend="Pricing" value={tiered ? "tiered" : "flat"} onChange={(v) => !locked && setTiered(v === "tiered")}
+              options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
+            {tiered ? (
+              <div className="rt-field">
+                <label htmlFor="rt-pws-ce-plan">Price plan</label>
+                <p className="rt-acc__note" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. <Link href="/provider/packages" className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link></p>
+                <FieldErr id="rt-pws-ce-plan" text={errors.planId} />
+                <FieldSelect id="rt-pws-ce-plan" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={draft.planId} disabled={locked} onChange={set("planId")}
+                  options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${(p.draft ?? p.tiers).map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}${p.tiers ? "" : " (waiting for approval)"}` }))}
+                  invalid={Boolean(errors.planId)} describedBy="rt-pws-ce-plan-h" />
+                {plans.some((p) => p.id === draft.planId && !p.tiers) && <p className="rt-acc__notice -warn">Our team hasn&apos;t approved this plan yet, so learners won&apos;t see the course&apos;s price until it is.</p>}
+              </div>
+            ) : (
+              <div className="rt-field rt-pws-course-price">
+                <label htmlFor="rt-pws-ce-pricein">Price per learner, including VAT</label>
+                <FieldErr id="rt-pws-ce-pricein" text={errors.price} />
+                <div className="rt-pws-course-money">
+                  <span aria-hidden="true">£</span>
+                  <input id="rt-pws-ce-pricein" type="text" inputMode="decimal" value={draft.price} disabled={locked} onChange={(e) => set("price")(e.target.value.trim())} aria-invalid={errors.price ? true : undefined} aria-describedby={errors.price ? "rt-pws-ce-pricein-e" : undefined} autoComplete="off" />
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <p className="rt-acc__note">Each date has its own price, set when you add the date: you can charge more for a Saturday or a busy month. {course.upcomingCohorts ? `This course has ${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}.` : "This course has no dates yet."} <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">See its dates</Link></p>
         )}

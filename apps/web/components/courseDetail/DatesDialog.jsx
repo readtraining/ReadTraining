@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useBooking } from "./BookingProvider";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { Icon } from "./Icon";
@@ -12,6 +11,9 @@ import { EmptyState } from "@/components/states/States";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { distanceLabel, nearestVenue } from "@/lib/catalogueFilters";
 import { api } from "@/lib/trpc/react";
+import { firstAidFor, maxDelegates } from "@/lib/basket";
+import PopShell from "./PopShell";
+import { BookingSteps } from "./PackageChooser";
 
 const SORTS = { classroom: [["cheapest", "Cheapest"], ["soonest", "Soonest"], ["name", "Name (A to Z)"]], online: [["cheapest", "Cheapest"], ["soonest", "Soonest"]] };
 const DEFAULT_SORT = "cheapest";
@@ -38,12 +40,58 @@ const tile = (iso) => {
   return { month: f({ month: "short" }), day: f({ day: "numeric" }), weekday: f({ weekday: "short" }) };
 };
 
-// One date: the whole row picks it (a calendar tile, the dates, how long and when, the days themselves when they aren't all in a
-// row, what the provider wrote about the date, the price, Skill Saver when only some dates are in it, and a tick once chosen).
-function DateRow({ s, selected, onSelect, classroom, markSaver }) {
+// One date: a calendar tile, the dates, how long and when, the days themselves when they aren't all in a row, what the provider
+// wrote about the date, the price and Skill Saver when only some dates are in it. With `onBook` (course page, course cards) the
+// date has its own delegates counter (as Hurak's, up to the places left) and "Book now", which books that many; otherwise the whole
+// row picks it, with a tick once chosen (the basket's "Change date").
+function DateRow({ s, selected, onSelect, onBook, classroom, markSaver }) {
+  const [qty, setQty] = useState(1);
   const t = s.mode === "ondemand" ? null : tile(s.date);
   const was = s.wasPrice > s.price ? s.wasPrice : null;
+  // sold in packages: the price is the cheapest package's, so it reads "From"
+  const from = s.packages ? "From " : "";
   const meta = [s.days ? `${s.days} ${s.days === 1 ? "day" : "days"}` : "", s.mode === "ondemand" ? "Online" : s.time, !classroom && s.mode === "online" ? "Live online" : ""].filter(Boolean).join(" · ");
+  // the date with its own "Book now" (course page and course cards): the button books it and goes to the basket
+  if (onBook) {
+    return (
+      <li>
+        <div className="rt-dd__slot rt-dd__slot--book">
+          {t && (
+            <span className="rt-dd__tile" aria-hidden="true">
+              <span className="rt-dd__tile-m">{t.month}</span>
+              <span className="rt-dd__tile-d">{t.day}</span>
+              <span className="rt-dd__tile-w">{t.weekday}</span>
+            </span>
+          )}
+          <span className="rt-dd__slot-main">
+            <strong>{whenLabel(s)}</strong>
+            {meta && <span>{meta}</span>}
+            {s.schedule && <span>{s.schedule}</span>}
+            {s.details && <span className="rt-dd__details">{s.details}</span>}
+            {markSaver && s.skillSaver && <SaverBadge />}
+          </span>
+          <span className="rt-dd__slot-price">
+            <span className="rt-dd__price-line">
+              {was && <s><span className="rt-cd__sr">was </span>{formatPrice(was)}</s>}
+              <strong>{from}{formatPrice(s.price)}</strong>
+            </span>
+            {qty > 1 ? <span className="rt-dd__total">{from}{formatPrice(s.price * qty)} for {qty}</span> : <span className="rt-dd__per">per delegate</span>}
+          </span>
+          <span className="rt-dd__actions">
+            <span className="rt-dd__qty-label" aria-hidden="true">Delegates</span>
+            <span className="rt-bk__qty" role="group" aria-label={`Delegates for ${whenLabel(s)}`}>
+              <button type="button" aria-label="Remove one delegate" disabled={qty <= 1} onClick={() => setQty((n) => Math.max(1, n - 1))}>−</button>
+              <output aria-live="polite"><span className="rt-cd__sr">Delegates: </span>{qty}</output>
+              <button type="button" aria-label="Add one delegate" disabled={qty >= maxDelegates(s)} onClick={() => setQty((n) => Math.min(maxDelegates(s), n + 1))}>+</button>
+            </span>
+            <button type="button" className="button -sm -purple-1 text-white rt-dd__book" onClick={() => onBook(s.id, qty)} aria-label={`Book now: ${qty} ${qty === 1 ? "delegate" : "delegates"}, ${whenLabel(s)}${classroom ? `, ${s.address}` : ""}, ${from.toLowerCase()}${formatPrice(s.price * qty)}${s.packages ? ", then choose a package" : ""}`}>
+              Book now
+            </button>
+          </span>
+        </div>
+      </li>
+    );
+  }
   return (
     <li>
       <button type="button" className={`rt-dd__slot${selected ? " is-selected" : ""}`} aria-pressed={selected} onClick={() => onSelect(s.id)}>
@@ -61,7 +109,7 @@ function DateRow({ s, selected, onSelect, classroom, markSaver }) {
           {s.details && <span className="rt-dd__details">{s.details}</span>}
         </span>
         <span className="rt-dd__slot-price">
-          <strong>{formatPrice(s.price)}</strong>
+          <strong>{from}{formatPrice(s.price)}</strong>
           {was && <s><span className="rt-cd__sr">was </span>{formatPrice(was)}</s>}
           {markSaver && s.skillSaver && <SaverBadge />}
         </span>
@@ -72,59 +120,61 @@ function DateRow({ s, selected, onSelect, classroom, markSaver }) {
   );
 }
 
-// A venue shows its first dates straight away; more than FOLD_AT are folded under "Show N more dates".
+// An open venue shows its first dates; more than FOLD_AT are folded under "Show N more dates". The list shows VENUES_STEP venues,
+// then "Show more venues".
 const SHOWN = 3;
 const FOLD_AT = 4;
+const VENUES_STEP = 10;
 
-// A venue: its name, address, how far it is from the place searched for and map link, its lowest price when it has several
-// dates, and its dates (each row picks one).
-function VenueCard({ v, current, onSelect, more, onMore, markSaver }) {
-  const has = v.sessions.some((s) => s.id === current);
+// A venue (as Hurak's): a plain row with its name, address, how far it is from the place searched for, next date and
+// lowest price, and "Show dates" on the right; its dates open under it, one venue at a time, so many venues stay easy to scan.
+function VenueCard({ v, current, onSelect, onBook, open, onToggle, more, onMore, markSaver }) {
   const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
   const folds = v.sessions.length > FOLD_AT;
   const shown = folds && !more ? v.sessions.slice(0, SHOWN) : v.sessions;
   const hidden = v.sessions.length - SHOWN;
+  const first = tile(v.sessions[0].date);
   return (
-    <section className={`rt-dd__vcard${has ? " is-selected" : ""}`} aria-labelledby={id}>
+    <section className={`rt-dd__vcard${open ? " is-open" : ""}`} aria-labelledby={id}>
       <div className="rt-dd__vhead">
-        <span className="rt-dd__vpin" aria-hidden="true"><PinIcon /></span>
         <div className="rt-dd__vinfo">
           <h3 id={id}>{v.venue || v.city}</h3>
           <p className="rt-dd__addr">
             {[v.street, v.city].filter(Boolean).join(", ")}
             {v.postcode && <>{(v.street || v.city) && ", "}<span className="rt-nowrap">{v.postcode}</span></>}
             {v.near && <span className="rt-nowrap"> · {distanceLabel(v.near)}</span>}
-            <span className="rt-nowrap">
-              {" "}·{" "}
-              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.name, v.postcode].filter(Boolean).join(", "))}`} target="_blank" rel="noopener">Map<span className="rt-cd__sr"> (opens in a new tab)</span></a>
-            </span>
           </p>
+          <p className="rt-dd__vnext">Next course: <strong>{first.weekday} {first.day} {first.month}</strong></p>
         </div>
-        {v.sessions.length > 1 && (
-          <p className="rt-dd__vfrom">
-            <span>{v.sessions.length} dates from</span>
-            <strong>{formatPrice(v.from)}</strong>
-          </p>
+        <p className="rt-dd__vfrom">{v.sessions.length > 1 || v.sessions.some((x) => x.packages) ? "From " : ""}{formatPrice(v.from)}</p>
+        <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={onToggle}>
+          {open ? "Hide dates" : "Show dates"}<span className="rt-cd__sr"> at {v.venue || v.city}</span>
+          <span className="rt-dd__vchev" aria-hidden="true"><Chevron /></span>
+        </button>
+      </div>
+      <div id={`${id}-dates`} hidden={!open}>
+        {open && (
+          <>
+            <ul className="rt-dd__slots" aria-label={`Dates at ${v.venue || v.city}`}>
+              {shown.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} onBook={onBook} classroom markSaver={markSaver} />)}
+            </ul>
+            {folds && (
+              <button type="button" className="rt-dd__more" aria-expanded={more} onClick={onMore}>
+                {more ? "Show fewer dates" : `Show ${hidden} more ${hidden === 1 ? "date" : "dates"}`} <Chevron />
+              </button>
+            )}
+          </>
         )}
       </div>
-      <ul className="rt-dd__slots" id={`${id}-dates`} aria-label={`Dates at ${v.venue || v.city}`}>
-        {shown.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} classroom markSaver={markSaver} />)}
-      </ul>
-      {folds && (
-        <button type="button" className="rt-dd__more" aria-expanded={more} aria-controls={`${id}-dates`} onClick={onMore}>
-          {more ? "Show fewer dates" : `Show ${hidden} more ${hidden === 1 ? "date" : "dates"}`} <Chevron />
-        </button>
-      )}
     </section>
   );
 }
 
 // The pop-up body. It is mounted only while the pop-up is open (and again for each study method), so its state starts from what
-// was remembered (sessionStorage). Without `confirm` a choice is applied at once (course page, basket); with it a choice is only
-// marked, and the footer shows it with the confirm button (the catalogue card's "Add to basket").
-function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClose, isDesktop }) {
+// was remembered (sessionStorage). With `onBook` (course page, course cards) each date has its own Book now; without it a date
+// picked is applied at once (the basket's "Change date").
+function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClose, isDesktop }) {
   const listRef = useRef(null);
-  const [chosen, setChosen] = useState(null); // nothing chosen until the visitor picks a date (no default date in the footer)
   const classroom = mode === "classroom";
   const key = storeKey(course, mode);
   const sorts = SORTS[classroom ? "classroom" : "online"];
@@ -148,11 +198,15 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   const [input, setInput] = useState(saved?.q || "");
   const [q, setQ] = useState(saved?.q || "");
   const [sort, setSort] = useState(sorts.some(([v]) => v === saved?.sort) ? saved.sort : DEFAULT_SORT);
-  // venues showing all their dates: the one holding the chosen date starts unfolded, so the chosen date is never hidden
-  const [more, setMore] = useState(() => {
+  // the venue holding the chosen date starts open with all its dates, so the chosen date is never hidden
+  const chosenVenue = useMemo(() => {
     const s = course.sessions.find((x) => x.id === selectedId && x.mode === mode);
-    return s ? [`${s.address}|${s.postcode}`] : [];
-  });
+    return s ? `${s.address}|${s.postcode}` : null;
+  }, [course, selectedId, mode]);
+  const [more, setMore] = useState(() => (chosenVenue ? [chosenVenue] : []));
+  // the open venue: undefined = not chosen yet (see `openKey` below), null = all closed
+  const [openPick, setOpenPick] = useState(undefined);
+  const [venuesShown, setVenuesShown] = useState(VENUES_STEP);
 
   useEffect(() => {
     const t = setTimeout(() => setQ(input.trim()), 300);
@@ -174,6 +228,10 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   useEffect(() => {
     if (place) setSort("nearest"); // a place found: nearest first, until another order is chosen
   }, [place]);
+  useEffect(() => {
+    setOpenPick(undefined); // a new search opens the nearest venue again
+    setVenuesShown(VENUES_STEP);
+  }, [q]);
   const sortBy = sort === "nearest" && !place ? DEFAULT_SORT : sort;
   const sortOptions = place ? [["nearest", "Nearest"], ...sorts] : sorts;
 
@@ -201,9 +259,14 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
   // which place the distances are from (the visitor can tell which Newport was used), or why the words typed are matched instead
   const placeNote = !lookup ? "" : place ? `Nearest to ${[place.label, place.area].filter(Boolean).join(", ")} first` : located.isError ? "We can't look places up right now, so venues are matched by name." : "";
   const toggle = (k) => setMore((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));
-  const pick = useCallback((id) => (confirm ? setChosen(id) : onPick(id)), [confirm, onPick]);
-  const current = confirm ? chosen : selectedId;
-  const chosenSession = course.sessions.find((s) => s.id === chosen);
+  // Booking (Book now on each date): every venue starts closed, as Hurak's, so the visitor picks the venue first; only a course
+  // with one venue opens it (there is nothing to pick). Changing a date in the basket opens the venue of the date already chosen.
+  const autoOpen = !classroom ? null : list.length === 1 ? list[0].key : !onBook && chosenVenue && list.some((v) => v.key === chosenVenue) ? chosenVenue : null;
+  const openKey = openPick === undefined ? autoOpen : openPick;
+  const venueList = classroom ? list.slice(0, venuesShown) : [];
+  const venuesLeft = classroom ? list.length - venueList.length : 0;
+  const pick = onPick;
+  const current = selectedId;
   // Skill Saver on only some of the course's dates: those dates are marked
   const markSaver = course.skillSaver === "some";
 
@@ -252,123 +315,62 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, confirm, onClo
           <EmptyState inCard title="No venues match." text={located.isSuccess && !place ? `We couldn't find ${q} on the map. Try another town or postcode.` : "Try another town or postcode."} />
         ) : classroom ? (
           <div className="rt-dd__venues">
-            {list.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} more={more.includes(v.key)} onMore={() => toggle(v.key)} markSaver={markSaver} />)}
+            {venueList.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} open={openKey === v.key} onToggle={() => setOpenPick(openKey === v.key ? null : v.key)} more={more.includes(v.key)} onMore={() => toggle(v.key)} markSaver={markSaver} onBook={onBook} />)}
+            {venuesLeft > 0 && (
+              <button type="button" className="rt-dd__more rt-dd__more--venues" onClick={() => setVenuesShown((n) => n + VENUES_STEP)}>
+                Show more venues ({venuesLeft}) <Chevron />
+              </button>
+            )}
           </div>
         ) : (
           <ul className="rt-dd__slots rt-dd__slots--flat">
-            {list.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} markSaver={markSaver} />)}
+            {list.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} onBook={onBook} markSaver={markSaver} />)}
           </ul>
         )}
       </div>
       <FilterScrollPill scrollRef={listRef} />
-
-      {confirm && (
-        <div className="rt-dd__foot">
-          <p className="rt-dd__chosen" aria-live="polite">
-            {chosenSession ? (
-              <>
-                <strong>{whenLabel(chosenSession)}</strong>
-                <span>{[chosenSession.location, formatPrice(chosenSession.price)].join(" · ")}</span>
-              </>
-            ) : (
-              <span>No date chosen yet</span>
-            )}
-          </p>
-          <button type="button" className="button -md -purple-1 text-white" disabled={!chosenSession} onClick={() => confirm.onConfirm(chosen)}>{confirm.label}</button>
-        </div>
-      )}
     </>
   );
 }
 
-// The "choose a date" pop-up. Desktop: centred dialog. 575px and under: full-screen sheet. `modes` + `onMode` add the study methods
-// as chips (catalogue card, basket); `confirm` { label, onConfirm(sessionId) } adds the footer. Focus goes back to the opener.
-export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode, modes, onMode, selectedId, onPick, confirm }) {
-  const [mounted, setMounted] = useState(false);
-  const [shown, setShown] = useState(false);
-  const panelRef = useRef(null);
-  const openerRef = useRef(null);
-  const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 576px)").matches;
-  const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  // mount, then fade/slide in on the next frame; fade out, then unmount
+// The "choose a date" pop-up. Desktop: centred dialog. 575px and under: full-screen sheet (PopShell). `modes` + `onMode` add the
+// study methods as chips (catalogue card, basket); `onBook(sessionId, delegates, packageKey, firstAid)` gives each date its own
+// Book now. A date sold in packages, or on a course the SIA licence needs first aid for, goes on to those steps in the same pop-up
+// (PackageChooser BookingSteps), with the delegates chosen and "Back to dates"; what is chosen goes with the booking. Focus goes
+// back to the opener.
+export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode, modes, onMode, selectedId, onPick, onBook }) {
+  const [pkgFor, setPkgFor] = useState(null); // { id, qty }: the date whose steps are showing
   useEffect(() => {
-    if (datesOpen) {
-      openerRef.current = document.activeElement;
-      setMounted(true);
-      const raf = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)));
-      return () => cancelAnimationFrame(raf);
-    }
-    setShown(false);
-    if (openerRef.current?.isConnected) setTimeout(() => openerRef.current?.isConnected && openerRef.current.focus?.({ preventScroll: true }), 0);
-    const t = setTimeout(() => setMounted(false), reduced() ? 0 : 260);
-    return () => clearTimeout(t);
+    if (datesOpen) setPkgFor(null); // every opening starts on the dates
   }, [datesOpen]);
-
-  // lock page scroll without moving the page (the scrollbar width is added back as padding)
-  useEffect(() => {
-    if (!mounted) return;
-    const html = document.documentElement;
-    const body = document.body;
-    const sbw = window.innerWidth - html.clientWidth;
-    const prev = { o: html.style.overflow, p: body.style.paddingRight };
-    html.style.overflow = "hidden";
-    if (sbw > 0) body.style.paddingRight = `${sbw}px`;
-    html.style.setProperty("--rt-sbw", `${sbw}px`);
-    return () => {
-      html.style.overflow = prev.o;
-      body.style.paddingRight = prev.p;
-      html.style.removeProperty("--rt-sbw");
-    };
-  }, [mounted]);
-
-  // initial focus, Esc, and a Tab trap
-  useEffect(() => {
-    if (!datesOpen || !mounted) return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    const t = setTimeout(() => (panel.querySelector("[data-initial]") || panel.querySelector("h2"))?.focus({ preventScroll: true }), 30);
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        closeDates();
-        return;
+  const book = onBook
+    ? (id, qty) => {
+        const s = course.sessions.find((x) => x.id === id);
+        if (s?.packages || (s && firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic }))) setPkgFor({ id, qty });
+        else onBook(id, qty);
       }
-      if (e.key !== "Tab") return;
-      const items = [...panel.querySelectorAll('a[href], button:not([disabled]), input, select, [tabindex]:not([tabindex="-1"])')].filter((el) => el.offsetParent !== null);
-      if (!items.length) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (e.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
-        e.preventDefault();
-        first.focus();
+    : undefined;
+  const pkgSession = pkgFor && course ? course.sessions.find((x) => x.id === pkgFor.id) : null;
+  if (!course) return null;
+  return (
+    <PopShell open={datesOpen} onClose={closeDates} labelledBy="rt-dd-title">
+      {(isDesktop) =>
+        pkgSession ? (
+          <BookingSteps titleId="rt-dd-title" course={course} session={pkgSession} quantity={pkgFor.qty} needsAid={firstAidFor({ mode: pkgSession.mode, subject: course.subject, sub: course.sub, topic: course.topic })}
+            onDone={(key, aid) => onBook(pkgSession.id, pkgFor.qty, key, aid)} onBack={() => setPkgFor(null)} onClose={() => closeDates()} />
+        ) : (
+          <Panel key={mode} course={course} mode={mode} modes={modes} onMode={onMode} selectedId={selectedId} onPick={onPick} onBook={book} onClose={() => closeDates()} isDesktop={isDesktop} />
+        )
       }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [datesOpen, mounted, closeDates]);
-
-  if (!mounted || !course) return null;
-  return createPortal(
-    <div className={`rt-dd${shown ? " is-in" : ""}`} onMouseDown={(e) => e.target === e.currentTarget && isDesktop && closeDates()}>
-      <div className="rt-dd__panel" role="dialog" aria-modal="true" aria-labelledby="rt-dd-title" ref={panelRef}>
-        <Panel key={mode} course={course} mode={mode} modes={modes} onMode={onMode} selectedId={selectedId} onPick={onPick} confirm={confirm} onClose={() => closeDates()} isDesktop={isDesktop} />
-      </div>
-    </div>,
-    document.body,
+    </PopShell>
   );
 }
 
-// The course page's pop-up for Classroom and Live online, on the page's booking state (choosing applies the date and closes).
+// The course page's pop-up for Classroom and Live online, on the page's booking state: every date has its own "Book now", which
+// books it and goes to the basket (as Hurak's).
 // When the course runs both, the pop-up's own tabs switch between their dates; the page follows only once a date is chosen.
 export default function DatesDialog() {
-  const { course, mode, session, selectSession, datesOpen, closeDates } = useBooking();
+  const { course, mode, session, selectSession, datesOpen, closeDates, book } = useBooking();
   const dated = useMemo(() => ["classroom", "online"].filter((m) => course.sessions.some((s) => s.mode === m)), [course]);
   const [view, setView] = useState(mode);
   useEffect(() => {
@@ -384,5 +386,5 @@ export default function DatesDialog() {
   if (mode === "ondemand" || mode === "inhouse") return null;
   if (!session) return null;
   const shown = dated.includes(view) ? view : mode;
-  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={shown} modes={dated.length > 1 ? dated : undefined} onMode={setView} selectedId={session.id} onPick={pick} />;
+  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={shown} modes={dated.length > 1 ? dated : undefined} onMode={setView} selectedId={session.id} onPick={pick} onBook={book} />;
 }
