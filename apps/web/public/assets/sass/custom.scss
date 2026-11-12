@@ -6735,7 +6735,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 /* the plans table: each package and its price */
 .rt-pws-pkgs__tiers { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
 .rt-pws-pkgs__tiers li { display: flex; justify-content: space-between; gap: 12px; max-width: 240px; list-style: none; }
-.rt-pws-pkgs__note { max-width: 260px; }
 .rt-pws-pkg__tier { display: grid; justify-items: start; gap: 12px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
 .rt-pws-pkg__tier.-popular { border-color: var(--rt-c-brand); box-shadow: 0 0 0 1px var(--rt-c-brand); }
 .rt-pws-pkg__tierhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
@@ -7027,19 +7026,20 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-labelled { display: flex; align-items: center; gap: 10px; margin: 0; }
 .rt-adm-labelled label { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); }
 .rt-adm-widesheet .rt-dd__panel { max-width: 860px; }
-/* a price plan to approve (AdminPlanReview): its packages side by side, as learners compare them; one under another on phones */
-@media (min-width: 768px) { .rt-adm-plansheet .rt-dd__panel { width: 1000px; max-width: 94vw; } }
-.rt-adm-linkbtn { padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
-.rt-adm-linkbtn:hover { color: var(--rt-c-brand) !important; text-decoration: underline; text-underline-offset: 3px; }
-.rt-adm-plan { display: grid; gap: 10px; }
+/* Prices and packages on the admin's course review (AdminCoursePrices): the dates and their prices, then each price plan's packages
+   side by side, as learners compare them; one under another on phones */
+.rt-adm-cp__tablewrap { margin: 12px 0 0; } /* the admin table reaches the card's edges, as in every card */
+.rt-adm-cp__table td small { white-space: nowrap; }
+.rt-adm-plan { display: grid; gap: 10px; margin-top: 20px; }
+.rt-adm-plan .rt-acc__h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
 .rt-adm-plan__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
-@media (min-width: 768px) { .rt-adm-plan__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rt-adm-plan__tiers.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 992px) { .rt-adm-plan__tiers.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .rt-adm-plan__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .rt-adm-plan__tiers.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .rt-adm-plan__tiers.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .rt-adm-plan__tier { display: grid; align-content: start; gap: 6px; margin: 0; padding: 14px; list-style: none; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); }
 .rt-adm-plan__tier.-popular { border-color: var(--rt-c-brand); }
 .rt-adm-plan__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--rt-c-text); }
 .rt-adm-plan__price { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
-.rt-adm-plan__price small { font-size: var(--rt-text-sm); font-weight: 400; color: var(--rt-c-muted); }
+.rt-adm-plan__price small { display: block; font-size: var(--rt-text-sm); font-weight: 400; color: var(--rt-c-muted); }
 .rt-adm-plan__features { display: grid; gap: 6px; margin: 4px 0 0; padding: 8px 0 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
 .rt-adm-plan__features li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); list-style: none; }
 .rt-adm-plan__features li i { margin-top: 4px; font-size: 10px; color: var(--rt-c-success); }
@@ -7232,6 +7232,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-pk__note { margin: 14px 0 0; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
 .rt-pk__list { padding-top: 22px; } /* room for the Most popular badge above the first row */
 .rt-bs__from { font-size: 15px; font-weight: 600; color: var(--cd-muted); }
+/* the hero's Book now: the course page's main button, a size bigger than the card's and the bar's */
+.rt-cd__booknow.button { height: 54px; padding: 0 36px; font-size: 17px; }
 /* the first aid requirement, after the date and package (PackageChooser FirstAidPanel) */
 .rt-fa { display: flex; flex-direction: column; gap: 12px; background: var(--cd-surface); }
 .rt-fa__tag { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: var(--cd-band); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--cd-brand); }

@@ -197,6 +197,13 @@ export function grantableAdminPermissions(admin: AdminAccess | null): AdminPermi
 
 const isViewAction = (action: string) => action.endsWith('.view') || action.endsWith('.open')
 
+// Until our team approves a provider (its application pending, or changes asked), it can only look around and complete its
+// application: its profile and name, its terms, sending the account for review, or closing it. Courses, dates, venues, price
+// plans and everything else wait for the approval (the team decided no drafts before it, 12 November 2026).
+const BEFORE_APPROVAL = new Set<string>(['provider.profile.edit', 'provider.profile.rename', 'provider.terms.edit', 'provider.review.send', 'provider.account.close'])
+export const waitsForApproval = (action: string, organisationStatus: OrganisationStatus) =>
+  action.startsWith('provider.') && (organisationStatus === 'pending' || organisationStatus === 'changes_requested') && !isViewAction(action) && !BEFORE_APPROVAL.has(action)
+
 // ---------------------------------------------------------------------------------------------------------------------------
 // The check. Denies anything it does not know.
 export function can(actor: Actor | null, action: Action, target: Target = {}): boolean {
@@ -227,6 +234,8 @@ export function can(actor: Actor | null, action: Action, target: Target = {}): b
   if (membership.organisationStatus === 'rejected') return false
   // a suspended organisation can still be opened and read, but nothing can be changed
   if (membership.organisationStatus === 'suspended' && !isViewAction(action)) return false
+  // not approved yet: only its application (above)
+  if (waitsForApproval(action, membership.organisationStatus)) return false
 
   const rule: { roles: readonly MemberRole[]; own?: boolean } = isProvider ? PROVIDER_RULES[action as ProviderAction] : BUSINESS_RULES[action as BusinessAction]
   const allowed = rule.roles.includes(membership.role) || (rule.own === true && membership.role === 'tutor' && !!target.tutorUserId && target.tutorUserId === actor.userId)

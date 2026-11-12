@@ -60,13 +60,11 @@ export function runLength(sessions: Session[]) {
 const lengthText = (n: number) => (n ? `${n} ${n === 1 ? 'day' : 'days'}` : '')
 
 // The live offerings and their bookable dates (starting after today, the UK's date, so a course already under way isn't offered;
-// not cancelled, taking bookings). A date or self-paced course on a price plan carries its approved packages (`plan_tiers`); one
-// whose plan our team hasn't approved yet isn't offered (a Preview, `anyStatus`, shows the waiting packages instead).
+// not cancelled, taking bookings). A date or self-paced course on a price plan carries its packages (`plan_tiers`).
 async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = false) {
   const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null; plan_tiers: unknown }>(sql`
     select c.id, c.parent_id, c.slug, c.title, c.method, c.model, c.skill_saver, c.is_public, c.listed, c.organisation_id,
-           case when c.plan_id is null or ${anyStatus ? sql`true` : sql`p.tiers is not null`} then c.price_pence end price_pence,
-           ${anyStatus ? sql`coalesce(p.tiers, p.draft)` : sql`p.tiers`} plan_tiers,
+           c.price_pence, p.tiers plan_tiers,
            o.name provider, o.slug provider_slug, o.logo_path, o.city provider_city
     from public.courses c join public.organisations o on o.id = c.organisation_id left join public.price_plans p on p.id = c.plan_id
     where c.kind = 'provider' and ${anyStatus ? sql`true` : sql`c.status = 'live' and o.status = 'active'`} and ${where}`)
@@ -74,10 +72,9 @@ async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = f
   const dates = ids.length
     ? await db.execute<{ id: string; course_id: number; method: string; sessions: Session[]; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; capacity: number; details: string | null; join_url: string | null; venue_name: string | null; street: string | null; city: string | null; postcode: string | null; lat: number | null; lng: number | null; plan_tiers: unknown }>(sql`
         select k.id, k.course_id, k.method, k.sessions, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.capacity, k.details, k.join_url,
-               v.name venue_name, v.street, v.city, v.postcode, v.lat, v.lng, ${anyStatus ? sql`coalesce(p.tiers, p.draft)` : sql`p.tiers`} plan_tiers
+               v.name venue_name, v.street, v.city, v.postcode, v.lat, v.lng, p.tiers plan_tiers
         from public.cohorts k left join public.venues v on v.id = k.venue_id left join public.price_plans p on p.id = k.plan_id
         where k.course_id in ${sql.raw(`(${ids.map((n) => Number(n)).filter(Number.isInteger).join(',')})`)} and k.cancelled_at is null and k.bookable and k.starts_on > (now() at time zone 'Europe/London')::date
-          and ${anyStatus ? sql`true` : sql`(k.plan_id is null or p.tiers is not null)`}
         order by k.starts_on, k.price_pence`)
     : []
   return { offers, dates }

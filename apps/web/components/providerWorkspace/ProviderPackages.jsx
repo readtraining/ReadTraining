@@ -7,21 +7,16 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { errorsFrom } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
 import PackageEditor from "./PackageEditor";
-import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { Loading, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
 const SHOW = [{ value: "", label: "In use" }, { value: "archive", label: "Archived" }, { value: "all", label: "All plans" }];
-const STATUS = {
-  approved: { label: "Approved", tone: "ok" },
-  pending: { label: "Waiting for approval", tone: "info" },
-  changes: { label: "Changes asked", tone: "warn" },
-};
 const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date" : "dates"}` : "", u.courses ? `${u.courses} self-paced ${u.courses === 1 ? "course" : "courses"}` : ""].filter(Boolean).join(" and ") || "Not used yet";
 
-// Price plans (Hurak's Tiered Plans), from the API (provider.plans): each plan's packages and prices, its status with our team,
-// and how many dates and courses use it. A date chooses its plan in its own form ("Tiered" pricing); a self-paced course in its
-// course pricing. Edit opens the plan; a waiting change can be withdrawn; a plan is archived (dates on it keep it) or, when nothing
+// Price plans (Hurak's Tiered Plans), from the API (provider.plans): each plan's packages and prices, and how many dates and
+// courses use it. A plan is the provider's own pricing: saving it changes what learners see at once. A date chooses its plan in its own form ("Tiered" pricing); a self-paced course in its
+// course pricing. Edit opens the plan; a plan is archived (dates on it keep it) or, when nothing
 // ever used it, deleted. Search and the archive filter are kept in the address.
 export default function ProviderPackages() {
   const { organisationId, can } = useProviderAccess();
@@ -29,7 +24,6 @@ export default function ProviderPackages() {
   const utils = api.useUtils();
   const query = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const archive = api.provider.plans.setArchived.useMutation();
-  const withdraw = api.provider.plans.withdraw.useMutation();
   const remove = api.provider.plans.remove.useMutation();
   const [q, setQ] = useState("");
   const [show, setShow] = useState("");
@@ -57,7 +51,7 @@ export default function ProviderPackages() {
   const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
   const create = () => setEditor({ open: true, plan: null });
   const inUse = Boolean(removing && removing.used.dates + removing.used.courses);
-  const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={(r) => say(r.pending ? "Saved and sent to our team for approval" : "Plan saved")} />;
+  const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={() => say("Plan saved")} />;
 
   if (!plans.length) {
     return (
@@ -88,14 +82,11 @@ export default function ProviderPackages() {
               <tr>
                 <th scope="col">Plan</th>
                 <th scope="col">Packages</th>
-                <th scope="col">Status</th>
                 <th scope="col"><span className="rt-sr">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {list.map((p) => {
-                const shown = p.draft ?? p.tiers;
-                const st = STATUS[p.status];
                 return (
                   <tr key={p.id}>
                     <td data-label="Plan">
@@ -104,19 +95,13 @@ export default function ProviderPackages() {
                     </td>
                     <td data-label="Packages">
                       <ul className="rt-pws-pkgs__tiers">
-                        {shown.map((t) => <li key={t.name}><span>{t.name}</span> <b className="rt-pws-money__num">{formatPrice(t.pricePence / 100)}</b></li>)}
+                        {p.tiers.map((t) => <li key={t.name}><span>{t.name}</span> <b className="rt-pws-money__num">{formatPrice(t.pricePence / 100)}</b></li>)}
                       </ul>
-                    </td>
-                    <td data-label="Status">
-                      <Pill tone={st.tone}>{st.label}</Pill>
-                      {p.status === "changes" && p.statusNote && <small className="rt-adm-muted rt-pws-pkgs__note">{p.statusNote}</small>}
-                      {p.status === "pending" && p.tiers && <small className="rt-adm-muted">Learners see the approved packages until then.</small>}
                     </td>
                     <td data-label="Actions">
                       {edit && (
                         <RowMenu label={`Actions for ${p.name}`} items={[
                           { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
-                          ...(p.draft && p.tiers ? [{ label: "Withdraw the change", onClick: () => withdraw.mutate({ organisationId, planId: p.id }, { onSuccess: () => { refresh(); say("Change withdrawn: learners keep the approved packages"); }, onError: fail }) }] : []),
                           { label: p.archived ? "Use again" : "Archive", onClick: () => archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} can be chosen again` : `${p.name} archived`); }, onError: fail }) },
                           { label: "Delete", onClick: () => setRemoving(p) },
                         ]} />

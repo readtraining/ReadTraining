@@ -15,6 +15,7 @@ import { categoryName, levelName, methodName, subcategoryName, topicName } from 
 import { Said, DetailSkeleton, formatWhen, Empty } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
+import AdminCoursePrices from "./AdminCoursePrices";
 
 const copy = A.catalogue;
 const d = copy.detail;
@@ -27,7 +28,8 @@ const NOTE = new Set(["changes", "rejectChange", "pause"]);
 // decisions sit in the page head: approve or send back a new course, approve or turn down a change, pause a live course or put
 // back one the team paused (each note is shown to the provider and emailed). A refusal (and an email that couldn't be sent) stays
 // in a notice at the top until the next decision. Preview opens the course as visitors will see it, with a waiting change shown
-// as if approved. A shared page lists the providers' courses on it and opens in the course editor to write it.
+// as if approved. A shared page lists the providers' courses on it and opens in the course editor to write it. Prices and packages
+// show what learners will pay (AdminCoursePrices), checked before approving: plans have no approval of their own.
 export default function AdminCourse({ id }) {
   const me = useAdminAccess();
   const courseId = /^\d+$/.test(String(id)) ? Number(id) : 0;
@@ -201,7 +203,7 @@ export default function AdminCourse({ id }) {
             <div><dt>Category</dt><dd>{place || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
             <div><dt>Level</dt><dd>{levelName(c.level) || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
             {!shared && <div><dt>How it is taught</dt><dd>{methodName(c.method) || "–"}</dd></div>}
-            {!shared && <div><dt>Price</dt><dd>{c.method === "self-paced" ? (c.pricePence != null ? formatPrice(c.pricePence / 100) : "Not set") : `Set on each date · ${c.upcomingCohorts} upcoming`}</dd></div>}
+            {!shared && <div><dt>Price</dt><dd>{c.method === "self-paced" ? (c.pricePence != null ? formatPrice(c.pricePence / 100) : "Not set") : `Set on each date · ${c.upcomingCohorts} upcoming`} <span className="rt-adm-muted">(see Prices and packages)</span></dd></div>}
             {!shared && <div><dt>Performance model</dt><dd>{pw.models[c.model]?.label}</dd></div>}
             {!shared && <div><dt>Skill Saver</dt><dd>{c.skillSaver ? "Yes" : "No"}</dd></div>}
             <div><dt>Shown in search</dt><dd>{c.listed && (shared || c.isPublic) ? "Yes" : "No"}</dd></div>
@@ -211,6 +213,8 @@ export default function AdminCourse({ id }) {
           </dl>
           {c.missing.length > 0 && <p className="rt-acc__note">Still missing: {c.missing.join("; ")}.</p>}
         </section>
+
+        <AdminCoursePrices pricing={c.pricing} />
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cc-h">
         <h2 className="rt-acc__h2" id="rt-adm-cc-h">The course page</h2>
