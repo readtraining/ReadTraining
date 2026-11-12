@@ -7028,7 +7028,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-widesheet .rt-dd__panel { max-width: 860px; }
 /* Prices and packages on the admin's course review (AdminCoursePrices): the dates and their prices, then each price plan's packages
    side by side, as learners compare them; one under another on phones */
-.rt-adm-cp__tablewrap { margin: 12px 0 0; overflow-x: auto; }
+.rt-adm-cp__tablewrap { margin: 12px 0 0; } /* the admin table reaches the card's edges, as in every card */
 .rt-adm-cp__table td small { white-space: nowrap; }
 .rt-adm-plan { display: grid; gap: 10px; margin-top: 20px; }
 .rt-adm-plan .rt-acc__h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }

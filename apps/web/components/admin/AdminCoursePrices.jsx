@@ -75,7 +75,7 @@ export default function AdminCoursePrices({ pricing }) {
               <tr>
                 <th scope="col">Dates</th>
                 <th scope="col">Where</th>
-                <th scope="col" className="rt-adm-num-cell">Price</th>
+                <th scope="col" className="rt-adm-num">Price</th>
               </tr>
             </thead>
             <tbody>
