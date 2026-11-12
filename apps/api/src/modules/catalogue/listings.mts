@@ -4,6 +4,7 @@ import { asc, courseExams, courseFaqs, courseImages, courseUnits, eq, sql } from
 
 import type { db as Db } from '../../lib/db.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
+import { publicTiers } from '../provider/plans.mjs'
 import { formatPostcode, POSTCODE } from '../../lib/postcode.mjs'
 
 // The public catalogue (Milestone 2): what learners see on the search, category and course pages, read from the real courses.
@@ -59,20 +60,24 @@ export function runLength(sessions: Session[]) {
 const lengthText = (n: number) => (n ? `${n} ${n === 1 ? 'day' : 'days'}` : '')
 
 // The live offerings and their bookable dates (starting after today, the UK's date, so a course already under way isn't offered;
-// not cancelled, taking bookings).
+// not cancelled, taking bookings). A date or self-paced course on a price plan carries its approved packages (`plan_tiers`); one
+// whose plan our team hasn't approved yet isn't offered (a Preview, `anyStatus`, shows the waiting packages instead).
 async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = false) {
-  const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null }>(sql`
-    select c.id, c.parent_id, c.slug, c.title, c.method, c.model, c.price_pence, c.skill_saver, c.is_public, c.listed, c.organisation_id,
+  const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null; plan_tiers: unknown }>(sql`
+    select c.id, c.parent_id, c.slug, c.title, c.method, c.model, c.skill_saver, c.is_public, c.listed, c.organisation_id,
+           case when c.plan_id is null or ${anyStatus ? sql`true` : sql`p.tiers is not null`} then c.price_pence end price_pence,
+           ${anyStatus ? sql`coalesce(p.tiers, p.draft)` : sql`p.tiers`} plan_tiers,
            o.name provider, o.slug provider_slug, o.logo_path, o.city provider_city
-    from public.courses c join public.organisations o on o.id = c.organisation_id
+    from public.courses c join public.organisations o on o.id = c.organisation_id left join public.price_plans p on p.id = c.plan_id
     where c.kind = 'provider' and ${anyStatus ? sql`true` : sql`c.status = 'live' and o.status = 'active'`} and ${where}`)
   const ids = offers.map((o) => o.id)
   const dates = ids.length
-    ? await db.execute<{ id: string; course_id: number; method: string; sessions: Session[]; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; capacity: number; details: string | null; join_url: string | null; venue_name: string | null; street: string | null; city: string | null; postcode: string | null; lat: number | null; lng: number | null }>(sql`
+    ? await db.execute<{ id: string; course_id: number; method: string; sessions: Session[]; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; capacity: number; details: string | null; join_url: string | null; venue_name: string | null; street: string | null; city: string | null; postcode: string | null; lat: number | null; lng: number | null; plan_tiers: unknown }>(sql`
         select k.id, k.course_id, k.method, k.sessions, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.capacity, k.details, k.join_url,
-               v.name venue_name, v.street, v.city, v.postcode, v.lat, v.lng
-        from public.cohorts k left join public.venues v on v.id = k.venue_id
+               v.name venue_name, v.street, v.city, v.postcode, v.lat, v.lng, ${anyStatus ? sql`coalesce(p.tiers, p.draft)` : sql`p.tiers`} plan_tiers
+        from public.cohorts k left join public.venues v on v.id = k.venue_id left join public.price_plans p on p.id = k.plan_id
         where k.course_id in ${sql.raw(`(${ids.map((n) => Number(n)).filter(Number.isInteger).join(',')})`)} and k.cancelled_at is null and k.bookable and k.starts_on > (now() at time zone 'Europe/London')::date
+          and ${anyStatus ? sql`true` : sql`(k.plan_id is null or p.tiers is not null)`}
         order by k.starts_on, k.price_pence`)
     : []
   return { offers, dates }
@@ -223,6 +228,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
       model: o.model,
       skillSaver: o.skill_saver,
       selfPacedPence: o.method === 'self-paced' ? o.price_pence : null,
+      selfPacedPlan: o.method === 'self-paced' ? publicTiers(o.plan_tiers) : null, // its packages, when sold in packages
       provider: { name: o.provider, slug: o.provider_slug, logoUrl: mediaUrl(o.logo_path), city: o.provider_city ?? '' },
       dates: dates
         .filter((d) => d.course_id === o.id)
@@ -236,6 +242,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
           pricePence: d.price_pence,
           wasPricePence: d.was_price_pence,
           capacity: d.capacity,
+          plan: publicTiers(d.plan_tiers), // the packages to choose between (Tiered pricing), or null (Flat)
           details: d.details ?? '',
           venue: d.city ? { name: d.venue_name ?? '', street: d.street ?? '', city: d.city, postcode: d.postcode, lat: d.lat, lng: d.lng } : null,
         })),

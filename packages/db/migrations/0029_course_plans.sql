@@ -1,0 +1,2 @@
+ALTER TABLE "courses" ADD COLUMN "plans" jsonb;--> statement-breakpoint
+ALTER TABLE "courses" ADD CONSTRAINT "courses_plans_shape" CHECK ("courses"."plans" is null or (jsonb_typeof("courses"."plans") = 'array' and jsonb_array_length("courses"."plans") between 2 and 3));
