@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { and, categories, cohorts, courseExams, courseFaqs, courseImages, courses, courseUnits, eq, inArray, organisations, sql, subcategories, topics, venues } from '@readtraining/db'
+import { and, categories, cohorts, courseExams, courseFaqs, courseImages, courses, courseUnits, eq, inArray, organisations, pricePlans, sql, subcategories, topics, venues } from '@readtraining/db'
 
 import { db } from '../lib/db.mjs'
 import { COURSE_MEDIA } from '../lib/media.mjs'
@@ -71,6 +71,8 @@ if (remove) {
   }
   if (orgIds.length) {
     await db.delete(venues).where(inArray(venues.organisationId, orgIds))
+    // any price plans made on a sample provider while it was tried out (they hold the provider back otherwise)
+    await db.delete(pricePlans).where(inArray(pricePlans.organisationId, orgIds))
     await db.delete(organisations).where(inArray(organisations.id, orgIds))
   }
   // the shared course pages stay, with their words and pictures: hidden until a real provider lists a course on one
