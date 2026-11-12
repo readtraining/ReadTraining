@@ -3003,7 +3003,9 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 
 /* the "Questions" sheet (phones) and the "Finish the test?" pop-up, in the course page's pop-up shell */
 .rt-tq-sheet .rt-dd__panel { width: 480px; }
-.rt-tq-sheet__body { flex: 1 1 auto; min-height: 0; padding: 18px; overflow-y: auto; overscroll-behavior: contain; }
+/* position: relative keeps hidden screen-reader text inside the scrolling body; without it that text sits in the panel, which
+   then scrolls itself and hides the title */
+.rt-tq-sheet__body { position: relative; flex: 1 1 auto; min-height: 0; padding: 18px; overflow-y: auto; overscroll-behavior: contain; }
 .rt-tq-sheet .rt-tq__nums { max-height: none; }
 .rt-tq-sheet .rt-tq__nav-finish { margin-top: 4px; }
 .rt-tq__dlg-text { margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }

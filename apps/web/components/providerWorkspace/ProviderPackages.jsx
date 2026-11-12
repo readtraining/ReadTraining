@@ -56,6 +56,7 @@ export default function ProviderPackages() {
   const setParam = (k, setter) => (v) => { setter(v); setQuery(k, k === "q" ? v.trim() : v); };
   const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
   const create = () => setEditor({ open: true, plan: null });
+  const inUse = Boolean(removing && removing.used.dates + removing.used.courses);
   const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={(r) => say(r.pending ? "Saved and sent to our team for approval" : "Plan saved")} />;
 
   if (!plans.length) {
@@ -128,14 +129,20 @@ export default function ProviderPackages() {
           </table>
         </div>
       ) : (
-        <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
+        // every plan archived, nothing searched: say so and open the archive, rather than "clear filters" with none set
+        filtered ? (
+          <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
+        ) : (
+          <EmptyState title="No plans in use" text="Your plans are archived. Use one again from the archive, or create a new one." action={{ label: "Show archived plans", onClick: () => setParam("show", setShow)("archive") }} />
+        )
       )}
       <p className="rt-acc__note">Choose a plan on a date (its pricing: Tiered) or on a self-paced course. Archived plans stay on the dates that use them, but can&apos;t be chosen for others.</p>
 
       {editor_}
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this plan?" confirmLabel="Delete plan" busy={remove.isPending}
-        text={removing ? `${removing.name} and its packages will be deleted. This can’t be undone.` : ""}
-        blocked={removing && removing.used.dates + removing.used.courses ? `${usedText(removing.used)} use this plan, so it can’t be deleted. Archive it instead.` : ""}
+      {/* a plan in use only says why it can't go (no "will be deleted" above it) */}
+      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title={inUse ? "This plan can’t be deleted" : "Delete this plan?"} confirmLabel="Delete plan" busy={remove.isPending}
+        text={removing && !inUse ? `${removing.name} and its packages will be deleted. This can’t be undone.` : ""}
+        blocked={inUse ? `${usedText(removing.used)} use this plan, so it can’t be deleted. Archive it instead.` : ""}
         onConfirm={() => remove.mutate({ organisationId, planId: removing.id }, { onSuccess: () => { refresh(); say("Plan deleted"); setRemoving(null); }, onError: (er) => { fail(er); setRemoving(null); } })} />
       <Toast toast={toast} onDone={clearToast} />
     </div>

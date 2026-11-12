@@ -65,6 +65,8 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const dirty = open && JSON.stringify(draft) !== start;
   useUnsavedChanges(dirty);
 
+  // a field's message goes once the field is changed (the next send checks everything again)
+  const clear = (key) => setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
   const setTier = (i, patch) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => (j === i ? { ...t, ...patch } : t)) }));
   const setFeature = (i, k, patch) => setTier(i, { features: draft.tiers[i].features.map((f, j) => (j === k ? { ...f, ...patch } : f)) });
   const moveFeature = (i, k, by) => {
@@ -85,8 +87,8 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     draft.tiers.forEach((t, i) => {
       if (!t.name.trim()) errs[`t${i}-name`] = "Name the package, like Basic.";
       else if (names.indexOf(names[i]) !== i) errs[`t${i}-name`] = "Give every package a different name.";
-      if (!isMoney(t.price)) errs[`t${i}-price`] = "Enter the price per delegate in pounds, like 249 or 249.99.";
-      if (t.save.trim() && !isMoney(t.save)) errs[`t${i}-save`] = "Enter the saving in pounds, like 30, or leave it empty.";
+      if (!isMoney(t.price)) errs[`t${i}-price`] = "Enter a price, like 249 or 249.99.";
+      if (t.save.trim() && !isMoney(t.save)) errs[`t${i}-save`] = "Enter a saving, like 30, or leave it empty.";
       t.features.forEach((f, k) => {
         if (!f.title.trim()) errs[`t${i}-f${k}`] = "Write the feature, or remove it.";
       });
@@ -126,12 +128,12 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
           {plan?.tiers
             ? `Learners see the approved packages until our team checks a change.${used ? ` When it is approved, the ${used === 1 ? "date or course" : `${used} dates and courses`} on this plan take its cheapest package as their price.` : ""}`
             : "Our team checks a new plan before learners see it. Dates you put on it show to learners once it is approved."}
-          {waiting && " A change is waiting for our team now."}
+          {waiting && (plan.tiers ? " A change is waiting for our team now." : " It is waiting for our team now.")}
         </p>
 
         <div className="rt-pws-pkg__top">
           <Field id="rt-plan-name" label="Plan name" error={errors.name} hint="Only your team sees this name. Learners see the package names.">
-            <input {...aria("rt-plan-name", errors.name, true)} type="text" maxLength={60} autoComplete="off" placeholder="For example: SIA door supervisor packages" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+            <input {...aria("rt-plan-name", errors.name, true)} type="text" maxLength={60} autoComplete="off" placeholder="For example: SIA door supervisor packages" value={draft.name} onChange={(e) => { setDraft((d) => ({ ...d, name: e.target.value })); clear("name"); }} />
           </Field>
           <fieldset className="rt-field rt-pws-pkg__count">
             <legend>Number of packages</legend>
@@ -153,14 +155,14 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                   {t.popular && <span className="rt-pws-pkg__badge">Most popular</span>}
                 </div>
                 <Field id={`rt-plan-t${i}-name`} label="Package name" error={errors[`t${i}-name`]}>
-                  <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => setTier(i, { name: e.target.value })} />
+                  <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} />
                 </Field>
                 <div className="rt-pws-pkg__money">
                   <Field id={`rt-plan-t${i}-price`} label="Price (£)" error={errors[`t${i}-price`]}>
-                    <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => setTier(i, { price: e.target.value })} />
+                    <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value }); clear(`t${i}-price`); }} />
                   </Field>
                   <Field id={`rt-plan-t${i}-save`} label="Save (£)" error={errors[`t${i}-save`]}>
-                    <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" placeholder="Optional" value={t.save} onChange={(e) => setTier(i, { save: e.target.value })} />
+                    <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" placeholder="Optional" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
                   </Field>
                 </div>
                 <p className="rt-pws-pkg__save" aria-live="polite">Per delegate, all inclusive{save > 0 ? ` · was ${formatPrice(Number(t.price) + save)}, you save ${formatPrice(save)}` : ""}</p>
@@ -181,7 +183,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                             <div className="rt-field">
                               <label htmlFor={id}>Feature {k + 1}</label>
                               {err && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{err}</p>}
-                              <input id={id} type="text" maxLength={80} autoComplete="off" placeholder="For example: Free date changes" value={f.title} onChange={(e) => setFeature(i, k, { title: e.target.value })} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
+                              <input id={id} type="text" maxLength={80} autoComplete="off" placeholder="For example: Free date changes" value={f.title} onChange={(e) => { setFeature(i, k, { title: e.target.value }); clear(`t${i}-f${k}`); }} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
                             </div>
                             <div className="rt-field">
                               <label htmlFor={`${id}-d`}>Description (optional)</label>
@@ -195,7 +197,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                               <span className="rt-pws-pkg__perkbtns">
                                 <button type="button" className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, -1)} disabled={k === 0} aria-label={`Move feature ${k + 1} up`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
                                 <button type="button" className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, 1)} disabled={k === t.features.length - 1} aria-label={`Move feature ${k + 1} down`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
-                                <button type="button" className="rt-pws-set__textbtn" onClick={() => setTier(i, { features: t.features.filter((_, j) => j !== k) })}>Remove<span className="rt-sr"> feature {k + 1}</span></button>
+                                <button type="button" className="rt-pws-set__textbtn" onClick={() => { setTier(i, { features: t.features.filter((_, j) => j !== k) }); setErrors((e) => Object.fromEntries(Object.entries(e).filter(([key]) => !key.startsWith(`t${i}-f`)))); }}>Remove<span className="rt-sr"> feature {k + 1}</span></button>
                               </span>
                             </div>
                           </li>

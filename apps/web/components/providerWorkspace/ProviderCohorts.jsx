@@ -134,7 +134,8 @@ export default function ProviderCohorts() {
   // said under the filters when a date set "When" to Any date, so the change is never silent
   const [whenNote, setWhenNote] = useState("");
   const [page, setPage] = useState(1);
-  const [editingK, setEditingK] = useState(null);
+  // the date being edited stays set while its form closes, so the closing form doesn't turn into an empty "Create cohort"
+  const [editing, setEditing] = useState({ open: false, k: null });
   const [deleting, setDeleting] = useState(null);
   const [cancelOne, setCancelOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -345,7 +346,7 @@ export default function ProviderCohorts() {
                           <RowMenu label={`Actions for ${name}`} items={[
                             { label: "View", href: `/provider/cohorts/${k.id}` },
                             ...(edit && !cancelled ? [
-                              { label: "Edit", onClick: () => setEditingK(k) },
+                              { label: "Edit", onClick: () => setEditing({ open: true, k }) },
                               { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
                               ...(k.endsOn >= today ? [{ label: "Cancel", onClick: () => setCancelOne(k) }] : []),
                             ] : []),
@@ -366,7 +367,7 @@ export default function ProviderCohorts() {
       )}
 
       <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => refresh()} />
-      <CohortForm open={Boolean(editingK)} onClose={() => setEditingK(null)} cohort={editingK} onSaved={() => { setEditingK(null); refresh(); setToast({ message: "Cohort saved" }); }} />
+      <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); setToast({ message: "Cohort saved" }); }} />
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
       <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
@@ -509,11 +510,16 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     setVenueAdded("");
   }, [open, Boolean(coursesQ.data)]); // eslint-disable-line react-hooks/exhaustive-deps -- fill once per opening
 
-  const ready = Boolean(open && f && venuesQ.data);
+  // not tied to `open`, so the filled form stays in place while the sheet closes
+  const ready = Boolean(f && venuesQ.data);
   const course = ready ? courseOf(f.courseId) : null;
   const method = cohort ? cohort.method : course?.method || studyMode;
   const today = todayIso();
-  const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  // changing a field takes its message away (the next save checks everything again)
+  const set = (patch) => {
+    setF((x) => ({ ...x, ...patch }));
+    setErrors((e) => (Object.keys(patch).some((k) => e[k]) ? { ...e, ...Object.fromEntries(Object.keys(patch).map((k) => [k, undefined])) } : e));
+  };
   const venueSaved = async (r) => {
     await venuesQ.refetch();
     set({ venueId: r.id });

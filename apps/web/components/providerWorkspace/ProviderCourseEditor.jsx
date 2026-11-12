@@ -273,7 +273,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
     else if (draft.price !== "" && Number(draft.price) > MAX_PRICE) e.price = "Enter a price of £100,000 or less.";
     // a live self-paced course shows its price (the API refuses it without one)
-    else if (isLive && draft.method === "self-paced" && draft.price === "") e.price = "Enter the price per learner: a live self-paced course needs one.";
+    else if (isLive && draft.method === "self-paced" && draft.price === "" && !draft.planId) {
+      e.price = "Enter the price per learner: a live self-paced course needs one.";
+      e.planId = "Choose a price plan: a live self-paced course needs a price.";
+    }
     // the same rule as the course page's player and the API (videoEmbed): one YouTube or Vimeo video that can actually play
     if (draft.videoUrl.trim() && !videoEmbed(draft.videoUrl.trim())) e.videoUrl = "Use a link to one YouTube or Vimeo video, starting https://";
     draft.exams.forEach((x, i) => {
@@ -1117,12 +1120,21 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
   const locked = !access.pricing;
   const { organisationId } = useProviderAccess();
   const plans = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && draft.method === "self-paced", retry: false }).data || [];
-  // Tiered is shown once chosen even before a plan is picked (picking Flat again clears the plan)
+  // Tiered is shown once chosen even before a plan is picked. Choosing it puts the flat price aside (so the course has no price
+  // until a plan is picked, and the editor knows something changed); picking Flat again clears the plan and brings the price back.
   const [tieredPick, setTieredPick] = useState(Boolean(draft.planId));
+  const flatPrice = useRef(draft.price);
   const tiered = tieredPick || Boolean(draft.planId);
   const setTiered = (on) => {
+    if (on === tiered) return;
     setTieredPick(on);
-    if (!on) set("planId")("");
+    if (on) {
+      flatPrice.current = draft.price;
+      set("price")("");
+    } else {
+      set("planId")("");
+      set("price")(flatPrice.current);
+    }
   };
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
