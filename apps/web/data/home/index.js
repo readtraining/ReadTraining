@@ -1,5 +1,5 @@
-// Home page content mirrored from the client's current site (hurak.com), September 2026.
-// Headline and brand are ours; categories, courses, options and lists match the existing site.
+// The home page's fixed wording. Courses, subjects, methods and towns come from the live catalogue (catalogue.nav); the trust
+// numbers, featured courses and FAQs can be changed in Admin › Site content (contentDefaults is their built-in wording).
 
 import { courseSearch } from "@/data/courseTopics";
 import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
@@ -20,13 +20,6 @@ export const topBar = {
   // our WhatsApp number (the client's mobile; WhatsApp only), opened through wa.me
   whatsapp: { number: "07405 098062", href: "https://wa.me/447405098062" },
 };
-
-export const menu = [
-  { href: CATALOGUE_HREF, label: "Courses" },
-  { href: "/licences", label: "Licences & Cards" },
-  { href: "/template/courses-list-3", label: "Locations" },
-  { href: "/template/blog-list-1", label: "Resources" },
-];
 
 export const hero = {
   eyebrow: "Vocational training across the UK",
@@ -54,27 +47,30 @@ export const bookingOptions = {
   text: "Choose the learning method, location and booking route that suits your schedule.",
   benefits: [
     { icon: "icon-search", title: "More choice in one place", text: "Explore suitable dates, locations and study methods without searching across multiple training websites." },
-    // payment protection and the booking options' benefits come with online payment (Milestone 4): said as what will happen
+    // payment protection comes with online payment (Milestone 4): said as what will happen
     { icon: "icon-badge", title: "Payment protection", text: "When online booking opens, we’ll hold your payment until the required result or certificate is supplied, and handle refunds if issues arise." },
-    { icon: "icon-star", title: "Selected booking benefits", text: "When online booking opens, some booking options will include rescheduling, faster results, bonus learning or other useful extras." },
+    { icon: "icon-star", title: "Packages on selected courses", text: "Some courses come in packages, such as the course with the first aid it needs, for less than booking each one separately." },
     { icon: "icon-message", title: "Support throughout your booking", text: "Get help choosing, booking and managing your course from start to finish." },
   ],
-  example: { eyebrow: "Coming with online booking", course: "SIA Door Supervisor Course", meta: "Classroom · London" },
+  // the client's own SIA Door Supervisor packages and starting prices (docs/door-supervisor-course (1).html; the course page's
+  // packages are data/courseGuides.js `packages`)
+  example: { eyebrow: "Example packages", course: "SIA Door Supervisor Course", meta: "Classroom" },
   tiers: [
-    { type: "Basic", price: 199, text: "Standard course booking." },
-    { type: "Plus", price: 224, text: "Added flexibility for date changes.", recommended: true },
-    { type: "Pro", price: 244, text: "Extra protection and selected benefits." },
+    { type: "Course only", price: 249.99, text: "You already hold a valid first aid (EFAW) certificate." },
+    { type: "Course + first aid", price: 319.99, text: "Everything a new starter needs to qualify.", recommended: true },
+    { type: "Career bundle", price: 479.99, text: "Stand out to employers from day one." },
   ],
   // which tiers include each feature (index into tiers)
   features: [
-    { label: "Course place in accredited classroom", tiers: [0, 1, 2] },
-    { label: "Standard official learning materials", tiers: [0, 1, 2] },
-    { label: "Flexible date rescheduling option", tiers: [1, 2] },
-    { label: "Faster result option", tiers: [1, 2] },
-    { label: "Extra booking protection", tiers: [2] },
-    { label: "Bonus online course & study resources", tiers: [2] },
+    { label: "6-day SIA Door Supervisor course", tiers: [0, 1, 2] },
+    { label: "Exams, registration and certificate", tiers: [0, 1, 2] },
+    { label: "Free mock exams and study guide", tiers: [0, 1, 2] },
+    { label: "1-day Emergency First Aid at Work (EFAW)", tiers: [1, 2] },
+    { label: "Priority licence application support", tiers: [1, 2] },
+    { label: "SIA CCTV Operator course", tiers: [2] },
+    { label: "CV review and access to our security job board", tiers: [2] },
   ],
-  footnote: "Example prices and benefits for when online booking opens. Options will vary by course, date and location.",
+  footnote: "Starting prices including VAT; they vary by location and date. The SIA licence fee is paid separately, to the SIA.",
   disclaimer: "Courses are delivered by independent training providers. ReadTraining helps you find, book and manage the option that suits you.",
   cta: { label: "Find course options", href: CATALOGUE_HREF },
 };
