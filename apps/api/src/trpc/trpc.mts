@@ -2,7 +2,7 @@ import { TRPCError, initTRPC } from '@trpc/server'
 import superjson from 'superjson'
 import { ZodError, z } from 'zod'
 
-import { can } from '@readtraining/permissions'
+import { can, waitsForApproval } from '@readtraining/permissions'
 import type { Action, AdminAction, BusinessAction, ProviderAction } from '@readtraining/permissions'
 
 import { logDenied } from '../lib/activity.mjs'
@@ -97,10 +97,20 @@ export async function refuse(ctx: { db: TRPCContext['db']; ip: string | null; us
  * membership in that organisation. Rules that need more (own cohorts, team changes, amounts) call `can()` again in the
  * procedure with the full target.
  */
+const NOT_APPROVED_YET = 'Your provider account is waiting for our team’s approval. Until then you can complete your profile and send it for review; you can add courses, dates, venues and price plans once it is approved.'
+
 export const orgProcedure = (action: ProviderAction | BusinessAction) =>
   protectedProcedure.input(z.object({ organisationId: z.string().uuid() })).use(async ({ ctx, input, path, next }) => {
     const { organisationId } = input as { organisationId: string }
-    if (!can(ctx.actor, action, { organisationId })) await refuse(ctx, action, organisationId, path)
+    if (!can(ctx.actor, action, { organisationId })) {
+      // a provider our team hasn't approved yet is told why (it can only complete its application until then); the refusal is
+      // logged either way
+      const m = ctx.actor.memberships.find((x) => x.organisationId === organisationId && x.status === 'active')
+      const why = m && waitsForApproval(action, m.organisationStatus) ? new TRPCError({ code: 'FORBIDDEN', message: NOT_APPROVED_YET }) : null
+      await refuse(ctx, action, organisationId, path).catch((error) => {
+        throw why ?? error
+      })
+    }
     return next()
   })
 

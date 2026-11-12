@@ -27,7 +27,8 @@ export const useProviderCourses = () => {
 // course per row: image or "Upload course image", mode, category, status, enrolment, performance model, upcoming dates,
 // Edit / manage course), then Hurak's offer of a free sales and marketing consultation.
 export default function ProviderCourses() {
-  const { can } = useProviderAccess();
+  const { can, status } = useProviderAccess();
+  const waiting = status === "pending" || status === "changes_requested"; // not approved yet
   const query = useProviderCourses();
   const courses = query.data;
   const [f, setF] = useState({ q: "", format: "", enrolment: "", category: "", model: "", status: "" });
@@ -47,7 +48,11 @@ export default function ProviderCourses() {
   if (!can("provider.courses.view")) return <EmptyState title="Courses aren't part of your role" text="Ask your provider's owner or an admin if you need to see the courses." />;
   if (query.isError) return <ErrorState title="We couldn't load your courses." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!courses) return <Loading rows={4} />;
-  if (!courses.length) return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", href: "/provider/courses/new" } : null} />;
+  if (!courses.length) {
+    // not approved yet: say when courses can be added, and where the application is
+    if (waiting) return <EmptyState title="No courses yet" text={pw.notApproved.text} action={pw.notApproved.action} />;
+    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", href: "/provider/courses/new" } : null} />;
+  }
 
   const needle = f.q.trim().toLowerCase();
   const list = courses.filter((c) => (!needle || c.title.toLowerCase().includes(needle))
@@ -151,6 +156,12 @@ export default function ProviderCourses() {
 
 // The provider's profile in the page head, beside "New course" (Hurak's profile card: view, edit, copy the profile address, total
 // and live courses), so the list starts straight under the title.
+// The Courses page's New course, for those who may create one (and only once our team has approved the account).
+export function NewCourseButton() {
+  const { can } = useProviderAccess();
+  return can("provider.courses.edit") ? <Link href="/provider/courses/new" className="button -md -purple-1 text-white">New course</Link> : null;
+}
+
 export function CoursesProfile() {
   const workspace = useWorkspace();
   const courses = useProviderCourses().data;
