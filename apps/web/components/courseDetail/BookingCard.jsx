@@ -109,7 +109,7 @@ export default function BookingCard() {
   const compact = barOn && desktop;
   // nothing to book yet: no dates and no team training
   if (!mode) return <NoDatesCard course={course} />;
-  const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
+  const label = status === "loading" ? "Booking" : status === "error" ? "Try again" : "Book now";
   const save = isInHouse ? 0 : savePercent(price, wasPrice);
   // a package other than the course alone is named on the card (its price is already in `price`)
   const withBundle = bundle && bundle.add > 0 ? bundle : null;
@@ -188,7 +188,7 @@ export default function BookingCard() {
             <button
               ref={cardButtonRef}
               type="button"
-              className={`button -md -purple-1 text-white rt-btn-block${status === "added" ? " is-added" : ""}${course.preview ? " rt-btn-off" : ""}`}
+              className={`button -md -purple-1 text-white rt-btn-block${course.preview ? " rt-btn-off" : ""}`}
               onClick={addToBasket}
               aria-disabled={course.preview || undefined}
               disabled={status === "loading"}

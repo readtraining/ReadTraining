@@ -10,6 +10,7 @@ import { formatShortDate } from "@/lib/format";
 import { lineFor } from "@/lib/basket";
 import { TEAM } from "@/lib/teamTraining";
 import { BASKET_HREF, QUOTE_HREF } from "@/lib/routes";
+import { useRouter } from "next/navigation";
 
 const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
@@ -179,36 +180,38 @@ export default function BookingProvider({ course, initialMode, initialSession, i
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // ---- add to basket: one shared flow for the card and the mobile bar (no double add) ----
-  const [status, setStatus] = useState("idle"); // idle | loading | added | error
+  // ---- Book now: one shared flow for the date pop-up, the card and the mobile bar. It puts the date in the basket (never twice:
+  // the basket merges the same date) and goes straight to the basket, as Hurak's "Book now" does ----
+  const router = useRouter();
+  const [status, setStatus] = useState("idle"); // idle | loading | error
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
   const lineBundle = bundle && bundle.add > 0 ? { key: bundle.key, name: bundle.name, add: bundle.add } : null;
   const inBasket = isAddedToCartCourses(course.id, session?.id || "", lineBundle?.key || "");
-  const addToBasket = useCallback(() => {
-    if (status === "loading" || status === "added" || !session || isInHouse) return;
-    // the editors' Preview of a course that may not be live yet: nothing goes in the basket
-    if (course.preview) return notify({ message: "This is a preview, so booking is off. Learners see the dates once the course is live; online booking opens in a later update." });
-    setStatus("loading");
-    later(() => {
+  const book = useCallback(
+    (sessionId, quantity = 1) => {
+      const target = sessionId ? course.sessions.find((s) => s.id === sessionId) : session;
+      if (status === "loading" || !target || isInHouse) return;
+      // the editors' Preview of a course that may not be live yet: nothing goes in the basket
+      if (course.preview) return notify({ message: "This is a preview, so booking is off. Learners see the dates once the course is live; online booking opens in a later update." });
+      setStatus("loading");
       try {
         // with a package: the package goes with the line, and one that includes first aid answers the basket's first aid question
-        const line = { ...lineFor(course, session), ...(lineBundle ? { bundle: lineBundle, ...(bundle.firstAid ? { firstAid: "bundle" } : {}) } : {}) };
+        const line = { ...lineFor(course, target), quantity, ...(lineBundle ? { bundle: lineBundle, ...(bundle.firstAid ? { firstAid: "bundle" } : {}) } : {}) };
         addCourseToCart(course.id, line);
-        setStatus("added");
-        // a self-paced course has no date: it starts whenever the learner likes
-        const when = session.mode === "ondemand" ? "self-paced, start any time" : `${formatShortDate(session.date)}, ${session.location}`;
-        notify({ message: `Added to basket: ${lineBundle ? `${lineBundle.name}, ` : ""}${when}`, href: BASKET_HREF, label: "View basket" });
-        trackEvent("add_to_cart", { currency: "GBP", value: price, items: [{ ...toItem(course), item_variant: lineBundle ? `${session.id}:${lineBundle.key}` : session.id, price, quantity: 1 }] });
-        later(() => setStatus("idle"), 1500);
+        const unit = target.price + (lineBundle?.add ?? 0);
+        trackEvent("add_to_cart", { currency: "GBP", value: unit * quantity, items: [{ ...toItem(course), item_variant: lineBundle ? `${target.id}:${lineBundle.key}` : target.id, price: unit, quantity }] });
+        router.push(BASKET_HREF);
       } catch {
         setStatus("error");
         notify("We could not add that course. Please try again.");
         later(() => setStatus("idle"), 1500);
       }
-    }, 300);
-  }, [status, session, isInHouse, addCourseToCart, course, notify, lineBundle, bundle, price]);
+    },
+    [status, session, isInHouse, addCourseToCart, course, notify, lineBundle, bundle, router],
+  );
+  const addToBasket = useCallback(() => book(), [book]);
 
   // The booking card's button, observed by the mobile buy bar.
   const cardButtonRef = useRef(null);
@@ -236,7 +239,7 @@ export default function BookingProvider({ course, initialMode, initialSession, i
 
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
-    status, inBasket, addToBasket, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
+    status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
     packages, bundle, selectBundle, price, wasPrice,
   };
 

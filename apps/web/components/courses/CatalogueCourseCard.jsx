@@ -1,11 +1,12 @@
 import React, { Fragment, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useContextElement } from "@/context/Context";
 import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
-import { bookableModes, cheapestMode, firstSession, formatShortDate } from "@/lib/courses";
+import { bookableModes, cheapestMode, firstSession } from "@/lib/courses";
 import { MODE_METHOD } from "@/lib/courseModes";
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
@@ -24,11 +25,10 @@ const formatPrice = (n) => gbp.format(Number(n) || 0); // always two decimals: Â
 // shows a toast. `listName`: the page's name, for analytics. `mode`: a booking mode (lib/courseModes.js) the course page opens on,
 // when the list is for one way of study (/courses/classroom).
 export default function CatalogueCourseCard({ course, index = 0, onNotify, distance = "", listName = "All courses", mode = "" }) {
-  const { addCourseToCart, isAddedToCartCourses } = useContextElement();
+  const { addCourseToCart } = useContextElement();
   const utils = api.useUtils();
   const priced = course.price != null;
   const href = course.detailsHref && mode ? `${course.detailsHref}?mode=${mode}` : course.detailsHref;
-  const inBasket = isAddedToCartCourses(course.id);
   const hasDiscount = course.wasPrice > course.price;
   const discount = hasDiscount ? Math.round((1 - course.price / course.wasPrice) * 100) : 0;
 
@@ -44,34 +44,32 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     }
   };
 
-  // ---- add to basket: a course always goes in with a date. The button opens the date pop-up on the study method of the card's
-  // "From" price (its cheapest date where the visitor is looking, `priceMethod`), and the visitor picks a date there or under
-  // another study method. A course that runs only
-  // on demand has no date to choose and goes straight in.
-  // States: idle > loading > added (2s) > in basket, with a "Try again" error state.
+  // ---- Add to basket (Hurak's list says the same): a course always goes in with a date. The button opens the date pop-up on the study method of the
+  // card's "From" price (its cheapest date where the visitor is looking, `priceMethod`), every date there has its own "Book now",
+  // and booking goes straight to the basket. A course that runs only on demand has no date to choose and goes straight in.
+  // States: idle > loading (fetching the dates, or booking), with a "Try again" error state. As Hurak's, the button stays "Add to
+  // basket" when the course is already in the basket: the visitor can book it again on another date, place or provider.
   const [status, setStatus] = useState("idle");
   const [dates, setDates] = useState(null); // { detail, mode } while the pop-up is in use
   const [datesOpen, setDatesOpen] = useState(false);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
-  const add = (detail, session) => {
+  const router = useRouter();
+  const add = (detail, session, quantity = 1) => {
     setStatus("loading");
-    later(() => {
-      try {
-        addCourseToCart(detail.id, lineFor(detail, session));
-        setStatus("added");
-        onNotify?.({ message: `Added to basket: ${session.mode === "ondemand" ? "self-paced, start any time" : `${formatShortDate(session.date)}, ${session.location}`}`, href: BASKET_HREF, label: "View basket" });
-        trackEvent("add_to_cart", { currency: "GBP", value: session.price, items: [{ ...toItem(course, index), item_variant: session.id, price: session.price, quantity: 1 }] });
-        later(() => setStatus("idle"), 2000);
-      } catch {
-        setStatus("error");
-        onNotify?.({ message: "We could not add that course. Please try again." });
-      }
-    }, 350);
+    try {
+      addCourseToCart(detail.id, { ...lineFor(detail, session), quantity });
+      trackEvent("add_to_cart", { currency: "GBP", value: session.price * quantity, items: [{ ...toItem(course, index), item_variant: session.id, price: session.price, quantity }] });
+      router.push(BASKET_HREF);
+    } catch {
+      setStatus("error");
+      onNotify?.({ message: "We could not add that course. Please try again." });
+      later(() => setStatus("idle"), 2000);
+    }
   };
   const addToBasket = async () => {
-    if (status === "loading" || status === "added" || inBasket) return; // no double add
+    if (status === "loading") return; // no double click
     let detail = null;
     setStatus("loading");
     try {
@@ -85,11 +83,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     setDates({ detail, mode: modes.includes(priceMode) ? priceMode : cheapestMode(detail) });
     setDatesOpen(true);
   };
-  const confirmDate = (id) => {
-    setDatesOpen(false);
-    add(dates.detail, dates.detail.sessions.find((s) => s.id === id));
-  };
-  const showInBasket = inBasket && status !== "added" && status !== "loading";
+  const bookDate = (id, quantity) => add(dates.detail, dates.detail.sessions.find((s) => s.id === id), quantity);
 
   // Meta row 1: short items only (Duration | Level | N providers). Meta row 2: delivery modes as plain text.
   const metaItems = [course.duration, levelName(course.level), course.providers > 0 ? `${course.providers} ${course.providers === 1 ? "provider" : "providers"}` : ""].filter(Boolean);
@@ -190,17 +184,10 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
         )}
 
         <div className="rt-card__actions">
-          {!priced ? null : showInBasket ? (
-            <Link href={BASKET_HREF} className="rt-card__btn rt-card__btn--primary">
-              In basket
-            </Link>
-          ) : (
+          {!priced ? null : (
             <button type="button" className={`rt-card__btn rt-card__btn--primary is-${status}`} onClick={addToBasket} aria-disabled={status === "loading" || undefined} aria-haspopup="dialog" aria-live="polite">
               {status === "loading" && <span className="rt-card__spinner" aria-hidden="true"></span>}
-              {status === "added" && (
-                <svg className="rt-card__tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
-              )}
-              {{ idle: "Add to basket", loading: "Adding", added: "Added", error: "Try again" }[status]}
+              {{ idle: "Add to basket", loading: "Loading", error: "Try again" }[status]}
             </button>
           )}
           {href ? (
@@ -223,7 +210,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
         modes={dates ? bookableModes(dates.detail) : undefined}
         onMode={(m) => setDates((d) => ({ ...d, mode: m }))}
         selectedId={dates ? firstSession(dates.detail, dates.mode)?.id : undefined}
-        confirm={{ label: "Add to basket", onConfirm: confirmDate }}
+        onBook={bookDate}
       />
     </article>
   );

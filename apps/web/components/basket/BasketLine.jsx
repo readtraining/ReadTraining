@@ -46,7 +46,16 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
               <ul className="rt-bk__facts">
                 <li><i className="icon-calendar" aria-hidden="true"></i><span>{item.mode === "ondemand" ? item.time : `${formatDateRange(item.date, item.endDate)}${item.time ? ` · ${item.time}` : ""}`}</span></li>
                 {item.venue && <li><i className="icon-location" aria-hidden="true"></i><span>{item.venue}{item.postcode ? `, ${item.city}, ${item.postcode}` : ""}</span></li>}
-                {item.provider && <li><i className="icon-person-3" aria-hidden="true"></i><span>Provided by {item.provider}</span></li>}
+                {item.provider && (
+                  <li>
+                    <i className="icon-person-3" aria-hidden="true"></i>
+                    <span>
+                      Provided by {item.provider}
+                      {/* their cancellation policy, before paying (it is on their profile, under Terms and policies) */}
+                      {item.providerSlug && <> · <Link href={`/providers/${item.providerSlug}#policies`} className="rt-bk__policy">Cancellation policy</Link></>}
+                    </span>
+                  </li>
+                )}
               </ul>
               <div className="rt-bk__tags">
                 <span className="rt-pill">{modeLabel(item.mode)}</span>

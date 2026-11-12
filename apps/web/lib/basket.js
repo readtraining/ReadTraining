@@ -30,6 +30,7 @@ export const lineFor = (course, session) => ({
   city: session.city,
   postcode: session.postcode,
   provider: session.provider,
+  providerSlug: session.providerSlug ?? null,
   skillSaver: Boolean(session.skillSaver), // in Skill Saver: the learner's discount comes off this line
   places: session.places ?? null,
 });

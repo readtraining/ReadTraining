@@ -1,7 +1,7 @@
 'use client'
 
 import React from "react";
-import { lineKey, mergeLines } from "@/lib/basket";
+import { lineKey, maxDelegates, mergeLines } from "@/lib/basket";
 import { isDay } from "@/lib/format";
 import { useContext ,useEffect ,useRef ,useState } from "react";
 const dataContext = React.createContext();
@@ -44,8 +44,11 @@ export const useContextElement = () => {
     // part of every page's download (the same for the template's shop products and events below).
     const addCourseToCart = async (id, course)=>{
         const found = course || (await import("@/data/courses")).coursesData.filter(elm=>elm.id == id)[0]
-        const item = {...found,quantity:1}
-        setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre : mergeLines([...pre,item]))
+        // the delegates chosen with the date (the dates pop-up's counter), 1 otherwise; the same date already in the basket gets them
+        // added to its line (as Hurak's), up to the date's places
+        const quantity = Math.min(maxDelegates(found), Math.max(1, Number(found.quantity) || 1))
+        const item = {...found,quantity}
+        setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre.map((elm)=>lineKey(elm) === lineKey(item) ? {...elm,quantity:Math.min(maxDelegates(elm),(Number(elm.quantity) || 1) + quantity)} : elm) : mergeLines([...pre,item]))
     }
     // With a session id: is that date in the basket. Without: is the course in it on any date. With a package key (a course
     // page package, lib/basket.js bundleOf): that date with that package ("" or none for the course alone).

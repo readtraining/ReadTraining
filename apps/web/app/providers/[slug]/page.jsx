@@ -100,6 +100,7 @@ export default async function ProviderPage(props) {
             text={fillName(d.policies.text, p.name)}
             items={[...terms, ...d.policies.items]}
             idPrefix="prov-policy"
+            id="policies"
           />
         </main>
         <HomeHelp />

@@ -1649,7 +1649,6 @@ a.rt-card__title-link:hover, a.rt-card__title-link:focus-visible { color: var(--
 .rt-card .rt-card__btn--primary { border: 1px solid var(--rt-card-brand); background: var(--rt-card-brand); color: var(--rt-card-brand-fg); }
 .rt-card .rt-card__btn--primary:hover:not(:disabled) { background: var(--rt-card-brand-hover); border-color: var(--rt-card-brand-hover); color: var(--rt-card-brand-fg); }
 .rt-card .rt-card__btn--primary:disabled { cursor: progress; opacity: 0.85; }
-.rt-card .rt-card__btn--primary.is-added { background: var(--rt-card-success); border-color: var(--rt-card-success); }
 .rt-card .rt-card__btn--primary.is-error { background: var(--rt-card-error); border-color: var(--rt-card-error); }
 .rt-card .rt-card__btn--secondary { border: 1px solid var(--rt-card-btn-border); background: var(--rt-card-btn-bg); color: var(--rt-card-btn-text); }
 .rt-card .rt-card__btn--secondary:hover { border-color: var(--rt-card-text); color: var(--rt-card-btn-text); }
@@ -2325,32 +2324,59 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dd__meta .rt-cd__link { flex: none; white-space: nowrap; }
 .rt-dd__details { margin-top: 4px; color: var(--cd-text); white-space: pre-line; }
 .rt-dd__slot-price .rt-sv-badge { margin-top: 4px; }
+.rt-bk__policy { color: var(--color-purple-1) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-dd__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
 /* The date pop-up's list (DatesDialog): one card per venue with its dates shown at once, each date a row that picks it. */
 .rt-dd__list { background: var(--cd-band); padding: 16px 18px 20px; }
 /* desktop: the panel fits a short list (no empty band under two dates) but keeps a steady minimum, so switching study method
    barely moves it; a long list scrolls (phones: full screen) */
 @media (min-width: 576px) { .rt-dd__panel:has(.rt-dd__list) { min-height: min(520px, 88dvh); max-height: min(680px, 88dvh); } }
-.rt-dd__venues { display: flex; flex-direction: column; gap: 12px; }
-.rt-dd__vcard { padding: 16px; background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: var(--cd-card-radius); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-.rt-dd__vcard.is-selected { border-color: var(--cd-brand); box-shadow: 0 0 0 1px var(--cd-brand); }
-.rt-dd__vhead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; margin-bottom: 12px; }
+/* venues as plain rows with a line between them (as Hurak's): name, address, next course and price on the left, Show dates on the right */
+.rt-dd__list:has(.rt-dd__venues) { background: var(--cd-surface); }
+.rt-dd__venues { display: flex; flex-direction: column; }
+.rt-dd__vcard { padding: 16px 0; border-bottom: 1px solid var(--cd-border); }
+.rt-dd__vcard:first-child { padding-top: 4px; }
+.rt-dd__vhead { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "info toggle" "price toggle"; column-gap: 16px; align-items: center; }
+.rt-dd__vinfo { grid-area: info; }
+.rt-dd__vnext { margin: 4px 0 0; font-size: 13px; line-height: 19px; color: var(--cd-muted); }
+.rt-dd__vnext strong { font-weight: 600; color: var(--cd-text); }
+.rt-dd__vfrom { grid-area: price; margin: 6px 0 0; font-size: 17px; line-height: 24px; font-weight: 700; color: var(--cd-brand); font-variant-numeric: tabular-nums; }
+.rt-dd__vtoggle { grid-area: toggle; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--cd-text); white-space: nowrap; }
+.rt-dd__vtoggle:hover { color: var(--cd-brand); }
+.rt-dd__vchev { display: inline-flex; color: var(--cd-brand); transition: transform 0.2s ease; }
+.rt-dd__vchev .rt-cd__icon { font-size: 9px; } /* the same small arrow as the Sort by box */
+.rt-dd__vtoggle[aria-expanded="true"] .rt-dd__vchev { transform: rotate(180deg); }
+.rt-dd__vcard.is-open .rt-dd__slots { margin-top: 14px; }
+.rt-dd__more--venues { align-self: center; margin-top: 12px; }
+.rt-dd__vinfo { min-width: 0; }
+.rt-dd__vinfo h3 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
+.rt-dd__vinfo .rt-dd__addr { margin: 2px 0 0; font-size: 13px; line-height: 19px; color: var(--cd-muted); }
 .rt-dd__more { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 0; border: 0; background: none; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--cd-brand); cursor: pointer; }
 .rt-dd__more:hover { text-decoration: underline; text-underline-offset: 3px; }
 .rt-dd__more .rt-cd__icon { font-size: 10px; transition: transform 0.2s ease; }
 .rt-dd__more[aria-expanded="true"] .rt-cd__icon { transform: rotate(180deg); }
-.rt-dd__vpin { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rt-radius-sm); background: var(--cd-brand-subtle); color: var(--cd-brand); font-size: 16px; }
-.rt-dd__vinfo { min-width: 0; }
-.rt-dd__vinfo h3 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
-.rt-dd__vinfo .rt-dd__addr { margin: 2px 0 0; font-size: 13px; line-height: 19px; color: var(--cd-muted); }
-.rt-dd__vinfo .rt-dd__addr a { color: var(--cd-brand) !important; font-weight: 500; }
-.rt-dd__vfrom { display: flex; flex-direction: column; align-items: flex-end; margin: 0; line-height: 1.2; text-align: right; }
-.rt-dd__vfrom span { font-size: 12px; color: var(--cd-muted); }
-.rt-dd__vfrom strong { font-size: 18px; font-weight: 700; color: var(--cd-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rt-dd__slots { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .rt-dd__slots > li { margin: 0; list-style: none; }
 .rt-dd__slot { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 14px; width: 100%; padding: 10px 14px 10px 10px; text-align: left; font: inherit; color: var(--cd-text); background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: 12px; cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
 .rt-dd__slot:hover { border-color: var(--cd-brand); }
+/* a date with its own delegates counter and Book now: the date on the left; the price and, under it, the counter and button on
+   the right (phones: the counter and button on a row of their own) */
+.rt-dd__slot--book { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "tile main price" "tile main actions"; row-gap: 8px; align-items: start; cursor: default; }
+.rt-dd__slot--book > .rt-dd__tile { grid-area: tile; }
+.rt-dd__slot--book > .rt-dd__slot-main { grid-area: main; align-self: center; }
+.rt-dd__slot--book > .rt-dd__slot-price { grid-area: price; }
+.rt-dd__slot--book:hover { border-color: var(--cd-border); }
+.rt-dd__slot--book .rt-dd__tile { align-self: start; }
+.rt-dd__price-line { display: inline-flex; align-items: baseline; gap: 6px; }
+.rt-dd__slot-main .rt-sv-badge { align-self: flex-start; margin-top: 4px; }
+.rt-dd__per { font-size: 12px; color: var(--cd-muted); }
+.rt-dd__total { margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--cd-text); white-space: nowrap; } /* the total for more than one, here so the counter never moves */
+.rt-dd__actions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.rt-dd__qty-label { display: none; font-size: 13px; color: var(--cd-muted); } /* "per delegate" above says it on wider screens */
+.rt-dd__actions .rt-bk__qty { height: 36px; }
+.rt-dd__actions .rt-bk__qty button { width: 36px; }
+.rt-dd__actions .rt-bk__qty output { min-width: 28px; }
+.rt-dd__book { white-space: nowrap; }
 .rt-dd__slot.is-selected { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
 .rt-dd__tile { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 52px; padding: 5px 0 6px; border-radius: 10px; background: var(--cd-band); line-height: 1; }
 .rt-dd__slot.is-selected .rt-dd__tile { background: var(--cd-surface); }
@@ -2372,16 +2398,17 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
   .rt-dd__panel { width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; box-shadow: none; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); transform: translateY(100%); opacity: 1; transition: transform 0.25s ease; }
   .rt-dd.is-in .rt-dd__panel { transform: none; }
   .rt-dd__list { padding: 12px 12px 16px; }
-  .rt-dd__vcard { padding: 12px; }
-  .rt-dd__vpin { display: none; }
-  .rt-dd__vhead { grid-template-columns: minmax(0, 1fr) auto; }
+  .rt-dd__vhead { grid-template-areas: "info info" "price toggle"; }
   .rt-dd__slot { gap: 10px; padding: 8px 10px 8px 8px; }
   .rt-dd__tick { width: 20px; height: 20px; }
   .rt-dd__tile { width: 46px; }
+  .rt-dd__slot--book { grid-template-areas: "tile main price" "actions actions actions"; }
+  .rt-dd__qty-label { display: inline; }
+  .rt-dd__actions .rt-dd__book { flex: 1; }
   .rt-dd__controls:has(.rt-dd__search) .rt-dd__sort { flex-basis: 128px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rt-dd, .rt-dd__panel, .rt-dd__slot, .rt-dd__vcard, .rt-dd__tick, .rt-dd__more .rt-cd__icon { transition: none; }
+  .rt-dd, .rt-dd__panel, .rt-dd__slot, .rt-dd__tick, .rt-dd__more .rt-cd__icon, .rt-dd__vchev { transition: none; }
 }
 
 /* Radio circles removed from the Learning options cards and the booking card (the real radio inputs stay for keyboard and screen readers) */
@@ -2399,7 +2426,6 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 #rt-cd-main:focus { outline: none; }
 
 /* Links inside dialog text are underlined (they were told apart by colour only). */
-.rt-dd__addr a { text-decoration: underline; text-underline-offset: 2px; }
 
 /* Header and top bar: readable contrast and a visible keyboard focus on the dark background. */
 .rt-utility__hours { color: color-mix(in srgb, var(--color-white) 72%, transparent); }
@@ -2463,7 +2489,6 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-cd__bar .rt-bar__btn { flex: none; width: 160px; margin: 0; }
 .rt-q__submit { width: 100%; margin-top: 4px; }
 .rt-cd .button:disabled { opacity: 0.7; cursor: default; }
-.rt-cd .button.is-added, .rt-cd .button.is-added:hover { background-color: var(--color-green-1) !important; border-color: var(--color-green-1) !important; color: var(--color-dark-1) !important; opacity: 1; }
 .rt-cd .button:focus-visible, .rt-dd .button:focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
 
 /* ===================================================================================================
@@ -3718,17 +3743,10 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__offnote { margin: 6px 0 0 32px; font-size: 13px; color: var(--color-light-1); }
 .rt-bk__change { min-height: 0; padding: 0; border: 0; background: none; cursor: pointer; }
 .rt-bk__sumnote { margin: -8px 0 14px; font-size: 14px; color: var(--color-light-1); }
-/* the date pop-up opened from a catalogue card or the basket: the study methods as the filter chips, and (card) a footer with the
-   date chosen and Add to basket */
+/* the date pop-up opened from a catalogue card or the basket: the study methods as the filter chips */
 .rt-dd__modes { flex: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--cd-border); }
-.rt-dd__foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-top: 1px solid var(--cd-border); background: var(--cd-surface); }
-.rt-dd__chosen { display: flex; flex-direction: column; min-width: 0; margin: 0; font-size: 13px; line-height: 1.45; color: var(--cd-muted); }
-.rt-dd__chosen strong { font-size: 15px; font-weight: 700; color: var(--cd-text); }
-.rt-dd__foot .button { flex: none; }
-.rt-dd__foot .button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* a course Preview: Add to basket looks switched off (a click still says why: booking is off in a preview) */
 .button.rt-btn-off { opacity: 0.45; cursor: not-allowed; } /* no date chosen yet: it must not look ready to press */
-@media (max-width: 575px) { .rt-dd__foot { flex-direction: column; align-items: stretch; gap: 10px; } .rt-dd__foot .button { width: 100%; } }
 .rt-bk__side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
 .rt-bk__qty { display: inline-flex; align-items: center; height: 40px; overflow: hidden; border: 1px solid var(--color-light-5); border-radius: 10px; background: #fff; }
 .rt-bk__qty button { width: 40px; height: 100%; border: 0; background: #fff; font-size: 18px; line-height: 1; color: var(--color-dark-1); cursor: pointer; }
@@ -6869,15 +6887,10 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
    when a course is added; buttons press down slightly. Hover only with a mouse; less motion when the visitor asks for it. */
 .rt-card .rt-card__btn { transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 160ms ease-out; }
 .rt-card .rt-card__btn:active { transform: scale(0.97); }
-.rt-card .rt-card__btn--primary.is-added,
-.rt-card .rt-card__btn--primary.is-added:hover:not(:disabled) { border: 1px solid var(--color-green-1); background: var(--color-green-1); color: var(--color-dark-1) !important; }
 .rt-card a.rt-card__btn--primary, .rt-card a.rt-card__btn--primary:hover { color: var(--rt-card-brand-fg) !important; }
-.rt-card .is-added .rt-card__tick { animation: rt-card-tick 220ms cubic-bezier(0.23, 1, 0.32, 1); }
-@keyframes rt-card-tick { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
   .rt-card .rt-card__btn { transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease; }
   .rt-card .rt-card__btn:active { transform: none; }
-  .rt-card .is-added .rt-card__tick { animation: none; }
 }
 
 
