@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { teamBooking as d, hero } from "@/data/home";
+import { teamBooking as d } from "@/data/home";
 import { useNav } from "@/lib/navContext";
 import FormGate from "@/components/forms/FormGate";
 
@@ -10,14 +10,15 @@ import FormGate from "@/components/forms/FormGate";
 export default function HomeTeamBooking() {
   const router = useRouter();
   const icons = ["icon-person-3", "icon-save-money", "icon-location"];
-  // the subjects with live courses (useNav)
-  const { subjects } = useNav();
-  const [form, setForm] = useState({ subject: "", learners: "5", method: hero.methods[1] || hero.methods[0], where: "" });
+  // the subjects with live courses and the study methods in use (useNav)
+  const { subjects, methods } = useNav();
+  const [form, setForm] = useState({ subject: "", learners: "5", method: "", where: "" });
   const subject = form.subject || subjects[0]?.name || "";
+  const method = form.method || methods[0]?.name || "";
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const submit = (e) => {
     e.preventDefault();
-    router.push(`${d.secondaryHref}?${new URLSearchParams({ ...form, subject }).toString()}`);
+    router.push(`${d.secondaryHref}?${new URLSearchParams({ ...form, subject, method }).toString()}`);
   };
 
   return (
@@ -69,8 +70,8 @@ export default function HomeTeamBooking() {
                 </label>
                 <label className="rt-field">
                   <span>Study method</span>
-                  <select value={form.method} onChange={set("method")}>
-                    {hero.methods.map((m) => <option key={m}>{m}</option>)}
+                  <select value={method} onChange={set("method")}>
+                    {methods.map((m) => <option key={m.slug}>{m.name}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">

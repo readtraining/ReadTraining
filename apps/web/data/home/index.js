@@ -31,7 +31,6 @@ export const hero = {
   subline: "Compare accredited providers, dates and prices in one place. No account needed to search.",
   primaryButton: { label: "Find Courses", href: CATALOGUE_HREF },
   secondaryButton: { label: "Book for your team", href: "/for-business" },
-  methods: ["All methods", "Classroom", "Live online", "Online self-paced"],
   coursePlaceholder: "Search for a course",
   locationPlaceholder: "Town or postcode",
   popular: [
