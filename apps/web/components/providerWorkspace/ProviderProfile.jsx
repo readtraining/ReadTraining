@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { ErrorState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
 import { useProviderCourses } from "./ProviderCourses";
 
@@ -12,8 +12,11 @@ import { useProviderCourses } from "./ProviderCourses";
 // and the policies (booking terms, cancellation policy). "Edit profile" opens the provider settings. From the API.
 export default function ProviderProfile() {
   const { organisationId, can } = useProviderAccess();
-  const query = api.provider.profile.get.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
+  // asked for only by a role that may see it (the API would refuse, and log, the rest); the course count likewise
+  const allowed = can("provider.settings.view");
+  const query = api.provider.profile.get.useQuery({ organisationId }, { enabled: Boolean(organisationId) && allowed });
   const courses = useProviderCourses().data;
+  if (!allowed) return <EmptyState title="Your public profile isn't part of your role" text="Ask your provider's owner or an admin if something on it needs changing." />;
   if (query.isError) return <ErrorState title="We couldn't load your profile." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   const o = query.data;
   if (!o) return <Loading rows={3} />;

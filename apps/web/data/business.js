@@ -1,8 +1,9 @@
 import { AUTH_ROUTES, CATALOGUE_HREF } from "@/lib/routes";
+import { contactHref } from "@/lib/forms";
 // "For business" page content. Same functionality as the client's current site, our own copy and UI.
 const signup = { label: "Create a Business account", href: AUTH_ROUTES.signUp };
 // the hero's second button: a demo of the Business account (the client offers demos); the closing banner's: straight to the courses
-const demo = { label: "Book a demo", href: "/contact-us?topic=demo#contact-form" };
+const demo = { label: "Book a demo", href: contactHref("demo") };
 const browse = { label: "Browse training", href: CATALOGUE_HREF };
 
 export const business = {
@@ -126,13 +127,13 @@ export const business = {
     title: "Questions businesses ask.",
     text: "The things most teams want to know about places, learners, certificates and credit before they create an account.",
     items: [
-      { q: "Can we buy training before we know which employee will attend?", a: "Yes. A Business account can hold purchased course places as unassigned licences. Assign a place when you're ready rather than naming the learner at the point of purchase." },
-      { q: "What can we see after assigning training?", a: "Your Business account brings learners and purchased courses together. For courses with trackable learning activity, you can review each learner's progress from the Business area." },
-      { q: "Can we access learner certificates and expiry dates?", a: "Where certificate data is available for the course, the Business area shows certificates with their issue and expiry dates, so you can see which training is approaching renewal." },
-      { q: "Can more than one colleague manage the Business account?", a: "Yes. Business accounts support team members with roles, so administration can be shared with the right colleagues." },
-      { q: "Can we see a demo first?", a: "Yes. We can show you the Business account and how buying, assigning and tracking training works, at a time that suits you. [Book a demo](/contact-us?topic=demo#contact-form) or call us." },
+      { q: "Can we buy training before we know which employee will attend?", a: "This is coming soon, with online booking. A Business account will hold purchased course places as unassigned places, so you can assign each one when you're ready rather than naming the learner at the point of purchase." },
+      { q: "What can we see after assigning training?", a: "This is coming soon. Your Business account will bring learners and purchased courses together, and for courses with trackable learning activity you will be able to review each learner's progress from the Business area." },
+      { q: "Can we access learner certificates and expiry dates?", a: "This is coming soon. Where certificate data is available for the course, the Business area will show certificates with their issue and expiry dates, so you can see which training is approaching renewal." },
+      { q: "Can more than one colleague manage the Business account?", a: "Adding colleagues in the Business account is coming soon, with roles so administration can be shared. Until then, call or WhatsApp us to give a colleague access or remove someone." },
+      { q: "Can we see a demo first?", a: `Yes. We can show you the Business account and how buying, assigning and tracking training works, at a time that suits you. [Book a demo](${contactHref("demo")}) or call us.` },
       { q: "How do Business credit accounts work?", a: "Credit facilities are available to eligible regular Business customers. The amount is agreed individually and can depend on the length and value of the relationship. Eligible customers purchase within the facility and settle invoices under their account terms." },
-      { q: "Can we manage training bought elsewhere?", a: "The Business area is designed around training purchased through ReadTraining. It keeps those places, learners, progress, certificates and purchases connected in one workflow." },
+      { q: "Can we manage training bought elsewhere?", a: "The Business area is designed around training purchased through ReadTraining. Once online booking opens, it will keep those places, learners, progress, certificates and purchases connected in one workflow." },
     ],
   },
   cta: {

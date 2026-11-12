@@ -13,7 +13,7 @@ export const relatedLicences = (l) => (l.related || []).map(getLicence).filter(B
 export const licenceCourses = (l, courses) => pickCourses(courses, l.courses || []).map(toCourseCard);
 
 // The costs frame's rows with their amounts: a course row takes the lowest price of the live courses under its pick ("From
-// £x"; "Set by each provider" while none has a price), a fee row its fixed amount, a quote row its text. The estimated total adds
+// £x"; "No dates listed yet" while none has a price), a fee row its fixed amount, a quote row its text. The estimated total adds
 // the course and fee rows that are not optional; it reads "From" when a course price is in it. No total when nothing can be
 // added up.
 export function licenceCosts(l, courses) {

@@ -5,14 +5,14 @@ import { and, courseRevisions, courses, eq, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 import type { AdminAction } from '@readtraining/permissions'
 
-import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
-import { sendEmail } from '../../lib/email.mjs'
-import { OWN_REASON_ERROR, ownReasonOk, soleApprover } from '../../lib/soleApprover.mjs'
+import { emailOutbox } from '../../lib/email.mjs'
+import { notify, ownerOf } from '../../lib/notify.mjs'
+import { OWN_REASON_ERROR, ownReasonOk, ownRequestRefused, soleApprover } from '../../lib/soleApprover.mjs'
 import { refuseRetired } from '../../lib/retired.mjs'
 import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
-import { siteUrl } from '../../lib/supabase.mjs'
+import { slugify } from '../../lib/slug.mjs'
 import { adminProcedure, createTRPCRouter, limit, refuse } from '../../trpc/trpc.mjs'
 import { loadCoursePage, loadListings } from '../catalogue/listings.mjs'
 import {
@@ -41,8 +41,9 @@ import {
 // published (no approval). Each decision saves the reason (the provider sees it), is logged, and emails the provider's owner.
 
 type Course = typeof courses.$inferSelect
+type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
 // The course (as it is about to be approved) and its shared course page must have the same subject (sameSubject).
-async function refuseOtherSubject(tx: Parameters<Parameters<typeof Db.transaction>[0]>[0], courseId: number) {
+async function refuseOtherSubject(tx: Tx, courseId: number) {
   const [c] = await tx.select({ parentId: courses.parentId, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, courseId))
   if (!c?.parentId) return
   const [page] = await tx.select({ title: courses.title, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, c.parentId))
@@ -61,10 +62,13 @@ const DECISIONS: Record<Decision, { from: Course['status'][]; message: boolean; 
   approveChange: { from: ['live', 'paused'], message: false, email: 'course-change-approved', log: 'admin.course_change_approved' },
   rejectChange: { from: ['live', 'paused'], message: true, email: 'course-change-rejected', log: 'admin.course_change_rejected', messageError: 'Enter why the change is not approved.' },
   pause: { from: ['live'], message: true, email: 'course-paused', log: 'admin.course_paused', messageError: 'Enter why the course is paused. The provider sees it.' },
-  resume: { from: ['paused'], message: false, email: null, log: 'admin.course_resumed' },
+  resume: { from: ['paused'], message: false, email: 'course-resumed', log: 'admin.course_resumed' },
 }
 
 const CHANGED_SINCE = 'The provider changed this since you opened it. Reload the page to see the latest version.'
+const PROVIDER_PAUSED = 'The provider paused this course themselves, so they put it back live from their workspace.'
+// when the course (or its change) is no longer waiting: another admin may have decided on it, or the provider withdrawn it
+const DECIDED_OR_CHANGED = 'This has just been decided or changed. Reload the page to see where it stands.'
 // `seen` is when the version on the admin's screen was sent; anything else (or nothing) is not that version
 const notSeen = (seen: string | undefined, sentAt: Date | string | null) => !seen || !sentAt || new Date(seen).getTime() !== new Date(sentAt).getTime()
 
@@ -82,20 +86,49 @@ async function sharedPage(db: typeof Db, courseId: number) {
 const logFor = (ctx: { user: { id: string }; ip: string | null }, course: Course, action: string, metadata: Record<string, unknown> = {}) => (tx: Parameters<typeof logActivity>[0]) =>
   logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: course.organisationId, action, targetType: 'course', targetId: String(course.id), metadata, ip: ctx.ip })
 
-// the provider's owner, emailed about a decision; an email that can't be sent doesn't undo the decision (the answer says so)
-async function emailOwner(db: typeof Db, course: Course, key: string, message: string | null) {
+// The provider's owner, emailed about a decision once it is saved (lib/notify.mts). Nothing here can fail the decision: an email
+// that can't be sent (or an owner who can't be looked up) only comes back as false, and the answer says so.
+async function emailOwner(db: typeof Db, course: { id: number; title: string; organisationId: string | null }, key: string, message: string | null, vars: Record<string, string> = {}, action = 'email.course_decision_sent') {
   if (!course.organisationId) return false
-  const [o] = await db.execute<{ name: string; email: string | null; first_name: string | null }>(sql`
-    select o.name, u.email, p.first_name from public.organisations o
-    join public.organisation_members m on m.organisation_id = o.id and m.role = 'owner'
-    join auth.users u on u.id = m.user_id left join public.profiles p on p.id = m.user_id
-    where o.id = ${course.organisationId}::uuid limit 1`)
-  if (!o?.email) return false
-  const vars = { firstName: o.first_name ?? '', provider: o.name, course: course.title, courseId: String(course.id), message: message ?? '' }
-  const sent = await sendEmail(renderEmail(key, await wordsFor(db, key), vars, siteUrl, o.email))
-  if (sent) await logActivity(db, { actorUserId: null, actorIdentity: 'system', organisationId: course.organisationId, action: 'email.course_decision_sent', targetType: 'course', targetId: String(course.id), metadata: { email: key }, ip: null })
-  return sent
+  try {
+    const { to, provider } = await ownerOf(db, course.organisationId)
+    return await notify(db, key, to, { provider, course: course.title, courseId: String(course.id), message: message ?? '', ...vars }, { organisationId: course.organisationId, targetType: 'course', targetId: String(course.id), action })
+  } catch (error) {
+    console.error(`email ${key}: could not find the provider's owner`, error instanceof Error ? error.message : error)
+    return false
+  }
 }
+
+// A course's web address is made from its title when it is created, so a draft first called "test course" would keep
+// /course/test-course. The first time it goes live (approved, or a shared page published) the address is made again from the
+// title it has then; once a course has been live its address never changes, so links and search results keep working. An
+// address already made from this title (the same words, perhaps with -2 after them) is kept as it is.
+async function firstLiveSlug(tx: Tx, course: { slug: string; title: string; publishedAt: Date | null }) {
+  if (course.publishedAt) return course.slug
+  const words = slugify(course.title, 'course')
+  const base = /^\d+$/.test(words) ? `course-${words}` : words // as courseSlug (modules/provider/courses.mts) makes it
+  if (course.slug === base || (course.slug.startsWith(`${base}-`) && /^\d+$/.test(course.slug.slice(base.length + 1)))) return course.slug
+  return courseSlug(tx, course.title)
+}
+
+// The catalogue entries a waiting change would move the course to (by the slugs it holds) that are retired in Catalogue settings,
+// as "Name (category)". Checked before the change is applied, so the admin is told which ones instead of the provider's "choose
+// from the list".
+async function retiredInChange(tx: Tx, change: Record<string, unknown>) {
+  const text = (v: unknown) => (typeof v === 'string' && v ? v : null)
+  const [cat, sub, topic, level] = [text(change.category), text(change.subcategory), text(change.topic), text(change.level)]
+  const rows = await tx.execute<{ word: string; name: string }>(sql`
+    select 'category' word, k.name from public.categories k where k.slug = ${cat} and not k.active
+    union all
+    select 'sub-category', s.name from public.subcategories s join public.categories k on k.id = s.category_id where k.slug = ${cat} and s.slug = ${sub} and not s.active
+    union all
+    select 'topic', t.name from public.topics t join public.subcategories s on s.id = t.subcategory_id join public.categories k on k.id = s.category_id
+      where k.slug = ${cat} and s.slug = ${sub} and t.slug = ${topic} and not t.active
+    union all
+    select 'level', l.name from public.course_levels l where l.slug = ${level} and not l.active`)
+  return rows.map((r) => `${r.name} (${r.word})`)
+}
+const andList = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0])
 
 // a waiting change shown against the live version, field by field, in the editor's shape (catalogue places as slugs)
 async function changeView(db: typeof Db, detail: Awaited<ReturnType<typeof courseDetail>>) {
@@ -206,17 +239,19 @@ export const adminCoursesRouter = createTRPCRouter({
       return rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, kind: r.kind, status: r.status, method: r.method, updatedAt: iso(r.updated_at), provider: r.provider, parent: r.parent, upcoming: r.upcoming, fromPence: r.from_pence, providers: r.providers, pendingChange: r.pending_change }))
     }),
 
-  // One course as the editor shows it, with its provider, a waiting change field by field, and (for a shared page) the
-  // providers' courses listed on it.
-  // A shared course page as visitors will see it (the editor's Preview), whatever its status: its live providers' dates included.
+  // A course as visitors will see it (Preview), whatever its status: a shared page with its live providers' dates; a provider's
+  // course with its own dates and, when a change is waiting for approval, that change shown as if approved (as the provider's
+  // own Preview shows it), so the admin can check it before deciding.
   preview: adminProcedure('admin.panel.open')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => {
       const course = await findCourse(ctx.db, input.courseId)
-      if (course.kind !== 'shared') throw notFound()
-      return loadCoursePage(ctx.db, '', { id: course.id })
+      const [rev] = course.kind === 'provider' ? await ctx.db.select({ content: courseRevisions.content }).from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending'))) : []
+      return loadCoursePage(ctx.db, '', { id: course.id, pending: (rev?.content as Record<string, unknown> | undefined) ?? null })
     }),
 
+  // One course as the editor shows it, with its provider, a waiting change field by field, and (for a shared page) the
+  // providers' courses listed on it.
   get: adminProcedure('admin.panel.open')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => {
@@ -262,7 +297,14 @@ export const adminCoursesRouter = createTRPCRouter({
       // (lib/soleApprover.mts)
       const asked = await requesters(ctx.db, course)
       const own = (isChange ? asked.change : asked.course).has(ctx.user.id)
-      if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, action)) : !can(ctx.actor, action)) await refuse(ctx, action, course.organisationId, path)
+      if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, action)) : !can(ctx.actor, action)) {
+        // logged as refused either way; an admin who may approve but sent this themselves is told why (a sole approver may have lost
+        // the exception since the page loaded: another admin can approve now)
+        const why = own && can(ctx.actor, action) ? new TRPCError({ code: 'FORBIDDEN', message: ownRequestRefused(ctx.actor) }) : null
+        await refuse(ctx, action, course.organisationId, path).catch((error) => {
+          throw why ?? error
+        })
+      }
       // decided on the version the admin saw (`seen`: when that version was sent): a new course sent again, or a change edited, since
       // the admin opened it is refused. Checked again under the row lock below, for an edit landing at the same moment.
       const onWaiting = input.decision === 'approve' || input.decision === 'changes'
@@ -281,23 +323,42 @@ export const adminCoursesRouter = createTRPCRouter({
         const [o] = await ctx.db.execute<{ status: string }>(sql`select status from public.organisations where id = ${course.organisationId}::uuid`)
         if (o?.status !== 'active') throw new TRPCError({ code: 'CONFLICT', message: 'This provider isn’t approved yet (or is suspended). Decide on the provider first, on the Providers page.' })
       }
+      // our team puts back live only what our team paused (it has their reason); a course the provider paused goes back live from
+      // their workspace. Checked again under the row lock below.
+      if (input.decision === 'resume' && !course.statusNote) throw new TRPCError({ code: 'CONFLICT', message: PROVIDER_PAUSED })
       const now = new Date()
-      await ctx.db.transaction(async (tx) => {
+      const done = await ctx.db.transaction(async (tx) => {
         // the provider's edits lock this row too (lockStatus in modules/provider/courses.mts): whichever comes second sees the other
-        const [locked] = await tx.select({ status: courses.status, submittedAt: courses.submittedAt }).from(courses).where(eq(courses.id, course.id)).for('update')
-        if (!locked || !rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
+        const [locked] = await tx.select().from(courses).where(eq(courses.id, course.id)).for('update')
+        if (!locked || !rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
         if (onWaiting && notSeen(input.seen, locked.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
+        if (input.decision === 'resume' && !locked.statusNote) throw new TRPCError({ code: 'CONFLICT', message: PROVIDER_PAUSED })
         if (isChange) {
           const [rev] = await tx.select({ status: courseRevisions.status, submittedAt: courseRevisions.submittedAt }).from(courseRevisions).where(eq(courseRevisions.id, revision.id))
-          if (rev?.status !== 'pending' || notSeen(input.seen, rev.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
+          if (rev?.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
+          if (notSeen(input.seen, rev.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
         }
-        if (input.decision === 'approve') await tx.update(courses).set({ status: 'live', statusNote: null, decidedAt: now, decidedBy: ctx.user.id, publishedAt: course.publishedAt ?? now, updatedAt: now }).where(eq(courses.id, course.id))
+        // the first time a course goes live its address is made again from its title (firstLiveSlug); the log records a new one
+        const slug = input.decision === 'approve' ? await firstLiveSlug(tx, locked) : locked.slug
+        if (input.decision === 'approve') await tx.update(courses).set({ status: 'live', statusNote: null, decidedAt: now, decidedBy: ctx.user.id, publishedAt: locked.publishedAt ?? now, slug, updatedAt: now }).where(eq(courses.id, course.id))
         if (input.decision === 'changes') await tx.update(courses).set({ status: 'changes', statusNote: message, decidedAt: now, decidedBy: ctx.user.id, updatedAt: now }).where(eq(courses.id, course.id))
         if (input.decision === 'pause') await tx.update(courses).set({ status: 'paused', statusNote: message, updatedAt: now }).where(eq(courses.id, course.id))
         if (input.decision === 'resume') await tx.update(courses).set({ status: 'live', statusNote: null, updatedAt: now }).where(eq(courses.id, course.id))
         if (input.decision === 'approveChange') {
-          await applyContent(tx, course.id, revision.content as Record<string, unknown>)
+          const change = revision.content as Record<string, unknown>
+          // a change into a category, sub-category, topic or level retired since it was sent: said in the admin's words (applying it
+          // would only say "choose from the list", the provider's words)
+          const retired = await retiredInChange(tx, change)
+          const one = retired.length === 1
+          if (retired.length) throw new TRPCError({ code: 'CONFLICT', message: `This change moves the course to ${andList(retired)}, which ${one ? 'is' : 'are'} retired in Catalogue settings. Restore ${one ? 'it' : 'them'} there, or turn the change down.` })
+          const before = await missing(tx, locked)
+          await applyContent(tx, course.id, change)
           await tx.update(courseRevisions).set({ status: 'approved', decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
+          // a published course stays complete: a change that takes away something required (the syllabus, the description…) is
+          // refused, naming what the course would be missing
+          const [applied] = await tx.select().from(courses).where(eq(courses.id, course.id))
+          const lost = (await missing(tx, applied)).filter((gap) => !before.includes(gap))
+          if (lost.length) throw new TRPCError({ code: 'CONFLICT', message: `With this change the course would be missing ${andList(lost)}. Turn the change down and say what to add.` })
         }
         // never live under a retired category, method or level (a change may move it into one retired since it was sent)
         if (input.decision === 'approve' || input.decision === 'resume' || (input.decision === 'approveChange' && locked.status === 'live')) await refuseRetired(tx, course.id, 'admin')
@@ -309,13 +370,16 @@ export const adminCoursesRouter = createTRPCRouter({
           // change could send it again unwarned)
           await tx.update(courses).set({ updatedAt: now }).where(eq(courses.id, course.id))
         }
-        await logFor(ctx, course, rule.log, { from: course.status, ...(message ? { message } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })(tx)
+        await logFor(ctx, course, rule.log, { from: locked.status, ...(message ? { message } : {}), ...(slug !== locked.slug ? { address: { from: locked.slug, to: slug } } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })(tx)
         // a decision on their own request gets its own line in the log, so it is never missed
         if (own) await logFor(ctx, course, 'admin.own_request_decided', { decision: input.decision, reason: input.ownReason!.trim() })(tx)
+        const [after] = await tx.select({ status: courses.status, title: courses.title }).from(courses).where(eq(courses.id, course.id))
+        return after
       })
-      const fresh = await findCourse(ctx.db, course.id)
-      const emailed = rule.email ? await emailOwner(ctx.db, fresh, rule.email, message) : false
-      return { status: fresh.status, emailed }
+      // after the commit, and never failing the decision (emailOwner): `emailed` says whether the owner was told, `outbox` that this
+      // copy of the site saves emails to its test outbox instead of sending them
+      const emailed = rule.email ? await emailOwner(ctx.db, { id: course.id, title: done.title, organisationId: course.organisationId }, rule.email, message) : null
+      return { status: done.status, emailed, outbox: emailOutbox() }
     }),
 
   // ---- shared course pages (the "catalogue" switch) --------------------------------------------------------------------------
@@ -373,13 +437,15 @@ export const adminCoursesRouter = createTRPCRouter({
       return { ok: true, pendingChange: false, version }
     }),
 
-  // Publish a shared page (once nothing required is missing), take it off the site, or put it back.
+  // Publish a shared page (once nothing required is missing), take it off the site, or put it back. Taking it off hides the
+  // providers' live courses on it from the search too, so each of those providers' owners is emailed (after the commit; an email
+  // that can't be sent doesn't undo it). The first time a page is published its address is made again from its title.
   setSharedStatus: adminProcedure('admin.catalogue.edit')
     .input(z.object({ courseId: id, status: z.enum(['live', 'paused']), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await sharedPage(ctx.db, input.courseId)
       const now = new Date()
-      await ctx.db.transaction(async (tx) => {
+      const hidden = await ctx.db.transaction(async (tx) => {
         // checked under the row lock: of two at the same moment (a double click, or two admins) one acts, the other is told
         const [page] = await tx.select().from(courses).where(eq(courses.id, course.id)).for('update')
         if (!page) throw notFound()
@@ -389,11 +455,26 @@ export const adminCoursesRouter = createTRPCRouter({
           const gaps = await missing(tx, page)
           if (gaps.length) throw bad(`Add ${gaps.join(', ')} before publishing it.`)
         } else if (page.status !== 'live') throw new TRPCError({ code: 'CONFLICT', message: 'Only a live page can be taken off the site.' })
-        await tx.update(courses).set({ status: input.status, publishedAt: page.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
+        const slug = input.status === 'live' ? await firstLiveSlug(tx, page) : page.slug
+        await tx.update(courses).set({ status: input.status, slug, publishedAt: page.publishedAt ?? (input.status === 'live' ? now : null), updatedAt: now }).where(eq(courses.id, course.id))
         if (input.status === 'live') await refuseRetired(tx, course.id, 'admin') // never live under a retired entry
-        await logFor(ctx, course, input.status === 'live' ? 'admin.shared_course_published' : 'admin.shared_course_paused')(tx)
+        // the providers' live courses on the page, which leave the search with it
+        const affected = input.status === 'paused' ? await tx.select({ title: courses.title, organisationId: courses.organisationId }).from(courses).where(and(eq(courses.parentId, course.id), eq(courses.status, 'live'))) : []
+        await logFor(ctx, course, input.status === 'live' ? 'admin.shared_course_published' : 'admin.shared_course_paused', {
+          ...(slug !== page.slug ? { address: { from: page.slug, to: slug } } : {}),
+          ...(affected.length ? { providerCourses: affected.length } : {}),
+        })(tx)
+        return affected
       })
-      return { ok: true, version: await courseVersion(ctx.db, course.id) }
+      // one email to each provider's owner, naming their courses on the page
+      const byProvider = new Map<string, string[]>()
+      for (const c of hidden) if (c.organisationId) byProvider.set(c.organisationId, [...(byProvider.get(c.organisationId) ?? []), c.title])
+      const sent = await Promise.all(
+        [...byProvider].map(([organisationId, titles]) =>
+          emailOwner(ctx.db, { id: course.id, title: andList(titles), organisationId }, 'shared-page-paused', null, { page: course.title }, 'email.shared_page_paused_sent'),
+        ),
+      )
+      return { ok: true, version: await courseVersion(ctx.db, course.id), providers: byProvider.size, emailed: sent.filter(Boolean).length, outbox: emailOutbox() }
     }),
 
   sharedImageUploadUrl: adminProcedure('admin.catalogue.edit')

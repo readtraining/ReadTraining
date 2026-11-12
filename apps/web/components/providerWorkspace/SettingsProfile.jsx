@@ -332,7 +332,7 @@ export function VenuesTab({ say }) {
                 <div>
                   <b>{v.name}</b>{!v.active && <> <Pill tone="muted">Archived</Pill></>}
                   <small>{[v.street, v.city, v.postcode].filter(Boolean).join(", ")}</small>
-                  <small>{v.upcoming ? `${v.upcoming} upcoming ${v.upcoming === 1 ? "date" : "dates"}` : "No upcoming dates"}{v.located ? "" : " · We couldn't find this postcode on the map, so distance search can't use it. Check the postcode."}</small>
+                  <small>{v.upcoming ? `${v.upcoming} upcoming ${v.upcoming === 1 ? "date" : "dates"}` : "No upcoming dates"}{v.located ? "" : v.problem ? ` · ${v.problem} Edit the venue to put it right.` : " · We couldn't check this town yet; we'll try again."}</small>
                 </div>
                 {edit && (
                   <div className="rt-adm-list__side">
@@ -349,7 +349,7 @@ export function VenuesTab({ say }) {
         </div>
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
-      <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : "Venue saved, but we couldn't find its postcode on the map"); }} />
+      <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : r.unchecked ? "Venue saved. We couldn't check its town just now; we'll try again." : "Venue saved, but we couldn't find its postcode on the map"); }} />
       <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
       <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked} busy={remove.isPending}
         onConfirm={() => remove.mutate({ organisationId, venueId: removing.id }, { onSuccess: () => { setRemoving(null); refresh(); say("Venue deleted"); }, onError: (e) => setBlocked(firstError(e)) })} />
@@ -368,7 +368,7 @@ function VenueSheet({ open, venue, onClose, onSaved }) {
 }
 
 // A venue's fields and its Save, checked here as the API checks them. `venue` to edit one (null for a new one); onSaved(result,
-// isNew) with the API's { id, located }. `inline`: inside another form (Create cohort), so it isn't a <form> of its own: Save is a
+// isNew) with the API's { id, located, unchecked }. `inline`: inside another form (Create cohort), so it isn't a <form> of its own: Save is a
 // plain button and Enter in a field saves the venue, not the outer form; `idPrefix` keeps its ids apart; onCancel shows Cancel.
 export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = false, idPrefix = "rt-set-v" }) {
   const { organisationId } = useProviderAccess();

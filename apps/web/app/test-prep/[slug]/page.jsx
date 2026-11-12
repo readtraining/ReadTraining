@@ -16,7 +16,7 @@ import SubjectSlimBar from "@/components/testPrep/subject/SubjectSlimBar";
 import SubjectReviews from "@/components/testPrep/subject/SubjectReviews";
 import { TESTS_ID } from "@/components/testPrep/subject/scrollToTests";
 import { testPrepPage } from "@/data/testPrep";
-import { bookHref, getSubject, getSubjectCourses, getSubjectSlugs, moreSubjects, resolveTests, subjectHref } from "@/lib/testPrep";
+import { bookHref, getSubject, getSubjectCourses, moreSubjects, resolveTests, subjectHref } from "@/lib/testPrep";
 import { loadCatalogue, liveHref } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
@@ -37,8 +37,10 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").r
 const abs = (path) => `${SITE_URL}${path}`;
 const json = (data) => JSON.stringify(data).replace(/</g, "\\u003c");
 
+// None is built with the site: a guide shows the live courses (and which links find one), and the API isn't running while the site
+// is built, so each is built on its first visit and then saved and refreshed as any page (lib/apiServer.js).
 export function generateStaticParams() {
-  return getSubjectSlugs().map((slug) => ({ slug }));
+  return [];
 }
 
 export async function generateMetadata(props) {

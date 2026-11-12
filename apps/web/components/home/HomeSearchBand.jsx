@@ -5,9 +5,12 @@ import HomeTextLink from "./HomeTextLink";
 import { useRouter } from "next/navigation";
 import { hero } from "@/data/home";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { findNear } from "@/app/course-locations/actions";
 
 // Course search directly under the hero, built on the template's segmented search pill
-// (home-9 `masthead-form`): one white pill with three fields and a search button.
+// (home-9 `masthead-form`): one white pill with three fields and a search button. The server checks the place first
+// (app/course-locations/actions.js findNear): when nothing matching runs near it, the search is for the course everywhere, so
+// it never lands on "No courses match" because of the place.
 export default function HomeSearchBand() {
   const router = useRouter();
   const [course, setCourse] = useState("");
@@ -23,10 +26,19 @@ export default function HomeSearchBand() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [ddOpen]);
 
-  const submit = (e) => {
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
     e.preventDefault();
-    const q = new URLSearchParams({ q: course.trim(), where: where.trim(), method }).toString();
-    router.push(`${CATALOGUE_HREF}?${q}`);
+    if (busy) return;
+    const input = { q: course.trim(), location: where.trim(), method };
+    let href = `${CATALOGUE_HREF}?${new URLSearchParams({ q: input.q, where: input.location, method })}`;
+    setBusy(true);
+    try {
+      href = await findNear(input);
+    } catch {} // the check couldn't be made: the search as typed
+    router.push(href);
+    setBusy(false);
   };
 
   return (
@@ -93,7 +105,7 @@ export default function HomeSearchBand() {
               </div>
 
               <div className="masthead-form__button rt-searchband__button">
-                <button type="submit" className="button -purple-1 text-white">
+                <button type="submit" className="button -purple-1 text-white" aria-busy={busy || undefined}>
                   Search courses <i className="icon-arrow-right text-14 ml-10"></i>
                 </button>
               </div>

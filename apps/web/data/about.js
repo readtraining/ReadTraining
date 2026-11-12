@@ -27,7 +27,7 @@ export const about = {
     title: "Who we are",
     paragraphs: [
       "Finding the right course used to mean searching provider by provider, comparing dates, venues and prices across dozens of websites. We built ReadTraining to put it all in one place.",
-      "Accredited training providers list their courses with us, so you can compare them side by side and book in a few minutes. The provider delivers the course; we make it simple to find the right one and support you from booking to certificate.",
+      "Accredited training providers list their courses with us, so you can compare them side by side and book your place with us. Online booking is coming soon: until then, call us and we'll book it for you. The provider delivers the course; we make it simple to find the right one and support you from booking to certificate.",
     ],
     promisesLabel: "What we do",
     promises: bookingOptions.benefits,
@@ -39,7 +39,7 @@ export const about = {
     text: "Every booking follows the same simple path, whichever provider runs your course.",
     steps: [
       { title: "Search", text: "Look up a course by name, subject or location, classroom or online.", icon: "icon-search" },
-      { title: "Compare", text: "See dates, venues, prices and reviews from different providers side by side.", icon: "icon-list" },
+      { title: "Compare", text: "See dates, venues and prices from different providers side by side.", icon: "icon-list" },
       { title: "Book", text: "Choose your date, then call us and we’ll book your place. Online booking is coming soon.", icon: "icon-basket" },
       { title: "Get certified", text: "Attend your course with the provider and receive your qualification.", icon: "icon-badge" },
     ],
@@ -49,9 +49,9 @@ export const about = {
     title: "Why we do it",
     text: "One marketplace for the people who need training, the teams that buy it and the providers who deliver it.",
     items: [
-      { icon: "icon-person", title: "Learners", text: "Find an accredited course near you or online, compare your options and book in minutes.", link: { label: "Find a course", href: CATALOGUE_HREF } },
-      { icon: "icon-person-3", title: "Businesses", text: "Book and manage training for your whole team from one account, with group quotes and credit options.", link: { label: "Training for business", href: "/for-business" } },
-      { icon: "icon-book", title: "Training providers", text: "List your courses, take bookings and reach learners across the UK, with no upfront cost.", link: { label: "List your courses", href: "/for-providers" } },
+      { icon: "icon-person", title: "Learners", text: "Find an accredited course near you or online, compare your options and call us to book your place.", link: { label: "Find a course", href: CATALOGUE_HREF } },
+      { icon: "icon-person-3", title: "Businesses", text: "Book courses for your whole team and ask us for a group quote. Online booking is coming soon: until then, call us and we'll book everyone's places.", link: { label: "Training for business", href: "/for-business" } },
+      { icon: "icon-book", title: "Training providers", text: "List your courses and reach learners across the UK, with no upfront cost.", link: { label: "List your courses", href: "/for-providers" } },
     ],
   },
   mission: {
@@ -66,10 +66,10 @@ export const about = {
     title: "Questions about ReadTraining",
     items: [
       { q: "Is ReadTraining a training provider?", a: "No. ReadTraining is a marketplace. Accredited training providers list their courses with us, and you book through ReadTraining. The provider delivers the course and arranges your certificate." },
-      { q: "Who delivers the courses?", a: "Independent training providers, in classrooms across the UK, live online or as online self-paced courses. Each course page shows the provider, the venue and what is included." },
+      { q: "Who delivers the courses?", a: "Independent training providers, in classrooms across the UK, live online or as online self-paced courses. Each course page shows the venues, dates, prices and what is included, and your basket shows which provider runs the date you choose." },
       { q: "Are the courses accredited?", a: `Courses lead to recognised qualifications, licences and cards from awarding and licensing bodies such as ${bodyList}. Each course page shows the qualification you will get.` },
-      { q: "How are training providers checked?", a: "Providers are approved before they can publish courses on ReadTraining, and each course must follow the rules for its qualification. Reviews from learners on every course help you choose." },
-      { q: "Can I book training for my team?", a: "Yes. You can book places for several learners at once, ask for a group quote, or open a business account to manage your team's training in one place." },
+      { q: "How are training providers checked?", a: "Providers are approved before they can publish courses on ReadTraining, and our team checks every course before it goes live. Each course must follow the rules for its qualification." },
+      { q: "Can I book training for my team?", a: "Yes. You can book places for several learners at once or ask us for a group quote. Online booking is coming soon: until then, call us and we'll book everyone's places." },
     ],
   },
   cta: {

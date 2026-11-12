@@ -1,5 +1,6 @@
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { CERT_EXAMPLE } from "@/lib/certificates";
+import { contactHref } from "@/lib/forms";
 
 // Verify a certificate (/certificate-checker). The checker follows the client's current page (hurak.com/certificate-checker:
 // the certificate number and the holder's name, exactly as on the certificate); the result states, the "not found" reasons
@@ -65,7 +66,7 @@ export const certificateChecker = {
         "the holder's name has changed since the course",
         "the course was not booked through ReadTraining",
       ],
-      help: { text: "If you still cannot verify it,", link: { label: "contact us with a copy of the certificate", href: "/contact-us?topic=other#contact-form" } },
+      help: { text: "If you still cannot verify it,", link: { label: "contact us with a copy of the certificate", href: contactHref("other") } },
       retry: "Check the details and try again",
     },
     fields: {

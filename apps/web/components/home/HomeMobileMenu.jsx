@@ -7,6 +7,7 @@ import { useNav } from "@/lib/navContext";
 
 import Link from "next/link";
 import HeaderAuth from "./HeaderAuth";
+import NavArrow from "@/components/header/NavArrow";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
@@ -82,8 +83,10 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
               if (elm.title) {
                 return (
                   <div key={i} className="submenuOne">
-                    <div
+                    <button
+                      type="button"
                       className="title"
+                      aria-expanded={menuNesting[0] == elm.title}
                       onClick={() =>
                         setMenuNesting((pre) =>
                           pre[0] == elm.title ? [] : [elm.title],
@@ -98,13 +101,14 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
                         {elm.title}
                       </span>
                       <i
+                        aria-hidden="true"
                         className={
                           menuNesting[0] == elm.title
                             ? "icon-chevron-right text-13 ml-10 active"
                             : "icon-chevron-right text-13 ml-10"
                         }
                       ></i>
-                    </div>
+                    </button>
 
                     {elm.links &&
                       elm.links.map((itm, index) => (
@@ -116,7 +120,14 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
                               : "toggle"
                           }
                         >
-                          {itm.href && (
+                          {itm.more && (
+                            <Link className="rt-nav-more rt-mm-more" href={itm.href}>
+                              {itm.label}
+                              <NavArrow className="rt-nav-more__arrow" />
+                            </Link>
+                          )}
+
+                          {itm.href && !itm.more && (
                             <Link
                               key={i}
                               className={
@@ -132,8 +143,10 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
 
                           {itm.links && (
                             <div className="submenuTwo">
-                              <div
+                              <button
+                                type="button"
                                 className="title"
+                                aria-expanded={menuNesting[1] == itm.title}
                                 onClick={() =>
                                   setMenuNesting((pre) =>
                                     pre[1] == itm.title
@@ -152,13 +165,14 @@ export default function HomeMobileMenu({ setActiveMobileMenu, activeMobileMenu }
                                   {itm.title && itm.title}
                                 </span>
                                 <i
+                                  aria-hidden="true"
                                   className={
                                     menuNesting[1] == itm.title
                                       ? "icon-chevron-right text-13 ml-10 active"
                                       : "icon-chevron-right text-13 ml-10"
                                   }
                                 ></i>
-                              </div>
+                              </button>
                               <div
                                 className={
                                   menuNesting[1] == itm.title

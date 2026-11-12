@@ -46,6 +46,8 @@ export default function AdminCatalogue() {
     if (KINDS.includes(k)) setKind(k);
     const s = getQuery("status");
     if (copy.statuses[s]) setStatus(s);
+    const words = getQuery("q"); // a provider's "All … courses" link (AdminProvider) searches by its name
+    if (words) setQ(words.slice(0, 80));
   }, []);
 
   const cols = copy.columns;

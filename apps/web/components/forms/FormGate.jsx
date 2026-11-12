@@ -11,11 +11,14 @@ export default function FormGate({ form, inCard = false, headingLevel, children 
   if (formReady(form)) return children;
   const f = FORMS[form];
   if (!f || f.hidden) return null;
+  // the email address appears once: where the text names it ("{email}"), or after the text
+  const email = <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>;
+  const [before, after] = f.text.split("{email}");
   return (
     <EmptyState
       icon="icon-wall-clock"
       title={f.title}
-      text={<>{f.text} Or email <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>.</>}
+      text={after === undefined ? <>{f.text} Or email {email}.</> : <>{before}{email}{after}</>}
       inCard={inCard}
       headingLevel={headingLevel}
       action={{ label: `Call ${CONTACT.phone}`, href: CONTACT.phoneHref }}

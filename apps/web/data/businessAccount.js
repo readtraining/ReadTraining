@@ -1,4 +1,5 @@
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { contactHref } from "@/lib/forms";
 // The Business account (/business): dashboard, learners, team training assignments, bookings, and billing and invoices. Built on
 // what Hurak's Business account offers (its "For Businesses" page: a training overview with learners, unassigned places,
 // certificates and renewals due; places per course you assign now or hold; learner progress; certificates and expiry; billing on a
@@ -141,7 +142,7 @@ export const businessAccount = {
     // Print opens the invoice with the browser's print window (where "Save as PDF" keeps a copy)
     invoices: { title: "Invoices", columns: ["Invoice", "Date", "Booking", "Amount", "Status"], view: "View", printRow: "Print", print: "Print invoice" },
     status: { paid: "Paid", due: "Due", overdue: "Overdue", refunded: "Refunded" },
-    details: { title: "Billing details", change: "To change these details, contact us.", cta: { label: "Contact us", href: "/contact-us?topic=business#contact-form" } },
+    details: { title: "Billing details", change: "To change these details, contact us.", cta: { label: "Contact us", href: contactHref("business") } },
   },
 
   // ---- demo data (until accounts exist) ----

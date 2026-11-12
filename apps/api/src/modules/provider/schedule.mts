@@ -5,31 +5,41 @@ import { and, asc, cohorts, courses, eq, gte, isNull, ne, organisationMembers, p
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { formatPostcode, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
+import { formatPostcode, lookupDown, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
 import { createTRPCRouter, orgProcedure } from '../../trpc/trpc.mjs'
-import { ownCourse } from './courses.mjs'
+import { ownCourse, ukToday as today } from './courses.mjs'
 
 // A provider's venues and course dates (cohorts). Dates are part of the course's prices and timetable, so they change straight
 // away, without approval. A tutor sees only the cohorts they teach.
 
-const bad = (message: string) => new TRPCError({ code: 'BAD_REQUEST', message })
-// today's date in the UK (dates are UK days; UTC would still be yesterday for an hour after midnight in summer)
-const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
+// a refusal, on the date form's field when it is about one (`field` as the form names it)
+const bad = (message: string, field?: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: field ? Object.assign(new Error(message), { field }) : undefined })
 
 const log = (tx: Parameters<typeof logActivity>[0], ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, targetType: string, targetId: string, metadata: Record<string, unknown> = {}) =>
   logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId, action, targetType, targetId, metadata, ip: ctx.ip })
 
-// A live online date's joining link: a Zoom, Microsoft Teams or Google Meet meeting address (https), so learners are never sent
-// to some other site. The cohort form checks the same (ProviderCohorts.jsx MEETING_LINK).
-const MEETING_HOSTS = /^(?:[a-z0-9-]+\.)*(zoom\.us|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com)$/i
+// A live online date's joining link: the https address of one Zoom, Microsoft Teams or Google Meet meeting, so learners are never
+// sent to some other page (a sign-up or download page, or a link with a login in it). The cohort form checks the same
+// (ProviderCohorts.jsx isMeetingLink): keep the two the same.
+const MEETINGS: [RegExp, RegExp][] = [
+  // Zoom: a meeting or webinar number (/j/, /w/) or a personal room (/my/), on zoom.us or a company's own zoom.us address
+  [/^(?:[a-z0-9-]+\.)*zoom\.(?:us|com)$/, /^\/(?:(?:j|w)\/\d{9,13}|my\/[\w.-]+)\/?$/],
+  // Microsoft Teams: a meeting's join link (/l/meetup-join/…) or its short form (/meet/…)
+  [/^teams\.(?:microsoft|live)\.com$/, /^\/(?:l\/meetup-join\/.+|meet\/[\w-]+\/?)$/],
+  // Google Meet: a meeting code, like abc-defg-hij
+  [/^meet\.google\.com$/, /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/],
+]
 export function isMeetingLink(v: string) {
   try {
     const u = new URL(v)
-    return u.protocol === 'https:' && MEETING_HOSTS.test(u.hostname) && u.pathname.length > 1
+    if (u.protocol !== 'https:' || u.username || u.password) return false
+    const host = u.hostname.toLowerCase()
+    return MEETINGS.some(([h, path]) => h.test(host) && path.test(u.pathname))
   } catch {
     return false
   }
 }
+const MEETING_LINK_ERROR = 'Use the https link to one Zoom, Microsoft Teams or Google Meet meeting, like https://zoom.us/j/1234567890.'
 
 // ---- venues -------------------------------------------------------------------------------------------------------------
 
@@ -54,21 +64,60 @@ async function lockVenue(tx: Tx, venueId: string) {
   return v ?? null
 }
 async function lockCohort(tx: Tx, cohortId: string) {
-  const [c] = await tx.select({ cancelledAt: cohorts.cancelledAt, bookable: cohorts.bookable, endsOn: cohorts.endsOn }).from(cohorts).where(eq(cohorts.id, cohortId)).for('update')
+  const [c] = await tx.select({ cancelledAt: cohorts.cancelledAt, bookable: cohorts.bookable, endsOn: cohorts.endsOn, updatedAt: cohorts.updatedAt, method: cohorts.method, joinUrl: cohorts.joinUrl }).from(cohorts).where(eq(cohorts.id, cohortId)).for('update')
   return c ?? null
 }
+// Two people (or two tabs) editing the same dates: the form sends the version it was filled from (`seen`, the dates' updatedAt), and
+// a save over a newer one is refused, so neither person's change is silently overwritten.
+const DATES_CHANGED =
+  'These dates were changed somewhere else (in another tab, or by someone else) since you opened them. Your changes are not saved. Copy anything you want to keep, then close this form and open the dates again.'
 const VENUE_GONE = 'This venue has already been deleted. Reload the page.'
 const DATES_GONE = 'These dates have already been deleted. Reload the page.'
 
+// A venue saved while postcodes.io couldn't be asked has no map point, so no public town page or menu uses its town until it is
+// checked. It is looked up again when the provider opens their venues or saves dates there (a few at a time, and not while
+// postcodes.io is known to be down). A venue whose town or postcode now proves wrong stays without a point, and the venue list
+// says why (remembered for a while, so the list doesn't ask again on every visit). Returns the problems, by venue id.
+const PROBLEM_MS = 10 * 60_000
+const venueProblems = new Map<string, { message: string; at: number }>() // by "postcode|town"
+async function recheckVenues(db: Parameters<typeof ownCourse>[0], organisationId: string, venueId?: string) {
+  const problems = new Map<string, string>()
+  const rows = await db
+    .select({ id: venues.id, postcode: venues.postcode, city: venues.city })
+    .from(venues)
+    .where(and(eq(venues.organisationId, organisationId), isNull(venues.lat), venueId ? eq(venues.id, venueId) : undefined))
+    .limit(5)
+  await Promise.all(
+    rows.map(async (v) => {
+      if (!v.postcode) return
+      const key = `${v.postcode}|${v.city.trim().toLowerCase()}`
+      const known = venueProblems.get(key)
+      if (known && Date.now() - known.at < PROBLEM_MS) return problems.set(v.id, known.message)
+      if (lookupDown()) return
+      const place = await placeVenue(v.postcode, v.city)
+      if (place.problem) {
+        venueProblems.set(key, { message: place.problem.message, at: Date.now() })
+        problems.set(v.id, place.problem.message)
+      } else if (place.at) {
+        // only if the venue is still as it was looked up (an edit at the same moment does its own check)
+        await db.update(venues).set({ lat: place.at.lat, lng: place.at.lng }).where(and(eq(venues.id, v.id), isNull(venues.lat), eq(venues.postcode, v.postcode), eq(venues.city, v.city)))
+      }
+    }),
+  )
+  return problems
+}
+
 export const providerVenuesRouter = createTRPCRouter({
+  // `located`: on the map (its town checked); `problem`: why a venue not on the map can't be placed, when that is known
   list: orgProcedure('provider.cohorts.view').query(async ({ ctx, input }) => {
+    const problems = await recheckVenues(ctx.db, input.organisationId).catch(() => new Map<string, string>())
     // `used`: dates that have ever used the venue (any, past or cancelled): such a venue can be archived but not deleted
     const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number; used: number }>(sql`
       select v.id, v.name, v.street, v.city, v.postcode, v.active, v.lat is not null located,
-             (select count(*)::int from public.cohorts k where k.venue_id = v.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming,
+             (select count(*)::int from public.cohorts k where k.venue_id = v.id and k.cancelled_at is null and k.ends_on >= ${today()}::date) upcoming,
              (select count(*)::int from public.cohorts k where k.venue_id = v.id) used
       from public.venues v where v.organisation_id = ${input.organisationId}::uuid order by v.active desc, v.name`)
-    return rows
+    return rows.map((r) => ({ ...r, problem: r.located ? null : (problems.get(r.id) ?? null) }))
   }),
 
   save: orgProcedure('provider.cohorts.edit')
@@ -91,10 +140,12 @@ export const providerVenuesRouter = createTRPCRouter({
       await refuseTwin(ctx.db)
       // look the place up when the postcode or the town is new or changed: the postcode must be in use and the town a UK place near
       // it (lib/postcode.mts placeVenue), since the town becomes a public town page
+      // If postcodes.io can't be asked, the venue is saved without a map point (`unchecked`): its town is checked again later
+      // (recheckVenues), and until then no public town page uses it.
       const same = before && before.postcode === postcode && before.city.trim().toLowerCase() === input.city.trim().toLowerCase() && before.lat !== null
-      const place = same ? { at: { lat: before.lat!, lng: before.lng! }, problem: null } : await placeVenue(postcode, input.city)
+      const place = same ? { at: { lat: before.lat!, lng: before.lng! }, problem: null, unchecked: false } : await placeVenue(postcode, input.city)
       if (place.problem) throw new TRPCError({ code: 'BAD_REQUEST', message: place.problem.message, cause: Object.assign(new Error('venue place'), { field: place.problem.field }) })
-      const where = place.at
+      const where = place.unchecked ? null : place.at
       const values = { name: input.name, street: input.street, city: input.city, postcode, lat: where?.lat ?? null, lng: where?.lng ?? null, updatedAt: new Date() }
       return ctx.db.transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`readtraining.venues:${input.organisationId}`}))`)
@@ -103,7 +154,7 @@ export const providerVenuesRouter = createTRPCRouter({
           ? await tx.update(venues).set(values).where(eq(venues.id, before.id)).returning({ id: venues.id })
           : await tx.insert(venues).values({ ...values, organisationId: input.organisationId }).returning({ id: venues.id })
         await log(tx, ctx, input.organisationId, before ? 'venue.updated' : 'venue.created', 'venue', v.id, { name: input.name })
-        return { id: v.id, located: Boolean(where) }
+        return { id: v.id, located: Boolean(where), unchecked: place.unchecked }
       })
     }),
 
@@ -173,12 +224,12 @@ const cohortFields = z.object({
     .string()
     .trim()
     .max(300)
-    .refine((v) => v === '' || isMeetingLink(v), 'Use the full https link to a Zoom, Microsoft Teams or Google Meet meeting.')
+    .refine((v) => v === '' || isMeetingLink(v), MEETING_LINK_ERROR)
     .nullable()
     .optional(),
   capacity: z.number().int().min(1, 'Allow at least 1 place.').max(200, 'Allow up to 200 places.'),
-  pricePence: z.number().int().min(1, 'Enter a price.').max(10000000),
-  wasPricePence: z.number().int().max(10000000).nullable().optional(),
+  pricePence: z.number().int().min(1, 'Enter a price.').max(10000000, 'Enter a price of £100,000 or less.'),
+  wasPricePence: z.number().int().max(10000000, 'Enter a “was” price of £100,000 or less.').nullable().optional(),
   details: z.string().trim().max(500, 'Keep the details to 500 characters or fewer.').nullable().optional(),
   tutorUserId: z.string().uuid().nullable().optional(),
   bookable: z.boolean().optional(),
@@ -211,28 +262,33 @@ async function refuseClash(tx: Tx, courseId: number, venueId: string | null, ses
       }
 }
 
+// a date's tutor is someone on the provider's team who has joined
+async function refuseNotOnTeam(db: Parameters<typeof ownCourse>[0], organisationId: string, userId: string) {
+  const [m] = await db
+    .select({ userId: organisationMembers.userId })
+    .from(organisationMembers)
+    .where(and(eq(organisationMembers.organisationId, organisationId), eq(organisationMembers.userId, userId), eq(organisationMembers.status, 'active')))
+  if (!m) throw bad('Choose a tutor from your team (someone who has joined).', 'tutorUserId')
+}
+
 // checks a cohort against its course and provider; returns the values to save
 // keepVenueId: the venue the dates already have (it stays allowed if it has since been archived)
 async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keepVenueId: string | null = null) {
   if (method !== 'classroom' && method !== 'live-online') throw bad('Only classroom and live online courses have dates. Self-paced courses start any time.')
   const sessions = [...input.sessions].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
-  if (sessions.some((s) => daysBetween(today(), s.end) > MAX_AHEAD_DAYS)) throw bad('Dates can be up to 3 years ahead.')
-  if (input.wasPricePence != null && input.wasPricePence <= input.pricePence) throw bad('The “was” price must be higher than the price.')
+  if (sessions.some((s) => daysBetween(today(), s.end) > MAX_AHEAD_DAYS)) throw bad('Dates can be up to 3 years ahead.', 'sessions')
+  if (input.wasPricePence != null && input.wasPricePence <= input.pricePence) throw bad('The “was” price must be higher than the price.', 'wasPrice')
   let venueId: string | null = null
   if (method === 'classroom') {
-    if (!input.venueId) throw bad('Choose the venue.')
+    if (!input.venueId) throw bad('Choose the venue.', 'venueId')
     const [v] = await db.select({ id: venues.id, active: venues.active }).from(venues).where(and(eq(venues.id, input.venueId), eq(venues.organisationId, organisationId)))
-    if (!v) throw bad('Choose one of your venues.')
-    if (!v.active && input.venueId !== keepVenueId) throw bad('This venue is archived. Choose another, or bring it back in Settings › Venues.')
+    if (!v) throw bad('Choose one of your venues.', 'venueId')
+    if (!v.active && input.venueId !== keepVenueId) throw bad('This venue is archived. Choose another, or bring it back in Settings › Venues.', 'venueId')
     venueId = v.id
   }
-  if (input.tutorUserId) {
-    const [m] = await db
-      .select({ userId: organisationMembers.userId })
-      .from(organisationMembers)
-      .where(and(eq(organisationMembers.organisationId, organisationId), eq(organisationMembers.userId, input.tutorUserId), eq(organisationMembers.status, 'active')))
-    if (!m) throw bad('Choose a tutor from your team (someone who has joined).')
-  }
+  // a live online date needs its joining link, as a classroom date needs its venue: learners can't take part without it
+  if (method === 'live-online' && !input.joinUrl) throw bad('Enter the joining link for these dates.', 'joinUrl')
+  if (input.tutorUserId) await refuseNotOnTeam(db, organisationId, input.tutorUserId)
   return {
     method,
     sessions,
@@ -278,7 +334,7 @@ export const providerCohortsRouter = createTRPCRouter({
           and(
             eq(courses.organisationId, input.organisationId),
             input.courseId ? eq(cohorts.courseId, input.courseId) : undefined,
-            input.when === 'past' ? sql`${cohorts.endsOn} < current_date` : input.when === 'upcoming' ? sql`${cohorts.endsOn} >= current_date` : undefined,
+            input.when === 'past' ? sql`${cohorts.endsOn} < ${today()}::date` : input.when === 'upcoming' ? sql`${cohorts.endsOn} >= ${today()}::date` : undefined,
             own ? eq(cohorts.tutorUserId, ctx.user.id) : undefined,
           ),
         )
@@ -323,6 +379,8 @@ export const providerCohortsRouter = createTRPCRouter({
         if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
         if (now.bookable === input.bookable) throw new TRPCError({ code: 'CONFLICT', message: input.bookable ? 'Bookings are already on for these dates.' : 'Bookings are already off for these dates.' })
+        // (dates saved before the joining link was required may have none)
+        if (input.bookable && now.method === 'live-online' && !now.joinUrl) throw bad('Add the joining link to these dates before turning bookings on: choose Edit.')
         await tx.update(cohorts).set({ bookable: input.bookable, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, input.bookable ? 'cohort.bookings_on' : 'cohort.bookings_off', 'cohort', cohort.id)
         return { ok: true }
@@ -347,29 +405,50 @@ export const providerCohortsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const values = await cohortValues(ctx.db, input.organisationId, course.method, input)
-      if (values.startsOn < today()) throw bad('New dates can’t start in the past.')
-      return ctx.db.transaction(async (tx) => {
+      if (values.startsOn < today()) throw bad('New dates can’t start in the past.', 'sessions')
+      const made = await ctx.db.transaction(async (tx) => {
         await refuseClash(tx, course.id, values.venueId, values.sessions)
         const [c] = await tx.insert(cohorts).values({ ...values, courseId: course.id, createdBy: ctx.user.id }).returning({ id: cohorts.id })
         await log(tx, ctx, input.organisationId, 'cohort.created', 'cohort', c.id, { courseId: course.id, startsOn: values.startsOn })
         return { id: c.id }
       })
+      // a venue whose town couldn't be checked when it was saved is tried again now
+      if (values.venueId) await recheckVenues(ctx.db, input.organisationId, values.venueId).catch(() => {})
+      return made
     }),
 
   update: orgProcedure('provider.cohorts.edit')
-    .input(cohortFields.extend({ cohortId: z.string().uuid() }))
+    .input(cohortFields.extend({ cohortId: z.string().uuid(), seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
       const values = await cohortValues(ctx.db, input.organisationId, course.method, input, cohort.venueId)
-      if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.')
-      return ctx.db.transaction(async (tx) => {
+      if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.', 'sessions')
+      await ctx.db.transaction(async (tx) => {
         const now = await lockCohort(tx, cohort.id)
         if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have just been cancelled, so they can’t be changed. Reload the page.' })
+        if (input.seen && now.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: DATES_CHANGED })
         await refuseClash(tx, course.id, values.venueId, values.sessions, cohort.id)
         await tx.update(cohorts).set({ ...values, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id })
+      })
+      if (values.venueId) await recheckVenues(ctx.db, input.organisationId, values.venueId).catch(() => {})
+      return { ok: true }
+    }),
+
+  // Change only the tutor (the list's tutor menu), so nothing else on the dates is sent again or overwritten.
+  setTutor: orgProcedure('provider.cohorts.edit')
+    .input(z.object({ cohortId: z.string().uuid(), tutorUserId: z.string().uuid().nullable() }))
+    .mutation(async ({ ctx, input }) => {
+      const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
+      if (input.tutorUserId) await refuseNotOnTeam(ctx.db, input.organisationId, input.tutorUserId)
+      return ctx.db.transaction(async (tx) => {
+        const now = await lockCohort(tx, cohort.id)
+        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
+        await tx.update(cohorts).set({ tutorUserId: input.tutorUserId, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
+        await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id, fields: ['tutor'] })
         return { ok: true }
       })
     }),

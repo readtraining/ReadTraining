@@ -10,6 +10,10 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 
 export const GENERAL = "General";
 
+// Where a learner can leave a review that is published: our Trustpilot page (where most of the reviews shown here were first
+// posted). The site itself publishes no reviews sent to it.
+const REVIEW_US = "https://uk.trustpilot.com/review/readtraining.co.uk";
+
 export const customerReviews = (reviews = []) => {
   const t = trustFigures();
   const list = reviews
@@ -55,14 +59,14 @@ export const customerReviews = (reviews = []) => {
       items: [
         { q: "Where do these reviews come from?", a: "They are reviews of Read Training, copied here word for word from the review sites they were first posted on, such as Google and Trustpilot." },
         { q: "Do you show every review?", a: "No. This page shows a selection. Our rating of {ratingOutOf} counts all {reviews} reviews on the site it comes from, not only these." },
-        { q: "How can I leave a review?", a: "After your course, tell us how it went by sending us a message. We read every one." },
+        { q: "How can I leave a review?", a: `After your course, review us on [Trustpilot](${REVIEW_US}). We read every one.` },
       ],
     },
     cta: {
       title: "Ready to find your course?",
       text: "Compare accredited courses, dates and prices from providers across the UK.",
       primary: { label: "Find courses", href: CATALOGUE_HREF },
-      secondary: { label: "Leave a review", href: "/contact-us?topic=other#contact-form" },
+      secondary: { label: "Review us on Trustpilot", href: REVIEW_US },
     },
   };
 };

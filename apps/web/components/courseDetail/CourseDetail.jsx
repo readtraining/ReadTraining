@@ -28,6 +28,9 @@ import { getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
+// an exam unit's name as it is matched to a guide's questions (data/courseGuides.js): case, spaces and punctuation aside
+const unitKey = (name) => String(name).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 // Same sections, in the same order, as the live Hurak course page, in our own design:
 // features > learning options > training providers > overview > what you will learn > course content > requirements > exams >
 // who it's for > trust points > the provider's terms > FAQs > more courses > need help > footer. The booking card is sticky on
@@ -42,14 +45,21 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
   const prices = course.sessions.map((s) => s.price);
   const guide = courseGuides.find((g) => matchesPick(course, g.pick)) || null;
   const { requirements } = course;
-  const exams = course.exams && guide?.exams ? { ...course.exams, ...guide.exams } : course.exams;
-  const columns = exams?.questions ? exams.columns : ["Unit", "Pass mark", "Duration"];
+  // the guide's exam intro, and its number of questions per unit when every exam row the provider wrote is one of the guide's
+  // units (matched by name); a row it doesn't know leaves the column out, so no unit ever shows another unit's number
+  const questionsOf = (rows) => {
+    const byUnit = new Map(Object.entries(guide?.exams?.questions || {}).map(([unit, n]) => [unitKey(unit), n]));
+    const counts = byUnit.size ? rows.map((r) => byUnit.get(unitKey(r.unit))) : [];
+    return counts.length && counts.every((c) => c != null) ? counts : null;
+  };
+  const exams = course.exams && guide?.exams ? { ...course.exams, intro: guide.exams.intro ?? course.exams.intro, questions: questionsOf(course.exams.rows) } : course.exams;
+  const columns = exams?.questions ? guide.exams.columns : ["Unit", "Pass mark", "Duration"];
 
   const navSections = [
     { id: "learning-options", label: "Learning options" },
     { id: "overview", label: "Overview" },
     ...(course.modules.length ? [{ id: "content", label: "Course content" }] : []),
-    { id: "requirements", label: "Requirements" },
+    ...(requirements ? [{ id: "requirements", label: "Requirements" }] : []),
     ...(guide?.packages ? [{ id: "packages", label: "Packages" }] : []),
     ...(guide?.business ? [{ id: "business", label: "For business" }] : []),
     ...(guide?.licence ? [{ id: "licence", label: "Your licence" }] : []),
@@ -151,6 +161,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
 
                   <TickCard id="rt-cg-incl-h" title={guide?.included?.title} items={guide?.included?.items} />
 
+                  {requirements && (
                   <section className="rt-cd__sec" id="requirements" aria-labelledby="rt-cd-req-h">
                     <h2 id="rt-cd-req-h">{requirements.title}</h2>
                     <LongBody>
@@ -162,6 +173,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
                       )}
                     </LongBody>
                   </section>
+                  )}
 
                   {exams && (
                     <section className="rt-cd__sec" aria-labelledby="rt-cd-exams-h">
@@ -247,7 +259,8 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(courseLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(crumbLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
+      {/* an FAQPage with no questions is invalid structured data */}
+      {course.faqs.length > 0 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />}
     </div>
   );
 }

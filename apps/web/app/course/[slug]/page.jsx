@@ -3,7 +3,7 @@ import CourseDetail from "@/components/courseDetail/CourseDetail";
 import { loadCoursePage } from "@/lib/catalogueServer";
 import { courseDetailFor } from "@/lib/courseDetailServer";
 import { coursePath } from "@/lib/routes";
-import { SITE_URL } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // The course details page (/course/<slug>): a live course (API catalogue.course), with up to three more courses from its
@@ -14,21 +14,24 @@ async function findCourse(slug) {
   return page ? courseDetailFor(page) : null;
 }
 
+// What search engines are told: a private or unlisted course (opened from its address only) isn't indexed; a provider's own
+// course on a shared page names that page as the one to index (canonical), as it is one of the dates the shared page lists and
+// isn't in the search or the sitemap itself.
 export async function generateMetadata(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
-  const course = (await findCourse(slug))?.course;
+  const page = await loadCoursePage(slug);
+  const course = page && (await courseDetailFor(page)).course;
   if (!course) return { title: "Course not found | ReadTraining" };
-  const path = coursePath(course.slug);
+  const indexed = page.isPublic !== false && page.listed !== false; // (an answer saved before the API sent them: indexed)
+  const path = coursePath(indexed && page.parent ? page.parent.slug : course.slug);
   const title = `${course.seoTitle || course.title} | ReadTraining`;
   const description = course.seoDescription || course.summary;
+  const meta = pageMetadata({ title, description, path, noindex: !indexed });
   return {
-    metadataBase: new URL(SITE_URL),
-    title,
-    description,
-    alternates: { canonical: path },
-    openGraph: { type: "website", siteName: "ReadTraining", title, description, url: path, images: course.imageSrc ? [{ url: course.imageSrc, width: 440, height: 248, alt: course.title }] : undefined },
-    twitter: { card: "summary_large_image", title, description },
+    ...meta,
+    openGraph: { ...meta.openGraph, images: course.imageSrc ? [{ url: course.imageSrc, width: 440, height: 248, alt: course.title }] : undefined },
+    twitter: { ...meta.twitter, card: "summary_large_image" },
   };
 }
 

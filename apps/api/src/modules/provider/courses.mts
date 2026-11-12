@@ -25,7 +25,7 @@ import {
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { refuseRetired } from '../../lib/retired.mjs'
+import { refuseRetired, retiredEntries } from '../../lib/retired.mjs'
 import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
@@ -51,16 +51,56 @@ const slugRef = z.string().trim().max(80).regex(/^[a-z0-9-]*$/)
 // the content an admin checks before it shows on a live course
 export const REVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'units', 'exams', 'faqs'] as const
 
-// A pass mark: a percentage up to 100%, a score that isn't more than its total ("26 out of 40", "26/40"), or words ("Pass or
-// fail"). The editor checks the same (passMarkProblem in ProviderCourseEditor.jsx). Returns what is wrong, or ''.
+// A pass mark: a percentage up to 100%, a score that isn't more than its total ("26 out of 40", "26/40", "26 of 40 marks", decimals
+// too), or words ("Pass or fail"). A bare "of" is a score only when the pass mark ends with it ("26 of 40", "26 of 40 marks"), so
+// "Level 3 of 2 sections" is words. The editor checks the same (passMarkProblem in ProviderCourseEditor.jsx). Returns what is
+// wrong, or ''.
+const NUM = String.raw`(\d+(?:\.\d+)?)`
+const SCORE = new RegExp(String.raw`${NUM}\s*(?:out of|/)\s*${NUM}`)
+const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|points?|questions?|answers?))?\s*\.?$`)
 export function passMarkProblem(text: string) {
   const t = text.trim().toLowerCase()
   if (!t) return ''
   const pct = t.match(/(\d+(?:\.\d+)?)\s*%/)
   if (pct && Number(pct[1]) > 100) return 'A percentage pass mark can’t be over 100%.'
-  const score = t.match(/(\d+)\s*(?:out of|\/|of)\s*(\d+)/)
+  const score = t.match(SCORE) || t.match(SCORE_OF)
   if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return 'The pass mark can’t be more than the total, like 26 out of 40.'
   return ''
+}
+
+// A link to one YouTube or Vimeo video as its player's address, or null (a channel, a playlist, another site). The course page plays
+// only what this returns, with the same rules (videoEmbed in apps/web/lib/catalogueData.js): keep the two the same, so every link
+// a provider can save plays on the page.
+const YT_ID = /^[\w-]{11}$/
+const VIMEO_ID = /^\d{1,12}$/
+const VIMEO_HASH = /^[\da-f]{6,20}$/i
+export function videoEmbed(link: string): string | null {
+  let url: URL
+  try {
+    url = new URL(link.trim())
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'https:') return null
+  const host = url.hostname.toLowerCase().replace(/^(www|m)\./, '')
+  const path = url.pathname.split('/').filter(Boolean)
+  if (host === 'youtube.com' || host === 'youtu.be') {
+    const id = host === 'youtu.be' ? (path.length === 1 ? path[0] : null) : path[0] === 'watch' && path.length === 1 ? url.searchParams.get('v') : ['embed', 'shorts', 'live', 'v'].includes(path[0]) && path.length === 2 ? path[1] : null
+    // "videoseries" is 11 letters too: /embed/videoseries?list= is a playlist
+    return id && YT_ID.test(id) && id !== 'videoseries' ? `https://www.youtube-nocookie.com/embed/${id}` : null
+  }
+  let id: string | null = null
+  let hash = url.searchParams.get('h')
+  if (host === 'player.vimeo.com') id = path[0] === 'video' && path.length === 2 ? path[1] : null
+  else if (host === 'vimeo.com') {
+    if (path.length <= 2 && VIMEO_ID.test(path[0] || '')) [id, hash] = [path[0], path[1] || hash]
+    else if (path[0] === 'video' && path.length === 2) id = path[1]
+    else if (path[0] === 'channels' && path.length === 3) id = path[2]
+    else if (['showcase', 'album'].includes(path[0]) && path[2] === 'video' && path.length === 4) id = path[3]
+    else if (path[0] === 'groups' && path[2] === 'videos' && path.length === 4) id = path[3]
+  }
+  if (!id || !VIMEO_ID.test(id) || (hash && !VIMEO_HASH.test(hash))) return null
+  return `https://player.vimeo.com/video/${id}${hash ? `?h=${hash}` : ''}`
 }
 
 export const content = {
@@ -79,7 +119,7 @@ export const content = {
     .string()
     .trim()
     .max(300)
-    .refine((v) => v === '' || /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/\S+$/.test(v), 'Use a YouTube or Vimeo link (https).')
+    .refine((v) => v === '' || videoEmbed(v) !== null, 'Use a link to one YouTube or Vimeo video, starting https://')
     .optional()
     .nullable(),
   units: z.array(z.object({ title: line(120, 'unit title').min(1, 'Give every unit a title.'), body: text(2000, 'unit text') })).max(40, 'Add up to 40 units.'),
@@ -98,7 +138,7 @@ export const settings = {
   seoTitle: text(60, 'search title'),
   seoDescription: text(320, 'search description'),
   seoKeywords: z.array(line(40, 'keyword').min(1)).max(20, 'Add up to 20 keywords.'),
-  pricePence: z.number().int().min(0).max(10000000).nullable(),
+  pricePence: z.number().int().min(0).max(10000000, 'Enter a price of £100,000 or less.').nullable(),
   skillSaver: z.boolean(),
   isPublic: z.boolean(),
   listed: z.boolean(),
@@ -108,6 +148,11 @@ export const settings = {
 }
 const PAGE_ONLY = new Set(['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'videoUrl', 'seoTitle', 'seoDescription', 'seoKeywords'])
 const PRICING = new Set(['pricePence', 'skillSaver'])
+// Settings our team doesn't check at approval (approval checks the shared page's subject itself): changing only these leaves a
+// course that is waiting for review where it is. Anything else (its wording, pictures, price, how it is taught) takes it back.
+const KEEPS_REVIEW = new Set(['seoTitle', 'seoDescription', 'seoKeywords', 'isPublic', 'listed', 'parentId'])
+// today's date in the UK: dates are UK days (the database's current_date is UTC, still yesterday for an hour after midnight in summer)
+export const ukToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
 
 export const bad = (message: string, field?: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: field ? Object.assign(new Error(message), { field }) : undefined })
 export const notFound = () => new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
@@ -239,7 +284,7 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
       select (select slug from public.categories where id = ${course.categoryId}) category,
              (select slug from public.subcategories where id = ${course.subcategoryId}) subcategory,
              (select slug from public.topics where id = ${course.topicId}) topic`),
-    db.execute<{ upcoming: number; total: number }>(sql`select count(*) filter (where cancelled_at is null and ends_on >= current_date)::int upcoming, count(*)::int total from public.cohorts where course_id = ${course.id}`),
+    db.execute<{ upcoming: number; total: number }>(sql`select count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date)::int upcoming, count(*)::int total from public.cohorts where course_id = ${course.id}`),
     db
       .select({ status: courseRevisions.status, note: courseRevisions.note, decidedAt: courseRevisions.decidedAt })
       .from(courseRevisions)
@@ -267,6 +312,8 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     upcomingCohorts: dates?.upcoming ?? 0,
     cohortCount: dates?.total ?? 0,
     missing: await missing(db, course),
+    // "Name (category)" for each catalogue entry the course is filed under that is no longer offered (it can't go live under one)
+    retired: await retiredEntries(db, course.id),
   }
 }
 
@@ -310,10 +357,12 @@ export async function addCourseImage(db: typeof Db, course: Course, path: string
     await removeMedia([path])
     throw bad(size ? `This picture is ${size.width} × ${size.height} pixels. Choose one at least ${width} × ${height} pixels.` : 'We couldn’t read that picture. Choose a JPG, PNG, WebP or GIF file.')
   }
-  const [n] = await db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, course.id))
-  if (n.n >= 10) throw bad('A course can have up to 10 images.')
   try {
     return await db.transaction(async (tx) => {
+      // counted under the course's row lock, so two uploads at the same moment (two tabs) can't both be the tenth
+      await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+      const [n] = await tx.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, course.id))
+      if (n.n >= 10) throw bad('A course can have up to 10 images. Remove one before adding another.')
       const [img] = await tx.insert(courseImages).values({ courseId: course.id, position: n.n, path, alt: alt || null }).returning({ id: courseImages.id })
       await onLog(tx)
       await touchCourse(tx, course.id)
@@ -427,7 +476,7 @@ export const providerCoursesRouter = createTRPCRouter({
              (select slug from public.subcategories where id = c.subcategory_id) subcategory,
              (select p.title from public.courses p where p.id = c.parent_id) parent,
              (select i.path from public.course_images i where i.course_id = c.id order by i.position limit 1) cover,
-             (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming,
+             (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) upcoming,
              exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
       from public.courses c
       where c.organisation_id = ${input.organisationId}::uuid and c.kind = 'provider'
@@ -562,12 +611,19 @@ export const providerCoursesRouter = createTRPCRouter({
       }
 
       const result = await ctx.db.transaction(async (tx) => {
-        const status = await lockStatus(tx, courseId)
+        const now = await lockCourse(tx, courseId)
+        if (!now) throw notFound()
+        const status = now.status
         // saved over a newer version (another tab, or someone else): refused, nothing written
         await refuseIfChanged(tx, courseId, seen)
         const isLive = status === 'live' || status === 'paused'
+        // a live self-paced course shows its price: switching a live course to self-paced (or clearing its price) needs one
+        const methodAfter = directSet.method ?? now.method
+        const priceAfter = directSet.pricePence !== undefined ? directSet.pricePence : now.pricePence
+        if (isLive && methodAfter === 'self-paced' && priceAfter === null) throw bad('Enter the price per learner: a live self-paced course needs one.', 'price')
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
-        const backToDraft = await leaveReview(tx, ctx, organisationId, { id: courseId, status })
+        // only a change our team checks takes a waiting course back to a draft (search and privacy settings leave it waiting)
+        const backToDraft = keys.some((k) => !KEEPS_REVIEW.has(k)) && (await leaveReview(tx, ctx, organisationId, { id: courseId, status }))
         let pendingChange = false
         let newChange = false
         if (Object.keys(reviewed).length) {
@@ -660,6 +716,9 @@ export const providerCoursesRouter = createTRPCRouter({
         await refuseIfChanged(tx, course.id, input.seen) // what is sent is what this editor showed
         const gaps = await missing(tx, now)
         if (gaps.length) throw bad(`Add ${gaps.join(', ')} before sending it for approval.`)
+        // filed under something no longer offered, it could never be approved: said now, not at approval
+        const retired = await retiredEntries(tx, course.id)
+        if (retired.length) throw bad(`${retired.join(', ')} ${retired.length === 1 ? 'is' : 'are'} no longer offered on ReadTraining. Choose another in the course editor, save, then send it for approval.`)
         await tx.update(courses).set({ status: 'pending', submittedAt: new Date(), statusNote: null, updatedAt: new Date() }).where(eq(courses.id, course.id))
         await log(tx, ctx, input.organisationId, 'course.submitted', course.id)
       })

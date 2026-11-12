@@ -75,7 +75,7 @@ function Changes({ review, onSent }) {
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
   const formRef = useRef(null);
-  const canSend = can("provider.profile.edit"); // the rule organisations.resubmit checks
+  const canSend = can("provider.review.send"); // the rule organisations.resubmit checks: the owner and admins
   const c = copy.send;
 
   const send = (e) => {

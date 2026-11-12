@@ -1,4 +1,5 @@
 import { CATALOGUE_HREF } from "@/lib/routes";
+import { contactHref } from "@/lib/forms";
 // The customer account (/account): dashboard, bookings (history, details, cancellation request), saved courses and profile.
 // Structured as the large booking sites do it and as Baymard's account research recommends: a short menu of a few clear pages,
 // the next booking first, and every booking task (details, receipt, change of date, cancellation) one step from the booking.
@@ -86,7 +87,7 @@ export const account = {
         { label: "Change a course date", href: "/help-centre/changes-and-refunds/change-your-course-date" },
         { label: "Cancel a booking", href: "/help-centre/changes-and-refunds/cancel-a-booking" },
         { label: "Get your certificate", href: "/help-centre/booking-a-course/get-your-certificate" },
-        { label: "Contact us", href: "/contact-us?topic=booking#contact-form" },
+        { label: "Contact us", href: contactHref("booking") },
       ],
     },
   },

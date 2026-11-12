@@ -7,49 +7,61 @@ import CataloguePagination from "@/components/courses/CataloguePagination";
 import { PROVIDERS_HREF, PROVIDERS_PAGE_SIZE } from "@/lib/providers";
 import { EmptyState } from "@/components/states/States";
 
-// The providers directory: a search (name, town, subject or headline, as you type; `?q=`), the count and a "Show all" toggle, the
-// providers as cards, then the page links. `?page=` is the page and `?show=all` lists every provider at once (as Hurak's "Show
-// all"), so a page of the list can be shared. The address is written with the History API, which Next.js keeps in sync with
-// useSearchParams, so changing page does not reload.
+// The address of one view of the directory: the search (`q`), and the page (`page`, from 2) or every provider at once
+// (`show=all`, as Hurak's "Show all"), so any view can be shared, refreshed or come back to with Back.
+const viewHref = ({ q = "", page = 1, all = false }) => {
+  const p = new URLSearchParams();
+  if (q) p.set("q", q);
+  if (all) p.set("show", "all");
+  else if (page > 1) p.set("page", String(page));
+  const s = p.toString();
+  return s ? `${PROVIDERS_HREF}?${s}` : PROVIDERS_HREF;
+};
+
+// The providers directory: a search (name, town, subject or headline, as you type), the count and a "Show all" toggle, the
+// providers as cards, then the page links. The page is rendered for each request (app/providers/page.jsx), so it arrives with the
+// view its address asks for. The address is written with the History API, which Next.js keeps in sync with useSearchParams, so
+// changing page does not reload.
 export default function ProviderDirectory({ providers: all }) {
   const params = useSearchParams();
   const resultsRef = useRef(null);
-  const [q, setQ] = useState(params.get("q") || "");
-  // the search is kept in the address (replaced, not added to the history) and starts again at page 1
+  const urlQ = (params.get("q") || "").trim().slice(0, 80);
+  const showAll = params.get("show") === "all";
+  const [q, setQ] = useState(urlQ);
+  // Back or Forward to another search: the box shows it
+  useEffect(() => setQ((typed) => (typed.trim() === urlQ ? typed : urlQ)), [urlQ]);
+  // a new search goes into the address (replaced, not added to the history), from page 1, keeping "Show all"
   useEffect(() => {
-    const t = setTimeout(() => {
-      const next = new URLSearchParams();
-      if (q.trim()) next.set("q", q.trim());
-      const url = next.toString() ? `${PROVIDERS_HREF}?${next}` : PROVIDERS_HREF;
-      if (url !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(null, "", url);
-    }, 300);
+    const words = q.trim();
+    if (words === urlQ) return;
+    const t = setTimeout(() => window.history.replaceState(null, "", viewHref({ q: words, all: showAll })), 300);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [q, urlQ, showAll]);
+
   const needle = q.trim().toLowerCase();
-  const providers = needle ? all.filter((p) => [p.name, p.city, p.headline, ...p.subjects].join(" ").toLowerCase().includes(needle)) : all;
+  // a provider matches on its name, where it is based, its headline, its subjects or a town it runs dates in
+  const providers = needle ? all.filter((p) => [p.name, p.city, p.headline, ...p.subjects, ...p.towns].join(" ").toLowerCase().includes(needle)) : all;
 
   const totalPages = Math.max(1, Math.ceil(providers.length / PROVIDERS_PAGE_SIZE));
-  const showAll = params.get("show") === "all";
-  const page = showAll ? 1 : Math.min(Math.max(parseInt(params.get("page"), 10) || 1, 1), totalPages);
+  // ?page= is a whole number from 1; anything else is page 1, and one past the end is the last page
+  const asked = Number(params.get("page"));
+  const page = showAll || !Number.isInteger(asked) || asked < 1 ? 1 : Math.min(asked, totalPages);
   const shown = showAll ? providers : providers.slice((page - 1) * PROVIDERS_PAGE_SIZE, page * PROVIDERS_PAGE_SIZE);
 
-  const hrefFor = (p) => (p === 1 ? PROVIDERS_HREF : `${PROVIDERS_HREF}?page=${p}`);
-  const scrollToResults = () => {
+  const hrefFor = (p) => viewHref({ q: q.trim(), page: p });
+  const goToPage = (p) => {
+    window.history.pushState(null, "", hrefFor(p));
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     resultsRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   };
-  const goToPage = (p) => {
-    window.history.pushState(null, "", hrefFor(p));
-    scrollToResults();
-  };
-  const toggleAll = () => window.history.pushState(null, "", showAll ? PROVIDERS_HREF : `${PROVIDERS_HREF}?show=all`);
+  const toggleAll = () => window.history.pushState(null, "", viewHref({ q: q.trim(), all: !showAll }));
 
   return (
     <div ref={resultsRef} className="rt-prov__results">
       <form className="rt-cat-search rt-prov__search" role="search" onSubmit={(e) => e.preventDefault()} noValidate>
         <div className="rt-cat-search__field">
           <i className="icon-search text-16 text-light-1" aria-hidden="true"></i>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by provider, town or subject" aria-label="Search providers by name, town or subject" autoComplete="off" />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={80} placeholder="Search by provider, town or subject" aria-label="Search providers by name, town or subject" autoComplete="off" />
         </div>
       </form>
       <div className="rt-prov__bar">

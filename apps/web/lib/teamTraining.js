@@ -1,24 +1,24 @@
 // All the team / group training wording in ONE place. The booking card, the Team training card, the "Interested in staff training?"
 // box, the mobile buy bar and the "Buying for your team?" trust item all read from here, so the text stays identical everywhere.
 // Every team action links to the same quote page with the current course (see quoteHref in BookingProvider).
+// In-house training is arranged with a provider case by case, so nothing here promises a discount, a venue or tailored content.
 export const TEAM = {
   note: "For groups of 6 or more at your workplace",
   short: "At your workplace, 6 or more", // the header menu's In-house line
-  line: "In-house training is arranged on a date and at a place that suit your team. Choose Get a quote and we will confirm availability.",
+  line: "In-house training can be arranged with a provider at your workplace, on a date that suits your team. Ask us and we'll check availability and the price.",
   quoteText: "Contact us for a quote",
-  cardTitle: "Team training solutions",
+  cardTitle: "Team training",
   barTitle: "In-house training",
   cta: "Get a quote",
   bullets: [
-    "Book more, pay less: bulk discounts available.",
-    "Choose from our centres or train on-site.",
-    "Train your team together on a date that suits you.",
-    "Customisable course content tailored to your workplace.",
-    "Expert-led, hands-on training delivered at your location.",
+    "Your team trains together at your workplace.",
+    "On a date that suits you, if a provider can run it.",
+    "For groups of 6 or more.",
+    "Ask us and we'll check availability and the price.",
   ],
   staff: {
     title: "Interested in staff training?",
-    text: "Ask us about exclusive discounts on group bookings.",
+    text: "Ask us about training a group of staff at your workplace. We'll check availability and the price with a provider.",
     link: "Get a group quote",
   },
   trust: {

@@ -6,6 +6,7 @@ import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
 import { bookableModes, cheapestMode, firstSession, formatShortDate } from "@/lib/courses";
+import { MODE_METHOD } from "@/lib/courseModes";
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
@@ -20,12 +21,13 @@ const formatPrice = (n) => gbp.format(Number(n) || 0); // always two decimals: Â
 // One course row: image (with the save heart) | details | price + actions. Every field except the title is optional and simply
 // not shown when missing; a course with no dates yet says so where the price goes and links to its page instead of the basket.
 // A real course's dates are asked for (API catalogue.course) when Add to basket is pressed. `onNotify({ message, href?, label? })`
-// shows a toast.
-export default function CatalogueCourseCard({ course, index = 0, onNotify, distance = "" }) {
+// shows a toast. `listName`: the page's name, for analytics. `mode`: a booking mode (lib/courseModes.js) the course page opens on,
+// when the list is for one way of study (/courses/classroom).
+export default function CatalogueCourseCard({ course, index = 0, onNotify, distance = "", listName = "All courses", mode = "" }) {
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
   const utils = api.useUtils();
   const priced = course.price != null;
-  const href = course.detailsHref;
+  const href = course.detailsHref && mode ? `${course.detailsHref}?mode=${mode}` : course.detailsHref;
   const inBasket = isAddedToCartCourses(course.id);
   const hasDiscount = course.wasPrice > course.price;
   const discount = hasDiscount ? Math.round((1 - course.price / course.wasPrice) * 100) : 0;
@@ -43,7 +45,8 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
   };
 
   // ---- add to basket: a course always goes in with a date. The button opens the date pop-up on the study method of the card's
-  // "From" price (its cheapest date), and the visitor picks a date there or under another study method. A course that runs only
+  // "From" price (its cheapest date where the visitor is looking, `priceMethod`), and the visitor picks a date there or under
+  // another study method. A course that runs only
   // on demand has no date to choose and goes straight in.
   // States: idle > loading > added (2s) > in basket, with a "Try again" error state.
   const [status, setStatus] = useState("idle");
@@ -78,7 +81,8 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     const modes = detail ? bookableModes(detail) : [];
     if (!modes.length) return onNotify?.({ message: "We could not load the dates for this course. Please try again." });
     if (modes.length === 1 && modes[0] === "ondemand") return add(detail, firstSession(detail, "ondemand"));
-    setDates({ detail, mode: cheapestMode(detail) });
+    const priceMode = Object.keys(MODE_METHOD).find((m) => MODE_METHOD[m] === course.priceMethod);
+    setDates({ detail, mode: modes.includes(priceMode) ? priceMode : cheapestMode(detail) });
     setDatesOpen(true);
   };
   const confirmDate = (id) => {
@@ -129,7 +133,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
         <span className="rt-card__subject">{categoryName(course.subject)}</span>
         <h3 className="rt-card__title">
           {href ? (
-            <Link href={href} className="rt-card__title-link" onClick={() => trackEvent("select_item", { item_list_name: "All courses", items: [toItem(course, index)] })}>{course.title}</Link>
+            <Link href={href} className="rt-card__title-link" onClick={() => trackEvent("select_item", { item_list_name: listName, items: [toItem(course, index)] })}>{course.title}</Link>
           ) : (
             <span className="rt-card__title-link">{course.title}</span>
           )}
@@ -200,7 +204,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
             </button>
           )}
           {href ? (
-            <Link href={href} className="rt-card__btn rt-card__btn--secondary" onClick={() => trackEvent("select_item", { item_list_name: "All courses", items: [toItem(course, index)] })}>
+            <Link href={href} className="rt-card__btn rt-card__btn--secondary" onClick={() => trackEvent("select_item", { item_list_name: listName, items: [toItem(course, index)] })}>
               More details
             </Link>
           ) : (

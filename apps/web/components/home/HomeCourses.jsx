@@ -19,7 +19,7 @@ export default function HomeCourses({ groups }) {
       <div className="container">
         <h2 className="sectionTitle__title sm:text-24">Popular courses and qualifications</h2>
         <p className="sectionTitle__text mt-5">
-          Browse some of the most booked training options across security, first aid, construction and more.
+          Browse featured training options across security, first aid, construction and more.
         </p>
 
         <div className="rt-tabs mt-30">

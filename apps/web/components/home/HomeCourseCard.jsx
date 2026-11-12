@@ -21,10 +21,9 @@ export default function HomeCourseCard({ data, href = data.href, className = "co
           {[...new Set([`${data.providers} ${data.providers === 1 ? "provider" : "providers"}`, data.duration, data.method.split(" • ").length > 1 ? `${data.method.split(" • ").length} study methods` : data.method])].filter(Boolean).join(" · ")}
         </div>
 
-        {(data.popular || data.badge) && (
+        {data.badge && (
           <div className="rt-ucard__pills">
-            {data.popular && <span className="rt-pill -accent">Most booked</span>}
-            {data.badge && !data.popular && <span className="rt-pill -accent">{data.badge}</span>}
+            <span className="rt-pill -accent">{data.badge}</span>
           </div>
         )}
 
@@ -34,7 +33,7 @@ export default function HomeCourseCard({ data, href = data.href, className = "co
           ) : (
             <>
               <span className="rt-ucard__from">From</span> £{data.price.toFixed(2).replace(/\.00$/, "")}
-              {data.wasPrice && <s>£{data.wasPrice}</s>}
+              {data.wasPrice && <s><span className="rt-sr">was </span>£{data.wasPrice}</s>}
             </>
           )}
         </div>

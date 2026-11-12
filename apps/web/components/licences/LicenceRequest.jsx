@@ -33,8 +33,8 @@ function validate(v, kind) {
     if (!v.type) e.type = "Select what you need.";
     if (!v.application) e.application = "Select the type of application.";
   } else {
-    if (!v.truck) e.truck = "Select the type of truck.";
-    if (!v.experience) e.experience = "Select your experience.";
+    if (kind === "training" && !v.truck) e.truck = "Select the type of truck.";
+    if (kind === "training" && !v.experience) e.experience = "Select your experience.";
     const n = Number(v.people);
     if (!Number.isInteger(n) || n < 1) e.people = "Enter a whole number of 1 or more.";
   }
@@ -43,7 +43,7 @@ function validate(v, kind) {
   if (!v.email.trim()) e.email = "Enter your email address.";
   else if (!EMAIL_RE.test(v.email.trim())) e.email = "Enter an email address in the correct format, like name@example.com.";
   if (v.phone.replace(/\D/g, "").length < 10) e.phone = "Enter a phone number, like 07700 900 982.";
-  if (kind === "training") {
+  if (kind !== "service") {
     if (!v.postcode.trim()) e.postcode = "Enter the postcode where training is needed.";
     else if (!validPostcode(v.postcode)) e.postcode = "Enter a real postcode, like SW1A 1AA.";
   }
@@ -51,17 +51,21 @@ function validate(v, kind) {
   return e;
 }
 
-// The licence page's one pop-up (the site's dialog shell, Sheet) with one of two forms in the GOV.UK pattern:
+// The licence page's one pop-up (the site's dialog shell, Sheet) with one of three forms in the GOV.UK pattern:
 // - "service" (CSCS cards, Personal Licence): we apply for you. What you need, the type of application, your details and consent;
 //   sent, it gives a reference and says a secure payment link and the document list follow by email. Payment is not taken in the
 //   basket because the basket holds dated course places only.
 // - "training" (forklift, no course in the catalogue yet): a training request for a quote, as the course page's group quote.
-// `licence` gives the title, the service (price, choices) or training choices.
+// - "enquiry" (opened by a button with `preset.kind`: a licence's "Ask about … training" while its course has no live dates):
+//   how many people, where, and their details; titled with the button's words (`preset.title`).
+// `licence` gives the service (price, choices) or training choices.
 export default function LicenceRequest({ licence, children }) {
-  const kind = licence.service ? "service" : "training";
+  const baseKind = licence.service ? "service" : "training";
   const options = licence.service || licence.training;
   const [isOpen, setOpen] = useState(false);
-  const [v, setV] = useState(() => blank(kind));
+  const [kind, setKind] = useState(baseKind);
+  const [enquiryTitle, setEnquiryTitle] = useState("");
+  const [v, setV] = useState(() => blank(baseKind));
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle"); // idle | sending | sent | failed
   const [ref, setRef] = useState("");
@@ -73,11 +77,16 @@ export default function LicenceRequest({ licence, children }) {
   }, [status]);
 
   const open = (preset = {}) => {
-    setV((x) => (status === "sent" ? blank(kind, preset) : { ...x, type: preset.type || x.type }));
-    if (status === "sent") setStatus("idle");
+    const next = preset.kind || baseKind;
+    // a sent request, or the other form, starts again empty
+    const fresh = status === "sent" || next !== kind;
+    setKind(next);
+    setEnquiryTitle(preset.title || "");
+    setV((x) => (fresh ? blank(next, preset) : { ...x, type: preset.type || x.type }));
+    if (fresh) setStatus("idle");
     setErrors({});
     setOpen(true);
-    trackEvent("licence_request_open", { licence: licence.slug, kind });
+    trackEvent("licence_request_open", { licence: licence.slug, kind: next });
   };
   const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
   const submit = async (e) => {
@@ -114,7 +123,7 @@ export default function LicenceRequest({ licence, children }) {
     );
   };
   const c = copy[kind];
-  const title = status === "sent" ? c.doneTitle : kind === "service" ? `${c.title} · ${options.price}` : c.title;
+  const title = status === "sent" ? c.doneTitle : kind === "service" ? `${c.title} · ${options.price}` : kind === "enquiry" ? enquiryTitle : c.title;
 
   return (
     <Ctx.Provider value={{ open }}>
@@ -136,10 +145,12 @@ export default function LicenceRequest({ licence, children }) {
               </>
             ) : (
               <>
-                <div className="rt-contact__pair">
-                  {field("truck", c.truck, { options: options.trucks })}
-                  {field("experience", c.experience, { options: options.experience })}
-                </div>
+                {kind === "training" && (
+                  <div className="rt-contact__pair">
+                    {field("truck", c.truck, { options: options.trucks })}
+                    {field("experience", c.experience, { options: options.experience })}
+                  </div>
+                )}
                 {field("people", c.people, { type: "number", min: 1, max: 50, inputMode: "numeric", className: "rt-ck__short" })}
               </>
             )}
@@ -151,7 +162,7 @@ export default function LicenceRequest({ licence, children }) {
               {field("email", "Email address", { type: "email", autoComplete: "email", inputMode: "email", spellCheck: false })}
               {field("phone", "Phone number", { type: "tel", autoComplete: "tel" })}
             </div>
-            {kind === "training" && field("postcode", c.postcode, { type: "text", autoComplete: "postal-code", autoCapitalize: "characters", spellCheck: false, className: "rt-ck__short" })}
+            {kind !== "service" && field("postcode", c.postcode, { type: "text", autoComplete: "postal-code", autoCapitalize: "characters", spellCheck: false, className: "rt-ck__short" })}
             <div className="rt-field">
               <label htmlFor="rt-lr-notes">{c.notes}</label>
               <textarea id="rt-lr-notes" rows={3} maxLength={1000} value={v.notes} onChange={set("notes")} />
