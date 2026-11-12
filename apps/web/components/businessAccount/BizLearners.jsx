@@ -85,7 +85,7 @@ export default function BizLearners() {
       <div className="rt-acc__card rt-biz__toolbar">
         <label className="rt-field rt-biz__search">
           <span className="rt-sr">{copy.search}</span>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={copy.search} autoComplete="off" />
+          <input name="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={copy.search} autoComplete="off" />
         </label>
         <button type="button" ref={addRef} className="button -md -purple-1 text-white" aria-haspopup="dialog" onClick={() => { setErrors({}); setAdding(true); }}>{copy.add}</button>
         <div className="rt-acc__tabs rt-biz__filters" role="group" aria-label="Filter learners">

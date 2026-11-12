@@ -146,7 +146,7 @@ export default function CatalogueDropdown({
           {searchable && (
             <div className="rt-cat-dd__search">
               <i className="icon-search text-14 text-light-1"></i>
-              <input
+              <input name="filter"
                 ref={inputRef}
                 type="text"
                 value={query}

@@ -182,7 +182,7 @@ export default function ProviderCohort({ cohortId }) {
                 <tr>
                   <th scope="col" className="rt-pws-coh__pick">
                     <label className="rt-pws-coh__check">
-                      <input type="checkbox" className="rt-fp__check" checked={allPicked} onChange={() => setPicked(allPicked ? [] : people.map((e) => e.id))} />
+                      <input name="selectAll" type="checkbox" className="rt-fp__check" checked={allPicked} onChange={() => setPicked(allPicked ? [] : people.map((e) => e.id))} />
                       <span className="rt-sr">Pick all students</span>
                     </label>
                   </th>
@@ -210,7 +210,7 @@ export default function ProviderCohort({ cohortId }) {
                       <tr className={picked.includes(e.id) ? "is-picked" : undefined}>
                         <td data-label="Pick" className="rt-pws-coh__pick">
                           <label className="rt-pws-coh__check">
-                            <input type="checkbox" className="rt-fp__check" checked={picked.includes(e.id)} onChange={() => togglePick(e.id)} />
+                            <input name="learners" type="checkbox" className="rt-fp__check" checked={picked.includes(e.id)} onChange={() => togglePick(e.id)} />
                             <span className="rt-sr">Pick {name}</span>
                           </label>
                         </td>
@@ -260,7 +260,7 @@ export default function ProviderCohort({ cohortId }) {
                               <div>
                                 <span>Attended</span>
                                 <label className="rt-pws-coh__check">
-                                  <input type="checkbox" className="rt-fp__check" checked={Boolean(e.attended)} disabled={locked || Boolean(e.certificate)} onChange={(ev) => setAttendance(e.id, ev.target.checked)} />
+                                  <input name="attended" type="checkbox" className="rt-fp__check" checked={Boolean(e.attended)} disabled={locked || Boolean(e.certificate)} onChange={(ev) => setAttendance(e.id, ev.target.checked)} />
                                   <span>{e.attended ? "Yes" : locked ? "Not yet" : "No"}</span>
                                   <span className="rt-sr"> attended, {name}</span>
                                 </label>

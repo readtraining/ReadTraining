@@ -81,7 +81,7 @@ function PlaceCard({ p, learners, highlight, onChange }) {
               const full = !on && chosen.length >= p.free;
               return (
                 <label key={l.id} className={`rt-biz__pick${on ? " is-on" : ""}${full ? " is-full" : ""}`}>
-                  <input type="checkbox" checked={on} disabled={full} onChange={() => toggle(l.id)} />
+                  <input name="learners" type="checkbox" checked={on} disabled={full} onChange={() => toggle(l.id)} />
                   <span><b>{l.name}</b><small>{[l.job, l.status === "invited" ? "Invited" : ""].filter(Boolean).join(" · ")}</small></span>
                 </label>
               );
@@ -141,7 +141,7 @@ export default function BizAssignments() {
         </div>
         <label className="rt-field rt-biz__search">
           <span className="rt-sr">{copy.search}</span>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={copy.search} autoComplete="off" />
+          <input name="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={copy.search} autoComplete="off" />
         </label>
       </div>
       <div className="rt-biz__bar">

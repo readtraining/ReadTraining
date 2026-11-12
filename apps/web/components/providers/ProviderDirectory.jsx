@@ -61,7 +61,7 @@ export default function ProviderDirectory({ providers: all }) {
       <form className="rt-cat-search rt-prov__search" role="search" onSubmit={(e) => e.preventDefault()} noValidate>
         <div className="rt-cat-search__field">
           <i className="icon-search text-16 text-light-1" aria-hidden="true"></i>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={80} placeholder="Search by provider, town or subject" aria-label="Search providers by name, town or subject" autoComplete="off" />
+          <input type="search" name="q" value={q} onChange={(e) => setQ(e.target.value)} maxLength={80} placeholder="Search by provider, town or subject" aria-label="Search providers by name, town or subject" autoComplete="off" />
         </div>
       </form>
       <div className="rt-prov__bar">

@@ -62,7 +62,7 @@ const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|point
 export function passMarkProblem(text: string) {
   const t = text.trim().toLowerCase()
   if (!t) return ''
-  const pct = t.match(/(\d+(?:\.\d+)?)\s*%/)
+  const pct = t.match(/(\d+(?:\.\d+)?)\s*(?:%|per\s*cent\b)/)
   if (pct && Number(pct[1]) > 100) return 'A percentage pass mark can’t be over 100%.'
   const score = t.match(SCORE) || t.match(SCORE_OF)
   if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return 'The pass mark can’t be more than the total, like 26 out of 40.'

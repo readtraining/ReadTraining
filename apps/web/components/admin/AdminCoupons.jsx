@@ -223,7 +223,7 @@ function CouponForm({ coupon, onDone }) {
           {errors.categories && <p className="rt-q__err" id="rt-cp-categories-e"><span className="rt-sr">Error: </span>{errors.categories}</p>}
           <div className="rt-adm-couponform__checks" id="rt-cp-categories">
             {taxonomy.categories.filter((x) => x.active !== false).map((x) => (
-              <label key={x.slug} className="rt-bk__check"><input type="checkbox" checked={v.categories.includes(x.slug)} onChange={() => pick("categories", x.slug)} />{x.name}</label>
+              <label key={x.slug} className="rt-bk__check"><input name="categories" type="checkbox" checked={v.categories.includes(x.slug)} onChange={() => pick("categories", x.slug)} />{x.name}</label>
             ))}
           </div>
         </fieldset>
@@ -236,7 +236,7 @@ function CouponForm({ coupon, onDone }) {
           <input id="rt-cp-courses" type="search" placeholder={f.courses.search} aria-label={f.courses.search} value={find} onChange={(e) => setFind(e.target.value)} />
           <div className="rt-adm-couponform__checks -courses">
             {shownCourses.map((x) => (
-              <label key={x.id} className="rt-bk__check"><input type="checkbox" checked={v.courses.includes(x.id)} onChange={() => pick("courses", x.id)} />{x.title}</label>
+              <label key={x.id} className="rt-bk__check"><input name="courses" type="checkbox" checked={v.courses.includes(x.id)} onChange={() => pick("courses", x.id)} />{x.title}</label>
             ))}
           </div>
         </fieldset>

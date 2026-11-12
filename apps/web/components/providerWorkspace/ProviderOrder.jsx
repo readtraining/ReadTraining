@@ -221,7 +221,7 @@ export default function ProviderOrder({ reference }) {
             <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => invoiceRef.current?.click()}>{o.invoice?.file ? "Replace invoice" : "Upload invoice"}</button>
             {o.invoice?.file && !o.invoice.paidOn && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("invoice", { date: "" })}>Pay invoice detail</button>}
           </div>
-          <input ref={invoiceRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; if (!/\.(pdf|jpe?g|png)$/i.test(f.name)) return say("The invoice must be a PDF, JPG or PNG."); uploadInvoice(o.ref, f.name); say("Invoice uploaded"); }} />
+          <input name="invoice" ref={invoiceRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; if (!/\.(pdf|jpe?g|png)$/i.test(f.name)) return say("The invoice must be a PDF, JPG or PNG."); uploadInvoice(o.ref, f.name); say("Invoice uploaded"); }} />
         </section>
       </div>
 

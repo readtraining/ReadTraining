@@ -58,25 +58,25 @@ export default function HomeTeamBooking() {
               <div className="rt-quote__grid">
                 <label className="rt-field">
                   <span>Course subject</span>
-                  <select value={subject} onChange={set("subject")}>
+                  <select name="subject" value={subject} onChange={set("subject")}>
                     {subjects.map((s) => <option key={s.slug}>{s.name}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">
                   <span>Number of learners</span>
-                  <select value={form.learners} onChange={set("learners")}>
+                  <select name="learners" value={form.learners} onChange={set("learners")}>
                     {["2 to 4", "5", "6 to 10", "11 to 20", "21 to 50", "50+"].map((n) => <option key={n}>{n}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">
                   <span>Study method</span>
-                  <select value={method} onChange={set("method")}>
+                  <select name="method" value={method} onChange={set("method")}>
                     {methods.map((m) => <option key={m.slug}>{m.name}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">
                   <span>Location or postcode</span>
-                  <input value={form.where} onChange={set("where")} placeholder="e.g. Manchester or M1" />
+                  <input name="where" value={form.where} onChange={set("where")} placeholder="e.g. Manchester or M1" />
                 </label>
               </div>
 

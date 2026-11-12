@@ -62,7 +62,7 @@ const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|point
 export function passMarkProblem(text) {
   const t = (text || "").trim().toLowerCase();
   if (!t) return "";
-  const pct = t.match(/(\d+(?:\.\d+)?)\s*%/);
+  const pct = t.match(/(\d+(?:\.\d+)?)\s*(?:%|per\s*cent\b)/);
   if (pct && Number(pct[1]) > 100) return "A percentage pass mark can't be over 100%.";
   const score = t.match(SCORE) || t.match(SCORE_OF);
   if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return "The pass mark can't be more than the total, like 26 out of 40.";
@@ -1146,7 +1146,7 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
         <h2 className="rt-acc__h2" id="rt-pws-ce-price-h">Course pricing</h2>
         <div className="rt-pws-ce__loyalty">
           <label className="rt-fp__opt">
-            <input type="checkbox" className="rt-fp__check" checked={draft.skillSaver} disabled={locked} onChange={(e) => set("skillSaver")(e.target.checked)} />
+            <input name="skillSaver" type="checkbox" className="rt-fp__check" checked={draft.skillSaver} disabled={locked} onChange={(e) => set("skillSaver")(e.target.checked)} />
             <span>Include this course in the Skill Saver loyalty programme</span>
           </label>
           <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link>
