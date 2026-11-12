@@ -32,13 +32,14 @@ async function ask(path: string): Promise<Answer> {
   }
 }
 
-// "Stoke-on-Trent", "stoke on trent" and "Stoke on Trent, Staffordshire" read the same
-const placeKey = (v: string) => v.split(',')[0].toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim()
+// "Stoke-on-Trent" and "stoke on trent" read the same. The town typed counts whole (it can't have a comma, schedule.mts); a
+// postcodes.io name is read up to its comma ("Bristol, City of" is Bristol)
+const placeKey = (v: string) => v.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim()
 // "Newcastle" is short for "Newcastle upon Tyne" and "Stoke" for "Stoke-on-Trent", but "North" isn't "North Reddish": a short name
 // matches only a longer one that goes on with upon, on, under, in, le or by
 const sameTown = (typed: string, name: string | null | undefined) => {
   const a = placeKey(typed)
-  const b = placeKey(name ?? '')
+  const b = placeKey((name ?? '').split(',')[0])
   return Boolean(a && b) && (a === b || /^(upon|on|under|in|le|by) /.test(b.startsWith(`${a} `) ? b.slice(a.length + 1) : ''))
 }
 const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {

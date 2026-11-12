@@ -49,7 +49,9 @@ const oneSpace = (v: string) => v.replace(/\s+/g, ' ')
 const venueFields = z.object({
   name: z.string().trim().min(2, 'Enter the venue name.').max(100, 'Keep the venue name to 100 characters or fewer.').transform(oneSpace),
   street: z.string().trim().min(3, 'Enter the street address.').max(160, 'Keep the address to 160 characters or fewer.').transform(oneSpace),
-  city: z.string().trim().min(2, 'Enter the town or city.').max(60, 'Keep the town or city to 60 characters or fewer.').transform(oneSpace),
+  // one town: the whole name is checked as a UK place near the postcode and becomes a public town page ("Leeds, Islamabad" would
+  // be checked as Leeds but shown as both)
+  city: z.string().trim().min(2, 'Enter the town or city.').max(60, 'Keep the town or city to 60 characters or fewer.').refine((v) => !v.includes(','), 'Enter one town or city, without a comma (like Stoke-on-Trent).').transform(oneSpace),
   postcode: z.string().trim().regex(POSTCODE, 'Enter a full UK postcode, like M1 1AE.'),
 })
 
