@@ -7016,6 +7016,25 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-labelled { display: flex; align-items: center; gap: 10px; margin: 0; }
 .rt-adm-labelled label { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); }
 .rt-adm-widesheet .rt-dd__panel { max-width: 860px; }
+/* a price plan to approve (AdminPlanReview): its packages side by side, as learners compare them; one under another on phones */
+@media (min-width: 768px) { .rt-adm-plansheet .rt-dd__panel { width: 1000px; max-width: 94vw; } }
+.rt-adm-linkbtn { padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.rt-adm-linkbtn:hover { color: var(--rt-c-brand) !important; text-decoration: underline; text-underline-offset: 3px; }
+.rt-adm-plan { display: grid; gap: 10px; }
+.rt-adm-plan__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 768px) { .rt-adm-plan__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rt-adm-plan__tiers.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 992px) { .rt-adm-plan__tiers.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.rt-adm-plan__tier { display: grid; align-content: start; gap: 6px; margin: 0; padding: 14px; list-style: none; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); }
+.rt-adm-plan__tier.-popular { border-color: var(--rt-c-brand); }
+.rt-adm-plan__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--rt-c-text); }
+.rt-adm-plan__price { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); font-variant-numeric: tabular-nums; }
+.rt-adm-plan__price small { font-size: var(--rt-text-sm); font-weight: 400; color: var(--rt-c-muted); }
+.rt-adm-plan__features { display: grid; gap: 6px; margin: 4px 0 0; padding: 8px 0 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
+.rt-adm-plan__features li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); list-style: none; }
+.rt-adm-plan__features li i { margin-top: 4px; font-size: 10px; color: var(--rt-c-success); }
+.rt-adm-plan__features li.-no { color: var(--rt-c-muted); }
+.rt-adm-plan__features li.-no i { color: var(--rt-c-error); }
+.rt-adm-plan__features small { display: block; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* sortable table headers (adminParts SortTh) */
 .rt-adm-sort { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
 .rt-adm-sort:hover, .rt-adm-sort.is-on { color: var(--rt-c-text); }
