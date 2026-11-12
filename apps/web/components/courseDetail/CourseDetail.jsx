@@ -21,6 +21,7 @@ import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
 import { CompareTable, TickCard, BusinessSection, LicenceSection } from "@/components/courseDetail/CourseGuide";
+import PackagePicker from "@/components/courseDetail/PackagePicker";
 import { courseGuides } from "@/data/courseGuides";
 import { matchesPick } from "@/lib/catalogueData";
 import { getSubjectLabel } from "@/lib/courses";
@@ -35,7 +36,7 @@ const unitKey = (name) => String(name).toLowerCase().replace(/[^a-z0-9]+/g, " ")
 // who it's for > trust points > the provider's terms > FAQs > more courses > need help > footer. The booking card is sticky on
 // the right. `course`: a live course (lib/catalogueData.js toCourseDetail); a section it has nothing for is left out, and
 // nothing it doesn't have (a rating of its own) is shown. A course with a guide (data/courseGuides.js, by catalogue topic) also
-// gets the guide's sections (CourseGuide.jsx) in the same parts: a comparison, the course week, what's included,
+// gets the guide's sections (CourseGuide.jsx) in the same parts: a comparison, the course week, what's included, packages,
 // business training, the licence steps, costs and careers, plus a questions column and intro lines for the exams table. `path` is the page's own address (canonical and structured data);
 // `query` is its search params (?mode=&session=). `reviews`: the published reviews that name this course's topic, shown as
 // reviews of Read Training (CourseReviews; `reviewsCourse` is the topic's name); none, and the section is left out.
@@ -59,6 +60,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
     { id: "overview", label: "Overview" },
     ...(course.modules.length ? [{ id: "content", label: "Course content" }] : []),
     ...(requirements ? [{ id: "requirements", label: "Requirements" }] : []),
+    ...(guide?.packages ? [{ id: "packages", label: "Packages" }] : []),
     ...(guide?.business ? [{ id: "business", label: "For business" }] : []),
     ...(guide?.licence ? [{ id: "licence", label: "Your licence" }] : []),
     ...(reviews.length ? [{ id: "course-reviews", label: "Reviews" }] : []),
@@ -104,7 +106,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
       {/* No overflow-hidden on any ancestor of the sticky card and nav. */}
       <div className="content-wrapper js-content-wrapper">
         <main id="rt-cd-main" className="rt-cd" tabIndex={-1}>
-          <BookingProvider course={course} initialMode={query.mode} initialSession={query.session}>
+          <BookingProvider course={course} initialMode={query.mode} initialSession={query.session} initialPackage={query.package} packages={guide?.packages?.items ?? null}>
             <div className="container rt-cd__wrap">
               <div className="rt-cd__grid">
                 <CourseHero course={course} />
@@ -213,6 +215,8 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
                       </div>
                     </section>
                   )}
+
+                  <PackagePicker packages={guide?.packages} />
 
                   <BusinessSection business={guide?.business} course={course} />
 

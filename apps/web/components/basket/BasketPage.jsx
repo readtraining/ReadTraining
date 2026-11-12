@@ -80,7 +80,12 @@ export default function BasketPage({ recommended }) {
     // delegates, first aid and the tick stay as they were; so does the package when the new date has one of the same name (a
     // date without it asks for a package on the line)
     const was = cartCourses.find((i) => lineKey(i) === dates.key);
-    change(dates.key, lineFor(dates.detail, session, was?.bundle?.key));
+    const next = lineFor(dates.detail, session, was?.bundle?.key);
+    // a course page package (the client's, with its `add`) stays on a date of one price; a date on a price plan takes the plan's
+    // packages instead, and first aid that package answered is asked again
+    if (!next.packages && was?.bundle?.add) next.bundle = was.bundle;
+    if (next.packages && was?.firstAid === "bundle") next.firstAid = undefined;
+    change(dates.key, next);
     setDatesOpen(false);
     setAnnounce(copy.dateChanged.replace("{date}", session.mode === "ondemand" ? session.time.toLowerCase() : formatShortDate(session.date)).replace("{place}", session.location));
   };

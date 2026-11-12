@@ -6,10 +6,10 @@ import { AUTH_ROUTES, QUOTE_HREF } from "@/lib/routes";
 import { topBar } from "@/data/home";
 
 // The course guide's sections (data/courseGuides.js), built only from the course page's own parts: .rt-cd__sec sections with an
-// h2 and an .rt-cd__lead line, the .rt-cd__learn card with .rt-cd__checks, the .rt-cd__table table, the trust boxes' tiles
-// (.rt-benefit-card) and the staff training callout (.rt-cd__staff). Every section is left out when its guide has nothing for
-// it. The course's own price is its lowest live price (course.price). Packages are the providers' own (price plans, chosen when
-// a date is booked), not part of a guide.
+// h2 and an .rt-cd__lead line, the .rt-cd__learn card with .rt-cd__checks, the .rt-cd__table table, the learning options' cards
+// (.rt-lc) for packages, the trust boxes' tiles (.rt-benefit-card) and the staff training callout (.rt-cd__staff). Every section
+// is left out when its guide has nothing for it. The course's own price is its lowest live price (course.price). The packages
+// are chosen on the page, so they are a client component of their own (PackagePicker).
 
 const quote = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 const tel = (phone) => `tel:${phone.replace(/\s+/g, "")}`;

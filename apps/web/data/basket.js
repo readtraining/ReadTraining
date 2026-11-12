@@ -29,7 +29,7 @@ export const basket = {
     title: "First aid qualification required",
     text: "To get your SIA licence you must hold an Emergency First Aid at Work qualification (or higher).",
     have: { label: "I already have a valid first aid certificate", note: "Bring the original certificate. It must have been taken in person and stay valid for at least 12 months after your course." },
-    // the client's own price: their "Course + first aid" bundle was £70 more than the course alone
+    // the client's own price: "Course + first aid" is £70 more than the course alone (data/courseGuides.js packages)
     add: { label: "Add Emergency First Aid at Work", note: "Completed as part of your course, with no extra training days. You also get a separate certificate.", price: 70 },
   },
 
