@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useContextElement } from "@/context/Context";
 import { basket as copy } from "@/data/basket";
-import { basketIssues, basketTotals, choosePackage, isSelected, lineFor, lineKey, mergeLines, promoFor } from "@/lib/basket";
+import { basketIssues, basketTotals, bookingSteps, choosePackage, isSelected, lineFor, lineKey, mergeLines, needsFirstAid, promoFor } from "@/lib/basket";
 import { useSkillSaver } from "@/lib/useSkillSaver";
 import { bookableModes, defaultMode, formatShortDate } from "@/lib/courses";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
@@ -90,9 +90,9 @@ export default function BasketPage({ recommended }) {
   // "Change package" / "Choose a package" on a line sold in packages: the packages it keeps, with its own date and delegates
   const [pkg, setPkg] = useState({ open: false, key: null, item: null });
   const closePkg = () => setPkg((x) => ({ ...x, open: false }));
-  const pickPackage = (pkgKey) => {
+  const pickPackage = (pkgKey, aid) => {
     const patch = pkg.item && choosePackage(pkg.item, pkgKey);
-    if (patch) change(pkg.key, patch);
+    if (patch) change(pkg.key, aid && aid !== "bundle" ? { ...patch, firstAid: aid } : patch);
     closePkg();
   };
   const remove = (item) => {
@@ -131,7 +131,7 @@ export default function BasketPage({ recommended }) {
             </div>
             <Link href={copy.continueLink.href} className="fb-textlink">{copy.continueLink.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
           </div>
-          <BasketSteps steps={copy.steps} current={1} />
+          <BasketSteps steps={bookingSteps(cartCourses.some((i) => i.packages?.length))} current={1} />
         </div>
       </section>
 
@@ -185,7 +185,7 @@ export default function BasketPage({ recommended }) {
       {ready && cartCourses.length > 0 && <BasketBar totals={totals} issues={issues} />}
 
       <p className="rt-sr" aria-live="polite">{announce}</p>
-      <PackageDialog open={pkg.open} onClose={closePkg} course={pkg.item ? { title: pkg.item.title } : null} quantity={pkg.item?.quantity || 1} current={pkg.item?.bundle?.key ?? null} onSelect={pickPackage}
+      <PackageDialog open={pkg.open} onClose={closePkg} course={pkg.item ? { title: pkg.item.title } : null} quantity={pkg.item?.quantity || 1} current={pkg.item?.bundle?.key ?? null} onDone={pickPackage} needsAid={pkg.item ? needsFirstAid(pkg.item) : false}
         session={pkg.item ? { mode: pkg.item.mode, date: pkg.item.date, endDate: pkg.item.endDate, time: pkg.item.time, location: pkg.item.city || "Online", packages: pkg.item.packages } : null} />
       <DatesPicker
         open={datesOpen}

@@ -57,11 +57,12 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
   const router = useRouter();
-  // `pkgKey`: the package chosen for a date sold in packages (the dates pop-up asks; a self-paced course asks below)
-  const add = (detail, session, quantity = 1, pkgKey = null) => {
+  // `pkgKey`: the package chosen for a date sold in packages, `firstAid`: the first aid answer (the dates pop-up asks both; a
+  // self-paced course's packages are asked below)
+  const add = (detail, session, quantity = 1, pkgKey = null, firstAid = null) => {
     setStatus("loading");
     try {
-      const line = { ...lineFor(detail, session, pkgKey), quantity };
+      const line = { ...lineFor(detail, session, pkgKey), quantity, ...(firstAid && firstAid !== "bundle" ? { firstAid } : {}) };
       addCourseToCart(detail.id, line);
       trackEvent("add_to_cart", { currency: "GBP", value: line.price * quantity, items: [{ ...toItem(course, index), item_variant: pkgKey ? `${session.id}:${pkgKey}` : session.id, price: line.price, quantity }] });
       router.push(BASKET_HREF);
@@ -89,7 +90,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     setDates({ detail, mode: modes.includes(priceMode) ? priceMode : cheapestMode(detail) });
     setDatesOpen(true);
   };
-  const bookDate = (id, quantity, pkgKey) => add(dates.detail, dates.detail.sessions.find((s) => s.id === id), quantity, pkgKey);
+  const bookDate = (id, quantity, pkgKey, firstAid) => add(dates.detail, dates.detail.sessions.find((s) => s.id === id), quantity, pkgKey, firstAid);
   // a self-paced course sold in packages: which package (the course and the session stay set while the pop-up closes)
   const [pkg, setPkg] = useState({ open: false, detail: null, session: null });
 
@@ -221,7 +222,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
         onBook={bookDate}
       />
       <PackageDialog open={pkg.open} onClose={() => setPkg((x) => ({ ...x, open: false }))} course={pkg.detail} session={pkg.session}
-        onSelect={(key) => { setPkg((x) => ({ ...x, open: false })); add(pkg.detail, pkg.session, 1, key); }} />
+        onDone={(key) => { setPkg((x) => ({ ...x, open: false })); add(pkg.detail, pkg.session, 1, key); }} />
     </article>
   );
 }

@@ -11,9 +11,9 @@ import { EmptyState } from "@/components/states/States";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { distanceLabel, nearestVenue } from "@/lib/catalogueFilters";
 import { api } from "@/lib/trpc/react";
-import { maxDelegates } from "@/lib/basket";
+import { firstAidFor, maxDelegates } from "@/lib/basket";
 import PopShell from "./PopShell";
-import { PackagePanel } from "./PackageChooser";
+import { BookingSteps } from "./PackageChooser";
 
 const SORTS = { classroom: [["cheapest", "Cheapest"], ["soonest", "Soonest"], ["name", "Name (A to Z)"]], online: [["cheapest", "Cheapest"], ["soonest", "Soonest"]] };
 const DEFAULT_SORT = "cheapest";
@@ -334,18 +334,19 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
 }
 
 // The "choose a date" pop-up. Desktop: centred dialog. 575px and under: full-screen sheet (PopShell). `modes` + `onMode` add the
-// study methods as chips (catalogue card, basket); `onBook(sessionId, delegates, packageKey)` gives each date its own Book now. A
-// date sold in packages (a price plan) goes on to "Choose your package" in the same pop-up, with the delegates chosen and "Back to
-// dates"; the package chosen goes with the booking. Focus goes back to the opener.
+// study methods as chips (catalogue card, basket); `onBook(sessionId, delegates, packageKey, firstAid)` gives each date its own
+// Book now. A date sold in packages, or on a course the SIA licence needs first aid for, goes on to those steps in the same pop-up
+// (PackageChooser BookingSteps), with the delegates chosen and "Back to dates"; what is chosen goes with the booking. Focus goes
+// back to the opener.
 export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode, modes, onMode, selectedId, onPick, onBook }) {
-  const [pkgFor, setPkgFor] = useState(null); // { id, qty }: the date whose packages are showing
+  const [pkgFor, setPkgFor] = useState(null); // { id, qty }: the date whose steps are showing
   useEffect(() => {
     if (datesOpen) setPkgFor(null); // every opening starts on the dates
   }, [datesOpen]);
   const book = onBook
     ? (id, qty) => {
         const s = course.sessions.find((x) => x.id === id);
-        if (s?.packages) setPkgFor({ id, qty });
+        if (s?.packages || (s && firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic }))) setPkgFor({ id, qty });
         else onBook(id, qty);
       }
     : undefined;
@@ -355,7 +356,8 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
     <PopShell open={datesOpen} onClose={closeDates} labelledBy="rt-dd-title">
       {(isDesktop) =>
         pkgSession ? (
-          <PackagePanel titleId="rt-dd-title" course={course} session={pkgSession} quantity={pkgFor.qty} onSelect={(key) => onBook(pkgSession.id, pkgFor.qty, key)} onBack={() => setPkgFor(null)} onClose={() => closeDates()} />
+          <BookingSteps titleId="rt-dd-title" course={course} session={pkgSession} quantity={pkgFor.qty} needsAid={firstAidFor({ mode: pkgSession.mode, subject: course.subject, sub: course.sub, topic: course.topic })}
+            onDone={(key, aid) => onBook(pkgSession.id, pkgFor.qty, key, aid)} onBack={() => setPkgFor(null)} onClose={() => closeDates()} />
         ) : (
           <Panel key={mode} course={course} mode={mode} modes={modes} onMode={onMode} selectedId={selectedId} onPick={onPick} onBook={book} onClose={() => closeDates()} isDesktop={isDesktop} />
         )

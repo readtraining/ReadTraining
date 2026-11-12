@@ -22,6 +22,8 @@ export const lineFor = (course, session, pkgKey = null) => ({
   imageSrc: course.imageSrc,
   slug: course.slug,
   subject: course.subject,
+  sub: course.sub,
+  topic: course.topic,
   ...priced(session, session.packages?.find((p) => p.key === pkgKey) ?? null),
   packages: session.packages ?? null,
   ...(session.packages?.find((p) => p.key === pkgKey)?.firstAid ? { firstAid: "bundle" } : {}),
@@ -59,8 +61,20 @@ const wasBase = (item) => {
   const was = Number(item.wasPrice ?? item.originalPrice) || 0;
   return was > basePrice(item) ? was : 0;
 };
-const rule = (list, item) => item.mode === "classroom" && list.subjects.includes(item.subject);
-export const needsFirstAid = (item) => rule(copy.firstAid, item);
+// A classroom course whose SIA licence needs first aid (data/basket.js firstAid.picks, "category/sub-category/topic"). A line
+// saved before lines kept their topic falls back to every security classroom course, as then.
+export const firstAidFor = ({ mode, subject, sub, topic }) => {
+  if (mode !== "classroom") return false;
+  if (topic === undefined) return subject === "security";
+  return copy.firstAid.picks.some((pick) => {
+    const [c, s, t] = pick.split("/");
+    return subject === c && (!s || sub === s) && (!t || topic === t);
+  });
+};
+export const needsFirstAid = (item) => firstAidFor(item);
+
+// The booking steps bar: "Choose your package" first when a course being booked comes in packages, otherwise "Choose a date".
+export const bookingSteps = (withPackage) => (withPackage ? [copy.packageStep, ...copy.steps.slice(1)] : copy.steps);
 
 // The price fields of a line: the chosen package's price (and its was-price, from its "Save £"), or the date's own.
 function priced(session, pkg) {

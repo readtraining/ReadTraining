@@ -7,7 +7,7 @@ import Toast from "@/components/courses/Toast";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { bookableModes, defaultMode as defaultModeOf, firstSession } from "@/lib/courseModes";
 import { formatShortDate } from "@/lib/format";
-import { lineFor } from "@/lib/basket";
+import { firstAidFor, lineFor } from "@/lib/basket";
 import { TEAM } from "@/lib/teamTraining";
 import { BASKET_HREF, QUOTE_HREF } from "@/lib/routes";
 import { useRouter } from "next/navigation";
@@ -158,22 +158,24 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   // packages asks which one first: the dates pop-up has its own step for it; the card and the bar open the packages here ----
   const router = useRouter();
   const [status, setStatus] = useState("idle"); // idle | loading | error
-  const [pkgFor, setPkgFor] = useState({ open: false, id: null, qty: 1 }); // the packages pop-up (its date stays set while closing)
+  const [pkgFor, setPkgFor] = useState({ open: false, id: null, qty: 1 }); // the steps pop-up (its date stays set while closing)
+  const needsAid = useCallback((s) => firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic }), [course]);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
   const inBasket = isAddedToCartCourses(course.id, session?.id || "");
   const book = useCallback(
-    (sessionId, quantity = 1, pkgKey = null) => {
+    (sessionId, quantity = 1, pkgKey = null, firstAid = null) => {
       const target = sessionId ? course.sessions.find((s) => s.id === sessionId) : session;
       if (status === "loading" || !target || isInHouse) return;
       const pkg = target.packages?.find((p) => p.key === pkgKey) ?? null;
-      if (target.packages && !pkg) return setPkgFor({ open: true, id: target.id, qty: quantity });
+      // the package, then the first aid requirement, before the basket
+      if ((target.packages && !pkg) || (needsAid(target) && !firstAid && !pkg?.firstAid)) return setPkgFor({ open: true, id: target.id, qty: quantity });
       // the editors' Preview of a course that may not be live yet: nothing goes in the basket
       if (course.preview) return notify({ message: "This is a preview, so booking is off. Learners see the dates once the course is live; online booking opens in a later update." });
       setStatus("loading");
       try {
-        const line = { ...lineFor(course, target, pkg?.key), quantity };
+        const line = { ...lineFor(course, target, pkg?.key), quantity, ...(firstAid && firstAid !== "bundle" ? { firstAid } : {}) };
         addCourseToCart(course.id, line);
         trackEvent("add_to_cart", { currency: "GBP", value: line.price * quantity, items: [{ ...toItem(course), item_variant: pkg ? `${target.id}:${pkg.key}` : target.id, price: line.price, quantity }] });
         router.push(BASKET_HREF);
@@ -183,10 +185,11 @@ export default function BookingProvider({ course, initialMode, initialSession, c
         later(() => setStatus("idle"), 1500);
       }
     },
-    [status, session, isInHouse, addCourseToCart, course, notify, router],
+    [status, session, isInHouse, addCourseToCart, course, notify, router, needsAid],
   );
   const addToBasket = useCallback(() => book(), [book]);
   const closePackages = useCallback(() => setPkgFor((x) => ({ ...x, open: false })), []);
+  const pkgSession = course.sessions.find((s) => s.id === pkgFor.id) ?? null;
 
   // The booking card's button, observed by the mobile buy bar.
   const cardButtonRef = useRef(null);
@@ -221,8 +224,8 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   return (
     <BookingContext.Provider value={value}>
       {children}
-      <PackageDialog open={pkgFor.open} onClose={closePackages} course={course} session={course.sessions.find((s) => s.id === pkgFor.id) ?? null} quantity={pkgFor.qty}
-        onSelect={(key) => { closePackages(); book(pkgFor.id, pkgFor.qty, key); }} />
+      <PackageDialog open={pkgFor.open} onClose={closePackages} course={course} session={pkgSession} quantity={pkgFor.qty} needsAid={pkgSession ? needsAid(pkgSession) : false}
+        onDone={(key, aid) => { closePackages(); book(pkgFor.id, pkgFor.qty, key, aid); }} />
       <Toast toast={toast} onDone={() => setToast(null)} duration={2600} />
     </BookingContext.Provider>
   );

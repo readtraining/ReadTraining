@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useContextElement } from "@/context/Context";
 import { basket as basketCopy } from "@/data/basket";
 import { checkout as copy } from "@/data/checkout";
-import { basketIssues, basketTotals, isSelected, lineKey, lineParts, modeLabel, promoFor } from "@/lib/basket";
+import { basketIssues, basketTotals, bookingSteps, isSelected, lineKey, lineParts, modeLabel, promoFor } from "@/lib/basket";
 import { getWallet, saveBooking, spendWallet } from "@/lib/account";
 import { ORDER_KEY, PAY_FAILED_KEY, validCardNumber, validExpiry, validPostcode } from "@/lib/checkout";
 import { sendForm } from "@/lib/forms";
@@ -215,7 +215,7 @@ function CheckoutForm() {
           <h1 className="rt-bk__h1">{copy.title}</h1>
           <Link href={copy.back.href} className="fb-textlink"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{copy.back.label}</Link>
         </div>
-        <BasketSteps steps={basketCopy.steps} current={2} />
+        <BasketSteps steps={bookingSteps(lines.some((i) => i.packages?.length))} current={2} />
       </div>
     </section>
   );
