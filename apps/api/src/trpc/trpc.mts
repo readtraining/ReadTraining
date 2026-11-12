@@ -31,9 +31,21 @@ const t = initTRPC.context<TRPCContext>().create({
 export const createTRPCRouter = t.router
 export const createCallerFactory = t.createCallerFactory
 
-// Every procedure runs through this: a database error (or any other unexpected one) is turned into words a person can act on,
-// a duplicate onto its form field, so no table, constraint or query text ever reaches the browser (lib/dbErrors.mts).
-const base = t.procedure.use(async ({ next, path }) => {
+// Hidden text-direction characters (bidi controls) make a title or name show differently from what is stored ("txt.exe" shown
+// as "exe.txt", a word hidden from view), so every string sent to the API loses them before it is checked. Passwords are left as
+// typed: they are compared, never shown.
+const BIDI = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/g
+const withoutBidi = (v: unknown, key = ''): unknown => {
+  if (typeof v === 'string') return /password/i.test(key) ? v : v.replace(BIDI, '')
+  if (Array.isArray(v)) return v.map((x) => withoutBidi(x))
+  if (v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, withoutBidi(x, k)]))
+  return v
+}
+
+// Every procedure runs through this: its input without bidi controls, and a database error (or any other unexpected one) turned
+// into words a person can act on, a duplicate onto its form field, so no table, constraint or query text ever reaches the browser
+// (lib/dbErrors.mts).
+const base = t.procedure.use(async ({ getRawInput, next }) => next({ getRawInput: async () => withoutBidi(await getRawInput()) })).use(async ({ next, path }) => {
   const result = await next()
   if (!result.ok) {
     const friendly = friendlyError(result.error, path)
