@@ -387,6 +387,7 @@ export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = f
     if (f.name.trim().length < 2) err.name = "Enter the venue name.";
     if (f.street.trim().length < 3) err.street = "Enter the street address.";
     if (f.city.trim().length < 2) err.city = "Enter the town or city.";
+    else if (f.city.includes(",")) err.city = "Enter one town or city, without a comma (like Stoke-on-Trent).";
     if (!POSTCODE.test(f.postcode.trim())) err.postcode = "Enter a full UK postcode, like LS1 4DL.";
     setErrors(err);
     if (Object.keys(err).length) return focusFirstError(ref.current);

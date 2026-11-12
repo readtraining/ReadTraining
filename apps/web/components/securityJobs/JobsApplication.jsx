@@ -162,7 +162,7 @@ function JobsApplicationForm() {
   const aside = copy.aside;
 
   return (
-    <section className="fb-section -lavender rt-jobs__anchor" id="application" aria-labelledby="rt-jobs-apply-h">
+    <section className="fb-section -lavender" aria-labelledby="rt-jobs-apply-h">
       <div className="container">
         <div className="fb-head -center">
           <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{copy.eyebrow}</div>
@@ -305,11 +305,14 @@ function JobsApplicationForm() {
   );
 }
 
-// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
+// shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel). The page's "Apply now" links
+// (#application) land here either way: the anchor is outside the switch.
 export default function JobsApplication(props) {
   return (
-    <FormGate form="jobs">
-      <JobsApplicationForm {...props} />
-    </FormGate>
+    <div id="application" className="rt-jobs__anchor">
+      <FormGate form="jobs">
+        <JobsApplicationForm {...props} />
+      </FormGate>
+    </div>
   );
 }

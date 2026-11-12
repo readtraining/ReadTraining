@@ -100,7 +100,6 @@ export const adminWork = {
       resume: "Lift the hold",
       invoices: "Invoices",
       remind: "Send a reminder",
-      markPaid: "Mark as paid",
       aged: "Money owed by age",
       notes: "Team notes",
     },

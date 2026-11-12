@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { teamBooking as d, hero } from "@/data/home";
+import { teamBooking as d } from "@/data/home";
 import { useNav } from "@/lib/navContext";
 import FormGate from "@/components/forms/FormGate";
 
@@ -10,14 +10,15 @@ import FormGate from "@/components/forms/FormGate";
 export default function HomeTeamBooking() {
   const router = useRouter();
   const icons = ["icon-person-3", "icon-save-money", "icon-location"];
-  // the subjects with live courses (useNav)
-  const { subjects } = useNav();
-  const [form, setForm] = useState({ subject: "", learners: "5", method: hero.methods[1] || hero.methods[0], where: "" });
+  // the subjects with live courses and the study methods in use (useNav)
+  const { subjects, methods } = useNav();
+  const [form, setForm] = useState({ subject: "", learners: "5", method: "", where: "" });
   const subject = form.subject || subjects[0]?.name || "";
+  const method = form.method || methods[0]?.name || "";
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const submit = (e) => {
     e.preventDefault();
-    router.push(`${d.secondaryHref}?${new URLSearchParams({ ...form, subject }).toString()}`);
+    router.push(`${d.secondaryHref}?${new URLSearchParams({ ...form, subject, method }).toString()}`);
   };
 
   return (
@@ -57,25 +58,25 @@ export default function HomeTeamBooking() {
               <div className="rt-quote__grid">
                 <label className="rt-field">
                   <span>Course subject</span>
-                  <select value={subject} onChange={set("subject")}>
+                  <select name="subject" value={subject} onChange={set("subject")}>
                     {subjects.map((s) => <option key={s.slug}>{s.name}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">
                   <span>Number of learners</span>
-                  <select value={form.learners} onChange={set("learners")}>
+                  <select name="learners" value={form.learners} onChange={set("learners")}>
                     {["2 to 4", "5", "6 to 10", "11 to 20", "21 to 50", "50+"].map((n) => <option key={n}>{n}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">
                   <span>Study method</span>
-                  <select value={form.method} onChange={set("method")}>
-                    {hero.methods.map((m) => <option key={m}>{m}</option>)}
+                  <select name="method" value={method} onChange={set("method")}>
+                    {methods.map((m) => <option key={m.slug}>{m.name}</option>)}
                   </select>
                 </label>
                 <label className="rt-field">
                   <span>Location or postcode</span>
-                  <input value={form.where} onChange={set("where")} placeholder="e.g. Manchester or M1" />
+                  <input name="where" value={form.where} onChange={set("where")} placeholder="e.g. Manchester or M1" />
                 </label>
               </div>
 

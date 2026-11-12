@@ -38,6 +38,8 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
         loggerLink({ enabled: () => process.env.NODE_ENV === 'development' }),
         httpBatchLink({
           url: `${API_URL}/api/trpc`,
+          // the API refuses a request with more than 20 calls in it (apps/api/src/index.mts MAX_BATCH)
+          maxItems: 20,
           transformer: SuperJSON,
           headers: authHeaders,
         }),

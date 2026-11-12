@@ -65,6 +65,7 @@ export default function HelpSearch({ items, placeholder = "Search help articles"
           <input
             ref={inputRef}
             type="search"
+            name="q"
             value={query}
             placeholder={placeholder}
             aria-label={placeholder}

@@ -11,10 +11,7 @@ export const useContextElement = () => {
   };
 
   export default function Context({ children }) {
-    const [cartProducts, setCartProducts] = useState([])
-  
     const [cartCourses, setCartCourses] = useState([])
-    const [cartEvents, setCartEvents] = useState([])
 
     // The basket survives a refresh: read it once after mount (so the server and first client render match), then save every change.
     const CART_KEY = "rt-cart"
@@ -28,8 +25,6 @@ export const useContextElement = () => {
                 // and one saved with a course page package as an `add` on the date's price takes that package's price instead
                 const fresh = (c) => (c.bundle?.add > 0 && !c.packages ? { ...c, price: Math.round((Number(c.price) + c.bundle.add) * 100) / 100, wasPrice: null, bundle: { key: c.bundle.key, name: c.bundle.name } } : c)
                 if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses.filter((c) => c && Number(c.id) >= 1000 && c.slug && (c.date == null || isDay(c.date))).map(fresh)))
-                if (Array.isArray(saved.products)) setCartProducts(saved.products)
-                if (Array.isArray(saved.events)) setCartEvents(saved.events)
             }
         } catch {}
         cartLoaded.current = true
@@ -37,15 +32,13 @@ export const useContextElement = () => {
     useEffect(() => {
         if (!cartLoaded.current) return
         try {
-            window.localStorage.setItem(CART_KEY, JSON.stringify({ courses: cartCourses, products: cartProducts, events: cartEvents }))
+            window.localStorage.setItem(CART_KEY, JSON.stringify({ courses: cartCourses }))
         } catch {}
-    }, [cartCourses, cartProducts, cartEvents])
+    }, [cartCourses])
     // A basket line is a course on one date (lib/basket.js lineKey): the same course can be added on two dates, never twice on one,
     // and a dated line replaces the course's undated one (mergeLines).
-    // Our pages always pass the course. Only the template's demo pages pass an id alone: their data loads on demand, so it is not
-    // part of every page's download (the same for the template's shop products and events below).
-    const addCourseToCart = async (id, course)=>{
-        const found = course || (await import("@/data/courses")).coursesData.filter(elm=>elm.id == id)[0]
+    const addCourseToCart = (id, course)=>{
+        const found = course
         // the delegates chosen with the date (the dates pop-up's counter), 1 otherwise; the same date already in the basket gets them
         // added to its line (as Hurak's), up to the date's places
         const quantity = Math.min(maxDelegates(found), Math.max(1, Number(found.quantity) || 1))
@@ -57,64 +50,11 @@ export const useContextElement = () => {
     const isAddedToCartCourses = (id, sessionId, bundleKey)=>{
         return cartCourses.some((elm)=>elm.id == id && (sessionId === undefined || (elm.sessionId || "") === sessionId) && (bundleKey === undefined || (elm.bundle?.key || "") === (bundleKey || "")))
     }
-    const addProductToCart = (id)=>{
-
-        if (!cartProducts.filter((elm)=>elm.id == id)[0]) {
-
-           import("@/data/products").then(({ productData })=>{
-             const item = {...productData.filter(elm=>elm.id == id)[0],quantity:1}
-             setCartProducts(pre=>pre.some((elm)=>elm.id == id) ? pre : [...pre,item])
-           })
-            
-        }
-
-    }
-    const isAddedToCartProducts = (id)=>{
-        if (cartProducts.filter((elm)=>elm.id == id)[0]) {
-            return true
-         }
-         return false
-
-    }
-    const addEventToCart = (id)=>{
-
-        if (!cartEvents.filter((elm)=>elm.id == id)[0]) {
-
-           import("@/data/events").then(({ events })=>{
-             const item = {...events.filter(elm=>elm.id == id)[0],quantity:1}
-             setCartEvents(pre=>pre.some((elm)=>elm.id == id) ? pre : [...pre,item])
-           })
-            
-        }
-
-    }
-    const isAddedToCartEvents = (id)=>{
-        if (cartEvents.filter((elm)=>elm.id == id)[0]) {
-            return true
-         }
-         return false
-
-    }
-
     const contextElement = {
-        
-        cartProducts,
-        setCartProducts,
-        addProductToCart,
-        isAddedToCartProducts,
-
-
         addCourseToCart,
         isAddedToCartCourses,
         cartCourses,
         setCartCourses,
-
-
-        cartEvents,
-        setCartEvents,
-        addEventToCart,
-        isAddedToCartEvents
-
       };
     return (
         <dataContext.Provider value={contextElement}>{children}</dataContext.Provider>

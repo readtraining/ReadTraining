@@ -391,7 +391,7 @@ export default function ProviderNewOrder() {
                             </div>
                             {j === 0 && (
                               <label className="rt-fp__opt rt-pws-ord__same">
-                                <input type="checkbox" className="rt-fp__check" checked={x.mode === "same"} onChange={(e) => setPerson(l.key, x.key, { mode: e.target.checked ? "same" : "new" })} />
+                                <input name="sameDetails" type="checkbox" className="rt-fp__check" checked={x.mode === "same"} onChange={(e) => setPerson(l.key, x.key, { mode: e.target.checked ? "same" : "new" })} />
                                 <span>Same as the customer</span>
                               </label>
                             )}

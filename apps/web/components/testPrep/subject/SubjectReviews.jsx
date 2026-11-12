@@ -62,7 +62,7 @@ function ReviewForm({ subject, onDone }) {
 
       <label className="rt-field">
         <span>{r.nameLabel}</span>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={r.namePlaceholder} autoComplete="given-name" maxLength={60} />
+        <input name="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={r.namePlaceholder} autoComplete="given-name" maxLength={60} />
       </label>
 
       <div className="rt-field">

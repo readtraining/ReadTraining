@@ -12,6 +12,7 @@ import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
 import { RowMenu, Said, TableSkeleton } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 
 const copy = A.catalogue.list;
 const RENAMEABLE = new Set(["category", "subcategory", "topic"]);
@@ -192,6 +193,7 @@ function NameSheet({ sheet, onClose, onDone }) {
     setName(sheet?.name ?? "");
     setError("");
   }
+  useUnsavedChanges(Boolean(sheet) && name.trim() !== (sheet?.name ?? "").trim()); // a name typed but not saved: leaving asks first
   const submit = async (e) => {
     e.preventDefault();
     const v = name.trim();

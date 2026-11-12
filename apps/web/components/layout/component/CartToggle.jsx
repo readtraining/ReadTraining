@@ -1,24 +1,12 @@
 "use client";
-import { usePathname } from "next/navigation";
 import React from "react";
 import { useContextElement } from "@/context/Context";
 import { useState, useEffect, useRef } from "react";
-import dynamic from "next/dynamic";
 import CourseCart from "./CourseCart";
 
-// The template's shop and event carts only show on its demo /template/shop and /template/event pages: loaded on demand, so they
-// are not part of every page's download.
-const ShopCart = dynamic(() => import("./ShopCart"));
-const EventCart = dynamic(() => import("./EventCart"));
-
 const CartToggle = ({ allClasses, parentClassess }) => {
-  const { cartProducts, cartCourses, cartEvents } = useContextElement();
+  const { cartCourses } = useContextElement();
   const [activeCart, setActiveCart] = useState(false);
-  const pathname = usePathname();
-  // Which cart to show comes from the real route. The old menu-title match compared only the first path segment, so every
-  // /template/... page matched "Shop" or "Events" and the course basket count never showed.
-  const isShop = pathname?.startsWith("/template/shop");
-  const isEvents = pathname?.startsWith("/template/event");
   // the mini basket is a drop-down panel: Esc or a click outside closes it, and Esc puts focus back on the basket button
   const boxRef = useRef(null);
   const btnRef = useRef(null);
@@ -38,7 +26,7 @@ const CartToggle = ({ allClasses, parentClassess }) => {
     };
   }, [activeCart]);
 
-  const count = isShop ? cartProducts.length : isEvents ? cartEvents.length : cartCourses.length;
+  const count = cartCourses.length;
   return (
     <>
       <div className={parentClassess ? parentClassess : ""} ref={boxRef}>
@@ -54,15 +42,7 @@ const CartToggle = ({ allClasses, parentClassess }) => {
         >
           <i className="text-20 icon icon-basket"></i>
           <div className="cartProductCount">
-            {isShop && (
-              <>{cartProducts.length > 9 ? "9+" : cartProducts.length} </>
-            )}
-            {isEvents && (
-              <>{cartEvents.length > 9 ? "9+" : cartEvents.length} </>
-            )}
-            {!(isShop || isEvents) && (
-              <>{cartCourses.length > 9 ? "9+" : cartCourses.length} </>
-            )}
+            {count > 9 ? "9+" : count}
           </div>
         </button>
 
@@ -72,9 +52,7 @@ const CartToggle = ({ allClasses, parentClassess }) => {
             activeCart ? "-is-el-visible" : ""
           }`}
         >
-          {isShop && <ShopCart />}
-          {isEvents && <EventCart />}
-          {!(isShop || isEvents) && <CourseCart />}
+          <CourseCart />
         </div>
       </div>
     </>

@@ -154,7 +154,7 @@ export default function BasketPage({ recommended }) {
                 {cartCourses.length > 1 && (
                   <div className="rt-bk__select">
                     <label className="rt-bk__check">
-                      <input type="checkbox" ref={allRef} checked={allOn} onChange={(e) => selectAll(e.target.checked)} />
+                      <input name="selectAll" type="checkbox" ref={allRef} checked={allOn} onChange={(e) => selectAll(e.target.checked)} />
                       <span>{copy.select.all}</span>
                     </label>
                     <span className="rt-bk__selcount" aria-live="polite">{copy.select.count.replace("{n}", chosen.length).replace("{total}", cartCourses.length)}</span>

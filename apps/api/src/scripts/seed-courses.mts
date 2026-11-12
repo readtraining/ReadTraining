@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { and, categories, cohorts, courseExams, courseFaqs, courseImages, courses, courseUnits, eq, inArray, organisations, pricePlans, sql, subcategories, topics, venues } from '@readtraining/db'
 
 import { db } from '../lib/db.mjs'
+import { logActivity } from '../lib/activity.mjs'
 import { COURSE_MEDIA } from '../lib/media.mjs'
 import { supabase } from '../lib/supabase.mjs'
 
@@ -63,17 +64,31 @@ async function filesUnder(folder: string) {
 }
 if (remove) {
   const orgIds = provRows.map((p) => p.id)
-  // the sample providers' own courses first (rows, then their pictures), so the shared pages are free to go
-  if (orgIds.length) await db.delete(courses).where(inArray(courses.organisationId, orgIds))
-  for (const o of orgIds) {
-    const files = await filesUnder(`${o}/courses`)
-    if (files.length) await supabase.storage.from(COURSE_MEDIA).remove(files)
-  }
   if (orgIds.length) {
-    await db.delete(venues).where(inArray(venues.organisationId, orgIds))
-    // any price plans made on a sample provider while it was tried out (they hold the provider back otherwise)
-    await db.delete(pricePlans).where(inArray(pricePlans.organisationId, orgIds))
-    await db.delete(organisations).where(inArray(organisations.id, orgIds))
+    // money records are kept: a sample provider with an order or payout (a staff booking made while trying it out) stays, and is
+    // sorted out by hand first
+    const ids = sql.join(orgIds.map((o) => sql`${o}::uuid`), sql`, `)
+    const [m] = await db.execute<{ orders: number; payouts: number }>(sql`
+      select (select count(*)::int from public.orders r where r.provider_id in (${ids}) or r.course_id in (select id from public.courses where organisation_id in (${ids}))) orders,
+             (select count(*)::int from public.payouts p where p.provider_id in (${ids})) payouts`)
+    if (m.orders || m.payouts) {
+      console.error(`The sample providers have ${m.orders} orders and ${m.payouts} payouts. Money records are kept, so nothing was removed.`)
+      process.exit(1)
+    }
+    const files = (await Promise.all(orgIds.map((o) => filesUnder(`${o}/courses`)))).flat()
+    // all or nothing, each provider's removal logged with it: its courses (their dates, units, exams, FAQs and picture rows go
+    // with them), venues, any price plans made on it while it was tried out, then the provider (its team rows go with it)
+    await db.transaction(async (tx) => {
+      for (const o of orgIds) {
+        const gone = await tx.delete(courses).where(eq(courses.organisationId, o)).returning({ id: courses.id })
+        await tx.delete(venues).where(eq(venues.organisationId, o))
+        await tx.delete(pricePlans).where(eq(pricePlans.organisationId, o))
+        const [org] = await tx.delete(organisations).where(eq(organisations.id, o)).returning({ name: organisations.name, slug: organisations.slug })
+        await logActivity(tx, { actorIdentity: 'system', organisationId: o, action: 'system.test_content_removed', targetType: 'organisation', targetId: o, metadata: { name: org?.name, slug: org?.slug, courses: gone.length, by: 'seed:courses --remove' } })
+      }
+    })
+    // the pictures' files, once the rows are gone
+    if (files.length) await supabase.storage.from(COURSE_MEDIA).remove(files)
   }
   // the shared course pages stay, with their words and pictures: hidden until a real provider lists a course on one
   const pages = await db.select({ slug: courses.slug }).from(courses).where(sql`${courses.slug} in ${SHARED_SLUGS} and ${courses.kind} = 'shared'`)

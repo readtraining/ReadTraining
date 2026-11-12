@@ -3,7 +3,7 @@
 import React, { Fragment, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { addCohortNote, addEnrolmentNote, bookResit, bulkEnrol, cancelCohort, issueCertificates, learnerName, customerName, logEmail, replaceLearner, rescheduleEnrolment, saveRecord, setAttendance, setCohortEnabled, setCohortStatus, setResult, setStudentStatus, timeRange, updateLearner, useProvider } from "@/lib/providerWorkspace";
+import { addCohortNote, addEnrolmentNote, bookResit, bulkEnrol, cancelCohort, issueCertificates, learnerName, customerName, logEmail, replaceLearner, rescheduleEnrolment, saveRecord, setAttendance, setCohortEnabled, setCohortStatus, setResult, setStudentStatus, timeRange, updateLearner, useProvider, editorHref } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
@@ -128,10 +128,10 @@ export default function ProviderCohort({ cohortId }) {
       <section className="rt-acc__card" aria-labelledby="rt-coh-det-h">
         <div className="rt-acc__cardhead rt-adm-cardhead">
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
-          {course && <Link href={`/provider/courses/${course.id}?tab=curriculum`} className="button -sm -outline-purple-1 text-purple-1">Manage curriculum</Link>}
+          {course && editorHref(course.id) && <Link href={`${editorHref(course.id)}?tab=curriculum`} className="button -sm -outline-purple-1 text-purple-1">Manage curriculum</Link>}
         </div>
         <dl className="rt-pws-coh__details">
-          <div><dt>Course</dt><dd>{course ? <Link href={`/provider/courses/${course.id}`} className="rt-adm-strong">{course.title || "Untitled course"}</Link> : "Course removed"}<small>{methodName(course?.format)}</small></dd></div>
+          <div><dt>Course</dt><dd>{course ? (editorHref(course.id) ? <Link href={editorHref(course.id)} className="rt-adm-strong">{course.title || "Untitled course"}</Link> : <b className="rt-adm-strong">{course.title || "Untitled course"}</b>) : "Course removed"}<small>{methodName(course?.format)}</small></dd></div>
           <div><dt>Dates</dt><dd>{dayRange(k.first, k.last)}{k.sessions.length > 1 && <small>{k.sessions.length} sessions</small>}</dd></div>
           <div><dt>Venue</dt><dd>{where}</dd></div>
           <div><dt>Timings</dt><dd>{[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}</dd></div>
@@ -182,7 +182,7 @@ export default function ProviderCohort({ cohortId }) {
                 <tr>
                   <th scope="col" className="rt-pws-coh__pick">
                     <label className="rt-pws-coh__check">
-                      <input type="checkbox" className="rt-fp__check" checked={allPicked} onChange={() => setPicked(allPicked ? [] : people.map((e) => e.id))} />
+                      <input name="selectAll" type="checkbox" className="rt-fp__check" checked={allPicked} onChange={() => setPicked(allPicked ? [] : people.map((e) => e.id))} />
                       <span className="rt-sr">Pick all students</span>
                     </label>
                   </th>
@@ -210,7 +210,7 @@ export default function ProviderCohort({ cohortId }) {
                       <tr className={picked.includes(e.id) ? "is-picked" : undefined}>
                         <td data-label="Pick" className="rt-pws-coh__pick">
                           <label className="rt-pws-coh__check">
-                            <input type="checkbox" className="rt-fp__check" checked={picked.includes(e.id)} onChange={() => togglePick(e.id)} />
+                            <input name="learners" type="checkbox" className="rt-fp__check" checked={picked.includes(e.id)} onChange={() => togglePick(e.id)} />
                             <span className="rt-sr">Pick {name}</span>
                           </label>
                         </td>
@@ -260,7 +260,7 @@ export default function ProviderCohort({ cohortId }) {
                               <div>
                                 <span>Attended</span>
                                 <label className="rt-pws-coh__check">
-                                  <input type="checkbox" className="rt-fp__check" checked={Boolean(e.attended)} disabled={locked || Boolean(e.certificate)} onChange={(ev) => setAttendance(e.id, ev.target.checked)} />
+                                  <input name="attended" type="checkbox" className="rt-fp__check" checked={Boolean(e.attended)} disabled={locked || Boolean(e.certificate)} onChange={(ev) => setAttendance(e.id, ev.target.checked)} />
                                   <span>{e.attended ? "Yes" : locked ? "Not yet" : "No"}</span>
                                   <span className="rt-sr"> attended, {name}</span>
                                 </label>

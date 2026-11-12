@@ -49,29 +49,30 @@ const upstash = (name: LimitName) => {
 
 // Without Upstash: a fixed window per key, in this copy's memory (old windows are dropped as they are passed)
 const memory = new Map<string, { count: number; ends: number }>()
-const inMemory = (name: LimitName, key: string) => {
+const inMemory = (name: LimitName, key: string, cost: number) => {
   const now = Date.now()
   const id = `${name}:${key}`
   const w = memory.get(id)
   if (!w || w.ends <= now) {
     if (memory.size > 50_000) for (const [k, v] of memory) if (v.ends <= now) memory.delete(k)
-    memory.set(id, { count: 1, ends: now + windowMs(LIMITS[name].window) })
-    return true
+    memory.set(id, { count: cost, ends: now + windowMs(LIMITS[name].window) })
+    return cost <= LIMITS[name].requests
   }
-  w.count += 1
+  w.count += cost
   return w.count <= LIMITS[name].requests
 }
 
-/** True when `key` (an IP address or a user id) may go ahead under `name`. Never throws: if Upstash can't be reached (down, or a
+/** True when `key` (an IP address or a user id) may go ahead under `name`, counting `cost` uses (the calls in one batched API
+ *  request each count). Never throws: if Upstash can't be reached (down, or a
  *  wrong or rotated token) this copy's memory counts instead, so the limits still hold per server copy and nobody is locked out.
  *  The error is logged each time, so a broken token shows in the logs. */
-export async function allowed(name: LimitName, key: string | null | undefined): Promise<boolean> {
+export async function allowed(name: LimitName, key: string | null | undefined, cost = 1): Promise<boolean> {
   const k = key || 'unknown'
-  if (!redis) return inMemory(name, k)
+  if (!redis) return inMemory(name, k, cost)
   try {
-    return (await upstash(name).limit(k)).success
+    return (await upstash(name).limit(k, { rate: cost })).success
   } catch (e) {
     console.error(`rate limit ${name}: counter unavailable, counting in memory (${e instanceof Error ? e.message.split('\n')[0] : 'error'})`)
-    return inMemory(name, k)
+    return inMemory(name, k, cost)
   }
 }

@@ -28,8 +28,8 @@ export const passCount = (questions, passMark) => Math.ceil((questions * passMar
 
 // Each test with its numbers resolved: its own values, else its subject's exam. A test listed with `ref` belongs to another subject
 // (the CITB HS&E tests are the CITB Mock Test's; the CSCS pages list them too): its card is the owner's test, with the owner's
-// numbers and address (`owner`, `href`), so each test has one page. A test with no questions yet (a "coming soon" placeholder) is
-// left out of every list, so nothing links to it; `placeholders` keeps them (the test's own page still works if opened directly).
+// numbers and address (`owner`, `href`), so each test has one page. A test with no questions yet is left
+// out of every list and has no page; `placeholders` keeps them.
 function resolveOne(slug, t) {
   const ownerSlug = t.ref || slug;
   const owner = subjects[ownerSlug];

@@ -44,10 +44,14 @@ const MEETING_LINK_ERROR = 'Use the https link to one Zoom, Microsoft Teams or G
 
 // ---- venues -------------------------------------------------------------------------------------------------------------
 
+// a venue's words are saved with single spaces ("Unit  4" is "Unit 4"), so the same place typed twice is seen as the same
+const oneSpace = (v: string) => v.replace(/\s+/g, ' ')
 const venueFields = z.object({
-  name: z.string().trim().min(2, 'Enter the venue name.').max(100, 'Keep the venue name to 100 characters or fewer.'),
-  street: z.string().trim().min(3, 'Enter the street address.').max(160, 'Keep the address to 160 characters or fewer.'),
-  city: z.string().trim().min(2, 'Enter the town or city.').max(60, 'Keep the town or city to 60 characters or fewer.'),
+  name: z.string().trim().min(2, 'Enter the venue name.').max(100, 'Keep the venue name to 100 characters or fewer.').transform(oneSpace),
+  street: z.string().trim().min(3, 'Enter the street address.').max(160, 'Keep the address to 160 characters or fewer.').transform(oneSpace),
+  // one town: the whole name is checked as a UK place near the postcode and becomes a public town page ("Leeds, Islamabad" would
+  // be checked as Leeds but shown as both)
+  city: z.string().trim().min(2, 'Enter the town or city.').max(60, 'Keep the town or city to 60 characters or fewer.').refine((v) => !v.includes(','), 'Enter one town or city, without a comma (like Stoke-on-Trent).').transform(oneSpace),
   postcode: z.string().trim().regex(POSTCODE, 'Enter a full UK postcode, like M1 1AE.'),
 })
 
@@ -134,7 +138,7 @@ export const providerVenuesRouter = createTRPCRouter({
           select name from public.venues
           where organisation_id = ${input.organisationId}::uuid and ${before ? sql`id <> ${before.id}::uuid` : sql`true`}
             and upper(replace(coalesce(postcode, ''), ' ', '')) = ${postcode.replace(/\s/g, '').toUpperCase()}
-            and (lower(trim(name)) = ${input.name.trim().toLowerCase()} or lower(trim(street)) = ${input.street.trim().toLowerCase()})
+            and (lower(regexp_replace(trim(name), '\\s+', ' ', 'g')) = ${input.name.toLowerCase()} or lower(regexp_replace(trim(street), '\\s+', ' ', 'g')) = ${input.street.toLowerCase()})
           limit 1`)
         if (twin) throw new TRPCError({ code: 'BAD_REQUEST', message: `You already have this venue: ${twin.name}, ${postcode}. Edit that one instead.`, cause: Object.assign(new Error('duplicate venue'), { field: 'name' }) })
       }

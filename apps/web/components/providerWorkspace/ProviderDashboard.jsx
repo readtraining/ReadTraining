@@ -58,7 +58,7 @@ export default function ProviderDashboard() {
     ...disputes.map((o) => ({ key: o.ref, demo: true, tone: "late", text: `Order ${o.ref} is in dispute. Send your evidence within 7 days.`, href: `/provider/orders/${o.ref}`, cta: "Send evidence" })),
     ...(unpaid.length ? [{ key: "unpaid", demo: true, tone: "info", text: `${unpaid.length} ${unpaid.length === 1 ? "order is" : "orders are"} waiting for payment`, href: "/provider/orders?status=incomplete", cta: "View" }] : []),
     ...(data.counts.reviews ? [{ key: "reviews", demo: true, tone: "info", text: `${data.counts.reviews} ${data.counts.reviews === 1 ? "review needs" : "reviews need"} a reply`, href: "/provider/performance?tab=reviews", cta: "Reply" }] : []),
-    ...(data.counts.questions ? [{ key: "qa", demo: true, tone: "info", text: `${data.counts.questions} learner ${data.counts.questions === 1 ? "question" : "questions"} to answer`, href: "/provider/settings?tab=qa", cta: "Answer" }] : []),
+    // (no learner-questions item: the Q&A settings tab it would open is still "coming soon", lib/forms.js providerSettings)
     ...(data.counts.leads ? [{ key: "leads", demo: true, tone: "info", text: `${data.counts.leads} new ${data.counts.leads === 1 ? "lead" : "leads"}`, href: "/provider/performance?tab=leads", cta: "View" }] : []),
     ...noTutor.slice(0, 3).map((k) => ({ key: k.id, tone: "muted", text: `No tutor yet for ${k.courseTitle}, ${dayRange(k.startsOn, k.endsOn)}`, href: `/provider/cohorts/${k.id}`, cta: "Assign" })),
     ...sentBack.map((c) => ({ key: c.id, tone: "late", text: `Changes requested on ${c.title}`, href: `/provider/courses/${c.id}`, cta: "Edit" })),

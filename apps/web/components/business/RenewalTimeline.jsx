@@ -1,5 +1,5 @@
 import { business } from "@/data/business";
-import { Chip, CtaLink, Eyebrow, IconDownload, Ticks } from "@/components/marketing/parts";
+import { Chip, CtaLink, Eyebrow, Ticks } from "@/components/marketing/parts";
 
 export default function RenewalTimeline() {
   const c = business.certificates;
@@ -28,7 +28,6 @@ export default function RenewalTimeline() {
                     <span>{r.name}</span>
                   </div>
                   <Chip>{r.status}</Chip>
-                  <button type="button" className="fb-iconBtn" aria-label="Download certificate"><IconDownload /></button>
                 </li>
               );
             })}

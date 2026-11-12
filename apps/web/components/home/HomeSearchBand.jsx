@@ -3,19 +3,22 @@
 import React, { useEffect, useRef, useState } from "react";
 import HomeTextLink from "./HomeTextLink";
 import { useRouter } from "next/navigation";
-import { hero } from "@/data/home";
+import { useNav } from "@/lib/navContext";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { findNear } from "@/app/course-locations/actions";
 
 // Course search directly under the hero, built on the template's segmented search pill
 // (home-9 `masthead-form`): one white pill with three fields and a search button. The server checks the place first
 // (app/course-locations/actions.js findNear): when nothing matching runs near it, the search is for the course everywhere, so
-// it never lands on "No courses match" because of the place.
+// it never lands on "No courses match" because of the place. The study methods are the live catalogue's (useNav), searched by
+// their slug (?method=classroom); "All methods" leaves the method out.
 export default function HomeSearchBand() {
   const router = useRouter();
   const [course, setCourse] = useState("");
   const [where, setWhere] = useState("");
-  const [method, setMethod] = useState(hero.methods[0]);
+  const methods = [{ slug: "", name: "All methods" }, ...useNav().methods];
+  const [method, setMethod] = useState("");
+  const methodName = methods.find((m) => m.slug === method)?.name || methods[0].name;
   const [ddOpen, setDdOpen] = useState(false);
   const ddRef = useRef(null);
 
@@ -32,7 +35,7 @@ export default function HomeSearchBand() {
     e.preventDefault();
     if (busy) return;
     const input = { q: course.trim(), location: where.trim(), method };
-    let href = `${CATALOGUE_HREF}?${new URLSearchParams({ q: input.q, where: input.location, method })}`;
+    let href = `${CATALOGUE_HREF}?${new URLSearchParams({ q: input.q, where: input.location, ...(method ? { method } : {}) })}`;
     setBusy(true);
     try {
       href = await findNear(input);
@@ -76,27 +79,27 @@ export default function HomeSearchBand() {
                       <i className="icon-online-learning-4 text-16 text-light-1 mr-12"></i>
                       <span className="rt-searchband__text">
                         <span className="rt-searchband__label">Study method</span>
-                        <span className="js-dropdown-title">{method}</span>
+                        <span className="js-dropdown-title">{methodName}</span>
                       </span>
                     </span>
                     <i className="icon text-9 icon-chevron-down ml-10"></i>
                   </button>
                   {ddOpen && (
                     <div className="rt-searchband__menu" role="listbox">
-                      {hero.methods.map((m) => (
+                      {methods.map((m) => (
                         <button
-                          key={m}
+                          key={m.slug}
                           type="button"
                           role="option"
-                          aria-selected={method === m}
+                          aria-selected={method === m.slug}
                           onClick={() => {
-                            setMethod(m);
+                            setMethod(m.slug);
                             setDdOpen(false);
                           }}
-                          className={`rt-searchband__option${method === m ? " is-active" : ""}`}
+                          className={`rt-searchband__option${method === m.slug ? " is-active" : ""}`}
                         >
-                          <span>{m}</span>
-                          {method === m && <i className="icon-check text-10"></i>}
+                          <span>{m.name}</span>
+                          {method === m.slug && <i className="icon-check text-10"></i>}
                         </button>
                       ))}
                     </div>

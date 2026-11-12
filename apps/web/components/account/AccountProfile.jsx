@@ -485,6 +485,7 @@ function CloseSection({ me }) {
   const withdraw = api.me.withdrawClosure.useMutation();
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState({ reason: "", currentPassword: "" });
+  useUnsavedChanges(Boolean(values.reason.trim())); // a reason typed but not sent: leaving asks first
   const [errors, setErrors] = useState({});
   const [said, setSaid] = useState("");
   const openRef = useRef(null);

@@ -17,6 +17,7 @@ import { Pager, RowMenu, Said, TableSkeleton, Tabs, Empty, usePaging, HeaderActi
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus, AdminTag } from "./AdminStatus";
+import { useSavedSnapshot } from "@/lib/unsavedChanges";
 
 const copy = A.customerReviews;
 const f = copy.fields;
@@ -178,6 +179,7 @@ function ReviewForm({ review, topics, onDone }) {
   );
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
+  useSavedSnapshot(v); // leaving with unsaved changes asks first (the sheet closes once saved)
   const ref = useRef(null);
   const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value }));
   const check = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.checked }));

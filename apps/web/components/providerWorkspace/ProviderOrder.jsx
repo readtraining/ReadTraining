@@ -3,7 +3,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
-import { addOrderNote, addonBooking, cancelOrder, customerName, decideRefund, learnerName, markOrderPaid, payInvoice, refundOrder, sendConfirmation, timeRange, uploadInvoice, upsellBooking, useProvider } from "@/lib/providerWorkspace";
+import { addOrderNote, addonBooking, cancelOrder, customerName, decideRefund, learnerName, payInvoice, refundOrder, sendConfirmation, timeRange, uploadInvoice, upsellBooking, useProvider, editorHref } from "@/lib/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
@@ -21,7 +21,7 @@ import DateField from "@/components/admin/DateField";
 // details, the timeline with notes, the invoice (upload it, record when it was paid), the enrolled students (one card per
 // booking: reference, course, delivery, venue, dates, timings, price, pricing plan, learner, View cohort, and Reschedule / Resit /
 // Upsell / Addon) and the earning details. Actions: Initiate refund (full or partial), Send confirmation mail; an unpaid order can
-// be marked paid, its link sent again or cancelled; a disputed one answered with evidence.
+// have its link sent again or be cancelled (nothing is marked paid by hand: that comes with real payments); a disputed one answered with evidence.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -139,7 +139,6 @@ export default function ProviderOrder({ reference }) {
       <div className="rt-pws-ord__actions">
         {o.status === "incomplete" && (
           <>
-            <button type="button" className="button -sm -purple-1 text-white" onClick={() => { markOrderPaid(o.ref); say("Order marked as paid"); }}>Mark as paid</button>
             {o.payment === "link" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => resend(`Payment link sent again to ${o.customer.email}.`, "Payment link sent again")}>Resend payment link</button>}
             <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("cancel")}>Cancel order</button>
           </>
@@ -222,7 +221,7 @@ export default function ProviderOrder({ reference }) {
             <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => invoiceRef.current?.click()}>{o.invoice?.file ? "Replace invoice" : "Upload invoice"}</button>
             {o.invoice?.file && !o.invoice.paidOn && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("invoice", { date: "" })}>Pay invoice detail</button>}
           </div>
-          <input ref={invoiceRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; if (!/\.(pdf|jpe?g|png)$/i.test(f.name)) return say("The invoice must be a PDF, JPG or PNG."); uploadInvoice(o.ref, f.name); say("Invoice uploaded"); }} />
+          <input name="invoice" ref={invoiceRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; if (!/\.(pdf|jpe?g|png)$/i.test(f.name)) return say("The invoice must be a PDF, JPG or PNG."); uploadInvoice(o.ref, f.name); say("Invoice uploaded"); }} />
         </section>
       </div>
 
@@ -254,7 +253,7 @@ export default function ProviderOrder({ reference }) {
                   )}
                 </div>
                 <dl className="rt-pws-ord__bookdl">
-                  <div><dt>Course title</dt><dd>{c ? <Link href={`/provider/courses/${c.id}`}>{c.title}</Link> : "Course removed"}</dd></div>
+                  <div><dt>Course title</dt><dd>{c ? (editorHref(c.id) ? <Link href={editorHref(c.id)}>{c.title}</Link> : c.title) : "Course removed"}</dd></div>
                   <div><dt>Delivery method</dt><dd>{methodName(c?.format) || "—"}</dd></div>
                   {k && <div><dt>Venue</dt><dd>{k.venue ? `${k.venue.name}, ${k.venue.street}, ${k.venue.city} ${k.venue.postcode}` : "Online"}</dd></div>}
                   {k && <div><dt>Course date</dt><dd>{dayRange(k.first, k.last)}</dd></div>}
