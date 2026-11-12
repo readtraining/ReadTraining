@@ -28,12 +28,12 @@ if (!termsRefunds) throw new Error("Help Centre: the terms section \"refunds-and
 const tel = `[${topBar.phone}](${topBar.phoneHref})`;
 const contactLine = `If you need help, [send us a message](/contact-us) or call us on ${tel}, ${topBar.hoursLong}.`;
 
-// what each booking option includes, as a table built from the home page's booking options
+// what each SIA Door Supervisor package includes, as a table built from the home page's example packages
 const optionsTable = {
   type: "table",
-  caption: "What each booking option includes",
+  caption: "What each SIA Door Supervisor package includes",
   rows: [
-    ["What is included", ...bookingOptions.tiers.map((t) => t.type)],
+    ["What is included", ...bookingOptions.tiers.map((t) => `${t.type} (from £${t.price})`)],
     ...bookingOptions.features.map((f) => [f.label, ...bookingOptions.tiers.map((_, i) => (f.tiers.includes(i) ? "Included" : "Not included"))]),
   ],
 };
@@ -43,7 +43,7 @@ export const helpTopics = [
     slug: "booking-a-course",
     icon: "icon-search",
     title: "Booking and certificates",
-    summary: "How booking works, ways to study, booking options, team bookings and certificates.",
+    summary: "How booking works, ways to study, course packages, team bookings and certificates.",
     articles: [
       {
         slug: "how-booking-works",
@@ -67,12 +67,13 @@ export const helpTopics = [
       },
       {
         slug: "booking-options",
-        title: "Compare booking options",
-        summary: "Basic, Plus and Pro, and what each one will include.",
+        title: "Course packages",
+        summary: "Some courses come in packages: what they are and how to choose one.",
         blocks: [
-          `Booking options come with online booking, which is coming soon. Some courses will then offer more than one. ${bookingOptions.text}`,
+          "Some courses come in packages, such as the course on its own or with the first aid it needs. Each package has its own price and lists what it includes, and you choose one after picking your date. A course without packages has one price for each date.",
+          "For example, the SIA Door Supervisor course:",
           optionsTable,
-          `When online booking opens, the options and prices for each course will show on its course page before you book. Until then, call us on ${tel} and we will talk you through what is included.`,
+          `${bookingOptions.footnote} Packages vary by course and training provider. If you're not sure which one you need, call us on ${tel}.`,
         ],
       },
       {
@@ -91,7 +92,6 @@ export const helpTopics = [
         summary: "Your training provider arranges your certificate or result after the course.",
         blocks: [
           "Your training provider arranges your certificate, result or card application after you complete the course. The course page shows the qualification you will get.",
-          "The Plus and Pro booking options include a faster result option.",
           `If your certificate has not arrived, [send us a message](${contactHref("booking")}) with your booking reference or call us on ${tel}.`,
         ],
       },
@@ -122,11 +122,10 @@ export const helpTopics = [
       {
         slug: "change-your-course-date",
         title: "Change your course date",
-        summary: "Move to another date, depending on the provider's policy and your booking option.",
+        summary: "Move to another date, depending on the training provider's policy.",
         blocks: [
-          "Whether you can move to another date depends on the training provider's rescheduling policy and your booking option. The Plus and Pro booking options include flexible date rescheduling.",
+          "Whether you can move to another date depends on the training provider's rescheduling policy.",
           `To change your date, [send us a message](${contactHref("booking")}) with your booking reference and the dates that suit you.`,
-          "See [Compare booking options](/help-centre/booking-a-course/booking-options) for what each option includes.",
         ],
       },
       {
@@ -141,7 +140,6 @@ export const helpTopics = [
         summary: "When online booking opens, we will hold your payment until your result or certificate is supplied.",
         blocks: [
           bookingOptions.benefits.find((b) => b.title === "Payment protection").text,
-          "The Pro booking option will add extra booking protection. See [Compare booking options](/help-centre/booking-a-course/booking-options).",
           `Until then, you book by calling us on ${tel}, and we explain how payment works for your booking before you pay anything.`,
         ],
       },
