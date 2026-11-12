@@ -25,7 +25,9 @@ export const useContextElement = () => {
             if (saved) {
                 // a line from the old sample catalogue (course numbers below 1000, no address) can't be booked: it is dropped, and so is
                 // one whose date isn't a real day (an older saved shape or a hand edit)
-                if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses.filter((c) => c && Number(c.id) >= 1000 && c.slug && (c.date == null || isDay(c.date)))))
+                // and one booked with the old course page packages (an `add` on top of the date, now gone) is the date alone again
+                const fresh = (c) => (c.bundle && !c.packages ? { ...c, bundle: null, firstAid: c.firstAid === "bundle" ? undefined : c.firstAid } : c)
+                if (Array.isArray(saved.courses)) setCartCourses(mergeLines(saved.courses.filter((c) => c && Number(c.id) >= 1000 && c.slug && (c.date == null || isDay(c.date))).map(fresh)))
                 if (Array.isArray(saved.products)) setCartProducts(saved.products)
                 if (Array.isArray(saved.events)) setCartEvents(saved.events)
             }
@@ -50,8 +52,8 @@ export const useContextElement = () => {
         const item = {...found,quantity}
         setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre.map((elm)=>lineKey(elm) === lineKey(item) ? {...elm,quantity:Math.min(maxDelegates(elm),(Number(elm.quantity) || 1) + quantity)} : elm) : mergeLines([...pre,item]))
     }
-    // With a session id: is that date in the basket. Without: is the course in it on any date. With a package key (a course
-    // page package, lib/basket.js bundleOf): that date with that package ("" or none for the course alone).
+    // With a session id: is that date in the basket. Without: is the course in it on any date. With a package key (a date sold
+    // in packages, lib/basket.js bundleOf): that date with that package ("" for none).
     const isAddedToCartCourses = (id, sessionId, bundleKey)=>{
         return cartCourses.some((elm)=>elm.id == id && (sessionId === undefined || (elm.sessionId || "") === sessionId) && (bundleKey === undefined || (elm.bundle?.key || "") === (bundleKey || "")))
     }

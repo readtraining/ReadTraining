@@ -4,7 +4,8 @@ import { basket as copy } from "@/data/basket";
 // on one date (`sessionId`); `quantity` is its delegates; `selected` false leaves it out of this booking. Every way in adds a date;
 // an older saved line without one asks for it in the basket's date pop-up. Swap the promo lookup for an API call later.
 
-// a course page package (`bundle`, data/courseGuides.js) is part of the line: the same date as another package is another line
+// the package chosen on a date sold in packages (`bundle`, a provider's price plan) is part of the line: the same date with
+// another package is another line
 export const lineKey = (item) => `${item.id}:${item.sessionId || ""}${item.bundle?.key ? `:${item.bundle.key}` : ""}`;
 export const MAX_DELEGATES = 20;
 // the most delegates one line can have: 20, or fewer when its date has fewer places
@@ -12,15 +13,17 @@ export const maxDelegates = (item) => Math.min(MAX_DELEGATES, Number(item.places
 // A ticked line is part of this booking; unticked lines stay in the basket for later and are left out of the total and payment.
 export const isSelected = (item) => item.selected !== false;
 
-// The basket line for a course on one session (from the course page, the catalogue card's date pop-up or a date changed in the basket).
-export const lineFor = (course, session) => ({
+// The basket line for a course on one session (from the course page, the catalogue card's date pop-up or a date changed in the
+// basket). A date sold in packages keeps them on the line (`packages`, for "Change package") with the one chosen (`pkgKey`): the
+// line's price is that package's. Without one chosen yet the line asks for it (lineIssues).
+export const lineFor = (course, session, pkgKey = null) => ({
   id: course.id,
   title: course.title,
   imageSrc: course.imageSrc,
   slug: course.slug,
   subject: course.subject,
-  price: session.price,
-  wasPrice: session.wasPrice ?? session.price,
+  ...priced(session, session.packages?.find((p) => p.key === pkgKey) ?? null),
+  packages: session.packages ?? null,
   sessionId: session.id,
   mode: session.mode,
   date: session.date,
@@ -56,34 +59,38 @@ const wasBase = (item) => {
   return was > basePrice(item) ? was : 0;
 };
 const rule = (list, item) => item.mode === "classroom" && list.subjects.includes(item.subject);
-export const hasPackages = (item) => rule(copy.packages, item);
 export const needsFirstAid = (item) => rule(copy.firstAid, item);
 
-export const packageOf = (item) => copy.packages.items.find((p) => p.key === (item.package || "saver")) || copy.packages.items[0];
-
-// The course page package a line was booked with (data/courseGuides.js: "Course + first aid" and the like), or null for the
-// course alone. Its `add` is per delegate, on top of the date's price.
-export const bundleOf = (item) => (item.bundle?.key && item.bundle.add > 0 ? item.bundle : null);
-// first aid is part of the line's package: the basket doesn't ask about it, and it is never charged twice
-export const firstAidInBundle = (item) => item.firstAid === "bundle";
+// The price fields of a line: the chosen package's price (and its was-price, from its "Save £"), or the date's own.
+function priced(session, pkg) {
+  if (!pkg) return { price: session.price, wasPrice: session.wasPrice ?? session.price, bundle: null };
+  return { price: pkg.price, wasPrice: pkg.wasPrice ?? pkg.price, bundle: { key: pkg.key, name: pkg.name } };
+}
+// A line sold in packages: the change that chooses package `key` (its price and name). Null when the line has no such package.
+export const choosePackage = (item, key) => {
+  const pkg = item.packages?.find((p) => p.key === key);
+  return pkg ? { price: pkg.price, wasPrice: pkg.wasPrice ?? pkg.price, bundle: { key: pkg.key, name: pkg.name } } : null;
+};
+// the package a line was booked with ({ key, name }), or null
+export const bundleOf = (item) => (item.bundle?.key ? item.bundle : null);
+// a line on a date sold in packages with none chosen yet (its date was changed in the basket to one on another plan)
+export const needsPackage = (item) => Boolean(item.packages?.length) && !item.packages.some((p) => p.key === item.bundle?.key);
 
 // What one delegate pays and what it would have been without offers, then the line's totals.
 export function lineParts(item) {
-  const pkg = hasPackages(item) ? packageOf(item).price : 0;
-  const bundle = bundleOf(item)?.add ?? 0;
   const addOn = needsFirstAid(item) && item.firstAid === "add" ? copy.firstAid.add.price : 0;
   const addOnWas = addOn && copy.firstAid.add.wasPrice > addOn ? copy.firstAid.add.wasPrice : 0;
-  const unit = basePrice(item) + pkg + bundle + addOn;
-  // a course page package (bundle) has no "was" price: only the course alone had one (as BookingProvider shows)
-  const unitWas = bundle ? 0 : wasBase(item) ? wasBase(item) + pkg + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
+  const unit = basePrice(item) + addOn;
+  const unitWas = wasBase(item) ? wasBase(item) + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
   const quantity = Math.min(maxDelegates(item), Math.max(1, Number(item.quantity) || 1)); // a date changed to one with fewer places
-  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, pkg, bundle, addOn };
+  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, addOn };
 }
 
 // What stops a line from going to payment (shown on the line, and listed under the Proceed button).
 export function lineIssues(item) {
   const issues = [];
   if (!hasDate(item)) issues.push("Choose a date");
+  else if (needsPackage(item)) issues.push("Choose a package");
   else if (needsFirstAid(item) && !item.firstAid) issues.push("Confirm your first aid qualification");
   return issues;
 }

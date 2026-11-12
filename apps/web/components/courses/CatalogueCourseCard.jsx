@@ -11,6 +11,7 @@ import { MODE_METHOD } from "@/lib/courseModes";
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
+import PackageDialog from "@/components/courseDetail/PackageChooser";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { api } from "@/lib/trpc/react";
 import { toCourseDetail } from "@/lib/catalogueData";
@@ -56,11 +57,13 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
   const router = useRouter();
-  const add = (detail, session, quantity = 1) => {
+  // `pkgKey`: the package chosen for a date sold in packages (the dates pop-up asks; a self-paced course asks below)
+  const add = (detail, session, quantity = 1, pkgKey = null) => {
     setStatus("loading");
     try {
-      addCourseToCart(detail.id, { ...lineFor(detail, session), quantity });
-      trackEvent("add_to_cart", { currency: "GBP", value: session.price * quantity, items: [{ ...toItem(course, index), item_variant: session.id, price: session.price, quantity }] });
+      const line = { ...lineFor(detail, session, pkgKey), quantity };
+      addCourseToCart(detail.id, line);
+      trackEvent("add_to_cart", { currency: "GBP", value: line.price * quantity, items: [{ ...toItem(course, index), item_variant: pkgKey ? `${session.id}:${pkgKey}` : session.id, price: line.price, quantity }] });
       router.push(BASKET_HREF);
     } catch {
       setStatus("error");
@@ -78,12 +81,17 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     setStatus("idle");
     const modes = detail ? bookableModes(detail) : [];
     if (!modes.length) return onNotify?.({ message: "We could not load the dates for this course. Please try again." });
-    if (modes.length === 1 && modes[0] === "ondemand") return add(detail, firstSession(detail, "ondemand"));
+    if (modes.length === 1 && modes[0] === "ondemand") {
+      const only = firstSession(detail, "ondemand");
+      return only.packages ? setPkg({ open: true, detail, session: only }) : add(detail, only);
+    }
     const priceMode = Object.keys(MODE_METHOD).find((m) => MODE_METHOD[m] === course.priceMethod);
     setDates({ detail, mode: modes.includes(priceMode) ? priceMode : cheapestMode(detail) });
     setDatesOpen(true);
   };
-  const bookDate = (id, quantity) => add(dates.detail, dates.detail.sessions.find((s) => s.id === id), quantity);
+  const bookDate = (id, quantity, pkgKey) => add(dates.detail, dates.detail.sessions.find((s) => s.id === id), quantity, pkgKey);
+  // a self-paced course sold in packages: which package (the course and the session stay set while the pop-up closes)
+  const [pkg, setPkg] = useState({ open: false, detail: null, session: null });
 
   // Meta row 1: short items only (Duration | Level | N providers). Meta row 2: delivery modes as plain text.
   const metaItems = [course.duration, levelName(course.level), course.providers > 0 ? `${course.providers} ${course.providers === 1 ? "provider" : "providers"}` : ""].filter(Boolean);
@@ -212,6 +220,8 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
         selectedId={dates ? firstSession(dates.detail, dates.mode)?.id : undefined}
         onBook={bookDate}
       />
+      <PackageDialog open={pkg.open} onClose={() => setPkg((x) => ({ ...x, open: false }))} course={pkg.detail} session={pkg.session}
+        onSelect={(key) => { setPkg((x) => ({ ...x, open: false })); add(pkg.detail, pkg.session, 1, key); }} />
     </article>
   );
 }

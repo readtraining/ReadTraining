@@ -3771,21 +3771,11 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__fs { min-width: 0; margin: 20px 0 0; padding: 20px 0 0; border: 0; border-top: 1px solid var(--color-light-5); }
 .rt-bk__fs legend { float: left; width: 100%; margin: 0 0 12px; padding: 0; font-size: 14px; font-weight: 700; color: var(--color-dark-1); }
 .rt-bk__fs legend + * { clear: both; }
-.rt-bk__pkgs { display: grid; gap: 12px; }
-@media (min-width: 768px) { .rt-bk__pkgs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.rt-bk__pkg, .rt-bk__opt { position: relative; cursor: pointer; border: 1px solid var(--color-light-5); border-radius: 12px; background: #fff; transition: border-color 0.15s ease, background 0.15s ease; }
-.rt-bk__pkg input, .rt-bk__opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.rt-bk__pkg:hover, .rt-bk__opt:hover { border-color: var(--color-purple-1); }
-.rt-bk__pkg:focus-within, .rt-bk__opt:focus-within { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
-.rt-bk__pkg.is-on, .rt-bk__opt.is-on { border-color: var(--color-purple-1); box-shadow: inset 0 0 0 1px var(--color-purple-1); background: var(--color-purple-3); }
-.rt-bk__pkg { display: grid; gap: 10px; padding: 14px 16px; }
-.rt-bk__pkghead { display: flex; align-items: center; gap: 8px; }
-.rt-bk__pkghead b { font-size: 15px; color: var(--color-dark-1); }
-.rt-bk__pkghead em { margin-left: auto; font-style: normal; font-size: 14px; font-weight: 600; color: var(--color-purple-1); }
-.rt-bk__terms { margin: 0; }
-.rt-bk__terms > div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 13px; }
-.rt-bk__terms dt { margin: 0; font-weight: 400; color: var(--color-light-1); }
-.rt-bk__terms dd { margin: 0; text-align: right; color: var(--color-dark-1); }
+.rt-bk__opt { position: relative; cursor: pointer; border: 1px solid var(--color-light-5); border-radius: 12px; background: #fff; transition: border-color 0.15s ease, background 0.15s ease; }
+.rt-bk__opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.rt-bk__opt:hover { border-color: var(--color-purple-1); }
+.rt-bk__opt:focus-within { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
+.rt-bk__opt.is-on { border-color: var(--color-purple-1); box-shadow: inset 0 0 0 1px var(--color-purple-1); background: var(--color-purple-3); }
 .rt-bk__fs.rt-bk__req { margin-top: 16px; padding: 16px; border: 1px solid var(--color-light-5); border-radius: 12px; background: var(--color-light-4); }
 .rt-bk__fs.rt-bk__req.is-open { border-color: var(--color-purple-1); }
 .rt-bk__reqtext { margin: 0 0 12px; font-size: 14px; line-height: 1.5; color: var(--color-dark-1); }
@@ -7111,8 +7101,6 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__exams th:nth-child(4) { width: 120px; }
 .rt-cg__costs th:nth-child(2) { width: 220px; }
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
-.rt-cg__pkgs { padding: 0; list-style: none; }
-.rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
 .rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
@@ -7163,11 +7151,39 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-humancheck { position: fixed; z-index: 3000; bottom: 24px; left: 50%; transform: translateX(-50%); }
 .rt-humancheck:empty { display: none; }
 
-/* ---- course page packages (PackagePicker): the chosen one in the booking card, the basket and the mini basket ------------ */
-.rt-bs__pkg span small { color: var(--cd-muted); font-weight: 400; }
-.rt-bk__tags .rt-pill.-accent small { margin-left: 4px; font-weight: 400; }
-.rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
-.rt-bk__inpkg i { color: var(--rt-c-success); }
+/* ---- "Choose your package" (PackageChooser): a date or self-paced course sold in a provider's price plan --------------- */
+/* the pop-up widens for 3 or 4 packages side by side; phones: one under another, full screen as every booking pop-up */
+@media (min-width: 576px) { .rt-dd__panel:has(.rt-pk__grid.-n3) { width: 880px; } .rt-dd__panel:has(.rt-pk__grid.-n4) { width: 1120px; } .rt-dd__panel:has(.rt-pk__list) { min-height: 0; } }
+.rt-pk__back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 2px 0; border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--cd-brand); cursor: pointer; }
+.rt-pk__back:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rt-pk__back .rt-cd__icon { font-size: 11px; }
+.rt-pk__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 576px) { .rt-pk__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .rt-pk__grid.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 992px) { .rt-pk__grid.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* one package: name, price, per delegate and the saving, tagline, its features (✓ included, ✗ not), and Select at the foot */
+.rt-pk__card { position: relative; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 18px 16px 16px; list-style: none; background: var(--cd-surface); border: 1px solid var(--cd-border); border-radius: 12px; }
+.rt-pk__card.-popular { border-color: var(--cd-brand); box-shadow: inset 0 0 0 1px var(--cd-brand); }
+.rt-pk__card.is-current { background: var(--cd-brand-subtle); }
+.rt-pk__badge { position: absolute; top: -11px; left: 16px; padding: 2px 10px; border-radius: 999px; background: var(--cd-brand); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--cd-surface); }
+.rt-pk__name { margin: 0; font-size: 17px; line-height: 24px; font-weight: 700; color: var(--cd-text); }
+.rt-pk__price { display: flex; align-items: baseline; gap: 8px; margin: 0; font-variant-numeric: tabular-nums; }
+.rt-pk__price strong { font-size: 24px; line-height: 30px; font-weight: 700; color: var(--cd-text); }
+.rt-pk__price s { font-size: 14px; color: var(--cd-muted); }
+.rt-pk__per { margin: 0; font-size: 13px; line-height: 19px; color: var(--cd-muted); }
+.rt-pk__save { font-weight: 600; color: var(--rt-c-success); }
+.rt-pk__tag { margin: 2px 0 0; font-size: 14px; line-height: 20px; color: var(--cd-text); }
+.rt-pk__features { display: grid; gap: 8px; margin: 8px 0 4px; padding: 10px 0 0; border-top: 1px solid var(--cd-border); list-style: none; }
+.rt-pk__features li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-text); list-style: none; }
+.rt-pk__features li.-no { color: var(--cd-muted); }
+.rt-pk__features small { display: block; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
+.rt-pk__mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; font-size: 8px; background: var(--rt-c-success-soft); color: var(--rt-c-success); }
+.rt-pk__features li.-no .rt-pk__mark { background: var(--cd-band); color: var(--cd-muted); }
+.rt-pk__select { margin-top: auto; } /* Select sits at the foot of every card, in one line across the row */
+.rt-pk__card > :nth-last-child(2) { margin-bottom: 10px; }
+.rt-pk__note { margin: 14px 0 0; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
+.rt-pk__list { padding-top: 22px; } /* room for the Most popular badge above the first row */
+.rt-bs__from { font-size: 15px; font-weight: 600; color: var(--cd-muted); }
 
 /* ============================================================================================
 

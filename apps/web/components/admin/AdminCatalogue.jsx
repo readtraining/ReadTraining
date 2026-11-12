@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
-import { basket } from "@/data/basket";
 import { api } from "@/lib/trpc/react";
 import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
@@ -17,10 +16,9 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { ErrorState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
 import { AdminStatus, AdminTag } from "./AdminStatus";
-import { SHOW_DEMO } from "@/lib/demo";
 
 const copy = A.catalogue;
-const TABS = ["courses", "list", "packages"];
+const TABS = ["courses", "list"];
 const KINDS = ["all", "shared", "provider"];
 
 const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.providers, sessions: (c) => c.upcoming, from: (c) => c.fromPence ?? Infinity };
@@ -41,7 +39,7 @@ export default function AdminCatalogue() {
   const list = api.admin.courses.list.useQuery({ kind, status, q: q.trim() || undefined }, { enabled: tab === "courses", placeholderData: (prev) => prev });
   useEffect(() => {
     const t = getQuery("tab");
-    if (TABS.includes(t) && (SHOW_DEMO || t !== "packages")) setTab(t);
+    if (TABS.includes(t)) setTab(t);
     const k = getQuery("kind");
     if (KINDS.includes(k)) setKind(k);
     const s = getQuery("status");
@@ -51,8 +49,7 @@ export default function AdminCatalogue() {
   }, []);
 
   const cols = copy.columns;
-  // the packages are DEMO: on the live site only the real courses and catalogue settings (lib/demo.js)
-  const tabs = [{ key: "courses", label: copy.tabs.courses }, { key: "list", label: copy.tabs.list }, ...(SHOW_DEMO ? [{ key: "packages", label: copy.tabs.packages }] : [])];
+  const tabs = [{ key: "courses", label: copy.tabs.courses }, { key: "list", label: copy.tabs.list }];
   const pick = (setter, key, fallback) => (v) => {
     setter(v);
     pages.restart();
@@ -119,36 +116,6 @@ export default function AdminCatalogue() {
 
       {tab === "list" && <AdminCatalogueList />}
 
-      {tab === "packages" && (
-        <>
-          <p className="rt-acc__note rt-adm-help">{copy.packagesNote}</p>
-          <div className="rt-adm-grid2">
-            {basket.packages.items.map((p) => (
-              <section key={p.key} className="rt-acc__card" aria-labelledby={`rt-adm-pk-${p.key}`}>
-                <div className="rt-acc__cardhead">
-                  <h2 className="rt-acc__h2" id={`rt-adm-pk-${p.key}`}>{p.name}</h2>
-                  <strong className="rt-adm-price">{p.price ? `+${formatPrice(p.price)}` : "Included"}</strong>
-                </div>
-                <dl className="rt-adm-dl">
-                  {p.terms.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-                  <div><dt>Applies to</dt><dd>Classroom courses in {basket.packages.subjects.join(", ")}</dd></div>
-                </dl>
-              </section>
-            ))}
-            <section className="rt-acc__card" aria-labelledby="rt-adm-pk-efaw">
-              <div className="rt-acc__cardhead">
-                <h2 className="rt-acc__h2" id="rt-adm-pk-efaw">Emergency First Aid at Work add-on</h2>
-                <strong className="rt-adm-price">+{formatPrice(basket.firstAid.add.price)}</strong>
-              </div>
-              <dl className="rt-adm-dl">
-                <div><dt>Was</dt><dd>{formatPrice(basket.firstAid.add.wasPrice)}</dd></div>
-                <div><dt>Applies to</dt><dd>Classroom courses in {basket.firstAid.subjects.join(", ")}</dd></div>
-                <div><dt>Shown as</dt><dd>{basket.firstAid.add.note}</dd></div>
-              </dl>
-            </section>
-          </div>
-        </>
-      )}
     </div>
   );
 }

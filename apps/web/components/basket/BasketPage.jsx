@@ -4,10 +4,11 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useContextElement } from "@/context/Context";
 import { basket as copy } from "@/data/basket";
-import { basketIssues, basketTotals, isSelected, lineFor, lineKey, mergeLines, promoFor } from "@/lib/basket";
+import { basketIssues, basketTotals, choosePackage, isSelected, lineFor, lineKey, mergeLines, promoFor } from "@/lib/basket";
 import { useSkillSaver } from "@/lib/useSkillSaver";
 import { bookableModes, defaultMode, formatShortDate } from "@/lib/courses";
 import { DatesPicker } from "@/components/courseDetail/DatesDialog";
+import PackageDialog from "@/components/courseDetail/PackageChooser";
 import { api } from "@/lib/trpc/react";
 import { toCourseDetail } from "@/lib/catalogueData";
 import BasketSteps from "./BasketSteps";
@@ -76,9 +77,20 @@ export default function BasketPage({ recommended }) {
   const pickDate = (id) => {
     const session = dates.detail.sessions.find((s) => s.id === id);
     if (!session) return;
-    change(dates.key, lineFor(dates.detail, session)); // delegates, package, first aid and the tick stay as they were
+    // delegates, first aid and the tick stay as they were; so does the package when the new date has one of the same name (a
+    // date without it asks for a package on the line)
+    const was = cartCourses.find((i) => lineKey(i) === dates.key);
+    change(dates.key, lineFor(dates.detail, session, was?.bundle?.key));
     setDatesOpen(false);
     setAnnounce(copy.dateChanged.replace("{date}", session.mode === "ondemand" ? session.time.toLowerCase() : formatShortDate(session.date)).replace("{place}", session.location));
+  };
+  // "Change package" / "Choose a package" on a line sold in packages: the packages it keeps, with its own date and delegates
+  const [pkg, setPkg] = useState({ open: false, key: null, item: null });
+  const closePkg = () => setPkg((x) => ({ ...x, open: false }));
+  const pickPackage = (pkgKey) => {
+    const patch = pkg.item && choosePackage(pkg.item, pkgKey);
+    if (patch) change(pkg.key, patch);
+    closePkg();
   };
   const remove = (item) => {
     setRemoved({ item, index: cartCourses.indexOf(item) });
@@ -146,7 +158,7 @@ export default function BasketPage({ recommended }) {
                   </div>
                 )}
                 {cartCourses.map((item) => (
-                  <BasketLine key={lineKey(item)} item={item} onChange={(patch) => change(lineKey(item), patch)} onRemove={() => remove(item)} onDates={() => openDates(item)} />
+                  <BasketLine key={lineKey(item)} item={item} onChange={(patch) => change(lineKey(item), patch)} onRemove={() => remove(item)} onDates={() => openDates(item)} onPackage={() => setPkg({ open: true, key: lineKey(item), item })} />
                 ))}
               </div>
               <BasketSummary totals={totals} issues={issues} promo={promo} onPromo={choosePromo} count={{ chosen: chosen.length, total: cartCourses.length }} signedOut={saver === null} />
@@ -170,6 +182,8 @@ export default function BasketPage({ recommended }) {
       {ready && cartCourses.length > 0 && <BasketBar totals={totals} issues={issues} />}
 
       <p className="rt-sr" aria-live="polite">{announce}</p>
+      <PackageDialog open={pkg.open} onClose={closePkg} course={pkg.item ? { title: pkg.item.title } : null} quantity={pkg.item?.quantity || 1} current={pkg.item?.bundle?.key ?? null} onSelect={pickPackage}
+        session={pkg.item ? { mode: pkg.item.mode, date: pkg.item.date, endDate: pkg.item.endDate, time: pkg.item.time, location: pkg.item.city || "Online", packages: pkg.item.packages } : null} />
       <DatesPicker
         open={datesOpen}
         onClose={() => setDatesOpen(false)}

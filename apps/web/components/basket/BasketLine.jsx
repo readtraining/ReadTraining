@@ -4,16 +4,17 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { basket as copy } from "@/data/basket";
-import { MAX_DELEGATES, maxDelegates, bundleOf, firstAidInBundle, hasDate, hasPackages, isSelected, lineParts, modeLabel, needsFirstAid } from "@/lib/basket";
+import { MAX_DELEGATES, maxDelegates, bundleOf, hasDate, isSelected, lineParts, modeLabel, needsFirstAid, needsPackage } from "@/lib/basket";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
 
-// One course on one date. Top: the picture, the title, when and where it runs, and on the right the delegates counter, the line's
-// price and Remove. Under it, only for a security classroom course: the package to choose (.rt-bk__pkg, the selected learning-option
-// card's look) and the first aid qualification the licence needs (.rt-bk__req). The tick box beside the title puts the course in
-// this booking or leaves it in the basket for later. The date is chosen and changed here, in the date pop-up (`onDates`).
-export default function BasketLine({ item, onChange, onRemove, onDates }) {
+// One course on one date. Top: the picture, the title, when and where it runs, the package chosen when the date is sold in
+// packages (with "Change package", `onPackage`), and on the right the delegates counter, the line's price and Remove. Under it,
+// only for a security classroom course: the first aid qualification the licence needs (.rt-bk__req). The tick box beside the
+// title puts the course in this booking or leaves it in the basket for later. The date is chosen and changed here, in the date
+// pop-up (`onDates`).
+export default function BasketLine({ item, onChange, onRemove, onDates, onPackage }) {
   const { unit, total, was, quantity } = lineParts(item);
   const dated = hasDate(item);
   const courseHref = coursePath(item.slug || item.id);
@@ -22,8 +23,9 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
   const max = maxDelegates(item);
   const setQuantity = (next) => onChange({ quantity: Math.min(max, Math.max(1, next)) });
   const on = isSelected(item);
-  // the course page package this line was booked with (its price is already in the line's price)
+  // the package this line was booked with (the line's price is that package's); one still to choose stops payment
   const bundle = bundleOf(item);
+  const pickPackage = needsPackage(item);
 
   return (
     <article className={`rt-bk__line${on ? "" : " is-off"}`} aria-labelledby={`${id}-t`}>
@@ -59,10 +61,17 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
               </ul>
               <div className="rt-bk__tags">
                 <span className="rt-pill">{modeLabel(item.mode)}</span>
-                {bundle && <span className="rt-pill -accent">{bundle.name} <small>+{formatPrice(bundle.add)}</small></span>}
+                {bundle && !pickPackage && <span className="rt-pill -accent"><span className="rt-sr">{copy.package.label}: </span>{bundle.name}</span>}
                 {item.skillSaver && <SaverBadge />}
                 <button type="button" className="fb-textlink rt-bk__change" aria-haspopup="dialog" onClick={onDates}>{copy.changeDate}<span className="rt-sr"> for {item.title}</span></button>
+                {bundle && !pickPackage && <button type="button" className="fb-textlink rt-bk__change" aria-haspopup="dialog" onClick={onPackage}>{copy.package.change}<span className="rt-sr"> for {item.title}</span></button>}
               </div>
+              {pickPackage && (
+                <div className="rt-bk__nodate" role="status">
+                  <p>{copy.package.none}</p>
+                  <button type="button" className="button -sm -purple-1 text-white" aria-haspopup="dialog" onClick={onPackage}>{copy.package.choose}<span className="rt-sr"> for {item.title}</span></button>
+                </div>
+              )}
             </>
           ) : (
             <div className="rt-bk__nodate" role="status">
@@ -93,35 +102,7 @@ export default function BasketLine({ item, onChange, onRemove, onDates }) {
         <p className="rt-bk__note">{max < MAX_DELEGATES ? `This date has ${max} places. Need more?` : `Need more than ${MAX_DELEGATES} places?`} <Link href={`${QUOTE_HREF}?course=${item.id}`} className="fb-textlink">Ask for a group quote</Link></p>
       )}
 
-      {dated && hasPackages(item) && (
-        <fieldset className="rt-bk__fs">
-          <legend>{copy.packages.title}</legend>
-          <div className="rt-bk__pkgs">
-            {copy.packages.items.map((p) => {
-              const on = (item.package || "saver") === p.key;
-              return (
-                <label key={p.key} className={`rt-bk__pkg${on ? " is-on" : ""}`}>
-                  <input type="radio" name={`${id}-pkg`} value={p.key} checked={on} onChange={() => onChange({ package: p.key })} />
-                  <span className="rt-bk__pkghead">
-                    <b>{p.name}</b>
-                    {p.badge && <span className="rt-pill -accent">{p.badge}</span>}
-                    <em>{p.price ? `+${formatPrice(p.price)}` : "Included"}</em>
-                  </span>
-                  <dl className="rt-bk__terms">
-                    {p.terms.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-                  </dl>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      )}
-
-      {dated && needsFirstAid(item) && firstAidInBundle(item) && (
-        <p className="rt-bk__note rt-bk__inpkg"><i className="icon-check text-10" aria-hidden="true"></i>Emergency First Aid at Work is included in your {bundle?.name || "package"} package.</p>
-      )}
-
-      {dated && needsFirstAid(item) && !firstAidInBundle(item) && (
+      {dated && needsFirstAid(item) && (
         <fieldset className={`rt-bk__fs rt-bk__req${item.firstAid ? "" : " is-open"}`}>
           <legend>{fa.title}</legend>
           <p className="rt-bk__reqtext">{fa.text}</p>

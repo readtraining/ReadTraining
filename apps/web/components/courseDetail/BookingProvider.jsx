@@ -11,18 +11,18 @@ import { lineFor } from "@/lib/basket";
 import { TEAM } from "@/lib/teamTraining";
 import { BASKET_HREF, QUOTE_HREF } from "@/lib/routes";
 import { useRouter } from "next/navigation";
+import PackageDialog from "./PackageChooser";
 
 const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
 export const IN_HOUSE_NOTE = TEAM.note;
 export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 
-// Shared booking state for the whole detail page: delivery mode, location filter, the selected session and, on a course with
-// packages (data/courseGuides.js), the chosen package. BookingCard, DatesSection, MobileBuyBar and PackagePicker all read this
-// one source. It is mirrored to the URL (?mode=&session=&package=) with history.replaceState, so a shared link opens with the
-// same selection and nothing reloads or scrolls. A package adds its `add` to the date's price (`price`; a was-price shows only
-// for the course alone) and goes into the basket with the date.
-export default function BookingProvider({ course, initialMode, initialSession, initialPackage, packages = null, children }) {
+// Shared booking state for the whole detail page: delivery mode, location filter and the selected session. BookingCard,
+// DatesSection and MobileBuyBar all read this one source. It is mirrored to the URL (?mode=&session=) with
+// history.replaceState, so a shared link opens with the same selection and nothing reloads or scrolls. A date or self-paced course
+// sold in packages (its provider's price plan) shows its cheapest package's price, "From"; booking it asks which package first.
+export default function BookingProvider({ course, initialMode, initialSession, children }) {
   const pathname = usePathname();
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
 
@@ -40,9 +40,6 @@ export default function BookingProvider({ course, initialMode, initialSession, i
     const wanted = course.sessions.find((s) => s.id === initialSession);
     return (wanted && wanted.mode === startMode ? wanted : startMode ? firstOf(startMode) : null)?.id;
   });
-  // the chosen package's key ("course": the course alone); none on a course without packages
-  const [bundleKey, setBundleKey] = useState(() => (packages?.some((p) => p.key === initialPackage) ? initialPackage : packages?.[0]?.key ?? null));
-  const bundle = packages?.find((p) => p.key === bundleKey) ?? null;
   const [city, setCity] = useState("");
   const [toast, setToast] = useState(null);
   const [datesOpen, setDatesOpen] = useState(false); // the "choose a date" pop-up
@@ -53,27 +50,23 @@ export default function BookingProvider({ course, initialMode, initialSession, i
 
   const isInHouse = mode === "inhouse";
   const session = course.sessions.find((s) => s.id === sessionId) || (mode ? firstOf(mode) : null) || course.sessions[0] || null;
-  // what one place costs with the chosen package (the date's price plus the package), and the date's was-price when it has one,
-  // for the course alone only: the date's was-price plus a package was never a price anyone charged
-  const extra = bundle?.add ?? 0;
-  const price = session ? session.price + extra : null;
-  const wasPrice = session && !extra && session.wasPrice > session.price ? session.wasPrice : null;
+  // what one place costs (sold in packages: the cheapest package's, and `fromPrice` says so), and the date's was-price
+  const price = session ? session.price : null;
+  const wasPrice = session && session.wasPrice > session.price ? session.wasPrice : null;
+  const fromPrice = Boolean(session?.packages);
 
   const writeUrl = useCallback(
-    (nextMode, nextSession, nextBundle) => {
+    (nextMode, nextSession) => {
       try {
         const params = new URLSearchParams(window.location.search);
         if (nextMode) params.set("mode", nextMode);
         if (nextSession) params.set("session", nextSession);
         else if (nextMode) params.delete("session");
-        if (nextBundle !== undefined) {
-          if (nextBundle && nextBundle !== packages?.[0]?.key) params.set("package", nextBundle);
-          else params.delete("package");
-        }
+        params.delete("package"); // the old course page packages (gone): an old shared link loses it
         window.history.replaceState(window.history.state, "", `${pathname}?${params.toString()}${window.location.hash}`);
       } catch {}
     },
-    [pathname, packages],
+    [pathname],
   );
 
   const setMode = useCallback(
@@ -109,26 +102,6 @@ export default function BookingProvider({ course, initialMode, initialSession, i
       }
     },
     [course, notify, writeUrl],
-  );
-
-  // ---- a package (data/courseGuides.js): choosing one leaves dated booking on the same date, or goes back to it from team
-  // training, and the booking card flashes with the new price ----
-  const selectBundle = useCallback(
-    (key) => {
-      const next = packages?.find((p) => p.key === key);
-      if (!next || key === bundleKey) return;
-      setFlash((f) => f + 1);
-      setBundleKey(key);
-      if (mode === "inhouse" && defaultMode && defaultMode !== "inhouse") {
-        const target = session?.mode === defaultMode ? session : firstOf(defaultMode);
-        setModeState(defaultMode);
-        if (target) setSessionId(target.id);
-        writeUrl(defaultMode, target?.id, key);
-      } else writeUrl(null, null, key);
-      notify(`Selected: ${next.name}`);
-      trackEvent("select_promotion", { promotion_id: next.key, promotion_name: next.name, items: [toItem(course)] });
-    },
-    [packages, bundleKey, mode, defaultMode, session, firstOf, writeUrl, notify, course],
   );
 
   // ---- "choose a date" pop-up: opening adds a history entry (?dates=open) so the browser Back button closes it ----
@@ -181,27 +154,28 @@ export default function BookingProvider({ course, initialMode, initialSession, i
   }, []);
 
   // ---- Book now: one shared flow for the date pop-up, the card and the mobile bar. It puts the date in the basket (never twice:
-  // the basket merges the same date) and goes straight to the basket, as Hurak's "Book now" does ----
+  // the basket merges the same date and package) and goes straight to the basket, as Hurak's "Book now" does. A date sold in
+  // packages asks which one first: the dates pop-up has its own step for it; the card and the bar open the packages here ----
   const router = useRouter();
   const [status, setStatus] = useState("idle"); // idle | loading | error
+  const [pkgFor, setPkgFor] = useState({ open: false, id: null, qty: 1 }); // the packages pop-up (its date stays set while closing)
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
-  const lineBundle = bundle && bundle.add > 0 ? { key: bundle.key, name: bundle.name, add: bundle.add } : null;
-  const inBasket = isAddedToCartCourses(course.id, session?.id || "", lineBundle?.key || "");
+  const inBasket = isAddedToCartCourses(course.id, session?.id || "");
   const book = useCallback(
-    (sessionId, quantity = 1) => {
+    (sessionId, quantity = 1, pkgKey = null) => {
       const target = sessionId ? course.sessions.find((s) => s.id === sessionId) : session;
       if (status === "loading" || !target || isInHouse) return;
+      const pkg = target.packages?.find((p) => p.key === pkgKey) ?? null;
+      if (target.packages && !pkg) return setPkgFor({ open: true, id: target.id, qty: quantity });
       // the editors' Preview of a course that may not be live yet: nothing goes in the basket
       if (course.preview) return notify({ message: "This is a preview, so booking is off. Learners see the dates once the course is live; online booking opens in a later update." });
       setStatus("loading");
       try {
-        // with a package: the package goes with the line, and one that includes first aid answers the basket's first aid question
-        const line = { ...lineFor(course, target), quantity, ...(lineBundle ? { bundle: lineBundle, ...(bundle.firstAid ? { firstAid: "bundle" } : {}) } : {}) };
+        const line = { ...lineFor(course, target, pkg?.key), quantity };
         addCourseToCart(course.id, line);
-        const unit = target.price + (lineBundle?.add ?? 0);
-        trackEvent("add_to_cart", { currency: "GBP", value: unit * quantity, items: [{ ...toItem(course), item_variant: lineBundle ? `${target.id}:${lineBundle.key}` : target.id, price: unit, quantity }] });
+        trackEvent("add_to_cart", { currency: "GBP", value: line.price * quantity, items: [{ ...toItem(course), item_variant: pkg ? `${target.id}:${pkg.key}` : target.id, price: line.price, quantity }] });
         router.push(BASKET_HREF);
       } catch {
         setStatus("error");
@@ -209,9 +183,10 @@ export default function BookingProvider({ course, initialMode, initialSession, i
         later(() => setStatus("idle"), 1500);
       }
     },
-    [status, session, isInHouse, addCourseToCart, course, notify, lineBundle, bundle, router],
+    [status, session, isInHouse, addCourseToCart, course, notify, router],
   );
   const addToBasket = useCallback(() => book(), [book]);
+  const closePackages = useCallback(() => setPkgFor((x) => ({ ...x, open: false })), []);
 
   // The booking card's button, observed by the mobile buy bar.
   const cardButtonRef = useRef(null);
@@ -240,12 +215,14 @@ export default function BookingProvider({ course, initialMode, initialSession, i
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
     status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
-    packages, bundle, selectBundle, price, wasPrice,
+    price, wasPrice, fromPrice,
   };
 
   return (
     <BookingContext.Provider value={value}>
       {children}
+      <PackageDialog open={pkgFor.open} onClose={closePackages} course={course} session={course.sessions.find((s) => s.id === pkgFor.id) ?? null} quantity={pkgFor.qty}
+        onSelect={(key) => { closePackages(); book(pkgFor.id, pkgFor.qty, key); }} />
       <Toast toast={toast} onDone={() => setToast(null)} duration={2600} />
     </BookingContext.Provider>
   );

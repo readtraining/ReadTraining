@@ -1,8 +1,8 @@
 import { CATALOGUE_HREF, CHECKOUT_HREF } from "@/lib/routes";
 // The course basket (/basket). The flow and the rules follow the client's current site (hurak.com: Select bundle >
-// Review basket > Pay securely, a package per course, the first-aid rule for security courses, the delegates counter and the
-// promo code). Our own wording and layout. Draft until confirmed: the package prices and terms, the first-aid add-on price and
-// the demo promo code (there is no backend for any of them yet).
+// Review basket > Pay securely, the package chosen with a date sold in packages, the first-aid rule for security courses, the
+// delegates counter and the promo code). Our own wording and layout. Draft until confirmed: the first-aid add-on price and the
+// demo promo code (there is no backend for either yet).
 
 export const basket = {
   title: "Your basket",
@@ -14,23 +14,14 @@ export const basket = {
   empty: { title: "Your basket is empty", text: "Find a course, choose a date and add it to your basket.", cta: { label: "Find courses", href: CATALOGUE_HREF } },
   recommended: { eyebrow: "More to consider", title: "You might also like" },
   noDate: "No date chosen yet.",
+  // a date sold in packages (a provider's price plan): the package chosen, and choosing or changing it
+  package: { label: "Package", change: "Change package", choose: "Choose a package", none: "This date comes in packages. Choose one to continue." },
   chooseDate: "Choose a date",
   changeDate: "Change date",
   dateChanged: "Date changed to {date}, {place}.",
   // the tick boxes: pay for the ticked courses, keep the rest in the basket (as Amazon's basket does)
   select: { all: "Select all", count: "{n} of {total} selected", none: "Select at least one course to continue", off: "Not in this booking. It stays in your basket.", include: "Include {title} in this booking" },
 
-  // a package per classroom security course: the same course, with the terms the learner wants. OFF (no subjects): these terms
-  // were examples, not the client's. A course's real packages are on its page (data/courseGuides.js: Course only, Course +
-  // first aid, Career bundle); choosing them in the basket is the separate branch feat/selectable-packages.
-  packages: {
-    subjects: [],
-    title: "Choose your package",
-    items: [
-      { key: "saver", name: "Saver", price: 0, terms: [["Rescheduling", "£170 fee"], ["Exam resits", "£100 per resit"], ["Results", "7 to 10 working days"]] },
-      { key: "flexi", name: "Flexi", price: 70, badge: "Most flexible", terms: [["Rescheduling", "Free up to 72 hours before"], ["Exam resits", "Unlimited until you pass"], ["Results", "Same day"]] },
-    ],
-  },
 
   // security licence courses need a first aid qualification: the learner confirms they have one or adds the course
   firstAid: {
@@ -38,7 +29,7 @@ export const basket = {
     title: "First aid qualification required",
     text: "To get your SIA licence you must hold an Emergency First Aid at Work qualification (or higher).",
     have: { label: "I already have a valid first aid certificate", note: "Bring the original certificate. It must have been taken in person and stay valid for at least 12 months after your course." },
-    // the client's own price: "Course + first aid" is £70 more than the course alone (data/courseGuides.js packages)
+    // the client's own price: their "Course + first aid" bundle was £70 more than the course alone
     add: { label: "Add Emergency First Aid at Work", note: "Completed as part of your course, with no extra training days. You also get a separate certificate.", price: 70 },
   },
 

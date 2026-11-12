@@ -128,6 +128,13 @@ function timetable(list = []) {
   return { time: `${sorted[0].from} to ${sorted[0].to}`, schedule: inARow ? "" : daysText(all) };
 }
 
+// A price plan's packages (API publicTiers) as the booking parts read them, in pounds; `key` is the package's name in lower case
+// (names are unique in a plan), so a basket line keeps which one was chosen. Null for a date or course with one flat price.
+const toPackages = (tiers) =>
+  Array.isArray(tiers) && tiers.length >= 2
+    ? tiers.map((t) => ({ key: t.name.trim().toLowerCase(), name: t.name, price: pounds(t.pricePence), wasPrice: pounds(t.wasPence), tagline: t.tagline || "", popular: Boolean(t.popular), features: t.features || [] }))
+    : null;
+
 const saverOf = (list) => (list.length && list.every((x) => x.skillSaver) ? "all" : list.some((x) => x.skillSaver) ? "some" : null);
 
 // A course page (catalogue.course) as the course page's parts read it. `related`: listings to show under it.
@@ -138,6 +145,7 @@ export function toCourseDetail(page, related = []) {
       sessions.push({
         id: `sp-${o.courseId}`, mode: "ondemand", date: today(), endDate: today(), time: "Start any time", location: "Online", city: "", venue: "", address: "", postcode: "",
         provider: o.provider.name, providerSlug: o.provider.slug, courseId: o.courseId, courseSlug: o.slug, price: pounds(o.selfPacedPence), wasPrice: null, skillSaver: o.skillSaver,
+        packages: toPackages(o.selfPacedPlan), // sold in packages (a price plan): the price is the cheapest one's
       });
     }
     for (const d of o.dates) {
@@ -164,6 +172,7 @@ export function toCourseDetail(page, related = []) {
         details: d.details, // what the provider wrote for learners about this date (shown under it)
         price: pounds(d.pricePence),
         wasPrice: pounds(d.wasPricePence),
+        packages: toPackages(d.plan), // Tiered pricing: the packages to choose between (the price is the cheapest one's)
         skillSaver: o.skillSaver, // the provider's course is in Skill Saver (its discount applies in the basket)
       });
     }

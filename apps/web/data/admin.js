@@ -774,7 +774,7 @@ export const admin = {
   catalogue: {
     title: "Catalogue",
     lead: "Every course on the marketplace: the shared course pages our team writes, and each provider's own courses.",
-    tabs: { courses: "Courses", list: "Categories and filters", packages: "Packages and add-ons" },
+    tabs: { courses: "Courses", list: "Categories and filters" },
     search: "Search by course, provider or number",
     kinds: { all: "All courses", shared: "Shared pages", provider: "Providers' courses" },
     kind: { shared: "Shared page", provider: "Provider course" },
@@ -800,7 +800,6 @@ export const admin = {
       proposed: "Proposed",
       fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
     },
-    packagesNote: "These apply in the basket to classroom courses in the listed categories. Prices change with the backend.",
     // the catalogue's one list (real, API admin.catalogue): what the site's filters and menus and the provider's course form use
     list: {
       note: "This is the list the site's filters and menus and the provider's course form use. Changes show on the site within a few seconds.",
