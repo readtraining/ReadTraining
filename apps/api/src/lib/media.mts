@@ -41,8 +41,28 @@ export const MIN_COURSE_IMAGE = { width: 500, height: 300 } as const
 // The smallest provider logo (the settings form says so; apps/web/lib/images.js has every picture rule).
 export const MIN_LOGO = { width: 200, height: 200 } as const
 
-/** Width and height read from the start of a JPG, PNG, WebP or GIF file; null when it isn't one of those (or is damaged). */
+/** Width and height of a JPG, PNG, WebP or GIF file; null when it isn't one of those, or is damaged: read from its start, and
+ *  the file must also end the way its kind does, so a fake or cut-off file (a real header with nothing whole after it) is refused. */
 export function imageSize(b: Uint8Array): { width: number; height: number } | null {
+  return complete(b) ? headerSize(b) : null
+}
+
+// Whether the file ends as its kind must: PNG with its IEND chunk, GIF with its trailer byte, WebP as long as its RIFF header says,
+// JPEG with its end-of-image marker (some cameras add a few bytes after it, so the last kilobyte is looked through).
+function complete(b: Uint8Array): boolean {
+  const n = b.length
+  const text = (at: number, len: number) => (at >= 0 && n >= at + len ? String.fromCharCode(...b.subarray(at, at + len)) : '')
+  if (b[0] === 0x89 && text(1, 3) === 'PNG') return text(n - 8, 4) === 'IEND'
+  if (text(0, 3) === 'GIF') return b[n - 1] === 0x3b
+  if (text(0, 4) === 'RIFF' && text(8, 4) === 'WEBP') return n >= 12 && n >= new DataView(b.buffer, b.byteOffset, n).getUint32(4, true) + 8
+  if (b[0] === 0xff && b[1] === 0xd8) {
+    for (let i = n - 2; i >= Math.max(2, n - 1024); i--) if (b[i] === 0xff && b[i + 1] === 0xd9) return true
+    return false
+  }
+  return false
+}
+
+function headerSize(b: Uint8Array): { width: number; height: number } | null {
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength)
   const text = (at: number, n: number) => (b.length >= at + n ? String.fromCharCode(...b.subarray(at, at + n)) : '')
   // PNG: the IHDR chunk comes first
