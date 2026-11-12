@@ -55,13 +55,15 @@ export function friendlyError(error: TRPCError, path: string): TRPCError | null 
         return fieldError('CONFLICT', 'That is linked to something that has changed or is still in use. Reload the page and try again.', null)
       case '23514':
       case '23502':
-      case '22001':
-      case '22P02':
-      case '22007':
-      case '22008':
         console.error(`[db] ${pg.code} ${constraint} on ${path}: ${String(pg.message)}`)
         return fieldError('BAD_REQUEST', 'One of the values isn’t allowed. Check the form and try again.', null)
       default:
+        // any data exception (class 22: too long, not a number or date, out of range, a character Postgres can't store such
+        // as a NUL byte...) is the value's fault, not ours
+        if (String(pg.code).startsWith('22')) {
+          console.error(`[db] ${pg.code} on ${path}: ${String(pg.message)}`)
+          return fieldError('BAD_REQUEST', 'One of the values isn’t allowed. Check the form and try again.', null)
+        }
         console.error(`[db] ${String(pg.code)} on ${path}:`, pg.message)
         return new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: GENERAL })
     }

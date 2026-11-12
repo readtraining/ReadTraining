@@ -55,9 +55,10 @@ export async function limit(ctx: { ip: string | null; user?: { id: string } | nu
 /**
  * A public form that sends to us (contact, quotes, applications, the certificate check… once each is built; their switch is in
  * apps/web/lib/forms.js). The input must carry `humanCheck`, a fresh Cloudflare Turnstile token (the web's sendForm adds it),
- * and each connection may send only a few in a short time. Every public form endpoint MUST use this, never publicProcedure.
+ * and each connection may send only a few in a short time. Every public form endpoint MUST use this, never publicProcedure. Built
+ * on `base`, so a database error comes back in plain words like every other procedure's.
  */
-export const publicFormProcedure = t.procedure
+export const publicFormProcedure = base
   .input(z.object({ humanCheck: z.string().min(1).max(2048) }))
   .use(async ({ ctx, input, next }) => {
     await limit(ctx, 'publicForm', 'ip')
