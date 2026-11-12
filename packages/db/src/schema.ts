@@ -48,6 +48,10 @@ export const memberStatus = pgEnum('member_status', ['invited', 'active'])
 export const adminPreset = pgEnum('admin_preset', ['full', 'support', 'finance', 'custom'])
 export const actorIdentity = pgEnum('actor_identity', ['student', 'business', 'provider', 'admin', 'system'])
 
+// A table only the API reads and writes: its "<table>: API only" policy refuses every row to the Data API roles (anon and
+// authenticated have no grants on it either, migration 0025). The API connects as postgres and isn't affected.
+const apiOnly = (table: string) => pgPolicy(`${table}: API only`, { as: 'restrictive', for: 'all', to: [anonRole, authenticatedRole], using: sql`false`, withCheck: sql`false` })
+
 // One row per sign-in (created by the auth.users trigger). Email and "verified" stay in auth.users.
 export const profiles = pgTable(
   'profiles',
@@ -145,7 +149,7 @@ export const organisationMembers = pgTable(
   ],
 ).enableRLS()
 
-// Platform staff. One role with switches (`permissions`) and presets; no Data API access at all (RLS on, no policy).
+// Platform staff. One role with switches (`permissions`) and presets; no Data API access at all (no grants, and its "API only" policy).
 export const adminUsers = pgTable(
   'admin_users',
   {
@@ -168,11 +172,11 @@ export const adminUsers = pgTable(
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   },
-  (t) => [index('admin_users_created_by_idx').on(t.createdBy), uniqueIndex('admin_users_one_super').on(t.isSuper).where(sql`${t.isSuper}`)],
+  (t) => [index('admin_users_created_by_idx').on(t.createdBy), uniqueIndex('admin_users_one_super').on(t.isSuper).where(sql`${t.isSuper}`), apiOnly('admin_users')],
 ).enableRLS()
 
 // Platform-wide settings an admin changes (for example the default commission), one row per key. Read and written by the API
-// only (RLS on, no policy); a key with no row uses the API's built-in default.
+// only (no grants, and its "API only" policy); a key with no row uses the API's built-in default.
 export const platformSettings = pgTable(
   'platform_settings',
   {
@@ -181,12 +185,12 @@ export const platformSettings = pgTable(
     updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
     updatedAt: updatedAt(),
   },
-  (t) => [index('platform_settings_updated_by_idx').on(t.updatedBy)],
+  (t) => [index('platform_settings_updated_by_idx').on(t.updatedBy), apiOnly('platform_settings')],
 ).enableRLS()
 
 // The site's editable content (Part B, B2): the trust numbers, the homepage's featured courses, testimonials and so on, one row
 // per key, each in the shape the API checks for that key. A key with no row uses the website's built-in wording, so the site
-// reads the same until an admin changes something. Read publicly through the API; written by admins only (RLS on, no policy).
+// reads the same until an admin changes something. Read publicly through the API; written by admins only (no grants, and its "API only" policy).
 export const siteContent = pgTable(
   'site_content',
   {
@@ -195,7 +199,7 @@ export const siteContent = pgTable(
     updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
     updatedAt: updatedAt(),
   },
-  (t) => [index('site_content_updated_by_idx').on(t.updatedBy)],
+  (t) => [index('site_content_updated_by_idx').on(t.updatedBy), apiOnly('site_content')],
 ).enableRLS()
 
 // Every version of every piece of site content that was ever saved: what an admin can look back at (the legal pages in
@@ -211,7 +215,7 @@ export const siteContentVersions = pgTable(
     savedBy: uuid('saved_by'),
     savedAt: timestamp('saved_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index('site_content_versions_key_idx').on(t.key, t.savedAt.desc())],
+  (t) => [index('site_content_versions_key_idx').on(t.key, t.savedAt.desc()), apiOnly('site_content_versions')],
 ).enableRLS()
 
 // Append-only record of every action (who, as which identity, what, on what, when). No foreign keys, so deleting a user or
@@ -235,6 +239,7 @@ export const activityLog = pgTable(
     index('activity_log_actor_idx').on(t.actorUserId, t.at.desc()),
     index('activity_log_target_idx').on(t.targetType, t.targetId),
     index('activity_log_action_idx').on(t.action),
+    apiOnly('activity_log'),
   ],
 ).enableRLS()
 
@@ -242,12 +247,12 @@ export const posts = pgTable('posts', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
   createdAt: createdAt(),
-}).enableRLS()
+}, () => [apiOnly('posts')]).enableRLS()
 
 // ---- the course catalogue's one list (brief §4) ---------------------------------------------------------------------------
 // Categories > sub-categories > topics, delivery methods and course levels, stored once. The public filters, the provider's
 // course form and the admin all read this list through the API, so they can never drift apart. Public reference data: read by
-// the API only (RLS on, no policy), changed only by admins (Part B: Catalogue settings). `position` orders each level;
+// the API only (no grants, and its "API only" policy), changed only by admins (Part B: Catalogue settings). `position` orders each level;
 // `active` = false retires an entry without breaking courses that use it.
 // A method's and a level's web address is always its name in lower case with hyphens ("Live online" -> live-online), so the
 // name a person sees and the word in the address are the same word; the database refuses anything else.
@@ -260,7 +265,7 @@ export const categories = pgTable(
     position: integer('position').notNull().default(0),
     active: boolean('active').notNull().default(true),
   },
-  (t) => [uniqueIndex('categories_slug_key').on(t.slug), check('categories_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+  (t) => [uniqueIndex('categories_slug_key').on(t.slug), check('categories_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`), apiOnly('categories')],
 ).enableRLS()
 
 export const subcategories = pgTable(
@@ -275,7 +280,7 @@ export const subcategories = pgTable(
     position: integer('position').notNull().default(0),
     active: boolean('active').notNull().default(true),
   },
-  (t) => [uniqueIndex('subcategories_category_slug_key').on(t.categoryId, t.slug), check('subcategories_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+  (t) => [uniqueIndex('subcategories_category_slug_key').on(t.categoryId, t.slug), check('subcategories_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`), apiOnly('subcategories')],
 ).enableRLS()
 
 export const topics = pgTable(
@@ -290,7 +295,7 @@ export const topics = pgTable(
     position: integer('position').notNull().default(0),
     active: boolean('active').notNull().default(true),
   },
-  (t) => [uniqueIndex('topics_subcategory_slug_key').on(t.subcategoryId, t.slug), check('topics_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+  (t) => [uniqueIndex('topics_subcategory_slug_key').on(t.subcategoryId, t.slug), check('topics_slug_format', sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`), apiOnly('topics')],
 ).enableRLS()
 
 export const deliveryMethods = pgTable(
@@ -301,7 +306,7 @@ export const deliveryMethods = pgTable(
     position: integer('position').notNull().default(0),
     active: boolean('active').notNull().default(true),
   },
-  (t) => [check('delivery_methods_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`)],
+  (t) => [check('delivery_methods_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`), apiOnly('delivery_methods')],
 ).enableRLS()
 
 export const courseLevels = pgTable(
@@ -312,7 +317,7 @@ export const courseLevels = pgTable(
     position: integer('position').notNull().default(0),
     active: boolean('active').notNull().default(true),
   },
-  (t) => [check('course_levels_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`)],
+  (t) => [check('course_levels_slug_is_name', sql`${t.slug} = trim(both '-' from lower(regexp_replace(${t.name}, '[^A-Za-z0-9]+', '-', 'g')))`), apiOnly('course_levels')],
 ).enableRLS()
 
 // ---- courses (Milestone 2) ------------------------------------------------------------------------------------------------
@@ -323,7 +328,7 @@ export const courseLevels = pgTable(
 //   (parent_id null: it has its own public page). The provider writes it; an admin approves it before it shows.
 // A course's id is a whole number from 1000 (orders.course_id, coupons.courses, the home page's featured courses and saved
 // baskets hold these numbers; the sample courses before Milestone 2 used 1–52, so the two never mix). Every table here has RLS
-// on and no policy: the public site and the workspaces read and write only through the API.
+// on, no grants and an "API only" policy: the public site and the workspaces read and write only through the API.
 // Status: draft → pending (sent for approval) → live, or changes (asked for changes) → pending again; live ↔ paused. A
 // content edit to a live course waits in course_revisions while the live version stays up; prices and dates change at once.
 export const courseKind = pgEnum('course_kind', ['shared', 'provider'])
@@ -391,6 +396,7 @@ export const courses = pgTable(
     check('courses_kind_shape', sql`(${t.kind} = 'shared' and ${t.organisationId} is null and ${t.parentId} is null) or (${t.kind} = 'provider' and ${t.organisationId} is not null)`),
     check('courses_price_range', sql`${t.pricePence} is null or ${t.pricePence} between 0 and 10000000`),
     index('courses_plan_idx').on(t.planId),
+    apiOnly('courses'),
   ],
 ).enableRLS()
 
@@ -417,6 +423,7 @@ export const courseRevisions = pgTable(
     index('course_revisions_submitted_by_idx').on(t.submittedBy),
     index('course_revisions_decided_by_idx').on(t.decidedBy),
     uniqueIndex('course_revisions_one_pending').on(t.courseId).where(sql`${t.status} = 'pending'`),
+    apiOnly('course_revisions'),
   ],
 ).enableRLS()
 
@@ -432,7 +439,7 @@ export const courseUnits = pgTable(
     title: text('title').notNull(),
     body: text('body'),
   },
-  (t) => [index('course_units_course_idx').on(t.courseId, t.position)],
+  (t) => [index('course_units_course_idx').on(t.courseId, t.position), apiOnly('course_units')],
 ).enableRLS()
 
 // The exam or assessment table, where a course has one: a row per unit with its pass mark and duration (as written).
@@ -448,7 +455,7 @@ export const courseExams = pgTable(
     passMark: text('pass_mark'),
     duration: text('duration'),
   },
-  (t) => [index('course_exams_course_idx').on(t.courseId, t.position)],
+  (t) => [index('course_exams_course_idx').on(t.courseId, t.position), apiOnly('course_exams')],
 ).enableRLS()
 
 // A course's own FAQs, written for that course only (never shared between courses).
@@ -463,7 +470,7 @@ export const courseFaqs = pgTable(
     question: text('question').notNull(),
     answer: text('answer').notNull(),
   },
-  (t) => [index('course_faqs_course_idx').on(t.courseId, t.position)],
+  (t) => [index('course_faqs_course_idx').on(t.courseId, t.position), apiOnly('course_faqs')],
 ).enableRLS()
 
 // A course's images, in order (the first is the cover): files in the public course-media bucket.
@@ -478,7 +485,7 @@ export const courseImages = pgTable(
     path: text('path').notNull(),
     alt: text('alt'),
   },
-  (t) => [index('course_images_course_idx').on(t.courseId, t.position)],
+  (t) => [index('course_images_course_idx').on(t.courseId, t.position), apiOnly('course_images')],
 ).enableRLS()
 
 // A provider's venues. lat/lng come from the postcode when the venue is saved, so search can sort by real distance.
@@ -499,7 +506,7 @@ export const venues = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('venues_organisation_idx').on(t.organisationId), index('venues_city_idx').on(t.city)],
+  (t) => [index('venues_organisation_idx').on(t.organisationId), index('venues_city_idx').on(t.city), apiOnly('venues')],
 ).enableRLS()
 
 // A provider's price plan (Hurak's "Tiered Plans"): 2 to 4 packages a learner chooses between (Basic, Plus, Pro, Elite by default),
@@ -527,7 +534,7 @@ export const pricePlans = pgTable(
     index('price_plans_created_by_idx').on(t.createdBy),
     check('price_plans_name_length', sql`char_length(${t.name}) between 1 and 60`),
     check('price_plans_packages_shape', sql`jsonb_typeof(${t.tiers}) = 'array' and jsonb_array_length(${t.tiers}) between 2 and 4`),
-    pgPolicy('price_plans: API only', { as: 'restrictive', for: 'all', to: [anonRole, authenticatedRole], using: sql`false`, withCheck: sql`false` }),
+    apiOnly('price_plans'),
   ],
 ).enableRLS()
 
@@ -577,6 +584,7 @@ export const cohorts = pgTable(
     check('cohorts_dates_order', sql`${t.endsOn} >= ${t.startsOn}`),
     check('cohorts_capacity_range', sql`${t.capacity} between 1 and 200`),
     check('cohorts_price_range', sql`${t.pricePence} between 1 and 10000000 and (${t.wasPricePence} is null or ${t.wasPricePence} > ${t.pricePence})`),
+    apiOnly('cohorts'),
   ],
 ).enableRLS()
 
@@ -615,6 +623,7 @@ export const coupons = pgTable(
     check('coupons_dates_order', sql`${t.startsAt} is null or ${t.endsAt} is null or ${t.startsAt} < ${t.endsAt}`),
     check('coupons_limit_positive', sql`${t.usageLimit} is null or ${t.usageLimit} > 0`),
     check('coupons_used_positive', sql`${t.used} >= 0`),
+    apiOnly('coupons'),
   ],
 ).enableRLS()
 
@@ -628,7 +637,7 @@ export const coupons = pgTable(
 // site shows is a display choice (published ones), and the site says it shows a selection. `topic` is the catalogue place an
 // imported review clearly names ("category/sub-category/topic"), or null. `review_date` is null when the real date isn't
 // known (never worked out from "3 weeks ago"); `date_is_approximate` marks a date that is only close. Read and written by
-// the API only: RLS on, no policy.
+// the API only: no grants, and its "API only" policy.
 export const reviewSource = pgEnum('review_source', ['imported', 'booking'])
 export const reviewStatus = pgEnum('review_status', ['pending', 'published', 'hidden'])
 export const reviews = pgTable(
@@ -670,6 +679,7 @@ export const reviews = pgTable(
     check('reviews_origin_url', sql`${t.originUrl} is null or (${t.origin} is not null and ${t.originUrl} ~ '^https://' and char_length(${t.originUrl}) <= 500)`),
     check('reviews_reply_length', sql`${t.providerReply} is null or char_length(${t.providerReply}) between 1 and 2000`),
     check('reviews_reply_date', sql`(${t.providerReply} is null) = (${t.providerRepliedAt} is null)`),
+    apiOnly('reviews'),
   ],
 ).enableRLS()
 
@@ -678,7 +688,7 @@ export const reviews = pgTable(
 // yet: orders come from staff bookings (invoice, payment link or free) and test data, and refunds and payouts are RECORDED
 // (decided, approved, marked sent) without moving money. When Stripe is connected it writes the same rows.
 // Amounts are whole pence. An order keeps the card fee and commission rates it was booked at, so later rate changes never
-// rewrite the past. Read and written by the API only (RLS on, no policy).
+// rewrite the past. Read and written by the API only (no grants, and its "API only" policy).
 export const paymentMethod = pgEnum('payment_method', ['card', 'bnpl', 'invoice', 'payment_link', 'free'])
 export const orderStatus = pgEnum('order_status', ['paid', 'part_refunded', 'refunded', 'cancelled'])
 export const refundStatus = pgEnum('refund_status', ['requested', 'approved', 'declined'])
@@ -723,6 +733,7 @@ export const orders = pgTable(
     check('orders_amounts', sql`${t.quantity} between 1 and 500 and ${t.unitPence} >= 0 and ${t.grossPence} = ${t.unitPence} * ${t.quantity}`),
     check('orders_free_is_zero', sql`(${t.method} = 'free') = (${t.grossPence} = 0)`),
     check('orders_rates', sql`${t.feeBps} between 0 and 2000 and ${t.commissionBps} between 0 and 6000`),
+    apiOnly('orders'),
   ],
 ).enableRLS()
 
@@ -748,6 +759,7 @@ export const refunds = pgTable(
     index('refunds_requested_by_idx').on(t.requestedBy),
     index('refunds_decided_by_idx').on(t.decidedBy),
     check('refunds_amount_positive', sql`${t.amountPence} > 0`),
+    apiOnly('refunds'),
   ],
 ).enableRLS()
 
@@ -773,6 +785,7 @@ export const disputes = pgTable(
     index('disputes_opened_by_idx').on(t.openedBy),
     index('disputes_closed_by_idx').on(t.closedBy),
     check('disputes_amount_positive', sql`${t.amountPence} > 0`),
+    apiOnly('disputes'),
   ],
 ).enableRLS()
 
@@ -805,6 +818,7 @@ export const payouts = pgTable(
     index('payouts_sent_by_idx').on(t.sentBy),
     check('payouts_amounts', sql`${t.amountPence} > 0 and ${t.heldBackPence} >= 0`),
     check('payouts_second_approver', sql`${t.approvedBy} is null or ${t.createdBy} is null or ${t.approvedBy} <> ${t.createdBy}`),
+    apiOnly('payouts'),
   ],
 ).enableRLS()
 
@@ -836,6 +850,7 @@ export const ledgerEntries = pgTable(
     index('ledger_payout_idx').on(t.payoutId),
     index('ledger_at_idx').on(t.at.desc()),
     check('ledger_split_adds_up', sql`${t.grossPence} = ${t.feePence} + ${t.commissionPence} + ${t.providerPence} or ${t.type} in ('charge', 'adjust', 'payout')`),
+    apiOnly('ledger_entries'),
   ],
 ).enableRLS()
 
@@ -860,7 +875,7 @@ export const accountClosureRequests = pgTable(
     uniqueIndex('account_closure_one_open').on(t.userId).where(sql`${t.status} = 'open'`),
     index('account_closure_status_idx').on(t.status, t.requestedAt),
     check('account_closure_reason_length', sql`${t.reason} is null or char_length(${t.reason}) <= 1000`),
-    pgPolicy('account_closure_requests: API only', { as: 'restrictive', for: 'all', to: [anonRole, authenticatedRole], using: sql`false`, withCheck: sql`false` }),
+    apiOnly('account_closure_requests'),
   ],
 ).enableRLS()
 
