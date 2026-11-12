@@ -8,6 +8,7 @@ import { logActivity } from '../../lib/activity.mjs'
 import { formatPostcode, lookupDown, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
 import { createTRPCRouter, orgProcedure } from '../../trpc/trpc.mjs'
 import { ownCourse, ukToday as today } from './courses.mjs'
+import { usablePlan } from './plans.mjs'
 
 // A provider's venues and course dates (cohorts). Dates are part of the course's prices and timetable, so they change straight
 // away, without approval. A tutor sees only the cohorts they teach.
@@ -228,8 +229,11 @@ const cohortFields = z.object({
     .nullable()
     .optional(),
   capacity: z.number().int().min(1, 'Allow at least 1 place.').max(200, 'Allow up to 200 places.'),
-  pricePence: z.number().int().min(1, 'Enter a price.').max(10000000, 'Enter a price of £100,000 or less.'),
+  // "Flat": the date's own price (and an optional higher "was" price); "Tiered": a price plan (planId), whose cheapest package
+  // becomes the date's price
+  pricePence: z.number().int().min(1, 'Enter a price.').max(10000000, 'Enter a price of £100,000 or less.').optional(),
   wasPricePence: z.number().int().max(10000000, 'Enter a “was” price of £100,000 or less.').nullable().optional(),
+  planId: z.string().uuid().nullable().optional(),
   details: z.string().trim().max(500, 'Keep the details to 500 characters or fewer.').nullable().optional(),
   tutorUserId: z.string().uuid().nullable().optional(),
   bookable: z.boolean().optional(),
@@ -272,12 +276,15 @@ async function refuseNotOnTeam(db: Parameters<typeof ownCourse>[0], organisation
 }
 
 // checks a cohort against its course and provider; returns the values to save
-// keepVenueId: the venue the dates already have (it stays allowed if it has since been archived)
-async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keepVenueId: string | null = null) {
+// keepVenueId / keepPlanId: the venue and price plan the dates already have (they stay allowed if since archived)
+async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keepVenueId: string | null = null, keepPlanId: string | null = null) {
   if (method !== 'classroom' && method !== 'live-online') throw bad('Only classroom and live online courses have dates. Self-paced courses start any time.')
   const sessions = [...input.sessions].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
   if (sessions.some((s) => daysBetween(today(), s.end) > MAX_AHEAD_DAYS)) throw bad('Dates can be up to 3 years ahead.', 'sessions')
-  if (input.wasPricePence != null && input.wasPricePence <= input.pricePence) throw bad('The “was” price must be higher than the price.', 'wasPrice')
+  // the price: a plan's cheapest package (Tiered), or the date's own (Flat)
+  const plan = input.planId ? await usablePlan(db, organisationId, input.planId, keepPlanId) : null
+  if (!plan && input.pricePence == null) throw bad('Enter a price.', 'price')
+  if (!plan && input.wasPricePence != null && input.wasPricePence <= input.pricePence!) throw bad('The “was” price must be higher than the price.', 'wasPrice')
   let venueId: string | null = null
   if (method === 'classroom') {
     if (!input.venueId) throw bad('Choose the venue.', 'venueId')
@@ -297,8 +304,9 @@ async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId:
     venueId,
     joinUrl: method === 'live-online' ? input.joinUrl || null : null,
     capacity: input.capacity,
-    pricePence: input.pricePence,
-    wasPricePence: input.wasPricePence ?? null,
+    pricePence: plan ? plan.from.pricePence : input.pricePence!,
+    wasPricePence: plan ? plan.from.wasPricePence : (input.wasPricePence ?? null),
+    planId: plan?.id ?? null,
     details: input.details || null,
     tutorUserId: input.tutorUserId ?? null,
     bookable: input.bookable ?? true,
@@ -422,7 +430,7 @@ export const providerCohortsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
-      const values = await cohortValues(ctx.db, input.organisationId, course.method, input, cohort.venueId)
+      const values = await cohortValues(ctx.db, input.organisationId, course.method, input, cohort.venueId, cohort.planId)
       if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.', 'sessions')
       await ctx.db.transaction(async (tx) => {
         const now = await lockCohort(tx, cohort.id)

@@ -134,7 +134,8 @@ export default function ProviderCohorts() {
   // said under the filters when a date set "When" to Any date, so the change is never silent
   const [whenNote, setWhenNote] = useState("");
   const [page, setPage] = useState(1);
-  const [editingK, setEditingK] = useState(null);
+  // the date being edited stays set while its form closes, so the closing form doesn't turn into an empty "Create cohort"
+  const [editing, setEditing] = useState({ open: false, k: null });
   const [deleting, setDeleting] = useState(null);
   const [cancelOne, setCancelOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -340,12 +341,12 @@ export default function ProviderCohorts() {
                           ) : (tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>)}
                         </td>
                         <td data-label="Places"><Seats booked={0} max={k.capacity} /></td>
-                        <td data-label="Price">{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
+                        <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
                         <td data-label="Actions" className="rt-pws-coh__end">
                           <RowMenu label={`Actions for ${name}`} items={[
                             { label: "View", href: `/provider/cohorts/${k.id}` },
                             ...(edit && !cancelled ? [
-                              { label: "Edit", onClick: () => setEditingK(k) },
+                              { label: "Edit", onClick: () => setEditing({ open: true, k }) },
                               { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
                               ...(k.endsOn >= today ? [{ label: "Cancel", onClick: () => setCancelOne(k) }] : []),
                             ] : []),
@@ -366,7 +367,7 @@ export default function ProviderCohorts() {
       )}
 
       <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => refresh()} />
-      <CohortForm open={Boolean(editingK)} onClose={() => setEditingK(null)} cohort={editingK} onSaved={() => { setEditingK(null); refresh(); setToast({ message: "Cohort saved" }); }} />
+      <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); setToast({ message: "Cohort saved" }); }} />
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
       <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
@@ -453,7 +454,9 @@ const MAX_PRICE = 100000; // pounds (the API's limit)
 const MEETING_LINK_ERROR = "Use the https link to one Zoom, Microsoft Teams or Google Meet meeting, like https://zoom.us/j/1234567890.";
 // the API's names for the form's fields, where they differ
 const FIELD_OF = { pricePence: "price", wasPricePence: "wasPrice" };
-const FORM_FIELDS = new Set(["courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "capacity", "details", "tutorUserId"]);
+const FORM_FIELDS = new Set(["courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "planId", "capacity", "details", "tutorUserId"]);
+// a plan's packages in one line, for the plan picker ("Basic £249 · Plus £299 · Pro £399")
+const planLine = (p) => (p.draft ?? p.tiers).map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ");
 
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
 // `suggestCourseId`). `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on.
@@ -475,19 +478,22 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const coursesQ = api.provider.courses.list.useQuery({ organisationId }, on);
   const venuesQ = api.provider.venues.list.useQuery({ organisationId }, on);
   const tutorsQ = api.provider.cohorts.tutors.useQuery({ organisationId }, { ...on, retry: false });
+  const plansQ = api.provider.plans.list.useQuery({ organisationId }, { ...on, retry: false });
+  const plans = plansQ.data || [];
   const create = api.provider.cohorts.create.useMutation();
   const update = api.provider.cohorts.update.useMutation();
   const utils = api.useUtils();
   const courses = coursesQ.data || [];
   const courseOf = (id) => courses.find((c) => String(c.id) === String(id));
 
-  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", price: "", wasPrice: "", capacity: "12", details: "" });
+  // pricing: "flat" (the date's own price) or "tiered" (a price plan's packages, Hurak's Tiered)
+  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "12", details: "" });
 
   // fill the form each time the panel opens (once the courses are in)
   useEffect(() => {
     if (!open || !coursesQ.data) return;
     if (cohort) {
-      const filled = { courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", price: money(cohort.pricePence), wasPrice: money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" };
+      const filled = { courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", pricing: cohort.planId ? "tiered" : "flat", planId: cohort.planId || "", price: cohort.planId ? "" : money(cohort.pricePence), wasPrice: cohort.planId ? "" : money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" };
       setF(filled);
       setStart(JSON.stringify(filled));
       setView(monthStart(cohort.startsOn || todayIso()));
@@ -504,11 +510,16 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     setVenueAdded("");
   }, [open, Boolean(coursesQ.data)]); // eslint-disable-line react-hooks/exhaustive-deps -- fill once per opening
 
-  const ready = Boolean(open && f && venuesQ.data);
+  // not tied to `open`, so the filled form stays in place while the sheet closes
+  const ready = Boolean(f && venuesQ.data);
   const course = ready ? courseOf(f.courseId) : null;
   const method = cohort ? cohort.method : course?.method || studyMode;
   const today = todayIso();
-  const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  // changing a field takes its message away (the next save checks everything again)
+  const set = (patch) => {
+    setF((x) => ({ ...x, ...patch }));
+    setErrors((e) => (Object.keys(patch).some((k) => e[k]) ? { ...e, ...Object.fromEntries(Object.keys(patch).map((k) => [k, undefined])) } : e));
+  };
   const venueSaved = async (r) => {
     await venuesQ.refetch();
     set({ venueId: r.id });
@@ -550,10 +561,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     if (method === "classroom" && !f.venueId) err.venueId = "Choose the venue.";
     if (method === "live-online" && !f.joinUrl.trim()) err.joinUrl = "Enter the joining link for these dates.";
     else if (method === "live-online" && !isMeetingLink(f.joinUrl.trim())) err.joinUrl = MEETING_LINK_ERROR;
-    if (!PRICE_RE.test(f.price) || Number(f.price) < 1) err.price = "Enter the price per learner in pounds, like 95.";
-    else if (Number(f.price) > MAX_PRICE) err.price = "Enter a price of £100,000 or less.";
-    if (f.wasPrice && (!PRICE_RE.test(f.wasPrice) || Number(f.wasPrice) <= Number(f.price))) err.wasPrice = "Enter a “was” price higher than the price, or leave it empty.";
-    else if (f.wasPrice && Number(f.wasPrice) > MAX_PRICE) err.wasPrice = "Enter a “was” price of £100,000 or less.";
+    const tiered = f.pricing === "tiered";
+    if (tiered && !f.planId) err.planId = "Choose the price plan learners pick their package from.";
+    if (!tiered && (!PRICE_RE.test(f.price) || Number(f.price) < 1)) err.price = "Enter the price per learner in pounds, like 95.";
+    else if (!tiered && Number(f.price) > MAX_PRICE) err.price = "Enter a price of £100,000 or less.";
+    if (!tiered && f.wasPrice && (!PRICE_RE.test(f.wasPrice) || Number(f.wasPrice) <= Number(f.price))) err.wasPrice = "Enter a “was” price higher than the price, or leave it empty.";
+    else if (!tiered && f.wasPrice && Number(f.wasPrice) > MAX_PRICE) err.wasPrice = "Enter a “was” price of £100,000 or less.";
     const m = Number(f.capacity);
     if (!Number.isInteger(m) || m < 1 || m > 200) err.capacity = "Enter a whole number from 1 to 200.";
     setErrors(err);
@@ -564,8 +577,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       venueId: method === "classroom" ? f.venueId : null,
       joinUrl: method === "live-online" ? f.joinUrl.trim() : null,
       capacity: m,
-      pricePence: Math.round(Number(f.price) * 100),
-      wasPricePence: f.wasPrice ? Math.round(Number(f.wasPrice) * 100) : null,
+      ...(tiered ? { planId: f.planId } : { planId: null, pricePence: Math.round(Number(f.price) * 100), wasPricePence: f.wasPrice ? Math.round(Number(f.wasPrice) * 100) : null }),
       details: f.details.trim() || null,
       tutorUserId: f.tutorUserId || null,
       bookable: cohort ? cohort.bookable : true,
@@ -713,17 +725,37 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </div>
               )}
             </div>
+            <Choice name="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
+              options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
+            {f.pricing === "tiered" && (
+              <div className="rt-field">
+                <label htmlFor="rt-cf-planId">Price plan</label>
+                <p className="rt-acc__note" id="rt-cf-planId-h">
+                  Learners choose a package when they book, and the date shows the cheapest package as its price.{" "}
+                  <Link href="/provider/packages" className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link>
+                </p>
+                {err("planId")}
+                <FieldSelect id="rt-cf-planId" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => set({ planId: value })}
+                  options={plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}${p.tiers ? "" : " (waiting for approval)"}` }))}
+                  invalid={Boolean(errors.planId)} describedBy={`rt-cf-planId-h${errors.planId ? " rt-cf-planId-e" : ""}`} />
+                {plans.some((p) => p.id === f.planId && !p.tiers) && <p className="rt-acc__notice -warn">Our team hasn&apos;t approved this plan yet, so learners won&apos;t see these dates until it is.</p>}
+              </div>
+            )}
             <div className="rt-pws-coh__setgrid">
-              <div className="rt-field">
-                <label htmlFor="rt-cf-price">Price per learner, including VAT (£)</label>
-                {err("price")}
-                <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.trim() })} autoComplete="off" {...aria("price")} />
-              </div>
-              <div className="rt-field">
-                <label htmlFor="rt-cf-wasPrice">“Was” price (optional, £)</label>
-                {err("wasPrice")}
-                <input id="rt-cf-wasPrice" type="text" inputMode="decimal" value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
-              </div>
+              {f.pricing === "flat" && (
+                <>
+                  <div className="rt-field">
+                    <label htmlFor="rt-cf-price">Price per learner, including VAT (£)</label>
+                    {err("price")}
+                    <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.trim() })} autoComplete="off" {...aria("price")} />
+                  </div>
+                  <div className="rt-field">
+                    <label htmlFor="rt-cf-wasPrice">“Was” price (optional, £)</label>
+                    {err("wasPrice")}
+                    <input id="rt-cf-wasPrice" type="text" inputMode="decimal" value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
+                  </div>
+                </>
+              )}
               <div className="rt-field">
                 <label htmlFor="rt-cf-capacity">Most learners</label>
                 {err("capacity")}

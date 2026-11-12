@@ -3,10 +3,11 @@ import { TOPICS } from "@/data/courseTopics";
 // Extra sections for a course page, beyond the fields a course has in the editor (summary, description, outcomes, units, exams,
 // entry requirements, audience, FAQs): a comparison, the course week, what's included, packages, business training, getting the
 // licence, costs and careers. A guide belongs to a catalogue topic (data/courseTopics.js), so the shared page and every provider
-// course on that topic show it (components/courseDetail/CourseGuide.jsx), in the course page's own parts. The packages can be
-// chosen on the page (PackagePicker): a package is the chosen date plus `add` (pounds, per delegate), so the basket and the
-// booking card show the date's price plus that. With the lowest date at £249.99 the bundles start at the client's published
-// prices (£319.99 and £479.99). `firstAid`: the package includes first aid, so the basket doesn't ask about it again.
+// course on that topic show it (components/courseDetail/CourseGuide.jsx), in the course page's own parts. The packages (the
+// client's, from docs/door-supervisor-course (1).html) show on the page (PackagePicker) and are chosen when a date is booked
+// ("Choose your package", lib/catalogueData.js guidePackages): a package is the date's price plus `add` (pounds, per delegate).
+// With the lowest date at £249.99 the bundles start at the client's published prices (£319.99 and £479.99). `firstAid`: the
+// package includes first aid, so the basket doesn't ask about it again.
 export const courseGuides = [
   {
     pick: TOPICS.doorSupervisor,

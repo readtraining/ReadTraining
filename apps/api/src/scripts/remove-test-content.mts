@@ -121,6 +121,7 @@ const images = ids.length ? await db.execute<{ path: string }>(sql`select path f
 const [dates] = ids.length ? await db.execute<{ n: number }>(sql`select count(*)::int n from public.cohorts where course_id in ${idList}`) : [{ n: 0 }]
 const orgList = sql.raw(`(${orgIds.length ? orgIds.map((id) => `'${id}'`).join(',') : 'null'})`)
 const venues = orgIds.length ? await db.execute<{ id: string }>(sql`select id from public.venues where organisation_id in ${orgList}`) : []
+const [plans] = orgIds.length ? await db.execute<{ n: number }>(sql`select count(*)::int n from public.price_plans where organisation_id in ${orgList}`) : [{ n: 0 }]
 const people = orgIds.length
   ? await db.execute<{ email: string; name: string }>(sql`select u.email, o.name from public.organisation_members m join auth.users u on u.id = m.user_id join public.organisations o on o.id = m.organisation_id where m.organisation_id in ${orgList}`)
   : []
@@ -133,7 +134,7 @@ if (venues.length) {
 console.log('WOULD REMOVE')
 for (const o of orgs) console.log(`  provider "${o.name}" (${o.slug}, ${o.status}) with its team${o.logo_path ? ' and logo' : ''}`)
 for (const c of courses) console.log(`  course "${c.title}" (${c.slug}, ${c.status}${c.provider ? `, ${c.provider}` : ''})`)
-console.log(`  ${dates.n} dates, ${venues.length} venues, ${images.length} pictures`)
+console.log(`  ${dates.n} dates, ${venues.length} venues, ${images.length} pictures${plans.n ? `, ${plans.n} price ${plans.n === 1 ? 'plan' : 'plans'}` : ''}`)
 if (people.length) console.log(`  Login accounts are kept: ${people.map((p) => `${p.email} (${p.name})`).join(', ')}. Remove them in Supabase if they are test logins too.`)
 if (problems.length) {
   console.log(`\nNOT POSSIBLE:\n  ${problems.join('\n  ')}\nNothing was changed.`)
@@ -153,6 +154,8 @@ await db.transaction(async (tx) => {
   }
   for (const o of orgs) {
     await tx.execute(sql`delete from public.venues where organisation_id = ${o.id}::uuid`)
+    // its price plans (its courses and dates on them are gone above; a plan holds the provider back otherwise)
+    await tx.execute(sql`delete from public.price_plans where organisation_id = ${o.id}::uuid`)
     await tx.execute(sql`delete from public.organisations where id = ${o.id}::uuid`) // its team rows go with it (cascade)
     await logActivity(tx, { actorIdentity: 'system', organisationId: o.id, action: 'system.test_content_removed', targetType: 'organisation', targetId: o.id, metadata: { name: o.name, slug: o.slug, by: 'remove:test-content' } })
   }

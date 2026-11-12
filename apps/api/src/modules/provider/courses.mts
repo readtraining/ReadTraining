@@ -31,6 +31,7 @@ import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
+import { usablePlan } from './plans.mjs'
 import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's courses (Milestone 2): create one (under a shared course page or on its own), write its page, add images, send it
@@ -139,6 +140,7 @@ export const settings = {
   seoDescription: text(320, 'search description'),
   seoKeywords: z.array(line(40, 'keyword').min(1)).max(20, 'Add up to 20 keywords.'),
   pricePence: z.number().int().min(0).max(10000000, 'Enter a price of £100,000 or less.').nullable(),
+  planId: z.string().uuid().nullable(), // a self-paced course sold in packages (its price is then the plan's cheapest package)
   skillSaver: z.boolean(),
   isPublic: z.boolean(),
   listed: z.boolean(),
@@ -147,7 +149,7 @@ export const settings = {
   parentId: z.number().int().positive().nullable(), // the shared course page it is listed under, or none
 }
 const PAGE_ONLY = new Set(['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'videoUrl', 'seoTitle', 'seoDescription', 'seoKeywords'])
-const PRICING = new Set(['pricePence', 'skillSaver'])
+const PRICING = new Set(['pricePence', 'skillSaver', 'planId'])
 // Settings our team doesn't check at approval (approval checks the shared page's subject itself): changing only these leaves a
 // course that is waiting for review where it is. Anything else (its wording, pictures, price, how it is taught) takes it back.
 const KEEPS_REVIEW = new Set(['seoTitle', 'seoDescription', 'seoKeywords', 'isPublic', 'listed', 'parentId'])
@@ -594,11 +596,19 @@ export const providerCoursesRouter = createTRPCRouter({
         taughtOnly(direct.method as string)
         directSet.method = (await resolveCatalogue(ctx.db, { method: direct.method as string })).method
       }
-      // only a self-paced course has a price of its own (classroom and live online are priced on their dates)
-      if (directSet.method !== undefined && directSet.method !== 'self-paced') directSet.pricePence = null
+      // only a self-paced course has a price (or price plan) of its own (classroom and live online are priced on their dates)
+      if (directSet.method !== undefined && directSet.method !== 'self-paced') Object.assign(directSet, { pricePence: null, planId: null })
+      if (direct.planId !== undefined) {
+        if ((directSet.method ?? course.method) !== 'self-paced') throw bad('Only a self-paced course has a price plan of its own: dates choose theirs.', 'planId')
+        if (direct.planId === null) directSet.planId = null
+        else {
+          const plan = await usablePlan(ctx.db, organisationId, direct.planId as string, course.planId)
+          Object.assign(directSet, { planId: plan.id, pricePence: plan.from.pricePence })
+        }
+      }
       for (const k of ['seoTitle', 'seoDescription'] as const) if (direct[k] !== undefined) directSet[k] = (direct[k] as string | null) || null
       if (direct.seoKeywords !== undefined) directSet.seoKeywords = [...new Set((direct.seoKeywords as string[]).map((w) => w.toLowerCase()))]
-      for (const k of ['pricePence', 'skillSaver', 'isPublic', 'listed', 'model'] as const) if (direct[k] !== undefined) (directSet as Record<string, unknown>)[k] = direct[k]
+      for (const k of ['pricePence', 'skillSaver', 'isPublic', 'listed', 'model'] as const) if (direct[k] !== undefined && !(k === 'pricePence' && directSet.planId)) (directSet as Record<string, unknown>)[k] = direct[k]
       if (direct.parentId !== undefined) {
         if (direct.parentId !== null) {
           const p = await livePage(ctx.db, direct.parentId as number)

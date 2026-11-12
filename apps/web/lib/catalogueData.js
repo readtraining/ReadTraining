@@ -1,4 +1,5 @@
 import { coursePath } from "@/lib/routes";
+import { courseGuides } from "@/data/courseGuides";
 
 // The real catalogue (API catalogue.listings / catalogue.course) in the shapes the public pages read: the listing card and the
 // filters (toCatalogueCourse), and the course page (toCourseDetail). Prices arrive in pence and include VAT; the pages work in
@@ -128,6 +129,20 @@ function timetable(list = []) {
   return { time: `${sorted[0].from} to ${sorted[0].to}`, schedule: inARow ? "" : daysText(all) };
 }
 
+// A price plan's packages (API publicTiers) as the booking parts read them, in pounds; `key` is the package's name in lower case
+// (names are unique in a plan), so a basket line keeps which one was chosen. Null for a date or course with one flat price.
+const toPackages = (tiers) =>
+  Array.isArray(tiers) && tiers.length >= 2
+    ? tiers.map((t) => ({ key: t.name.trim().toLowerCase(), name: t.name, price: pounds(t.pricePence), wasPrice: pounds(t.wasPence), tagline: t.tagline || "", popular: Boolean(t.popular), features: t.features || [] }))
+    : null;
+
+// The client's own packages for a course (a course guide's, data/courseGuides.js: SIA Door Supervisor) on one of its dates of one
+// price, in the same shape: each package is the date's price plus its `add`; only the course alone keeps the date's was-price.
+// `firstAid`: the package includes first aid (the basket then doesn't ask about it).
+const cents = (n) => Math.round(n * 100) / 100;
+const guidePackages = (guide, d) =>
+  guide.packages.items.map((p) => ({ key: p.key, name: p.name, price: cents(d.price + (p.add || 0)), wasPrice: p.add ? null : d.wasPrice, tagline: p.text || "", popular: Boolean(p.badge), features: p.points.map((t) => ({ title: t, description: null, included: true })), firstAid: Boolean(p.firstAid) }));
+
 const saverOf = (list) => (list.length && list.every((x) => x.skillSaver) ? "all" : list.some((x) => x.skillSaver) ? "some" : null);
 
 // A course page (catalogue.course) as the course page's parts read it. `related`: listings to show under it.
@@ -138,6 +153,7 @@ export function toCourseDetail(page, related = []) {
       sessions.push({
         id: `sp-${o.courseId}`, mode: "ondemand", date: today(), endDate: today(), time: "Start any time", location: "Online", city: "", venue: "", address: "", postcode: "",
         provider: o.provider.name, providerSlug: o.provider.slug, courseId: o.courseId, courseSlug: o.slug, price: pounds(o.selfPacedPence), wasPrice: null, skillSaver: o.skillSaver,
+        packages: toPackages(o.selfPacedPlan), // sold in packages (a price plan): the price is the cheapest one's
       });
     }
     for (const d of o.dates) {
@@ -164,10 +180,14 @@ export function toCourseDetail(page, related = []) {
         details: d.details, // what the provider wrote for learners about this date (shown under it)
         price: pounds(d.pricePence),
         wasPrice: pounds(d.wasPricePence),
+        packages: toPackages(d.plan), // Tiered pricing: the packages to choose between (the price is the cheapest one's)
         skillSaver: o.skillSaver, // the provider's course is in Skill Saver (its discount applies in the basket)
       });
     }
   }
+  // the client's packages on a course with them (a date on a price plan keeps the plan's)
+  const guide = courseGuides.find((g) => g.packages && matchesPick({ subject: page.category || "", sub: page.subcategory || "", topic: page.topic || "" }, g.pick));
+  if (guide) for (const s of sessions) if (!s.packages) s.packages = guidePackages(guide, s);
   sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.price - b.price));
 
   const dated = sessions.filter((s) => s.mode !== "ondemand");

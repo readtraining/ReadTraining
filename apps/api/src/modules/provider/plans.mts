@@ -1,0 +1,233 @@
+import { TRPCError } from '@trpc/server'
+import { z } from 'zod'
+
+import { and, asc, cohorts, courses, eq, inArray, isNull, pricePlans, sql } from '@readtraining/db'
+
+import { logActivity } from '../../lib/activity.mjs'
+import { notifyApprovers, ownerOf } from '../../lib/notify.mjs'
+import { createTRPCRouter, limit, orgProcedure } from '../../trpc/trpc.mjs'
+
+// A provider's price plans (Hurak's "Tiered Plans"): 2 to 4 packages a learner chooses between, each with its own full price per
+// delegate, a "Save £" amount, a tagline, "Most popular" on one, and features that are included (✓) or not (✗). A plan is reused:
+// a classroom or live online date chooses one (cohorts.plan_id, the date's "Tiered" pricing), and a self-paced course can
+// (courses.plan_id). A new plan, and any change to its packages, waits for our team (admin.plans) before learners see it: the
+// approved packages are `tiers`, the waiting ones `draft`. A date or course on a plan has the plan's cheapest package as its own
+// price, kept in step by `syncPlanPrices` whenever the approved packages change. A plan in use is archived, never deleted.
+
+type Tx = Parameters<Parameters<(typeof import('../../lib/db.mjs'))['db']['transaction']>[0]>[0]
+type Writer = (typeof import('../../lib/db.mjs'))['db'] | Tx
+
+const bad = (message: string, field?: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: field ? Object.assign(new Error(message), { field }) : undefined })
+const line = (max: number, what: string) => z.string().trim().max(max, `Keep the ${what} to ${max} characters or fewer.`)
+const MAX_PENCE = 10000000
+// today in the UK (as provider/courses.mts ukToday; not imported, so the two modules don't import each other)
+const ukToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
+
+const feature = z.object({
+  title: line(80, 'feature').min(1, 'Write every feature, or remove it.'),
+  description: line(200, 'feature description').optional().nullable(),
+  included: z.boolean(),
+})
+const tier = z.object({
+  name: line(30, 'package name').min(1, 'Name every package.'),
+  pricePence: z.number().int().min(1, 'Enter a price for every package.').max(MAX_PENCE, 'Enter a price of £100,000 or less.'),
+  savePence: z.number().int().min(0).max(MAX_PENCE).optional().nullable(), // "Save £": shown as a was-price of price + save
+  tagline: line(80, 'tagline').optional().nullable(),
+  popular: z.boolean().optional(),
+  features: z.array(feature).max(12, 'Add up to 12 features to a package.'),
+})
+export const tiersInput = z
+  .array(tier)
+  .min(2, 'A plan has at least 2 packages.')
+  .max(4, 'A plan has up to 4 packages.')
+  .superRefine((list, ctx) => {
+    const names = list.map((t) => t.name.trim().toLowerCase())
+    if (new Set(names).size !== names.length) ctx.addIssue({ code: 'custom', message: 'Give every package a different name.' })
+    if (list.filter((t) => t.popular).length > 1) ctx.addIssue({ code: 'custom', message: 'Mark only one package as Most popular.' })
+  })
+export type Tier = z.infer<typeof tier>
+
+// the packages as learners see them (stored values are checked when saved; this keeps only what the page needs)
+export const publicTiers = (tiers: unknown) =>
+  Array.isArray(tiers) && tiers.length >= 2
+    ? (tiers as Tier[]).map((t) => ({
+        name: t.name,
+        pricePence: t.pricePence,
+        wasPence: t.savePence ? t.pricePence + t.savePence : null,
+        tagline: t.tagline || null,
+        popular: Boolean(t.popular),
+        features: (t.features ?? []).map((f) => ({ title: f.title, description: f.description || null, included: f.included })),
+      }))
+    : null
+
+// the "From" price a date or course on the plan shows: its cheapest package, with that package's was-price
+export const cheapest = (tiers: Tier[]) => {
+  const t = [...tiers].sort((a, b) => a.pricePence - b.pricePence)[0]
+  return { pricePence: t.pricePence, wasPricePence: t.savePence ? t.pricePence + t.savePence : null }
+}
+
+/** Keeps every date and self-paced course on a plan priced at its cheapest approved package (or its waiting one, before any). */
+export async function syncPlanPrices(tx: Writer, planId: string) {
+  const [p] = await tx.select({ tiers: pricePlans.tiers, draft: pricePlans.draft }).from(pricePlans).where(eq(pricePlans.id, planId))
+  const tiers = (p?.tiers ?? p?.draft) as Tier[] | null
+  if (!tiers?.length) return
+  const from = cheapest(tiers)
+  await tx.update(cohorts).set({ ...from, updatedAt: new Date() }).where(eq(cohorts.planId, planId))
+  await tx.update(courses).set({ pricePence: from.pricePence, updatedAt: new Date() }).where(eq(courses.planId, planId))
+}
+
+/** A plan of this provider's, for a date or course to use: refused when it is someone else's, or archived (unless kept). */
+export async function usablePlan(db: Writer, organisationId: string, planId: string, keepId: string | null = null) {
+  const [p] = await db.select().from(pricePlans).where(and(eq(pricePlans.id, planId), eq(pricePlans.organisationId, organisationId)))
+  if (!p) throw bad('Choose one of your price plans.', 'planId')
+  if (p.archivedAt && p.id !== keepId) throw bad('This price plan is archived. Choose another, or restore it in Price plans.', 'planId')
+  return { ...p, from: cheapest(((p.tiers ?? p.draft) as Tier[]) ?? []) }
+}
+
+const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, planId: string, metadata: Record<string, unknown> = {}) =>
+  logActivity(tx as Parameters<typeof logActivity>[0], { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId, action, targetType: 'price_plan', targetId: planId, metadata, ip: ctx.ip })
+
+const PLAN_GONE = 'This price plan was not found. It may have been deleted: reload the page.'
+const PLAN_CHANGED = 'This price plan was changed somewhere else since you opened it. Reload it to see the latest version, then make your change again.'
+
+async function lockPlan(tx: Tx, organisationId: string, planId: string) {
+  const [p] = await tx.select().from(pricePlans).where(and(eq(pricePlans.id, planId), eq(pricePlans.organisationId, organisationId))).for('update')
+  if (!p) throw new TRPCError({ code: 'NOT_FOUND', message: PLAN_GONE })
+  return p
+}
+
+// how many upcoming dates and courses use each plan (a plan in use is archived, not deleted; editing it moves their prices)
+async function usage(db: Writer, planIds: string[]) {
+  if (!planIds.length) return new Map<string, { dates: number; courses: number }>()
+  const [dates, selfPaced] = await Promise.all([
+    db
+      .select({ planId: cohorts.planId, n: sql<number>`count(*)::int` })
+      .from(cohorts)
+      .where(and(inArray(cohorts.planId, planIds), isNull(cohorts.cancelledAt), sql`${cohorts.endsOn} >= ${ukToday()}::date`))
+      .groupBy(cohorts.planId),
+    db.select({ planId: courses.planId, n: sql<number>`count(*)::int` }).from(courses).where(inArray(courses.planId, planIds)).groupBy(courses.planId),
+  ])
+  const out = new Map(planIds.map((id) => [id, { dates: 0, courses: 0 }]))
+  for (const d of dates) if (d.planId) out.get(d.planId)!.dates = d.n
+  for (const c of selfPaced) if (c.planId) out.get(c.planId)!.courses = c.n
+  return out
+}
+
+const view = (p: typeof pricePlans.$inferSelect, used: { dates: number; courses: number } | undefined) => ({
+  id: p.id,
+  name: p.name,
+  tiers: (p.tiers as Tier[] | null) ?? null, // what learners see
+  draft: (p.draft as Tier[] | null) ?? null, // waiting for our team
+  status: p.status,
+  statusNote: p.statusNote,
+  submittedAt: p.submittedAt?.toISOString() ?? null,
+  archived: Boolean(p.archivedAt),
+  used: used ?? { dates: 0, courses: 0 },
+  version: p.updatedAt.toISOString(),
+})
+
+export const providerPlansRouter = createTRPCRouter({
+  // The provider's plans, newest first, each with what learners see, any change waiting and how many dates and courses use it.
+  list: orgProcedure('provider.pricing.view').query(async ({ ctx, input }) => {
+    const rows = await ctx.db.select().from(pricePlans).where(eq(pricePlans.organisationId, input.organisationId)).orderBy(asc(pricePlans.archivedAt), sql`${pricePlans.createdAt} desc`)
+    const used = await usage(ctx.db, rows.map((r) => r.id))
+    return rows.map((r) => view(r, used.get(r.id)))
+  }),
+
+  get: orgProcedure('provider.pricing.view')
+    .input(z.object({ planId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [p] = await ctx.db.select().from(pricePlans).where(and(eq(pricePlans.id, input.planId), eq(pricePlans.organisationId, input.organisationId)))
+      if (!p) throw new TRPCError({ code: 'NOT_FOUND', message: PLAN_GONE })
+      return view(p, (await usage(ctx.db, [p.id])).get(p.id))
+    }),
+
+  // Create a plan, or change one. Its name changes at once (only the provider sees it); new or changed packages wait for our team,
+  // while learners keep seeing the approved ones. `seen`: the version the form was opened on (a save over a newer one is refused).
+  // Our approvers are emailed once the save is in, when the plan starts waiting (new, or an approved or sent-back plan changed);
+  // saving again while it waits doesn't email again. The email never holds up or undoes the save.
+  save: orgProcedure('provider.pricing.edit')
+    .input(z.object({ planId: z.string().uuid().optional(), name: line(60, 'plan name').min(1, 'Name the plan.'), tiers: tiersInput, seen: z.string().datetime().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!input.planId) await limit(ctx, 'plans')
+      const now = new Date()
+      const done = await ctx.db.transaction(async (tx) => {
+        if (!input.planId) {
+          const [made] = await tx
+            .insert(pricePlans)
+            .values({ organisationId: input.organisationId, name: input.name, draft: input.tiers, status: 'pending', submittedAt: now, submittedBy: ctx.user.id, createdBy: ctx.user.id })
+            .returning()
+          await log(tx, ctx, input.organisationId, 'plan.created', made.id, { name: input.name, packages: input.tiers.length })
+          return { id: made.id, pending: true, version: made.updatedAt.toISOString(), sent: true }
+        }
+        const p = await lockPlan(tx, input.organisationId, input.planId)
+        if (input.seen && p.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: PLAN_CHANGED })
+        // the packages as they stand: the waiting version if there is one, else the approved one
+        const current = JSON.stringify(p.draft ?? p.tiers)
+        const changed = JSON.stringify(input.tiers) !== current
+        const back = changed && p.tiers && JSON.stringify(input.tiers) === JSON.stringify(p.tiers) // edited back to what learners see
+        const set: Partial<typeof pricePlans.$inferInsert> = { name: input.name, updatedAt: now }
+        if (back) Object.assign(set, { draft: null, status: 'approved', statusNote: null, submittedAt: null, submittedBy: null })
+        else if (changed) Object.assign(set, { draft: input.tiers, status: 'pending', statusNote: null, submittedAt: now, submittedBy: ctx.user.id })
+        const [saved] = await tx.update(pricePlans).set(set).where(eq(pricePlans.id, p.id)).returning()
+        // a plan never approved prices its dates from the waiting packages (they don't show to learners until approved)
+        if (changed && !p.tiers) await syncPlanPrices(tx, p.id)
+        await log(tx, ctx, input.organisationId, changed && !back ? 'plan.change_submitted' : 'plan.updated', p.id, { name: input.name })
+        return { id: p.id, pending: saved.status === 'pending', version: saved.updatedAt.toISOString(), sent: changed && !back && p.status !== 'pending' }
+      })
+      if (done.sent) {
+        try {
+          const { provider } = await ownerOf(ctx.db, input.organisationId)
+          await notifyApprovers(ctx.db, 'admin-new-plan', { provider, plan: input.name }, { organisationId: input.organisationId, targetType: 'price_plan', targetId: done.id, action: 'email.approvers_told' }, ctx.user.id)
+        } catch (error) {
+          console.error('email admin-new-plan: could not tell the approvers', error instanceof Error ? error.message : error)
+        }
+      }
+      const { sent: _sent, ...out } = done
+      return out
+    }),
+
+  // Take back a change that is still waiting: learners keep the approved packages. A plan never approved has nothing to go back to.
+  withdraw: orgProcedure('provider.pricing.edit')
+    .input(z.object({ planId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const p = await lockPlan(tx, input.organisationId, input.planId)
+        if (!p.draft) throw new TRPCError({ code: 'CONFLICT', message: 'There is no change waiting on this plan.' })
+        if (!p.tiers) throw bad('This plan hasn’t been approved yet, so there is nothing to go back to. Edit it, or delete it if nothing uses it.')
+        await tx.update(pricePlans).set({ draft: null, status: 'approved', statusNote: null, submittedAt: null, submittedBy: null, updatedAt: new Date() }).where(eq(pricePlans.id, p.id))
+        await log(tx, ctx, input.organisationId, 'plan.change_withdrawn', p.id)
+        return { ok: true }
+      }),
+    ),
+
+  // Archive a plan (it can't be chosen for new dates; dates already on it keep it) or bring it back.
+  setArchived: orgProcedure('provider.pricing.edit')
+    .input(z.object({ planId: z.string().uuid(), archived: z.boolean() }))
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const p = await lockPlan(tx, input.organisationId, input.planId)
+        if (Boolean(p.archivedAt) === input.archived) throw new TRPCError({ code: 'CONFLICT', message: input.archived ? 'This plan is already archived.' : 'This plan is already in use.' })
+        await tx.update(pricePlans).set({ archivedAt: input.archived ? new Date() : null, updatedAt: new Date() }).where(eq(pricePlans.id, p.id))
+        await log(tx, ctx, input.organisationId, input.archived ? 'plan.archived' : 'plan.restored', p.id)
+        return { ok: true }
+      }),
+    ),
+
+  // Delete a plan nothing has ever used (no date, past or future, and no course). One in use is archived instead.
+  remove: orgProcedure('provider.pricing.edit')
+    .input(z.object({ planId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const p = await lockPlan(tx, input.organisationId, input.planId)
+        const [[d], [c]] = await Promise.all([
+          tx.select({ n: sql<number>`count(*)::int` }).from(cohorts).where(eq(cohorts.planId, p.id)),
+          tx.select({ n: sql<number>`count(*)::int` }).from(courses).where(eq(courses.planId, p.id)),
+        ])
+        if (d.n || c.n) throw new TRPCError({ code: 'CONFLICT', message: `This plan is used by ${[d.n ? `${d.n} ${d.n === 1 ? 'date' : 'dates'}` : '', c.n ? `${c.n} ${c.n === 1 ? 'course' : 'courses'}` : ''].filter(Boolean).join(' and ')}, so it can’t be deleted. Archive it instead.` })
+        await tx.delete(pricePlans).where(eq(pricePlans.id, p.id))
+        await log(tx, ctx, input.organisationId, 'plan.deleted', p.id, { name: p.name })
+        return { ok: true }
+      }),
+    ),
+})

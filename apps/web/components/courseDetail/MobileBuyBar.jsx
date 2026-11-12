@@ -9,7 +9,7 @@ import { formatPrice, formatShortDate } from "@/lib/format";
 // Fixed bar at 991px and under. It appears only once the booking card's button has scrolled out of view above the screen.
 // In-house follows the card: no price, and the button becomes "Get a quote".
 export default function MobileBuyBar() {
-  const { course, session, mode, isInHouse, status, addToBasket, cardButtonRef, bundle, price } = useBooking();
+  const { course, session, mode, isInHouse, status, addToBasket, cardButtonRef, price, fromPrice } = useBooking();
   const [visible, setVisible] = useState(false);
 
   // Visible once the card's button is fully above the top of the screen. A scroll check (rAF-throttled) is used instead of
@@ -35,7 +35,7 @@ export default function MobileBuyBar() {
     };
   }, [cardButtonRef, isInHouse]);
 
-  const label = status === "loading" ? "Adding" : status === "added" ? "Added" : status === "error" ? "Try again" : "Add to basket";
+  const label = status === "loading" ? "Booking" : status === "error" ? "Try again" : "Book now";
   if (!mode || (!isInHouse && !session)) return null;
 
   return (
@@ -51,10 +51,10 @@ export default function MobileBuyBar() {
       ) : (
         <>
           <div className="rt-cd__bar-info">
-            <strong>{formatPrice(price)}</strong>
-            <span>{bundle && bundle.add > 0 ? `${bundle.name} · ` : ""}{mode === "ondemand" ? session.time : formatShortDate(session.date)}, {session.location}</span>
+            <strong>{fromPrice ? "From " : ""}{formatPrice(price)}</strong>
+            <span>{mode === "ondemand" ? session.time : formatShortDate(session.date)}, {session.location}</span>
           </div>
-          <button type="button" className={`button -md -purple-1 text-white rt-bar__btn${status === "added" ? " is-added" : ""}${course.preview ? " rt-btn-off" : ""}`} onClick={addToBasket} aria-disabled={course.preview || undefined} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
+          <button type="button" className={`button -md -purple-1 text-white rt-bar__btn${course.preview ? " rt-btn-off" : ""}`} onClick={addToBasket} aria-disabled={course.preview || undefined} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
             {label}
           </button>
         </>

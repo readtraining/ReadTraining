@@ -357,6 +357,9 @@ export const courses = pgTable(
     isPublic: boolean('is_public').notNull().default(true),
     listed: boolean('listed').notNull().default(true),
     pricePence: integer('price_pence'), // self-paced price, including VAT; classroom and live-online prices are on each cohort
+    // a self-paced course sold in packages (Hurak's "Tiered"): its price plan, whose cheapest package is price_pence; null = one
+    // flat price. Classroom and live-online dates choose their own plan (cohorts.plan_id).
+    planId: uuid('plan_id').references((): AnyPgColumn => pricePlans.id, { onDelete: 'restrict' }),
     videoUrl: text('video_url'),
     seoTitle: text('seo_title'),
     seoDescription: text('seo_description'),
@@ -387,6 +390,7 @@ export const courses = pgTable(
     // a shared page belongs to no provider and sits under nothing; a provider course always has its provider
     check('courses_kind_shape', sql`(${t.kind} = 'shared' and ${t.organisationId} is null and ${t.parentId} is null) or (${t.kind} = 'provider' and ${t.organisationId} is not null)`),
     check('courses_price_range', sql`${t.pricePence} is null or ${t.pricePence} between 0 and 10000000`),
+    index('courses_plan_idx').on(t.planId),
   ],
 ).enableRLS()
 
@@ -498,6 +502,48 @@ export const venues = pgTable(
   (t) => [index('venues_organisation_idx').on(t.organisationId), index('venues_city_idx').on(t.city)],
 ).enableRLS()
 
+// A provider's price plan (Hurak's "Tiered Plans"): 2 to 4 packages a learner chooses between (Basic, Plus, Pro, Elite by default),
+// each with its own full price per delegate. One plan can be used by many dates and courses. `tiers` is the approved version,
+// the one learners see (null until first approved); `draft` is a new plan or a change waiting for our team (null when nothing
+// waits). Each package: { name, pricePence, savePence, tagline, popular, features: [{ title, description, included }] }, checked
+// by the API (provider/plans.mts). A date or course on a plan has the plan's cheapest price as its own price_pence, kept in step
+// when the plan is approved. A plan in use is archived, never deleted. Read and written by the API only.
+export const pricePlanStatus = pgEnum('price_plan_status', ['pending', 'approved', 'changes'])
+export const pricePlans = pgTable(
+  'price_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organisationId: uuid('organisation_id')
+      .notNull()
+      .references(() => organisations.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(), // the provider's own name for it ("Standard course bundle"); learners see the packages' names
+    tiers: jsonb('tiers'),
+    draft: jsonb('draft'),
+    status: pricePlanStatus('status').notNull().default('pending'),
+    statusNote: text('status_note'), // our team's reason when they ask for changes; the provider sees it
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    submittedBy: uuid('submitted_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decidedBy: uuid('decided_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('price_plans_organisation_idx').on(t.organisationId),
+    index('price_plans_status_idx').on(t.status),
+    index('price_plans_submitted_by_idx').on(t.submittedBy),
+    index('price_plans_decided_by_idx').on(t.decidedBy),
+    index('price_plans_created_by_idx').on(t.createdBy),
+    check('price_plans_name_length', sql`char_length(${t.name}) between 1 and 60`),
+    check('price_plans_tiers_shape', sql`${t.tiers} is null or (jsonb_typeof(${t.tiers}) = 'array' and jsonb_array_length(${t.tiers}) between 2 and 4)`),
+    check('price_plans_draft_shape', sql`${t.draft} is null or (jsonb_typeof(${t.draft}) = 'array' and jsonb_array_length(${t.draft}) between 2 and 4)`),
+    check('price_plans_has_version', sql`${t.tiers} is not null or ${t.draft} is not null`),
+    pgPolicy('price_plans: API only', { as: 'restrictive', for: 'all', to: [anonRole, authenticatedRole], using: sql`false`, withCheck: sql`false` }),
+  ],
+).enableRLS()
+
 // One bookable run of a provider course (classroom or live online; self-paced has none). `sessions` = the days, in order:
 // [{ date: 'YYYY-MM-DD', end: 'YYYY-MM-DD', from: 'HH:MM', to: 'HH:MM' }]; starts_on/ends_on are the first and last day, for
 // search. Classroom needs a venue; live online has a join link (it can be added after the cohort is made). Price includes VAT.
@@ -519,6 +565,9 @@ export const cohorts = pgTable(
     capacity: integer('capacity').notNull(),
     pricePence: integer('price_pence').notNull(),
     wasPricePence: integer('was_price_pence'),
+    // "Tiered" pricing (Hurak's): the price plan whose packages the learner chooses between; price_pence is then its cheapest
+    // package (the "From" price), kept in step by the API. Null = "Flat": the date's own price.
+    planId: uuid('plan_id').references(() => pricePlans.id, { onDelete: 'restrict' }),
     details: text('details'), // the cohort's structure, shown to learners under the dates
     tutorUserId: uuid('tutor_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
     bookable: boolean('bookable').notNull().default(true), // the provider can stop new bookings without cancelling
@@ -535,6 +584,7 @@ export const cohorts = pgTable(
     index('cohorts_starts_idx').on(t.startsOn),
     index('cohorts_tutor_idx').on(t.tutorUserId),
     index('cohorts_created_by_idx').on(t.createdBy),
+    index('cohorts_plan_idx').on(t.planId),
     check('cohorts_method_dated', sql`${t.method} in ('classroom', 'live-online')`),
     check('cohorts_classroom_venue', sql`${t.method} <> 'classroom' or ${t.venueId} is not null`),
     check('cohorts_dates_order', sql`${t.endsOn} >= ${t.startsOn}`),
