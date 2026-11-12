@@ -41,10 +41,19 @@ app.use('/api/trpc', (req, res, next) => {
   res.status(413).json({ error: { json: { message: 'This request is too large.', code: -32013, data: { code: 'PAYLOAD_TOO_LARGE', httpStatus: 413 } } } })
 })
 
-// Each visitor (IP) may make 300 API requests a minute (the Vercel Firewall caps the same in front of us; this holds if that
-// rule is ever changed). Over it: 429 in tRPC's own error shape, so the website shows the message.
+// Each visitor (IP) may make 300 API calls a minute (the Vercel Firewall caps 300 requests in front of us; this holds if that
+// rule is ever changed). The website sends several calls in one request (tRPC batching: /api/trpc/a,b,c), so each call in it
+// counts, and a request may hold at most MAX_BATCH calls (the website's own batches are capped at the same number). Over it:
+// 429 in tRPC's own error shape, so the website shows the message.
+const MAX_BATCH = 20
+const callsIn = (path: string) => Math.max(1, path.replace(/^\/+/, '').split(',').length)
 app.use('/api/trpc', async (req, res, next) => {
-  if (await allowed('api', clientIp(req))) return next()
+  const calls = callsIn(req.path)
+  if (calls > MAX_BATCH) {
+    res.status(400).json({ error: { json: { message: 'Too many calls in one request.', code: -32600, data: { code: 'BAD_REQUEST', httpStatus: 400 } } } })
+    return
+  }
+  if (await allowed('api', clientIp(req), calls)) return next()
   res.status(429).json({ error: { json: { message: LIMITS.api.message, code: -32029, data: { code: 'TOO_MANY_REQUESTS', httpStatus: 429 } } } })
 })
 
@@ -55,6 +64,7 @@ app.use(
     router: appRouter,
     createContext: createTRPCContext,
     maxBodySize: MAX_BODY,
+    maxBatchSize: MAX_BATCH,
     // One short line per error: never the input (it can hold passwords) and never the whole error object.
     onError({ error, path }) {
       if (error.code === 'INTERNAL_SERVER_ERROR') {
