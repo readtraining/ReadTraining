@@ -386,7 +386,7 @@ function CheckoutForm() {
 // shown only when its switch in lib/forms.js holds a real send (otherwise the "coming soon" panel)
 export default function CheckoutPage(props) {
   return (
-    <FormGate form="checkout">
+    <FormGate form="checkout" headingLevel={1}>
       <CheckoutForm {...props} />
     </FormGate>
   );
