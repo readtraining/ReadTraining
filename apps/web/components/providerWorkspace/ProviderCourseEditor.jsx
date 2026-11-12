@@ -206,6 +206,9 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const clearToast = useCallback(() => setToast(null), []);
   const saved = useCallback((message) => setToast({ message }), []);
   const access = ep.access;
+  // a provider our team hasn't approved yet can open its courses but not change them (the shared permission table)
+  const { status: providerStatus } = useProviderAccess();
+  const notApproved = !ep.admin && (providerStatus === "pending" || providerStatus === "changes_requested");
   const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS;
   const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: "/provider/courses" };
 
@@ -475,7 +478,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setWithdrawing(true)} aria-haspopup="dialog" disabled={ep.discarding}>{ep.discarding ? "Withdrawing…" : "Withdraw changes"}</button>}
         </section>
       )}
-      {!access.page && <p className="rt-adm-item__block">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : "Your role can see this course but not change it."}</p>}
+      {!access.page && <p className="rt-adm-item__block">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : notApproved ? pw.notApproved.text : "Your role can see this course but not change it."}</p>}
       {!ep.admin && access.page && !access.full && <p className="rt-adm-item__block">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
 
       <div className="rt-pws-ce">
@@ -1159,9 +1162,8 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
                 <p className="rt-acc__note" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. <Link href="/provider/packages" className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link></p>
                 <FieldErr id="rt-pws-ce-plan" text={errors.planId} />
                 <FieldSelect id="rt-pws-ce-plan" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={draft.planId} disabled={locked} onChange={set("planId")}
-                  options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${(p.draft ?? p.tiers).map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}${p.tiers ? "" : " (waiting for approval)"}` }))}
+                  options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}` }))}
                   invalid={Boolean(errors.planId)} describedBy="rt-pws-ce-plan-h" />
-                {plans.some((p) => p.id === draft.planId && !p.tiers) && <p className="rt-acc__notice -warn">Our team hasn&apos;t approved this plan yet, so learners won&apos;t see the course&apos;s price until it is.</p>}
               </div>
             ) : (
               <div className="rt-field rt-pws-course-price">

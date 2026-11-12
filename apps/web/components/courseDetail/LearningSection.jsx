@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
-import { formatDateRange, formatPrice } from "@/lib/format";
+import { formatPrice, formatWeekdayDate } from "@/lib/format";
 import DatesDialog from "./DatesDialog";
 import { Check, Icon } from "./Icon";
 import { modeLabel } from "@/lib/courseModes";
@@ -19,27 +19,19 @@ const BULLETS = {
   inhouse: TEAM.bullets,
 };
 
-// One summary row for the selected dated option. "See dates" opens the pop-up (DatesDialog) where the date is chosen.
+// One summary row for the selected dated option (nothing is chosen for the learner): how many dates at how many venues, the
+// next one and the lowest price. "See dates" opens the pop-up (DatesDialog) where the venue and date are chosen.
 function DatesSummary({ rows, mode }) {
-  const { session, openDates } = useBooking();
-  const chosen = rows.find((r) => r.id === session.id);
+  const { openDates, summaryFor } = useBooking();
+  const sum = summaryFor(mode);
+  if (!sum) return null;
   const classroom = mode === "classroom";
-  const venues = new Set(rows.map((r) => `${r.address}|${r.postcode}`)).size;
-  const from = Math.min(...rows.map((r) => r.price));
   return (
     <div className="rt-ds">
       <Icon name="calendar" className="rt-ds__icon" />
       <div className="rt-ds__text" aria-live="polite">
-        {chosen ? (
-          <>
-            <strong>{formatDateRange(chosen.date, chosen.endDate)}</strong>
-            {/* the days themselves when they aren't all in a row, or each day's times when they differ */}
-            {chosen.schedule && <span>{chosen.schedule}</span>}
-            <span>{classroom ? `${chosen.address}, ${chosen.postcode}` : chosen.time}</span>
-          </>
-        ) : (
-          <strong>{classroom ? `${rows.length} dates in ${venues} venues, from ${formatPrice(from)}` : `${rows.length} dates, from ${formatPrice(from)}`}</strong>
-        )}
+        <strong>{sum.count} {sum.count === 1 ? "date" : "dates"}{classroom ? ` at ${sum.venues} ${sum.venues === 1 ? "venue" : "venues"}` : ", live online"}</strong>
+        <span>Next course: {formatWeekdayDate(sum.next.date)} · {sum.from ? "from " : ""}{formatPrice(sum.price)}</span>
       </div>
       <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={openDates} aria-haspopup="dialog">See dates ({rows.length})</button>
     </div>

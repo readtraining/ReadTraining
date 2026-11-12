@@ -225,6 +225,13 @@
       "when": 1794475758238,
       "tag": "0031_drop_course_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794495856303,
+      "tag": "0032_plans_no_approval",
+      "breakpoints": true
     }
   ]
 }

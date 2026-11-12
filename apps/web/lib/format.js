@@ -15,6 +15,7 @@ export const formatDate = day({ weekday: "short", day: "numeric", month: "short"
 // "17 Jul 2026": dates in tables and lists, where the weekday is clutter
 export const formatDay = day({ day: "numeric", month: "short", year: "numeric" });
 export const formatShortDate = day({ day: "numeric", month: "short" });
+export const formatWeekdayDate = day({ weekday: "short", day: "numeric", month: "short" }); // "Wed 25 Nov"
 export const formatMonthYear = day({ month: "long", year: "numeric" });
 export const formatNumber = (n) => new Intl.NumberFormat("en-GB").format(n);
 export const savePercent = (price, wasPrice) => (wasPrice > price ? Math.round((1 - price / wasPrice) * 100) : 0);

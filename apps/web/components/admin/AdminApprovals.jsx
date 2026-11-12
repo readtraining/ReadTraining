@@ -14,16 +14,14 @@ import { methodName } from "@/lib/taxonomy";
 import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
-import AdminPlanReview from "./AdminPlanReview";
 
 const copy = A.approvals;
 const TABS = ["waiting", "changes", "decided"];
 const DAY = 86400000;
 
-// One inbox for what providers send for review (API admin.courses and admin.plans): new courses, changes to live courses and price
-// plans, oldest first so nothing waits silently, each with its deadline. Review opens the course; a new course can also be
-// approved or sent back here, a change approved or turned down; a price plan opens its packages to approve or send back
-// (AdminPlanReview). Sending back and turning down need a note, which the provider sees and is emailed (the site's
+// One inbox for what providers send for review (API admin.courses): new courses and changes to live courses, oldest first so
+// nothing waits silently, each with its deadline. Review opens the course; a new course can also be approved or sent back here,
+// a change approved or turned down. Sending back and turning down need a note, which the provider sees and is emailed (the site's
 // pop-up, the first error focused). Waiting new courses can be ticked and approved together. Tabs and the type filter are kept in
 // the address. Deciding needs the "approve" switch; the API also stops anyone deciding on what they sent themselves.
 export default function AdminApprovals() {
@@ -40,9 +38,6 @@ export default function AdminApprovals() {
   const formRef = useRef(null);
   const utils = api.useUtils();
   const query = api.admin.courses.queue.useQuery({ tab });
-  // price plans waiting, or sent back (decided plans are on each provider's Price plans page)
-  const plansQ = api.admin.plans.queue.useQuery({ tab: tab === "changes" ? "changes" : "waiting" }, { enabled: tab !== "decided" });
-  const [planOpen, setPlanOpen] = useState(null); // the plan being reviewed
   const counts = api.admin.courses.counts.useQuery(undefined, { staleTime: 30000 }).data;
   const decide = api.admin.courses.decide.useMutation();
   const canDecide = Boolean(me?.permissions?.includes("approve"));
@@ -53,14 +48,11 @@ export default function AdminApprovals() {
     const ty = getQuery("type");
     if (ty && copy.types[ty]) setType(ty);
   }, []);
-  if (query.isError || plansQ.isError) return <ErrorState title="We couldn't load the approvals." text="Check your connection, then try again." onRetry={() => { query.refetch(); plansQ.refetch(); }} />;
-  if (!query.data || (tab !== "decided" && !plansQ.data)) return <TableSkeleton />;
+  if (query.isError) return <ErrorState title="We couldn't load the approvals." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
+  if (!query.data) return <TableSkeleton />;
 
   const now = Date.now();
-  const plans = tab === "decided" ? [] : plansQ.data.map((p) => ({ ...p, type: "plan", title: p.name, key: `plan-${p.planId}` }));
-  // courses and plans in one list: waiting oldest first, the others latest first
-  const when = (a) => (a.at ? new Date(a.at).getTime() : 0);
-  const items = [...query.data.map((a) => ({ ...a, key: `${a.type}-${a.courseId}-${a.at}` })), ...plans].sort((a, b) => (tab === "waiting" ? when(a) - when(b) : when(b) - when(a)));
+  const items = query.data.map((a) => ({ ...a, key: `${a.type}-${a.courseId}-${a.at}` }));
   const shown = items.filter((a) => type === "all" || a.type === type);
   const pickable = tab === "waiting" ? shown.filter((a) => a.type === "new" && a.providerStatus === "active" && !a.own) : [];
   const allPicked = pickable.length > 0 && pickable.every((a) => picked.includes(a.key));
@@ -69,8 +61,6 @@ export default function AdminApprovals() {
     utils.admin.courses.counts.invalidate();
     utils.admin.courses.get.invalidate();
     utils.admin.courses.list.invalidate();
-    utils.admin.plans.queue.invalidate();
-    utils.admin.plans.get.invalidate();
   };
 
   const choose = (t) => {
@@ -177,27 +167,14 @@ export default function AdminApprovals() {
                     <span className="rt-adm-item__when">{tab === "waiting" ? "Sent" : "Decided"} {ago(at, now).replace(/^Just/, "just")}</span>
                     {tab === "waiting" && <AdminDue due={at + copy.dueDays * DAY} now={now} />}
                   </div>
-                  {a.type === "plan" ? (
-                    <>
-                      <h3 className="rt-acc__h3"><button type="button" className="rt-adm-strong rt-adm-linkbtn" onClick={() => setPlanOpen(a.planId)}>{a.title}</button></h3>
-                      <p className="rt-acc__note">{[a.provider, a.isNew ? copy.plans.new : copy.plans.change, copy.plans.packagesCount(a.packages)].join(" · ")}</p>
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="rt-acc__h3"><Link href={`/admin/catalogue/${a.courseId}`} className="rt-adm-strong">{a.title}</Link></h3>
-                      <p className="rt-acc__note">{[a.provider, methodName(a.method), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
-                    </>
-                  )}
+                  <h3 className="rt-acc__h3"><Link href={`/admin/catalogue/${a.courseId}`} className="rt-adm-strong">{a.title}</Link></h3>
+                  <p className="rt-acc__note">{[a.provider, methodName(a.method), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
                   {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive(a.providerStatus)}</p>}
                   {a.note && <p className="rt-adm-item__reason"><strong>Note to the provider:</strong> {a.note}</p>}
                   {canDecide && tab === "waiting" && a.own && <p className="rt-adm-item__reason">{a.soleApprover ? copy.ownQueueSole : copy.ownBlocked}</p>}
                 </div>
                 <div className="rt-adm-item__actions">
-                  {a.type === "plan" ? (
-                    <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setPlanOpen(a.planId)}>{copy.review}</button>
-                  ) : (
-                    <Link href={`/admin/catalogue/${a.courseId}`} className="button -sm -outline-purple-1 text-purple-1">{copy.review}</Link>
-                  )}
+                  <Link href={`/admin/catalogue/${a.courseId}`} className="button -sm -outline-purple-1 text-purple-1">{copy.review}</Link>
                   {canDecide && tab === "waiting" && a.type === "new" && !a.own && (
                     <>
                       {providerReady && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => run([a], "approve")}>{copy.approve}</button>}
@@ -218,9 +195,6 @@ export default function AdminApprovals() {
       ) : (
         type === "all" ? <Empty title={copy.empty[tab][0]} text={copy.empty[tab][1]} /> : <Empty kind="none" title="Nothing of this type here." />
       )}
-      {tab === "decided" && type === "plan" && <p className="rt-acc__note">{copy.plans.decidedTabNote}</p>}
-
-      <AdminPlanReview planId={planOpen} canDecide={canDecide} onClose={() => setPlanOpen(null)} onDecided={(text) => { setPlanOpen(null); refresh(); setSaid(text); }} />
 
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={asking ? `${asking.decision === "rejectChange" ? copy.rejectChange : copy.requestChanges}: ${asking.item.title}` : ""} closeLabel="Close">
         {asking && (

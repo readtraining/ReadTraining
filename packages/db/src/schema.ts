@@ -503,12 +503,11 @@ export const venues = pgTable(
 ).enableRLS()
 
 // A provider's price plan (Hurak's "Tiered Plans"): 2 to 4 packages a learner chooses between (Basic, Plus, Pro, Elite by default),
-// each with its own full price per delegate. One plan can be used by many dates and courses. `tiers` is the approved version,
-// the one learners see (null until first approved); `draft` is a new plan or a change waiting for our team (null when nothing
-// waits). Each package: { name, pricePence, savePence, tagline, popular, features: [{ title, description, included }] }, checked
-// by the API (provider/plans.mts). A date or course on a plan has the plan's cheapest price as its own price_pence, kept in step
-// when the plan is approved. A plan in use is archived, never deleted. Read and written by the API only.
-export const pricePlanStatus = pgEnum('price_plan_status', ['pending', 'approved', 'changes'])
+// each with its own full price per delegate. One plan can be used by many dates and courses. It is the provider's own pricing:
+// what they save is what learners see, with no review by our team (the course itself is reviewed). Each package in `tiers`:
+// { name, pricePence, savePence, tagline, popular, features: [{ title, description, included }] }, checked by the API
+// (provider/plans.mts). A date or course on a plan has the plan's cheapest price as its own price_pence, kept in step whenever the
+// plan is saved. A plan in use is archived, never deleted. Read and written by the API only.
 export const pricePlans = pgTable(
   'price_plans',
   {
@@ -517,14 +516,7 @@ export const pricePlans = pgTable(
       .notNull()
       .references(() => organisations.id, { onDelete: 'restrict' }),
     name: text('name').notNull(), // the provider's own name for it ("Standard course bundle"); learners see the packages' names
-    tiers: jsonb('tiers'),
-    draft: jsonb('draft'),
-    status: pricePlanStatus('status').notNull().default('pending'),
-    statusNote: text('status_note'), // our team's reason when they ask for changes; the provider sees it
-    submittedAt: timestamp('submitted_at', { withTimezone: true }),
-    submittedBy: uuid('submitted_by').references(() => authUsers.id, { onDelete: 'set null' }),
-    decidedAt: timestamp('decided_at', { withTimezone: true }),
-    decidedBy: uuid('decided_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    tiers: jsonb('tiers').notNull(),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
@@ -532,14 +524,9 @@ export const pricePlans = pgTable(
   },
   (t) => [
     index('price_plans_organisation_idx').on(t.organisationId),
-    index('price_plans_status_idx').on(t.status),
-    index('price_plans_submitted_by_idx').on(t.submittedBy),
-    index('price_plans_decided_by_idx').on(t.decidedBy),
     index('price_plans_created_by_idx').on(t.createdBy),
     check('price_plans_name_length', sql`char_length(${t.name}) between 1 and 60`),
-    check('price_plans_tiers_shape', sql`${t.tiers} is null or (jsonb_typeof(${t.tiers}) = 'array' and jsonb_array_length(${t.tiers}) between 2 and 4)`),
-    check('price_plans_draft_shape', sql`${t.draft} is null or (jsonb_typeof(${t.draft}) = 'array' and jsonb_array_length(${t.draft}) between 2 and 4)`),
-    check('price_plans_has_version', sql`${t.tiers} is not null or ${t.draft} is not null`),
+    check('price_plans_packages_shape', sql`jsonb_typeof(${t.tiers}) = 'array' and jsonb_array_length(${t.tiers}) between 2 and 4`),
     pgPolicy('price_plans: API only', { as: 'restrictive', for: 'all', to: [anonRole, authenticatedRole], using: sql`false`, withCheck: sql`false` }),
   ],
 ).enableRLS()

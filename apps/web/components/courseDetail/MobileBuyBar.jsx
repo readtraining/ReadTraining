@@ -4,12 +4,13 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
-import { formatPrice, formatShortDate } from "@/lib/format";
+import { formatPrice, formatWeekdayDate } from "@/lib/format";
 
 // Fixed bar at 991px and under. It appears only once the booking card's button has scrolled out of view above the screen.
-// In-house follows the card: no price, and the button becomes "Get a quote".
+// In-house follows the card: no price, and the button becomes "Get a quote". A course with dates shows its lowest price and how
+// many dates there are, and Book now opens them, as the card's (nothing is chosen for the learner).
 export default function MobileBuyBar() {
-  const { course, session, mode, isInHouse, status, addToBasket, cardButtonRef, price, fromPrice } = useBooking();
+  const { course, session, mode, isInHouse, status, cardButtonRef, price, fromPrice, bookNow, summaryFor } = useBooking();
   const [visible, setVisible] = useState(false);
 
   // Visible once the card's button is fully above the top of the screen. A scroll check (rAF-throttled) is used instead of
@@ -37,6 +38,7 @@ export default function MobileBuyBar() {
 
   const label = status === "loading" ? "Booking" : status === "error" ? "Try again" : "Book now";
   if (!mode || (!isInHouse && !session)) return null;
+  const sum = !isInHouse && mode !== "ondemand" ? summaryFor(mode) : null;
 
   return (
     <div className={`rt-cd__bar${visible ? " is-visible" : ""}`} aria-hidden={!visible} inert={!visible}>
@@ -51,10 +53,10 @@ export default function MobileBuyBar() {
       ) : (
         <>
           <div className="rt-cd__bar-info">
-            <strong>{fromPrice ? "From " : ""}{formatPrice(price)}</strong>
-            <span>{mode === "ondemand" ? session.time : formatShortDate(session.date)}, {session.location}</span>
+            <strong>{(sum ? sum.from : fromPrice) ? "From " : ""}{formatPrice(sum ? sum.price : price)}</strong>
+            <span>{sum ? `${sum.count} ${sum.count === 1 ? "date" : "dates"} · next ${formatWeekdayDate(sum.next.date)}` : session.time}</span>
           </div>
-          <button type="button" className={`button -md -purple-1 text-white rt-bar__btn${course.preview ? " rt-btn-off" : ""}`} onClick={addToBasket} aria-disabled={course.preview || undefined} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
+          <button type="button" className={`button -md -purple-1 text-white rt-bar__btn${course.preview ? " rt-btn-off" : ""}`} onClick={bookNow} aria-haspopup={sum ? "dialog" : undefined} aria-disabled={course.preview || undefined} disabled={status === "loading"} tabIndex={visible ? 0 : -1}>
             {label}
           </button>
         </>

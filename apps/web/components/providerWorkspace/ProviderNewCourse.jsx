@@ -13,7 +13,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { CardChoice, Choice, Loading } from "./providerParts";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { categoryOptions, pagesForSubject, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
-import { ErrorState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
 
 // A new course in Hurak's five steps: 1 working title, 2 category, sub-category and topic, 3 compliance or not (a compliance course
 // can also go on a shared course page, chosen from the live ones), 4 performance model, 5 Skill Saver. Previous / Continue, Exit back
@@ -24,7 +24,7 @@ const YES_NO = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
 export default function ProviderNewCourse() {
   const router = useRouter();
   const taxonomy = useTaxonomy();
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, status } = useProviderAccess();
   const [step, setStep] = useState(1);
   const [f, setF] = useState({ title: "", category: "", subcategory: "", topic: "", type: "", sharedLanding: "", parentId: "", model: "", skillSaver: "" });
   const [errors, setErrors] = useState({});
@@ -103,6 +103,8 @@ export default function ProviderNewCourse() {
   const Err = ({ k }) => (errors[k] ? <p className="rt-q__err" id={`rt-pws-nc-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p> : null);
 
   // the categories come from the catalogue list; without it a course can't be filed, so say so instead of empty lists
+  // not approved yet: courses come after our team's approval (the API refuses them too); otherwise it's the person's role
+  if ((status === "pending" || status === "changes_requested")) return <EmptyState title={pw.notApproved.title} text={pw.notApproved.text} action={pw.notApproved.action} />;
   if (!can("provider.courses.edit")) return <ErrorState title="You can't create courses." text="Ask the owner or an admin of your provider account to give you the Course editor role." />;
   if (!categoryOptions().length) return taxonomy?.loading ? <Loading rows={2} /> : <ErrorState title="We couldn't load the course categories." text="Check your connection, then try again." onRetry={taxonomy?.retry} />;
 

@@ -56,7 +56,8 @@ export default function ProviderChecklist({ heading = 2 }) {
       <ol className="rt-pws-check__list">
         {keys.map((k) => {
           const step = copy.steps[k];
-          const text = typeof step.text === "string" ? step.text : step.text[status] || "";
+          // a step's words can depend on the account's status; a step already done reads as it does once approved
+          const text = typeof step.text === "string" ? step.text : step.text[done[k] && k !== "approved" ? "active" : status] || "";
           // approval has an action only when our team is waiting on the provider
           const action = k === "approved" ? (status === "changes_requested" ? step.action : null) : step.action;
           return (
