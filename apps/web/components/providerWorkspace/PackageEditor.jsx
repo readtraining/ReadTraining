@@ -114,14 +114,17 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     );
   };
 
-  const used = plan ? plan.used.dates + plan.used.courses : 0;
+  // what uses the plan, in words: "the upcoming date", "the 3 upcoming dates and the self-paced course"
+  const n = (k, one, many) => (k ? (k === 1 ? `the ${one}` : `the ${k} ${many}`) : "");
+  const used = plan ? [n(plan.used.dates, "upcoming date", "upcoming dates"), n(plan.used.courses, "self-paced course", "self-paced courses")].filter(Boolean).join(" and ") : "";
+  const usedMany = plan ? plan.used.dates + plan.used.courses > 1 : false;
   return (
     <Sheet open={open} onClose={onClose} title={plan ? "Edit price plan" : "Create price plan"} closeLabel="Close" className="rt-pws-pkg__sheet">
       <form className="rt-q__form rt-pws-pkg" onSubmit={submit} noValidate ref={formRef}>
         {general && <p className="rt-acc__notice -warn" tabIndex={-1} role="alert">{general}</p>}
         <p className="rt-acc__note">
           {plan
-            ? `Changes show to learners as soon as you save.${used ? ` The ${used === 1 ? "date or course" : `${used} dates and courses`} on this plan take its cheapest package as their price.` : ""}`
+            ? `Changes show to learners as soon as you save.${used ? ` ${used.charAt(0).toUpperCase()}${used.slice(1)} on this plan ${usedMany ? "take" : "takes"} its cheapest package as ${usedMany ? "their" : "its"} price.` : ""}`
             : "Learners see the packages as soon as you put the plan on a date or a self-paced course. Its cheapest package is the price they show."}
         </p>
 
