@@ -7,7 +7,7 @@ import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
-import { formatDateRange, formatPrice, savePercent } from "@/lib/format";
+import { formatPrice, formatWeekdayDate, savePercent } from "@/lib/format";
 import { Check, Icon } from "./Icon";
 import { modeLabel } from "@/lib/courseModes";
 
@@ -60,8 +60,10 @@ const QUOTE_TEXT = TEAM.quoteText;
 const SAVER_DATE = "In Skill Saver: members get their discount";
 const IN_HOUSE_LINE = TEAM.line;
 
-// The booking card. SELECTED option on top (radio, price, info lines, link, button, trust items), then one row for every other
-// option the course offers (choosing a row selects it everywhere), then a grey footer with Save.
+// The booking card, as Hurak's: nothing is chosen for the learner. The SELECTED study method on top: its lowest price ("From",
+// with that date's was-price), how many dates at how many venues and the next one, the towns, and Book now, which opens the dates
+// (venue, date, package, first aid, then the basket); a self-paced course shows "Start any time" and goes on to its steps. Then
+// one row for every other option the course offers (choosing a row selects it everywhere), then a grey footer with Save.
 // FULL (title visible): course image first, trust items under the button. COMPACT (desktop, title out of view): the image and
 // the trust items collapse; everything else stays. Tablet and mobile: always FULL.
 // The card for a course with nothing to book yet: no dates are open and team training isn't offered.
@@ -86,7 +88,7 @@ function NoDatesCard({ course }) {
 }
 
 export default function BookingCard() {
-  const { course, modes, mode, isInHouse, setMode, session, status, addToBasket, cardButtonRef, barOn, flash, openDates, price, wasPrice, fromPrice } = useBooking();
+  const { course, modes, mode, isInHouse, setMode, session, status, cardButtonRef, barOn, flash, price, wasPrice, fromPrice, bookNow, summaryFor } = useBooking();
   const [desktop, setDesktop] = useState(false);
   const [flashing, setFlashing] = useState(false);
 
@@ -110,12 +112,16 @@ export default function BookingCard() {
   // nothing to book yet: no dates and no team training
   if (!mode) return <NoDatesCard course={course} />;
   const label = status === "loading" ? "Booking" : status === "error" ? "Try again" : "Book now";
-  const save = isInHouse ? 0 : savePercent(price, wasPrice);
   const trust = trustItems(course);
   const onDemand = mode === "ondemand";
+  // a dated study method: the summary of its dates (the card never shows one date as chosen)
+  const sum = !isInHouse && !onDemand ? summaryFor(mode) : null;
+  const shown = sum ? { price: sum.price, was: sum.wasPrice, from: sum.from } : { price, was: wasPrice, from: fromPrice };
+  const save = isInHouse ? 0 : savePercent(shown.price, shown.was);
+  const towns = sum ? (sum.towns.length > 3 ? `${sum.towns.slice(0, 3).join(", ")} +${sum.towns.length - 3} more` : sum.towns.join(", ")) : "";
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const others = modes.filter((m) => m !== mode);
-  // in Skill Saver on some dates only (the hero says "on some dates"): say when the chosen one is
+  // a self-paced course in Skill Saver on some offers only: say when this one is
   const saverDate = course.skillSaver === "some" && session?.skillSaver;
 
   return (
@@ -142,9 +148,9 @@ export default function BookingCard() {
             <p className="rt-bs__quote">{QUOTE_TEXT}</p>
           ) : (
             <div className="rt-bs__price">
-              {/* sold in packages: the cheapest package's price; Book now asks which package */}
-              <strong>{fromPrice ? <small className="rt-bs__from">From </small> : null}{formatPrice(price)}</strong>
-              {wasPrice > price && <s><span className="rt-cd__sr">was </span>{formatPrice(wasPrice)}</s>}
+              {/* the lowest price ("From" when dates or packages differ); Book now asks the rest */}
+              <strong>{shown.from ? <small className="rt-bs__from">From </small> : null}{formatPrice(shown.price)}</strong>
+              {shown.was > shown.price && <s><span className="rt-cd__sr">was </span>{formatPrice(shown.was)}</s>}
               {save > 0 && <span className="rt-bs__off">{save}% off</span>}
             </div>
           )}
@@ -163,22 +169,14 @@ export default function BookingCard() {
               </>
             ) : (
               <>
-                {/* the dates, then the days themselves when they aren't all in a row (or each day's times when they differ) */}
-                <li><Icon name="calendar" /><span>{formatDateRange(session.date, session.endDate)}{session.schedule && <><br />{session.schedule}</>}</span></li>
-                {session.time && <li><Icon name="wall-clock" /><span>{session.time}</span></li>}
-                <li><Icon name="location" /><span>{session.location}</span></li>
-                {/* what the provider wrote for learners about this date */}
-                {session.details && <li><Icon name="document" /><span>{session.details}</span></li>}
-                {/* in Skill Saver on some dates only: say when the chosen one is */}
-                {saverDate && <li><Icon name="star" /><span>{SAVER_DATE}</span></li>}
+                {/* how many dates (at how many venues) and the next one; the learner chooses in the dates pop-up */}
+                <li><Icon name="calendar" /><span>{sum.count} {sum.count === 1 ? "date" : "dates"}{mode === "classroom" ? ` at ${sum.venues} ${sum.venues === 1 ? "venue" : "venues"}` : ""}<br />Next course: {formatWeekdayDate(sum.next.date)}</span></li>
+                <li><Icon name="location" /><span>{mode === "classroom" ? towns : "Live online"}</span></li>
+                {course.skillSaver === "some" && <li><Icon name="star" /><span>Skill Saver on some dates</span></li>}
                 <li><Icon name="coupon" /><span>Price includes VAT</span></li>
               </>
             )}
           </ul>
-
-          {!isInHouse && !onDemand ? (
-            <p className="rt-bs__link"><Icon name="edit" /><button type="button" className="rt-cd__link rt-bs__change" onClick={openDates}>Change</button></p>
-          ) : null}
 
           {isInHouse ? (
             <Link ref={cardButtonRef} href={quoteHref(course)} className="button -md -purple-1 text-white rt-btn-block">{TEAM.cta}</Link>
@@ -187,7 +185,8 @@ export default function BookingCard() {
               ref={cardButtonRef}
               type="button"
               className={`button -md -purple-1 text-white rt-btn-block${course.preview ? " rt-btn-off" : ""}`}
-              onClick={addToBasket}
+              onClick={bookNow}
+              aria-haspopup={onDemand ? undefined : "dialog"}
               aria-disabled={course.preview || undefined}
               disabled={status === "loading"}
               aria-busy={status === "loading"}

@@ -188,6 +188,29 @@ export default function BookingProvider({ course, initialMode, initialSession, c
     [status, session, isInHouse, addCourseToCart, course, notify, router, needsAid],
   );
   const addToBasket = useCallback(() => book(), [book]);
+  // Book now, wherever it is on the page (hero, card, mobile bar), as Hurak's: nothing is chosen for the learner. A course with
+  // dates opens them (venue, date, then the package and first aid); a self-paced course has no date, so it goes on to its steps.
+  const bookNow = useCallback(() => (mode === "ondemand" ? book() : openDates()), [mode, book, openDates]);
+  // What a study method offers, for the card, the mobile bar and Learning options: how many dates and venues, the towns, the
+  // next date, and the lowest price (with that date's was-price); "From" when there is more than one price or packages.
+  const summaryFor = useCallback(
+    (m) => {
+      const list = course.sessions.filter((s) => s.mode === m);
+      if (!list.length) return null;
+      const cheapest = list.reduce((a, b) => (b.price < a.price ? b : a));
+      const next = list.reduce((a, b) => (b.date < a.date ? b : a));
+      return {
+        count: list.length,
+        venues: new Set(list.map((s) => `${s.address}|${s.postcode}`)).size,
+        towns: [...new Set(list.map((s) => s.city).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+        next,
+        price: cheapest.price,
+        wasPrice: cheapest.wasPrice > cheapest.price ? cheapest.wasPrice : null,
+        from: new Set(list.map((s) => s.price)).size > 1 || list.some((s) => s.packages),
+      };
+    },
+    [course],
+  );
   const closePackages = useCallback(() => setPkgFor((x) => ({ ...x, open: false })), []);
   const pkgSession = course.sessions.find((s) => s.id === pkgFor.id) ?? null;
 
@@ -218,7 +241,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
     status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
-    price, wasPrice, fromPrice,
+    price, wasPrice, fromPrice, bookNow, summaryFor,
   };
 
   return (
