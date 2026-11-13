@@ -3726,7 +3726,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__titlerow .rt-bk__check { padding-top: 1px; }
 .rt-bk__line.is-off { background: var(--color-light-4); }
 .rt-bk__offnote { margin: 6px 0 0 32px; font-size: 13px; color: var(--color-light-1); }
-.rt-bk__change { min-height: 0; padding: 0; border: 0; background: none; cursor: pointer; }
 .rt-bk__sumnote { margin: -8px 0 14px; font-size: 14px; color: var(--color-light-1); }
 /* the date pop-up opened from a catalogue card or the basket: the study methods as the filter chips */
 .rt-dd__modes { flex: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--cd-border); }
@@ -3742,13 +3741,19 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__price strong { font-size: 20px; font-weight: 700; color: var(--color-dark-1); }
 .rt-bk__price s { margin-left: 8px; }
 .rt-bk__each { margin: 0; font-size: 13px; color: var(--color-light-1); }
-.rt-bk__remove { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; border: 0; background: none; font-size: 13px; color: var(--color-light-1); cursor: pointer; }
-.rt-bk__remove:hover { color: var(--color-dark-1); text-decoration: underline; }
+/* a line's Edit (pencil, its menu under it) and Remove (bin): square icon buttons under the price */
+.rt-bk__acts { display: flex; gap: 8px; }
+.rt-bk__icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: 15px; color: var(--rt-c-muted); cursor: pointer; transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease; }
+.rt-bk__icon:hover, .rt-rowmenu.is-open .rt-bk__icon { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
+.rt-bk__icon.-danger:hover { border-color: var(--rt-c-error); background: var(--rt-c-surface); color: var(--rt-c-error); }
+.rt-bk__icon:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-bk__acts .rt-rowmenu__list { width: max-content; min-width: 200px; }
 .rt-bk__note { margin: 12px 0 0; font-size: 13px; color: var(--color-light-1); }
 @media (max-width: 767px) {
   .rt-bk__row { grid-template-columns: 96px minmax(0, 1fr); gap: 14px; }
   .rt-bk__side { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
   .rt-bk__price { text-align: left; }
+  .rt-bk__acts .rt-rowmenu__list { left: 0; right: auto; } /* the icons sit on the left here, so the menu opens to the right */
 }
 /* the package and first aid choices: the selected learning-option card's look (purple border, pale fill) as radio cards */
 .rt-bk__fs { min-width: 0; margin: 20px 0 0; padding: 20px 0 0; border: 0; border-top: 1px solid var(--color-light-5); }
@@ -7305,7 +7310,6 @@ html { scrollbar-gutter: stable; }
 .rt-dd__total strong { font-size: 17px; font-weight: 700; color: var(--cd-text); font-variant-numeric: tabular-nums; }
 .rt-dd__total small { margin-left: 4px; font-size: 13px; font-weight: 400; color: var(--cd-muted); }
 /* a package that includes first aid (or the first aid answer, with Change): the basket line says so instead of asking */
-.rt-bk__inpkg .rt-bk__change { margin-left: 4px; }
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
 .rt-bk__inpkg i { color: var(--rt-c-success); }
 

@@ -67,7 +67,7 @@ export function BasketSummary({ totals, issues, promo, onPromo, count, signedOut
               <label htmlFor="rt-bk-code" className="rt-sr">Promo code</label>
               {error && <p id="rt-bk-code-err" className="rt-q__err rt-bk__promoerr" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
               <div className="rt-bk__promorow">
-                <input id="rt-bk-code" type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Promo code" autoComplete="off" aria-invalid={error ? "true" : undefined} aria-describedby={error ? "rt-bk-code-err" : undefined} autoFocus />
+                <input id="rt-bk-code" type="text" value={code} onChange={(e) => { setCode(e.target.value); setError(""); }} placeholder="Promo code" autoComplete="off" aria-invalid={error ? "true" : undefined} aria-describedby={error ? "rt-bk-code-err" : undefined} autoFocus />
                 <button type="submit" className="button -md -outline-dark-1 text-dark-1">{copy.promo.apply}</button>
               </div>
             </form>

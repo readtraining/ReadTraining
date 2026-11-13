@@ -19,6 +19,8 @@ export const basket = {
   // a date sold in packages (a provider's price plan): the package chosen, and choosing or changing it
   package: { label: "Package", change: "Change package", choose: "Choose a package", none: "This date comes in packages. Choose one to continue." },
   chooseDate: "Choose a date",
+  edit: "Edit", // a line's pencil button: a menu of what it can change (components/basket/BasketLine.jsx)
+  remove: "Remove", // a line's bin button
   changeDate: "Change date",
   dateChanged: "Date changed to {date}, {place}.",
   // the tick boxes: pay for the ticked courses, keep the rest in the basket (as Amazon's basket does)
@@ -42,7 +44,8 @@ export const basket = {
     have: { label: "I already have a valid first aid certificate", note: "Bring the original certificate. It must have been taken in person and stay valid for at least 12 months after your course.", short: "You have a valid first aid certificate (bring the original)" },
     // the client's own price: "Course + first aid" is £70 more than the course alone (data/courseGuides.js packages)
     add: { label: "Add Emergency First Aid at Work", note: "A 1-day course with its own certificate.", price: 70, short: "Emergency First Aid at Work added" },
-    change: "Change",
+    remove: "Remove first aid", // Edit menu: takes the add-on off and asks the question again
+    addItem: "Add first aid (+{price})", // Edit menu, for someone who said they hold a certificate
   },
 
   promo: {
