@@ -15,7 +15,8 @@ const CATALOGUE = CATALOGUE_HREF;
 // quote for this course, lib/teamTraining.js), then Read Training's rating (the site's trust numbers, Admin › Site content: our Google rating and its
 // number of reviews, worded as ours, not the course's; left out until an admin has entered one). With reviews of the course
 // on the page (`hasReviews`), the rating is a link down to them.
-export default function CourseHero({ course, hasReviews = false }) {
+// `heroTitle`: a course guide's heading for the hero (data/courseGuides.js); without one, the course's own name.
+export default function CourseHero({ course, hasReviews = false, heroTitle = null }) {
   const subject = getSubjectLabel(course);
   const sub = getSubLabel(course);
   const lowest = course.sessions.reduce((best, s) => (!best || s.price < best.price ? s : best), null);
@@ -35,7 +36,7 @@ export default function CourseHero({ course, hasReviews = false }) {
 
         {/* in Skill Saver on every date, or on some (the dates pop-up and the booking card then mark which) */}
         {course.skillSaver && <SaverBadge href="/skill-saver" className="rt-cd__saver" label={course.skillSaver === "some" ? "Skill Saver on some dates" : undefined} />}
-        <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
+        <h1 className="rt-cd__title" id="rt-cd-title">{heroTitle || course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
 
         {/* the counts are in the bar under the hero; a provider's course on a shared page links to every date for that course */}

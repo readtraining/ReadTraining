@@ -2149,6 +2149,11 @@ main#rt-cd-main { overflow: clip; }
 
 /* Course content: heading and "Expand all sections" on one line */
 .rt-cd__mod-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; }
+/* Course content's "Expand all" / "Collapse all": a small outline button beside the heading; its chevron turns when all are open */
+.rt-cd__expand.button { flex: none; gap: 8px; height: 36px; padding: 0 14px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rt-cd__expand-icon { font-size: 9px; transition: transform 0.2s ease; }
+.rt-cd__expand-icon.is-open { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .rt-cd__expand-icon { transition: none; } }
 .rt-cd__mod-head h2 { margin: 0; }
 
 /* Learning options: one row of dated option cards, team training full width under them */

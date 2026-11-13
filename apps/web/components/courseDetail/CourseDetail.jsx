@@ -109,7 +109,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
           <BookingProvider course={course} initialMode={query.mode} initialSession={query.session}>
             <div className="container rt-cd__wrap">
               <div className="rt-cd__grid">
-                <CourseHero course={course} hasReviews={reviews.length > 0} />
+                <CourseHero course={course} hasReviews={reviews.length > 0} heroTitle={guide?.heroTitle} />
 
                 <aside className="rt-cd__aside" aria-label="Book this course">
                   <BookingCard />

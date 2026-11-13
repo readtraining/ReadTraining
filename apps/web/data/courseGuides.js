@@ -52,6 +52,7 @@ export const courseGuides = [
       },
       intro: ["You sit four multiple-choice exams on the final day, plus practical assessments in searching and physical intervention observed by your trainer. Many centres give results the same day."],
     },
+    heroTitle: "SIA Door Supervisor Course", // the hero's heading, as the client's page has it (the course's name stays the same elsewhere)
     packages: {
       title: "Packages",
       intro: "Bundle what you need and save. Prices are starting prices and vary by location and date.",
