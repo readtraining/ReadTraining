@@ -2085,6 +2085,7 @@ main#rt-cd-main { overflow: clip; }
 .rt-cd__hero .rt-cd__crumbs a:hover { color: var(--color-white) !important; }
 .rt-cd__hero .rt-cd__crumbs li + li::before { content: ">"; margin-right: 8px; color: var(--color-light-11); }
 .rt-cd__hero .rt-cd__title { margin: 0 0 8px; }
+.rt-cd__title-accent { color: var(--rt-c-accent); } /* a course guide's selling line in the hero (on dark navy, as the logo's green) */
 .rt-cd__hero .rt-cd__summary { max-width: none; margin: 0 0 16px; font-size: var(--rt-lead-size); line-height: var(--rt-lead-lh); font-weight: 400; }
 .rt-cd__hero .rt-cd__providers { margin: 0 0 8px; font-size: 14px; line-height: 1.4; }
 .rt-cd__hrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 8px; }

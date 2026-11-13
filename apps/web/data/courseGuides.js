@@ -52,6 +52,9 @@ export const courseGuides = [
       },
       intro: ["You sit four multiple-choice exams on the final day, plus practical assessments in searching and physical intervention observed by your trainer. Many centres give results the same day."],
     },
+    // the hero's headline: the course's name as a heading, then its selling line, highlighted (the client's page; "qualify",
+    // not "get licensed": the licence comes about 25 working days after the 6-day course, as `licence` below says)
+    headline: { title: "SIA Door Supervisor Course", accent: "qualify in 6 days" },
     packages: {
       title: "Packages",
       intro: "Bundle what you need and save. Prices are starting prices and vary by location and date.",
