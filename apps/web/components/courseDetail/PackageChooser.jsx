@@ -13,7 +13,8 @@ import PopShell from "./PopShell";
 const when = (s) => (s.mode === "ondemand" ? s.time : formatDateRange(s.date, s.endDate));
 const fa = basketCopy.firstAid;
 
-function Head({ titleId, title, sub, onBack, backLabel, onClose }) {
+// `step`: "Step 2 of 3" while booking a date goes through more than one step (the dates, the package, first aid)
+function Head({ titleId, title, sub, step, onBack, backLabel, onClose }) {
   return (
     <div className="rt-dd__head">
       <div className="rt-dd__heading">
@@ -22,6 +23,7 @@ function Head({ titleId, title, sub, onBack, backLabel, onClose }) {
             <Icon name="arrow-left" /> {backLabel}
           </button>
         )}
+        {step && <p className="rt-dd__step">{step}</p>}
         <h2 id={titleId} className="rt-dd__title" tabIndex={-1}>{title}</h2>
         <p className="rt-dd__sub">{sub}</p>
       </div>
@@ -32,12 +34,12 @@ function Head({ titleId, title, sub, onBack, backLabel, onClose }) {
 
 // The packages side by side: each one's full price per delegate (and was-price, from its "Save £"), its tagline, "Most popular"
 // on one, and its features, each included (✓) or not (✗). `current`: the package a basket line already has.
-function PackagePanel({ titleId, sub, session, quantity, current, onSelect, onBack, onClose }) {
+function PackagePanel({ titleId, sub, step, session, quantity, current, onSelect, onBack, onClose }) {
   const list = session.packages || [];
   const n = Math.min(4, Math.max(2, list.length));
   return (
     <>
-      <Head titleId={titleId} title="Choose your package" sub={sub} onBack={onBack} backLabel="Back to dates" onClose={onClose} />
+      <Head titleId={titleId} title="Choose your package" sub={sub} step={step} onBack={onBack} backLabel="Back to dates" onClose={onClose} />
       <div className="rt-dd__list rt-pk__list">
         <ul className={`rt-pk__grid -n${n}`}>
           {list.map((p) => {
@@ -72,7 +74,7 @@ function PackagePanel({ titleId, sub, session, quantity, current, onSelect, onBa
                 )}
                 <button type="button" className={`button -md ${mine ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"} rt-btn-block rt-pk__select`} onClick={() => onSelect(p.key)}
                   aria-label={mine ? `Keep ${p.name}, your package` : `Select ${p.name}, ${formatPrice(p.price)} per delegate`}>
-                  {mine ? "Your package" : `Select ${p.name}`}
+                  {mine ? "Your package" : "Select package"}
                 </button>
               </li>
             );
@@ -85,10 +87,10 @@ function PackagePanel({ titleId, sub, session, quantity, current, onSelect, onBa
 }
 
 // The SIA's first aid requirement: one of the two to go on (the basket asks again if it is skipped some other way).
-function FirstAidPanel({ titleId, sub, quantity, onChoose, onBack, backLabel, onClose }) {
+function FirstAidPanel({ titleId, sub, step, quantity, pkg, unit, onChoose, onBack, backLabel, onClose }) {
   return (
     <>
-      <Head titleId={titleId} title={fa.title} sub={sub} onBack={onBack} backLabel={backLabel} onClose={onClose} />
+      <Head titleId={titleId} title={fa.title} sub={sub} step={step} onBack={onBack} backLabel={backLabel} onClose={onClose} />
       <div className="rt-dd__list rt-fa">
         <span className="rt-fa__tag">{fa.badge}</span>
         <p className="rt-fa__text">{fa.text}</p>
@@ -105,20 +107,29 @@ function FirstAidPanel({ titleId, sub, quantity, onChoose, onBack, backLabel, on
           </button>
         </div>
       </div>
+      {unit != null && (
+        <div className="rt-dd__total" aria-live="polite">
+          <span>{[pkg?.name, `${quantity} ${quantity === 1 ? "delegate" : "delegates"}`].filter(Boolean).join(" · ")}</span>
+          <strong>{formatPrice(unit * quantity)}<small> so far, inc. VAT</small></strong>
+        </div>
+      )}
     </>
   );
 }
 
 // The steps for one date: `needsAid` (the course needs first aid for the licence), `onDone(packageKey, firstAid)`. `onBack`: back
-// to the dates (inside the dates pop-up). `current`: the basket line's package ("Change package").
+// to the dates (inside the dates pop-up, which is then step 1). `current`: the basket line's package ("Change package").
 export function BookingSteps({ titleId, course, session, quantity = 1, needsAid = false, current = null, onDone, onBack, onClose }) {
   const packaged = Boolean(session.packages?.length);
   const [stage, setStage] = useState(packaged ? "package" : "firstaid");
   const [key, setKey] = useState(null);
   const sub = `${course.title} · ${when(session)}${session.mode !== "ondemand" && session.location ? `, ${session.location}` : ""}${quantity > 1 ? ` · ${quantity} delegates` : ""}`;
+  // the steps: the dates (when this follows them), the package, first aid (skipped when the package includes it)
+  const total = (onBack ? 1 : 0) + (packaged ? 1 : 0) + (needsAid ? 1 : 0);
+  const stepOf = (n) => (total > 1 ? `Step ${n} of ${total}` : null);
   if (stage === "package") {
     return (
-      <PackagePanel titleId={titleId} sub={sub} session={session} quantity={quantity} current={current} onBack={onBack} onClose={onClose}
+      <PackagePanel titleId={titleId} sub={sub} step={stepOf(onBack ? 2 : 1)} session={session} quantity={quantity} current={current} onBack={onBack} onClose={onClose}
         onSelect={(k) => {
           const pkg = session.packages.find((p) => p.key === k);
           if (needsAid && !pkg?.firstAid) {
@@ -129,7 +140,8 @@ export function BookingSteps({ titleId, course, session, quantity = 1, needsAid 
     );
   }
   return (
-    <FirstAidPanel titleId={titleId} sub={sub} quantity={quantity} onClose={onClose} onChoose={(c) => onDone(key, c)}
+    <FirstAidPanel titleId={titleId} sub={sub} step={stepOf(total)} quantity={quantity} pkg={session.packages?.find((p) => p.key === key)}
+      unit={session.packages?.find((p) => p.key === key)?.price ?? session.price} onClose={onClose} onChoose={(c) => onDone(key, c)}
       onBack={packaged ? () => setStage("package") : onBack} backLabel={packaged ? "Back to packages" : "Back to dates"} />
   );
 }
@@ -138,7 +150,7 @@ export function BookingSteps({ titleId, course, session, quantity = 1, needsAid 
 // package". `session` stays set while it closes; a new opening starts again from the first step.
 export default function PackageDialog({ open, onClose, course, session, quantity, needsAid, current, onDone }) {
   return (
-    <PopShell open={open && Boolean(session)} onClose={onClose} labelledBy="rt-pk-title">
+    <PopShell open={open && Boolean(session)} onClose={onClose} labelledBy="rt-pk-title" book wide={session?.packages?.length || 0}>
       {() => (session ? <BookingSteps key={`${session.id}:${current ?? ""}`} titleId="rt-pk-title" course={course} session={session} quantity={quantity} needsAid={needsAid} current={current} onDone={onDone} onClose={onClose} /> : null)}
     </PopShell>
   );

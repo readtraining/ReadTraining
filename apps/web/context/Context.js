@@ -5,6 +5,8 @@ import { lineKey, maxDelegates, mergeLines } from "@/lib/basket";
 import { isDay } from "@/lib/format";
 import { useContext ,useEffect ,useRef ,useState } from "react";
 const dataContext = React.createContext();
+// a date added again to the basket (its line grows instead): read once by the basket page to say so
+export const MERGED_KEY = "rt-basket-merged";
 export const useContextElement = () => {
 
     return useContext(dataContext);
@@ -43,6 +45,12 @@ export const useContextElement = () => {
         // added to its line (as Hurak's), up to the date's places
         const quantity = Math.min(maxDelegates(found), Math.max(1, Number(found.quantity) || 1))
         const item = {...found,quantity}
+        // the same date (and package) already in the basket: its line grows, and the basket says so once it opens (BasketPage)
+        const existing = cartCourses.find((elm)=>lineKey(elm) === lineKey(item))
+        if (existing) {
+            const total = Math.min(maxDelegates(existing),(Number(existing.quantity) || 1) + quantity)
+            try { window.sessionStorage.setItem(MERGED_KEY, JSON.stringify({ title: item.title, quantity: total })) } catch {}
+        }
         setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre.map((elm)=>lineKey(elm) === lineKey(item) ? {...elm,quantity:Math.min(maxDelegates(elm),(Number(elm.quantity) || 1) + quantity)} : elm) : mergeLines([...pre,item]))
     }
     // With a session id: is that date in the basket. Without: is the course in it on any date. With a package key (lib/basket.js

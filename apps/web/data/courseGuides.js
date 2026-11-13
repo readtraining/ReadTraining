@@ -52,6 +52,7 @@ export const courseGuides = [
       },
       intro: ["You sit four multiple-choice exams on the final day, plus practical assessments in searching and physical intervention observed by your trainer. Many centres give results the same day."],
     },
+    heroTitle: "SIA Door Supervisor Course", // the hero's heading, as the client's page has it (the course's name stays the same elsewhere)
     packages: {
       title: "Packages",
       intro: "Bundle what you need and save. Prices are starting prices and vary by location and date.",
@@ -69,7 +70,7 @@ export const courseGuides = [
         { icon: "icon-save-money", title: "Volume discounts", text: "Lower per-learner prices the more you book." },
         { icon: "icon-location", title: "On-site delivery", text: "Private courses at your premises for 6+ learners, on dates that suit your rota." },
         { icon: "icon-badge", title: "One dashboard", text: "Book, track attendance, results and certificates in one place." },
-        { icon: "icon-check", title: "Refresher reminders", text: "Never miss a renewal: we flag expiring licences early." },
+        { icon: "icon-calendar", title: "Refresher reminders", text: "Never miss a renewal: we flag expiring licences early." },
         { icon: "icon-person-3", title: "Dedicated manager", text: "A single point of contact for every booking, with progress reporting." },
         { icon: "icon-friend", title: "Recruit licensed staff", text: "Find new licensed staff from our learner network." },
       ],
@@ -80,7 +81,7 @@ export const courseGuides = [
       ],
       account: "Approved business accounts pay by invoice on 30-day terms.",
       signIn: "Already have a business account?",
-      quote: { title: "Get a business quote", text: "We reply the same working day.", cta: "Request a business quote" },
+      quote: { title: "Training a team?", text: "We reply the same working day.", cta: "Get a team quote" },
     },
     licence: {
       title: "From booking to badge in 5 steps",

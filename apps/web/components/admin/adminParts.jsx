@@ -227,8 +227,8 @@ export function Search({ value, onChange, label }) {
 // `items`: [{ label, onClick } | { label, href }], `danger` for a destructive item. A real menu: arrow keys move between items,
 // Esc closes it and puts focus back on the button, a click outside closes it. Looks like the site's dropdown panel.
 // The provider's account menu uses it too: `trigger` replaces the dots, `head` goes above the items, and { group } items label
-// the ones after them. An item's `icon` (an icon class) goes before its label. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
-export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null }) {
+// the ones after them (`title`: the button's hover name, for an icon-only trigger). An item's `icon` (an icon class) goes before its label. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
+export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null, title }) {
   const [open, setOpen] = React.useState(false);
   const wrap = React.useRef(null);
   const btn = React.useRef(null);
@@ -268,7 +268,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
   };
   return (
     <div className={`rt-rowmenu${open ? " is-open" : ""}`} ref={wrap} onKeyDown={open ? onKey : undefined}>
-      <button type="button" ref={btn} className={trigger ? triggerClass : "rt-rowmenu__btn"} aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
+      <button type="button" ref={btn} className={trigger ? triggerClass : "rt-rowmenu__btn"} title={title} aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
         {trigger || <span aria-hidden="true">•••</span>}<span className="rt-sr">{label}</span>
       </button>
       {open && (

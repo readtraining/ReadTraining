@@ -7,7 +7,7 @@ import { TEAM } from "@/lib/teamTraining";
 import { formatPrice, formatWeekdayDate } from "@/lib/format";
 
 // Fixed bar at 991px and under. It appears only once the booking card's button has scrolled out of view above the screen.
-// In-house follows the card: no price, and the button becomes "Get a quote". A course with dates shows its lowest price and how
+// Team training follows the card: no price, and the button becomes "Get a team quote". A course with dates shows its lowest price and how
 // many dates there are, and Book now opens them, as the card's (nothing is chosen for the learner).
 export default function MobileBuyBar() {
   const { course, session, mode, isInHouse, status, cardButtonRef, price, fromPrice, bookNow, summaryFor } = useBooking();

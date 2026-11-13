@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useContextElement } from "@/context/Context";
+import { MERGED_KEY, useContextElement } from "@/context/Context";
 import { basket as copy } from "@/data/basket";
 import { basketIssues, basketTotals, bookingSteps, choosePackage, isSelected, lineFor, lineKey, mergeLines, needsFirstAid, promoFor } from "@/lib/basket";
 import { useSkillSaver } from "@/lib/useSkillSaver";
@@ -36,6 +36,7 @@ export default function BasketPage({ recommended }) {
   const [dates, setDates] = useState(null); // { key, detail, mode, selectedId } while the date pop-up is in use
   const [datesOpen, setDatesOpen] = useState(false);
   const [announce, setAnnounce] = useState("");
+  const [merged, setMerged] = useState(null); // { title, quantity }: a date booked again joined its line (context/Context.js)
   const allRef = useRef(null);
   useHeaderOffset();
 
@@ -43,6 +44,11 @@ export default function BasketPage({ recommended }) {
   useEffect(() => {
     try {
       setPromo(promoFor(window.sessionStorage.getItem(PROMO_KEY)));
+      const note = window.sessionStorage.getItem(MERGED_KEY);
+      if (note) {
+        window.sessionStorage.removeItem(MERGED_KEY);
+        setMerged(JSON.parse(note));
+      }
     } catch {}
     setReady(true);
   }, []);
@@ -129,7 +135,6 @@ export default function BasketPage({ recommended }) {
               <h1 className="rt-bk__h1">{copy.title}</h1>
               {ready && cartCourses.length > 0 && <p className="rt-bk__count">{cartCourses.length} {cartCourses.length === 1 ? "course" : "courses"} in your basket</p>}
             </div>
-            <Link href={copy.continueLink.href} className="fb-textlink">{copy.continueLink.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
           </div>
           <BasketSteps steps={bookingSteps(cartCourses.some((i) => i.packages?.length))} current={1} />
         </div>
@@ -137,6 +142,12 @@ export default function BasketPage({ recommended }) {
 
       <section className="rt-bk layout-pt-md layout-pb-lg" aria-label="Your courses">
         <div className="container">
+          {merged && !removed && (
+            <div className="rt-bk__undo" role="status">
+              <span><b>{merged.title}</b> on that date was already in your basket, so it now has {merged.quantity} {merged.quantity === 1 ? "delegate" : "delegates"}.</span>
+              <button type="button" onClick={() => setMerged(null)}>OK</button>
+            </div>
+          )}
           {removed && (
             <div className="rt-bk__undo" role="status">
               <span>Removed <b>{removed.item.title}</b>.</span>
@@ -163,6 +174,8 @@ export default function BasketPage({ recommended }) {
                 {cartCourses.map((item) => (
                   <BasketLine key={lineKey(item)} item={item} onChange={(patch) => change(lineKey(item), patch)} onRemove={() => remove(item)} onDates={() => openDates(item)} onPackage={() => setPkg({ open: true, key: lineKey(item), item })} />
                 ))}
+                {/* back to the courses, under the list (where people look once they have checked it); the empty basket has its own button */}
+                <Link href={copy.continueLink.href} className="fb-textlink rt-bk__back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{copy.continueLink.label}</Link>
               </div>
               <BasketSummary totals={totals} issues={issues} promo={promo} onPromo={choosePromo} count={{ chosen: chosen.length, total: cartCourses.length }} signedOut={saver === null} />
             </div>
