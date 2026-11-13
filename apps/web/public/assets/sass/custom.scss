@@ -7099,7 +7099,11 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-opt { display: flex; flex-direction: column; gap: 16px; margin: 0; padding: 20px; list-style: none; border: 1px solid var(--cd-border-strong); border-radius: var(--cd-card-radius); background: var(--cd-surface); }
 .rt-opt__head { display: flex; align-items: center; gap: 12px; }
 .rt-opt__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--cd-brand-subtle); color: var(--cd-brand); }
-.rt-opt__icon .rt-cd__icon { font-size: 18px; color: var(--cd-brand); }
+/* the main way of studying: our recommendation (not a selection: only its button acts) */
+.rt-opt.-main { border-color: var(--cd-brand); box-shadow: 0 0 0 1px var(--cd-brand); background: var(--cd-brand-subtle); }
+.rt-opt.-main .rt-opt__icon { background: var(--cd-brand); color: var(--color-white); }
+.rt-opt.-main .rt-cd__check { background: var(--color-white); }
+.rt-opt.-main .rt-opt__foot { border-top-color: color-mix(in srgb, var(--cd-brand) 20%, transparent); }
 .rt-cd .rt-opt__name { margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: var(--cd-text); }
 .rt-opt__price { display: flex; flex-direction: column; align-items: flex-end; margin: 0 0 0 auto; line-height: 1.15; text-align: right; }
 .rt-opt__price span { font-size: 12px; color: var(--cd-muted); }
@@ -7109,7 +7113,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-opt__list .rt-cd__check { flex: none; margin-top: 1px; }
 .rt-opt__foot { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--cd-border); }
 .rt-opt__meta { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-size: 13px; line-height: 19px; color: var(--cd-muted); }
-.rt-opt__meta .rt-cd__icon { flex: none; margin-top: 1px; font-size: 17px; color: var(--cd-brand); }
+.rt-opt__meta .rt-cd__icon, .rt-opt__meta svg { flex: none; margin-top: 1px; font-size: 17px; color: var(--cd-brand); }
 .rt-opt__meta strong { display: block; font-weight: 600; color: var(--cd-text); }
 .rt-opt__btn.button { width: 100%; height: 44px; padding: 0 16px; font-size: 15px; font-weight: 600; }
 
@@ -7127,8 +7131,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-pkg__price { display: flex; flex-direction: column; gap: 2px; margin: 0; font-variant-numeric: tabular-nums; }
 .rt-pkg__price span { font-size: 12px; line-height: 16px; color: var(--cd-muted); }
 .rt-pkg__price strong { font-size: 28px; line-height: 32px; font-weight: 800; letter-spacing: -0.01em; color: var(--cd-text); }
-.rt-pkg__price small { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--rt-c-success); }
-.rt-pkg__price s { font-weight: 400; color: var(--cd-muted); }
+.rt-pkg__price b { font-weight: 600; color: var(--rt-c-success); }
+.rt-pkg__price s { color: var(--cd-muted); }
 .rt-pkg__list { display: flex; flex-direction: column; gap: 9px; margin: 0; padding: 14px 0 0; border-top: 1px solid var(--cd-border); list-style: none; }
 .rt-pkg__list li { display: flex; align-items: flex-start; gap: 9px; margin: 0; list-style: none; font-size: 13.5px; line-height: 19px; color: var(--cd-muted); }
 .rt-pkg__list .rt-cd__check { flex: none; margin-top: 1px; }

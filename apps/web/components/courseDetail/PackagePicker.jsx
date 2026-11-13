@@ -32,9 +32,11 @@ export default function PackagePicker({ packages }) {
               </div>
               {price != null ? (
                 <p className="rt-pkg__price">
-                  <span>From</span>
+                  <span>
+                    From
+                    {was && <> · <s><span className="rt-cd__sr">was </span>{formatPrice(was)}</s> <b>Save {formatPrice(was - price)}</b></>}
+                  </span>
                   <strong>{formatPrice(price)}</strong>
-                  {was && <small><s><span className="rt-cd__sr">was </span>{formatPrice(was)}</s> · Save {formatPrice(was - price)}</small>}
                 </p>
               ) : <span />}
               <ul className="rt-pkg__list">{p.points.map((x) => <li key={x}><Check /> <span>{x}</span></li>)}</ul>

@@ -6,7 +6,7 @@ import { quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
 import { formatPrice, formatWeekdayDate } from "@/lib/format";
 import DatesDialog from "./DatesDialog";
-import { Check, Icon } from "./Icon";
+import { Check } from "./Icon";
 import { modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
 
@@ -17,18 +17,28 @@ const BULLETS = {
   ondemand: ["Start any time, at your own pace", "Study on any device", "Pick up where you left off"],
   inhouse: TEAM.points,
 };
-// each way of studying's icon (the site's icon font)
-const ICONS = { classroom: "location", online: "video-file", ondemand: "time-management", inhouse: "friend" };
+// each way of studying's icon: a drawn line icon (stroke, currentColor)
+const PATHS = {
+  classroom: <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>,
+  online: <><rect x="4" y="5" width="16" height="11" rx="2" /><path d="M2 19h20" /><path d="M10.5 8.8v3.4l3-1.7z" /></>,
+  ondemand: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
+  inhouse: <><path d="M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19" /><circle cx="10" cy="7.5" r="3.5" /><path d="M20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.2a3.5 3.5 0 0 1 0 6.6" /></>,
+};
+const ModeIcon = ({ mode }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{PATHS[mode] || PATHS.classroom}</svg>
+);
 
 // Learning options: one card per way of studying this course (Classroom, Live online, Self-paced, Team training), side by side
 // (two across, a third one taking the full row; one under another on phones). Each card is information plus ONE action, its
 // button: the card itself isn't clickable. A card: icon, name and price on one row; what it offers; then a footer saying what
 // is open (the dates and venues, "start any time", or at your workplace) and its button: See dates (that method's dates,
 // DatesDialog), Book now (a self-paced course, straight to its steps or the basket) or Get a team quote (the quote form with
-// this course filled in).
+// this course filled in). The main way of studying (the most popular, else the first with dates) is highlighted as our
+// recommendation; it is still only its button that acts.
 export default function LearningSection() {
   const { course, modes, book, openDatesFor, summaryFor } = useBooking();
   const noDates = course.sessions.length === 0;
+  const main = modes.includes(course.popularMode) && course.popularMode !== "inhouse" ? course.popularMode : modes.find((m) => m !== "inhouse");
 
   if (!modes.length) {
     return (
@@ -53,9 +63,9 @@ export default function LearningSection() {
             ? { label: selfPaced.packages ? "From" : "Price", value: formatPrice(selfPaced.price) }
             : null;
     return (
-      <li key={m} className="rt-opt">
+      <li key={m} className={`rt-opt${m === main && modes.length > 1 ? " -main" : ""}`}>
         <div className="rt-opt__head">
-          <span className="rt-opt__icon" aria-hidden="true"><Icon name={ICONS[m] || "check"} /></span>
+          <span className="rt-opt__icon" aria-hidden="true"><ModeIcon mode={m} /></span>
           <h3 className="rt-opt__name">{name}</h3>
           {price && (
             <p className="rt-opt__price">
@@ -68,7 +78,7 @@ export default function LearningSection() {
         <div className="rt-opt__foot">
           {sum ? (
             <p className="rt-opt__meta">
-              <Icon name="calendar" />
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg>
               <span>
                 <strong>{sum.count} {sum.count === 1 ? "date" : "dates"}{m === "classroom" ? ` at ${sum.venues} ${sum.venues === 1 ? "venue" : "venues"}` : ", live online"}</strong>
                 Next course {formatWeekdayDate(sum.next.date)}{m === "classroom" && sum.towns.length ? ` · ${sum.towns.slice(0, 3).join(", ")}${sum.towns.length > 3 ? ` +${sum.towns.length - 3}` : ""}` : ""}
@@ -76,12 +86,12 @@ export default function LearningSection() {
             </p>
           ) : m === "inhouse" ? (
             <p className="rt-opt__meta">
-              <Icon name="location" />
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 21V8l8-5 8 5v13" /><path d="M9 21v-6h6v6" /></svg>
               <span><strong>{TEAM.where}</strong>{TEAM.reply}</span>
             </p>
           ) : (
             <p className="rt-opt__meta">
-              <Icon name="time-management" />
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
               <span><strong>Start any time</strong>{selfPaced?.time || "Online, at your own pace"}</span>
             </p>
           )}
