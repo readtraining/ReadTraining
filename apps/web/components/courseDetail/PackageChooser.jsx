@@ -74,7 +74,7 @@ function PackagePanel({ titleId, sub, step, session, quantity, current, onSelect
                 )}
                 <button type="button" className={`button -md ${mine ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"} rt-btn-block rt-pk__select`} onClick={() => onSelect(p.key)}
                   aria-label={mine ? `Keep ${p.name}, your package` : `Select ${p.name}, ${formatPrice(p.price)} per delegate`}>
-                  {mine ? "Your package" : `Select ${p.name}`}
+                  {mine ? "Your package" : "Select package"}
                 </button>
               </li>
             );
