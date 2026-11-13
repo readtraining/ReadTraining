@@ -7279,6 +7279,44 @@ html { scrollbar-gutter: stable; }
 @media (min-width: 576px) { .rt-fa__choices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-fa__choices .button { height: auto; min-height: 48px; padding: 10px 14px; white-space: normal; line-height: 1.3; }
 .rt-dd__panel:has(.rt-fa) { min-height: 0; }
+
+/* ---- The booking pop-up (PopShell `book`: the dates, the packages, first aid). One fixed size per screen for every step, so it
+   never jumps; its list scrolls inside. Phones (575px and under): full screen, as every booking pop-up. Tablets: taller, using the
+   screen. Laptops and up: 720px for dates only, 960px when the course has three packages (1120px for four); never over 94% of the
+   screen. Inside, a container query lays each part out by the pop-up's own width, not the screen's. ---------------------------- */
+@media (min-width: 576px) {
+  .rt-dd .rt-dd__panel.-book { width: min(94vw, 720px); height: min(88dvh, 780px); min-height: 0; max-height: none; }
+  .rt-dd .rt-dd__panel.-book.-wide3 { width: min(94vw, 960px); }
+  .rt-dd .rt-dd__panel.-book.-wide4 { width: min(94vw, 1120px); }
+}
+@media (min-width: 576px) and (min-height: 1000px) { .rt-dd .rt-dd__panel.-book { height: min(80dvh, 920px); } }
+.rt-dd__panel.-book { container: rt-book / inline-size; }
+.rt-dd__panel.-book > .rt-dd__list, .rt-dd__panel.-book > .rt-pk__list, .rt-dd__panel.-book > .rt-fa { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+/* a date, when the pop-up is narrow (phones, small tablets): the date and its details get the full width; under them the price on
+   one line (was-price, price, per delegate), then the delegates counter and a full-width Book now */
+@container rt-book (max-width: 560px) {
+  .rt-dd__slot--book { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "tile main" "price price" "actions actions"; row-gap: 10px; }
+  .rt-dd__slot--book > .rt-dd__slot-main { align-self: start; }
+  .rt-dd__slot--book > .rt-dd__slot-price { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; padding-top: 10px; border-top: 1px solid var(--cd-border); }
+  .rt-dd__slot--book .rt-dd__actions { justify-content: stretch; }
+  .rt-dd__slot--book .rt-dd__actions .rt-dd__book { flex: 1; }
+  /* the town search above the sort, both full width */
+  .rt-dd__controls { flex-direction: column; }
+  .rt-dd__controls:has(.rt-dd__search) .rt-dd__sort { flex: none; width: 100%; }
+}
+
+/* the packages: side by side when they fit, else one per row with "Most popular" first (never two and one left over) */
+.rt-dd__panel.-book .rt-pk__grid { grid-template-columns: minmax(0, 1fr); }
+@container rt-book (max-width: 759px) { .rt-pk__card.-popular { order: -1; } }
+@container rt-book (min-width: 520px) { .rt-dd__panel.-book .rt-pk__grid.-n2, .rt-dd__panel.-book .rt-pk__grid.-n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container rt-book (min-width: 760px) { .rt-dd__panel.-book .rt-pk__grid.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container rt-book (min-width: 1000px) { .rt-dd__panel.-book .rt-pk__grid.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* the first aid step's foot: what is being booked and the total so far */
+.rt-dd__total { flex: none; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; padding: 12px 18px; border-top: 1px solid var(--cd-border); background: var(--cd-surface); font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+.rt-dd__total strong { font-size: 17px; font-weight: 700; color: var(--cd-text); font-variant-numeric: tabular-nums; }
+.rt-dd__total small { margin-left: 4px; font-size: 13px; font-weight: 400; color: var(--cd-muted); }
 /* a package that includes first aid (or the first aid answer, with Change): the basket line says so instead of asking */
 .rt-bk__inpkg .rt-bk__change { margin-left: 4px; }
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }

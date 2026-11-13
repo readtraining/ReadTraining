@@ -87,7 +87,7 @@ function PackagePanel({ titleId, sub, step, session, quantity, current, onSelect
 }
 
 // The SIA's first aid requirement: one of the two to go on (the basket asks again if it is skipped some other way).
-function FirstAidPanel({ titleId, sub, step, quantity, onChoose, onBack, backLabel, onClose }) {
+function FirstAidPanel({ titleId, sub, step, quantity, pkg, unit, onChoose, onBack, backLabel, onClose }) {
   return (
     <>
       <Head titleId={titleId} title={fa.title} sub={sub} step={step} onBack={onBack} backLabel={backLabel} onClose={onClose} />
@@ -107,6 +107,12 @@ function FirstAidPanel({ titleId, sub, step, quantity, onChoose, onBack, backLab
           </button>
         </div>
       </div>
+      {unit != null && (
+        <div className="rt-dd__total" aria-live="polite">
+          <span>{[pkg?.name, `${quantity} ${quantity === 1 ? "delegate" : "delegates"}`].filter(Boolean).join(" · ")}</span>
+          <strong>{formatPrice(unit * quantity)}<small> so far, inc. VAT</small></strong>
+        </div>
+      )}
     </>
   );
 }
@@ -134,7 +140,8 @@ export function BookingSteps({ titleId, course, session, quantity = 1, needsAid 
     );
   }
   return (
-    <FirstAidPanel titleId={titleId} sub={sub} step={stepOf(total)} quantity={quantity} onClose={onClose} onChoose={(c) => onDone(key, c)}
+    <FirstAidPanel titleId={titleId} sub={sub} step={stepOf(total)} quantity={quantity} pkg={session.packages?.find((p) => p.key === key)}
+      unit={session.packages?.find((p) => p.key === key)?.price ?? session.price} onClose={onClose} onChoose={(c) => onDone(key, c)}
       onBack={packaged ? () => setStage("package") : onBack} backLabel={packaged ? "Back to packages" : "Back to dates"} />
   );
 }
@@ -143,7 +150,7 @@ export function BookingSteps({ titleId, course, session, quantity = 1, needsAid 
 // package". `session` stays set while it closes; a new opening starts again from the first step.
 export default function PackageDialog({ open, onClose, course, session, quantity, needsAid, current, onDone }) {
   return (
-    <PopShell open={open && Boolean(session)} onClose={onClose} labelledBy="rt-pk-title" wide={session?.packages?.length || 0}>
+    <PopShell open={open && Boolean(session)} onClose={onClose} labelledBy="rt-pk-title" book wide={session?.packages?.length || 0}>
       {() => (session ? <BookingSteps key={`${session.id}:${current ?? ""}`} titleId="rt-pk-title" course={course} session={session} quantity={quantity} needsAid={needsAid} current={current} onDone={onDone} onClose={onClose} /> : null)}
     </PopShell>
   );

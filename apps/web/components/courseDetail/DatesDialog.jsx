@@ -359,7 +359,7 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
   // the most packages a date of this course has: the whole pop-up takes the package step's width from the start
   const wide = Math.max(0, ...course.sessions.map((s) => (onBook ? s.packages?.length || 0 : 0)));
   return (
-    <PopShell open={datesOpen} onClose={closeDates} labelledBy="rt-dd-title" wide={wide}>
+    <PopShell open={datesOpen} onClose={closeDates} labelledBy="rt-dd-title" book wide={wide}>
       {(isDesktop) =>
         pkgSession ? (
           <BookingSteps titleId="rt-dd-title" course={course} session={pkgSession} quantity={pkgFor.qty} needsAid={firstAidFor({ mode: pkgSession.mode, subject: course.subject, sub: course.sub, topic: course.topic })}

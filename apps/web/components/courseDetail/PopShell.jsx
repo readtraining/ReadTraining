@@ -7,9 +7,9 @@ import { createPortal } from "react-dom";
 // (.rt-dd). It mounts, then fades and slides in on the next frame; closing fades out, then unmounts. While open the page doesn't
 // scroll (and doesn't move: the scrollbar's width is added back), focus starts on the element marked `data-initial` (or the
 // title), Esc closes it, Tab stays inside it, and focus goes back to the opener afterwards. `children(isDesktop)` is the body.
-// `wide`: 3 or 4 when the booking's steps include packages side by side, so every step of it keeps that width (no jump between
-// the dates, the packages and first aid).
-export default function PopShell({ open, onClose, labelledBy, wide = 0, children }) {
+// `book`: a booking pop-up (the dates, the packages, first aid): one fixed size per screen for all its steps (custom.scss
+// .rt-dd__panel.-book). `wide`: 3 or 4 when the booking's steps include packages side by side, so every step keeps that width.
+export default function PopShell({ open, onClose, labelledBy, book = false, wide = 0, children }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const panelRef = useRef(null);
@@ -85,7 +85,7 @@ export default function PopShell({ open, onClose, labelledBy, wide = 0, children
   if (!mounted) return null;
   return createPortal(
     <div className={`rt-dd${shown ? " is-in" : ""}`} onMouseDown={(e) => e.target === e.currentTarget && isDesktop && closeRef.current()}>
-      <div className={`rt-dd__panel${wide >= 3 ? ` -wide${wide >= 4 ? "4" : "3"}` : ""}`} role="dialog" aria-modal="true" aria-labelledby={labelledBy} ref={panelRef}>
+      <div className={`rt-dd__panel${book ? " -book" : ""}${wide >= 3 ? ` -wide${wide >= 4 ? "4" : "3"}` : ""}`} role="dialog" aria-modal="true" aria-labelledby={labelledBy} ref={panelRef}>
         {children(isDesktop)}
       </div>
     </div>,
