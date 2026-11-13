@@ -11,10 +11,12 @@ export const TEAM = {
   cardTitle: "Team training",
   barTitle: "Team training",
   cta: "Get a team quote",
-  // the Learning options card: its three points and its footer
-  points: ["Your team trains together at your workplace", "On a date that suits you, if a provider can run it", "For groups of 6 or more"],
-  where: "At your workplace",
-  reply: "We check availability and reply the same working day",
+  bullets: [
+    "Your team trains together at your workplace.",
+    "On a date that suits you, if a provider can run it.",
+    "For groups of 6 or more.",
+    "Ask us and we'll check availability and the price.",
+  ],
   trust: {
     title: "Buying for your team?",
     text: "Add places for your team, family or colleagues to one basket, or ask us for a team quote to train together at your workplace.",

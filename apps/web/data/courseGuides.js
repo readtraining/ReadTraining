@@ -57,7 +57,7 @@ export const courseGuides = [
       intro: "Bundle what you need and save. Prices are starting prices and vary by location and date.",
       items: [
         { key: "course", name: "Course only", text: "You already hold a valid EFAW certificate.", points: ["6-day SIA Door Supervisor course", "Exams, registration and certificate", "Free mock exams and study guide"], add: 0 },
-        { key: "first-aid", name: "Course + first aid", badge: "Most popular", text: "Everything a new starter needs, in one booking.", points: ["Everything in Course only", "1-day Emergency First Aid at Work (EFAW)", "Priority licence application support"], add: 70, firstAid: true },
+        { key: "first-aid", name: "Course + first aid", badge: "Most popular", text: "Everything a new starter needs to qualify, for less than booking separately.", points: ["Everything in Course only", "1-day Emergency First Aid at Work (EFAW)", "Priority licence application support"], add: 70, firstAid: true },
         { key: "career", name: "Career bundle", text: "Stand out to employers from day one.", points: ["Door Supervisor + EFAW", "SIA CCTV Operator course", "CV review and access to our security job board"], add: 230, firstAid: true },
       ],
       note: "All prices include VAT. The SIA licence fee is paid separately, directly to the SIA.",

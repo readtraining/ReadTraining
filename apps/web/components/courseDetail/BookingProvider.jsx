@@ -191,14 +191,6 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   // Book now, wherever it is on the page (hero, card, mobile bar), as Hurak's: nothing is chosen for the learner. A course with
   // dates opens them (venue, date, then the package and first aid); a self-paced course has no date, so it goes on to its steps.
   const bookNow = useCallback(() => (mode === "ondemand" ? book() : openDates()), [mode, book, openDates]);
-  // a Learning options card's See dates: that study method's dates (the page follows the method)
-  const openDatesFor = useCallback(
-    (m) => {
-      if (m && m !== mode) setMode(m);
-      openDates();
-    },
-    [mode, setMode, openDates],
-  );
   // What a study method offers, for the card, the mobile bar and Learning options: how many dates and venues, the towns, the
   // next date, and the lowest price (with that date's was-price); "From" when there is more than one price or packages.
   const summaryFor = useCallback(
@@ -248,7 +240,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
 
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
-    status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, openDatesFor, closeDates,
+    status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
     price, wasPrice, fromPrice, bookNow, summaryFor,
   };
 
