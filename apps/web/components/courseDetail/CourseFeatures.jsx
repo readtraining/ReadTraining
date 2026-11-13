@@ -1,8 +1,8 @@
 import React from "react";
 import { Icon } from "./Icon";
 
-// Course features: the course's key facts as a plain list (an icon and its words, two columns from tablet width, one on phones),
-// information only, so nothing looks clickable. The icon is picked from the wording, as the client's own page marks its facts
+// Course features: the course's key facts as a plain list (an icon and its words; up to three in one row, more in two columns from
+// tablet width; one column on phones), information only, so nothing looks clickable. The icon is picked from the wording, as the client's own page marks its facts
 // (📅 the course, 🎓 the award, 🪪 the licence): the first rule that matches wins, so a cost ("£204 SIA licence fee") is money
 // before it is a licence, mock exams are study materials before they are exams, and an award ("Ofqual regulated") is a
 // qualification before it is a standard; anything unrecognised gets a tick. Glyphs from the site's icon font (the same as home).
@@ -26,7 +26,7 @@ export default function CourseFeatures({ features }) {
   return (
     <section className="rt-cd__fcard" aria-labelledby="rt-cd-features-h">
       <h2 id="rt-cd-features-h">Course features</h2>
-      <ul className="rt-fx">
+      <ul className={`rt-fx${features.length <= 3 ? ` -row${features.length}` : ""}`}>
         {features.map((f) => (
           <li key={f}>
             <span className="rt-fx__icon" aria-hidden="true"><Icon name={iconFor(f)} /></span>
