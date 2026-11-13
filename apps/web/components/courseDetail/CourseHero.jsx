@@ -7,16 +7,15 @@ import Link from "next/link";
 import { CATALOGUE_HREF, QUOTE_HREF, coursePath } from "@/lib/routes";
 import { trustFigures } from "@/lib/siteContent";
 import { TEAM } from "@/lib/teamTraining";
+import RatingStars from "./RatingStars";
 
 const CATALOGUE = CATALOGUE_HREF;
 
 // Hero, in this order: breadcrumb, badge, title, summary, provider link, the price row with Book now and "Get a team quote" (a
 // quote for this course, lib/teamTraining.js), then Read Training's rating (the site's trust numbers, Admin › Site content: our Google rating and its
-// number of reviews, worded as ours, not the course's; left out until an admin has entered one).
-
-// How much of each of the five stars to fill (4.9: four full stars and nine-tenths of the fifth), as the home page's hero does.
-const starFills = (rating) => [0, 1, 2, 3, 4].map((i) => Math.max(0, Math.min(1, Number(rating) - i)));
-export default function CourseHero({ course }) {
+// number of reviews, worded as ours, not the course's; left out until an admin has entered one). With reviews of the course
+// on the page (`hasReviews`), the rating is a link down to them.
+export default function CourseHero({ course, hasReviews = false }) {
   const subject = getSubjectLabel(course);
   const sub = getSubLabel(course);
   const lowest = course.sessions.reduce((best, s) => (!best || s.price < best.price ? s : best), null);
@@ -62,17 +61,16 @@ export default function CourseHero({ course }) {
 
         {trust.rating && trust.reviews && (
           <p className="rt-cd__htrust">
-            <span className="rt-cd__hstars" aria-hidden="true">
-              {starFills(trust.rating).map((fill, i) => (
-                <span key={i} className="rt-cd__hstar">
-                  <i className="icon-star" />
-                  {fill > 0 && <i className="icon-star -on" style={{ width: `${Math.round(fill * 100)}%` }} />}
-                </span>
-              ))}
-            </span>
-            <span>
-              <strong>{trust.ratingOutOf}</strong> from {trust.reviews} {trust.source ? `${trust.source} ` : ""}reviews of Read Training
-            </span>
+            <RatingStars rating={trust.rating} />
+            {hasReviews ? (
+              <a href="#course-reviews" className="rt-cd__htrust-link">
+                <strong>{trust.ratingOutOf}</strong> from {trust.reviews} {trust.source ? `${trust.source} ` : ""}reviews of Read Training
+              </a>
+            ) : (
+              <span>
+                <strong>{trust.ratingOutOf}</strong> from {trust.reviews} {trust.source ? `${trust.source} ` : ""}reviews of Read Training
+              </span>
+            )}
           </p>
         )}
 

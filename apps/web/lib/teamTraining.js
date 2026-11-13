@@ -17,11 +17,6 @@ export const TEAM = {
     "For groups of 6 or more.",
     "Ask us and we'll check availability and the price.",
   ],
-  staff: {
-    title: "Training a team?",
-    text: "Ask us about training a group of staff at your workplace. We'll check availability and the price with a provider.",
-    link: "Get a team quote",
-  },
   trust: {
     title: "Buying for your team?",
     text: "Add places for your team, family or colleagues to one basket, or ask us for a team quote to train together at your workplace.",

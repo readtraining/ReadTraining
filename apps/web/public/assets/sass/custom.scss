@@ -2050,9 +2050,6 @@ main#rt-cd-main { overflow: clip; }
 .rt-lo__h { margin: 0 0 12px; font-size: 18px; line-height: 24px; font-weight: 700; }
 
 .rt-lo__inhouse p { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
-.rt-lo__xtra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
-.rt-lo__xtra .rt-cd__staff { margin-top: 0; }
-@media (max-width: 575px) { .rt-lo__xtra { grid-template-columns: minmax(0, 1fr); } }
 
 /* ---------- Long text with a fade ---------- */
 .rt-clamp__body.is-clamped { position: relative; overflow: hidden; }
@@ -2161,7 +2158,6 @@ main#rt-cd-main { overflow: clip; }
 .rt-lo__dates-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 12px; }
 .rt-lo__dates-head .rt-lo__h { margin: 0; }
 
-.rt-lo__xtra { align-items: start; }
 /* the template sets `ul, li { list-style: none }` on the items themselves, so the bullets are restored on the items */
 .rt-cd ul.rt-cd__list li, .rt-cd ul.rt-cd__mod-topics li { display: list-item; margin: 0 0 8px; padding-left: 2px; list-style: disc; }
 .rt-cd ul.rt-cd__list li::marker, .rt-cd ul.rt-cd__mod-topics li::marker { color: var(--cd-muted); }
@@ -7258,6 +7254,16 @@ html { scrollbar-gutter: stable; }
 .rt-cd__hstars { display: inline-flex; gap: 2px; }
 .rt-cd__hstar { position: relative; display: inline-block; font-size: 14px; line-height: 1; color: rgba(255, 255, 255, 0.25); }
 .rt-cd__hstar .-on { position: absolute; top: 0; left: 0; overflow: hidden; white-space: nowrap; color: var(--color-yellow-1); }
+.rt-cd__htrust-link { color: rgba(255, 255, 255, 0.8) !important; text-decoration: none; }
+.rt-cd__htrust-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* the course page's reviews open on Read Training's rating: the big number, its stars and what it counts, then the selection */
+.rt-cd__rsum { display: flex; align-items: center; gap: 16px; margin: 0 0 20px; padding: 16px 20px; border-radius: var(--cd-card-radius); background: var(--cd-brand-subtle); }
+.rt-cd__rsum-n { font-size: 40px; line-height: 1; font-weight: 700; color: var(--cd-text); font-variant-numeric: tabular-nums; }
+.rt-cd__rsum-text { display: grid; gap: 6px; }
+.rt-cd__rsum .rt-cd__hstar { font-size: 16px; color: var(--color-light-5); }
+.rt-cd__rsum p { margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+/* every card's header the same height, with or without a date under the name, so the dividers line up across a row */
+.rt-cd__reviews .rt-review__who { min-height: 66px; }
 /* the first aid requirement, after the date and package (PackageChooser FirstAidPanel) */
 .rt-fa { display: flex; flex-direction: column; gap: 12px; background: var(--cd-surface); }
 .rt-fa__tag { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: var(--cd-band); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--cd-brand); }

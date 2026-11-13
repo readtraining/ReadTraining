@@ -111,14 +111,6 @@ export default function LearningSection() {
       </div>
       )}
 
-      <div className="rt-lo__xtra">
-        <div className="rt-cd__staff">
-          <strong>{TEAM.staff.title}</strong>
-          <p>{TEAM.staff.text}</p>
-          <Link href={quoteHref(course)} className="rt-cd__link">{TEAM.staff.link}</Link>
-        </div>
-
-      </div>
     </section>
   );
 }
