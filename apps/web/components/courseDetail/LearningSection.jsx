@@ -4,9 +4,9 @@ import React from "react";
 import Link from "next/link";
 import { quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
-import { formatPrice, formatWeekdayDate } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import DatesDialog from "./DatesDialog";
-import { Check, Icon } from "./Icon";
+import { Check } from "./Icon";
 import { modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
 
@@ -19,25 +19,6 @@ const BULLETS = {
   inhouse: TEAM.bullets,
 };
 
-// One summary row for the selected dated option (nothing is chosen for the learner): how many dates at how many venues, the
-// next one and the lowest price. "See dates" opens the pop-up (DatesDialog) where the venue and date are chosen.
-function DatesSummary({ rows, mode }) {
-  const { openDates, summaryFor } = useBooking();
-  const sum = summaryFor(mode);
-  if (!sum) return null;
-  const classroom = mode === "classroom";
-  return (
-    <div className="rt-ds">
-      <Icon name="calendar" className="rt-ds__icon" />
-      <div className="rt-ds__text" aria-live="polite">
-        <strong>{sum.count} {sum.count === 1 ? "date" : "dates"}{classroom ? ` at ${sum.venues} ${sum.venues === 1 ? "venue" : "venues"}` : ", live online"}</strong>
-        <span>Next course: {formatWeekdayDate(sum.next.date)} · {sum.from ? "from " : ""}{formatPrice(sum.price)}</span>
-      </div>
-      <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={openDates} aria-haspopup="dialog">See dates ({rows.length})</button>
-    </div>
-  );
-}
-
 // Learning options: the one place where the choice is made. Every option (Classroom, Live online, Self-paced, team training) is
 // the same card; the grid picks one row, 2 x 2 or a single column from the number of options and the room available. The dates for the selected option follow,
 // then the staff training and exam prep boxes. Choosing never moves the page.
@@ -45,7 +26,6 @@ export default function LearningSection() {
   const { course, modes, mode, setMode, isInHouse } = useBooking();
 
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
-  const rows = course.sessions.filter((s) => s.mode === mode);
   const noDates = course.sessions.length === 0;
   // "Most popular" means something only between study methods (classroom, live online, self-paced), not against team training
   const compare = modes.filter((m) => m !== "inhouse").length > 1;
@@ -88,28 +68,19 @@ export default function LearningSection() {
         </div>
       </fieldset>
 
-      {/* self-paced has nothing more to show here (no dates, no further points), so the part and its heading are left out */}
-      {mode !== "ondemand" && (
-      <div className="rt-lo__dates">
-        <div className="rt-lo__dates-head">
-          <h3 className="rt-lo__h">{isInHouse ? "Team training at your workplace" : "Upcoming dates"}</h3>
-        </div>
-
-        {isInHouse ? (
+      {/* team training chosen: how it works and its quote button (the dates are in the booking card's Book now) */}
+      {isInHouse && (
+        <div className="rt-lo__dates">
+          <h3 className="rt-lo__h">Team training at your workplace</h3>
           <div className="rt-lo__inhouse">
             <p className="rt-cd__lead">{TEAM.line}</p>
             <div className="rt-lc__cta">
               <Link href={quoteHref(course)} className="button -md -outline-purple-1 text-purple-1">{TEAM.cta}</Link>
             </div>
           </div>
-        ) : rows.length === 0 ? (
-          <EmptyState inCard title="No dates in this location yet." text="Try another location." />
-        ) : (
-          <DatesSummary rows={rows} mode={mode} />
-        )}
-        <DatesDialog />
-      </div>
+        </div>
       )}
+      <DatesDialog />
 
     </section>
   );

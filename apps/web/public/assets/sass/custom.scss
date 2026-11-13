@@ -2155,8 +2155,6 @@ main#rt-cd-main { overflow: clip; }
 
 /* Study options: heading and location filter on one line, two-line rows */
 
-.rt-lo__dates-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 12px; }
-.rt-lo__dates-head .rt-lo__h { margin: 0; }
 
 /* the template sets `ul, li { list-style: none }` on the items themselves, so the bullets are restored on the items */
 .rt-cd ul.rt-cd__list li, .rt-cd ul.rt-cd__mod-topics li { display: list-item; margin: 0 0 8px; padding-left: 2px; list-style: disc; }
@@ -2283,13 +2281,6 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-lo__dates { margin-top: 16px; }
 .rt-lo__inhouse { justify-items: start; gap: 8px; display: block; }
 
-/* SESSION DATES: summary row + "choose a date" pop-up */
-.rt-ds { display: flex; align-items: center; gap: 14px; box-sizing: border-box; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--cd-border-strong); background: var(--cd-surface); }
-.rt-ds__icon { font-size: 20px; color: var(--cd-brand); }
-.rt-ds__text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.rt-ds__text strong { font-size: 14px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
-.rt-ds__text span { font-size: 13px; line-height: 18px; color: var(--cd-muted); }
-@media (max-width: 479px) { .rt-ds { flex-wrap: wrap; } .rt-ds__text { flex: 1 1 calc(100% - 40px); } .rt-ds .button { width: 100%; } }
 .rt-bs__change { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; }
 
 .rt-dd { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: transparent; transition: background-color 0.2s ease; }
@@ -2501,7 +2492,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* the course page's surface; not .rt-dd, whose backdrop must stay clear until it fades to the tint */
 .rt-cd { background: var(--cd-surface); }
 .rt-cd .rt-cd__fcard, .rt-cd .rt-stats, .rt-cd .rt-bk { border-radius: var(--cd-card-radius); border-color: var(--cd-card-border); }
-.rt-cd .rt-lc__card, .rt-cd .rt-ds, .rt-cd .rt-cd__staff { border-radius: var(--cd-card-radius); }
+.rt-cd .rt-lc__card, .rt-cd .rt-cd__staff { border-radius: var(--cd-card-radius); }
 .rt-cd .rt-stats, .rt-cd .rt-bk { overflow: hidden; }
 
 /* TEST PREP HUB (/test-prep). Built from the site's own parts: the catalogue hero (.rt-cat__hero, .rt-cat-search,
