@@ -119,11 +119,10 @@ function FirstAidPanel({ titleId, sub, step, quantity, pkg, unit, onChoose, onBa
 
 // The steps for one date: `needsAid` (the course needs first aid for the licence), `onDone(packageKey, firstAid)`. `onBack`: back
 // to the dates (inside the dates pop-up, which is then step 1). `current`: the basket line's package ("Change package").
-// `preset`: a package already chosen on the page (its card's button): its step is skipped.
-export function BookingSteps({ titleId, course, session, quantity = 1, needsAid = false, current = null, preset = null, onDone, onBack, onClose }) {
-  const packaged = Boolean(session.packages?.length) && !preset;
+export function BookingSteps({ titleId, course, session, quantity = 1, needsAid = false, current = null, onDone, onBack, onClose }) {
+  const packaged = Boolean(session.packages?.length);
   const [stage, setStage] = useState(packaged ? "package" : "firstaid");
-  const [key, setKey] = useState(preset);
+  const [key, setKey] = useState(null);
   const sub = `${course.title} · ${when(session)}${session.mode !== "ondemand" && session.location ? `, ${session.location}` : ""}${quantity > 1 ? ` · ${quantity} delegates` : ""}`;
   // the steps: the dates (when this follows them), the package, first aid (skipped when the package includes it)
   const total = (onBack ? 1 : 0) + (packaged ? 1 : 0) + (needsAid ? 1 : 0);

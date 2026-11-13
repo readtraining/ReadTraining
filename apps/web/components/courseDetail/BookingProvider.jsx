@@ -43,7 +43,6 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const [city, setCity] = useState("");
   const [toast, setToast] = useState(null);
   const [datesOpen, setDatesOpen] = useState(false); // the "choose a date" pop-up
-  const [pkgPref, setPkgPref] = useState(null); // a package already chosen on the page (its card's "Book with this package")
   const openerRef = useRef(null);
   const [flash, setFlash] = useState(0); // bumped on every choice made on the page; the card flashes briefly
   const [barOn, setBarOn] = useState(false); // true while the slim bar is showing (the card then collapses its image)
@@ -106,10 +105,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   );
 
   // ---- "choose a date" pop-up: opening adds a history entry (?dates=open) so the browser Back button closes it ----
-  // `pkg`: a package already chosen (a package card's button): after the date, its step is skipped. Called as a click handler it
-  // gets the event, which chooses nothing.
-  const openDates = useCallback((opts) => {
-    setPkgPref(typeof opts?.pkg === "string" ? opts.pkg : null);
+  const openDates = useCallback(() => {
     openerRef.current = document.activeElement;
     try {
       const params = new URLSearchParams(window.location.search);
@@ -195,12 +191,11 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   // Book now, wherever it is on the page (hero, card, mobile bar), as Hurak's: nothing is chosen for the learner. A course with
   // dates opens them (venue, date, then the package and first aid); a self-paced course has no date, so it goes on to its steps.
   const bookNow = useCallback(() => (mode === "ondemand" ? book() : openDates()), [mode, book, openDates]);
-  // a Learning options card's or a package card's button: that study method's dates (the page follows the method), with the
-  // package already chosen when it comes from a package card
+  // a Learning options card's See dates: that study method's dates (the page follows the method)
   const openDatesFor = useCallback(
-    (m, pkg = null) => {
+    (m) => {
       if (m && m !== mode) setMode(m);
-      openDates({ pkg });
+      openDates();
     },
     [mode, setMode, openDates],
   );
@@ -253,7 +248,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
 
   const value = {
     course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
-    status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, openDatesFor, pkgPref, closeDates,
+    status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, openDatesFor, closeDates,
     price, wasPrice, fromPrice, bookNow, summaryFor,
   };
 
