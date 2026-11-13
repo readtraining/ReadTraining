@@ -7231,6 +7231,17 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-bs__from { font-size: 15px; font-weight: 600; color: var(--cd-muted); }
 /* the hero's Book now: the course page's main button, a size bigger than the card's and the bar's */
 .rt-cd__booknow.button { height: 54px; padding: 0 36px; font-size: 17px; }
+/* the hero's buttons: Book now, then "Book for my team" (outlined, the same height); stacked full width on phones */
+.rt-cd__hctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.rt-cd__hteam.button { height: 54px; padding: 0 28px; font-size: 17px; border: 2px solid rgba(255, 255, 255, 0.6); }
+.rt-cd__hteam.button:hover { border-color: var(--color-white); background: var(--color-white); color: var(--color-purple-1) !important; }
+@media (max-width: 575px) { .rt-cd__hctas { width: 100%; } .rt-cd__hctas .button { flex: 1 1 100%; } }
+/* Read Training's rating under the buttons: five stars filled to the rating, then the words */
+.rt-cd__htrust { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 18px 0 0; font-size: 14px; line-height: 20px; color: rgba(255, 255, 255, 0.8); }
+.rt-cd__htrust strong { font-weight: 700; color: var(--color-white); }
+.rt-cd__hstars { display: inline-flex; gap: 2px; }
+.rt-cd__hstar { position: relative; display: inline-block; font-size: 14px; line-height: 1; color: rgba(255, 255, 255, 0.25); }
+.rt-cd__hstar .-on { position: absolute; top: 0; left: 0; overflow: hidden; white-space: nowrap; color: var(--color-yellow-1); }
 /* the first aid requirement, after the date and package (PackageChooser FirstAidPanel) */
 .rt-fa { display: flex; flex-direction: column; gap: 12px; background: var(--cd-surface); }
 .rt-fa__tag { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: var(--cd-band); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--cd-brand); }
