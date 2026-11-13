@@ -2309,7 +2309,6 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dd__meta .rt-cd__link { flex: none; white-space: nowrap; }
 .rt-dd__details { margin-top: 4px; color: var(--cd-text); white-space: pre-line; }
 .rt-dd__slot-price .rt-sv-badge { margin-top: 4px; }
-.rt-bk__policy { color: var(--color-purple-1) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-dd__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
 /* The date pop-up's list (DatesDialog): one card per venue with its dates shown at once, each date a row that picks it. */
 .rt-dd__list { background: var(--cd-band); padding: 16px 18px 20px; }
