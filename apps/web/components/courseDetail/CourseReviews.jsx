@@ -32,16 +32,15 @@ export default function CourseReviews({ reviews, course }) {
           </li>
         ))}
       </ul>
-      {left > 0 ? (
-        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setCount((n) => n + PAGE)}>
-          Show more reviews <span className="rt-reviews__more-n">({left} more)</span>
-        </button>
-      ) : (
-        count > PAGE && (
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={fewer}>
-            Show fewer reviews
-          </button>
-        )
+      {reviews.length > PAGE && (
+        <div className="rt-cd__reviews-more">
+          <span className="rt-cd__reviews-count" aria-live="polite">Showing {Math.min(count, reviews.length)} of {reviews.length} reviews</span>
+          {left > 0 ? (
+            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setCount((n) => n + PAGE)}>Show more reviews</button>
+          ) : (
+            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={fewer}>Show fewer reviews</button>
+          )}
+        </div>
       )}
     </section>
   );
