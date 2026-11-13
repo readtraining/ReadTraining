@@ -173,7 +173,7 @@ function VenueCard({ v, current, onSelect, onBook, open, onToggle, more, onMore,
 // The pop-up body. It is mounted only while the pop-up is open (and again for each study method), so its state starts from what
 // was remembered (sessionStorage). With `onBook` (course page, course cards) each date has its own Book now; without it a date
 // picked is applied at once (the basket's "Change date").
-function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClose, isDesktop }) {
+function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClose, isDesktop, steps = 1 }) {
   const listRef = useRef(null);
   const classroom = mode === "classroom";
   const key = storeKey(course, mode);
@@ -277,6 +277,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
     <>
       <div className="rt-dd__head">
         <div className="rt-dd__heading">
+          {steps > 1 && <p className="rt-dd__step">Step 1 of {steps}</p>}
           <h2 id="rt-dd-title" className="rt-dd__title" tabIndex={-1} data-initial={isDesktop ? undefined : ""}>Choose a date</h2>
           <p className="rt-dd__sub">{modes ? course.title : `${course.title} · ${modeLabel(mode)}`}</p>
         </div>
@@ -352,14 +353,19 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
     : undefined;
   const pkgSession = pkgFor && course ? course.sessions.find((x) => x.id === pkgFor.id) : null;
   if (!course) return null;
+  // booking a date here goes through these steps: the date, then its package (when sold in packages), then first aid (when the
+  // licence needs it): "Step 1 of 3" on the dates
+  const steps = onBook ? 1 + (course.sessions.some((s) => s.packages?.length) ? 1 : 0) + (course.sessions.some((s) => firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic })) ? 1 : 0) : 1;
+  // the most packages a date of this course has: the whole pop-up takes the package step's width from the start
+  const wide = Math.max(0, ...course.sessions.map((s) => (onBook ? s.packages?.length || 0 : 0)));
   return (
-    <PopShell open={datesOpen} onClose={closeDates} labelledBy="rt-dd-title">
+    <PopShell open={datesOpen} onClose={closeDates} labelledBy="rt-dd-title" book wide={wide}>
       {(isDesktop) =>
         pkgSession ? (
           <BookingSteps titleId="rt-dd-title" course={course} session={pkgSession} quantity={pkgFor.qty} needsAid={firstAidFor({ mode: pkgSession.mode, subject: course.subject, sub: course.sub, topic: course.topic })}
             onDone={(key, aid) => onBook(pkgSession.id, pkgFor.qty, key, aid)} onBack={() => setPkgFor(null)} onClose={() => closeDates()} />
         ) : (
-          <Panel key={mode} course={course} mode={mode} modes={modes} onMode={onMode} selectedId={selectedId} onPick={onPick} onBook={book} onClose={() => closeDates()} isDesktop={isDesktop} />
+          <Panel key={mode} course={course} mode={mode} modes={modes} onMode={onMode} selectedId={selectedId} onPick={onPick} onBook={book} onClose={() => closeDates()} isDesktop={isDesktop} steps={steps} />
         )
       }
     </PopShell>

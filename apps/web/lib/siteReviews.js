@@ -24,4 +24,3 @@ export const reviewCourse = (review) => {
 export const reviewsForCourse = (reviews, course) => reviews.filter((r) => r.topic && matchesPick(course, r.topic));
 
 // Customer reviews, filtered to one course (its name as the filter shows it)
-export const reviewsHref = (courseName) => (courseName ? `${REVIEWS_HREF}?course=${encodeURIComponent(courseName)}` : REVIEWS_HREF);

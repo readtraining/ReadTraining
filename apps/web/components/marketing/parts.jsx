@@ -1,7 +1,10 @@
 // Shared bits for the /for-business and /for-providers pages: inline SVG icons, chips, avatars and the product window frame.
 import Link from "next/link";
 
-export const initials = (name) => name.split(" ").map((x) => x[0]).join("");
+export const initials = (name) => {
+  const words = String(name || "").trim().split(/\s+/).filter(Boolean);
+  return (words.length > 1 ? words[0][0] + words[words.length - 1][0] : words[0]?.[0] || "").toUpperCase();
+};
 
 export const IconCheck = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.2 5 8.6l4.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>

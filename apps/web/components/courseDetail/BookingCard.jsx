@@ -195,7 +195,7 @@ export default function BookingCard() {
             </button>
           )}
 
-          {trust.length > 0 && (
+          {trust.length > 0 && !isInHouse && (
             <Fold hidden={compact} className="rt-bk__fold--trust">
               <ul className="rt-bs__trust">
                 {trust.map((t) => (

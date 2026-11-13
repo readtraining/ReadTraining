@@ -2045,14 +2045,7 @@ main#rt-cd-main { overflow: clip; }
 
 @media (prefers-reduced-motion: reduce) { .rt-bk__fold { transition: none; }   }
 
-/* ---------- Learning options: radio cards, then dates ---------- */
-
-.rt-lo__h { margin: 0 0 12px; font-size: 18px; line-height: 24px; font-weight: 700; }
-
-.rt-lo__inhouse p { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
-.rt-lo__xtra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
-.rt-lo__xtra .rt-cd__staff { margin-top: 0; }
-@media (max-width: 575px) { .rt-lo__xtra { grid-template-columns: minmax(0, 1fr); } }
+/* ---------- Learning options: radio cards ---------- */
 
 /* ---------- Long text with a fade ---------- */
 .rt-clamp__body.is-clamped { position: relative; overflow: hidden; }
@@ -2152,16 +2145,18 @@ main#rt-cd-main { overflow: clip; }
 
 /* Course content: heading and "Expand all sections" on one line */
 .rt-cd__mod-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; }
+/* Course content's "Expand all" / "Collapse all": a small outline button beside the heading; its chevron turns when all are open */
+.rt-cd__expand.button { flex: none; gap: 8px; height: 36px; padding: 0 14px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rt-cd__expand-icon { font-size: 9px; transition: transform 0.2s ease; }
+.rt-cd__expand-icon.is-open { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .rt-cd__expand-icon { transition: none; } }
 .rt-cd__mod-head h2 { margin: 0; }
 
 /* Learning options: one row of dated option cards, team training full width under them */
 
 /* Study options: heading and location filter on one line, two-line rows */
 
-.rt-lo__dates-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 12px; }
-.rt-lo__dates-head .rt-lo__h { margin: 0; }
 
-.rt-lo__xtra { align-items: start; }
 /* the template sets `ul, li { list-style: none }` on the items themselves, so the bullets are restored on the items */
 .rt-cd ul.rt-cd__list li, .rt-cd ul.rt-cd__mod-topics li { display: list-item; margin: 0 0 8px; padding-left: 2px; list-style: disc; }
 .rt-cd ul.rt-cd__list li::marker, .rt-cd ul.rt-cd__mod-topics li::marker { color: var(--cd-muted); }
@@ -2257,7 +2252,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-lc > .rt-lc__card { margin-bottom: 12px; } /* the space between rows of cards: a grid row-gap would also open up between the shared rows inside each card */
 @container rt-lo (min-width: 412px) { .rt-lc.-n2, .rt-lc.-n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container rt-lo (min-width: 624px) { .rt-lc.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-/* wide: always four columns, so a card is the same size however many options a course has (two cards keep a quarter each, not half) */
+/* wide: always four columns, so a card is the same size however many options a course has (as the live site) */
 @container rt-lo (min-width: 836px) { .rt-lc.rt-lc { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 /* Each card spans five rows of the option grid and shares them (subgrid): badge, title, points, "+ more", price. Parts line up
    across a row of cards; a card alone in its row is only as tall as its own content. Empty parts take no space. */
@@ -2283,17 +2278,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-lc__full li { font-size: 14px; color: var(--cd-text); }
 @media (min-width: 768px) { .rt-lc__full--cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-.rt-lc__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 16px; }
-.rt-lo__dates { margin-top: 16px; }
-.rt-lo__inhouse { justify-items: start; gap: 8px; display: block; }
 
-/* SESSION DATES: summary row + "choose a date" pop-up */
-.rt-ds { display: flex; align-items: center; gap: 14px; box-sizing: border-box; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--cd-border-strong); background: var(--cd-surface); }
-.rt-ds__icon { font-size: 20px; color: var(--cd-brand); }
-.rt-ds__text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.rt-ds__text strong { font-size: 14px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
-.rt-ds__text span { font-size: 13px; line-height: 18px; color: var(--cd-muted); }
-@media (max-width: 479px) { .rt-ds { flex-wrap: wrap; } .rt-ds__text { flex: 1 1 calc(100% - 40px); } .rt-ds .button { width: 100%; } }
 .rt-bs__change { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; }
 
 .rt-dd { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: transparent; transition: background-color 0.2s ease; }
@@ -2324,7 +2309,6 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dd__meta .rt-cd__link { flex: none; white-space: nowrap; }
 .rt-dd__details { margin-top: 4px; color: var(--cd-text); white-space: pre-line; }
 .rt-dd__slot-price .rt-sv-badge { margin-top: 4px; }
-.rt-bk__policy { color: var(--color-purple-1) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-dd__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
 /* The date pop-up's list (DatesDialog): one card per venue with its dates shown at once, each date a row that picks it. */
 .rt-dd__list { background: var(--cd-band); padding: 16px 18px 20px; }
@@ -2459,7 +2443,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
    =================================================================================================== */
 .rt-cd #rt-cd-title, .rt-cd h1 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h1-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h1-ls); }
 .rt-cd .rt-cd__sec h2, .rt-cd .rt-cd__mod-head h2, .rt-cd__sec > h2 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h2-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h2-ls); }
-.rt-cd h3, .rt-cd .rt-cd__h3, .rt-cd .rt-lo__h { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
+.rt-cd h3, .rt-cd .rt-cd__h3 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
 .rt-cd__prose p, .rt-cd__sec > p, .rt-cd .rt-cd__list li, .rt-cd__checks li, .rt-cd .rt-clamp p, .bz-acc__inner p, .rt-cd__mod-topics li, .rt-cd__table td { font-size: 15px; line-height: 1.7; font-weight: 400; color: var(--color-light-1); }
 .rt-cd .rt-cd__acc .bz-acc__btn { font-size: 17px; font-weight: 600; }
 /* a unit with no text, among units that open: a plain row in the list */
@@ -2467,11 +2451,16 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 
 /* Course features: ONE line of badges. Badges that do not fit on the line are clipped away whole (the row is exactly one badge high),
    so the row never wraps onto a second line. Text uses the same style as the body (15px, 500). */
-.rt-fx { margin: 0; padding: 0; list-style: none;  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; } /* wraps, so every feature shows (up to 8, CourseFeatures.jsx) */
-.rt-fx li { margin: 0; list-style: none;  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: 42px; min-height: 0; padding: 0 16px 0 12px; border: 1px solid var(--cd-card-border); border-radius: 999px; background: var(--cd-surface); font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-dark-1); white-space: nowrap; }
-.rt-fx li > .rt-cd__icon { font-size: 18px; color: var(--cd-brand); }
-.rt-fx li:hover { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
-@media (max-width: 575px) { .rt-fx li { max-width: 100%; height: auto; min-height: 42px; padding-block: 10px; white-space: normal; } } /* a long feature wraps inside its badge on a phone */
+/* Course features (CourseFeatures.jsx): a plain list of key facts, an icon in a pale purple circle and its words; two columns from
+   576px, one on phones. Information only: no borders, no hover, nothing that looks like a button. */
+.rt-fx { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px 24px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 576px) { .rt-fx { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* up to three facts sit in one row (no lone fact on a second line beside an empty space) */
+@media (min-width: 576px) { .rt-fx.-row1 { grid-template-columns: minmax(0, 1fr); } .rt-fx.-row3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.rt-fx li { display: flex; align-items: center; gap: 12px; margin: 0; list-style: none; font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-dark-1); }
+.rt-fx__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--cd-brand-subtle); }
+.rt-fx__icon .rt-cd__icon { font-size: 16px; color: var(--cd-brand); }
+.rt-fx__icon .icon-check { font-size: 11px; } /* the tick glyph is drawn heavier than the line icons: smaller, so they match */
 
 .rt-cd .rt-cd__fcard h2 { font-weight: 700; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 14px; }
 
@@ -2500,7 +2489,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* the course page's surface; not .rt-dd, whose backdrop must stay clear until it fades to the tint */
 .rt-cd { background: var(--cd-surface); }
 .rt-cd .rt-cd__fcard, .rt-cd .rt-stats, .rt-cd .rt-bk { border-radius: var(--cd-card-radius); border-color: var(--cd-card-border); }
-.rt-cd .rt-lc__card, .rt-cd .rt-ds, .rt-cd .rt-cd__staff { border-radius: var(--cd-card-radius); }
+.rt-cd .rt-lc__card, .rt-cd .rt-cd__staff { border-radius: var(--cd-card-radius); }
 .rt-cd .rt-stats, .rt-cd .rt-bk { overflow: hidden; }
 
 /* TEST PREP HUB (/test-prep). Built from the site's own parts: the catalogue hero (.rt-cat__hero, .rt-cat-search,
@@ -3419,6 +3408,10 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 .rt-reviews__empty { max-width: 560px; margin: 32px auto 0; }
 .rt-reviews__more { display: flex; justify-content: center; margin-top: 32px; }
 .rt-reviews__more-n { margin-left: 6px; font-weight: 400; }
+/* a long review cut to six lines (ReviewCard `clamp`), with Read more / Show less under it */
+.rt-reviews__grid .rt-review__quote.-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden; }
+.rt-review__more { align-self: flex-start; margin-top: 8px; padding: 0; border: 0; background: none; color: var(--color-purple-1); font-size: 14px; font-weight: 600; cursor: pointer; }
+.rt-review__more:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* the closing call to action, spaced from the FAQ's tinted band */
 .rt-reviews__cta { padding-top: 64px; }
 
@@ -3688,6 +3681,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk-page main, .rt-bk-page .rt-bk { overflow: clip; }
 .rt-bk__head { padding: 40px 0 28px; background: var(--color-light-4); border-bottom: 1px solid var(--color-light-5); }
 .rt-bk__headrow { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.rt-bk__back { display: inline-flex; align-items: center; gap: 8px; justify-self: start; margin-top: 4px; font-weight: 600; }
 .rt-bk__h1 { margin: 0; font-size: clamp(28px, 3vw, 36px); line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; color: var(--color-dark-1); }
 .rt-bk__count { margin: 6px 0 0; font-size: 15px; color: var(--color-light-1); }
 /* booking steps */
@@ -3733,7 +3727,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__titlerow .rt-bk__check { padding-top: 1px; }
 .rt-bk__line.is-off { background: var(--color-light-4); }
 .rt-bk__offnote { margin: 6px 0 0 32px; font-size: 13px; color: var(--color-light-1); }
-.rt-bk__change { min-height: 0; padding: 0; border: 0; background: none; cursor: pointer; }
 .rt-bk__sumnote { margin: -8px 0 14px; font-size: 14px; color: var(--color-light-1); }
 /* the date pop-up opened from a catalogue card or the basket: the study methods as the filter chips */
 .rt-dd__modes { flex: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--cd-border); }
@@ -3749,13 +3742,19 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__price strong { font-size: 20px; font-weight: 700; color: var(--color-dark-1); }
 .rt-bk__price s { margin-left: 8px; }
 .rt-bk__each { margin: 0; font-size: 13px; color: var(--color-light-1); }
-.rt-bk__remove { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; border: 0; background: none; font-size: 13px; color: var(--color-light-1); cursor: pointer; }
-.rt-bk__remove:hover { color: var(--color-dark-1); text-decoration: underline; }
+/* a line's Edit (pencil, its menu under it) and Remove (bin): square icon buttons under the price */
+.rt-bk__acts { display: flex; gap: 8px; }
+.rt-bk__icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: 15px; color: var(--rt-c-muted); cursor: pointer; transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease; }
+.rt-bk__icon:hover, .rt-rowmenu.is-open .rt-bk__icon { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
+.rt-bk__icon.-danger:hover { border-color: var(--rt-c-error); background: var(--rt-c-surface); color: var(--rt-c-error); }
+.rt-bk__icon:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-bk__acts .rt-rowmenu__list { width: max-content; min-width: 200px; }
 .rt-bk__note { margin: 12px 0 0; font-size: 13px; color: var(--color-light-1); }
 @media (max-width: 767px) {
   .rt-bk__row { grid-template-columns: 96px minmax(0, 1fr); gap: 14px; }
   .rt-bk__side { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
   .rt-bk__price { text-align: left; }
+  .rt-bk__acts .rt-rowmenu__list { left: 0; right: auto; } /* the icons sit on the left here, so the menu opens to the right */
 }
 /* the package and first aid choices: the selected learning-option card's look (purple border, pale fill) as radio cards */
 .rt-bk__fs { min-width: 0; margin: 20px 0 0; padding: 20px 0 0; border: 0; border-top: 1px solid var(--color-light-5); }
@@ -3790,7 +3789,8 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__promo { margin: 4px 0 0; }
 .rt-bk__promoopen { padding: 4px 0; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--color-purple-1); cursor: pointer; }
 .rt-bk__promoopen:hover { text-decoration: underline; }
-.rt-bk__promorow { display: flex; gap: 8px; }
+.rt-bk__promorow { display: flex; align-items: stretch; gap: 8px; }
+.rt-bk .rt-bk__promorow .button { flex: none; height: 46px; margin: 0; padding: 0 20px; } /* level with the code box (not the basket buttons' 14px top gap) */
 .rt-bk__promorow input { flex: 1; min-width: 0; height: 46px; padding: 0 14px; border: 1px solid var(--color-light-5); border-radius: 10px; font-size: 15px; text-transform: uppercase; }
 .rt-bk__promorow input:focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 1px; }
 .rt-bk__promoerr { margin: 0 0 8px; }
@@ -7126,7 +7126,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cd__learn .rt-cd__checks + .rt-cd__lead { margin-top: 4px; }
 .rt-cd__learn > .rt-cd__link { display: inline-flex; align-items: center; margin-top: 4px; }
 .rt-cg__yes { display: inline-flex; align-items: center; gap: 8px; }
-.rt-cg__no { color: var(--cd-muted); }
+.rt-cg__no { display: inline-flex; align-items: center; gap: 8px; color: var(--cd-muted); }
+.rt-cg__x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--cd-band); font-size: 8px; color: var(--cd-muted); }
 .rt-cg__compare th:nth-child(2), .rt-cg__compare th:nth-child(3) { width: 140px; }
 .rt-cg__exams th:nth-child(2), .rt-cg__exams th:nth-child(3) { width: 96px; }
 .rt-cg__exams th:nth-child(4) { width: 120px; }
@@ -7134,11 +7135,9 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
 .rt-cg__pkgs { padding: 0; list-style: none; }
 .rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
-/* the client's packages are information here (chosen when a date is booked): no pick on hover; Choose dates on the price row */
+/* the client's packages are information here (chosen when a date is booked): no pick on hover */
 .rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border); }
 .rt-cg__pkgs > li { margin: 0; list-style: none; }
-.rt-cg__pkg .rt-lc__price { flex-wrap: wrap; row-gap: 4px; }
-.rt-cg__pkgdates { margin-left: auto; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
@@ -7172,6 +7171,9 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 
 /* ---- a course page's "Reviews of Read Training" (CourseReviews): the Customer reviews cards, two across in the main column */
 .rt-cd__reviews { margin: 0 0 16px; }
+/* under the course page's reviews: how many are showing, then Show more / Show fewer */
+.rt-cd__reviews-more { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.rt-cd__reviews-count { font-size: 14px; line-height: 20px; color: var(--cd-muted); }
 @media (min-width: 992px) { .rt-cd__reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 576px) { .rt-cd__reviews.-one { grid-template-columns: minmax(0, 1fr); } }
 
@@ -7186,12 +7188,24 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-preview__back { font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 /* ---------- HUMAN CHECK (lib/humanCheck.js) ----------
    Cloudflare Turnstile runs invisibly; in the rare case it wants a click, its small box shows here, above everything */
+/* the scrollbar's space is always kept, so the page (and its fixed and sticky bars) doesn't move sideways when a pop-up stops it
+   scrolling (PopShell) */
+html { scrollbar-gutter: stable; }
 .rt-humancheck { position: fixed; z-index: 3000; bottom: 24px; left: 50%; transform: translateX(-50%); }
 .rt-humancheck:empty { display: none; }
 
 /* ---- "Choose your package" (PackageChooser): a date or self-paced course sold in a provider's price plan --------------- */
 /* the pop-up widens for 3 or 4 packages side by side; phones: one under another, full screen as every booking pop-up */
-@media (min-width: 576px) { .rt-dd__panel:has(.rt-pk__grid.-n3) { width: 880px; } .rt-dd__panel:has(.rt-pk__grid.-n4) { width: 1120px; } .rt-dd__panel:has(.rt-pk__list) { min-height: 0; } }
+/* the pop-up widens for 3 or 4 packages side by side, and when a booking's steps include them (PopShell `wide`) every step of it
+   keeps that width, so it doesn't jump between the dates, the packages and first aid; phones: full screen as every booking pop-up */
+@media (min-width: 576px) {
+  .rt-dd__panel:has(.rt-pk__grid.-n3), .rt-dd__panel.-wide3 { width: 880px; }
+  .rt-dd__panel:has(.rt-pk__grid.-n4), .rt-dd__panel.-wide4 { width: 1120px; }
+  .rt-dd__panel:has(.rt-pk__list) { min-height: 0; }
+  .rt-dd__panel.-wide3, .rt-dd__panel.-wide4 { min-height: min(560px, 88dvh); }
+}
+/* "Step 2 of 3" above a booking step's title */
+.rt-dd__step { margin: 0 0 2px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--cd-brand); }
 .rt-pk__back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 2px 0; border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--cd-brand); cursor: pointer; }
 .rt-pk__back:hover { text-decoration: underline; text-underline-offset: 3px; }
 .rt-pk__back .rt-cd__icon { font-size: 11px; }
@@ -7215,7 +7229,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-pk__features li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-text); list-style: none; }
 .rt-pk__features li.-no { color: var(--cd-muted); }
 .rt-pk__features small { display: block; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
-.rt-pk__mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; font-size: 8px; background: var(--rt-c-success-soft); color: var(--rt-c-success); }
+.rt-pk__mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; font-size: 8px; background: var(--color-purple-3); color: var(--color-purple-1); } /* the page's tick (.rt-cd__check) */
 .rt-pk__features li.-no .rt-pk__mark { background: var(--cd-band); color: var(--cd-muted); }
 .rt-pk__select { margin-top: auto; } /* Select sits at the foot of every card, in one line across the row */
 .rt-pk__card > :nth-last-child(2) { margin-bottom: 10px; }
@@ -7224,6 +7238,27 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-bs__from { font-size: 15px; font-weight: 600; color: var(--cd-muted); }
 /* the hero's Book now: the course page's main button, a size bigger than the card's and the bar's */
 .rt-cd__booknow.button { height: 54px; padding: 0 36px; font-size: 17px; }
+/* the hero's buttons: Book now, then "Book for my team" (outlined, the same height); stacked full width on phones */
+.rt-cd__hctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.rt-cd__hteam.button { height: 54px; padding: 0 28px; font-size: 17px; border: 2px solid rgba(255, 255, 255, 0.6); }
+.rt-cd__hteam.button:hover { border-color: var(--color-white); background: var(--color-white); color: var(--color-purple-1) !important; }
+@media (max-width: 575px) { .rt-cd__hctas { width: 100%; } .rt-cd__hctas .button { flex: 1 1 100%; } }
+/* Read Training's rating under the buttons: five stars filled to the rating, then the words */
+.rt-cd__htrust { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 18px 0 0; font-size: 14px; line-height: 20px; color: rgba(255, 255, 255, 0.8); }
+.rt-cd__htrust strong { font-weight: 700; color: var(--color-white); }
+.rt-cd__hstars { display: inline-flex; gap: 2px; }
+.rt-cd__hstar { position: relative; display: inline-block; font-size: 14px; line-height: 1; color: rgba(255, 255, 255, 0.25); }
+.rt-cd__hstar .-on { position: absolute; top: 0; left: 0; overflow: hidden; white-space: nowrap; color: var(--color-yellow-1); }
+.rt-cd__htrust-link { color: rgba(255, 255, 255, 0.8) !important; text-decoration: none; }
+.rt-cd__htrust-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* the course page's reviews open on Read Training's rating: the big number, its stars and what it counts, then the selection */
+.rt-cd__rsum { display: flex; align-items: center; gap: 16px; margin: 0 0 20px; padding: 16px 20px; border-radius: var(--cd-card-radius); background: var(--cd-brand-subtle); }
+.rt-cd__rsum-n { font-size: 40px; line-height: 1; font-weight: 700; color: var(--cd-text); font-variant-numeric: tabular-nums; }
+.rt-cd__rsum-text { display: grid; gap: 6px; }
+.rt-cd__rsum .rt-cd__hstar { font-size: 16px; color: var(--color-light-5); }
+.rt-cd__rsum p { margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+/* every card's header the same height, with or without a date under the name, so the dividers line up across a row */
+.rt-cd__reviews .rt-review__who { min-height: 66px; }
 /* the first aid requirement, after the date and package (PackageChooser FirstAidPanel) */
 .rt-fa { display: flex; flex-direction: column; gap: 12px; background: var(--cd-surface); }
 .rt-fa__tag { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: var(--cd-band); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--cd-brand); }
@@ -7233,14 +7268,50 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-fa__h { margin: 4px 0 0; font-size: 15px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
 .rt-fa__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .rt-fa__list li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-text); list-style: none; }
-.rt-fa__list .rt-cd__icon { margin-top: 4px; font-size: 10px; color: var(--rt-c-success); }
+.rt-fa__list .rt-cd__icon { margin-top: 4px; font-size: 10px; color: var(--color-purple-1); }
 .rt-fa__pick { margin: 8px 0 0; padding-top: 12px; border-top: 1px solid var(--cd-border); font-size: 14px; font-weight: 600; text-align: center; color: var(--cd-text); }
 .rt-fa__choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 @media (min-width: 576px) { .rt-fa__choices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-fa__choices .button { height: auto; min-height: 48px; padding: 10px 14px; white-space: normal; line-height: 1.3; }
 .rt-dd__panel:has(.rt-fa) { min-height: 0; }
+
+/* ---- The booking pop-up (PopShell `book`: the dates, the packages, first aid). One width for every course and every step of a
+   booking (800px, Bootstrap's large size; 1120px when a course has four packages side by side; never over 94% of the screen), so it doesn't jump
+   sideways; its height fits each step (the dates keep their minimum), so a short step has no empty space; its list scrolls
+   inside. Phones (575px and under): full screen, as every booking pop-up. A container query lays each part out by the pop-up's
+   own width, not the screen's. ------------------------------------------------------------------------------------------------ */
+@media (min-width: 576px) {
+  .rt-dd .rt-dd__panel.-book { width: min(94vw, 800px); }
+  .rt-dd .rt-dd__panel.-book.-wide4 { width: min(94vw, 1120px); }
+}
+.rt-dd__panel.-book { container: rt-book / inline-size; }
+.rt-dd__panel.-book > .rt-dd__list, .rt-dd__panel.-book > .rt-pk__list, .rt-dd__panel.-book > .rt-fa { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+/* a date, when the pop-up is narrow (phones, small tablets): the date and its details get the full width; under them the price on
+   one line (was-price, price, per delegate), then the delegates counter and a full-width Book now */
+@container rt-book (max-width: 560px) {
+  .rt-dd__slot--book { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "tile main" "price price" "actions actions"; row-gap: 10px; }
+  .rt-dd__slot--book > .rt-dd__slot-main { align-self: start; }
+  .rt-dd__slot--book > .rt-dd__slot-price { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; padding-top: 10px; border-top: 1px solid var(--cd-border); }
+  .rt-dd__slot--book .rt-dd__actions { justify-content: stretch; }
+  .rt-dd__slot--book .rt-dd__actions .rt-dd__book { flex: 1; }
+  /* the town search above the sort, both full width */
+  .rt-dd__controls { flex-direction: column; }
+  .rt-dd__controls:has(.rt-dd__search) .rt-dd__sort { flex: none; width: 100%; }
+}
+
+/* the packages: side by side when they fit, else one per row with "Most popular" first (never two and one left over) */
+.rt-dd__panel.-book .rt-pk__grid { grid-template-columns: minmax(0, 1fr); }
+@container rt-book (max-width: 759px) { .rt-pk__card.-popular { order: -1; } }
+@container rt-book (min-width: 520px) { .rt-dd__panel.-book .rt-pk__grid.-n2, .rt-dd__panel.-book .rt-pk__grid.-n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container rt-book (min-width: 760px) { .rt-dd__panel.-book .rt-pk__grid.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container rt-book (min-width: 1000px) { .rt-dd__panel.-book .rt-pk__grid.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* the first aid step's foot: what is being booked and the total so far */
+.rt-dd__total { flex: none; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; padding: 12px 18px; border-top: 1px solid var(--cd-border); background: var(--cd-surface); font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+.rt-dd__total strong { font-size: 17px; font-weight: 700; color: var(--cd-text); font-variant-numeric: tabular-nums; }
+.rt-dd__total small { margin-left: 4px; font-size: 13px; font-weight: 400; color: var(--cd-muted); }
 /* a package that includes first aid (or the first aid answer, with Change): the basket line says so instead of asking */
-.rt-bk__inpkg .rt-bk__change { margin-left: 4px; }
 .rt-bk__inpkg { display: flex; align-items: center; gap: 8px; color: var(--color-dark-1); }
 .rt-bk__inpkg i { color: var(--rt-c-success); }
 

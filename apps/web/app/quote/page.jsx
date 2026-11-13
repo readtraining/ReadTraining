@@ -8,12 +8,14 @@ import { loadCoursePage } from "@/lib/catalogueServer";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
 import { pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
+import { TEAM } from "@/lib/teamTraining";
 
-// Group quote (/quote, ?course=<course address or number> from a course page or a basket line): the Contact page's layout (marketing hero, then how it works beside
-// the form in a frame), so it no longer stands out as a bare form. The form is QuoteForm (simulated sending: lib/quote.js).
+// Team quote (/quote, ?course=<course address or number> from a course page or a basket line): the Contact page's layout (marketing hero, then how it works beside
+// the form in a frame), so it no longer stands out as a bare form. Its heading is the course page's button (TEAM.cta), so the
+// visitor lands where the button said. The form is QuoteForm, behind its switch in lib/forms.js (FormGate).
 
 const copy = {
-  hero: { eyebrow: "Group training", title: ["Get a group quote"], lead: "Tell us how many people need training and we will reply the same working day." },
+  hero: { eyebrow: TEAM.cardTitle, title: [TEAM.cta], lead: "Tell us how many people need training and we will reply the same working day." },
   how: {
     eyebrow: "How it works",
     title: "Training for your whole team",
@@ -28,7 +30,7 @@ const copy = {
 };
 
 export const metadata = pageMetadata({
-  title: "Get a group quote | ReadTraining",
+  title: `${TEAM.cta} | ReadTraining`,
   description: "Tell us how many people need training and we will send a quote for your team the same working day.",
   path: QUOTE_HREF,
 });

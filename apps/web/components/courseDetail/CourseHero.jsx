@@ -4,16 +4,24 @@ import Crumbs from "./Crumbs";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { formatPrice, getSubjectLabel, getSubLabel, savePercent } from "@/lib/courses";
 import Link from "next/link";
-import { CATALOGUE_HREF, coursePath } from "@/lib/routes";
+import { CATALOGUE_HREF, QUOTE_HREF, coursePath } from "@/lib/routes";
+import { trustFigures } from "@/lib/siteContent";
+import { TEAM } from "@/lib/teamTraining";
+import RatingStars from "./RatingStars";
 
 const CATALOGUE = CATALOGUE_HREF;
 
-// Hero, in this order: breadcrumb, title, summary, badge, provider count, price row with Book now. The rating, students and "Rated Excellent" proof now live in the stats card on the hero edge (StatsCard).
-export default function CourseHero({ course }) {
+// Hero, in this order: breadcrumb, badge, title, summary, provider link, the price row with Book now and "Get a team quote" (a
+// quote for this course, lib/teamTraining.js), then Read Training's rating (the site's trust numbers, Admin › Site content: our Google rating and its
+// number of reviews, worded as ours, not the course's; left out until an admin has entered one). With reviews of the course
+// on the page (`hasReviews`), the rating is a link down to them.
+// `heroTitle`: a course guide's heading for the hero (data/courseGuides.js); without one, the course's own name.
+export default function CourseHero({ course, hasReviews = false, heroTitle = null }) {
   const subject = getSubjectLabel(course);
   const sub = getSubLabel(course);
   const lowest = course.sessions.reduce((best, s) => (!best || s.price < best.price ? s : best), null);
   const pct = lowest ? savePercent(lowest.price, lowest.wasPrice) : 0;
+  const trust = trustFigures();
 
   return (
     <div className="rt-cd__hero">
@@ -28,7 +36,7 @@ export default function CourseHero({ course }) {
 
         {/* in Skill Saver on every date, or on some (the dates pop-up and the booking card then mark which) */}
         {course.skillSaver && <SaverBadge href="/skill-saver" className="rt-cd__saver" label={course.skillSaver === "some" ? "Skill Saver on some dates" : undefined} />}
-        <h1 className="rt-cd__title" id="rt-cd-title">{course.title}</h1>
+        <h1 className="rt-cd__title" id="rt-cd-title">{heroTitle || course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
 
         {/* the counts are in the bar under the hero; a provider's course on a shared page links to every date for that course */}
@@ -46,8 +54,26 @@ export default function CourseHero({ course }) {
           ) : (
             <p className="rt-cd__hprice"><strong className="rt-cd__hprice-soon">New dates coming soon</strong></p>
           )}
-          <BookNow />
+          <div className="rt-cd__hctas">
+            <BookNow />
+            <Link href={`${QUOTE_HREF}?course=${course.slug}`} className="button -md -outline-white text-white rt-cd__hteam">{TEAM.cta}</Link>
+          </div>
         </div>
+
+        {trust.rating && trust.reviews && (
+          <p className="rt-cd__htrust">
+            <RatingStars rating={trust.rating} />
+            {hasReviews ? (
+              <a href="#course-reviews" className="rt-cd__htrust-link">
+                <strong>{trust.ratingOutOf}</strong> from {trust.reviews} {trust.source ? `${trust.source} ` : ""}reviews of Read Training
+              </a>
+            ) : (
+              <span>
+                <strong>{trust.ratingOutOf}</strong> from {trust.reviews} {trust.source ? `${trust.source} ` : ""}reviews of Read Training
+              </span>
+            )}
+          </p>
+        )}
 
       </div>
     </div>

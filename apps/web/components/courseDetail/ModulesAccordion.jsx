@@ -4,7 +4,7 @@ import React, { useState } from "react";
 
 // Course content in the site's accordion (.bz-acc, the same divider list and plus/minus icon as the FAQs). Only a unit with text
 // under it opens: a unit that is just a name is a plain row, with nothing to toggle (and with no unit to open, the units are a
-// plain list). Expand all / Collapse all once 4 or more units open (fewer are quick to open one by one). Any number can be
+// plain list). An "Expand all" / "Collapse all" button once 4 or more units open (fewer are quick to open one by one). Any number can be
 // open. A closed unit is inert, so it cannot be tabbed into.
 export default function ModulesAccordion({ modules, title, titleId, intro }) {
   const hasText = (m) => Boolean(m.text || m.topics?.length);
@@ -22,8 +22,9 @@ export default function ModulesAccordion({ modules, title, titleId, intro }) {
       <div className="rt-cd__mod-head">
         <h2 id={titleId}>{title}</h2>
         {opening >= EXPAND_FROM && (
-          <button type="button" className="rt-cd__link" onClick={() => setOpen(modules.map(() => !allOpen))}>
-            {allOpen ? "Collapse all sections" : "Expand all sections"}
+          <button type="button" className="button -sm -outline-purple-1 text-purple-1 rt-cd__expand" aria-controls="rt-cd-units" aria-expanded={allOpen} onClick={() => setOpen(modules.map(() => !allOpen))}>
+            {allOpen ? "Collapse all" : "Expand all"}
+            <i className={`icon-chevron-down rt-cd__expand-icon${allOpen ? " is-open" : ""}`} aria-hidden="true"></i>
           </button>
         )}
       </div>

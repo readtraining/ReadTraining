@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { initials } from "@/components/marketing/parts";
 import { EmptyState } from "@/components/states/States";
 import ReviewStars from "./ReviewStars";
@@ -8,22 +8,61 @@ import SourceLabel from "./SourceLabel";
 
 // One review card (.rt-review, in the reviews grid .rt-reviews__grid): the reviewer first (initials, name, the course the
 // review names), their own stars and, when set, where it was first posted (as text), then the full text with its line
-// breaks.
-export function ReviewCard({ review: r }) {
+// breaks. `clamp`: a long text is cut to six lines with "Read more" under it (it opens in the card), so one long review doesn't
+// stretch its row of cards; the button shows only when the text is really cut. `meta`: what goes under the name, the course the
+// review names (the reviews page) or when it was written (a course page, where the course is the page itself).
+
+// a name typed all in capitals ("RAJA SEKHAR REDDY") shown in normal case; any other name exactly as written
+const displayName = (name) =>
+  name && name === name.toUpperCase() && /[A-Z]{2}/.test(name) ? name.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (m, sep, ch) => sep + ch.toUpperCase()) : name;
+// the month it was written ("November 2026"), "About November 2026" when the day isn't known exactly; nothing when unknown
+const monthOf = (r) => {
+  if (!r.date) return null;
+  const month = new Date(`${r.date}T12:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  return r.dateIsApproximate ? `About ${month}` : month;
+};
+
+function Quote({ text, clamp }) {
+  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    if (!clamp) return;
+    const el = ref.current;
+    const check = () => el && setCut(el.scrollHeight > el.clientHeight + 1);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [text, clamp]);
+  return (
+    <>
+      <blockquote ref={ref} className={`rt-review__quote${clamp && !open ? " -clamp" : ""}`}>{text}</blockquote>
+      {clamp && (cut || open) && (
+        <button type="button" className="rt-review__more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          {open ? "Read less" : "Read more"}
+        </button>
+      )}
+    </>
+  );
+}
+
+export function ReviewCard({ review: r, clamp = false, meta = "course" }) {
+  const name = displayName(r.name);
+  const under = meta === "date" ? monthOf(r) : r.course;
   return (
     <figure className="rt-review">
       <figcaption className="rt-review__who">
-        <span className="rt-review__avatar" aria-hidden="true">{initials(r.name)}</span>
+        <span className="rt-review__avatar" aria-hidden="true">{initials(name)}</span>
         <div>
-          <div className="rt-review__name">{r.name}</div>
-          {r.course && <div className="rt-review__course">{r.course}</div>}
+          <div className="rt-review__name">{name}</div>
+          {under && <div className="rt-review__course">{meta === "date" && r.date ? <time dateTime={r.date}>{under}</time> : under}</div>}
         </div>
       </figcaption>
       <div className="rt-review__top">
         <ReviewStars rating={r.rating} />
         <SourceLabel label={r.origin} />
       </div>
-      <blockquote className="rt-review__quote">{r.text}</blockquote>
+      <Quote text={r.text} clamp={clamp} />
     </figure>
   );
 }

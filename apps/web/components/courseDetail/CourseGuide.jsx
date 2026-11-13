@@ -20,7 +20,7 @@ const Ticks = ({ items, one }) => (
   </ul>
 );
 
-const Cell = ({ v }) => (typeof v === "boolean" ? (v ? <span className="rt-cg__yes"><Check /> Yes</span> : <span className="rt-cg__no">No</span>) : v);
+const Cell = ({ v }) => (typeof v === "boolean" ? (v ? <span className="rt-cg__yes"><Check /> Yes</span> : <span className="rt-cg__no"><i className="icon-close rt-cg__x" aria-hidden="true" /> No</span>) : v);
 
 // A comparison table (door supervisor or security guard licence).
 export function CompareTable({ compare }) {

@@ -109,7 +109,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
           <BookingProvider course={course} initialMode={query.mode} initialSession={query.session}>
             <div className="container rt-cd__wrap">
               <div className="rt-cd__grid">
-                <CourseHero course={course} />
+                <CourseHero course={course} hasReviews={reviews.length > 0} heroTitle={guide?.heroTitle} />
 
                 <aside className="rt-cd__aside" aria-label="Book this course">
                   <BookingCard />
@@ -123,7 +123,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
                   <LearningSection />
 
                   <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
-                    <h2 id="rt-cd-overview-h">{course.title}</h2>
+                    <h2 id="rt-cd-overview-h">About this course</h2>
                     {course.video && (
                       <div className="rt-cd__video">
                         <iframe src={course.video} title={`Video: ${course.title}`} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
