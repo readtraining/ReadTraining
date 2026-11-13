@@ -135,7 +135,6 @@ export default function BasketPage({ recommended }) {
               <h1 className="rt-bk__h1">{copy.title}</h1>
               {ready && cartCourses.length > 0 && <p className="rt-bk__count">{cartCourses.length} {cartCourses.length === 1 ? "course" : "courses"} in your basket</p>}
             </div>
-            <Link href={copy.continueLink.href} className="fb-textlink">{copy.continueLink.label}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
           </div>
           <BasketSteps steps={bookingSteps(cartCourses.some((i) => i.packages?.length))} current={1} />
         </div>
@@ -175,6 +174,8 @@ export default function BasketPage({ recommended }) {
                 {cartCourses.map((item) => (
                   <BasketLine key={lineKey(item)} item={item} onChange={(patch) => change(lineKey(item), patch)} onRemove={() => remove(item)} onDates={() => openDates(item)} onPackage={() => setPkg({ open: true, key: lineKey(item), item })} />
                 ))}
+                {/* back to the courses, under the list (where people look once they have checked it); the empty basket has its own button */}
+                <Link href={copy.continueLink.href} className="fb-textlink rt-bk__back"><i className="icon-arrow-left text-12" aria-hidden="true"></i>{copy.continueLink.label}</Link>
               </div>
               <BasketSummary totals={totals} issues={issues} promo={promo} onPromo={choosePromo} count={{ chosen: chosen.length, total: cartCourses.length }} signedOut={saver === null} />
             </div>

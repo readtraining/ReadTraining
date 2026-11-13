@@ -3681,6 +3681,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk-page main, .rt-bk-page .rt-bk { overflow: clip; }
 .rt-bk__head { padding: 40px 0 28px; background: var(--color-light-4); border-bottom: 1px solid var(--color-light-5); }
 .rt-bk__headrow { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.rt-bk__back { display: inline-flex; align-items: center; gap: 8px; justify-self: start; margin-top: 4px; font-weight: 600; }
 .rt-bk__h1 { margin: 0; font-size: clamp(28px, 3vw, 36px); line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; color: var(--color-dark-1); }
 .rt-bk__count { margin: 6px 0 0; font-size: 15px; color: var(--color-light-1); }
 /* booking steps */
@@ -3788,7 +3789,8 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__promo { margin: 4px 0 0; }
 .rt-bk__promoopen { padding: 4px 0; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--color-purple-1); cursor: pointer; }
 .rt-bk__promoopen:hover { text-decoration: underline; }
-.rt-bk__promorow { display: flex; gap: 8px; }
+.rt-bk__promorow { display: flex; align-items: stretch; gap: 8px; }
+.rt-bk .rt-bk__promorow .button { flex: none; height: 46px; margin: 0; padding: 0 20px; } /* level with the code box (not the basket buttons' 14px top gap) */
 .rt-bk__promorow input { flex: 1; min-width: 0; height: 46px; padding: 0 14px; border: 1px solid var(--color-light-5); border-radius: 10px; font-size: 15px; text-transform: uppercase; }
 .rt-bk__promorow input:focus-visible { outline: 2px solid var(--color-purple-1); outline-offset: 1px; }
 .rt-bk__promoerr { margin: 0 0 8px; }
