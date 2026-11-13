@@ -35,8 +35,9 @@ export default function SlimBar({ sections }) {
     let raf = 0;
     const compute = () => {
       raf = 0;
-      const offset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-offset")) || 0;
-      const line = 72 + 24; // the header is hidden while the bar shows, so only the bar is above the content
+      // a section is current once its top passes 40% of the screen (at least below the bar, which is all that sits above the
+      // content while it shows), so the one being read is underlined, not the one before it that has just scrolled away
+      const line = Math.max(72 + 24, window.innerHeight * 0.4);
       let current = sections[0]?.id;
       for (const s of sections) {
         const el = document.getElementById(s.id);

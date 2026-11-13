@@ -8,7 +8,7 @@ const ITEMS = [
   { icon: "icon-badge", title: "Approved providers only", text: "All courses on our platform undergo thorough manual screening to ensure the utmost quality." },
   { icon: "icon-friend", title: TEAM.trust.title, text: TEAM.trust.text },
   // online booking and payment (with pay by invoice for businesses) come in Milestone 4; until then a place is booked by phone
-  { icon: "icon-message", title: "Book by phone", text: `Online booking is coming soon. Call us on ${topBar.phone} and we'll book your place with you.` },
+  { icon: "icon-message", title: "Book by phone", text: `Online payment is coming soon. Until then, call us on ${topBar.phone} and we'll confirm your place with you.` },
 ];
 
 export default function TrustBoxes() {

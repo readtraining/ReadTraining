@@ -34,14 +34,14 @@ export const basket = {
     badge: "Required for your SIA licence",
     title: "First aid qualification required",
     text: "To get your SIA licence you must hold an Emergency First Aid at Work qualification (or higher).",
-    addText: "For {price}, you can add Emergency First Aid at Work and complete it as part of your course, with no extra training days. You also get a separate first aid certificate.",
+    addText: "For {price}, you can add Emergency First Aid at Work: a 1-day course with its own certificate, which your SIA licence application needs.",
     haveTitle: "Already have a first aid certificate?",
     haveRules: ["Bring the original certificate to your course", "It must have been taken in person (online courses aren't accepted)", "It must stay valid for at least 12 months after your course starts"],
     pick: "Choose one to continue",
     addButton: "Add first aid for {price}",
     have: { label: "I already have a valid first aid certificate", note: "Bring the original certificate. It must have been taken in person and stay valid for at least 12 months after your course.", short: "You have a valid first aid certificate (bring the original)" },
     // the client's own price: "Course + first aid" is £70 more than the course alone (data/courseGuides.js packages)
-    add: { label: "Add Emergency First Aid at Work", note: "Completed as part of your course, with no extra training days. You also get a separate certificate.", price: 70, short: "Emergency First Aid at Work added" },
+    add: { label: "Add Emergency First Aid at Work", note: "A 1-day course with its own certificate.", price: 70, short: "Emergency First Aid at Work added" },
     change: "Change",
   },
 

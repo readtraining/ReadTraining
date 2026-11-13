@@ -7,7 +7,7 @@ import { methodName } from "@/lib/taxonomy";
 // A booking mode is one of the catalogue's delivery methods (or team training in-house); its name always comes from the
 // catalogue list, so the course page, basket, provider pages and admin all say the same word.
 export const MODE_METHOD = { classroom: "classroom", online: "live-online", ondemand: "self-paced" };
-export const modeLabel = (mode) => (mode === "inhouse" ? "In-house" : methodName(MODE_METHOD[mode]));
+export const modeLabel = (mode) => (mode === "inhouse" ? "Team training" : methodName(MODE_METHOD[mode]));
 export const bookableModes = (course) => ["classroom", "online", "ondemand"].filter((m) => course.sessions.some((s) => s.mode === m));
 export const firstSession = (course, mode) => course.sessions.filter((s) => s.mode === mode).reduce((best, s) => (!best || s.price < best.price ? s : best), null);
 // The study method of the course's cheapest date: a search card says "From" that price, so its date pop-up opens there.

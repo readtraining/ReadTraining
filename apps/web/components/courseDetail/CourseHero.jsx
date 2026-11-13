@@ -6,11 +6,12 @@ import { formatPrice, getSubjectLabel, getSubLabel, savePercent } from "@/lib/co
 import Link from "next/link";
 import { CATALOGUE_HREF, QUOTE_HREF, coursePath } from "@/lib/routes";
 import { trustFigures } from "@/lib/siteContent";
+import { TEAM } from "@/lib/teamTraining";
 
 const CATALOGUE = CATALOGUE_HREF;
 
-// Hero, in this order: breadcrumb, badge, title, summary, provider link, the price row with Book now and "Book for my team" (a
-// quote for this course), then Read Training's rating (the site's trust numbers, Admin › Site content: our Google rating and its
+// Hero, in this order: breadcrumb, badge, title, summary, provider link, the price row with Book now and "Get a team quote" (a
+// quote for this course, lib/teamTraining.js), then Read Training's rating (the site's trust numbers, Admin › Site content: our Google rating and its
 // number of reviews, worded as ours, not the course's; left out until an admin has entered one).
 
 // How much of each of the five stars to fill (4.9: four full stars and nine-tenths of the fifth), as the home page's hero does.
@@ -55,7 +56,7 @@ export default function CourseHero({ course }) {
           )}
           <div className="rt-cd__hctas">
             <BookNow />
-            <Link href={`${QUOTE_HREF}?course=${course.slug}`} className="button -md -outline-white text-white rt-cd__hteam">Book for my team</Link>
+            <Link href={`${QUOTE_HREF}?course=${course.slug}`} className="button -md -outline-white text-white rt-cd__hteam">{TEAM.cta}</Link>
           </div>
         </div>
 

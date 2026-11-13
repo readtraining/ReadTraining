@@ -2257,8 +2257,8 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-lc > .rt-lc__card { margin-bottom: 12px; } /* the space between rows of cards: a grid row-gap would also open up between the shared rows inside each card */
 @container rt-lo (min-width: 412px) { .rt-lc.-n2, .rt-lc.-n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container rt-lo (min-width: 624px) { .rt-lc.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-/* wide: always four columns, so a card is the same size however many options a course has (two cards keep a quarter each, not half) */
-@container rt-lo (min-width: 836px) { .rt-lc.rt-lc { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* wide: four cards in one row; two or three cards share the full width (no empty columns beside them) */
+@container rt-lo (min-width: 836px) { .rt-lc.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 /* Each card spans five rows of the option grid and shares them (subgrid): badge, title, points, "+ more", price. Parts line up
    across a row of cards; a card alone in its row is only as tall as its own content. Empty parts take no space. */
 .rt-lc__card { position: relative; display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; align-content: start; box-sizing: border-box; min-width: 0; padding: 16px; border: 1px solid var(--cd-border-strong); background: var(--cd-surface); cursor: pointer; transition: border-color 0.15s ease; }
@@ -7132,7 +7132,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cd__learn .rt-cd__checks + .rt-cd__lead { margin-top: 4px; }
 .rt-cd__learn > .rt-cd__link { display: inline-flex; align-items: center; margin-top: 4px; }
 .rt-cg__yes { display: inline-flex; align-items: center; gap: 8px; }
-.rt-cg__no { color: var(--cd-muted); }
+.rt-cg__no { display: inline-flex; align-items: center; gap: 8px; color: var(--cd-muted); }
+.rt-cg__x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--cd-band); font-size: 8px; color: var(--cd-muted); }
 .rt-cg__compare th:nth-child(2), .rt-cg__compare th:nth-child(3) { width: 140px; }
 .rt-cg__exams th:nth-child(2), .rt-cg__exams th:nth-child(3) { width: 96px; }
 .rt-cg__exams th:nth-child(4) { width: 120px; }
@@ -7193,12 +7194,24 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-preview__back { font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 /* ---------- HUMAN CHECK (lib/humanCheck.js) ----------
    Cloudflare Turnstile runs invisibly; in the rare case it wants a click, its small box shows here, above everything */
+/* the scrollbar's space is always kept, so the page (and its fixed and sticky bars) doesn't move sideways when a pop-up stops it
+   scrolling (PopShell) */
+html { scrollbar-gutter: stable; }
 .rt-humancheck { position: fixed; z-index: 3000; bottom: 24px; left: 50%; transform: translateX(-50%); }
 .rt-humancheck:empty { display: none; }
 
 /* ---- "Choose your package" (PackageChooser): a date or self-paced course sold in a provider's price plan --------------- */
 /* the pop-up widens for 3 or 4 packages side by side; phones: one under another, full screen as every booking pop-up */
-@media (min-width: 576px) { .rt-dd__panel:has(.rt-pk__grid.-n3) { width: 880px; } .rt-dd__panel:has(.rt-pk__grid.-n4) { width: 1120px; } .rt-dd__panel:has(.rt-pk__list) { min-height: 0; } }
+/* the pop-up widens for 3 or 4 packages side by side, and when a booking's steps include them (PopShell `wide`) every step of it
+   keeps that width, so it doesn't jump between the dates, the packages and first aid; phones: full screen as every booking pop-up */
+@media (min-width: 576px) {
+  .rt-dd__panel:has(.rt-pk__grid.-n3), .rt-dd__panel.-wide3 { width: 880px; }
+  .rt-dd__panel:has(.rt-pk__grid.-n4), .rt-dd__panel.-wide4 { width: 1120px; }
+  .rt-dd__panel:has(.rt-pk__list) { min-height: 0; }
+  .rt-dd__panel.-wide3, .rt-dd__panel.-wide4 { min-height: min(560px, 88dvh); }
+}
+/* "Step 2 of 3" above a booking step's title */
+.rt-dd__step { margin: 0 0 2px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--cd-brand); }
 .rt-pk__back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 2px 0; border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--cd-brand); cursor: pointer; }
 .rt-pk__back:hover { text-decoration: underline; text-underline-offset: 3px; }
 .rt-pk__back .rt-cd__icon { font-size: 11px; }
@@ -7222,7 +7235,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-pk__features li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-text); list-style: none; }
 .rt-pk__features li.-no { color: var(--cd-muted); }
 .rt-pk__features small { display: block; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
-.rt-pk__mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; font-size: 8px; background: var(--rt-c-success-soft); color: var(--rt-c-success); }
+.rt-pk__mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; font-size: 8px; background: var(--color-purple-3); color: var(--color-purple-1); } /* the page's tick (.rt-cd__check) */
 .rt-pk__features li.-no .rt-pk__mark { background: var(--cd-band); color: var(--cd-muted); }
 .rt-pk__select { margin-top: auto; } /* Select sits at the foot of every card, in one line across the row */
 .rt-pk__card > :nth-last-child(2) { margin-bottom: 10px; }
@@ -7251,7 +7264,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-fa__h { margin: 4px 0 0; font-size: 15px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
 .rt-fa__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .rt-fa__list li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-text); list-style: none; }
-.rt-fa__list .rt-cd__icon { margin-top: 4px; font-size: 10px; color: var(--rt-c-success); }
+.rt-fa__list .rt-cd__icon { margin-top: 4px; font-size: 10px; color: var(--color-purple-1); }
 .rt-fa__pick { margin: 8px 0 0; padding-top: 12px; border-top: 1px solid var(--cd-border); font-size: 14px; font-weight: 600; text-align: center; color: var(--cd-text); }
 .rt-fa__choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 @media (min-width: 576px) { .rt-fa__choices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

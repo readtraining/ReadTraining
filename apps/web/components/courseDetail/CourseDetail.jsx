@@ -123,7 +123,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
                   <LearningSection />
 
                   <section className="rt-cd__sec" id="overview" aria-labelledby="rt-cd-overview-h">
-                    <h2 id="rt-cd-overview-h">{course.title}</h2>
+                    <h2 id="rt-cd-overview-h">About this course</h2>
                     {course.video && (
                       <div className="rt-cd__video">
                         <iframe src={course.video} title={`Video: ${course.title}`} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />

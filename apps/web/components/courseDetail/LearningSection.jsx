@@ -47,6 +47,8 @@ export default function LearningSection() {
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const rows = course.sessions.filter((s) => s.mode === mode);
   const noDates = course.sessions.length === 0;
+  // "Most popular" means something only between study methods (classroom, live online, self-paced), not against team training
+  const compare = modes.filter((m) => m !== "inhouse").length > 1;
 
   if (!modes.length) {
     return (
@@ -74,9 +76,9 @@ export default function LearningSection() {
                 <input type="radio" name="rt-lo-mode" value={m} checked={on} onChange={() => setMode(m)} aria-labelledby={`rt-lc-${m}`} />
                 {/* Every card has the same four parts (badge, title, points, price), some of them empty, so the
                     parts line up across a row of cards (CSS subgrid). */}
-                <span className="rt-lc__top">{course.popularMode === m && <span className="rt-pill -accent">Most popular</span>}</span>
+                <span className="rt-lc__top">{compare && course.popularMode === m && <span className="rt-pill -accent">Most popular</span>}</span>
                 <h3 className="rt-lc__name" id={`rt-lc-${m}`}>{m === "inhouse" ? TEAM.cardTitle : modeLabel(m)}</h3>
-                <ul className="rt-lc__list">{list.slice(0, 2).map((b) => <li key={b}><Check /> <span>{b}</span></li>)}</ul>
+                <ul className="rt-lc__list">{list.map((b) => <li key={b}><Check /> <span>{b}</span></li>)}</ul>
                 <span className="rt-lc__price">
                   {m === "inhouse" ? <span className="rt-lc__quote">{TEAM.quoteText}</span> : <><span>From</span> <strong>{formatPrice(fromFor(m))}</strong></>}
                 </span>
@@ -90,21 +92,12 @@ export default function LearningSection() {
       {mode !== "ondemand" && (
       <div className="rt-lo__dates">
         <div className="rt-lo__dates-head">
-          <h3 className="rt-lo__h">Study options for the {course.title}</h3>
+          <h3 className="rt-lo__h">{isInHouse ? "Team training at your workplace" : "Upcoming dates"}</h3>
         </div>
-
-        {/* The selected option's full list of points shows here as soon as its card is chosen. */}
-        {!isInHouse && BULLETS[mode]?.length > 2 && (
-          <ul className="rt-lc__full">
-            {BULLETS[mode].map((b) => <li key={b}><Check /> <span>{b}</span></li>)}
-          </ul>
-        )}
 
         {isInHouse ? (
           <div className="rt-lo__inhouse">
-            <ul className="rt-lc__full rt-lc__full--cols">
-              {BULLETS.inhouse.map((b) => <li key={b}><Check /> <span>{b}</span></li>)}
-            </ul>
+            <p className="rt-cd__lead">{TEAM.line}</p>
             <div className="rt-lc__cta">
               <Link href={quoteHref(course)} className="button -md -outline-purple-1 text-purple-1">{TEAM.cta}</Link>
             </div>

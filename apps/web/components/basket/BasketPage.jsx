@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useContextElement } from "@/context/Context";
+import { MERGED_KEY, useContextElement } from "@/context/Context";
 import { basket as copy } from "@/data/basket";
 import { basketIssues, basketTotals, bookingSteps, choosePackage, isSelected, lineFor, lineKey, mergeLines, needsFirstAid, promoFor } from "@/lib/basket";
 import { useSkillSaver } from "@/lib/useSkillSaver";
@@ -36,6 +36,7 @@ export default function BasketPage({ recommended }) {
   const [dates, setDates] = useState(null); // { key, detail, mode, selectedId } while the date pop-up is in use
   const [datesOpen, setDatesOpen] = useState(false);
   const [announce, setAnnounce] = useState("");
+  const [merged, setMerged] = useState(null); // { title, quantity }: a date booked again joined its line (context/Context.js)
   const allRef = useRef(null);
   useHeaderOffset();
 
@@ -43,6 +44,11 @@ export default function BasketPage({ recommended }) {
   useEffect(() => {
     try {
       setPromo(promoFor(window.sessionStorage.getItem(PROMO_KEY)));
+      const note = window.sessionStorage.getItem(MERGED_KEY);
+      if (note) {
+        window.sessionStorage.removeItem(MERGED_KEY);
+        setMerged(JSON.parse(note));
+      }
     } catch {}
     setReady(true);
   }, []);
@@ -137,6 +143,12 @@ export default function BasketPage({ recommended }) {
 
       <section className="rt-bk layout-pt-md layout-pb-lg" aria-label="Your courses">
         <div className="container">
+          {merged && !removed && (
+            <div className="rt-bk__undo" role="status">
+              <span><b>{merged.title}</b> on that date was already in your basket, so it now has {merged.quantity} {merged.quantity === 1 ? "delegate" : "delegates"}.</span>
+              <button type="button" onClick={() => setMerged(null)}>OK</button>
+            </div>
+          )}
           {removed && (
             <div className="rt-bk__undo" role="status">
               <span>Removed <b>{removed.item.title}</b>.</span>
