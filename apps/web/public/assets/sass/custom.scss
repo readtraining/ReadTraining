@@ -2467,11 +2467,13 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 
 /* Course features: ONE line of badges. Badges that do not fit on the line are clipped away whole (the row is exactly one badge high),
    so the row never wraps onto a second line. Text uses the same style as the body (15px, 500). */
-.rt-fx { margin: 0; padding: 0; list-style: none;  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; } /* wraps, so every feature shows (up to 8, CourseFeatures.jsx) */
-.rt-fx li { margin: 0; list-style: none;  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: 42px; min-height: 0; padding: 0 16px 0 12px; border: 1px solid var(--cd-card-border); border-radius: 999px; background: var(--cd-surface); font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-dark-1); white-space: nowrap; }
-.rt-fx li > .rt-cd__icon { font-size: 18px; color: var(--cd-brand); }
-.rt-fx li:hover { border-color: var(--cd-brand); background: var(--cd-brand-subtle); }
-@media (max-width: 575px) { .rt-fx li { max-width: 100%; height: auto; min-height: 42px; padding-block: 10px; white-space: normal; } } /* a long feature wraps inside its badge on a phone */
+/* Course features (CourseFeatures.jsx): a plain list of key facts, an icon in a pale purple circle and its words; two columns from
+   576px, one on phones. Information only: no borders, no hover, nothing that looks like a button. */
+.rt-fx { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px 24px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 576px) { .rt-fx { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rt-fx li { display: flex; align-items: center; gap: 12px; margin: 0; list-style: none; font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-dark-1); }
+.rt-fx__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--cd-brand-subtle); }
+.rt-fx__icon .rt-cd__icon { font-size: 16px; color: var(--cd-brand); }
 
 .rt-cd .rt-cd__fcard h2 { font-weight: 700; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 14px; }
 
