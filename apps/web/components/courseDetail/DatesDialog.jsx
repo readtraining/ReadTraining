@@ -339,7 +339,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
 // Book now. A date sold in packages, or on a course the SIA licence needs first aid for, goes on to those steps in the same pop-up
 // (PackageChooser BookingSteps), with the delegates chosen and "Back to dates"; what is chosen goes with the booking. Focus goes
 // back to the opener.
-export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode, modes, onMode, selectedId, onPick, onBook }) {
+export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode, modes, onMode, selectedId, onPick, onBook, preferPkg = null }) {
   const [pkgFor, setPkgFor] = useState(null); // { id, qty }: the date whose steps are showing
   useEffect(() => {
     if (datesOpen) setPkgFor(null); // every opening starts on the dates
@@ -347,7 +347,13 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
   const book = onBook
     ? (id, qty) => {
         const s = course.sessions.find((x) => x.id === id);
-        if (s?.packages || (s && firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic }))) setPkgFor({ id, qty });
+        const aid = s && firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic });
+        // the package already chosen on the page, when this date has it: its step is skipped
+        const pre = preferPkg && s?.packages?.find((p) => p.key === preferPkg);
+        if (pre) {
+          if (aid && !pre.firstAid) setPkgFor({ id, qty, pkg: pre.key });
+          else onBook(id, qty, pre.key, pre.firstAid ? "bundle" : null);
+        } else if (s?.packages || aid) setPkgFor({ id, qty });
         else onBook(id, qty);
       }
     : undefined;
@@ -355,14 +361,15 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
   if (!course) return null;
   // booking a date here goes through these steps: the date, then its package (when sold in packages), then first aid (when the
   // licence needs it): "Step 1 of 3" on the dates
-  const steps = onBook ? 1 + (course.sessions.some((s) => s.packages?.length) ? 1 : 0) + (course.sessions.some((s) => firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic })) ? 1 : 0) : 1;
+  const prePkg = preferPkg && course.sessions.flatMap((s) => s.packages || []).find((p) => p.key === preferPkg);
+  const steps = onBook ? 1 + (course.sessions.some((s) => s.packages?.length) && !prePkg ? 1 : 0) + (course.sessions.some((s) => firstAidFor({ mode: s.mode, subject: course.subject, sub: course.sub, topic: course.topic })) && !prePkg?.firstAid ? 1 : 0) : 1;
   // the most packages a date of this course has: the whole pop-up takes the package step's width from the start
   const wide = Math.max(0, ...course.sessions.map((s) => (onBook ? s.packages?.length || 0 : 0)));
   return (
     <PopShell open={datesOpen} onClose={closeDates} labelledBy="rt-dd-title" book wide={wide}>
       {(isDesktop) =>
         pkgSession ? (
-          <BookingSteps titleId="rt-dd-title" course={course} session={pkgSession} quantity={pkgFor.qty} needsAid={firstAidFor({ mode: pkgSession.mode, subject: course.subject, sub: course.sub, topic: course.topic })}
+          <BookingSteps titleId="rt-dd-title" course={course} session={pkgSession} quantity={pkgFor.qty} preset={pkgFor.pkg || null} needsAid={firstAidFor({ mode: pkgSession.mode, subject: course.subject, sub: course.sub, topic: course.topic })}
             onDone={(key, aid) => onBook(pkgSession.id, pkgFor.qty, key, aid)} onBack={() => setPkgFor(null)} onClose={() => closeDates()} />
         ) : (
           <Panel key={mode} course={course} mode={mode} modes={modes} onMode={onMode} selectedId={selectedId} onPick={onPick} onBook={book} onClose={() => closeDates()} isDesktop={isDesktop} steps={steps} />
@@ -376,7 +383,7 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
 // books it and goes to the basket (as Hurak's).
 // When the course runs both, the pop-up's own tabs switch between their dates; the page follows only once a date is chosen.
 export default function DatesDialog() {
-  const { course, mode, session, selectSession, datesOpen, closeDates, book } = useBooking();
+  const { course, mode, session, selectSession, datesOpen, closeDates, book, pkgPref } = useBooking();
   const dated = useMemo(() => ["classroom", "online"].filter((m) => course.sessions.some((s) => s.mode === m)), [course]);
   const [view, setView] = useState(mode);
   useEffect(() => {
@@ -392,5 +399,5 @@ export default function DatesDialog() {
   if (mode === "ondemand" || mode === "inhouse") return null;
   if (!session) return null;
   const shown = dated.includes(view) ? view : mode;
-  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={shown} modes={dated.length > 1 ? dated : undefined} onMode={setView} selectedId={session.id} onPick={pick} onBook={book} />;
+  return <DatesPicker open={datesOpen} onClose={closeDates} course={course} mode={shown} modes={dated.length > 1 ? dated : undefined} onMode={setView} selectedId={session.id} onPick={pick} onBook={book} preferPkg={pkgPref} />;
 }

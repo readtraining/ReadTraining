@@ -2045,11 +2045,8 @@ main#rt-cd-main { overflow: clip; }
 
 @media (prefers-reduced-motion: reduce) { .rt-bk__fold { transition: none; }   }
 
-/* ---------- Learning options: radio cards, then dates ---------- */
 
-.rt-lo__h { margin: 0 0 12px; font-size: 18px; line-height: 24px; font-weight: 700; }
 
-.rt-lo__inhouse p { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
 
 /* ---------- Long text with a fade ---------- */
 .rt-clamp__body.is-clamped { position: relative; overflow: hidden; }
@@ -2155,8 +2152,6 @@ main#rt-cd-main { overflow: clip; }
 
 /* Study options: heading and location filter on one line, two-line rows */
 
-.rt-lo__dates-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 12px; }
-.rt-lo__dates-head .rt-lo__h { margin: 0; }
 
 /* the template sets `ul, li { list-style: none }` on the items themselves, so the bullets are restored on the items */
 .rt-cd ul.rt-cd__list li, .rt-cd ul.rt-cd__mod-topics li { display: list-item; margin: 0 0 8px; padding-left: 2px; list-style: disc; }
@@ -2243,53 +2238,9 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-bs__trust { display: grid; gap: 2px; margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
 .rt-bf { display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; border-top: 1px solid var(--cd-border); background: var(--color-white); padding: 6px 14px; }
 
-/* LEARNING OPTIONS: equal cards (design B) */
-.rt-lc__fs { margin: 0; padding: 0; border: 0; min-width: 0; }
-/* Option cards are all the same size. Columns follow the room the section really has (a container query, because the sidebar
-   changes the column width at each breakpoint), so a card is never narrower than about 200px and no card is left alone in a row:
-   4 options: one row, else 2 x 2, else one column. 3 options: one row, else one column. 2 options: side by side, else one column. */
 .rt-lo { container: rt-lo / inline-size; }
-.rt-lc { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 12px; row-gap: 0; align-items: stretch; margin-bottom: -12px; }
-.rt-lc > .rt-lc__card { margin-bottom: 12px; } /* the space between rows of cards: a grid row-gap would also open up between the shared rows inside each card */
-@container rt-lo (min-width: 412px) { .rt-lc.-n2, .rt-lc.-n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@container rt-lo (min-width: 624px) { .rt-lc.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-/* wide: four cards in one row; two or three cards share the full width (no empty columns beside them) */
-@container rt-lo (min-width: 836px) { .rt-lc.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-/* Each card spans five rows of the option grid and shares them (subgrid): badge, title, points, "+ more", price. Parts line up
-   across a row of cards; a card alone in its row is only as tall as its own content. Empty parts take no space. */
-.rt-lc__card { position: relative; display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; align-content: start; box-sizing: border-box; min-width: 0; padding: 16px; border: 1px solid var(--cd-border-strong); background: var(--cd-surface); cursor: pointer; transition: border-color 0.15s ease; }
-.rt-lc__card:hover { border-color: var(--cd-brand); }
-.rt-lc__card.is-selected { padding: 15px; border: 2px solid var(--cd-brand); background: var(--cd-brand-subtle); }
-.rt-lc__card input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
-.rt-lc__card:has(input:focus-visible) { outline: 2px solid var(--cd-brand); outline-offset: 2px; }
-.rt-lc__top { display: flex; align-items: flex-start; }
-.rt-lc__top:not(:empty) { margin-bottom: 10px; }
-.rt-lc__name { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 700; color: var(--cd-text); }
-.rt-lc__list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.rt-lc__list:not(:empty) { margin-top: 10px; }
-.rt-lc__list li, .rt-lc__full li { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
-.rt-lc__list .rt-cd__check, .rt-lc__full .rt-cd__check { flex: none; margin-top: 2px; }
-.rt-lc__card.is-selected .rt-cd__check { background: var(--color-white); } /* the selected card is already purple-3 */
-.rt-lc__card.is-selected .rt-pill.-accent { background: var(--color-white); border-color: var(--color-white); } /* the badge keeps its box on the purple-3 card */
-/* "+ N more" is a hint, not a control: choosing the card shows the full list under the cards */
-.rt-lc__price { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--cd-border); display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--cd-muted); }
-.rt-lc__price strong { font-size: 17px; line-height: 24px; font-weight: 700; color: var(--cd-text); }
-.rt-lc__quote { font-size: 13px; line-height: 24px; font-weight: 600; color: var(--cd-muted); text-transform: none; }
-.rt-lc__full { display: grid; gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; }
-.rt-lc__full li { font-size: 14px; color: var(--cd-text); }
-@media (min-width: 768px) { .rt-lc__full--cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-.rt-lc__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 16px; }
-.rt-lo__dates { margin-top: 16px; }
-.rt-lo__inhouse { justify-items: start; gap: 8px; display: block; }
 
-/* SESSION DATES: summary row + "choose a date" pop-up */
-.rt-ds { display: flex; align-items: center; gap: 14px; box-sizing: border-box; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--cd-border-strong); background: var(--cd-surface); }
-.rt-ds__icon { font-size: 20px; color: var(--cd-brand); }
-.rt-ds__text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.rt-ds__text strong { font-size: 14px; line-height: 20px; font-weight: 700; color: var(--cd-text); }
-.rt-ds__text span { font-size: 13px; line-height: 18px; color: var(--cd-muted); }
-@media (max-width: 479px) { .rt-ds { flex-wrap: wrap; } .rt-ds__text { flex: 1 1 calc(100% - 40px); } .rt-ds .button { width: 100%; } }
 .rt-bs__change { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; }
 
 .rt-dd { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: transparent; transition: background-color 0.2s ease; }
@@ -2408,12 +2359,11 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 }
 
 /* Radio circles removed from the Learning options cards and the booking card (the real radio inputs stay for keyboard and screen readers) */
-.rt-lc__card .rt-bs__radio, .rt-bk .rt-bs__radio { display: none; }
+.rt-bk .rt-bs__radio { display: none; }
 
 /* COURSE FEATURES v2: one row of rounded icon badges (Hurak style) */
 .rt-cd__fcard { z-index: 1; box-sizing: border-box; background: var(--cd-surface); border: 1px solid var(--cd-border); position: static; margin-top: 32px; box-shadow: none; border-radius: 16px; padding: 20px 24px; }
 
-.rt-lc__full--cols { margin-top: 0; display: flex; flex-direction: column; gap: 8px; }
 
 /* ===================================================================================================
    QA FIXES (course detail). Later rules, so they win over the earlier overrides above.
@@ -2455,7 +2405,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
    =================================================================================================== */
 .rt-cd #rt-cd-title, .rt-cd h1 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h1-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h1-ls); }
 .rt-cd .rt-cd__sec h2, .rt-cd .rt-cd__mod-head h2, .rt-cd__sec > h2 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h2-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h2-ls); }
-.rt-cd h3, .rt-cd .rt-cd__h3, .rt-cd .rt-lo__h { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
+.rt-cd h3, .rt-cd .rt-cd__h3 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
 .rt-cd__prose p, .rt-cd__sec > p, .rt-cd .rt-cd__list li, .rt-cd__checks li, .rt-cd .rt-clamp p, .bz-acc__inner p, .rt-cd__mod-topics li, .rt-cd__table td { font-size: 15px; line-height: 1.7; font-weight: 400; color: var(--color-light-1); }
 .rt-cd .rt-cd__acc .bz-acc__btn { font-size: 17px; font-weight: 600; }
 /* a unit with no text, among units that open: a plain row in the list */
@@ -2501,7 +2451,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* the course page's surface; not .rt-dd, whose backdrop must stay clear until it fades to the tint */
 .rt-cd { background: var(--cd-surface); }
 .rt-cd .rt-cd__fcard, .rt-cd .rt-stats, .rt-cd .rt-bk { border-radius: var(--cd-card-radius); border-color: var(--cd-card-border); }
-.rt-cd .rt-lc__card, .rt-cd .rt-ds, .rt-cd .rt-cd__staff { border-radius: var(--cd-card-radius); }
+.rt-cd .rt-cd__staff { border-radius: var(--cd-card-radius); }
 .rt-cd .rt-stats, .rt-cd .rt-bk { overflow: hidden; }
 
 /* TEST PREP HUB (/test-prep). Built from the site's own parts: the catalogue hero (.rt-cat__hero, .rt-cat-search,
@@ -7111,7 +7061,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm__link > span:not(.rt-adm__count) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- Course guide sections on the course page (components/courseDetail/CourseGuide.jsx, data/courseGuides.js). They reuse the
-   page's own parts (.rt-cd__sec, .rt-cd__learn, .rt-cd__checks, .rt-cd__table, .rt-lc cards, .rt-benefit-card, .rt-cd__staff);
+   page's own parts (.rt-cd__sec, .rt-cd__learn, .rt-cd__checks, .rt-cd__table, .rt-benefit-card, .rt-cd__staff);
    these rules only fit them to the new content. ------------------------------------------------------------------------------- */
 .rt-cd__lead.rt-cg__note { margin: 12px 0 0; }
 /* a section that ends on a table, or opens with the mock test callout, keeps the page's one 36px gap between sections */
@@ -7138,11 +7088,51 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__exams th:nth-child(4) { width: 120px; }
 .rt-cg__costs th:nth-child(2) { width: 220px; }
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
-.rt-cg__pkgs { padding: 0; list-style: none; }
-.rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
-/* the client's packages are information here (chosen when a date is booked): no pick on hover */
-.rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border); }
-.rt-cg__pkgs > li { margin: 0; list-style: none; }
+/* ---- Learning options (LearningSection): one card per way of studying. Icon, name and price on one row; what it offers; a footer
+   with what is open and the card's one button (the card itself isn't clickable). Two across from 560px of column; a third card
+   takes the full row; one column on phones. The footers line up across a row (the list grows). ------------------------------- */
+.rt-opts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; }
+@container rt-lo (min-width: 560px) {
+  .rt-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rt-opts.-n3 > .rt-opt:last-child { grid-column: 1 / -1; }
+}
+.rt-opt { display: flex; flex-direction: column; gap: 16px; margin: 0; padding: 20px; list-style: none; border: 1px solid var(--cd-border-strong); border-radius: var(--cd-card-radius); background: var(--cd-surface); }
+.rt-opt__head { display: flex; align-items: center; gap: 12px; }
+.rt-opt__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--cd-brand-subtle); color: var(--cd-brand); }
+.rt-opt__icon .rt-cd__icon { font-size: 18px; color: var(--cd-brand); }
+.rt-cd .rt-opt__name { margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: var(--cd-text); }
+.rt-opt__price { display: flex; flex-direction: column; align-items: flex-end; margin: 0 0 0 auto; line-height: 1.15; text-align: right; }
+.rt-opt__price span { font-size: 12px; color: var(--cd-muted); }
+.rt-opt__price strong { font-size: 18px; font-weight: 700; color: var(--cd-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rt-opt__list { display: flex; flex-direction: column; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.rt-opt__list li { display: flex; align-items: flex-start; gap: 10px; margin: 0; list-style: none; font-size: 14px; line-height: 20px; color: var(--cd-muted); }
+.rt-opt__list .rt-cd__check { flex: none; margin-top: 1px; }
+.rt-opt__foot { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--cd-border); }
+.rt-opt__meta { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-size: 13px; line-height: 19px; color: var(--cd-muted); }
+.rt-opt__meta .rt-cd__icon { flex: none; margin-top: 1px; font-size: 17px; color: var(--cd-brand); }
+.rt-opt__meta strong { display: block; font-weight: 600; color: var(--cd-text); }
+.rt-opt__btn.button { width: 100%; height: 44px; padding: 0 16px; font-size: 15px; font-weight: 600; }
+
+/* ---- Packages (PackagePicker): side by side from 624px of column (one under another below), the parts of every card on shared
+   rows (subgrid), so names, prices, lists and buttons line up across the row. "Most popular": a badge on its card's border and a
+   purple border, never a fill (that would read as selected). ------------------------------------------------------------------ */
+.rt-pkgs { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 14px; row-gap: 0; margin: 12px 0 -14px; padding: 0; list-style: none; }
+@container rt-lo (min-width: 624px) { .rt-pkgs.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .rt-pkgs.-n2, .rt-pkgs.-n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rt-pkg { position: relative; display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 14px; margin: 0 0 14px; padding: 22px 18px 18px; list-style: none; border: 1px solid var(--cd-border-strong); border-radius: var(--cd-card-radius); background: var(--cd-surface); }
+.rt-pkg.-popular { border-color: var(--cd-brand); box-shadow: 0 0 0 1px var(--cd-brand); }
+.rt-pkg__badge { position: absolute; top: 0; left: 16px; transform: translateY(-50%); padding: 3px 12px; border-radius: 999px; background: var(--cd-brand); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--color-white); }
+.rt-pkg__head { display: flex; flex-direction: column; gap: 4px; }
+.rt-cd .rt-pkg__name { margin: 0; font-size: 17px; line-height: 23px; font-weight: 700; color: var(--cd-text); }
+.rt-pkg__for { margin: 0; font-size: 13px; line-height: 18px; color: var(--cd-muted); }
+.rt-pkg__price { display: flex; flex-direction: column; gap: 2px; margin: 0; font-variant-numeric: tabular-nums; }
+.rt-pkg__price span { font-size: 12px; line-height: 16px; color: var(--cd-muted); }
+.rt-pkg__price strong { font-size: 28px; line-height: 32px; font-weight: 800; letter-spacing: -0.01em; color: var(--cd-text); }
+.rt-pkg__price small { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--rt-c-success); }
+.rt-pkg__price s { font-weight: 400; color: var(--cd-muted); }
+.rt-pkg__list { display: flex; flex-direction: column; gap: 9px; margin: 0; padding: 14px 0 0; border-top: 1px solid var(--cd-border); list-style: none; }
+.rt-pkg__list li { display: flex; align-items: flex-start; gap: 9px; margin: 0; list-style: none; font-size: 13.5px; line-height: 19px; color: var(--cd-muted); }
+.rt-pkg__list .rt-cd__check { flex: none; margin-top: 1px; }
+.rt-pkg__btn.button { align-self: end; width: 100%; height: 44px; padding: 0 12px; font-size: 15px; font-weight: 600; white-space: nowrap; }
 .rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
@@ -7281,12 +7271,12 @@ html { scrollbar-gutter: stable; }
 .rt-dd__panel:has(.rt-fa) { min-height: 0; }
 
 /* ---- The booking pop-up (PopShell `book`: the dates, the packages, first aid). One width for every course and every step of a
-   booking (880px, 1120px when a course has four packages side by side; never over 94% of the screen), so it doesn't jump
+   booking (800px, Bootstrap's large size; 1120px when a course has four packages side by side; never over 94% of the screen), so it doesn't jump
    sideways; its height fits each step (the dates keep their minimum), so a short step has no empty space; its list scrolls
    inside. Phones (575px and under): full screen, as every booking pop-up. A container query lays each part out by the pop-up's
    own width, not the screen's. ------------------------------------------------------------------------------------------------ */
 @media (min-width: 576px) {
-  .rt-dd .rt-dd__panel.-book { width: min(94vw, 880px); }
+  .rt-dd .rt-dd__panel.-book { width: min(94vw, 800px); }
   .rt-dd .rt-dd__panel.-book.-wide4 { width: min(94vw, 1120px); }
 }
 .rt-dd__panel.-book { container: rt-book / inline-size; }
