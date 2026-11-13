@@ -3419,6 +3419,10 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 .rt-reviews__empty { max-width: 560px; margin: 32px auto 0; }
 .rt-reviews__more { display: flex; justify-content: center; margin-top: 32px; }
 .rt-reviews__more-n { margin-left: 6px; font-weight: 400; }
+/* a long review cut to six lines (ReviewCard `clamp`), with Read more / Show less under it */
+.rt-reviews__grid .rt-review__quote.-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden; }
+.rt-review__more { align-self: flex-start; margin-top: 8px; padding: 0; border: 0; background: none; color: var(--color-purple-1); font-size: 14px; font-weight: 600; cursor: pointer; }
+.rt-review__more:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* the closing call to action, spaced from the FAQ's tinted band */
 .rt-reviews__cta { padding-top: 64px; }
 

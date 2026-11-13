@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { initials } from "@/components/marketing/parts";
 import { EmptyState } from "@/components/states/States";
 import ReviewStars from "./ReviewStars";
@@ -8,8 +8,33 @@ import SourceLabel from "./SourceLabel";
 
 // One review card (.rt-review, in the reviews grid .rt-reviews__grid): the reviewer first (initials, name, the course the
 // review names), their own stars and, when set, where it was first posted (as text), then the full text with its line
-// breaks.
-export function ReviewCard({ review: r }) {
+// breaks. `clamp`: a long text is cut to six lines with "Read more" under it (it opens in the card), so one long review doesn't
+// stretch its row of cards; the button shows only when the text is really cut.
+function Quote({ text, clamp }) {
+  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    if (!clamp) return;
+    const el = ref.current;
+    const check = () => el && setCut(el.scrollHeight > el.clientHeight + 1);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [text, clamp]);
+  return (
+    <>
+      <blockquote ref={ref} className={`rt-review__quote${clamp && !open ? " -clamp" : ""}`}>{text}</blockquote>
+      {clamp && (cut || open) && (
+        <button type="button" className="rt-review__more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          {open ? "Show less" : "Read more"}
+        </button>
+      )}
+    </>
+  );
+}
+
+export function ReviewCard({ review: r, clamp = false }) {
   return (
     <figure className="rt-review">
       <figcaption className="rt-review__who">
@@ -23,7 +48,7 @@ export function ReviewCard({ review: r }) {
         <ReviewStars rating={r.rating} />
         <SourceLabel label={r.origin} />
       </div>
-      <blockquote className="rt-review__quote">{r.text}</blockquote>
+      <Quote text={r.text} clamp={clamp} />
     </figure>
   );
 }
