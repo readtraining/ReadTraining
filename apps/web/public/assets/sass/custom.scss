@@ -2045,11 +2045,7 @@ main#rt-cd-main { overflow: clip; }
 
 @media (prefers-reduced-motion: reduce) { .rt-bk__fold { transition: none; }   }
 
-/* ---------- Learning options: radio cards, then dates ---------- */
-
-.rt-lo__h { margin: 0 0 12px; font-size: 18px; line-height: 24px; font-weight: 700; }
-
-.rt-lo__inhouse p { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
+/* ---------- Learning options: radio cards ---------- */
 
 /* ---------- Long text with a fade ---------- */
 .rt-clamp__body.is-clamped { position: relative; overflow: hidden; }
@@ -2282,9 +2278,6 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-lc__full li { font-size: 14px; color: var(--cd-text); }
 @media (min-width: 768px) { .rt-lc__full--cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-.rt-lc__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 16px; }
-.rt-lo__dates { margin-top: 16px; }
-.rt-lo__inhouse { justify-items: start; gap: 8px; display: block; }
 
 .rt-bs__change { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; }
 
@@ -2451,7 +2444,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
    =================================================================================================== */
 .rt-cd #rt-cd-title, .rt-cd h1 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h1-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h1-ls); }
 .rt-cd .rt-cd__sec h2, .rt-cd .rt-cd__mod-head h2, .rt-cd__sec > h2 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h2-size); line-height: var(--rt-h2-lh); letter-spacing: var(--rt-h2-ls); }
-.rt-cd h3, .rt-cd .rt-cd__h3, .rt-cd .rt-lo__h { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
+.rt-cd h3, .rt-cd .rt-cd__h3 { font-weight: var(--rt-heading-weight); font-size: var(--rt-page-h3-size); line-height: var(--rt-h3-lh); }
 .rt-cd__prose p, .rt-cd__sec > p, .rt-cd .rt-cd__list li, .rt-cd__checks li, .rt-cd .rt-clamp p, .bz-acc__inner p, .rt-cd__mod-topics li, .rt-cd__table td { font-size: 15px; line-height: 1.7; font-weight: 400; color: var(--color-light-1); }
 .rt-cd .rt-cd__acc .bz-acc__btn { font-size: 17px; font-weight: 600; }
 /* a unit with no text, among units that open: a plain row in the list */

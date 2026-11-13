@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { quoteHref, useBooking } from "./BookingProvider";
+import { useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
 import { formatPrice } from "@/lib/format";
 import DatesDialog from "./DatesDialog";
@@ -20,10 +19,11 @@ const BULLETS = {
 };
 
 // Learning options: the one place where the choice is made. Every option (Classroom, Live online, Self-paced, team training) is
-// the same card; the grid picks one row, 2 x 2 or a single column from the number of options and the room available. The dates for the selected option follow,
-// then the staff training and exam prep boxes. Choosing never moves the page.
+// the same card; the grid picks one row, 2 x 2 or a single column from the number of options and the room available. Nothing
+// follows the cards: the booking card beside them (and the phone's bottom bar) shows the chosen option's dates and Book now, or
+// for team training its Get a team quote. Choosing never moves the page.
 export default function LearningSection() {
-  const { course, modes, mode, setMode, isInHouse } = useBooking();
+  const { course, modes, mode, setMode } = useBooking();
 
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
   const noDates = course.sessions.length === 0;
@@ -68,20 +68,7 @@ export default function LearningSection() {
         </div>
       </fieldset>
 
-      {/* team training chosen: how it works and its quote button (the dates are in the booking card's Book now) */}
-      {isInHouse && (
-        <div className="rt-lo__dates">
-          <h3 className="rt-lo__h">Team training at your workplace</h3>
-          <div className="rt-lo__inhouse">
-            <p className="rt-cd__lead">{TEAM.line}</p>
-            <div className="rt-lc__cta">
-              <Link href={quoteHref(course)} className="button -md -outline-purple-1 text-purple-1">{TEAM.cta}</Link>
-            </div>
-          </div>
-        </div>
-      )}
       <DatesDialog />
-
     </section>
   );
 }
