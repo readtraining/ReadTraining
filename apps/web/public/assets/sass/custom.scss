@@ -2474,6 +2474,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-fx li { display: flex; align-items: center; gap: 12px; margin: 0; list-style: none; font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-dark-1); }
 .rt-fx__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--cd-brand-subtle); }
 .rt-fx__icon .rt-cd__icon { font-size: 16px; color: var(--cd-brand); }
+.rt-fx__icon .icon-check { font-size: 11px; } /* the tick glyph is drawn heavier than the line icons: smaller, so they match */
 
 .rt-cd .rt-cd__fcard h2 { font-weight: 700; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 14px; }
 
