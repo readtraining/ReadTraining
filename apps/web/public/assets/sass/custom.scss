@@ -7280,16 +7280,15 @@ html { scrollbar-gutter: stable; }
 .rt-fa__choices .button { height: auto; min-height: 48px; padding: 10px 14px; white-space: normal; line-height: 1.3; }
 .rt-dd__panel:has(.rt-fa) { min-height: 0; }
 
-/* ---- The booking pop-up (PopShell `book`: the dates, the packages, first aid). One fixed size per screen for every step, so it
-   never jumps; its list scrolls inside. Phones (575px and under): full screen, as every booking pop-up. Tablets: taller, using the
-   screen. Laptops and up: 720px for dates only, 960px when the course has three packages (1120px for four); never over 94% of the
-   screen. Inside, a container query lays each part out by the pop-up's own width, not the screen's. ---------------------------- */
+/* ---- The booking pop-up (PopShell `book`: the dates, the packages, first aid). One width for every course and every step of a
+   booking (880px, 1120px when a course has four packages side by side; never over 94% of the screen), so it doesn't jump
+   sideways; its height fits each step (the dates keep their minimum), so a short step has no empty space; its list scrolls
+   inside. Phones (575px and under): full screen, as every booking pop-up. A container query lays each part out by the pop-up's
+   own width, not the screen's. ------------------------------------------------------------------------------------------------ */
 @media (min-width: 576px) {
-  .rt-dd .rt-dd__panel.-book { width: min(94vw, 720px); height: min(88dvh, 780px); min-height: 0; max-height: none; }
-  .rt-dd .rt-dd__panel.-book.-wide3 { width: min(94vw, 960px); }
+  .rt-dd .rt-dd__panel.-book { width: min(94vw, 880px); }
   .rt-dd .rt-dd__panel.-book.-wide4 { width: min(94vw, 1120px); }
 }
-@media (min-width: 576px) and (min-height: 1000px) { .rt-dd .rt-dd__panel.-book { height: min(80dvh, 920px); } }
 .rt-dd__panel.-book { container: rt-book / inline-size; }
 .rt-dd__panel.-book > .rt-dd__list, .rt-dd__panel.-book > .rt-pk__list, .rt-dd__panel.-book > .rt-fa { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 
