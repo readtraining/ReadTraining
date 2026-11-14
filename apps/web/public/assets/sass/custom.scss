@@ -6396,7 +6396,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-dash__sub { max-width: 62ch; margin: 6px 0 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-dash__quick { display: flex; flex-wrap: wrap; gap: 10px; }
 .rt-dash__grid { display: grid; gap: var(--rt-gap); align-items: start; }
-@media (min-width: 1200px) { .rt-dash__grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } .rt-dash__grid.-even { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* one quarter grid for the whole Dashboard: three quarters + one beside the four number cards' edges, halves below, one gap */
+@media (min-width: 1200px) { .rt-dash__grid { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); } .rt-dash__grid.-even { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-dash__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .rt-dash__title { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-dash__n { min-width: 24px; height: 24px; margin-right: auto; padding: 0 8px; border-radius: 999px; background: var(--rt-c-brand); font-size: var(--rt-text-xs); font-weight: 700; line-height: 24px; text-align: center; color: var(--rt-c-surface); }
@@ -6418,7 +6419,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-dash__status a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--rt-radius-sm); text-decoration: none; }
 .rt-dash__status a:hover { background: var(--rt-c-soft); }
 .rt-dash__status b { font-size: var(--rt-text); font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
-.rt-dash__kpis { display: grid; gap: 16px; }
+.rt-dash__kpis { display: grid; gap: var(--rt-gap); }
 @media (min-width: 576px) { .rt-dash__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1200px) { .rt-dash__kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .rt-dash__kpis li { list-style: none; }
