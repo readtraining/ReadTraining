@@ -85,7 +85,7 @@ export default function ProviderCohortDetail({ cohortId }) {
             <dt>Bookings</dt>
             <dd className="rt-pws-coh__inline">
               <Pill tone={k.bookable && !cancelled ? "ok" : "muted"}>{k.bookable && !cancelled ? "On" : "Off"}</Pill>
-              {edit && !cancelled && <button type="button" className="rt-cd__link" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
+              {edit && !cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
             </dd>
           </div>
           <div><dt>Tutor</dt><dd>{k.tutorName || <span className="rt-adm-muted">Not assigned</span>}</dd></div>
