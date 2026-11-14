@@ -4205,9 +4205,9 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
   .rt-biz__table td small { display: inline; margin: 0 0 0 6px; }
   .rt-biz__act { justify-content: flex-end; }
 }
-/* workspace tables stack into labelled rows from 991px down (decision D4, 14 Nov 2026): the standard table's own phone layout,
-   for tablets too, where 7 to 9 columns are wider than the content area */
-@media (min-width: 768px) and (max-width: 991px) {
+/* workspace tables stack into labelled rows from 1199px down (decision D4, 14 Nov 2026): the standard table's own phone layout,
+   for tablets and, from 992px, beside the sidebar too, where 6 to 9 columns are wider than the content area (about 745px) */
+@media (min-width: 768px) and (max-width: 1199px) {
   .rt-pws .rt-biz__tablecard { padding: 4px 16px; }
   .rt-pws .rt-biz__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-pws .rt-biz__table, .rt-pws .rt-biz__table tbody, .rt-pws .rt-biz__table tr, .rt-pws .rt-biz__table td { display: block; width: 100%; }
@@ -6151,8 +6151,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-pws-coh__details { grid-template-columns: minmax(0, 1fr); }
 }
 /* below 1200px the students table on a cohort's page stacks into labelled rows (as the account tables do on phones), so its
-   dropdowns and menus are never clipped; the cohorts list stays a table down to 768px (one status column, the favourite
-   beside the menu) and stacks on phones */
+   dropdowns and menus are never clipped (the cohorts list stacks with the other workspace tables, decision D4) */
 @media (max-width: 1199px) {
   .rt-pws-coh__students thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-pws-coh__students, .rt-pws-coh__students tbody, .rt-pws-coh__students tr, .rt-pws-coh__students td { display: block; width: 100%; }
@@ -6494,7 +6493,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-rq-reason { min-width: 240px; max-width: 420px; line-height: 1.5; }
 .rt-rq-note { max-width: 220px; }
 .rt-rq-act { white-space: nowrap; }
-@media (max-width: 1199px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
+/* the reason's 240px only where the table has the room (from 1360px, as the Courses table): beside the sidebar below that, all 8 columns fit */
+@media (max-width: 1359px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
 /* phones: the stacked rows keep each cell's small line (date, decision note, email) under its value */
 @media (max-width: 767px) {
   .rt-rq-table td { flex-wrap: wrap; }
