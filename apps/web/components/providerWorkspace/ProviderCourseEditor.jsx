@@ -1288,7 +1288,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
           <>
             <p className="rt-acc__note">Each date (a cohort) has its own {course.method === "classroom" ? "venue, " : "joining link, "}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live; online booking opens in a later update."}</p>
             <div className="rt-pws-ce__dates">
-              <p className="rt-pws-ce__datecount">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}` : "No upcoming dates yet"}</p>
+              <p className="rt-pws-ce__datecount">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}` : course.cohortCount ? "No upcoming dates: learners only see a run before its first day" : "No upcoming dates yet"}</p>
               {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Create cohort</button>}
               {course.cohortCount > 0 && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>}
             </div>

@@ -693,6 +693,11 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   ))}
                 </ol>
               )}
+              {/* the course page lists a run only before its first day (the API's listings: starts_on after today), so a run that
+                  starts today is saved but learners won't see it: say so as soon as today is picked */}
+              {ordered.length > 0 && ordered[0].s.date <= today && (
+                <p className="rt-acc__notice -warn" role="status">This run {ordered[0].s.date === today ? "starts today" : "has already started"}, so learners won&apos;t see it on the course page: a run shows there until the day before it starts. You can still add learners you booked yourself.</p>
+              )}
             </section>
             <DatePicker view={view} setView={setView} picked={f.sessions.map((s) => s.date)} onPick={toggleDay} min={cohort ? "" : today} />
           </div>
