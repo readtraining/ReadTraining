@@ -5965,6 +5965,11 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__stale { display: grid; justify-items: start; gap: 8px; }
 .rt-pws-ce__stale p { margin: 0; }
 .rt-pws-ce__unitbody { white-space: pre-line; }
+/* the editor's syllabus units and FAQs: what a unit covers and an FAQ's answer are content, at the body size (not the 12px meta of
+   .rt-adm-list); the row's icon buttons stay in one line at the top right, whatever the text's length */
+.rt-pws-ce__main .rt-adm-list li { align-items: flex-start; }
+.rt-pws-ce__main .rt-adm-list small { font-size: var(--rt-text); line-height: 1.5; color: var(--rt-c-text); }
+.rt-pws-ce__main .rt-adm-list__side { flex: none; flex-wrap: nowrap; gap: 4px; }
 .rt-pws-ce__iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); cursor: pointer; }
 .rt-pws-ce__iconbtn:hover:not(:disabled) { background: var(--rt-c-soft); color: var(--rt-c-text); }
 .rt-pws-ce__iconbtn:disabled { opacity: 0.35; cursor: default; }
