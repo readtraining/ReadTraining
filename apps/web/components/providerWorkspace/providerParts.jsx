@@ -36,12 +36,12 @@ export function Loading({ rows = 3, stats = false, detail = false }) {
   );
 }
 
-// Hurak's List / Calendar switch above the cohorts and the calendar.
+// Hurak's List / Calendar switch above the cohorts and the calendar: two pages, so links, in the look of every tab (Tabs).
 export function CohortViews({ current }) {
   return (
-    <nav className="rt-pws-views" aria-label="Cohort views">
+    <nav className="rt-acc__tabs" aria-label="Cohort views">
       {[["list", "List", "/provider/cohorts"], ["calendar", "Calendar", "/provider/calendar"]].map(([key, label, href]) => (
-        <Link key={key} href={href} className={`rt-pws-views__link${current === key ? " is-on" : ""}`} aria-current={current === key ? "page" : undefined}>{label}</Link>
+        <Link key={key} href={href} className={`rt-tr__filter${current === key ? " is-on" : ""}`} aria-current={current === key ? "page" : undefined}>{label}</Link>
       ))}
     </nav>
   );

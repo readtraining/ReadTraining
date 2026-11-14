@@ -3038,6 +3038,9 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 .rt-tr__filter { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border: 1px solid var(--color-border-strong); border-radius: 999px; background: var(--color-white); font-size: 14px; font-weight: 600; color: var(--color-dark-1); cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
 .rt-tr__filter:hover { border-color: var(--color-purple-1); }
 .rt-tr__filter.is-on { border-color: var(--color-purple-1); background: var(--color-purple-1); color: var(--color-white); }
+/* a tab that goes to another page is a link (Cohorts' List / Calendar): it keeps the tab's colours, not the template's link colour */
+a.rt-tr__filter { text-decoration: none; color: var(--color-dark-1) !important; }
+a.rt-tr__filter.is-on { color: var(--color-white) !important; }
 .rt-tr__filter-n { min-width: 22px; padding: 0 6px; border-radius: 999px; background: var(--color-light-4); font-size: 12px; line-height: 20px; text-align: center; color: var(--color-dark-1); }
 .rt-tr__filter.is-on .rt-tr__filter-n { background: var(--color-white); color: var(--color-purple-1); }
 /* phones: the pinned filters stay on one row that scrolls sideways (the chips run off the edge to show there are more), so
@@ -5629,10 +5632,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws .rt-adm__head { align-items: flex-start; }
 .rt-pws__org { display: flex; align-items: center; gap: 10px; margin: 4px 4px 0; padding: 10px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
 /* cohorts: List / Calendar switch */
-.rt-pws-views { display: inline-flex; padding: 4px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-pill); background: var(--rt-c-surface); }
-.rt-pws-views__link { display: inline-flex; align-items: center; min-height: 36px; padding: 0 18px; border-radius: var(--rt-radius-pill); font-size: var(--rt-text-sm); font-weight: 600; text-decoration: none; color: var(--rt-c-text) !important; }
-.rt-pws-views__link.is-on { background: var(--rt-c-brand); color: var(--rt-c-surface) !important; }
-.rt-pws-views__link:not(.is-on):hover { color: var(--rt-c-brand) !important; }
 /* Hurak's top bar: New course, Student, the bell and the account menu */
 .rt-pws__nav { display: grid; gap: 2px; margin: 16px 0 0; padding: 0; list-style: none; }
 .rt-pws__nav li { list-style: none; }
@@ -6442,12 +6441,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (max-width: 575px) { .rt-dash__hello { padding: 20px; } .rt-dash__cohorts .rt-adm-seats { display: none; } }
 @media (prefers-reduced-motion: reduce) { .rt-dash__go, .rt-dash__kpi { transition: none; } }
 /* segmented control (date ranges) */
-.rt-seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-soft); }
-.rt-seg__opt { display: inline-flex; align-items: center; min-height: 36px; margin: 0; padding: 0 14px; border-radius: var(--rt-radius-sm); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
-.rt-seg__opt.is-on { background: var(--rt-c-surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--rt-c-dark) 12%, transparent), 0 0 0 1px var(--rt-c-line); color: var(--rt-c-text); }
-.rt-seg__opt:has(:focus-visible) { outline: 3px solid var(--rt-c-brand); outline-offset: 1px; }
-@media (hover: hover) and (pointer: fine) { .rt-seg__opt:not(.is-on):hover { color: var(--rt-c-text); } }
-@media (max-width: 575px) { .rt-seg { display: grid; grid-template-columns: 1fr 1fr; width: 100%; } .rt-seg__opt { justify-content: center; } }
 /* performance: KPI cards that switch the chart */
 .rt-perf-kpis { display: grid; gap: 16px; }
 @media (min-width: 992px) { .rt-perf-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -6473,7 +6466,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-perf-split { display: grid; gap: var(--rt-gap); }
 @media (min-width: 992px) { .rt-perf-split { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .rt-perf-split__note { margin: 4px 0 16px; }
-@media (prefers-reduced-motion: reduce) { .rt-seg__opt, button.rt-perf-kpi { transition: none; } }
+@media (prefers-reduced-motion: reduce) { button.rt-perf-kpi { transition: none; } }
 /* requests (Hurak's refunds list) */
 .rt-rq-sum { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-rq-sum b { color: var(--rt-c-text); }
