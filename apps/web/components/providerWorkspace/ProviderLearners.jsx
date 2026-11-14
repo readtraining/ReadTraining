@@ -58,7 +58,7 @@ export default function ProviderLearners() {
         <div className="rt-acc__card rt-biz__tablecard rt-lr-table">
           <table className="rt-biz__table rt-adm-table">
             <thead>
-              <tr><th scope="col">Name</th><th scope="col">Email address</th><th scope="col">Contact number</th><th scope="col">Town</th><th scope="col">Bookings</th><th scope="col">Last booking</th><th scope="col"><span className="rt-sr">Actions</span></th></tr>
+              <tr><th scope="col">Name</th><th scope="col">Email address</th><th scope="col">Contact number</th><th scope="col">Town</th><th scope="col">Bookings</th><th scope="col">Last booking</th></tr>
             </thead>
             <tbody>
               {rows.map((l) => (
@@ -74,7 +74,6 @@ export default function ProviderLearners() {
                   <td data-label="Town">{l.town || "—"}</td>
                   <td data-label="Bookings" className="rt-pws-money__num">{l.bookings}</td>
                   <td data-label="Last booking">{l.lastAt ? formatOrderDay(l.lastAt) : "—"}</td>
-                  <td data-label="Actions"><Link href={`/provider/learners/${l.id}`} className="rt-lr-view">View<span className="rt-sr"> {l.first} {l.last}</span><i className="icon-chevron-right text-10" aria-hidden="true"></i></Link></td>
                 </tr>
               ))}
             </tbody>

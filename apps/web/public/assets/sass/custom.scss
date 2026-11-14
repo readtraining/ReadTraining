@@ -6485,20 +6485,12 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-rq-reason { min-width: 240px; max-width: 420px; line-height: 1.5; }
 .rt-rq-note { max-width: 220px; }
 .rt-rq-act { white-space: nowrap; }
-.rt-rq-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-left: 4px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text) !important; text-decoration: none; cursor: pointer; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
-.rt-rq-icon:first-child { margin-left: 0; }
-.rt-rq-icon:disabled { opacity: 0.4; cursor: not-allowed; }
-@media (hover: hover) and (pointer: fine) { .rt-rq-icon:not(:disabled):hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; } }
-.rt-rq-icon:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 @media (max-width: 1199px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
-.rt-rq-acts { display: inline-flex; gap: 4px; }
-.rt-rq-acts .rt-rq-icon { margin-left: 0; }
 /* phones: the stacked rows keep each cell's small line (date, decision note, email) under its value */
 @media (max-width: 767px) {
   .rt-rq-table td { flex-wrap: wrap; }
   .rt-rq-table td small, .rt-rq-table td .rt-rq-note { flex-basis: 100%; max-width: none; text-align: right; }
 }
-@media (prefers-reduced-motion: reduce) { .rt-rq-icon { transition: none; } }
 /* public profile and student profile (Hurak's): initials or logo, name, details, one action */
 .rt-pws-prof { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; }
 .rt-pws-prof__logo { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 96px; height: 96px; overflow: hidden; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-app-h2); font-weight: 700; color: var(--rt-c-brand); }
@@ -6519,8 +6511,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-lr-who small { display: block; margin-top: 2px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-lr-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); }
 .rt-lr-avatar.-lg { width: 72px; height: 72px; border-radius: var(--rt-radius-card); font-size: var(--rt-app-h3); }
-.rt-lr-view { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--rt-radius-sm); font-size: var(--rt-text-sm); font-weight: 600; text-decoration: none; color: var(--rt-c-brand) !important; transition: background-color 150ms ease; }
-@media (hover: hover) and (pointer: fine) { .rt-lr-view:hover { background: var(--rt-c-brand-soft); } .rt-lr-table tbody tr:hover td { background: var(--rt-c-soft); } }
 .rt-lr-head { display: grid; gap: 20px; }
 .rt-lr-head__top { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; }
 .rt-lr-head__who { flex: 1 1 320px; min-width: 0; }
@@ -6768,6 +6758,15 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws dd > small:not([class]), .rt-pws li > p + small:not([class]) { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 /* a page's description doesn't end on one word alone */
 .rt-pws .rt-adm__lead { text-wrap: pretty; }
+/* a row that opens its record is one big link with a hover: the admin's rule (.rt-adm--platform .rt-adm-table), for the
+   workspace's tables (their main link is a.rt-adm-strong) and the Courses table (its title link); the row's own buttons, links and
+   menus stay on top */
+@media (min-width: 576px) {
+  .rt-pws .rt-adm-table tbody tr:has(a.rt-adm-strong), .rt-pws .rt-cx-table tbody tr { position: relative; cursor: pointer; }
+  .rt-pws .rt-adm-table tbody tr:has(a.rt-adm-strong):hover { background: var(--rt-c-soft); }
+  .rt-pws .rt-adm-table tbody a.rt-adm-strong::after, .rt-pws .rt-cx-table tbody a.rt-cx-course__title::after { content: ""; position: absolute; inset: 0; }
+  .rt-pws :is(.rt-adm-table, .rt-cx-table) tbody td :is(button, a, input, label, .rt-rowmenu):not(a.rt-adm-strong, a.rt-cx-course__title) { position: relative; z-index: 1; }
+}
 /* destructive actions side by side, apart from the others (each is the existing red text button) */
 .rt-pws-danger-group { display: flex; flex-wrap: wrap; gap: 12px; margin-left: auto; }
 
