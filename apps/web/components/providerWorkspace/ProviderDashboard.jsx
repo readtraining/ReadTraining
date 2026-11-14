@@ -9,11 +9,12 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { SHOW_DEMO } from "@/lib/demo";
 import { COURSE_TONE, DemoTag, Loading, ORDER_TONE, Pill, formatWhen } from "./providerParts";
 import { Delta, Sparkline, money } from "./charts";
-import { Seats, dayRange, useSchedule } from "./ProviderCohorts";
+import { Seats, dayRange, todayIso, useSchedule } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 
-// Our dashboard (Hurak has none; everything on it opens the Hurak-style page it comes from). Under the greeting, the getting-set-up
-// checklist (ProviderChecklist) until every step is done. Then what needs the provider today
+// Our dashboard (Hurak has none; everything on it opens the Hurak-style page it comes from). The greeting lists the first real
+// things to do today as links; under it, the getting-set-up checklist folded to its next step (ProviderChecklist compact) until
+// every step is done. Then the rest of what needs the provider today
 // (refund requests, disputes, unpaid orders, reviews and questions to answer, new leads, cohorts with no tutor, courses sent back),
 // then the last 30 days against the 30 before (revenue, enrolments, orders, rating), then the next cohorts, the latest orders and
 // the courses by status. Courses and cohorts come from the API; orders, refunds, reviews and leads are still DEMO records.
@@ -22,6 +23,14 @@ import ProviderChecklist from "./ProviderChecklist";
 const demoTag = SHOW_DEMO && <span className="rt-demo-tag" title="Sample orders and reviews for now. Real ones show here once booking goes live.">Demo data<span className="rt-sr">: sample orders and reviews for now</span></span>;
 
 const greet = (h) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+// how soon a cohort starts, in words (UK dates)
+const DAY_MS = 864e5;
+const startsIn = (iso, today) => {
+  const n = Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS);
+  return n <= 0 ? "Starts today" : n === 1 ? "Starts tomorrow" : `Starts in ${n} days`;
+};
+// the greeting shows up to this many of today's real things to do; Needs your attention shows the rest
+const TODAY_SHOWN = 3;
 
 export default function ProviderDashboard() {
   const { person, data: meData } = useMe();
@@ -49,7 +58,7 @@ export default function ProviderDashboard() {
   const refunds = data.refunds.filter((r) => r.status === "open");
   const disputes = data.orders.filter((o) => o.status === "dispute");
   const unpaid = data.orders.filter((o) => o.status === "incomplete");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const upcoming = schedule.cohorts.data.filter((k) => !k.cancelledAt && k.startsOn > today);
   const noTutor = upcoming.filter((k) => !k.tutorUserId);
   const sentBack = courses.filter((c) => c.status === "changes");
@@ -67,8 +76,11 @@ export default function ProviderDashboard() {
   // the made-up items (refunds, disputes, unpaid orders, reviews, questions, leads) are tagged; the greeting counts only real ones
   const real = todo.filter((t) => !t.demo);
   const demoItems = todo.length - real.length;
-  // real items first, so made-up ones never push them out of the first seven
-  const shownTodo = [...real, ...todo.filter((t) => t.demo)];
+  // the greeting lists the first real ones; the card below has the rest (real first, so made-up ones never push them out)
+  const firstThings = real.slice(0, TODAY_SHOWN);
+  const shownTodo = [...real.slice(TODAY_SHOWN), ...todo.filter((t) => t.demo)];
+  // nothing sold or reviewed yet: one line in place of four empty number cards
+  const anySales = sold.some((o) => o.at >= prev) || data.reviews.length > 0;
 
   const kpis = [
     { label: "Revenue", value: money(sum(from, now + 1, (o) => o.money.gross)), now: sum(from, now + 1, (o) => o.money.gross), before: sum(prev, from, (o) => o.money.gross), spark: weeks.map(([a, b]) => sum(a, b, (o) => o.money.gross)), href: "/provider/performance" },
@@ -88,6 +100,13 @@ export default function ProviderDashboard() {
         <div>
           <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}{firstName ? `, ${firstName}` : ""}</h2>
           <p className="rt-dash__sub">{real.length ? `${real.length} ${real.length === 1 ? "thing needs" : "things need"} you today.` : "You're all caught up."} {upcoming.length ? `Next cohort: ${upcoming[0].courseTitle}, ${dayRange(upcoming[0].startsOn, upcoming[0].endsOn)}.` : ""}</p>
+          {firstThings.length > 0 && (
+            <ul className="rt-dash__today">
+              {firstThings.map((t) => (
+                <li key={t.key}><span className={`rt-dash__dot -${t.tone}`} aria-hidden="true"></span><Link href={t.href}>{t.text}</Link></li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="rt-dash__quick">
           {access.can("provider.orders.create") && <Link href="/provider/orders/new" className="button -sm -outline-purple-1 text-purple-1">Create order</Link>}
@@ -95,12 +114,12 @@ export default function ProviderDashboard() {
         </div>
       </section>
 
-      <ProviderChecklist />
+      <ProviderChecklist compact />
 
       <div className="rt-dash__grid">
         <section className="rt-acc__card rt-dash__todo" aria-labelledby="rt-dash-todo">
-          <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-todo">Needs your attention {demoItems > 0 && <DemoTag label={real.length ? "Partly demo" : "Demo data"} note={pw.demo.attention} />}</h2>{real.length > 0 && <span className="rt-dash__n">{real.length}</span>}</div>
-          {todo.length ? (
+          <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-todo">{firstThings.length ? "Also waiting" : "Needs your attention"} {demoItems > 0 && <DemoTag label={real.length > TODAY_SHOWN ? "Partly demo" : "Demo data"} note={pw.demo.attention} />}</h2>{real.length > TODAY_SHOWN && <span className="rt-dash__n">{real.length - TODAY_SHOWN}</span>}</div>
+          {shownTodo.length ? (
             <ul className="rt-dash__list">
               {shownTodo.slice(0, 7).map((t) => (
                 <li key={t.key}>
@@ -111,7 +130,7 @@ export default function ProviderDashboard() {
               ))}
             </ul>
           ) : (
-            <div className="rt-dash__clear"><i className="icon-check text-16" aria-hidden="true"></i><p>Nothing waiting. New refund requests, reviews and questions will show here.</p></div>
+            <div className="rt-dash__clear"><i className="icon-check text-16" aria-hidden="true"></i><p>{firstThings.length ? "Nothing else waiting." : "Nothing waiting."} New refund requests, reviews and questions will show here.</p></div>
           )}
         </section>
 
@@ -132,17 +151,20 @@ export default function ProviderDashboard() {
 
       <section aria-labelledby="rt-dash-30">
         <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-30">Last 30 days {demoTag}</h2><Link href="/provider/performance" className="rt-cd__link">Performance</Link></div>
-        <ul className="rt-dash__kpis">
-          {kpis.map((x) => (
-            <li key={x.label}>
-              <Link href={x.href} className="rt-dash__kpi">
-                <span className="rt-dash__kpitop"><span>{x.label}</span><Delta now={x.now} before={x.before} label="vs the 30 days before" /></span>
-                <strong>{x.value}</strong>
-                <Sparkline values={x.spark} label={`${x.label}, last 8 weeks`} />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {anySales ? (
+          <ul className="rt-dash__kpis">
+            {kpis.map((x) => (
+              <li key={x.label}>
+                <Link href={x.href} className="rt-dash__kpi">
+                  <span className="rt-dash__kpitop"><span>{x.label}</span><Delta now={x.now} before={x.before} label="vs the 30 days before" /></span>
+                  <strong>{x.value}</strong>
+                  <small className="rt-dash__kpivs" aria-hidden="true">vs the 30 days before</small>
+                  <Sparkline values={x.spark} label={`${x.label}, last 8 weeks`} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="rt-acc__card rt-acc__note rt-dash__empty">Your revenue, enrolments, orders and rating will show here after your first booking.</p>}
       </section>
 
       <div className="rt-dash__grid -even">
@@ -154,8 +176,8 @@ export default function ProviderDashboard() {
                 <li key={k.id}>
                   <span className={`rt-dash__date -c-${k.method === "live-online" ? "blue" : "purple"}`} aria-hidden="true"><small>{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${k.startsOn}T00:00:00Z`))}</small><b>{Number(k.startsOn.slice(8))}</b></span>
                   <span className="rt-dash__cmeta">
-                    <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>
-                    <small>{k.venue ? k.venue.name : "Online"} · {tutorName(k.tutorUserId) || "No tutor yet"}</small>
+                    <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
+                    <small><span className="rt-dash__soon">{startsIn(k.startsOn, today)}</span> · {k.venue ? k.venue.name : "Online"}{tutorName(k.tutorUserId) ? ` · ${tutorName(k.tutorUserId)}` : ""}</small>
                   </span>
                   <Seats booked={0} max={k.capacity} />
                 </li>
@@ -166,7 +188,7 @@ export default function ProviderDashboard() {
 
         <section className="rt-acc__card" aria-labelledby="rt-dash-orders">
           <div className="rt-dash__head"><h2 className="rt-dash__title" id="rt-dash-orders">Latest orders {demoTag}</h2><Link href="/provider/orders" className="rt-cd__link">All orders</Link></div>
-          <ul className="rt-dash__orders">
+          {recent.length ? <ul className="rt-dash__orders">
             {recent.map((o) => (
               <li key={o.ref}>
                 <span className="rt-dash__avatar" aria-hidden="true">{`${o.customer.first[0] || ""}${o.customer.last[0] || ""}`.toUpperCase()}</span>
@@ -177,7 +199,7 @@ export default function ProviderDashboard() {
                 <span className="rt-dash__amount"><b>{money(o.total)}</b><Pill tone={ORDER_TONE[o.status]}>{pw.orderStatuses[o.status]}</Pill></span>
               </li>
             ))}
-          </ul>
+          </ul> : <p className="rt-acc__note">Your first booking will appear here.</p>}
         </section>
       </div>
     </div>
