@@ -5926,7 +5926,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-cardhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0; }
 .rt-pws-course-cardhead .rt-acc__h2 { margin: 0; }
 .rt-pws-course-count { align-self: flex-end; }
-.rt-pws-course-grid3, .rt-pws-course-grid2 { display: grid; gap: 16px; }
+/* fields side by side line up on their boxes: a hint or an error above one box doesn't push it below its neighbour */
+.rt-pws-course-grid3, .rt-pws-course-grid2 { display: grid; gap: 16px; align-items: end; }
 @media (min-width: 768px) { .rt-pws-course-grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rt-pws-course-grid2 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
 .rt-pws-course-addrow { display: flex; align-items: center; gap: 8px; }
 .rt-pws-course-addrow > input, .rt-pws-course-addrow > .rt-field { flex: 1 1 auto; min-width: 0; }
