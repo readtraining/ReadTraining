@@ -22,6 +22,7 @@ import { COURSE_TONE, CardChoice, Choice, Loading, Pill, getQuery, setQuery } fr
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
 
 // The course editor's sections, in the order a provider fills them in, each ticked in the side list when it is complete. Mode of
 // study comes before the price, as the price step depends on it: a self-paced course has one price, a course on dates is priced
@@ -555,7 +556,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       {!ep.admin && access.page && !access.full && <p className="rt-adm-item__block">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
 
       <div className="rt-pws-ce">
-        <nav className="rt-acc__card rt-pws-ce__nav" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>
+        <nav className="rt-acc__card rt-pws-ce__nav rt-pill-scroll" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>
           <h2 className="rt-adm-h3" id="rt-pws-ce-nav-h">{isLive ? (ep.admin ? "Page sections" : "Course sections") : ep.admin ? "Publish the page" : "Publish your course"}</h2>
           <div className="rt-pws-ce__progress">
             <p>{done === steps.length ? "Every required step is complete" : `${done} of ${steps.length} required steps complete`}</p>
@@ -582,6 +583,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
               {sentNote && <p className="rt-acc__notice -ok">{sentNote}</p>}
             </>
           )}
+          <FilterScrollPill scrollRef={navRef} />
         </nav>
 
         <div className="rt-pws-ce__main" ref={formRef}>
