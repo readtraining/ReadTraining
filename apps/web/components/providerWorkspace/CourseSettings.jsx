@@ -179,8 +179,9 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
         </div>
       ) : (
         <div className="rt-q__form" aria-busy={busy || undefined}>
+          <p className="rt-acc__note">Each setting is saved as soon as you change it.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
-          <Choice name="rt-pws-gear-enrol" legend="Enrollment (privacy)" hint="Private courses don't show in search; you share the link or book learners yourself." value={course.isPublic ? "public" : "private"} onChange={(v) => edit && change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public")} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
+          <Choice name="rt-pws-gear-enrol" legend="Enrolment (privacy)" hint="Private courses don't show in search; you share the link or book learners yourself." value={course.isPublic ? "public" : "private"} onChange={(v) => edit && change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public")} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
           <div className="rt-field">
             <label htmlFor="rt-pws-gear-url">Course address</label>
             <p className="rt-field__hint">Share it on your website or social media{course.status === "live" ? "." : ". It works once the course is live."}</p>
@@ -220,6 +221,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
             </div>
           )}
           {course.method !== "self-paced" && <p className="rt-acc__note"><Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">See this course&apos;s dates</Link></p>}
+          <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={close}>Done</button>
         </div>
       )}
     </Sheet>
@@ -300,6 +302,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
               {blocked ? <p className="rt-acc__note">{blocked}</p> : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setConfirm(true)}>Delete page</button>}
             </div>
           )}
+          <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={close}>Done</button>
         </div>
       )}
     </Sheet>

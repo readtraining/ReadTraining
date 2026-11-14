@@ -124,7 +124,12 @@ export const content = {
     .optional()
     .nullable(),
   units: z.array(z.object({ title: line(120, 'unit title').min(1, 'Give every unit a title.'), body: text(2000, 'unit text') })).max(40, 'Add up to 40 units.'),
-  exams: z.array(z.object({ unit: line(120, 'exam unit').min(1, 'Name every exam row.'), passMark: text(40, 'pass mark').refine((v) => !passMarkProblem(v ?? ''), (v) => ({ message: passMarkProblem(v ?? '') })), duration: text(40, 'duration') })).max(20, 'Add up to 20 exam rows.'),
+  // the course page shows each row as a line of a table (unit, pass mark, duration): a row needs all three, or no row at all
+  exams: z.array(z.object({
+    unit: line(120, 'exam unit').min(1, 'Name every exam row.'),
+    passMark: line(40, 'pass mark').min(1, 'Give every exam row its pass mark.').refine((v) => !passMarkProblem(v), (v) => ({ message: passMarkProblem(v) })),
+    duration: line(40, 'duration').min(1, 'Give every exam row its duration.'),
+  })).max(20, 'Add up to 20 exam rows.'),
   faqs: z.array(z.object({ question: line(160, 'question').min(1, 'Write every question.'), answer: line(1200, 'answer').min(1, 'Write every answer.') })).max(30, 'Add up to 30 FAQs.'),
 }
 // The ways of teaching a provider course can use: booking only knows these (classroom and live online are priced on their dates,
