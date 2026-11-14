@@ -7,7 +7,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspace } from "@/lib/workspaceContext";
-import { COURSE_TONE, Loading, Pill, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, Loading, Pill, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
@@ -76,13 +76,7 @@ export default function ProviderCourses() {
     <div className="rt-acc__stack">
       <section className="rt-cx" aria-label="Your courses">
         <div className="rt-cx__top">
-          <div className="rt-cx-tabs" role="group" aria-label="Course status">
-            {statusTabs.map((t) => (
-              <button key={t.key || "all"} type="button" className={`rt-cx-tabs__tab${f.status === t.key ? " is-on" : ""}`} aria-pressed={f.status === t.key} onClick={() => set("status")(t.key)}>
-                {t.label}<span>{t.count}</span>
-              </button>
-            ))}
-          </div>
+          <Tabs tabs={statusTabs.map((t) => ({ key: t.key, label: t.label, count: t.count }))} value={f.status} onChange={set("status")} label="Course status" />
         </div>
         <div className="rt-cx__bar" role="search" aria-label="Find courses">
           <Search value={f.q} onChange={set("q")} label="Search your courses" />

@@ -5770,17 +5770,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-org__stats dt { font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
 .rt-cx-org__stats dd { margin: 0; font-size: var(--rt-text); font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
 .rt-cx { border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-.rt-cx__top { padding: 0 20px; border-bottom: 1px solid var(--rt-c-line); }
-.rt-cx-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
-.rt-cx-tabs::-webkit-scrollbar { display: none; }
-.rt-cx-tabs__tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 8px; min-height: 52px; padding: 0 12px; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); cursor: pointer; transition: color 150ms ease; }
-.rt-cx-tabs__tab span { min-width: 22px; padding: 1px 7px; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); font-size: 11px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; color: var(--rt-c-muted); }
-.rt-cx-tabs__tab::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--rt-c-brand); transform: scaleX(0); transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1); }
-.rt-cx-tabs__tab.is-on { color: var(--rt-c-text); }
-.rt-cx-tabs__tab.is-on span { background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
-.rt-cx-tabs__tab.is-on::after { transform: scaleX(1); }
-.rt-cx-tabs__tab:hover { color: var(--rt-c-text); }
-.rt-cx-tabs__tab:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: -3px; border-radius: 8px; }
+.rt-cx__top { padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-cx__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 14px 20px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-cx__bar.-more { padding-top: 14px; background: var(--rt-c-soft); }
 .rt-cx__bar .rt-adm-search { flex: 1 1 260px; }
@@ -5789,7 +5779,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx__more:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-cx__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rt-c-brand); }
 .rt-cx-table { width: 100%; border-collapse: collapse; }
-.rt-cx-table th { padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; text-align: left; white-space: nowrap; color: var(--rt-c-muted); }
+.rt-cx-table th { padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.04em; text-align: left; text-transform: uppercase; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-cx-table td { padding: 12px 16px; border-bottom: 1px solid var(--rt-c-line); font-size: var(--rt-text-sm); vertical-align: middle; color: var(--rt-c-text); }
 .rt-cx-table tbody tr:last-child td { border-bottom: 0; }
 .rt-cx-table th:first-child, .rt-cx-table td:first-child { padding-left: 20px; }
@@ -5851,7 +5841,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-cx-org__stats > div:first-child { margin-left: 0; padding-left: 0; border-left: 0; }
   .rt-cx-head > .button { width: 100%; justify-content: center; }
 }
-@media (prefers-reduced-motion: reduce) { .rt-cx-tabs__tab, .rt-cx-tabs__tab::after, .rt-cx__more, .rt-cx-table tbody tr, .rt-cx-manage { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-cx__more, .rt-cx-table tbody tr, .rt-cx-manage { transition: none; } }
 .rt-cl-promo { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; padding: 20px 24px; border: 1px dashed color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); border-radius: var(--rt-radius-card); background: var(--rt-c-brand-soft); }
 .rt-cl-promo > div { flex: 1 1 260px; }
 .rt-cl-promo__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-surface); color: var(--rt-c-brand); }

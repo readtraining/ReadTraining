@@ -198,7 +198,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
               </div>
               {lead && <p className="rt-adm__lead">{lead}</p>}
             </div>
-            {actions}
+            <div className="rt-adm__actions" id="rt-adm-actions">{actions}</div>
           </div>
           {children}
         </main>

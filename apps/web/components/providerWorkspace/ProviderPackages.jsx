@@ -10,6 +10,7 @@ import PackageEditor from "./PackageEditor";
 import { Loading, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { HeaderAction } from "@/components/admin/adminParts";
 
 const SHOW = [{ value: "", label: "In use" }, { value: "archive", label: "Archived" }, { value: "all", label: "All plans" }];
 const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date" : "dates"}` : "", u.courses ? `${u.courses} self-paced ${u.courses === 1 ? "course" : "courses"}` : ""].filter(Boolean).join(" and ") || "Not used yet";
@@ -70,7 +71,7 @@ export default function ProviderPackages() {
         <div className="rt-adm-toolbar__end">
           <ToolSelect id="rt-plan-show" label="Show" value={show} onChange={setParam("show", setShow)} options={SHOW} />
           {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filters</button>}
-          {edit && <button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button>}
+          {edit && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}
         </div>
       </div>
       <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "plan" : "plans"}`}</p>
