@@ -302,6 +302,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const noDates = course.kind === "provider" && (course.method === "classroom" || course.method === "live-online") && !course.upcomingCohorts;
   const ticks = sections.map((x) => ({ ...x, label: x.key === "pricing" ? pricingLabel(base.method) : x.label, ok: sectionOk(base, course, x.key) }));
   const steps = ticks.filter((x) => !x.optional);
+  // before a course is live, the first required step still to do is marked Next, so a new provider sees where to start
+  const nextKey = isLive ? null : steps.find((x) => !x.ok)?.key;
   // a step's status under its name, from what is saved: Complete (a mode of study names itself), "3 to add", No dates yet, Optional
   const stepStatus = (x) => {
     if (x.key === "mode" && x.ok) return methodName(base.method);
@@ -568,7 +570,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
               <li key={x.key}>
                 <button type="button" className={`rt-pws-ce__step${tab === x.key ? " is-on" : ""}`} onClick={() => changeTab(x.key)} aria-current={tab === x.key ? "step" : undefined}>
                   <span className={`rt-pws-course-tick${x.ok ? " is-ok" : ""}`} aria-hidden="true">{x.ok ? <i className="icon-check text-10"></i> : null}</span>
-                  <span className="rt-pws-ce__steptext">{x.label}<small className={`rt-pws-ce__stepstatus${!x.ok && !x.optional ? " -todo" : ""}`}><span className="rt-sr">: </span>{stepStatus(x)}</small></span>
+                  <span className="rt-pws-ce__steptext"><span>{x.label}{x.key === nextKey && <> <Pill tone="info">Next</Pill></>}</span><small className={`rt-pws-ce__stepstatus${!x.ok && !x.optional ? " -todo" : ""}`}><span className="rt-sr">: </span>{stepStatus(x)}</small></span>
                 </button>
               </li>
             ))}
