@@ -5907,7 +5907,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__need:focus { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-ce__status { margin: 0; }
 @media (max-width: 1199px) {
-  .rt-pws-ce__steps { display: flex; gap: 6px; margin: 0 -4px; padding: 0 4px 4px; overflow-x: auto; scrollbar-width: thin; }
+  /* below 1200px the steps are chips that wrap onto more lines, as the tabs do: every step in view, no sideways strip or scrollbar */
+  .rt-pws-ce__steps { display: flex; flex-wrap: wrap; gap: 6px; }
   .rt-pws-ce__step { white-space: nowrap; border: 1px solid var(--rt-c-line); }
   .rt-pws-ce__step.is-on { border-color: var(--rt-c-brand); }
   .rt-pws-ce__nav .rt-btn-block { width: auto; justify-self: start; }
