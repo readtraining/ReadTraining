@@ -39,7 +39,7 @@ export default async function Page(props) {
   const status = course.pendingChanges ? "This is how the course page will look once our team approves your changes." : STATUS[course.status] || STATUS.draft;
   return (
     <>
-      <PreviewBar back={`/provider/courses/${courseId}`} status={status} />
+      <PreviewBar back={`/provider/courses/${courseId}`} status={status} missing={course.status === "draft" || course.status === "changes" ? course.missing || [] : []} />
       <CourseDetail course={{ ...detail.course, preview: true }} query={{}} path={coursePath(detail.course.slug)} reviews={detail.reviews} reviewsCourse={detail.reviewsCourse} />
     </>
   );

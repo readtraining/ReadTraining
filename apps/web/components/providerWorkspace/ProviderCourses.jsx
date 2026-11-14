@@ -7,7 +7,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspace } from "@/lib/workspaceContext";
-import { COURSE_TONE, Loading, Pill, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, Loading, Pill, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
@@ -76,18 +76,12 @@ export default function ProviderCourses() {
     <div className="rt-acc__stack">
       <section className="rt-cx" aria-label="Your courses">
         <div className="rt-cx__top">
-          <div className="rt-cx-tabs" role="group" aria-label="Course status">
-            {statusTabs.map((t) => (
-              <button key={t.key || "all"} type="button" className={`rt-cx-tabs__tab${f.status === t.key ? " is-on" : ""}`} aria-pressed={f.status === t.key} onClick={() => set("status")(t.key)}>
-                {t.label}<span>{t.count}</span>
-              </button>
-            ))}
-          </div>
+          <Tabs tabs={statusTabs.map((t) => ({ key: t.key, label: t.label, count: t.count }))} value={f.status} onChange={set("status")} label="Course status" />
         </div>
         <div className="rt-cx__bar" role="search" aria-label="Find courses">
           <Search value={f.q} onChange={set("q")} label="Search your courses" />
           <ToolSelect id="rt-pws-cf-format" label="Mode of study" value={f.format} onChange={set("format")} options={[{ value: "", label: "All modes of study" }, ...pw.formats.map((x) => ({ value: x.key, label: methodName(x.key) }))]} />
-          <ToolSelect id="rt-pws-cf-enr" label="Enrollment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrollment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
+          <ToolSelect id="rt-pws-cf-enr" label="Enrolment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrolment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
           <button type="button" className={`rt-cx__more${more ? " is-on" : ""}`} aria-expanded={more} aria-controls="rt-pws-cf-more" onClick={() => setMore(!more)}><i className="icon-setting text-14" aria-hidden="true"></i>Filters{(f.category || f.model) && <span className="rt-cx__dot" aria-label="filters on"></span>}</button>
           {filtered && <button type="button" className="rt-cd__link" onClick={reset}>Clear filters</button>}
         </div>
@@ -148,23 +142,17 @@ export default function ProviderCourses() {
           <h2 className="rt-cl-promo__title" id="rt-pws-cm-h">Let us help you increase sales</h2>
           <p className="rt-acc__note">Book a free consultation with our sales and marketing team.</p>
         </div>
-        <Link href="/contact-us" className="button -sm -purple-1 text-white">Schedule meeting</Link>
+        <Link href="/contact-us" className="button -sm -outline-purple-1 text-purple-1">Schedule meeting</Link>
       </section>
     </div>
   );
 }
 
-// The provider's profile in the page head, beside "New course" (Hurak's profile card: view, edit, copy the profile address, total
-// and live courses), so the list starts straight under the title.
-// The Courses page's New course, for those who may create one (and only once our team has approved the account).
-export function NewCourseButton() {
-  const { can } = useProviderAccess();
-  return can("provider.courses.edit") ? <Link href="/provider/courses/new" className="button -md -purple-1 text-white">New course</Link> : null;
-}
+// The provider's profile in the page head (Hurak's profile card: view, edit, copy the profile address, total and live courses), so
+// the list starts straight under the title. New course is the top bar's, on every page.
 
 export function CoursesProfile() {
   const workspace = useWorkspace();
-  const courses = useProviderCourses().data;
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
   if (!workspace) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
@@ -174,7 +162,7 @@ export function CoursesProfile() {
     const profileUrl = `${window.location.origin}/providers/${org.slug}`;
     try {
       await navigator.clipboard.writeText(profileUrl);
-      setToast({ message: "Profile URL copied" });
+      setToast({ message: "Profile link copied" });
     } catch {
       setToast({ message: profileUrl });
     }
@@ -188,13 +176,9 @@ export function CoursesProfile() {
         <p className="rt-cx-org__links">
           <Link href="/provider/profile">View</Link>
           <Link href="/provider/settings">Edit</Link>
-          {live && <button type="button" onClick={copyProfile}>Copy Profile URL</button>}
+          {live && <button type="button" onClick={copyProfile}>Copy profile link</button>}
         </p>
       </div>
-      <dl className="rt-cx-org__stats">
-        <div><dt>Total courses</dt><dd>{courses ? courses.length : "–"}</dd></div>
-        <div><dt>Live</dt><dd>{courses ? courses.filter((c) => c.status === "live").length : "–"}</dd></div>
-      </dl>
       <Toast toast={toast} onDone={clearToast} />
     </section>
   );

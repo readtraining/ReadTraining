@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, CardChoice, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
@@ -253,7 +253,7 @@ export default function ProviderCohorts() {
         <>
           <div className="rt-adm-toolbar">
             <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
-            {create}
+            {mode !== "self-paced" && create}
           </div>
           {mode !== "self-paced" && (
             <div className="rt-pws-coh__filterbox">
@@ -289,13 +289,13 @@ export default function ProviderCohorts() {
                       <tr key={c.id}>
                         <td data-label="Course"><Link href={`/provider/courses/${c.id}`} className="rt-adm-strong">{c.title}</Link></td>
                         <td data-label="Course status"><Pill tone={c.status === "live" ? "ok" : c.status === "changes" ? "warn" : "muted"}>{pw.courseStatuses[c.status]}</Pill></td>
-                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Course pricing", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
+                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Price", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            ) : <EmptyState title="No self-paced courses yet." />
+            ) : <EmptyState title="No self-paced courses yet." text="A self-paced course has no dates: learners start as soon as they book." />
           ) : list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
@@ -635,8 +635,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
           {savedNote && <p className="rt-acc__notice -ok" role="status">{savedNote}</p>}
           {!cohort && !suggestCourseId && (
-            <Choice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
-              options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key) }))} />
+            <CardChoice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
+              options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
           )}
           {!cohort && !(suggestCourseId && course) ? (
             <div className="rt-field">
@@ -692,6 +692,11 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                     </li>
                   ))}
                 </ol>
+              )}
+              {/* the course page lists a run only before its first day (the API's listings: starts_on after today), so a run that
+                  starts today is saved but learners won't see it: say so as soon as today is picked */}
+              {ordered.length > 0 && ordered[0].s.date <= today && (
+                <p className="rt-acc__notice -warn" role="status">This run {ordered[0].s.date === today ? "starts today" : "has already started"}, so learners won&apos;t see it on the course page: a run shows there until the day before it starts. You can still add learners you booked yourself.</p>
               )}
             </section>
             <DatePicker view={view} setView={setView} picked={f.sessions.map((s) => s.date)} onPick={toggleDay} min={cohort ? "" : today} />
@@ -756,14 +761,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </>
               )}
               <div className="rt-field">
-                <label htmlFor="rt-cf-capacity">Most learners</label>
+                <label htmlFor="rt-cf-capacity">Number of places</label>
                 {err("capacity")}
                 <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} autoComplete="off" {...aria("capacity")} />
               </div>
             </div>
             <div className="rt-field">
               <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
-              <p className="rt-acc__note" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
+              <p className="rt-field__hint" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
               {err("details")}
               <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-invalid={errors.details ? true : undefined} aria-describedby={`rt-cf-details-h${errors.details ? " rt-cf-details-e" : ""}`} autoComplete="off" />
             </div>

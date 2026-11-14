@@ -60,23 +60,15 @@ export default function ProviderPerformance() {
 }
 
 // Hurak's four date ranges as one segmented control (a radio group: arrow keys move between them)
+// the date range: the standard Tabs, as every other switch
 function RangeTabs({ value, onChange }) {
-  return (
-    <div className="rt-seg" role="radiogroup" aria-label="Date range">
-      {pw.ranges.map((r) => (
-        <label key={r.key} className={`rt-seg__opt${value === r.key ? " is-on" : ""}`}>
-          <input type="radio" name="rt-perf-range" className="rt-sr" value={r.key} checked={value === r.key} onChange={() => onChange(r.key)} />
-          <span>{r.label}</span>
-        </label>
-      ))}
-    </div>
-  );
+  return <Tabs tabs={pw.ranges.map((r) => ({ key: r.key, label: r.label }))} value={value} onChange={onChange} label="Date range" />;
 }
 
 const KPIS = [
   { key: "revenue", label: "Total revenue", isMoney: true, icon: "icon-save-money" },
   { key: "leads", label: "Total leads", icon: "icon-message" },
-  { key: "enrolments", label: "Total enrollments", icon: "icon-person-2" },
+  { key: "enrolments", label: "Total enrolments", icon: "icon-person-2" },
 ];
 
 function Overview({ data, start, now, range }) {

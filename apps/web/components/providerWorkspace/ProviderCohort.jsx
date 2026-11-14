@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 
 // Manage cohort, as Hurak's: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
-// whether it takes bookings, tutor), with Edit cohort details, Enroll student (a new order on these dates), Bulk enrolment (a
+// whether it takes bookings, tutor), with Edit cohort details, Enrol student (a new order on these dates), Bulk enrolment (a
 // file of people booked outside ReadTraining) and Manage curriculum. Then its students: each one's status, name and email, the
 // customer who paid (name and email), pricing plan, sales channel, payment, notes and LMS access, an email button, the learner record, and a menu
 // (Edit Details, Reschedule, Resit, Notes, Timeline). A row opens to the register (attended, result, certificate). Picked rows
@@ -68,7 +68,7 @@ export default function ProviderCohort({ cohortId }) {
   const [open, setOpen] = useState([]);
   const [toast, setToast] = useState(null);
 
-  if (!data) return <Loading rows={3} />;
+  if (!data) return <Loading detail />;
   const k = data.byId.cohort[cohortId];
   if (!k) {
     return (
@@ -158,12 +158,12 @@ export default function ProviderCohort({ cohortId }) {
         </dl>
         {!k.cancelled && (
           <div className="rt-pws-coh__heroactions">
-            {!k.disabled && k.left > 0 && <Link href={`/provider/orders/new?cohort=${k.id}`} className="button -sm -purple-1 text-white">Enroll student</Link>}
+            {!k.disabled && k.left > 0 && <Link href={`/provider/orders/new?cohort=${k.id}`} className="button -sm -purple-1 text-white">Enrol student</Link>}
             {!k.disabled && k.left > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setBulk(true)}>Bulk enrolment</button>}
             {canCancel && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
           </div>
         )}
-        {k.cancelled && <p className="rt-adm-item__block">This cohort is cancelled. Booked learners were told and offered another date or a refund.</p>}
+        {k.cancelled && <p className="rt-acc__notice -warn">This cohort is cancelled. Booked learners were told and offered another date or a refund.</p>}
         {k.disabled && !k.cancelled && <p className="rt-acc__note">Bookings are turned off: this cohort is not offered to new learners.</p>}
       </section>
 
@@ -623,7 +623,7 @@ function TimelineSheet({ enrolment: e, order, onClose }) {
   );
 }
 
-// "Bulk Students Enrollment": a CSV of people booked outside ReadTraining (first name, last name, email, phone)
+// "Bulk enrolment": a CSV of people booked outside ReadTraining (first name, last name, email, phone)
 function BulkSheet({ open, cohort: k, onClose, onSaved }) {
   const formRef = useRef(null);
   const [rows, setRows] = useState(null);

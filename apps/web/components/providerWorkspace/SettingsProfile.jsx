@@ -239,55 +239,58 @@ export function TermsTab({ say }) {
   return <WithProfile>{(p) => <TermsForms profile={p} say={say} />}</WithProfile>;
 }
 
+// Cancellation policy (required) and booking terms (optional) in one form with one Save, as every Settings tab: it sends only
+// what changed, and leaving with either unsaved asks first.
 function TermsForms({ profile, say }) {
   const { organisationId, can } = useProviderAccess();
   const utils = api.useUtils();
   const update = api.provider.profile.updateTerms.useMutation();
   const locked = !can("provider.terms.edit");
-  // each form saves only its own text; `onSaved` runs once it has (the form then counts as saved)
-  const save = (patch, saved, onError, onSaved) => update.mutate(
-    { organisationId, ...patch },
-    { onSuccess: () => { onSaved?.(); utils.provider.profile.get.invalidate({ organisationId }); say(saved); }, onError: (er) => onError(firstError(er)) },
-  );
-  return (
-    <div className="rt-acc__stack">
-      <TextDoc id="rt-set-policy" title="Cancellation policy" required value={profile.cancellationPolicy} locked={locked} busy={update.isPending}
-        text="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain."
-        onSave={(v, onError, onSaved) => save({ cancellationPolicy: v }, "Cancellation policy saved", onError, onSaved)} />
-      <TextDoc id="rt-set-terms" title="Booking terms" value={profile.bookingTerms} locked={locked} busy={update.isPending}
-        text="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms."
-        onSave={(v, onError, onSaved) => save({ bookingTerms: v || null }, "Booking terms saved", onError, onSaved)} />
-    </div>
-  );
-}
-
-function TextDoc({ id, title, text, value, required, locked, busy, onSave }) {
-  const max = id === "rt-set-terms" ? 20000 : 10000;
-  const [v, setV] = useState(value || "");
-  const [error, setError] = useState("");
+  const [policy, setPolicy] = useState(profile.cancellationPolicy || "");
+  const [terms, setTerms] = useState(profile.bookingTerms || "");
   // what is saved (set on a save, before the profile loads again)
-  const [savedV, setSavedV] = useState(value || "");
-  useUnsavedChanges(!locked && v.trim() !== savedV.trim());
+  const [saved, setSaved] = useState({ policy: profile.cancellationPolicy || "", terms: profile.bookingTerms || "" });
+  const [errors, setErrors] = useState({});
   const formRef = useRef(null);
+  const changed = { policy: policy.trim() !== saved.policy.trim(), terms: terms.trim() !== saved.terms.trim() };
+  useUnsavedChanges(!locked && (changed.policy || changed.terms));
   const submit = (e) => {
     e.preventDefault();
-    if (required && !v.trim()) {
-      setError(`Enter your ${title.toLowerCase()}.`);
+    if (!policy.trim()) {
+      setErrors({ policy: "Enter your cancellation policy." });
       return focusFirstError(formRef.current);
     }
-    setError("");
-    const sent = v.trim();
-    onSave(sent, setError, () => setSavedV(sent));
+    setErrors({});
+    const sent = { policy: policy.trim(), terms: terms.trim() };
+    const patch = { ...(changed.policy ? { cancellationPolicy: sent.policy } : {}), ...(changed.terms ? { bookingTerms: sent.terms || null } : {}) };
+    update.mutate(
+      { organisationId, ...patch },
+      {
+        onSuccess: () => {
+          setSaved(sent);
+          utils.provider.profile.get.invalidate({ organisationId });
+          say(changed.policy && changed.terms ? "Cancellation policy and booking terms saved" : changed.policy ? "Cancellation policy saved" : "Booking terms saved");
+        },
+        onError: (er) => {
+          const msg = firstError(er);
+          setErrors(changed.policy ? { policy: msg } : { terms: msg });
+          focusFirstError(formRef.current);
+        },
+      },
+    );
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      <Field id={id} label={`${title}${required ? "" : " (optional)"}`} hint={text} error={error} count={<Counter value={v} max={max} />}>
-        <textarea {...aria(id, error, true)} rows={9} maxLength={max} autoComplete="off" value={v} onChange={(e) => { setV(e.target.value); if (error) setError(""); }} disabled={locked} />
+      <Field id="rt-set-policy" label="Cancellation policy" hint="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain." error={errors.policy} count={<Counter value={policy} max={10000} />}>
+        <textarea {...aria("rt-set-policy", errors.policy, true)} rows={9} maxLength={10000} autoComplete="off" value={policy} onChange={(e) => { setPolicy(e.target.value); if (errors.policy) setErrors({}); }} disabled={locked} />
+      </Field>
+      <Field id="rt-set-terms" label="Booking terms (optional)" hint="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms." error={errors.terms} count={<Counter value={terms} max={20000} />}>
+        <textarea {...aria("rt-set-terms", errors.terms, true)} rows={9} maxLength={20000} autoComplete="off" value={terms} onChange={(e) => { setTerms(e.target.value); if (errors.terms) setErrors({}); }} disabled={locked} />
       </Field>
       {!locked && (
         <div className="rt-pws-set__foot">
           <span></span>
-          <button type="submit" className="button -md -outline-purple-1 text-purple-1" disabled={busy || v.trim() === (value || "")} aria-busy={busy || undefined}>{busy ? "Saving…" : `Save ${title.toLowerCase()}`}</button>
+          <button type="submit" className="button -md -purple-1 text-white" disabled={update.isPending || !(changed.policy || changed.terms)} aria-busy={update.isPending || undefined}>{update.isPending ? "Saving…" : "Save"}</button>
         </div>
       )}
     </form>

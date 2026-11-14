@@ -18,25 +18,29 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
 import { CohortForm } from "./ProviderCohorts";
-import { COURSE_TONE, CardChoice, Choice, Loading, Pill, formatWhen, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, CardChoice, Choice, Loading, Pill, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import FilterScrollPill from "@/components/courses/FilterScrollPill";
 
-// The course editor's sections, in Hurak's order, each ticked in the "Publish your course" list when it is complete. FAQs and SEO
-// are optional: they never stop a course being sent for approval.
+// The course editor's sections, in the order a provider fills them in, each ticked in the side list when it is complete. Mode of
+// study comes before the price, as the price step depends on it: a self-paced course has one price, a course on dates is priced
+// on each date, so its step is its dates. FAQs and SEO are optional: they never stop a course being sent for approval.
 const SECTIONS = [
   { key: "landing", label: "Course landing page" },
   { key: "info", label: "Course information" },
   { key: "syllabus", label: "Syllabus and exam" },
   { key: "faqs", label: "FAQs", optional: true },
-  { key: "pricing", label: "Course pricing" },
   { key: "mode", label: "Mode of study" },
+  { key: "pricing", label: "Price" },
   { key: "seo", label: "SEO settings", optional: true },
 ];
+// the price step's name: a course on dates is priced on each date
+const pricingLabel = (method) => (method === "self-paced" ? "Price" : "Dates and prices");
 // a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
 const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
-const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "pricing", "mode"];
+const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "mode", "pricing"];
 const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
 // how many of each list a course can have (the API's limits, provider/courses.mts `content`)
 const MOST = { features: 12, outcomes: 20, units: 40, exams: 20, faqs: 30 };
@@ -44,15 +48,17 @@ const MAX_PRICE = 100000; // pounds (the API's pricePence limit)
 // The section that shows each field's error, by the API's names (a list's rows come under the list's name) and the editor's own
 // (passMark0, examUnit0: one exam row's fields). Saving with errors goes to the first section that has one.
 const SECTION_OF = {
-  model: "landing", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
+  model: "mode", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
   features: "info", outcomes: "info", audience: "info", entryRequirements: "info",
-  units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode",
+  images: "landing", units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode",
 };
-const sectionOf = (key) => SECTION_OF[key] || (/^(passMark|examUnit)\d+$/.test(key) ? "syllabus" : null);
+const sectionOf = (key) => SECTION_OF[key] || (/^(passMark|examUnit|examDuration)\d+$/.test(key) ? "syllabus" : null);
 // course pictures follow the rule every picture upload does (lib/images.js): JPG, PNG, WebP or GIF up to 15 MB, big ones made
 // smaller for you (a GIF is kept as it is, so it must be under 2 MB), at least 500 × 300 (the API checks the stored file too:
 // MIN_COURSE_IMAGE in apps/api/src/lib/media.mts)
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
+// "28 Oct 2026, 14:05": with the year, as a course or a waiting change can sit for months
+const SAVED_AT = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 // A pass mark, as the API checks it (apps/api/src/modules/provider/courses.mts passMarkProblem): a percentage up to 100%, a score
 // that isn't more than its total ("26 out of 40", "26/40", "26 of 40 marks", decimals too), or words ("Pass or fail"; a bare "of"
 // is a score only at the end, so "Level 3 of 2 sections" is words). Returns what is wrong, or "". Keep the two the same.
@@ -81,7 +87,7 @@ const SHARED_NOTES = {
   paused: "This shared course page is off the site. Providers' courses on it don't show until it is published again.",
 };
 // fields only the page's wording (the "page" roles: course editor, marketing) may change; the rest need full course editing
-const NO_DATES_NOTE = "This course has no upcoming dates, so learners won't see a date to book until you add one.";
+const NO_DATES_NOTE = "This course has no upcoming dates, so learners won't see a date until you add one.";
 const PAGE_FIELDS = ["title", "summary", "description", "audience", "entryRequirements", "outcomes", "features", "videoUrl"];
 const PRICE_FIELDS = ["price", "planId", "skillSaver"];
 
@@ -137,6 +143,30 @@ function stillNeeded(d, course) {
   }
   return out;
 }
+// What the step `key` still needs before Continue moves on, as { field: message } (the same rules as stillNeeded and the API's
+// `missing`; optional fields never stop it). Save still saves a half-finished step, and the side list still opens any step.
+function stepGaps(d, course, key) {
+  const e = {};
+  if (key === "landing") {
+    if (!d.summary.trim()) e.summary = "Enter a short description.";
+    if (!d.level) e.level = "Choose a level.";
+    if (!d.category) e.category = "Choose a category.";
+    if (!d.subcategory) e.subcategory = "Choose a sub-category.";
+    if (!d.description.trim()) e.description = "Enter the course description.";
+    if (!course.images.length) e.images = "Upload at least one picture.";
+  }
+  if (key === "info" && d.outcomes.length < 4) e.outcomes = `Add at least 4 things learners will learn (${d.outcomes.length} so far).`;
+  if (key === "syllabus" && !d.units.length) e.units = "Add at least one unit.";
+  // an exam row (optional) needs all three parts: the course page shows it as a line of a table
+  if (key === "syllabus") d.exams.forEach((x, i) => {
+    if (!x.unit.trim()) e[`examUnit${i}`] = "Name this exam or unit, or remove the row.";
+    if (!x.passMark.trim()) e[`passMark${i}`] = "Enter the pass mark, like 70% or 26 out of 40.";
+    if (!x.duration.trim()) e[`examDuration${i}`] = "Enter how long it takes, like 45 minutes.";
+  });
+  if (key === "mode" && course.kind === "provider" && !d.method) e.method = "Choose how the course is taught.";
+  if (key === "pricing" && course.kind === "provider" && d.method === "self-paced" && d.price === "" && !d.planId) e.price = "Enter the price per learner, or choose a price plan.";
+  return e;
+}
 // the draft's field for each kind of catalogue entry the API names as retired ("Name (sub-category)": provider/courses.mts retired)
 const RETIRED_KEY = { category: "category", "sub-category": "subcategory", topic: "topic", level: "level", "delivery method": "method" };
 
@@ -170,6 +200,12 @@ function alreadySaved(patch, fresh, access) {
 // once nothing required is missing. Leaving with unsaved changes asks first. Course data comes from the API.
 // scope "admin": the same editor for a shared course page in the admin (lib/courseEditorApi.js): no pricing or mode of study,
 // changes go live on Save, and the page is published from here instead of sent for approval.
+// The page title (ProviderShell's h1): the course's name once it has loaded.
+export function CourseTitle({ courseId, scope = "provider", fallback }) {
+  const id = /^\d+$/.test(String(courseId)) ? Number(courseId) : 0;
+  return useCourseEndpoints(scope, id).query.data?.title || fallback;
+}
+
 export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const id = /^\d+$/.test(String(courseId)) ? Number(courseId) : 0;
   const ep = useCourseEndpoints(scope, id);
@@ -181,7 +217,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState(null);
   const [said, setSaid] = useState("");
-  const [showNeed, setShowNeed] = useState(false); // "Send for approval" was pressed while something was missing
+  const [showNeed, setShowNeed] = useState(false); // "Almost ready to send" is open: Send for approval was pressed with something missing
   const [submitError, setSubmitError] = useState("");
   // sent (or published) just now: the button gives way at once, without waiting for the course to load again
   const [sent, setSent] = useState(false);
@@ -199,6 +235,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     requestAnimationFrame(() => staleRef.current?.focus());
   });
   const [gear, setGear] = useState(false);
+  const [seo, setSeo] = useState({ dirty: false, busy: false }); // the SEO step's own form, saved from the bar
   const [preview, setPreview] = useState(false);
   const formRef = useRef(null);
   const navRef = useRef(null);
@@ -243,17 +280,44 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   }, [course]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the course loads again; ep keeps its version in a ref
   // leaving with unsaved changes (a link, Back, closing the tab) asks first (lib/unsavedChanges.js)
   useUnsavedChanges(dirty);
+  // the fields Continue said were missing: each message goes as soon as that field is filled in (a picture uploaded)
+  const gapRef = useRef([]);
+  useEffect(() => {
+    if (!draft || !course || !gapRef.current.length) return;
+    const still = stepGaps(draft, course, tab);
+    const fixed = gapRef.current.filter((k) => !still[k]);
+    if (!fixed.length) return;
+    gapRef.current = gapRef.current.filter((k) => still[k]);
+    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !fixed.includes(k))));
+  }, [draft, course]); // eslint-disable-line react-hooks/exhaustive-deps -- tab: a change of step clears the errors itself
 
   if (!id || query.error?.data?.code === "NOT_FOUND" || (ep.admin && course && course.kind !== "shared")) return <EmptyState title="This course was not found" text={ep.admin ? "It may have been deleted. Only shared course pages are edited here." : "It may have been deleted, or it belongs to another provider."} action={back} />;
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
-  if (!course || !draft) return <Loading rows={3} />;
+  if (!course || !draft) return <Loading detail />;
 
   const status = sent ? (ep.admin ? "live" : "pending") : course.status;
   const canSubmit = access.full && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
   const isLive = course.status === "live" || course.status === "paused";
   // a course taught on dates can go live without one, but learners then have no date to book
   const noDates = course.kind === "provider" && (course.method === "classroom" || course.method === "live-online") && !course.upcomingCohorts;
-  const ticks = sections.map((x) => ({ ...x, ok: sectionOk(draft, course, x.key) }));
+  const ticks = sections.map((x) => ({ ...x, label: x.key === "pricing" ? pricingLabel(base.method) : x.label, ok: sectionOk(base, course, x.key) }));
+  const steps = ticks.filter((x) => !x.optional);
+  // before a course is live, the first required step still to do is marked Next, so a new provider sees where to start
+  const nextKey = isLive ? null : steps.find((x) => !x.ok)?.key;
+  // a step's status under its name, from what is saved: Complete (a mode of study names itself), "3 to add", No dates yet, Optional
+  const stepStatus = (x) => {
+    if (x.key === "mode" && x.ok) return methodName(base.method);
+    if (x.ok) return "Complete";
+    if (x.key === "pricing" && base.method !== "self-paced") return "No dates yet";
+    if (x.optional) return "Optional";
+    const n = x.key === "info" ? Math.max(0, 4 - base.outcomes.length) : Object.keys(stepGaps(base, course, x.key)).length;
+    return n ? `${n} to add` : "";
+  };
+  const done = steps.filter((x) => x.ok).length;
+  // the section before and after this one, for the bar under the form (Back, Save and continue)
+  const at = sections.findIndex((x) => x.key === tab);
+  const prev = ticks[at - 1];
+  const next = ticks[at + 1];
   const needed = stillNeeded(draft, course);
   const refresh = ep.refresh;
 
@@ -284,8 +348,9 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (draft.videoUrl.trim() && !videoEmbed(draft.videoUrl.trim())) e.videoUrl = "Use a link to one YouTube or Vimeo video, starting https://";
     draft.exams.forEach((x, i) => {
       if (!x.unit.trim()) e[`examUnit${i}`] = "Name this exam or unit, or remove the row.";
-      const problem = passMarkProblem(x.passMark);
+      const problem = x.passMark.trim() ? passMarkProblem(x.passMark) : "Enter the pass mark, like 70% or 26 out of 40.";
       if (problem) e[`passMark${i}`] = problem;
+      if (!x.duration.trim()) e[`examDuration${i}`] = "Enter how long it takes, like 45 minutes.";
     });
     if (Object.keys(e).length) {
       showErrors(e);
@@ -342,11 +407,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   // required is missing (or the provider isn't approved yet): the box under the button says what to do, and gets the focus.
   const submit = async () => {
     setSubmitError("");
-    if (needed.length || ep.waiting) {
-      setShowNeed(true);
-      requestAnimationFrame(() => needRef.current?.focus());
-      return;
-    }
+    if (needed.length || ep.waiting) return setShowNeed(true);
     if (dirty && !(await save())) return;
     try {
       if (ep.admin) await ep.setStatus("live");
@@ -429,38 +490,54 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       setReloading(false);
     }
   };
-  function changeTab(t) {
+  function changeTab(t, { scroll = false } = {}) {
     setTab(t);
     setErrors({});
     setQuery("tab", t === "landing" ? "" : t);
+    if (!scroll) return;
+    // the new section from its top, its heading focused (so a screen reader says where they are)
+    requestAnimationFrame(() => {
+      const box = formRef.current?.closest(".rt-pws-ce");
+      if (box) window.scrollTo({ top: box.getBoundingClientRect().top + window.scrollY - 96, behavior: "smooth" });
+      const h = formRef.current?.querySelector("h2");
+      if (h) {
+        h.setAttribute("tabindex", "-1");
+        h.focus({ preventScroll: true });
+      }
+    });
   }
-  const lastSaved = course.updatedAt ? formatWhen(new Date(course.updatedAt).getTime()) : "";
+  const goTo = async (x, { check = false } = {}) => {
+    if (FORM_SECTIONS.includes(tab) && dirty && access.page && !(await save())) return;
+    const gaps = check && access.page ? stepGaps(draft, course, tab) : {};
+    gapRef.current = Object.keys(gaps);
+    if (gapRef.current.length) return showErrors(gaps);
+    changeTab(x.key, { scroll: true });
+  };
+  const lastSaved = course.updatedAt ? SAVED_AT.format(new Date(course.updatedAt)) : "";
   const busy = ep.updating || ep.submitting;
   const sectionProps = { course, draft, setDraft, errors, access };
 
   return (
     <CourseEndpoints.Provider value={ep}>
-    <div className="rt-acc__stack">
+    <div className="rt-acc__stack rt-pws-cepage">
       <p className="rt-sr" aria-live="polite">{said}</p>
-      <section className="rt-acc__card rt-adm-hero" aria-label="Course">
-        <div className="rt-pws-course-herotext">
-          <div className="rt-adm-item__top">
-            <Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill>
-            <span className="rt-adm-item__when">{ep.admin ? "Shared course page" : `Performance model: ${pw.models[course.model]?.label}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
-          </div>
-          <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>
-          <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>
-          {status === "changes" && course.statusNote && <p className="rt-adm-item__block"><b>What to change:</b> {course.statusNote}</p>}
+      <section className="rt-pws-ce__head" aria-label="Course">
+        <div className="rt-pws-ce__headtext">
+          <p className="rt-pws-ce__meta">
+            <span title={status === "draft" ? (ep.admin ? SHARED_NOTES : STATUS_NOTES).draft : undefined}><Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill>{status === "draft" && <span className="rt-sr">: {(ep.admin ? SHARED_NOTES : STATUS_NOTES).draft}</span>}</span>
+            <span>{ep.admin ? "Shared course page" : `${pw.models[course.model]?.label} · ${methodName(course.method)}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
+          </p>
+          {ep.admin && <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>}
+          {status !== "draft" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
+          {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
           {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
-          {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-adm-item__block"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
-          {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-adm-item__block"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
-          {isLive && course.retired?.length > 0 && <p className="rt-adm-item__block"><b>No longer offered on ReadTraining:</b> {course.retired.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
+          {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
+          {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-acc__notice -warn"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
+          {isLive && course.retired?.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {course.retired.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
           {!ep.admin && isLive && noDates && <p className="rt-acc__note">{NO_DATES_NOTE}</p>}
         </div>
-        <div className="rt-adm-hero__actions">
-          {FORM_SECTIONS.includes(tab) && dirty && <span className="rt-pws-course-unsaved"><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
-          {FORM_SECTIONS.includes(tab) && access.page && <button type="button" className="button -sm -purple-1 text-white" onClick={save} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save"}</button>}
-          <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={openPreview}>Preview<span className="rt-sr"> (opens in a new tab)</span></button>
+        <div className="rt-pws-ce__headactions">
+          <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={openPreview}>Preview<span className="rt-sr"> (opens in a new tab)</span></button>
           <button type="button" className="rt-pws-ce__gear" onClick={() => setGear(true)} aria-label="Course settings"><i className="icon-setting text-16" aria-hidden="true"></i></button>
         </div>
       </section>
@@ -474,51 +551,34 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       )}
       {course.pendingChanges && (
         <section className="rt-acc__card rt-pws-ce__pending" aria-label="Changes waiting for approval">
-          <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {formatWhen(new Date(course.pendingChanges.since).getTime())}). You can keep editing: new changes join the same request.</p>
+          <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {SAVED_AT.format(new Date(course.pendingChanges.since))}). You can keep editing: new changes join the same request.</p>
           {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setWithdrawing(true)} aria-haspopup="dialog" disabled={ep.discarding}>{ep.discarding ? "Withdrawing…" : "Withdraw changes"}</button>}
         </section>
       )}
-      {!access.page && <p className="rt-adm-item__block">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : notApproved ? pw.notApproved.text : "Your role can see this course but not change it."}</p>}
-      {!ep.admin && access.page && !access.full && <p className="rt-adm-item__block">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
+      {!access.page && <p className="rt-acc__notice">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : notApproved ? pw.notApproved.text : "Your role can see this course but not change it."}</p>}
+      {!ep.admin && access.page && !access.full && <p className="rt-acc__notice">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
 
       <div className="rt-pws-ce">
-        <nav className="rt-acc__card rt-pws-ce__nav" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>
-          <h2 className="rt-adm-h3" id="rt-pws-ce-nav-h">{ep.admin ? "Publish the page" : "Publish your course"}</h2>
+        <nav className="rt-acc__card rt-pws-ce__nav rt-pill-scroll" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>
+          <h2 className="rt-adm-h3" id="rt-pws-ce-nav-h">{isLive ? (ep.admin ? "Page sections" : "Course sections") : ep.admin ? "Publish the page" : "Publish your course"}</h2>
+          <div className="rt-pws-ce__progress">
+            <p>{done === steps.length ? "Every required step is complete" : `${done} of ${steps.length} required steps complete`}</p>
+            <div className="rt-pws-wiz__bar" aria-hidden="true"><span style={{ "--rt-wiz": `${(done / steps.length) * 100}%` }}></span></div>
+          </div>
           <ol className="rt-pws-ce__steps">
             {ticks.map((x) => (
               <li key={x.key}>
                 <button type="button" className={`rt-pws-ce__step${tab === x.key ? " is-on" : ""}`} onClick={() => changeTab(x.key)} aria-current={tab === x.key ? "step" : undefined}>
                   <span className={`rt-pws-course-tick${x.ok ? " is-ok" : ""}`} aria-hidden="true">{x.ok ? <i className="icon-check text-10"></i> : null}</span>
-                  {x.label}{x.optional && <small className="rt-pws-ce__opt"> (optional)</small>}<span className="rt-sr">{x.ok ? ": complete" : ": not complete"}</span>
+                  <span className="rt-pws-ce__steptext"><span>{x.label}{x.key === nextKey && <> <Pill tone="info">Next</Pill></>}</span><small className={`rt-pws-ce__stepstatus${!x.ok && !x.optional ? " -todo" : ""}`}><span className="rt-sr">: </span>{stepStatus(x)}</small></span>
                 </button>
               </li>
             ))}
           </ol>
           {canSubmit ? (
             <>
-              <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={busy} aria-describedby={ep.waiting || needed.length ? "rt-pws-ce-need" : undefined} aria-busy={ep.submitting || undefined}>{ep.admin ? (ep.submitting ? "Publishing…" : "Publish") : ep.submitting ? "Sending…" : "Send for approval"}</button>
-              {ep.waiting ? (
-                <div className={`rt-acc__notice -warn rt-pws-ce__need${showNeed ? " is-pressed" : ""}`} id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role={showNeed ? "alert" : undefined}>
-                  <b>Your provider account is waiting for approval</b>
-                  <p>You can build this course now. Once our team approves your account, you can send it for approval.</p>
-                </div>
-              ) : needed.length > 0 ? (
-                <div className={`rt-acc__notice -warn rt-pws-ce__need${showNeed ? " is-pressed" : ""}`} id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role={showNeed ? "alert" : undefined}>
-                  <b>{ep.admin ? "Before you can publish this page, add:" : "Before you can send it for approval, add:"}</b>
-                  <ul>
-                    {needed.map((n) => (
-                      <li key={n.text}>
-                        <button type="button" className="rt-cd__link" onClick={() => changeTab(n.section)}>{n.text.charAt(0).toUpperCase() + n.text.slice(1)}</button>
-                        <small>{sections.find((x) => x.key === n.section)?.label}</small>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : submitError ? (
-                <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>
-              ) : null}
-              {/* not needed to send it, but worth knowing first */}
-              {!ep.admin && noDates && <p className="rt-acc__note">{NO_DATES_NOTE} <button type="button" className="rt-cd__link" onClick={() => changeTab("mode")}>Go to Mode of study</button></p>}
+              <button type="button" className={`button -md rt-btn-block ${needed.length || ep.waiting ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={submit} disabled={busy} aria-haspopup={needed.length || ep.waiting ? "dialog" : undefined} aria-describedby={submitError ? "rt-pws-ce-need" : undefined} aria-busy={ep.submitting || undefined}>{ep.admin ? (ep.submitting ? "Publishing…" : "Publish") : ep.submitting ? "Sending…" : "Send for approval"}</button>
+              {submitError && <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>}
             </>
           ) : (
             <>
@@ -526,6 +586,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
               {sentNote && <p className="rt-acc__notice -ok">{sentNote}</p>}
             </>
           )}
+          <FilterScrollPill scrollRef={navRef} />
         </nav>
 
         <div className="rt-pws-ce__main" ref={formRef}>
@@ -534,15 +595,25 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {tab === "info" && <InfoSection {...sectionProps} />}
           {tab === "syllabus" && <SyllabusSection {...sectionProps} />}
           {tab === "faqs" && <FaqSection {...sectionProps} />}
-          {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} />}
-          {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} isLive={isLive} onSaved={saved} />}
+          {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} />}
+          {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} onSaved={saved} />}
           {tab === "seo" && (
             <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-seo-h">
               <h2 className="rt-acc__h2" id="rt-pws-ce-seo-h">SEO settings</h2>
-              <p className="rt-acc__note">How the course page shows in Google and other search results. Saved on its own, straight away.</p>
-              <SeoPanel course={course} onSaved={saved} />
+              <p className="rt-acc__note">How the course page shows in Google and other search results.</p>
+              <SeoPanel course={course} onSaved={saved} formId="rt-pws-ce-seo-form" onState={setSeo} />
             </section>
           )}
+          <div className="rt-acc__card rt-pws-ce__bar">
+            {prev ? <button type="button" className="rt-cd__link" onClick={() => goTo(prev)} disabled={busy}><i className="icon-arrow-left text-12" aria-hidden="true"></i><span className="rt-sr">Back to </span>{prev.label}</button> : <span></span>}
+            <div className="rt-pws-ce__baractions">
+              {tab === "seo" && <span className="rt-pws-course-unsaved">{seo.dirty ? <><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</> : "All changes saved"}</span>}
+              {tab === "seo" && access.page && <button type="submit" form="rt-pws-ce-seo-form" className={`button -md ${next ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} disabled={seo.busy} aria-busy={seo.busy || undefined}>{seo.busy ? "Saving…" : "Save"}</button>}
+              {FORM_SECTIONS.includes(tab) && <span className="rt-pws-course-unsaved">{dirty ? <><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</> : "All changes saved"}</span>}
+              {FORM_SECTIONS.includes(tab) && access.page && <button type="button" className={`button -md ${next ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={save} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save"}</button>}
+              {next && <button type="button" className="button -md -purple-1 text-white" onClick={() => goTo(next, { check: true })} disabled={busy}>{FORM_SECTIONS.includes(tab) && dirty && access.page ? "Save and continue" : "Continue"}<span className="rt-sr">: {next.label}</span></button>}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -555,6 +626,29 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
             <button type="button" className="button -md -purple-1 text-white" onClick={saveAndPreview} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save and preview"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => { setPreview(false); window.open(previewHref, "_blank"); }}>Preview without them</button>
           </div>
+        </div>
+      </Sheet>
+      <Sheet open={showNeed} onClose={() => setShowNeed(false)} title={ep.waiting ? "Your account is waiting for approval" : ep.admin ? "Almost ready to publish" : "Almost ready to send"} closeLabel="Close" className="rt-pws-set__confirm">
+        <div className="rt-q__form">
+          {ep.waiting ? (
+            <p className="rt-acc__note">You can build this course now. Once our team approves your provider account, you can send it for approval.</p>
+          ) : (
+            <>
+              <p className="rt-acc__note">{ep.admin ? "Add these, then publish the page:" : "Add these, then send the course for approval:"}</p>
+              <ul className="rt-adm-list">
+                {sections.filter((x) => needed.some((n) => n.section === x.key)).map((x) => (
+                  <li key={x.key}>
+                    <div>
+                      <b>{x.key === "pricing" ? pricingLabel(draft.method) : x.label}</b>
+                      <small>{needed.filter((n) => n.section === x.key).map((n) => n.text.charAt(0).toUpperCase() + n.text.slice(1)).join(" · ")}</small>
+                    </div>
+                    <div className="rt-adm-list__side"><button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setShowNeed(false); changeTab(x.key, { scroll: true }); }} aria-label={`Go to ${x.key === "pricing" ? pricingLabel(draft.method) : x.label}`}>Go to step</button></div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <div className="rt-adm-cellrow"><button type="button" className="button -md -purple-1 text-white" onClick={() => setShowNeed(false)}>Keep editing</button></div>
         </div>
       </Sheet>
       <Toast toast={toast} onDone={clearToast} />
@@ -575,10 +669,17 @@ const useSet = (setDraft) => (key) => (value) => setDraft((d) => ({ ...d, [key]:
 // `max` is each line's length, `most` how many lines there can be (adding stops there, and says so); `error` a save's message.
 function LineList({ id, label, hint, items, onChange, max, most, placeholder, ordered = false, commas = false, disabled, error }) {
   const [value, setValue] = useState("");
+  const [twice, setTwice] = useState(""); // what was typed is already on the list
   const full = items.length >= most;
   const add = (text = value) => {
     const parts = (commas ? text.split(",") : [text]).map((x) => x.trim().slice(0, max)).filter(Boolean);
-    if (parts.length) onChange([...items, ...parts.filter((p) => !items.includes(p))].slice(0, most));
+    const fresh = parts.filter((p) => !items.includes(p));
+    if (parts.length && !fresh.length) {
+      setTwice(`"${parts[0]}" is already on the list.`);
+      return;
+    }
+    setTwice("");
+    if (fresh.length) onChange([...items, ...fresh].slice(0, most));
     setValue("");
   };
   const move = (i, by) => {
@@ -591,10 +692,10 @@ function LineList({ id, label, hint, items, onChange, max, most, placeholder, or
     <div className="rt-field">
       <label htmlFor={id}>{label}</label>
       <span className="rt-field__hint" id={`${id}-h`}>{full && !disabled ? `That's the most a course can have (${most}). Remove one to add another.` : hint}</span>
-      <FieldErr id={id} text={error} />
+      <FieldErr id={id} text={error || twice} />
       {!disabled && (
         <div className="rt-pws-course-addrow">
-          <input id={id} value={value} maxLength={max} disabled={full} onChange={(e) => (commas && e.target.value.includes(",") ? add(e.target.value) : setValue(e.target.value))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder={placeholder} aria-invalid={error ? true : undefined} aria-describedby={`${id}-h${error ? ` ${id}-e` : ""}`} autoComplete="off" />
+          <input id={id} value={value} maxLength={max} disabled={full} onChange={(e) => { setTwice(""); if (commas && e.target.value.includes(",")) add(e.target.value); else setValue(e.target.value); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder={placeholder} aria-invalid={error || twice ? true : undefined} aria-describedby={`${id}-h${error || twice ? ` ${id}-e` : ""}`} autoComplete="off" />
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => add()} disabled={full}>Add</button>
         </div>
       )}
@@ -634,12 +735,10 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
   const page = !access.page;
 
   return (
-    <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-basics-h">
+    <form className="rt-acc__card rt-pws-ce__groups" noValidate onSubmit={(e) => e.preventDefault()}>
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-basics-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-basics-h">Course landing page</h2>
-        {!shared && <CardChoice name="rt-pws-ce-model" legend="Performance model" value={draft.model} onChange={(v) => !full && set("model")(v)}
-          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: full && value !== draft.model }))} />}
-        <FieldErr id="rt-pws-ce-model" text={errors.model} />
+        <p className="rt-acc__note">What learners read first: the title, a short description and where the course is filed. Every field is required unless it says (optional).</p>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-title">Course title</label>
           <FieldErr id="rt-pws-ce-title" text={errors.title} />
@@ -650,7 +749,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
           <label htmlFor="rt-pws-ce-sub">Short description</label>
           <span className="rt-field__hint" id="rt-pws-ce-sub-h">One or two sentences under the title: who it is for and what they get.</span>
           <FieldErr id="rt-pws-ce-sub" text={errors.summary} />
-          <textarea id="rt-pws-ce-sub" rows={2} value={draft.summary} maxLength={LIMITS.summary} onChange={(e) => set("summary")(e.target.value)} disabled={page} aria-describedby="rt-pws-ce-sub-h" autoComplete="off" />
+          <textarea id="rt-pws-ce-sub" rows={2} value={draft.summary} maxLength={LIMITS.summary} onChange={(e) => set("summary")(e.target.value)} disabled={page} aria-invalid={errors.summary ? true : undefined} aria-describedby={`rt-pws-ce-sub-h${errors.summary ? " rt-pws-ce-sub-e" : ""}`} autoComplete="off" />
           <Counter value={draft.summary} max={LIMITS.summary} />
         </div>
         <div className="rt-pws-course-grid3">
@@ -683,10 +782,10 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         </div>
       </section>
 
-      <ImagesCard course={course} disabled={page} onSaved={onSaved} />
+      <ImagesCard course={course} disabled={page} onSaved={onSaved} required={errors.images} />
 
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-video-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-video-h">Overview video (optional)</h2>
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-video-h">
+        <h3 className="rt-adm-h3" id="rt-pws-ce-video-h">Overview video (optional)</h3>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-video">Video link</label>
           <span className="rt-field__hint" id="rt-pws-ce-video-h2">A YouTube or Vimeo link. Copy it from the video&apos;s Share button.</span>
@@ -703,7 +802,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
 // the moment they are asked for. If the server refuses, the list goes back to how it was (unsaved ALT text kept) and says why. The course then loads again in the
 // background. An upload and an ALT text save show their own label while they run (Uploading…, Saving…); every button waits while
 // one change is saving, and Remove asks first.
-function ImagesCard({ course, disabled, onSaved }) {
+function ImagesCard({ course, disabled, onSaved, required }) {
   const ep = useEndpoints();
   const [list, setList] = useState(course.images);
   // what is running: null, "upload", "alt", "remove" or "cover"
@@ -813,10 +912,11 @@ function ImagesCard({ course, disabled, onSaved }) {
   const lastOfLive = shown.length === 1 && (course.status === "live" || course.status === "paused");
 
   return (
-    <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
-      <h2 className="rt-acc__h2" id="rt-pws-ce-media-h">Course images</h2>
+    <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
+      <h3 className="rt-adm-h3" id="rt-pws-ce-media-h">Course images</h3>
       <p className="rt-acc__note">They show at the top of the course page; the first image is the cover in search results. Images are saved as soon as you add or change them.</p>
       {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+      {required && !list.length && <p className="rt-q__err"><span className="rt-sr">Error: </span>{required}</p>}
       {!disabled && (
         <div className="rt-pws-course-mediabar">
           <input ref={fileRef} type="file" accept={acceptFor("course")} className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
@@ -834,12 +934,15 @@ function ImagesCard({ course, disabled, onSaved }) {
                   <div className="rt-pws-course-mediabody"><Pill tone="info">Uploading…</Pill></div>
                 ) : (
                 <div className="rt-pws-course-mediabody">
-                  {i === 0 ? <Pill tone="info">Cover</Pill> : !disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={busy} onClick={() => saveList([m, ...shown.filter((x) => x.id !== m.id)], "Cover image changed", "cover")}>Make cover</button>}
+                  <div className="rt-pws-course-mediahead">
+                    {i === 0 ? <Pill tone="info">Cover</Pill> : !disabled ? <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={busy} onClick={() => saveList([m, ...shown.filter((x) => x.id !== m.id)], "Cover image changed", "cover")}>Make cover</button> : <span></span>}
+                    {!disabled && <button type="button" className="rt-pws-ce__iconbtn -danger" disabled={busy} onClick={() => setRemoving(m)} aria-haspopup="dialog" aria-label={`Remove image ${i + 1}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>}
+                  </div>
                   <div className="rt-field">
                     <label htmlFor={`rt-pws-ce-alt-${i}`}>ALT text</label>
+                    <span className="rt-field__hint">What the picture shows, for people who can&apos;t see it.</span>
                     <input id={`rt-pws-ce-alt-${i}`} value={m.alt || ""} maxLength={140} disabled={disabled} onChange={(e) => setList(list.map((x) => (x.id === m.id ? { ...x, alt: e.target.value } : x)))} placeholder="For example: learners practising CPR on a manikin" autoComplete="off" />
                   </div>
-                  {!disabled && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" disabled={busy} onClick={() => setRemoving(m)} aria-haspopup="dialog">Remove<span className="rt-sr"> image {i + 1}</span></button>}
                 </div>
                 )}
               </li>
@@ -878,8 +981,8 @@ function InfoSection({ draft, setDraft, access, errors }) {
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-learn-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-learn-h">Course information</h2>
-        <p className="rt-acc__note">These show on the public course page and help it perform in search.</p>
-        <LineList id="rt-pws-ce-feature" label="Course features" hint={`Short facts shown as tags, like "1 day" or "Certificate valid 3 years". Press Enter or type a comma to add. Up to ${MOST.features}.`} items={draft.features} onChange={set("features")} max={LIMITS.feature} most={MOST.features} commas disabled={page} error={errors.features} />
+        <p className="rt-acc__note">These show on the public course page and help it perform in search. Every field is required unless it says (optional).</p>
+        <LineList id="rt-pws-ce-feature" label="Course features (optional)" hint={`Short facts shown as tags, like "1 day" or "Certificate valid 3 years". Press Enter or type a comma to add. Up to ${MOST.features}.`} items={draft.features} onChange={set("features")} max={LIMITS.feature} most={MOST.features} commas disabled={page} error={errors.features} />
         <LineList id="rt-pws-ce-obj" label="What will learners learn?" hint={`Add at least 4 (up to ${MOST.outcomes}), each starting with a verb. Press Enter to add. ${draft.outcomes.length} added${draft.outcomes.length < 4 ? `, ${4 - draft.outcomes.length} more to reach 4` : ""}.`} items={draft.outcomes} onChange={set("outcomes")} max={LIMITS.outcome} most={MOST.outcomes} placeholder="For example: Give CPR to an adult" ordered disabled={page} error={errors.outcomes} />
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-aud">Who is it for? (optional)</label>
@@ -917,8 +1020,8 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
   const setExam = (i, patch) => set("exams")(draft.exams.map((e, j) => (j === i ? { ...e, ...patch } : e)));
 
   return (
-    <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-units-h">
+    <form className="rt-acc__card rt-pws-ce__groups" noValidate onSubmit={(e) => e.preventDefault()}>
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-units-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
           <h2 className="rt-acc__h2" id="rt-pws-ce-units-h">Syllabus</h2>
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(null); setSheet(true); }} disabled={draft.units.length >= MOST.units}>Add unit</button>}
@@ -934,8 +1037,8 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
                   <div className="rt-adm-list__side">
                     <button type="button" className="rt-pws-ce__iconbtn" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move up: ${u.title}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
                     <button type="button" className="rt-pws-ce__iconbtn" onClick={() => move(i, 1)} disabled={i === draft.units.length - 1} aria-label={`Move down: ${u.title}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => { setEditing(i); setSheet(true); }}>Edit<span className="rt-sr"> {u.title}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => askRemove("units", i, u.title || `unit ${i + 1}`, !u.title && !u.body)} aria-haspopup="dialog">Remove<span className="rt-sr"> {u.title}</span></button>
+                    <button type="button" className="rt-pws-ce__iconbtn" onClick={() => { setEditing(i); setSheet(true); }} aria-label={`Edit: ${u.title}`} title="Edit"><i className="icon-edit text-14" aria-hidden="true"></i></button>
+                    <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => askRemove("units", i, u.title || `unit ${i + 1}`, !u.title && !u.body)} aria-haspopup="dialog" aria-label={`Remove: ${u.title}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>
                   </div>
                 )}
               </li>
@@ -944,12 +1047,12 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         ) : <EmptyState inCard title="No units yet. Add at least one: a course needs its syllabus before it can be sent for approval." />}
       </section>
 
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-exam-h">
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-exam-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
-          <h2 className="rt-acc__h2" id="rt-pws-ce-exam-h">Exam and assessment (optional)</h2>
+          <h3 className="rt-adm-h3" id="rt-pws-ce-exam-h">Exam and assessment (optional)</h3>
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => set("exams")([...draft.exams, { unit: "", passMark: "", duration: "" }])} disabled={draft.exams.length >= MOST.exams}>Add row</button>}
         </div>
-        <p className="rt-acc__note">If the course ends with an exam, one row per paper or practical: what it covers, the pass mark and how long it takes. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
+        <p className="rt-acc__note">If the course ends with an exam, add one row per paper or practical, each with what it covers, its pass mark and how long it takes. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
         <FieldErr id="rt-pws-ce-exams" text={errors.exams} />
         {draft.exams.length ? (
           <ol className="rt-pws-ce__exams">
@@ -967,9 +1070,10 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
                 </div>
                 <div className="rt-field">
                   <label htmlFor={`rt-pws-ce-ex-d${i}`}>Duration</label>
-                  <input id={`rt-pws-ce-ex-d${i}`} value={e.duration} maxLength={40} onChange={(ev) => setExam(i, { duration: ev.target.value })} disabled={locked} placeholder="For example: 45 minutes" autoComplete="off" />
+                  <FieldErr id={`rt-pws-ce-ex-d${i}`} text={errors[`examDuration${i}`]} />
+                  <input id={`rt-pws-ce-ex-d${i}`} value={e.duration} maxLength={40} onChange={(ev) => setExam(i, { duration: ev.target.value })} disabled={locked} placeholder="For example: 45 minutes" autoComplete="off" aria-invalid={errors[`examDuration${i}`] ? true : undefined} aria-describedby={errors[`examDuration${i}`] ? `rt-pws-ce-ex-d${i}-e` : undefined} />
                 </div>
-                {!locked && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => askRemove("exams", i, e.unit || `exam row ${i + 1}`, !e.unit && !e.passMark && !e.duration)} aria-haspopup="dialog">Remove<span className="rt-sr"> exam row {i + 1}</span></button>}
+                {!locked && <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => askRemove("exams", i, e.unit || `exam row ${i + 1}`, !e.unit && !e.passMark && !e.duration)} aria-haspopup="dialog" aria-label={`Remove exam row ${i + 1}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>}
               </li>
             ))}
           </ol>
@@ -1058,8 +1162,8 @@ function FaqSection({ draft, setDraft, access, errors }) {
                 <div><b>{f.question}</b><small>{f.answer}</small></div>
                 {!locked && (
                   <div className="rt-adm-list__side">
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => setEditing(i)}>Edit<span className="rt-sr"> {f.question}</span></button>
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRemoving({ index: i, name: f.question })} aria-haspopup="dialog">Remove<span className="rt-sr"> {f.question}</span></button>
+                    <button type="button" className="rt-pws-ce__iconbtn" onClick={() => setEditing(i)} aria-label={`Edit: ${f.question}`} title="Edit"><i className="icon-edit text-14" aria-hidden="true"></i></button>
+                    <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => setRemoving({ index: i, name: f.question })} aria-haspopup="dialog" aria-label={`Remove: ${f.question}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>
                   </div>
                 )}
               </li>
@@ -1117,12 +1221,15 @@ function FaqSheet({ open, onClose, faq, onSave }) {
 // ---- Course pricing --------------------------------------------------------------------------------------------------------
 
 // Skill Saver, and the price: a self-paced course has one price or a price plan; classroom and live online courses are priced on
-// each date.
+// each date, so this step holds their dates (Create cohort opens the same form as the Cohorts page).
 // Prices include VAT and change straight away, even on a live course.
-function PricingSection({ draft, setDraft, errors, access, course }) {
+function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
   const set = useSet(setDraft);
   const locked = !access.pricing;
-  const { organisationId } = useProviderAccess();
+  const { organisationId, can } = useProviderAccess();
+  const [adding, setAdding] = useState(false);
+  const ep = useEndpoints();
+  const enquiries = course.model === "enquiries";
   const plans = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && draft.method === "self-paced", retry: false }).data || [];
   // Tiered is shown once chosen even before a plan is picked. Choosing it puts the flat price aside (so the course has no price
   // until a plan is picked, and the editor knows something changed); picking Flat again clears the plan and brings the price back.
@@ -1143,7 +1250,7 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-price-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-price-h">Course pricing</h2>
+        <h2 className="rt-acc__h2" id="rt-pws-ce-price-h">{pricingLabel(draft.method)}</h2>
         <div className="rt-pws-ce__loyalty">
           <label className="rt-fp__opt">
             <input name="skillSaver" type="checkbox" className="rt-fp__check" checked={draft.skillSaver} disabled={locked} onChange={(e) => set("skillSaver")(e.target.checked)} />
@@ -1177,56 +1284,48 @@ function PricingSection({ draft, setDraft, errors, access, course }) {
               </div>
             )}
           </>
+        ) : draft.method !== course.method ? (
+          <p className="rt-acc__note">Save the new mode of study first: its dates and prices follow from it.</p>
         ) : (
-          <p className="rt-acc__note">Each date has its own price, set when you add the date: you can charge more for a Saturday or a busy month. {course.upcomingCohorts ? `This course has ${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}.` : "This course has no dates yet."} <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">See its dates</Link></p>
+          <>
+            <p className="rt-acc__note">Each date (a cohort) has its own {course.method === "classroom" ? "venue, " : "joining link, "}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live; online booking opens in a later update."}</p>
+            <div className="rt-pws-ce__dates">
+              <p className="rt-pws-ce__datecount">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}` : course.cohortCount ? "No upcoming dates: learners only see a run before its first day" : "No upcoming dates yet"}</p>
+              {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Create cohort</button>}
+              {course.cohortCount > 0 && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>}
+            </div>
+          </>
         )}
       </section>
+      <CohortForm open={adding} onClose={() => setAdding(false)} suggestCourseId={course.id} onSaved={() => {
+        setAdding(false);
+        ep.refresh();
+        onSaved("Dates added");
+      }} />
     </form>
   );
 }
 
 // ---- Mode of study ---------------------------------------------------------------------------------------------------------
 
-function ModeSection({ course, draft, setDraft, access, errors, onSaved }) {
+function ModeSection({ course, draft, setDraft, access, errors }) {
   const set = useSet(setDraft);
-  const [adding, setAdding] = useState(false);
-  const utils = api.useUtils();
-  const { organisationId, can } = useProviderAccess();
   const locked = !access.full || course.cohortCount > 0;
-  const dated = course.method === "classroom" || course.method === "live-online";
 
   return (
     <div className="rt-acc__stack">
       <form className="rt-acc__card rt-pws-course-form" noValidate onSubmit={(e) => e.preventDefault()} aria-labelledby="rt-pws-ce-mode-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">Mode of study</h2>
-        {course.cohortCount > 0 && <p className="rt-adm-item__block">This course has dates, so how it is taught can&apos;t change. Remove its dates first, or create a new course for another mode of study.</p>}
+        {course.cohortCount > 0 && <p className="rt-acc__notice">This course has dates, so how it is taught can&apos;t change. Remove its dates first, or create a new course for another mode of study.</p>}
         <CardChoice name="rt-pws-ce-format" legend="How is the course taught?" value={draft.method} onChange={(v) => !locked && set("method")(v)}
           options={pw.formats.map((f) => ({ value: f.key, label: methodName(f.key), text: f.text, disabled: locked && f.key !== draft.method }))} />
         <FieldErr id="rt-pws-ce-format" text={errors.method} />
-        {draft.method !== course.method && <p className="rt-acc__note">{draft.method === "self-paced" && (course.status === "live" || course.status === "paused") ? "Save to change how the course is taught. A live self-paced course needs its price: add it in Course pricing first." : "Save to change how the course is taught."}</p>}
+        <CardChoice name="rt-pws-ce-model" legend="How do learners reach you?" value={draft.model} onChange={(v) => access.full && set("model")(v)}
+          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: !access.full && value !== draft.model }))} />
+        <FieldErr id="rt-pws-ce-model" text={errors.model} />
+        {draft.method !== course.method && <p className="rt-acc__note">{draft.method === "self-paced" && (course.status === "live" || course.status === "paused") ? "Save to change how the course is taught. A live self-paced course needs its price: add it in the Price step first." : "Save to change how the course is taught."}</p>}
+        {draft.method === "self-paced" && draft.method === course.method && <p className="rt-acc__note">Self-paced courses have no dates: learners start straight away. The course shows on ReadTraining with its price; lessons for self-paced courses come in a later update.</p>}
       </form>
-
-      {dated && draft.method === course.method && (
-        <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-dates-h">
-          <div className="rt-acc__cardhead rt-pws-course-cardhead">
-            <h2 className="rt-acc__h2" id="rt-pws-ce-dates-h">Dates</h2>
-            {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Add dates</button>}
-          </div>
-          <p className="rt-acc__note">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}.` : "No upcoming dates yet."} Each date has its own {course.method === "classroom" ? "venue, " : "joining link, "}places and price. Learners see the dates once the course is live; online booking opens in a later update.</p>
-          <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>
-        </section>
-      )}
-      {draft.method === "self-paced" && draft.method === course.method && (
-        <section className="rt-acc__card rt-pws-course-form" aria-label="Self-paced">
-          <p className="rt-acc__note">Self-paced courses have no dates: learners start when they book. The course shows on ReadTraining with its price; lessons and online booking for self-paced courses come in a later update.</p>
-        </section>
-      )}
-
-      <CohortForm open={adding} onClose={() => setAdding(false)} suggestCourseId={course.id} onSaved={() => {
-        setAdding(false);
-        utils.provider.courses.get.invalidate({ organisationId, courseId: course.id });
-        onSaved("Dates added");
-      }} />
     </div>
   );
 }

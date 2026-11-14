@@ -77,7 +77,7 @@ export default function ProviderNewOrder() {
   useEffect(() => {
     if (!data || prefilled.current) return;
     prefilled.current = true;
-    // ?cohort=ID ("Enroll student" on a cohort): the first line is that course and those dates
+    // ?cohort=ID ("Enrol student" on a cohort): the first line is that course and those dates
     const k = data.byId.cohort[getQuery("cohort")];
     if (k) {
       const tiered = data.byId.course[k.courseId]?.pricing.type === "tiered";
@@ -344,7 +344,7 @@ export default function ProviderNewOrder() {
         <section className="rt-acc__card" id="rt-pws-ord-s2" aria-labelledby="rt-pws-ord-h2">
           <h2 className="rt-acc__h2 rt-pws-ord__step" id="rt-pws-ord-h2"><span aria-hidden="true">2</span>Courses and learners</h2>
           <p className="rt-acc__note">Add each course with the people going on it. A company can book several people at once.</p>
-          {!courses.length && <p className="rt-adm-item__block">You have no live courses yet. A course can be booked once our team has approved it.</p>}
+          {!courses.length && <p className="rt-acc__notice">You have no live courses yet. A course can be booked once our team has approved it.</p>}
           <ol className="rt-pws-ord__lines">
             {lines.map((l, i) => {
               const p = `l${i}`;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/trpc/react";
@@ -21,7 +21,7 @@ import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 const Err = ({ id, text }) => (text ? <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{text}</p> : null);
 
 // SEO settings: title (60), description (320) and keywords, with a search result preview.
-export function SeoPanel({ course, onSaved }) {
+export function SeoPanel({ course, onSaved, formId, onState }) {
   const ep = useEndpoints();
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState(course.seoTitle || "");
@@ -32,7 +32,9 @@ export function SeoPanel({ course, onSaved }) {
   const ref = useRef(null);
   // what is saved: leaving the page with anything else typed asks first (lib/unsavedChanges.js)
   const [saved, setSaved] = useState({ title: course.seoTitle || "", desc: course.seoDescription || "", keywords: course.seoKeywords || [] });
-  useUnsavedChanges(title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords));
+  const dirty = title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords);
+  useUnsavedChanges(dirty);
+  useEffect(() => { onState?.({ dirty, busy }); }, [dirty, busy]); // eslint-disable-line react-hooks/exhaustive-deps -- onState is the editor's setter
 
   const addWords = (text) => {
     const add = text.split(",").map((w) => w.trim().toLowerCase().slice(0, 40)).filter((w) => w && !keywords.includes(w));
@@ -62,7 +64,7 @@ export function SeoPanel({ course, onSaved }) {
   const locked = !ep.access.page;
 
   return (
-    <form className="rt-q__form" onSubmit={submit} noValidate ref={ref}>
+    <form className="rt-q__form" id={formId} onSubmit={submit} noValidate ref={ref}>
       <div className="rt-field">
         <label htmlFor="rt-pws-cset-st">SEO title (optional)</label>
         <Err id="rt-pws-cset-st" text={errors.title} />
@@ -97,7 +99,7 @@ export function SeoPanel({ course, onSaved }) {
         <span className="rt-pws-cset__serpdesc">{desc.trim() || course.summary || "Your description shows here."}</span>
       </div>
       {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
-      {!locked && <div><button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : "Save"}</button></div>}
+      {!locked && !formId && <div><button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : "Save"}</button></div>}
     </form>
   );
 }
@@ -179,8 +181,9 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
         </div>
       ) : (
         <div className="rt-q__form" aria-busy={busy || undefined}>
+          <p className="rt-acc__note">Each setting is saved as soon as you change it.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
-          <Choice name="rt-pws-gear-enrol" legend="Enrollment (privacy)" hint="Private courses don't show in search; you share the link or book learners yourself." value={course.isPublic ? "public" : "private"} onChange={(v) => edit && change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public")} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
+          <Choice name="rt-pws-gear-enrol" legend="Enrolment (privacy)" hint="Private courses don't show in search; you share the link or book learners yourself." value={course.isPublic ? "public" : "private"} onChange={(v) => edit && change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public")} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
           <div className="rt-field">
             <label htmlFor="rt-pws-gear-url">Course address</label>
             <p className="rt-field__hint">Share it on your website or social media{course.status === "live" ? "." : ". It works once the course is live."}</p>
@@ -220,6 +223,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
             </div>
           )}
           {course.method !== "self-paced" && <p className="rt-acc__note"><Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">See this course&apos;s dates</Link></p>}
+          <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={close}>Done</button>
         </div>
       )}
     </Sheet>
@@ -300,6 +304,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
               {blocked ? <p className="rt-acc__note">{blocked}</p> : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setConfirm(true)}>Delete page</button>}
             </div>
           )}
+          <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={close}>Done</button>
         </div>
       )}
     </Sheet>

@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { SHOW_DEMO } from "@/lib/demo";
+import { DetailSkeleton, TableSkeleton } from "@/components/admin/adminParts";
 
 // Shared bits of the provider workspace. The pills, tabs, search, address helpers and date-time format are the admin's
 // (components/admin/adminParts.jsx), so both work layouts look and behave the same. Added here: the status tones, the loading
@@ -24,21 +25,23 @@ export function DemoTag({ note = "Made up for now, to show how this works. Real 
 }
 
 // While the records load: grey blocks in the shape of the page (a strip of stats, then cards), not a spinner.
-export function Loading({ rows = 3, stats = false }) {
+// Loading, in the shape of what is coming (DESIGN-SYSTEM.md section 7): a list's table rows (TableSkeleton), or a record page's head
+// card and two cards (`detail`, DetailSkeleton), with the Dashboard's number strip (`stats`) above. The page is marked busy.
+export function Loading({ rows = 3, stats = false, detail = false }) {
   return (
-    <div className="rt-acc__stack rt-pws-skel" aria-busy="true" aria-label="Loading">
-      {stats && <div className="rt-pws-skel__stats">{[0, 1, 2, 3].map((i) => <span key={i} className="rt-pws-skel__block -stat"></span>)}</div>}
-      {Array.from({ length: rows }, (_, i) => <span key={i} className="rt-pws-skel__block"></span>)}
+    <div className="rt-acc__stack" aria-busy="true" aria-label="Loading">
+      {stats && <div className="rt-pws-skel__stats" aria-hidden="true">{[0, 1, 2, 3].map((i) => <span key={i} className="rt-pws-skel__block -stat"></span>)}</div>}
+      {detail ? <DetailSkeleton /> : <TableSkeleton rows={Math.max(4, rows * 2)} />}
     </div>
   );
 }
 
-// Hurak's List / Calendar switch above the cohorts and the calendar.
+// Hurak's List / Calendar switch above the cohorts and the calendar: two pages, so links, in the look of every tab (Tabs).
 export function CohortViews({ current }) {
   return (
-    <nav className="rt-pws-views" aria-label="Cohort views">
+    <nav className="rt-acc__tabs" aria-label="Cohort views">
       {[["list", "List", "/provider/cohorts"], ["calendar", "Calendar", "/provider/calendar"]].map(([key, label, href]) => (
-        <Link key={key} href={href} className={`rt-pws-views__link${current === key ? " is-on" : ""}`} aria-current={current === key ? "page" : undefined}>{label}</Link>
+        <Link key={key} href={href} className={`rt-tr__filter${current === key ? " is-on" : ""}`} aria-current={current === key ? "page" : undefined}>{label}</Link>
       ))}
     </nav>
   );

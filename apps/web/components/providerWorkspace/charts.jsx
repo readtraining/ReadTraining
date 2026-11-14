@@ -19,7 +19,7 @@ export function Delta({ now, before, label = "vs previous period" }) {
   return (
     <span className={`rt-chart-delta -${dir}`}>
       <span aria-hidden="true">{dir === "up" ? "↑" : dir === "down" ? "↓" : "→"}</span>
-      {Math.abs(pct).toFixed(1)}%<span className="rt-sr"> {dir === "down" ? "down" : "up"} {label}</span>
+      {Math.abs(pct).toFixed(1)}%<span className="rt-sr"> {dir === "down" ? "down" : dir === "up" ? "up" : "no change"} {label}</span>
     </span>
   );
 }

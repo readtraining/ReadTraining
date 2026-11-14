@@ -162,9 +162,9 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                     <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" placeholder="Optional" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
                   </Field>
                 </div>
-                <p className="rt-pws-pkg__save" aria-live="polite">Per delegate, all inclusive{save > 0 ? ` · was ${formatPrice(Number(t.price) + save)}, you save ${formatPrice(save)}` : ""}</p>
+                <p className="rt-pws-pkg__save" aria-live="polite">Per delegate, including VAT (as learners see it){save > 0 ? ` · was ${formatPrice(Number(t.price) + save)}, saves ${formatPrice(save)}` : ""}</p>
                 <Field id={`rt-plan-t${i}-tag`} label="Tagline (optional)">
-                  <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Everything you need to pass" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
+                  <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
                 </Field>
                 <Toggle id={`rt-plan-t${i}-pop`} checked={t.popular} onChange={(on) => setPopular(i, on)} label="Mark as Most popular" />
 

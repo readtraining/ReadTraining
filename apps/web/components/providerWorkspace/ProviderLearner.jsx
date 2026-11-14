@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { learnerName, timeRange, useProvider, editorHref } from "@/lib/providerWorkspace";
-import { ORDER_TONE, Loading, Pill, RowMenu } from "./providerParts";
+import { Loading, ORDER_TONE, Pill, RowMenu, Stats } from "./providerParts";
 import { dayRange } from "./ProviderCohorts";
 import { money } from "./charts";
 import { EmptyState } from "@/components/states/States";
@@ -12,9 +12,15 @@ import { EmptyState } from "@/components/states/States";
 // Student profile: Hurak's details (name, phone, town, email) and its booking cards (course, dates and times, venue's full address,
 // booking reference, order number and status, View cohort / Order details), in our layout: a header with the learner's numbers,
 // then the bookings as a timeline, newest first.
+// The page title (ProviderShell's h1): the learner's name once the records have loaded.
+export function LearnerTitle({ learnerId, fallback }) {
+  const l = useProvider()?.byId.learner[learnerId];
+  return l ? learnerName(l) : fallback;
+}
+
 export default function ProviderLearner({ learnerId }) {
   const data = useProvider();
-  if (!data) return <Loading rows={2} />;
+  if (!data) return <Loading detail />;
   const l = data.byId.learner[learnerId];
   if (!l) return <EmptyState title="This learner was not found." action={{ href: "/provider/learners", label: "Back to learners" }} />;
 
@@ -23,10 +29,10 @@ export default function ProviderLearner({ learnerId }) {
   const lineOf = (e) => orderOf(e.orderRef)?.lines.find((x) => x.courseId === e.courseId && x.learnerIds.includes(e.learnerId));
   const spent = list.filter((e) => e.status !== "cancelled").reduce((t, e) => t + (lineOf(e)?.price || 0), 0);
   const stats = [
-    { label: "Bookings", value: list.length },
-    { label: "Courses", value: new Set(list.map((e) => e.courseId)).size },
-    { label: "Certificates", value: list.filter((e) => e.certificate).length },
-    { label: "Booked value", value: money(spent) },
+    { label: "Bookings", value: list.length, icon: "icon-calendar" },
+    { label: "Courses", value: new Set(list.map((e) => e.courseId)).size, icon: "icon-book" },
+    { label: "Certificates", value: list.filter((e) => e.certificate).length, icon: "icon-badge" },
+    { label: "Booked value", value: money(spent), icon: "icon-save-money" },
   ];
   const initials = `${l.first[0] || ""}${l.last[0] || ""}`.toUpperCase();
 
@@ -36,7 +42,6 @@ export default function ProviderLearner({ learnerId }) {
         <div className="rt-lr-head__top">
           <span className="rt-lr-avatar -lg" aria-hidden="true">{initials}</span>
           <div className="rt-lr-head__who">
-            <h2 className="rt-lr-head__name">{learnerName(l)}</h2>
             <ul className="rt-lr-head__contact">
               <li><span>Phone</span>{l.phone ? <a href={`tel:${l.phone.replace(/\s/g, "")}`}>{l.phone}</a> : "—"}</li>
               <li><span>Town</span>{l.town || "—"}</li>
@@ -45,10 +50,8 @@ export default function ProviderLearner({ learnerId }) {
           </div>
           <Link href={`/provider/orders/new?learner=${l.id}`} className="button -sm -purple-1 text-white">Create order</Link>
         </div>
-        <dl className="rt-lr-head__stats">
-          {stats.map((s) => <div key={s.label}><dt>{s.label}</dt><dd>{s.value}</dd></div>)}
-        </dl>
       </section>
+      <Stats items={stats} label="This learner's bookings" />
 
       <section aria-labelledby="rt-pws-lrn-bk">
         <h2 className="rt-lr-h" id="rt-pws-lrn-bk">Bookings</h2>
