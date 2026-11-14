@@ -6,46 +6,41 @@ import { pw } from "@/data/providerWorkspace";
 import { bookedBy, customerName, useProvider } from "@/lib/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import CataloguePagination from "@/components/courses/CataloguePagination";
-import { Loading, ORDER_TONE, Pill, RowMenu, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { Loading, ORDER_TONE, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { formatOrderDay } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
 
 const PER_PAGE = 10;
-const FIELDS = [
-  { key: "no", label: "Order no", placeholder: "eg. 24871" },
-  { key: "first", label: "First name", placeholder: "First name" },
-  { key: "last", label: "Last name", placeholder: "Last name" },
-  { key: "email", label: "Email", placeholder: "Email" },
-];
 const CHANNELS = [{ value: "", label: "All sales channels" }, ...Object.entries(pw.channels).map(([value, label]) => ({ value, label }))];
 const STATUSES = [{ value: "", label: "All statuses" }, ...Object.entries(pw.orderStatuses).map(([value, label]) => ({ value, label }))];
 
-// Orders, as Hurak's: search by order number, first name, last name and email, filter by sales channel and status (all kept in
-// the address), newest first, 10 a page. Columns: order no, customer name and email, sales channel, who booked it, status, amount,
+// Orders, as Hurak's: find an order by its number, the customer's first name, last name or email (one search box, the workspace's
+// filter bar as on Courses), filter by sales channel and status (all kept in the address), newest first, 10 a page. Columns: order no, customer name and email, sales channel, who booked it, status, amount,
 // payment method, date, and the actions (view the order, its first cohort). "Create order" adds one by hand.
 export default function ProviderOrders() {
   const data = useProvider();
-  const [f, setF] = useState({ no: "", first: "", last: "", email: "" });
+  const [q, setQ] = useState("");
   const [channel, setChannel] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   useEffect(() => {
-    setF({ no: getQuery("no") || "", first: getQuery("first") || "", last: getQuery("last") || "", email: getQuery("email") || "" });
+    setQ(getQuery("q") || "");
     const c = getQuery("channel");
     if (pw.channels[c]) setChannel(c);
     const s = getQuery("status");
     if (pw.orderStatuses[s]) setStatus(s);
   }, []);
-  useEffect(() => setPage(1), [f, channel, status]);
+  useEffect(() => setPage(1), [q, channel, status]);
   if (!data) return <Loading rows={2} />;
 
   if (!data.orders.length) {
     return <EmptyState title="No orders yet" text="Bookings from ReadTraining, your website and the orders you add yourself appear here." action={{ href: "/provider/orders/new", label: "Create order" }} />;
   }
 
-  const has = (v, needle) => !needle.trim() || String(v || "").toLowerCase().includes(needle.trim().toLowerCase());
+  // every word typed must be found in the order number, the customer's name or email
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const list = data.orders
-    .filter((o) => has(o.ref, f.no) && has(o.customer.first, f.first) && has(o.customer.last, f.last) && has(o.customer.email, f.email))
+    .filter((o) => { const hay = `${o.ref} ${o.customer.first} ${o.customer.last} ${o.customer.email}`.toLowerCase(); return words.every((w) => hay.includes(w)); })
     .filter((o) => (!channel || o.channel === channel) && (!status || o.status === status))
     .sort((a, b) => b.at - a.at);
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
@@ -54,25 +49,20 @@ export default function ProviderOrders() {
   // the course on each order (the first, with how many more), and which orders have an open refund request
   const courseOf = (o) => data.byId.course[o.lines[0]?.courseId]?.title || "Course removed";
   const refundAsked = new Set(data.refunds.filter((r) => r.status === "open").map((r) => r.orderRef));
-  const filtered = Boolean(Object.values(f).some((v) => v.trim()) || channel || status);
-  const setField = (k, v) => { setF((x) => ({ ...x, [k]: v })); setQuery(k, v.trim()); };
+  const filtered = Boolean(words.length || channel || status);
+  const search = (v) => { setQ(v); setQuery("q", v.trim()); };
   const clear = () => {
-    setF({ no: "", first: "", last: "", email: "" });
+    setQ("");
     setChannel("");
     setStatus("");
-    ["no", "first", "last", "email", "channel", "status"].forEach((k) => setQuery(k, ""));
+    ["q", "channel", "status"].forEach((k) => setQuery(k, ""));
   };
 
   return (
     <div className="rt-acc__stack">
-      <div className="rt-acc__card rt-pws-ord__search" role="search" aria-label="Find orders">
-        {FIELDS.map((x) => (
-          <div className="rt-field" key={x.key}>
-            <label htmlFor={`rt-ord-${x.key}`}>{x.label}</label>
-            <input id={`rt-ord-${x.key}`} type={x.key === "email" ? "email" : "text"} inputMode={x.key === "no" ? "numeric" : undefined} value={f[x.key]} placeholder={x.placeholder} onChange={(e) => setField(x.key, e.target.value)} autoComplete="off" spellCheck={false} />
-          </div>
-        ))}
-        <div className="rt-pws-ord__searchfoot">
+      <div className="rt-cx" role="search" aria-label="Find orders">
+        <div className="rt-cx__bar">
+          <Search value={q} onChange={search} label="Order number, name or email" />
           <ToolSelect id="rt-ord-channel" label="Sales channel" value={channel} onChange={(v) => { setChannel(v); setQuery("channel", v); }} options={CHANNELS} />
           <ToolSelect id="rt-ord-status" label="Status" value={status} onChange={(v) => { setStatus(v); setQuery("status", v); }} options={STATUSES} />
           {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filters</button>}

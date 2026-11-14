@@ -5773,6 +5773,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx__top { padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-cx__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 14px 20px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-cx__bar.-more { padding-top: 14px; background: var(--rt-c-soft); }
+/* a filter bar on its own in its card (Orders, Learners): no line under it */
+.rt-cx > .rt-cx__bar:last-child { border-bottom: 0; }
 .rt-cx__bar .rt-adm-search { flex: 1 1 260px; }
 .rt-cx__more { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
 .rt-cx__more.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
@@ -6510,17 +6512,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-prof__body:last-child { margin-bottom: 0; }
 @media (max-width: 575px) { .rt-pws-prof > .button { width: 100%; justify-content: center; } }
 /* learners (ours, Hurak's fields): one filter bar, the table, the profile header and booking timeline */
-.rt-lr-find { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-.rt-lr-find__field { display: grid; gap: 2px; padding: 12px 16px; border-left: 1px solid var(--rt-c-line); transition: background-color 150ms ease; }
-.rt-lr-find__field:first-child { border-left: 0; }
-.rt-lr-find__field:focus-within { background: var(--rt-c-soft); }
-.rt-lr-find__field label { font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
-.rt-lr-find__input { display: flex; align-items: center; gap: 8px; }
-.rt-lr-find__input i { flex: none; color: var(--rt-c-muted); }
-.rt-lr-find__input input { width: 100%; min-width: 0; height: 32px; padding: 0; border: 0; background: transparent; font-size: var(--rt-text-sm); color: var(--rt-c-text); outline: none; }
-.rt-lr-find__field:focus-within label { color: var(--rt-c-brand); }
-@media (max-width: 991px) { .rt-lr-find { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rt-lr-find__field:nth-child(3) { border-left: 0; } .rt-lr-find__field:nth-child(n + 3) { border-top: 1px solid var(--rt-c-line); } }
-@media (max-width: 575px) { .rt-lr-find { grid-template-columns: minmax(0, 1fr); } .rt-lr-find__field { border-left: 0; } .rt-lr-find__field + .rt-lr-find__field { border-top: 1px solid var(--rt-c-line); } }
 .rt-lr-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -8px; }
 .rt-lr-count p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-lr-count b { color: var(--rt-c-text); }
@@ -6560,7 +6551,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-lr-booking__facts .-wide { grid-column: 1 / -1; }
 .rt-lr-booking__facts dt { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-lr-booking__facts dd { margin: 2px 0 0; font-size: var(--rt-text-sm); font-weight: 600; overflow-wrap: anywhere; color: var(--rt-c-text); }
-@media (prefers-reduced-motion: reduce) { .rt-lr-find__field, .rt-lr-view { transition: none; } }
 /* provider help (ours, Hurak's three ways to get help): search, provider guides, ways to reach us */
 .rt-hp-search { display: grid; gap: 14px; padding: 28px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: radial-gradient(90% 180% at 0% 0%, var(--rt-c-brand-soft) 0%, var(--rt-c-surface) 60%); }
 .rt-hp-search__title { margin: 0; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
@@ -6601,11 +6591,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__zoommark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
 .rt-pws-set__zoomlist { display: grid; gap: 4px; margin: 6px 0 10px; padding-left: 18px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 /* orders list: Hurak's four search fields, then the channel and status filters */
-.rt-pws-ord__search { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.rt-pws-ord__search .rt-field { margin: 0; }
-.rt-pws-ord__searchfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; grid-column: 1 / -1; }
-@media (max-width: 991px) { .rt-pws-ord__search { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 575px) { .rt-pws-ord__search { grid-template-columns: minmax(0, 1fr); } .rt-pws-ord__searchfoot > * { flex: 1 1 100%; } }
 .rt-pws-ord__table td { vertical-align: middle; }
 .rt-pws-ord__table .rt-pws-money__num { white-space: nowrap; }
 .rt-pws-ord__flag { font-weight: 600; color: var(--rt-c-error) !important; }
