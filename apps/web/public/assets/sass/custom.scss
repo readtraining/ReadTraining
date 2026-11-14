@@ -6767,6 +6767,9 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-pws .rt-adm-table tbody a.rt-adm-strong::after, .rt-pws .rt-cx-table tbody a.rt-cx-course__title::after { content: ""; position: absolute; inset: 0; }
   .rt-pws :is(.rt-adm-table, .rt-cx-table) tbody td :is(button, a, input, label, .rt-rowmenu):not(a.rt-adm-strong, a.rt-cx-course__title) { position: relative; z-index: 1; }
 }
+/* tap targets of 24px or more (WCAG 2.2): calendar chips, and on phones (rows stacked into cards, not one link) each row's record link */
+.rt-pws .rt-pws-cal__chip { min-height: 24px; }
+@media (max-width: 575px) { .rt-pws .rt-adm-table a.rt-adm-strong { display: inline-block; padding-block: 3px; } }
 /* destructive actions side by side, apart from the others (each is the existing red text button) */
 .rt-pws-danger-group { display: flex; flex-wrap: wrap; gap: 12px; margin-left: auto; }
 
