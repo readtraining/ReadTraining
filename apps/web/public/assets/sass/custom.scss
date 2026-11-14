@@ -6794,7 +6794,7 @@ body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form) > button.rt-bt
 .rt-pws-ce__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 24px; }
 .rt-pws-ce__headtext { display: grid; flex: 1 1 360px; gap: 8px; min-width: 0; }
 .rt-pws-ce__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
-.rt-pws-ce__head :is(.rt-acc__note, .rt-adm-item__block) { margin: 0; }
+.rt-pws-ce__head :is(.rt-acc__note, .rt-acc__notice) { margin: 0; }
 .rt-pws-ce__headactions { display: flex; align-items: center; gap: 8px; }
 /* the step list scrolls inside itself when it is taller than the screen, with the site's scroll pill (FilterScrollPill), as the sidebar */
 @media (min-width: 1200px) { .rt-pws-ce__nav { max-height: calc(100dvh - 104px); overflow-y: auto; } }

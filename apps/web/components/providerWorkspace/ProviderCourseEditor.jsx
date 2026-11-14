@@ -527,11 +527,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           </p>
           {ep.admin && <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>}
           {status !== "draft" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
-          {status === "changes" && course.statusNote && <p className="rt-adm-item__block"><b>What to change:</b> {course.statusNote}</p>}
+          {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
           {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
-          {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-adm-item__block"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
-          {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-adm-item__block"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
-          {isLive && course.retired?.length > 0 && <p className="rt-adm-item__block"><b>No longer offered on ReadTraining:</b> {course.retired.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
+          {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
+          {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-acc__notice -warn"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
+          {isLive && course.retired?.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {course.retired.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
           {!ep.admin && isLive && noDates && <p className="rt-acc__note">{NO_DATES_NOTE}</p>}
         </div>
         <div className="rt-pws-ce__headactions">
@@ -553,8 +553,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setWithdrawing(true)} aria-haspopup="dialog" disabled={ep.discarding}>{ep.discarding ? "Withdrawing…" : "Withdraw changes"}</button>}
         </section>
       )}
-      {!access.page && <p className="rt-adm-item__block">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : notApproved ? pw.notApproved.text : "Your role can see this course but not change it."}</p>}
-      {!ep.admin && access.page && !access.full && <p className="rt-adm-item__block">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
+      {!access.page && <p className="rt-acc__notice">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : notApproved ? pw.notApproved.text : "Your role can see this course but not change it."}</p>}
+      {!ep.admin && access.page && !access.full && <p className="rt-acc__notice">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
 
       <div className="rt-pws-ce">
         <nav className="rt-acc__card rt-pws-ce__nav rt-pill-scroll" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>
@@ -1314,7 +1314,7 @@ function ModeSection({ course, draft, setDraft, access, errors }) {
     <div className="rt-acc__stack">
       <form className="rt-acc__card rt-pws-course-form" noValidate onSubmit={(e) => e.preventDefault()} aria-labelledby="rt-pws-ce-mode-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">Mode of study</h2>
-        {course.cohortCount > 0 && <p className="rt-adm-item__block">This course has dates, so how it is taught can&apos;t change. Remove its dates first, or create a new course for another mode of study.</p>}
+        {course.cohortCount > 0 && <p className="rt-acc__notice">This course has dates, so how it is taught can&apos;t change. Remove its dates first, or create a new course for another mode of study.</p>}
         <CardChoice name="rt-pws-ce-format" legend="How is the course taught?" value={draft.method} onChange={(v) => !locked && set("method")(v)}
           options={pw.formats.map((f) => ({ value: f.key, label: methodName(f.key), text: f.text, disabled: locked && f.key !== draft.method }))} />
         <FieldErr id="rt-pws-ce-format" text={errors.method} />

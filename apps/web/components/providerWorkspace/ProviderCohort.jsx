@@ -163,7 +163,7 @@ export default function ProviderCohort({ cohortId }) {
             {canCancel && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
           </div>
         )}
-        {k.cancelled && <p className="rt-adm-item__block">This cohort is cancelled. Booked learners were told and offered another date or a refund.</p>}
+        {k.cancelled && <p className="rt-acc__notice -warn">This cohort is cancelled. Booked learners were told and offered another date or a refund.</p>}
         {k.disabled && !k.cancelled && <p className="rt-acc__note">Bookings are turned off: this cohort is not offered to new learners.</p>}
       </section>
 

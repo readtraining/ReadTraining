@@ -97,7 +97,7 @@ export default function ProviderCohortDetail({ cohortId }) {
             <li key={`${s.date}-${i}`}><div><b>{s.end && s.end !== s.date ? `${longDay(s.date)} to ${longDay(s.end)}` : longDay(s.date)}</b><small>{timeRange(s)}</small></div></li>
           ))}
         </ol>
-        {cancelled && <p className="rt-adm-item__block">This cohort is cancelled{k.cancelReason ? `: ${k.cancelReason}` : "."}</p>}
+        {cancelled && <p className="rt-acc__notice -warn">This cohort is cancelled{k.cancelReason ? `: ${k.cancelReason}` : "."}</p>}
         {edit && (
           <div className="rt-pws-coh__heroactions">
             {!cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>}
