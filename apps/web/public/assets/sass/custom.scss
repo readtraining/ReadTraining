@@ -5849,7 +5849,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-cx-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rt-cx-head, .rt-cx-org { width: 100%; }
   .rt-cx-org { flex-wrap: wrap; }
-  .rt-cx-head > .button { width: 100%; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { .rt-cx__more, .rt-cx-table tbody tr, .rt-cx-manage { transition: none; } }
 .rt-cl-promo { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; padding: 20px 24px; border: 1px dashed color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); border-radius: var(--rt-radius-card); background: var(--rt-c-brand-soft); }
