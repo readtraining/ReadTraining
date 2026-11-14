@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/trpc/react";
@@ -21,7 +21,7 @@ import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 const Err = ({ id, text }) => (text ? <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{text}</p> : null);
 
 // SEO settings: title (60), description (320) and keywords, with a search result preview.
-export function SeoPanel({ course, onSaved }) {
+export function SeoPanel({ course, onSaved, formId, onState }) {
   const ep = useEndpoints();
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState(course.seoTitle || "");
@@ -32,7 +32,9 @@ export function SeoPanel({ course, onSaved }) {
   const ref = useRef(null);
   // what is saved: leaving the page with anything else typed asks first (lib/unsavedChanges.js)
   const [saved, setSaved] = useState({ title: course.seoTitle || "", desc: course.seoDescription || "", keywords: course.seoKeywords || [] });
-  useUnsavedChanges(title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords));
+  const dirty = title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords);
+  useUnsavedChanges(dirty);
+  useEffect(() => { onState?.({ dirty, busy }); }, [dirty, busy]); // eslint-disable-line react-hooks/exhaustive-deps -- onState is the editor's setter
 
   const addWords = (text) => {
     const add = text.split(",").map((w) => w.trim().toLowerCase().slice(0, 40)).filter((w) => w && !keywords.includes(w));
@@ -62,7 +64,7 @@ export function SeoPanel({ course, onSaved }) {
   const locked = !ep.access.page;
 
   return (
-    <form className="rt-q__form" onSubmit={submit} noValidate ref={ref}>
+    <form className="rt-q__form" id={formId} onSubmit={submit} noValidate ref={ref}>
       <div className="rt-field">
         <label htmlFor="rt-pws-cset-st">SEO title (optional)</label>
         <Err id="rt-pws-cset-st" text={errors.title} />
@@ -97,7 +99,7 @@ export function SeoPanel({ course, onSaved }) {
         <span className="rt-pws-cset__serpdesc">{desc.trim() || course.summary || "Your description shows here."}</span>
       </div>
       {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
-      {!locked && <div><button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : "Save"}</button></div>}
+      {!locked && !formId && <div><button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : "Save"}</button></div>}
     </form>
   );
 }

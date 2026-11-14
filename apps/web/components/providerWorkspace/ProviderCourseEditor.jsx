@@ -235,6 +235,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     requestAnimationFrame(() => staleRef.current?.focus());
   });
   const [gear, setGear] = useState(false);
+  const [seo, setSeo] = useState({ dirty: false, busy: false }); // the SEO step's own form, saved from the bar
   const [preview, setPreview] = useState(false);
   const formRef = useRef(null);
   const navRef = useRef(null);
@@ -597,13 +598,15 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {tab === "seo" && (
             <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-seo-h">
               <h2 className="rt-acc__h2" id="rt-pws-ce-seo-h">SEO settings</h2>
-              <p className="rt-acc__note">How the course page shows in Google and other search results. Saved with its own Save button, below.</p>
-              <SeoPanel course={course} onSaved={saved} />
+              <p className="rt-acc__note">How the course page shows in Google and other search results.</p>
+              <SeoPanel course={course} onSaved={saved} formId="rt-pws-ce-seo-form" onState={setSeo} />
             </section>
           )}
           <div className="rt-acc__card rt-pws-ce__bar">
             {prev ? <button type="button" className="rt-cd__link" onClick={() => goTo(prev)} disabled={busy}><i className="icon-arrow-left text-12" aria-hidden="true"></i><span className="rt-sr">Back to </span>{prev.label}</button> : <span></span>}
             <div className="rt-pws-ce__baractions">
+              {tab === "seo" && <span className="rt-pws-course-unsaved">{seo.dirty ? <><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</> : "All changes saved"}</span>}
+              {tab === "seo" && access.page && <button type="submit" form="rt-pws-ce-seo-form" className={`button -md ${next ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} disabled={seo.busy} aria-busy={seo.busy || undefined}>{seo.busy ? "Saving…" : "Save"}</button>}
               {FORM_SECTIONS.includes(tab) && <span className="rt-pws-course-unsaved">{dirty ? <><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</> : "All changes saved"}</span>}
               {FORM_SECTIONS.includes(tab) && access.page && <button type="button" className={`button -md ${next ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={save} disabled={busy} aria-busy={ep.updating || undefined}>{ep.updating ? "Saving…" : "Save"}</button>}
               {next && <button type="button" className="button -md -purple-1 text-white" onClick={() => goTo(next, { check: true })} disabled={busy}>{FORM_SECTIONS.includes(tab) && dirty && access.page ? "Save and continue" : "Continue"}<span className="rt-sr">: {next.label}</span></button>}

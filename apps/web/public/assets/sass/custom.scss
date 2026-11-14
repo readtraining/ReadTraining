@@ -6774,6 +6774,9 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 /* destructive actions side by side, apart from the others (each is the existing red text button) */
 .rt-pws-danger-group { display: flex; flex-wrap: wrap; gap: 12px; margin-left: auto; }
 
+/* text fields in the workspace's pop-ups keep the field's own focus (.rt-field: dark border, white fill), not the course page
+   pop-ups' outline (.rt-dd input:focus-visible); buttons and dropdowns keep their keyboard focus ring */
+body.rt-pws-open .rt-dd .rt-field :is(input, textarea):focus-visible { outline: none; }
 /* pop-ups: forms 640px wide, questions 480px (the cohort and price plan pop-ups keep their own 1040px: a two-month calendar and the
    package cards need it); a form's button row stays at the bottom of the pop-up while it scrolls, the main button on the right */
 body.rt-pws-open .rt-dd.rt-tq-sheet:not(.rt-pws-coh__sheet):not(.rt-pws-pkg__sheet) .rt-dd__panel { width: 640px; }
