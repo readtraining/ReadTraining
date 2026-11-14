@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/states/States";
 // then the bookings as a timeline, newest first.
 export default function ProviderLearner({ learnerId }) {
   const data = useProvider();
-  if (!data) return <Loading rows={2} />;
+  if (!data) return <Loading detail />;
   const l = data.byId.learner[learnerId];
   if (!l) return <EmptyState title="This learner was not found." action={{ href: "/provider/learners", label: "Back to learners" }} />;
 

@@ -46,7 +46,7 @@ export default function ProviderCohortDetail({ cohortId }) {
 
   if (query.error?.data?.code === "NOT_FOUND") return <EmptyState title="This cohort was not found." text="It may have been deleted." action={{ href: "/provider/cohorts", label: "All cohorts" }} />;
   if (query.isError) return <ErrorState title="We couldn't load this cohort." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
-  if (!k) return <Loading rows={3} />;
+  if (!k) return <Loading detail />;
 
   const edit = can("provider.cohorts.edit");
   const status = cohortState(k);

@@ -68,7 +68,7 @@ export default function ProviderCohort({ cohortId }) {
   const [open, setOpen] = useState([]);
   const [toast, setToast] = useState(null);
 
-  if (!data) return <Loading rows={3} />;
+  if (!data) return <Loading detail />;
   const k = data.byId.cohort[cohortId];
   if (!k) {
     return (

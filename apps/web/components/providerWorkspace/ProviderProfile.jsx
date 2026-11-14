@@ -19,7 +19,7 @@ export default function ProviderProfile() {
   if (!allowed) return <EmptyState title="Your public profile isn't part of your role" text="Ask your provider's owner or an admin if something on it needs changing." />;
   if (query.isError) return <ErrorState title="We couldn't load your profile." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   const o = query.data;
-  if (!o) return <Loading rows={3} />;
+  if (!o) return <Loading detail />;
   const initials = o.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const social = [["Facebook", o.socials.facebook], ["LinkedIn", o.socials.linkedin], ["YouTube", o.socials.youtube]].filter(([, url]) => url);
   const live = courses ? courses.filter((c) => c.status === "live" && c.isPublic && c.listed).length : null;

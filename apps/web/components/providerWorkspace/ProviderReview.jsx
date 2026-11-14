@@ -30,7 +30,7 @@ export default function ProviderReview() {
   const [toast, setToast] = useState(null);
   if (query.isError) return <ErrorState title="We couldn't load your account review." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   const r = query.data;
-  if (!r) return <Loading rows={3} />;
+  if (!r) return <Loading detail />;
   const s = copy.statuses[r.status] || copy.statuses.pending;
   const askedBefore = r.events.some((e) => e.kind === "changes");
   // the steps: Changes only shows when our team has asked for some (now or before)
