@@ -6628,7 +6628,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 992px) { .rt-pws-set { grid-template-columns: 220px minmax(0, 1fr); gap: var(--rt-gap); align-items: start; } }
 .rt-pws-set__navcard { display: none; }
-.rt-pws-set__chips { margin: 0; padding: 0 0 4px; }
+/* below 992px the sections are chips that wrap onto more lines, as the course editor's steps: all nine in view, no hidden sideways strip */
+.rt-pws-set__chips { flex-wrap: wrap; margin: 0; padding: 0; overflow: visible; }
 @media (min-width: 992px) {
   .rt-pws-set__nav { position: sticky; top: 88px; }
   .rt-pws-set__navcard { display: block; padding: 8px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
@@ -6717,7 +6718,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__move:disabled { opacity: 0.4; cursor: not-allowed; }
 .rt-pws-pkg__move:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 /* pricing plans table */
-.rt-pws-pkgs__name { display: block; padding: 0; border: 0; background: none; font-weight: 600; color: var(--rt-c-text); text-align: left; cursor: pointer; }
+.rt-pws-pkgs__name { display: block; min-height: 24px; padding: 0; border: 0; background: none; font-weight: 600; color: var(--rt-c-text); text-align: left; cursor: pointer; }
 .rt-pws-pkgs__name:hover { color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; }
 .rt-pws-pkgs small { display: block; margin-top: 2px; }
 .rt-pws-pkg__itemset { display: grid; justify-items: start; gap: 12px; margin: 0; padding: 0; border: 0; }
