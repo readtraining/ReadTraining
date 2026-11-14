@@ -6799,6 +6799,10 @@ body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form) > button.rt-bt
 /* the step list scrolls inside itself when it is taller than the screen, with the site's scroll pill (FilterScrollPill), as the sidebar */
 @media (min-width: 1200px) { .rt-pws-ce__nav { max-height: calc(100dvh - 104px); overflow-y: auto; } }
 .rt-pws-ce__main { display: grid; gap: var(--rt-gap); }
+/* one card per step: its parts (details, images, video; units, exam) are sections of the step's card, with sub-headings, more space
+   between them than between fields */
+.rt-pws-ce__groups { display: grid; gap: 40px; }
+.rt-pws-ce__groups .rt-adm-h3 { margin: 0; }
 /* the editor's column is already a readable width: its fields fill it, so every right edge lines up */
 .rt-pws .rt-pws-ce__main .rt-field { max-width: none; }
 /* Mode of study's choice cards: one height in a row */

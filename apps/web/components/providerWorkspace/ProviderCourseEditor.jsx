@@ -735,8 +735,8 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
   const page = !access.page;
 
   return (
-    <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-basics-h">
+    <form className="rt-acc__card rt-pws-ce__groups" noValidate onSubmit={(e) => e.preventDefault()}>
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-basics-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-basics-h">Course landing page</h2>
         <p className="rt-acc__note">What learners read first: the title, a short description and where the course is filed. Every field is required unless it says (optional).</p>
         <div className="rt-field">
@@ -784,8 +784,8 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
 
       <ImagesCard course={course} disabled={page} onSaved={onSaved} required={errors.images} />
 
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-video-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-video-h">Overview video (optional)</h2>
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-video-h">
+        <h3 className="rt-adm-h3" id="rt-pws-ce-video-h">Overview video (optional)</h3>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-video">Video link</label>
           <span className="rt-field__hint" id="rt-pws-ce-video-h2">A YouTube or Vimeo link. Copy it from the video&apos;s Share button.</span>
@@ -912,8 +912,8 @@ function ImagesCard({ course, disabled, onSaved, required }) {
   const lastOfLive = shown.length === 1 && (course.status === "live" || course.status === "paused");
 
   return (
-    <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
-      <h2 className="rt-acc__h2" id="rt-pws-ce-media-h">Course images</h2>
+    <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
+      <h3 className="rt-adm-h3" id="rt-pws-ce-media-h">Course images</h3>
       <p className="rt-acc__note">They show at the top of the course page; the first image is the cover in search results. Images are saved as soon as you add or change them.</p>
       {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
       {required && !list.length && <p className="rt-q__err"><span className="rt-sr">Error: </span>{required}</p>}
@@ -1020,8 +1020,8 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
   const setExam = (i, patch) => set("exams")(draft.exams.map((e, j) => (j === i ? { ...e, ...patch } : e)));
 
   return (
-    <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-units-h">
+    <form className="rt-acc__card rt-pws-ce__groups" noValidate onSubmit={(e) => e.preventDefault()}>
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-units-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
           <h2 className="rt-acc__h2" id="rt-pws-ce-units-h">Syllabus</h2>
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(null); setSheet(true); }} disabled={draft.units.length >= MOST.units}>Add unit</button>}
@@ -1047,9 +1047,9 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         ) : <EmptyState inCard title="No units yet. Add at least one: a course needs its syllabus before it can be sent for approval." />}
       </section>
 
-      <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-exam-h">
+      <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-exam-h">
         <div className="rt-acc__cardhead rt-pws-course-cardhead">
-          <h2 className="rt-acc__h2" id="rt-pws-ce-exam-h">Exam and assessment (optional)</h2>
+          <h3 className="rt-adm-h3" id="rt-pws-ce-exam-h">Exam and assessment (optional)</h3>
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => set("exams")([...draft.exams, { unit: "", passMark: "", duration: "" }])} disabled={draft.exams.length >= MOST.exams}>Add row</button>}
         </div>
         <p className="rt-acc__note">If the course ends with an exam, add one row per paper or practical, each with what it covers, its pass mark and how long it takes. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
@@ -1324,13 +1324,8 @@ function ModeSection({ course, draft, setDraft, access, errors }) {
           options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: !access.full && value !== draft.model }))} />
         <FieldErr id="rt-pws-ce-model" text={errors.model} />
         {draft.method !== course.method && <p className="rt-acc__note">{draft.method === "self-paced" && (course.status === "live" || course.status === "paused") ? "Save to change how the course is taught. A live self-paced course needs its price: add it in the Price step first." : "Save to change how the course is taught."}</p>}
+        {draft.method === "self-paced" && draft.method === course.method && <p className="rt-acc__note">Self-paced courses have no dates: learners start straight away. The course shows on ReadTraining with its price; lessons for self-paced courses come in a later update.</p>}
       </form>
-
-      {draft.method === "self-paced" && draft.method === course.method && (
-        <section className="rt-acc__card rt-pws-course-form" aria-label="Self-paced">
-          <p className="rt-acc__note">Self-paced courses have no dates: learners start straight away. The course shows on ReadTraining with its price; lessons for self-paced courses come in a later update.</p>
-        </section>
-      )}
     </div>
   );
 }
