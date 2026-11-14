@@ -56,7 +56,7 @@ export default function ProviderPackages() {
   if (!plans.length) {
     return (
       <>
-        <EmptyState title="No price plans yet" text="Create packages like Basic, Plus and Pro once, then choose the plan on any of your dates." action={edit ? { label: "Create price plan", onClick: create } : undefined} />
+        <EmptyState title="No price plans yet" text="A plan is optional: without one, each date has a single price." action={edit ? { label: "Create price plan", onClick: create } : undefined} />
         {editor_}
         <Toast toast={toast} onDone={clearToast} />
       </>

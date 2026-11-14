@@ -77,7 +77,7 @@ export default function ProviderNewOrder() {
   useEffect(() => {
     if (!data || prefilled.current) return;
     prefilled.current = true;
-    // ?cohort=ID ("Enroll student" on a cohort): the first line is that course and those dates
+    // ?cohort=ID ("Enrol student" on a cohort): the first line is that course and those dates
     const k = data.byId.cohort[getQuery("cohort")];
     if (k) {
       const tiered = data.byId.course[k.courseId]?.pricing.type === "tiered";

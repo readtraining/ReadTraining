@@ -76,7 +76,7 @@ function RangeTabs({ value, onChange }) {
 const KPIS = [
   { key: "revenue", label: "Total revenue", isMoney: true, icon: "icon-save-money" },
   { key: "leads", label: "Total leads", icon: "icon-message" },
-  { key: "enrolments", label: "Total enrollments", icon: "icon-person-2" },
+  { key: "enrolments", label: "Total enrolments", icon: "icon-person-2" },
 ];
 
 function Overview({ data, start, now, range }) {

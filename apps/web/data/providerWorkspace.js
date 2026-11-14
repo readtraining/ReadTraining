@@ -81,7 +81,7 @@ export const pw = {
       profile: { title: "Complete your public profile", text: "A headline, a short biography and your logo.", action: { label: "Edit profile", href: "/provider/settings?tab=info" } },
       policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
       course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses/new" } },
-      date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Add a date", href: "/provider/cohorts?new=1" } },
+      date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Create cohort", href: "/provider/cohorts?new=1" } },
     },
   },
 
@@ -154,7 +154,7 @@ export const pw = {
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
     requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
     team: { title: "Manage team members", lead: "People who can use this workspace, and what each of them can do." },
-    help: { title: "Help", lead: "Videos, guides and a person to talk to when you need one." },
+    help: { title: "Help", lead: "Guides, help articles and a person to talk to when you need one." },
   },
 
   // How each delivery method is explained in the course wizard (Hurak's wording). `key` is the method's slug in the catalogue
@@ -204,7 +204,7 @@ export const pw = {
     card: { label: "Payment via card", hint: "Take the card details on the phone." },
     link: { label: "Payment via link", hint: "The customer pays by email. Places are held for 48 hours." },
     offline: { label: "Offline payment", hint: "Bank transfer, invoice or cash. Mark the order paid when the money arrives." },
-    free: { label: "Enroll for free", hint: "No payment. For staff, resits or goodwill." },
+    free: { label: "Enrol for free", hint: "No payment. For staff, resits or goodwill." },
   },
   // Hurak's course activity types, in its order
   lessonTypes: {
@@ -243,7 +243,7 @@ export const pw = {
   settingsTabs: [
     { key: "info", label: "Provider information" },
     { key: "logo", label: "Company logo" },
-    { key: "terms", label: "Terms" },
+    { key: "terms", label: "Cancellation and terms" },
     { key: "venues", label: "Venues" },
     { key: "vat", label: "VAT" },
     { key: "affiliate", label: "Affiliate" },
