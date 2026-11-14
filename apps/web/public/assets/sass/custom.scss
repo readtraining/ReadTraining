@@ -6509,16 +6509,10 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-lr-head { display: grid; gap: 20px; }
 .rt-lr-head__top { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; }
 .rt-lr-head__who { flex: 1 1 320px; min-width: 0; }
-.rt-lr-head__name { margin: 0 0 8px; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
 .rt-lr-head__contact { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-lr-head__contact li { display: grid; list-style: none; overflow-wrap: anywhere; }
 .rt-lr-head__contact span { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
-.rt-lr-head__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--rt-c-line); }
-.rt-lr-head__stats > div { padding: 16px 0 0 16px; border-left: 1px solid var(--rt-c-line); }
-.rt-lr-head__stats > div:first-child { padding-left: 0; border-left: 0; }
-.rt-lr-head__stats dt { font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
-.rt-lr-head__stats dd { margin: 2px 0 0; font-size: var(--rt-app-h3); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
-@media (max-width: 575px) { .rt-lr-head__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 12px; } .rt-lr-head__stats > div:nth-child(3) { padding-left: 0; border-left: 0; } .rt-lr-head__top > .button { width: 100%; justify-content: center; } }
+@media (max-width: 575px) { .rt-lr-head__top > .button { width: 100%; justify-content: center; } }
 .rt-lr-h { margin: 0 0 12px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-lr-timeline { position: relative; display: grid; gap: 14px; margin: 0; padding: 0 0 0 28px; list-style: none; }
 .rt-lr-timeline::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--rt-c-line); }
