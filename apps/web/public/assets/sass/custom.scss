@@ -4205,6 +4205,21 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
   .rt-biz__table td small { display: inline; margin: 0 0 0 6px; }
   .rt-biz__act { justify-content: flex-end; }
 }
+/* workspace tables stack into labelled rows from 991px down (decision D4, 14 Nov 2026): the standard table's own phone layout,
+   for tablets too, where 7 to 9 columns are wider than the content area */
+@media (min-width: 768px) and (max-width: 991px) {
+  .rt-pws .rt-biz__tablecard { padding: 4px 16px; }
+  .rt-pws .rt-biz__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .rt-pws .rt-biz__table, .rt-pws .rt-biz__table tbody, .rt-pws .rt-biz__table tr, .rt-pws .rt-biz__table td { display: block; width: 100%; }
+  .rt-pws .rt-biz__table tr { padding: 14px 0; border-bottom: 1px solid var(--color-light-5); }
+  .rt-pws .rt-biz__table tr:last-child { border-bottom: 0; }
+  .rt-pws .rt-biz__table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border: 0; text-align: right; }
+  .rt-pws .rt-biz__table td::before { content: attr(data-label); flex: none; font-size: 12px; font-weight: 600; color: var(--color-light-1); text-align: left; }
+  .rt-pws .rt-biz__table td:first-child { padding-bottom: 8px; }
+  .rt-pws .rt-biz__table td:first-child::before, .rt-pws .rt-biz__table td.rt-biz__act::before { content: none; }
+  .rt-pws .rt-biz__table td small { display: inline; margin: 0 0 0 6px; }
+  .rt-pws .rt-biz__act { justify-content: flex-end; }
+}
 /* pop-ups: add a learner, a learner's details, pay, an invoice */
 .rt-biz__sheetform { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 /* a long name or email in a pop-up wraps instead of making the pop-up scroll sideways */
@@ -6188,7 +6203,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (min-width: 768px) { .rt-pws-coh__sheet .rt-dd__panel { width: 1040px; max-width: 94vw; } }
 .rt-pws-coh__form { padding-bottom: 8px; }
 .rt-pws-coh__for { margin: 0; }
-.rt-pws-coh__h3 { margin: 0 0 4px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
+.rt-pws-coh__h3 { margin: 0 0 4px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-coh__dates { display: grid; gap: var(--rt-gap); }
 @media (min-width: 992px) { .rt-pws-coh__dates { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; } }
 .rt-pws-coh__slots .rt-acc__note { margin: 0 0 12px; }
@@ -6624,8 +6639,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__panel { display: grid; gap: 16px; min-width: 0; }
 .rt-pws-set__head .rt-acc__h2 { margin: 0; }
 .rt-pws-set__head .rt-acc__note { margin-top: 4px; }
-.rt-pws-set__h3 { margin: 0 0 12px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-set__form { max-width: 760px; }
+.rt-pws-set__h3 { margin: 0 0 12px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
+/* every Settings tab's card is the full content width (decision D2, 14 Nov 2026); the fields inside keep their readable width */
 .rt-pws-set__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .rt-pws-set__grid.-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 575px) { .rt-pws-set__grid.-two { grid-template-columns: minmax(0, 1fr); } }
@@ -6664,7 +6679,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 
 /* ---------- provider workspace: price package editor (PackageEditor) and the packages list ---------- */
 .rt-pws-pkg__sheet .rt-dd__panel { width: 1040px; }
-.rt-pws-pkg__h3 { margin: 0; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
+.rt-pws-pkg__h3 { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-pkg__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 /* 2, 3 or 4 packages side by side on wide screens (4 go two by two below 1200px); one under another on phones */
 @media (min-width: 768px) { .rt-pws-pkg__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
@@ -6761,6 +6776,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 /* tap targets of 24px or more (WCAG 2.2): calendar chips, and on phones (rows stacked into cards, not one link) each row's record link */
 .rt-pws .rt-pws-cal__chip { min-height: 24px; }
 @media (max-width: 575px) { .rt-pws .rt-adm-table a.rt-adm-strong { display: inline-block; padding-block: 3px; } }
+/* sub-headings inside cards are the card-title size, 20px at the heading weight (decision D1, 14 Nov 2026) */
+.rt-pws .rt-adm-h3 { font-size: var(--rt-app-h3); }
 /* destructive actions side by side, apart from the others (each is the existing red text button) */
 .rt-pws-danger-group { display: flex; flex-wrap: wrap; gap: 12px; margin-left: auto; }
 
