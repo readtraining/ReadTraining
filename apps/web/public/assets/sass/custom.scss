@@ -6561,9 +6561,11 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-hp-guides small { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-hp-guides > li > a > i { color: var(--rt-c-muted); }
 .rt-hp-guides__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
-.rt-hp-ways { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.rt-hp-ways li { display: flex; align-items: flex-start; gap: 14px; list-style: none; }
-.rt-hp-ways__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-brand); color: var(--rt-c-surface); }
+/* Get help: one card, its heading inside as Guides for providers', the three ways divided as that list's rows */
+.rt-hp-ways { display: grid; margin: 0; padding: 0; list-style: none; }
+.rt-hp-ways li { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
+.rt-hp-ways li:first-child { padding-top: 0; border-top: 0; }
+.rt-hp-ways__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand); color: var(--rt-c-surface); }
 .rt-hp-ways__title { margin: 0 0 2px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
 .rt-hp-ways .rt-acc__note { margin: 0 0 2px; }
 @media (max-width: 575px) { .rt-hp-search { padding: 20px; } }

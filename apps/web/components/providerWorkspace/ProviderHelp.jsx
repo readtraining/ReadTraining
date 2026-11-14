@@ -57,11 +57,11 @@ export default function ProviderHelp() {
             ))}
           </ul>
         </section>
-        <section aria-labelledby="rt-hp-ways">
+        <section className="rt-acc__card" aria-labelledby="rt-hp-ways">
           <h2 className="rt-hp-h" id="rt-hp-ways">Get help</h2>
           <ul className="rt-hp-ways">
             {WAYS.map((w) => (
-              <li key={w.title} className="rt-acc__card">
+              <li key={w.title}>
                 <span className="rt-hp-ways__icon" aria-hidden="true"><i className={`${w.icon} text-18`}></i></span>
                 <div>
                   <h3 className="rt-hp-ways__title">{w.title}</h3>
