@@ -293,7 +293,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
 
   if (!id || query.error?.data?.code === "NOT_FOUND" || (ep.admin && course && course.kind !== "shared")) return <EmptyState title="This course was not found" text={ep.admin ? "It may have been deleted. Only shared course pages are edited here." : "It may have been deleted, or it belongs to another provider."} action={back} />;
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
-  if (!course || !draft) return <Loading rows={3} />;
+  if (!course || !draft) return <Loading detail />;
 
   const status = sent ? (ep.admin ? "live" : "pending") : course.status;
   const canSubmit = access.full && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
