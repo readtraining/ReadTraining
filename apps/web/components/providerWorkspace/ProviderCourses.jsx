@@ -153,7 +153,6 @@ export default function ProviderCourses() {
 
 export function CoursesProfile() {
   const workspace = useWorkspace();
-  const courses = useProviderCourses().data;
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
   if (!workspace) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
@@ -163,7 +162,7 @@ export function CoursesProfile() {
     const profileUrl = `${window.location.origin}/providers/${org.slug}`;
     try {
       await navigator.clipboard.writeText(profileUrl);
-      setToast({ message: "Profile URL copied" });
+      setToast({ message: "Profile link copied" });
     } catch {
       setToast({ message: profileUrl });
     }
@@ -177,13 +176,9 @@ export function CoursesProfile() {
         <p className="rt-cx-org__links">
           <Link href="/provider/profile">View</Link>
           <Link href="/provider/settings">Edit</Link>
-          {live && <button type="button" onClick={copyProfile}>Copy Profile URL</button>}
+          {live && <button type="button" onClick={copyProfile}>Copy profile link</button>}
         </p>
       </div>
-      <dl className="rt-cx-org__stats">
-        <div><dt>Total courses</dt><dd>{courses ? courses.length : "–"}</dd></div>
-        <div><dt>Live</dt><dd>{courses ? courses.filter((c) => c.status === "live").length : "–"}</dd></div>
-      </dl>
       <Toast toast={toast} onDone={clearToast} />
     </section>
   );
