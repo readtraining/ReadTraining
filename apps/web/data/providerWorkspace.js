@@ -113,7 +113,7 @@ export const pw = {
   // identities on this login, added by ProviderShell from the API) and log out
   accountMenu: [
     { label: "Account settings", href: "/account/settings" },
-    { label: "Requests", href: "/provider/requests" },
+    { label: "Refunds", href: "/provider/requests" },
     { label: "Public profile", href: "/provider/profile" },
     { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
@@ -150,10 +150,10 @@ export const pw = {
     newOrder: { title: "Create order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
     order: { title: "Order details" },
     notifications: { title: "Notifications", lead: "Updates on your courses, orders and reviews." },
-    settings: { title: "Provider settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
+    settings: { title: "Settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
     requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
-    team: { title: "Manage team members", lead: "People who can use this workspace, and what each of them can do." },
+    team: { title: "Team", lead: "People who can use this workspace, and what each of them can do." },
     help: { title: "Help", lead: "Guides, help articles and a person to talk to when you need one." },
   },
 
