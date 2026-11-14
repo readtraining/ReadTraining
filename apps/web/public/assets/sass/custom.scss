@@ -5625,6 +5625,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
    the sidebar, plus the parts in providerParts.jsx. Tokens only (DESIGN-SYSTEM.md).
    ===================================================================== */
 .rt-pws { --fp-text: var(--rt-c-text); --fp-muted: var(--rt-c-muted); --fp-border: var(--rt-c-line); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--rt-c-brand); --fp-surface: var(--rt-c-surface); }
+/* the page head's buttons line up with the title, so a description on two lines doesn't move them (Cohorts and Calendar share a switch) */
+.rt-pws .rt-adm__head { align-items: flex-start; }
 .rt-pws__org { display: flex; align-items: center; gap: 10px; margin: 4px 4px 0; padding: 10px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
 /* cohorts: List / Calendar switch */
 .rt-pws-views { display: inline-flex; padding: 4px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-pill); background: var(--rt-c-surface); }
@@ -5904,12 +5906,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-tick.is-ok { border-color: var(--rt-c-success); background: var(--rt-c-success); color: var(--rt-c-surface); }
 .rt-pws-ce__need { display: grid; gap: 6px; margin: 0; }
 .rt-pws-ce__need:focus { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-.rt-pws-ce__need p { margin: 0; }
-.rt-pws-ce__need ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.rt-pws-ce__need li { display: grid; gap: 0; }
-.rt-pws-ce__need .rt-cd__link { min-height: 0; justify-self: start; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
-.rt-pws-ce__need small { color: var(--rt-c-muted); font-size: var(--rt-text-xs); }
-.rt-pws-ce__need.is-pressed { border-left-width: 5px; }
 .rt-pws-ce__status { margin: 0; }
 @media (max-width: 1199px) {
   .rt-pws-ce__steps { display: flex; gap: 6px; margin: 0 -4px; padding: 0 4px 4px; overflow-x: auto; scrollbar-width: thin; }
@@ -5968,11 +5964,25 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__pending .rt-acc__note { flex: 1 1 320px; margin: 0; }
 .rt-pws-ce__stale { display: grid; justify-items: start; gap: 8px; }
 .rt-pws-ce__stale p { margin: 0; }
-.rt-pws-ce__opt { font-weight: 400; color: var(--rt-c-muted); }
 .rt-pws-ce__unitbody { white-space: pre-line; }
 .rt-pws-ce__iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); cursor: pointer; }
 .rt-pws-ce__iconbtn:hover:not(:disabled) { background: var(--rt-c-soft); color: var(--rt-c-text); }
 .rt-pws-ce__iconbtn:disabled { opacity: 0.35; cursor: default; }
+/* a remove (bin) icon button: red on hover */
+.rt-pws-ce__iconbtn.-danger:hover:not(:disabled) { color: var(--rt-c-error); }
+/* the side list: how far along, and a step's short hint under its name */
+.rt-pws-ce__progress { display: grid; gap: 6px; }
+.rt-pws-ce__progress p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-ce__steptext { display: grid; }
+/* the bar under each section: the existing card (.rt-acc__card), kept in view at the bottom of the screen; Back on the left, Save
+   and Continue on the right. Layout only: its surface, border and padding are the card's */
+.rt-pws-ce__bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.rt-pws-ce__baractions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; margin-left: auto; }
+.rt-pws-ce__bar .rt-cd__link { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 575px) { .rt-pws-ce__baractions { width: 100%; } .rt-pws-ce__baractions .button { flex: 1 1 auto; } }
+/* the price step's dates: how many, Create cohort and the link to them, on one row (no panel of its own) */
+.rt-pws-ce__dates { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.rt-pws-ce__datecount { margin: 0 auto 0 0; font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-ce__exams { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .rt-pws-ce__exam { display: grid; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); list-style: none; }
 @media (min-width: 768px) { .rt-pws-ce__exam { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; } .rt-pws-ce__exam .rt-pws-course-linkbtn { margin-bottom: 12px; } }
@@ -6227,7 +6237,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__swatch.is-on { border-color: var(--rt-coh); }
 .rt-pws-coh__swatch:focus-within { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-coh__formfoot { display: flex; flex-wrap: wrap; gap: 12px; }
-.rt-pws-coh__formfoot .button { flex: 1 1 200px; }
+.rt-pws-coh__formfoot .button { flex: 0 1 auto; min-width: 160px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws-coh__day { transition: none; } }
 
 /* calendar */
@@ -6730,7 +6740,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__tierhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .rt-pws-pkg__badge { padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); }
 .rt-pws-pkg__money { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; }
-.rt-pws-pkg__save { min-height: 20px; margin: -4px 0 0; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-success); }
+.rt-pws-pkg__save { min-height: 18px; margin: -4px 0 0; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-pws-pkg__perkbtns { display: inline-flex; gap: 12px; }
 .rt-pws-pkg__perkbtns .rt-pws-set__textbtn { min-height: 32px; font-size: var(--rt-text-xs); }
 .rt-pws-pkg__move { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; }
@@ -6759,6 +6769,58 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-dd:is(.rt-pws-coh__sheet, .rt-pws-pkg__sheet) { padding: 88px 0 24px; }
   .rt-dd:is(.rt-pws-coh__sheet, .rt-pws-pkg__sheet) .rt-dd__panel { max-height: calc(100dvh - 112px); }
 }
+/* =====================================================================
+   PROVIDER WORKSPACE LAYOUT (2026-11-14): layout fixes only. Every look comes from the existing parts and tokens
+   (DESIGN-SYSTEM.md): .rt-field, .rt-acc__card, the template's button classes, Sheet, EmptyState. Nothing here adds a colour,
+   size, border, shadow or button style.
+   ===================================================================== */
+/* the template's `main { overflow: hidden }` stops anything inside from staying in view (position: sticky); clip cuts off the same
+   overflow without that side effect */
+.rt-pws .rt-adm__main { overflow: clip; }
+/* one content width, centred on a wide screen: the page head, back link and content move together, so they stay lined up (on a
+   laptop the content fills the space beside the menu and nothing changes); the course editor is a little narrower */
+@media (min-width: 992px) {
+  .rt-pws .rt-adm__main { --rt-pws-w: 1200px; padding-inline: max(32px, calc((100% - var(--rt-pws-w)) / 2)); }
+  .rt-pws .rt-adm__main:has(.rt-pws-cepage) { --rt-pws-w: 1120px; }
+  /* the menu folded away: room on the left for the button that opens it */
+  .rt-pws.is-sideclosed .rt-adm__main { padding-left: max(72px, calc((100% - var(--rt-pws-w)) / 2)); }
+}
+/* the page title is the app H1 (DESIGN-SYSTEM.md section 2) */
+.rt-pws .rt-adm__h1 { font-size: var(--rt-app-h1); }
+/* a hint written as a <span> lost to `.rt-field > span` (dark and bold): it gets the hint's own style back */
+:is(.rt-pws, body.rt-pws-open .rt-dd) .rt-field > .rt-field__hint { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); }
+/* destructive actions side by side, apart from the others (each is the existing red text button) */
+.rt-pws-danger-group { display: flex; flex-wrap: wrap; gap: 12px; margin-left: auto; }
+
+/* pop-ups: forms 640px wide, questions 480px (the cohort and price plan pop-ups keep their own 1040px: a two-month calendar and the
+   package cards need it); a form's button row stays at the bottom of the pop-up while it scrolls, the main button on the right */
+body.rt-pws-open .rt-dd.rt-tq-sheet:not(.rt-pws-coh__sheet):not(.rt-pws-pkg__sheet) .rt-dd__panel { width: 640px; }
+body.rt-pws-open .rt-dd.rt-pws-set__confirm .rt-dd__panel { width: 480px; }
+body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form, .rt-pws-set__confirmbody) > :is(.rt-adm-cellrow, .rt-pws-set__actions, .rt-pws-coh__formfoot):last-child { position: sticky; bottom: 0; z-index: 2; display: flex; flex-direction: row-reverse; flex-wrap: wrap; justify-content: flex-start; background: var(--rt-c-surface); }
+body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form) > button.rt-btn-block:last-child { position: sticky; bottom: 0; z-index: 2; }
+
+/* ---- the course editor: layout ---- */
+.rt-pws-cepage { max-width: 1120px; }
+.rt-pws-ce__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 24px; }
+.rt-pws-ce__headtext { display: grid; flex: 1 1 360px; gap: 8px; min-width: 0; }
+.rt-pws-ce__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-ce__head :is(.rt-acc__note, .rt-adm-item__block) { margin: 0; }
+.rt-pws-ce__headactions { display: flex; align-items: center; gap: 8px; }
+@media (min-width: 1200px) { .rt-pws-ce__nav { max-height: calc(100dvh - 104px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rt-c-line) transparent; } }
+.rt-pws-ce__main { display: grid; gap: var(--rt-gap); }
+/* the editor's column is already a readable width: its fields fill it, so every right edge lines up */
+.rt-pws .rt-pws-ce__main .rt-field { max-width: none; }
+/* Mode of study's choice cards: one height in a row */
+.rt-pws .rt-pws-optcards__row { align-items: stretch; }
+/* images: the picture, its ALT text and its actions in one row */
+.rt-pws-course-mediaitem { align-items: center; }
+.rt-pws-course-mediaitem img { width: 160px; height: 100px; flex: none; object-fit: cover; border-radius: var(--rt-radius-sm); }
+.rt-pws-course-mediahead { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+/* each step's status under its name (12px, the label size); one still to do in the text colour */
+.rt-pws-ce__stepstatus { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); }
+.rt-pws-ce__stepstatus.-todo { color: var(--rt-c-text); }
+/* ---- the new course steps: the card in the middle of the page ---- */
+.rt-pws-wiz { width: 100%; max-width: 640px; margin: 8px auto 0; }
 /* end PROVIDER WORKSPACE */
 
 /* =====================================================================

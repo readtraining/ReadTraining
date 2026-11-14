@@ -43,6 +43,11 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
   const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);
+  // pop-ups (Sheet) render on <body>, outside the workspace: this class gives them the workspace's form and button look
+  useEffect(() => {
+    document.body.classList.add("rt-pws-open");
+    return () => document.body.classList.remove("rt-pws-open");
+  }, []);
   // a group's page is current when its path matches and, for ?tab= / ?mode= pages, its query does too
   // a page opened from a notification goes back to the notifications; otherwise to its own list (`back`)
   const backTo = /(^|[?&])from=notifications(&|$)/.test(search) ? { label: "Notifications", href: "/provider/notifications" } : back;

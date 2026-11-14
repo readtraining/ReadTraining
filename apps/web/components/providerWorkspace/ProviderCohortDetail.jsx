@@ -97,14 +97,17 @@ export default function ProviderCohortDetail({ cohortId }) {
             <li key={`${s.date}-${i}`}><div><b>{s.end && s.end !== s.date ? `${longDay(s.date)} to ${longDay(s.end)}` : longDay(s.date)}</b><small>{timeRange(s)}</small></div></li>
           ))}
         </ol>
-        {edit && !cancelled && (
+        {cancelled && <p className="rt-adm-item__block">This cohort is cancelled{k.cancelReason ? `: ${k.cancelReason}` : "."}</p>}
+        {edit && (
           <div className="rt-pws-coh__heroactions">
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>
-            {k.endsOn >= new Date().toISOString().slice(0, 10) && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
+            {!cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>}
+            {/* the destructive actions together, apart from Edit */}
+            <div className="rt-pws-danger-group">
+              {!cancelled && k.endsOn >= new Date().toISOString().slice(0, 10) && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
+              <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setDeleting(true)}>Delete cohort</button>
+            </div>
           </div>
         )}
-        {cancelled && <p className="rt-adm-item__block">This cohort is cancelled{k.cancelReason ? `: ${k.cancelReason}` : "."}</p>}
-        {edit && <p className="rt-acc__note"><button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setDeleting(true)}>Delete cohort</button></p>}
       </section>
 
       <section className="rt-acc__card" aria-labelledby="rt-coh-ppl-h">

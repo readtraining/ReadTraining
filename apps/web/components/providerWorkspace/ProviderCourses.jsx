@@ -87,7 +87,7 @@ export default function ProviderCourses() {
         <div className="rt-cx__bar" role="search" aria-label="Find courses">
           <Search value={f.q} onChange={set("q")} label="Search your courses" />
           <ToolSelect id="rt-pws-cf-format" label="Mode of study" value={f.format} onChange={set("format")} options={[{ value: "", label: "All modes of study" }, ...pw.formats.map((x) => ({ value: x.key, label: methodName(x.key) }))]} />
-          <ToolSelect id="rt-pws-cf-enr" label="Enrollment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrollment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
+          <ToolSelect id="rt-pws-cf-enr" label="Enrolment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrolment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
           <button type="button" className={`rt-cx__more${more ? " is-on" : ""}`} aria-expanded={more} aria-controls="rt-pws-cf-more" onClick={() => setMore(!more)}><i className="icon-setting text-14" aria-hidden="true"></i>Filters{(f.category || f.model) && <span className="rt-cx__dot" aria-label="filters on"></span>}</button>
           {filtered && <button type="button" className="rt-cd__link" onClick={reset}>Clear filters</button>}
         </div>
@@ -148,19 +148,14 @@ export default function ProviderCourses() {
           <h2 className="rt-cl-promo__title" id="rt-pws-cm-h">Let us help you increase sales</h2>
           <p className="rt-acc__note">Book a free consultation with our sales and marketing team.</p>
         </div>
-        <Link href="/contact-us" className="button -sm -purple-1 text-white">Schedule meeting</Link>
+        <Link href="/contact-us" className="button -sm -outline-purple-1 text-purple-1">Schedule meeting</Link>
       </section>
     </div>
   );
 }
 
-// The provider's profile in the page head, beside "New course" (Hurak's profile card: view, edit, copy the profile address, total
-// and live courses), so the list starts straight under the title.
-// The Courses page's New course, for those who may create one (and only once our team has approved the account).
-export function NewCourseButton() {
-  const { can } = useProviderAccess();
-  return can("provider.courses.edit") ? <Link href="/provider/courses/new" className="button -md -purple-1 text-white">New course</Link> : null;
-}
+// The provider's profile in the page head (Hurak's profile card: view, edit, copy the profile address, total and live courses), so
+// the list starts straight under the title. New course is the top bar's, on every page.
 
 export function CoursesProfile() {
   const workspace = useWorkspace();

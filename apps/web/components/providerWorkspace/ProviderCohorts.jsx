@@ -253,7 +253,7 @@ export default function ProviderCohorts() {
         <>
           <div className="rt-adm-toolbar">
             <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
-            {create}
+            {mode !== "self-paced" && create}
           </div>
           {mode !== "self-paced" && (
             <div className="rt-pws-coh__filterbox">
@@ -289,13 +289,13 @@ export default function ProviderCohorts() {
                       <tr key={c.id}>
                         <td data-label="Course"><Link href={`/provider/courses/${c.id}`} className="rt-adm-strong">{c.title}</Link></td>
                         <td data-label="Course status"><Pill tone={c.status === "live" ? "ok" : c.status === "changes" ? "warn" : "muted"}>{pw.courseStatuses[c.status]}</Pill></td>
-                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Course pricing", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
+                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Price", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            ) : <EmptyState title="No self-paced courses yet." />
+            ) : <EmptyState title="No self-paced courses yet." text="A self-paced course has no dates: learners start as soon as they book." />
           ) : list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
@@ -756,14 +756,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </>
               )}
               <div className="rt-field">
-                <label htmlFor="rt-cf-capacity">Most learners</label>
+                <label htmlFor="rt-cf-capacity">Number of places</label>
                 {err("capacity")}
                 <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} autoComplete="off" {...aria("capacity")} />
               </div>
             </div>
             <div className="rt-field">
               <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
-              <p className="rt-acc__note" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
+              <p className="rt-field__hint" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
               {err("details")}
               <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-invalid={errors.details ? true : undefined} aria-describedby={`rt-cf-details-h${errors.details ? " rt-cf-details-e" : ""}`} autoComplete="off" />
             </div>
