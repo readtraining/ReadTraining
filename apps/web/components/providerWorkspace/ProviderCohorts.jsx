@@ -429,7 +429,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
             {error && <p className="rt-q__err" id="rt-coh-cancel-why-e"><span className="rt-sr">Error: </span>{error}</p>}
             <textarea id="rt-coh-cancel-why" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-coh-cancel-why-e" : undefined} autoComplete="off" />
           </div>
-          <div className="rt-pws-coh__actions">
+          <div className="rt-pws-set__actions">
             <button type="submit" className="button -md -outline-red-3 text-red-3" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Go back</button>
           </div>
@@ -449,7 +449,7 @@ export function DeleteSheet({ cohort, onClose, onDone }) {
         <div className="rt-q__form">
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, is removed for good.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
-          <div className="rt-pws-coh__actions">
+          <div className="rt-pws-set__actions">
             <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
           </div>

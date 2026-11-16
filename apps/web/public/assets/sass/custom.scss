@@ -6114,7 +6114,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__check input:disabled { cursor: not-allowed; opacity: 0.5; }
 .rt-pws-coh__table th.rt-pws-coh__pick, .rt-pws-coh__table td.rt-pws-coh__pick { width: 44px; }
 .rt-pws-coh__table tr.is-picked td { background: var(--rt-c-brand-soft); }
-.rt-pws-coh__actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .rt-pws-coh__peoplehead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 /* Phase 1 (Hurak cohort operations). RowMenu: a row's "…" menu, in the site's dropdown panel look. */
 .rt-rowmenu { position: relative; display: inline-flex; }

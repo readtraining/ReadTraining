@@ -302,7 +302,7 @@ export default function ProviderCohort({ cohortId }) {
       <Sheet open={cancelling} onClose={() => setCancelling(false)} title="Cancel this cohort?" closeLabel="Close" noClose>
         <div className="rt-q__form">
           <p className="rt-acc__note">{k.booked ? `The ${k.booked} booked ${k.booked === 1 ? "learner is" : "learners are"} told straight away and offered another date or a full refund.` : "Nobody is booked yet, so nobody needs to be told."} This can't be undone.</p>
-          <div className="rt-pws-coh__actions">
+          <div className="rt-pws-set__actions">
             <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => { cancelCohort(k.id); setCancelling(false); setToast({ message: "Cohort cancelled" }); }}>Cancel cohort</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setCancelling(false)}>Go back</button>
           </div>
