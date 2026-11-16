@@ -822,7 +822,7 @@
 .rt-field input::placeholder { color: var(--color-light-1); opacity: 0.8; }
 .rt-field select:focus, .rt-field input:focus { outline: none; background-color: #fff; border-color: var(--color-dark-1); }
 /* form pages: a <label> as the field title, textareas, hints and errors */
-.rt-field > label { font-size: 12px; font-weight: 600; color: var(--color-dark-1); }
+.rt-field > label, .rt-pws-nc__labelrow > label { font-size: 12px; font-weight: 600; color: var(--color-dark-1); }
 .rt-field textarea { width: 100%; min-height: 120px; padding: 14px; border: 1px solid var(--color-light-5); border-radius: 10px; background: var(--color-light-4); font: inherit; font-size: 14px; color: var(--color-dark-1); resize: vertical; }
 .rt-field textarea:focus { outline: none; background-color: #fff; border-color: var(--color-dark-1); }
 .rt-field [aria-invalid="true"] { border-color: var(--color-red-3); }
@@ -6662,10 +6662,20 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__short { max-width: 260px; }
 .rt-pws-set__count { align-self: flex-end; font-variant-numeric: tabular-nums; }
 .rt-pws-set__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-/* New course pop-up (NewCourse.jsx): category and sub-category side by side from 576px */
+/* New course pop-up (NewCourse.jsx): two groups, the course (title; category and sub-category side by side from 576px; topic) and
+   its options (the site's option cards), divided by a line; the title's character count sits on its label's row */
+.rt-pws-nc { display: grid; gap: 24px; }
+/* it may grow to 90% of the screen (not the pop-ups' 720px), so with the shared page cards the whole form shows on a laptop */
+@media (min-width: 768px) { .rt-pws-nc__sheet .rt-dd__panel { max-height: 90dvh; } }
+.rt-pws-nc__group { display: grid; gap: 16px; }
+.rt-pws-nc__group + .rt-pws-nc__group { padding-top: 24px; border-top: 1px solid var(--rt-c-line); }
+.rt-pws-nc__group .rt-field { margin: 0; }
 .rt-pws-nc__row { display: grid; gap: 16px; }
-.rt-pws-nc__row .rt-field { margin: 0; }
 @media (min-width: 576px) { .rt-pws-nc__row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rt-pws-nc__labelrow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rt-pws-nc__labelrow > label { margin: 0; }
+.rt-pws-nc__count, .rt-pws-nc__opt { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); font-variant-numeric: tabular-nums; }
+.rt-pws-nc .rt-pws-optcard input[type="checkbox"] { flex: none; margin-top: 2px; }
 .rt-pws-set__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-top: 4px; }
 .rt-pws-set__foot .rt-acc__note { flex: 1 1 280px; margin: 0; }
 .rt-pws-set__textbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
