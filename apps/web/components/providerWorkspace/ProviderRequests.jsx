@@ -6,7 +6,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
 import { decideRefund, learnerName, useProvider } from "@/lib/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Loading, formatWhen, Pill } from "./providerParts";
+import { Loading, formatWhen, Pill, RowMenu } from "./providerParts";
 import { money } from "./charts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
@@ -96,12 +96,10 @@ export default function ProviderRequests() {
                     {r.status !== "open" && r.note && <small className="rt-rq-note">{r.note}</small>}
                   </td>
                   <td data-label="Actions" className="rt-rq-act">
-                    <span className="rt-rq-acts">
-                    <Link href={`/provider/orders/${r.orderRef}`} className="rt-rq-icon" title="View order"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg><span className="rt-sr">View order {r.orderRef} for {name}</span></Link>
-                    <button type="button" className="rt-rq-icon" title={r.status === "open" ? "Change refund status" : "Already decided"} onClick={() => open(r)} disabled={r.status !== "open"}>
-                      <i className="icon-edit text-14" aria-hidden="true"></i><span className="rt-sr">Change refund status for {name}</span>
-                    </button>
-                    </span>
+                    <RowMenu label={`Actions for refund ${r.id.replace(/\D/g, "")}`} items={[
+                      { label: "Order details", href: `/provider/orders/${r.orderRef}` },
+                      ...(r.status === "open" ? [{ label: "Change refund status", onClick: () => open(r) }] : []),
+                    ]} />
                   </td>
                 </tr>
               );

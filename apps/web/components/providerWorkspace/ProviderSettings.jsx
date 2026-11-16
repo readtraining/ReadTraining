@@ -231,7 +231,7 @@ function IntegrationsTab({ data, say }) {
         <p className="rt-acc__note">{on ? "Connected. New live online cohorts get a Zoom room." : "Not connected."}</p>
       </div>
       <button type="button" className={`button -md ${on ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={on ? () => setAsking(true) : toggle} aria-haspopup={on ? "dialog" : undefined}>{on ? "Disconnect" : "Connect with Zoom"}</button>
-      <Confirm open={asking} onClose={() => setAsking(false)} title="Disconnect Zoom?" text="New live online cohorts won't get a Zoom room, and you add their joining links yourself. Rooms already made stay as they are. You can connect again at any time." confirmLabel="Disconnect Zoom" onConfirm={toggle} />
+      <Confirm danger open={asking} onClose={() => setAsking(false)} title="Disconnect Zoom?" text="New live online cohorts won't get a Zoom room, and you add their joining links yourself. Rooms already made stay as they are. You can connect again at any time." confirmLabel="Disconnect Zoom" onConfirm={toggle} />
     </div>
   );
 }

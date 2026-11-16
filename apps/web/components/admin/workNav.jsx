@@ -3,45 +3,197 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { SIDE_COOKIE } from "@/lib/sideMenu";
+import { SIDE, SIDE_COOKIE, SIDE_WIDTH_COOKIE } from "@/lib/sideMenu";
 
 // The sidebar parts both work layouts share (the admin, AdminShell; the provider workspace, ProviderShell), so they look and
 // behave the same: below 992px the sidebar is a drawer opened from the top bar's menu button (focus moves into it and is kept
 // there, Esc or the close button shuts it, the page behind doesn't scroll, and it shuts when a page opens), and its groups fold
-// one by one, remembered in this browser. From 992px the button at the sidebar's top right hides it, and the same button at the
-// top left of the page brings it back (kept in a cookie, so the server draws the page the same way and nothing jumps on load).
+// one by one, remembered in this browser. From 992px the button at the sidebar's top folds it to a 64px rail of icons and opens
+// it again (kept in a cookie, so the server draws the page the same way and nothing jumps on load). The provider workspace also
+// has Ctrl+B for that button (useSideShortcut), an edge that resizes the open menu (SideResizer; the width is kept in a cookie
+// too) and the rail's tooltips (useRailTip).
 
-// The sidebar hidden or shown, from 992px. The layouts read the cookie on the server (`closed`, lib/sideMenu.js).
-const SideMenu = createContext({ closed: false, toggle: () => {} });
-export function SideMenuProvider({ closed: initial = false, children }) {
-  const [closed, setClosed] = useState(initial);
-  const toggle = () => {
-    const next = !closed;
-    document.cookie = `${SIDE_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+const keep = (name, value) => {
+  try {
+    document.cookie = `${name}=${value}; path=/; max-age=31536000; samesite=lax`;
+  } catch {}
+};
+
+// The sidebar folded or open, from 992px, and the provider workspace's chosen width (null: the default). The layouts read the
+// cookies on the server (lib/sideMenu.js).
+const SideMenu = createContext({ closed: false, width: null, fold: () => {}, toggle: () => {}, resize: () => {} });
+export function SideMenuProvider({ closed: initialClosed = false, width: initialWidth = null, children }) {
+  const [closed, setClosed] = useState(initialClosed);
+  const [width, setWidth] = useState(initialWidth);
+  const fold = (next) => {
+    keep(SIDE_COOKIE, next ? "1" : "0");
     setClosed(next);
-    // the keyboard stays on the button, which has moved: the page's button when hidden, the sidebar's when shown
-    // (the admin's sidebar becomes an icon rail and keeps its own button; the provider workspace's hides and uses the page's)
-    requestAnimationFrame(() => {
-      const page = document.querySelector(".rt-adm__sideopen");
-      (next && page?.offsetParent ? page : document.querySelector(".rt-adm__sidehide"))?.focus();
-    });
   };
-  return <SideMenu.Provider value={{ closed, toggle }}>{children}</SideMenu.Provider>;
+  const toggle = () => fold(!closed);
+  const resize = (w) => {
+    keep(SIDE_WIDTH_COOKIE, String(w));
+    setWidth(w);
+  };
+  return <SideMenu.Provider value={{ closed, width, fold, toggle, resize }}>{children}</SideMenu.Provider>;
 }
 export const useSideMenu = () => useContext(SideMenu);
 
-// The button that hides the sidebar (`where="side"`, at its top right) or brings it back (`where="page"`, the page's top left).
-export function SideMenuButton({ where, controls }) {
+// The button at the sidebar's top that folds it to the rail and opens it again (it stays in place in the rail). `shortcut`: the
+// provider workspace's wording, which names Ctrl+B (useSideShortcut); the admin keeps "Hide menu" / "Show menu".
+export function SideMenuButton({ controls, shortcut = false }) {
   const { closed, toggle } = useSideMenu();
-  const label = where === "side" && !closed ? "Hide menu" : "Show menu";
+  const label = shortcut ? (closed ? "Expand menu" : "Collapse menu") : closed ? "Show menu" : "Hide menu";
   return (
-    <button type="button" className={where === "side" ? "rt-adm__sidehide" : "rt-adm__sideopen"} onClick={toggle} aria-expanded={!closed} aria-controls={controls} title={label}>
+    <button type="button" className="rt-adm__sidehide" onClick={toggle} aria-expanded={!closed} aria-controls={controls}
+      title={shortcut ? `${label} (Ctrl+B)` : label} aria-keyshortcuts={shortcut ? "Control+B Meta+B" : undefined}>
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d={where === "side" && !closed ? "m15.5 10-2 2 2 2" : "m13.5 10 2 2-2 2"} />
+        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d={closed ? "m13.5 10 2 2-2 2" : "m15.5 10-2 2 2 2"} />
       </svg>
       <span className="rt-sr">{label}</span>
     </button>
   );
+}
+
+// Ctrl+B (Cmd+B on a Mac) folds or opens the sidebar, from 992px; never while typing (a field, a text editor) or in a pop-up.
+export function useSideShortcut() {
+  const { toggle } = useSideMenu();
+  const latest = useRef(toggle);
+  useEffect(() => {
+    latest.current = toggle;
+  });
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.repeat || e.defaultPrevented || e.key?.toLowerCase() !== "b") return;
+      if (!window.matchMedia("(min-width: 992px)").matches) return;
+      const t = e.target;
+      if (t instanceof Element && (t.isContentEditable || t.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='dialog']"))) return;
+      e.preventDefault();
+      const was = document.activeElement;
+      latest.current();
+      // the keyboard was on a menu link that has now gone (the open list or the rail's icons): it goes to the menu's button
+      requestAnimationFrame(() => {
+        if (was && was !== document.body && (!was.isConnected || !was.getClientRects().length)) document.querySelector(".rt-adm__sidehide")?.focus();
+      });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+}
+
+// the widest open menu for this window: 280px, or a quarter of the window, but never narrower than the default (the CSS keeps the
+// same limits, .rt-pws .rt-adm__body)
+const widest = () => Math.min(SIDE.max, Math.max(SIDE.base, Math.floor(window.innerWidth / 4)));
+
+// The open menu's width for the layout's root element (the grid reads --rt-side-w)
+export const sideWidthStyle = (width) => ({ "--rt-side-w": `${width ?? SIDE.base}px` });
+
+// The sidebar's right edge (from 992px): drag it to resize the open menu, below the snap point to fold it to the rail, or from the
+// rail outwards to open it; double-click folds or opens it. With the keyboard: arrows step 16px (below the narrowest folds, right
+// from the rail opens), Home folds, End opens it widest and Enter folds or opens. `rootRef` is the element whose --rt-side-w the
+// grid reads: while dragging it is written straight there (no re-render on every move) and saved when the drag ends. `sideRef` is
+// the sidebar.
+export function SideResizer({ rootRef, sideRef, controls }) {
+  const { closed, width, fold, toggle, resize } = useSideMenu();
+  const [max, setMax] = useState(SIDE.max);
+  const drag = useRef(null);
+  useEffect(() => {
+    const measure = () => setMax(widest());
+    measure();
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      document.body.classList.remove("rt-side-resizing"); // a page that changes mid-drag
+    };
+  }, []);
+  const open = Math.min(width ?? SIDE.base, max);
+  const setTo = (w) => {
+    if (w < SIDE.min) {
+      if (!closed) fold(true);
+      return;
+    }
+    if (closed) fold(false);
+    resize(Math.min(w, max));
+  };
+  const onKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      toggle();
+      return;
+    }
+    const next = { ArrowLeft: closed ? null : open - SIDE.step, ArrowRight: closed ? SIDE.min : open + SIDE.step, Home: 0, End: max }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    if (next !== null) setTo(next);
+  };
+  const setVar = (w) => rootRef.current?.style.setProperty("--rt-side-w", `${w}px`);
+  const onPointerDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault(); // no text selection
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { x: e.clientX, from: sideRef.current?.getBoundingClientRect().width ?? open, saved: width ?? SIDE.base, rail: closed, w: null, moved: false };
+    document.body.classList.add("rt-side-resizing");
+  };
+  const onPointerMove = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    if (!d.moved && Math.abs(dx) < 3) return; // a click or a double-click doesn't resize
+    d.moved = true;
+    const raw = d.from + dx;
+    const rail = raw < SIDE.snap;
+    if (rail !== d.rail) {
+      d.rail = rail;
+      fold(rail);
+    }
+    if (!rail) {
+      d.w = Math.round(Math.min(Math.max(raw, SIDE.min), widest()));
+      setVar(d.w);
+    }
+  };
+  const onPointerEnd = () => {
+    const d = drag.current;
+    if (!d) return;
+    drag.current = null;
+    document.body.classList.remove("rt-side-resizing");
+    if (d.rail) setVar(d.saved); // left folded: it opens again at the width it had before
+    else if (d.w !== null) resize(d.w);
+  };
+  return (
+    <div className="rt-adm__resize" role="separator" aria-orientation="vertical" tabIndex={0} aria-label="Resize menu" aria-controls={controls}
+      aria-valuemin={SIDE.rail} aria-valuemax={max} aria-valuenow={closed ? SIDE.rail : open} aria-valuetext={closed ? "Folded to icons" : `${open} pixels wide`}
+      title="Drag to resize the menu, double-click to fold or open it"
+      onKeyDown={onKeyDown} onDoubleClick={toggle} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd}
+      onPointerCancel={onPointerEnd} onLostPointerCapture={onPointerEnd}></div>
+  );
+}
+
+// The rail's tooltips: pointing at or focusing an icon shows its name beside it, drawn outside the rail (which scrolls, so it would
+// cut off a tooltip inside it); Esc or scrolling hides it, and so does opening the menu (`on`: the rail is shown). Returns the
+// props for each icon link (its name in `data-tip`) and the tooltip, rendered once.
+export function useRailTip(on) {
+  const [tip, setTip] = useState(null);
+  useEffect(() => {
+    if (!on) setTip(null);
+  }, [on]);
+  const show = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setTip({ label: e.currentTarget.dataset.tip, top: r.top + r.height / 2, left: r.right + 8 });
+  };
+  const hide = () => setTip(null);
+  useEffect(() => {
+    if (!tip) return;
+    const onKey = (e) => e.key === "Escape" && setTip(null);
+    const onScroll = () => setTip(null);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [tip]);
+  const tipProps = { onPointerEnter: show, onPointerLeave: hide, onFocus: show, onBlur: hide };
+  const tipEl = on && tip && <span className="rt-adm__tip" style={{ top: tip.top, left: tip.left }} aria-hidden="true">{tip.label}</span>;
+  return [tipProps, tipEl];
 }
 
 // The drawer: `sideRef` is the sidebar <nav>.

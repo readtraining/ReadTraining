@@ -12,6 +12,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
+import { isDatedMethod, waysOf } from "@/lib/courseModes";
 import { Said, DetailSkeleton, formatWhen, Empty } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -202,8 +203,11 @@ export default function AdminCourse({ id }) {
           <dl className="rt-adm-dl">
             <div><dt>Category</dt><dd>{place || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
             <div><dt>Level</dt><dd>{levelName(c.level) || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
-            {!shared && <div><dt>How it is taught</dt><dd>{methodName(c.method) || "–"}</dd></div>}
-            {!shared && <div><dt>Price</dt><dd>{c.method === "self-paced" ? (c.pricePence != null ? formatPrice(c.pricePence / 100) : "Not set") : `Set on each date · ${c.upcomingCohorts} upcoming`} <span className="rt-adm-muted">(see Prices and packages)</span></dd></div>}
+            {!shared && <div><dt>Learning options</dt><dd>{waysOf(c).length ? <>{methodName(c.method)}{waysOf(c).length > 1 && <span className="rt-adm-muted"> (primary) · also {waysOf(c).slice(1).map(methodName).join(", ")}</span>}</> : "–"}</dd></div>}
+            {!shared && <div><dt>Price</dt><dd>{[
+              waysOf(c).includes("self-paced") ? `Self-paced: ${c.pricePence != null ? formatPrice(c.pricePence / 100) : "not set"}` : "",
+              waysOf(c).some(isDatedMethod) ? `Set on each date · ${c.upcomingCohorts} upcoming` : "",
+            ].filter(Boolean).join(" · ") || "–"} <span className="rt-adm-muted">(see Prices and packages)</span></dd></div>}
             {!shared && <div><dt>Performance model</dt><dd>{pw.models[c.model]?.label}</dd></div>}
             {!shared && <div><dt>Skill Saver</dt><dd>{c.skillSaver ? "Yes" : "No"}</dd></div>}
             <div><dt>Shown in search</dt><dd>{c.listed && (shared || c.isPublic) ? "Yes" : "No"}</dd></div>

@@ -134,8 +134,26 @@ function VenueCard({ v, current, onSelect, onBook, open, onToggle, more, onMore,
   const shown = folds && !more ? v.sessions.slice(0, SHOWN) : v.sessions;
   const hidden = v.sessions.length - SHOWN;
   const first = tile(v.sessions[0].date);
+  // opened (or shown more) by the visitor near the bottom of the list: scroll just enough to bring its dates into view, keeping
+  // the venue's name on screen, so nobody has to scroll to find the Book now buttons
+  const card = useRef(null);
+  const reveal = useRef(false);
+  useEffect(() => {
+    if (!open || !reveal.current) return;
+    reveal.current = false;
+    const el = card.current;
+    let box = el?.parentElement;
+    while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement;
+    if (!el || !box) return;
+    const r = el.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    const below = r.bottom - b.bottom; // how much of the card is hidden under the bottom edge
+    if (below <= 0) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    box.scrollBy({ top: Math.min(below + 12, r.top - b.top), behavior: reduce ? "auto" : "smooth" });
+  }, [open, more]);
   return (
-    <section className={`rt-dd__vcard${open ? " is-open" : ""}`} aria-labelledby={id}>
+    <section ref={card} className={`rt-dd__vcard${open ? " is-open" : ""}`} aria-labelledby={id}>
       <div className="rt-dd__vhead">
         <div className="rt-dd__vinfo">
           <h3 id={id}>{v.venue || v.city}</h3>
@@ -147,7 +165,7 @@ function VenueCard({ v, current, onSelect, onBook, open, onToggle, more, onMore,
           <p className="rt-dd__vnext">Next course: <strong>{first.weekday} {first.day} {first.month}</strong></p>
         </div>
         <p className="rt-dd__vfrom">{v.sessions.length > 1 || v.sessions.some((x) => x.packages) ? "From " : ""}{formatPrice(v.from)}</p>
-        <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={onToggle}>
+        <button type="button" className="rt-dd__vtoggle" aria-expanded={open} aria-controls={`${id}-dates`} onClick={() => { reveal.current = !open; onToggle(); }}>
           {open ? "Hide dates" : "Show dates"}<span className="rt-cd__sr"> at {v.venue || v.city}</span>
           <span className="rt-dd__vchev" aria-hidden="true"><Chevron /></span>
         </button>
@@ -159,7 +177,7 @@ function VenueCard({ v, current, onSelect, onBook, open, onToggle, more, onMore,
               {shown.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={onSelect} onBook={onBook} classroom markSaver={markSaver} />)}
             </ul>
             {folds && (
-              <button type="button" className="rt-dd__more" aria-expanded={more} onClick={onMore}>
+              <button type="button" className="rt-dd__more" aria-expanded={more} onClick={() => { reveal.current = !more; onMore(); }}>
                 {more ? "Show fewer dates" : `Show ${hidden} more ${hidden === 1 ? "date" : "dates"}`} <Chevron />
               </button>
             )}

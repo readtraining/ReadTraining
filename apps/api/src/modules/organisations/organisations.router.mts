@@ -207,8 +207,24 @@ export const organisationsRouter = createTRPCRouter({
       // userId: the browser's permission checks need it for "their own" rules (a tutor's own dates)
       // our team's status note is for the owner and admins only (a tutor or an assistant sees the status, not the note)
       const statusNote = PRIVATE_ROLES.includes(chosen.role) ? org.statusNote : null
-      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
+      // whether this person has already seen the message for the account's current status (one that shows once is then gone)
+      const [member] = await ctx.db
+        .select({ seenAt: organisationMembers.statusSeenAt })
+        .from(organisationMembers)
+        .where(and(eq(organisationMembers.organisationId, org.id), eq(organisationMembers.userId, ctx.user.id)))
+      const statusSeen = Boolean(member?.seenAt && (!org.statusChangedAt || new Date(member.seenAt) >= new Date(org.statusChangedAt)))
+      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, statusSeen, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
+
+  // The person has seen the account's status message (shown once on the provider dashboard): it won't show to them again until
+  // the status changes. Their own row only; nothing to log, as it changes no one's access or records.
+  statusSeen: protectedProcedure.input(z.object({ organisationId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+    await ctx.db
+      .update(organisationMembers)
+      .set({ statusSeenAt: new Date() })
+      .where(and(eq(organisationMembers.organisationId, input.organisationId), eq(organisationMembers.userId, ctx.user.id), eq(organisationMembers.status, 'active')))
+    return { ok: true }
+  }),
 
   // After the ReadTraining team asked for changes: the provider says they're done (with an optional note for the team), and
   // the account goes back to waiting for a decision. Only the owner and admins: they are the ones who read our team's message

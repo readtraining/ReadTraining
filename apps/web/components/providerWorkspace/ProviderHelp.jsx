@@ -6,12 +6,12 @@ import { getHelpSearchIndex, getHelpTopic } from "@/lib/help";
 import { EmptyState } from "@/components/states/States";
 import { topBar } from "@/data/home";
 
-// Help: Hurak's three ways to get help (how-to guides, help and support, live chat) in our layout: a search across every help
-// article, the provider guides as a list, and the three ways to reach us beside it.
+// Help: Hurak's three ways to get help (how-to guides, help and support, contact) in our layout: a search across every help
+// article, the provider guides as a list, and the three ways to get help beside it.
 const WAYS = [
-  { icon: "icon-play-button", title: "How-to guides", text: "Step by step: listing a course, running cohorts, orders and earnings.", href: "/help-centre/training-providers", cta: "Open the guides" },
+  { icon: "icon-book", title: "How-to guides", text: "Step by step: listing a course, running cohorts, orders and earnings.", href: "/help-centre/training-providers", cta: "Open the guides" },
   { icon: "icon-document", title: "Help and support", text: "Every help article, from publishing your first course to refunds.", href: "/help-centre", cta: "Visit the help centre" },
-  { icon: "icon-message", title: "Live chat", text: `Message our provider team, ${topBar.hoursLong}. We usually reply the same day.`, href: "/contact-us", cta: "Contact the team" },
+  { icon: "icon-message", title: "Contact our team", text: `Message our provider team, ${topBar.hoursLong}. We usually reply the same day.`, href: "/contact-us", cta: "Contact the team" },
 ];
 const INDEX = getHelpSearchIndex();
 const GUIDES = getHelpTopic("training-providers")?.articles || [];
@@ -57,11 +57,11 @@ export default function ProviderHelp() {
             ))}
           </ul>
         </section>
-        <section aria-labelledby="rt-hp-ways">
+        <section className="rt-acc__card" aria-labelledby="rt-hp-ways">
           <h2 className="rt-hp-h" id="rt-hp-ways">Get help</h2>
           <ul className="rt-hp-ways">
             {WAYS.map((w) => (
-              <li key={w.title} className="rt-acc__card">
+              <li key={w.title}>
                 <span className="rt-hp-ways__icon" aria-hidden="true"><i className={`${w.icon} text-18`}></i></span>
                 <div>
                   <h3 className="rt-hp-ways__title">{w.title}</h3>

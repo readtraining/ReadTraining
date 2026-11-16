@@ -11,13 +11,11 @@ import { formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { COHORT_TONE, Loading, Pill } from "./providerParts";
-import { CancelSheet, CohortForm, DeleteSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
+import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
 
 // One run of a course (Hurak's Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
 // whether it takes bookings and its tutor, with Edit, Cancel and Delete. Learners appear under it once booking opens (a later
 // milestone); until then the list is empty.
-
-const STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
 
 const useCohort = (cohortId) => {
   const { organisationId } = useProviderAccess();
@@ -46,7 +44,7 @@ export default function ProviderCohortDetail({ cohortId }) {
 
   if (query.error?.data?.code === "NOT_FOUND") return <EmptyState title="This cohort was not found." text="It may have been deleted." action={{ href: "/provider/cohorts", label: "All cohorts" }} />;
   if (query.isError) return <ErrorState title="We couldn't load this cohort." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
-  if (!k) return <Loading rows={3} />;
+  if (!k) return <Loading detail />;
 
   const edit = can("provider.cohorts.edit");
   const status = cohortState(k);
@@ -73,7 +71,7 @@ export default function ProviderCohortDetail({ cohortId }) {
       <section className="rt-acc__card" aria-labelledby="rt-coh-det-h">
         <div className="rt-acc__cardhead rt-adm-cardhead">
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
-          <Pill tone={COHORT_TONE[status]}>{STATUSES[status]}</Pill>
+          <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
         </div>
         <dl className="rt-pws-coh__details">
           <div><dt>Course</dt><dd><Link href={`/provider/courses/${k.courseId}`} className="rt-adm-strong">{k.courseTitle}</Link><small>{methodName(k.method)}</small></dd></div>
@@ -85,7 +83,7 @@ export default function ProviderCohortDetail({ cohortId }) {
             <dt>Bookings</dt>
             <dd className="rt-pws-coh__inline">
               <Pill tone={k.bookable && !cancelled ? "ok" : "muted"}>{k.bookable && !cancelled ? "On" : "Off"}</Pill>
-              {edit && !cancelled && <button type="button" className="rt-cd__link" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
+              {edit && !cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
             </dd>
           </div>
           <div><dt>Tutor</dt><dd>{k.tutorName || <span className="rt-adm-muted">Not assigned</span>}</dd></div>
@@ -97,14 +95,17 @@ export default function ProviderCohortDetail({ cohortId }) {
             <li key={`${s.date}-${i}`}><div><b>{s.end && s.end !== s.date ? `${longDay(s.date)} to ${longDay(s.end)}` : longDay(s.date)}</b><small>{timeRange(s)}</small></div></li>
           ))}
         </ol>
-        {edit && !cancelled && (
+        {cancelled && <p className="rt-acc__notice -warn">This cohort is cancelled{k.cancelReason ? `: ${k.cancelReason}` : "."}</p>}
+        {edit && (
           <div className="rt-pws-coh__heroactions">
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>
-            {k.endsOn >= new Date().toISOString().slice(0, 10) && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
+            {!cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>}
+            {/* the destructive actions together, apart from Edit */}
+            <div className="rt-pws-danger-group">
+              {!cancelled && k.endsOn >= new Date().toISOString().slice(0, 10) && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
+              <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setDeleting(true)}>Delete cohort</button>
+            </div>
           </div>
         )}
-        {cancelled && <p className="rt-adm-item__block">This cohort is cancelled{k.cancelReason ? `: ${k.cancelReason}` : "."}</p>}
-        {edit && <p className="rt-acc__note"><button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setDeleting(true)}>Delete cohort</button></p>}
       </section>
 
       <section className="rt-acc__card" aria-labelledby="rt-coh-ppl-h">

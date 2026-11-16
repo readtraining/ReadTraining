@@ -10,7 +10,8 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
-import { categoryOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
+import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
+import { waysLabel } from "@/lib/courseModes";
 import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { ErrorState } from "@/components/states/States";
@@ -92,14 +93,14 @@ export default function AdminCatalogue() {
                     <tr key={c.id}>
                       <td data-label={cols.course}>
                         <Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link>
-                        <small>{c.kind === "shared" ? copy.kind.shared : [c.provider, methodName(c.method), c.parent ? `on ${c.parent}` : ""].filter(Boolean).join(" · ")}</small>
+                        <small>{c.kind === "shared" ? copy.kind.shared : [c.provider, waysLabel(c), c.parent ? `on ${c.parent}` : ""].filter(Boolean).join(" · ")}</small>
                       </td>
                       <td data-label={cols.status}>
                         <AdminStatus kind="course" status={c.status}>{copy.statuses[c.status]}</AdminStatus>
                         {c.pendingChange && <small>Change waiting</small>}
                       </td>
                       <td data-label={cols.providers} className="rt-adm-num-cell">{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
-                      <td data-label={cols.sessions} className="rt-adm-num-cell">{c.method === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
+                      <td data-label={cols.sessions} className="rt-adm-num-cell">{c.methods?.length === 1 && c.methods[0] === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
                       <td data-label={cols.from} className="rt-adm-num-cell">{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
                     </tr>
                   ))}

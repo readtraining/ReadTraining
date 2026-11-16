@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/trpc/react";
@@ -13,6 +13,8 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { Choice, Toggle } from "./providerParts";
 import { pagesForSubject } from "@/lib/taxonomy";
 import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
+import { contactHref } from "@/lib/forms";
+import { isDatedMethod, waysOf } from "@/lib/courseModes";
 
 // The course editor's self-saving parts: SEO settings, and the gear's course settings (a provider's course, or a shared course
 // page in the admin). Each saves on its own (SEO with its button, the gear as you choose) and reports back through onSaved for the
@@ -21,7 +23,7 @@ import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 const Err = ({ id, text }) => (text ? <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{text}</p> : null);
 
 // SEO settings: title (60), description (320) and keywords, with a search result preview.
-export function SeoPanel({ course, onSaved }) {
+export function SeoPanel({ course, onSaved, formId, onState }) {
   const ep = useEndpoints();
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState(course.seoTitle || "");
@@ -32,7 +34,9 @@ export function SeoPanel({ course, onSaved }) {
   const ref = useRef(null);
   // what is saved: leaving the page with anything else typed asks first (lib/unsavedChanges.js)
   const [saved, setSaved] = useState({ title: course.seoTitle || "", desc: course.seoDescription || "", keywords: course.seoKeywords || [] });
-  useUnsavedChanges(title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords));
+  const dirty = title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords);
+  useUnsavedChanges(dirty);
+  useEffect(() => { onState?.({ dirty, busy }); }, [dirty, busy]); // eslint-disable-line react-hooks/exhaustive-deps -- onState is the editor's setter
 
   const addWords = (text) => {
     const add = text.split(",").map((w) => w.trim().toLowerCase().slice(0, 40)).filter((w) => w && !keywords.includes(w));
@@ -62,7 +66,7 @@ export function SeoPanel({ course, onSaved }) {
   const locked = !ep.access.page;
 
   return (
-    <form className="rt-q__form" onSubmit={submit} noValidate ref={ref}>
+    <form className="rt-q__form" id={formId} onSubmit={submit} noValidate ref={ref}>
       <div className="rt-field">
         <label htmlFor="rt-pws-cset-st">SEO title (optional)</label>
         <Err id="rt-pws-cset-st" text={errors.title} />
@@ -97,14 +101,104 @@ export function SeoPanel({ course, onSaved }) {
         <span className="rt-pws-cset__serpdesc">{desc.trim() || course.summary || "Your description shows here."}</span>
       </div>
       {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
-      {!locked && <div><button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : "Save"}</button></div>}
+      {!locked && !formId && <div><button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : "Save"}</button></div>}
+    </form>
+  );
+}
+
+// The name typed to confirm deleting a course that has been live: its title, ignoring spaces around it and case (the API checks
+// the same, sameName in modules/provider/courses.mts).
+const sameName = (typed, title) => typed.trim().toLowerCase() === title.trim().toLowerCase();
+// our team's reason for pausing a course, as one sentence (it may or may not end with a full stop)
+const teamReason = (note = "") => {
+  const t = note.trim().replace(/\.+$/, "");
+  return /[!?]$/.test(t) ? t : `${t}.`;
+};
+
+// ---- pausing and deleting a provider's course: the gear and the Courses list's ⋮ menu share these, so both follow one rule ----
+
+// Pause and Put back live are offered for a live course and for one the provider paused; a course our team paused has their
+// reason (statusNote) and goes back live only through them
+export const pausable = (course) => course.status === "live" || (course.status === "paused" && !course.statusNote);
+export const PAUSE_NOTE = "Pausing takes the course off ReadTraining. Its dates stay, and you can put it back live at any time.";
+export const COURSE_SAID = { paused: "The course is paused", resumed: "The course is live again", withdrawn: "Withdrawn from review. The course is a draft again" };
+
+// Why a course can't be deleted now (the API's deleteBlock), with the next step: waiting for review, Withdraw from review; paused
+// by our team, their reason and Contact us; booked or reviewed, Pause. Nothing when it can be deleted.
+export function DeleteBlocked({ course, busy, withdrawing, onWithdraw }) {
+  if (course.deleteBlock === "in_review") {
+    return (
+      <>
+        <p className="rt-acc__note">This course is waiting for our team&apos;s review. Withdraw it from review to edit or delete it.</p>
+        <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={withdrawing || undefined} onClick={onWithdraw}>{withdrawing ? "Withdrawing…" : "Withdraw from review"}</button>
+      </>
+    );
+  }
+  if (course.deleteBlock === "paused_by_team") return <p className="rt-acc__note">Our team has paused this course: {teamReason(course.statusNote)} You can&apos;t delete it while we&apos;ve paused it. <Link href={contactHref()} className="rt-cd__link">Contact us</Link> if you&apos;d like it removed.</p>;
+  if (course.deleteBlock === "in_use") return <p className="rt-acc__note">Courses can&apos;t be deleted once learners have booked or reviewed them.{course.status === "live" ? " Pause it to take it off ReadTraining." : ""}</p>;
+  return null;
+}
+
+// "Delete this course?": a course that has been live is deleted only with its name typed (it leaves ReadTraining, and our team is
+// told); any other asks once. Cancel is locked while it deletes. A refusal (booked, reviewed or sent for review meanwhile) is
+// said here, and the course loads again, so the gear and the list then show why.
+export function DeleteCourseForm({ course, onKeep, onDeleted }) {
+  const { organisationId } = useProviderAccess();
+  const utils = api.useUtils();
+  const remove = api.provider.courses.remove.useMutation();
+  const [typed, setTyped] = useState(""); // the course name, typed to confirm deleting a course that has been live
+  const [nameError, setNameError] = useState("");
+  const [error, setError] = useState("");
+  const nameRef = useRef(null);
+  const wasLive = Boolean(course.publishedAt) || course.status === "live" || course.status === "paused";
+  const submit = (e) => {
+    e.preventDefault();
+    if (wasLive && !sameName(typed, course.title)) return;
+    setError("");
+    setNameError("");
+    remove.mutate({ organisationId, courseId: course.id, ...(wasLive ? { confirmTitle: typed } : {}) }, {
+      onSuccess: () => {
+        utils.provider.courses.list.invalidate({ organisationId });
+        onDeleted();
+      },
+      onError: (er) => {
+        const { fields, general } = errorsFrom(er);
+        if (fields.confirmTitle) {
+          setNameError(fields.confirmTitle);
+          return requestAnimationFrame(() => nameRef.current?.focus());
+        }
+        utils.provider.courses.get.invalidate({ organisationId, courseId: course.id });
+        utils.provider.courses.list.invalidate({ organisationId });
+        setError(general || Object.values(fields)[0]);
+      },
+    });
+  };
+  return (
+    <form className="rt-q__form" noValidate onSubmit={submit}>
+      {wasLive ? (
+        <>
+          <p className="rt-acc__note">This takes “{course.title}” off ReadTraining straight away, with its dates and images, and can&apos;t be undone. Type the course name to confirm.</p>
+          <div className="rt-field">
+            <label htmlFor="rt-pws-del-name">Course name</label>
+            <Err id="rt-pws-del-name" text={nameError} />
+            <input id="rt-pws-del-name" ref={nameRef} type="text" autoComplete="off" spellCheck={false} maxLength={200} value={typed} onChange={(e) => { setTyped(e.target.value); setNameError(""); }} aria-invalid={nameError ? true : undefined} aria-describedby={nameError ? "rt-pws-del-name-e" : undefined} />
+          </div>
+        </>
+      ) : (
+        <p className="rt-acc__note">“{course.title}”, its dates and its images will be deleted. This can&apos;t be undone.</p>
+      )}
+      {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+      <div className="rt-adm-cellrow">
+        <button type="submit" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending || (wasLive && !sameName(typed, course.title))} aria-busy={remove.isPending || undefined}>{remove.isPending ? "Deleting…" : "Delete course"}</button>
+        <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onKeep} disabled={remove.isPending}>Cancel</button>
+      </div>
     </form>
   );
 }
 
 // The gear on every editor page (Hurak's course settings): who can enrol (public or private), the address to share, the shared
-// course page it is listed under, showing it in ReadTraining's search, pausing a live course, and deleting a course that has never
-// been live. Each choice saves at once.
+// course page it is listed under, showing it in ReadTraining's search, pausing a live course, and deleting it (DeleteBlocked says
+// when it can't be, and a course our team paused has no Put back live; DeleteCourseForm asks). Each choice saves at once.
 export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const router = useRouter();
   // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
@@ -113,12 +207,13 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const utils = api.useUtils();
   const update = api.provider.courses.update.useMutation();
   const pause = api.provider.courses.setPaused.useMutation();
-  const remove = api.provider.courses.remove.useMutation();
+  const withdraw = api.provider.courses.withdrawReview.useMutation();
   const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: open && Boolean(organisationId) });
   const [confirm, setConfirm] = useState(false);
   const [askPause, setAskPause] = useState(false); // "Pause course" asks first
   const [error, setError] = useState("");
   const edit = can("provider.courses.edit");
+  const dated = waysOf(course).some(isDatedMethod); // taught on dates: the gear links to them
   const [url, setUrl] = useState("");
   React.useEffect(() => setUrl(`${window.location.origin}/course/${course.slug}`), [course.slug]);
 
@@ -134,7 +229,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const doPause = (paused) => {
     setError("");
     pause.mutate({ organisationId, courseId: course.id, paused, seen: ep?.seen() }, {
-      onSuccess: (r) => { ep?.keep(r); refresh(); setAskPause(false); onSaved(paused ? "The course is paused" : "The course is live again"); },
+      onSuccess: (r) => { ep?.keep(r); refresh(); setAskPause(false); onSaved(paused ? COURSE_SAID.paused : COURSE_SAID.resumed); },
       onError: (e) => { setAskPause(false); fail(e); },
     });
   };
@@ -151,75 +246,94 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
       onSaved("Press Ctrl+C to copy the link");
     }
   };
-  const doRemove = () => {
+  const doWithdraw = () => {
     setError("");
-    remove.mutate({ organisationId, courseId: course.id }, { onSuccess: () => { utils.provider.courses.list.invalidate({ organisationId }); leaveWithoutAsking(() => router.push("/provider/courses")); }, onError: fail });
+    withdraw.mutate({ organisationId, courseId: course.id, seen: ep?.seen() }, {
+      onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(COURSE_SAID.withdrawn); },
+      onError: fail,
+    });
   };
-  const close = () => {
+  const leaveConfirm = () => {
     setConfirm(false);
     setError("");
+  };
+  const close = () => {
+    leaveConfirm();
     onClose();
   };
-  const busy = update.isPending || pause.isPending || remove.isPending;
+  const busy = update.isPending || pause.isPending || withdraw.isPending;
   const pages = pagesForSubject(shared.data || [], course); // only pages for this course's subject
   const parentOptions = [{ value: "", label: "None: the course has its own page" }, ...pages.map((p) => ({ value: String(p.id), label: p.title }))];
   const wrongPage = course.parent && !course.parent.sameSubject;
   if (course.parent && !pages.some((p) => p.id === course.parent.id)) parentOptions.push({ value: String(course.parent.id), label: course.parent.title });
 
   return (
-    <Sheet open={open} onClose={close} title={confirm ? "Delete this course?" : "Course settings"} closeLabel="Close">
+    <Sheet open={open} onClose={close} title={confirm ? "Delete this course?" : "Course settings"} closeLabel="Close" noClose={confirm}>
       {confirm ? (
-        <div className="rt-q__form">
-          <p className="rt-acc__note">“{course.title}”, its dates and its images will be deleted for good.</p>
-          {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
-          <div className="rt-adm-cellrow">
-            <button type="button" className="button -md -purple-1 text-white" onClick={doRemove} disabled={busy} aria-busy={remove.isPending || undefined}>{remove.isPending ? "Deleting…" : "Delete course"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)}>Keep it</button>
-          </div>
-        </div>
+        <DeleteCourseForm course={course} onKeep={leaveConfirm} onDeleted={() => leaveWithoutAsking(() => router.push("/provider/courses"))} />
       ) : (
-        <div className="rt-q__form" aria-busy={busy || undefined}>
+        <div className="rt-q__form rt-pws-gear" aria-busy={busy || undefined}>
+          <p className="rt-acc__note">Changes are saved as you make them.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
-          <Choice name="rt-pws-gear-enrol" legend="Enrollment (privacy)" hint="Private courses don't show in search; you share the link or book learners yourself." value={course.isPublic ? "public" : "private"} onChange={(v) => edit && change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public")} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
-          <div className="rt-field">
-            <label htmlFor="rt-pws-gear-url">Course address</label>
-            <p className="rt-field__hint">Share it on your website or social media{course.status === "live" ? "." : ". It works once the course is live."}</p>
-            <div className="rt-pws-course-addrow">
-              <input id="rt-pws-gear-url" value={url} readOnly onFocus={(e) => e.target.select()} />
-              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={copy}>Copy</button>
-            </div>
-          </div>
-          {(pages.length > 0 || course.parent) && (
+          {/* who can find the course */}
+          <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-vis">
+            <h3 className="rt-pws-gear__h" id="rt-pws-gear-vis">Visibility</h3>
+            <Choice name="rt-pws-gear-enrol" legend="Enrolment (privacy)" hint="Private courses don't show in search; you share the link or book learners yourself." value={course.isPublic ? "public" : "private"} onChange={(v) => edit && change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public")} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
+            <Toggle id="rt-pws-gear-market" checked={course.listed} disabled={!edit || busy} onChange={(v) => change({ listed: v }, v ? "The course shows in ReadTraining's search" : "The course is hidden from ReadTraining's search")} label="Show this course in ReadTraining's search" hint="If it is off, the course page still opens from its address, so you can share it yourself." />
+            {(pages.length > 0 || course.parent) && (
+              <div className="rt-field">
+                <label htmlFor="rt-pws-gear-parent">Shared course page</label>
+                <p className="rt-field__hint" id="rt-pws-gear-parent-h">A page on ReadTraining that lists every provider running this course, so learners can compare dates and prices. Only pages with this course's subject are offered.</p>
+                {wrongPage && <p className="rt-acc__notice -warn" role="status">“{course.parent.title}” is a page for a different course, so learners looking for this course won&apos;t find it there. Choose None to give it its own page.</p>}
+                <FieldSelect id="rt-pws-gear-parent" label="Shared course page" value={course.parent ? String(course.parent.id) : ""} onChange={(v) => change({ parentId: v ? Number(v) : null }, v ? "Listed on the shared course page" : "The course now has its own page")} options={parentOptions} disabled={!edit || busy} describedBy="rt-pws-gear-parent-h" />
+              </div>
+            )}
+          </section>
+          <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-share">
+            <h3 className="rt-pws-gear__h" id="rt-pws-gear-share">Sharing</h3>
             <div className="rt-field">
-              <label htmlFor="rt-pws-gear-parent">Shared course page</label>
-              <p className="rt-field__hint" id="rt-pws-gear-parent-h">A page on ReadTraining that lists every provider running this course, so learners can compare dates and prices. Only pages with this course's subject are offered.</p>
-              {wrongPage && <p className="rt-acc__notice -warn" role="status">“{course.parent.title}” is a page for a different course, so learners looking for this course won&apos;t find it there. Choose None to give it its own page.</p>}
-              <FieldSelect id="rt-pws-gear-parent" label="Shared course page" value={course.parent ? String(course.parent.id) : ""} onChange={(v) => change({ parentId: v ? Number(v) : null }, v ? "Listed on the shared course page" : "The course now has its own page")} options={parentOptions} disabled={!edit || busy} describedBy="rt-pws-gear-parent-h" />
+              <label htmlFor="rt-pws-gear-url">Course address</label>
+              <p className="rt-field__hint">Share it on your website or social media{course.status === "live" ? "." : ". It works once the course is live."}</p>
+              <div className="rt-pws-course-addrow">
+                <input id="rt-pws-gear-url" value={url} readOnly onFocus={(e) => e.target.select()} />
+                <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={copy}>Copy</button>
+              </div>
             </div>
-          )}
-          <Toggle id="rt-pws-gear-market" checked={course.listed} disabled={!edit || busy} onChange={(v) => change({ listed: v }, v ? "The course shows in ReadTraining's search" : "The course is hidden from ReadTraining's search")} label="Show this course in ReadTraining's search" hint="If it is off, the course page still opens from its address, so you can share it yourself." />
-          {edit && (course.status === "live" || (course.status === "paused" && !course.statusNote)) && (
-            <div className="rt-field">
-              <p className="rt-acc__note">{course.status === "live" ? "Pausing takes the course off ReadTraining. Its dates stay, and you can put it back live at any time." : "This course is paused: it doesn't show on ReadTraining."}</p>
-              {/* pausing takes the course off the site, so it asks first (putting it back live doesn't) */}
-              {askPause ? (
-                <div className="rt-adm-cellrow" role="group" aria-label="Pause this course?">
-                  <button type="button" className="button -sm -purple-1 text-white" disabled={busy} aria-busy={pause.isPending || undefined} onClick={() => doPause(true)}>{pause.isPending ? "Pausing…" : "Yes, pause it"}</button>
-                  <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => setAskPause(false)}>Keep it live</button>
+          </section>
+          {((edit && pausable(course)) || dated) && (
+            <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-avail">
+              <h3 className="rt-pws-gear__h" id="rt-pws-gear-avail">Availability</h3>
+              {edit && pausable(course) && (
+                <div className="rt-pws-gear__row">
+                  <p className="rt-acc__note">{course.status === "live" ? PAUSE_NOTE : "This course is paused: it doesn't show on ReadTraining."}</p>
+                  {/* pausing takes the course off the site, so it asks first (putting it back live doesn't) */}
+                  {askPause ? (
+                    <div className="rt-pws-gear__btns" role="group" aria-label="Pause this course?">
+                      <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} onClick={() => setAskPause(false)}>Cancel</button>
+                      <button type="button" className="button -sm -purple-1 text-white" disabled={busy} aria-busy={pause.isPending || undefined} onClick={() => doPause(true)}>{pause.isPending ? "Pausing…" : "Pause course"}</button>
+                    </div>
+                  ) : (
+                    <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={pause.isPending || undefined} onClick={() => (course.status === "live" ? setAskPause(true) : doPause(false))}>{course.status === "live" ? "Pause course" : pause.isPending ? "Putting back live…" : "Put back live"}</button>
+                  )}
                 </div>
-              ) : (
-                <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={pause.isPending || undefined} onClick={() => (course.status === "live" ? setAskPause(true) : doPause(false))}>{course.status === "live" ? "Pause course" : pause.isPending ? "Putting back live…" : "Put back live"}</button>
               )}
-            </div>
+              {dated && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true"> →</span></Link>}
+            </section>
           )}
           {can("provider.courses.delete") && (
-            <div className="rt-pws-gear__danger">
-              {course.publishedAt
-                ? <p className="rt-acc__note">A course that has been live can&apos;t be deleted, so its history stays. Pause it to take it off ReadTraining.</p>
-                : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setConfirm(true)}>Delete course</button>}
-            </div>
+            <section className="rt-pws-gear__danger" aria-labelledby="rt-pws-gear-del">
+              <h3 className="rt-pws-gear__h -danger" id="rt-pws-gear-del">Delete course</h3>
+              {course.deleteBlock ? <DeleteBlocked course={course} busy={busy} withdrawing={withdraw.isPending} onWithdraw={doWithdraw} /> : (
+                <div className="rt-pws-gear__row">
+                  <p className="rt-acc__note">Removes the course with its dates and pictures. This can&apos;t be undone.</p>
+                  <button type="button" className="button -sm -outline-red-3 text-red-3" onClick={() => setConfirm(true)}>Delete course</button>
+                </div>
+              )}
+            </section>
           )}
-          {course.method !== "self-paced" && <p className="rt-acc__note"><Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">See this course&apos;s dates</Link></p>}
+          <div className="rt-pws-set__actions">
+            <button type="button" className="button -md -purple-1 text-white" onClick={close}>Done</button>
+          </div>
         </div>
       )}
     </Sheet>
@@ -262,14 +376,14 @@ export function SharedGear({ course, open, onClose, onSaved }) {
   const blocked = course.children?.length ? `${course.children.length} ${course.children.length === 1 ? "provider course is" : "providers' courses are"} listed on this page, so it can't be deleted. Take it off the site instead.` : course.publishedAt ? "A page that has been live can't be deleted, so its history stays. Take it off the site instead." : "";
 
   return (
-    <Sheet open={open} onClose={close} title={confirm ? "Delete this page?" : "Page settings"} closeLabel="Close">
+    <Sheet open={open} onClose={close} title={confirm ? "Delete this page?" : "Page settings"} closeLabel="Close" noClose={confirm}>
       {confirm ? (
         <div className="rt-q__form">
           <p className="rt-acc__note">“{course.title}” and its images will be deleted for good.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-adm-cellrow">
-            <button type="button" className="button -md -purple-1 text-white" disabled={remove.isPending} onClick={() => remove.mutate({ courseId: course.id }, { onSuccess: () => { utils.admin.courses.list.invalidate(); leaveWithoutAsking(() => router.push("/admin/catalogue")); }, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete page"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)}>Keep it</button>
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ courseId: course.id }, { onSuccess: () => { utils.admin.courses.list.invalidate(); leaveWithoutAsking(() => router.push("/admin/catalogue")); }, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete page"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)} disabled={remove.isPending}>Cancel</button>
           </div>
         </div>
       ) : (
@@ -300,6 +414,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
               {blocked ? <p className="rt-acc__note">{blocked}</p> : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setConfirm(true)}>Delete page</button>}
             </div>
           )}
+          <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={close}>Done</button>
         </div>
       )}
     </Sheet>

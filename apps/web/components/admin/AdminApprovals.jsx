@@ -10,7 +10,7 @@ import { refreshCourses } from "@/app/admin/actions";
 import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { methodName } from "@/lib/taxonomy";
+import { waysLabel } from "@/lib/courseModes";
 import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
@@ -168,7 +168,7 @@ export default function AdminApprovals() {
                     {tab === "waiting" && <AdminDue due={at + copy.dueDays * DAY} now={now} />}
                   </div>
                   <h3 className="rt-acc__h3"><Link href={`/admin/catalogue/${a.courseId}`} className="rt-adm-strong">{a.title}</Link></h3>
-                  <p className="rt-acc__note">{[a.provider, methodName(a.method), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
+                  <p className="rt-acc__note">{[a.provider, waysLabel(a), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
                   {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive(a.providerStatus)}</p>}
                   {a.note && <p className="rt-adm-item__reason"><strong>Note to the provider:</strong> {a.note}</p>}
                   {canDecide && tab === "waiting" && a.own && <p className="rt-adm-item__reason">{a.soleApprover ? copy.ownQueueSole : copy.ownBlocked}</p>}

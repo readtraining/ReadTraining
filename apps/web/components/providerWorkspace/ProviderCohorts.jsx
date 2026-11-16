@@ -10,14 +10,16 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, CardChoice, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
+import { isDatedMethod, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import { VenueForm } from "./SettingsProfile";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { useNewCourse } from "./NewCourse";
 
 // Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
@@ -33,12 +35,12 @@ const MODES = [
   // self-paced courses have no dates, so this tab lists courses, not cohorts (its count is not part of All)
   { key: "self-paced", label: "Self-paced courses" },
 ];
-const WHEN = [
+export const WHEN = [
   { value: "upcoming", label: "Upcoming and in progress" },
   { value: "past", label: "Past" },
   { value: "all", label: "Any date" },
 ];
-const STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
+export const COHORT_STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
 const ONLINE = "Online";
 const PER_PAGE = 10;
 const monthShortFmt = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
@@ -84,8 +86,9 @@ const DEFAULT_SLOT = { from: "09:30", to: "16:30" };
 // The provider's dates, courses, venues and team, from the API (shared by the list, the form and the calendar). Only what this
 // role may see is asked for (the API refuses the rest): a tutor gets the dates they teach and no venue list (only the date form,
 // which they can't open, needs it); roles without dates or courses get an empty list. `may` says which ones the role sees.
+// `courseId`: only that course's dates (the course overview).
 const NONE = { data: [], isError: false, refetch: () => {} };
-export function useSchedule(when = "upcoming") {
+export function useSchedule(when = "upcoming", courseId = null) {
   const access = useProviderAccess();
   const { organisationId } = access;
   const may = {
@@ -95,7 +98,7 @@ export function useSchedule(when = "upcoming") {
     courses: access.can("provider.courses.view"),
   };
   const on = (ok) => ({ enabled: Boolean(organisationId) && ok });
-  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when }, on(may.dates));
+  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when, ...(courseId ? { courseId } : {}) }, on(may.dates));
   const courses = api.provider.courses.list.useQuery({ organisationId }, on(may.courses));
   const venues = api.provider.venues.list.useQuery({ organisationId }, on(may.venues));
   const tutors = api.provider.cohorts.tutors.useQuery({ organisationId }, on(may.team));
@@ -148,6 +151,7 @@ export default function ProviderCohorts() {
   const assignTutor = api.provider.cohorts.setTutor.useMutation();
   const bookable = api.provider.cohorts.setBookable.useMutation();
   const edit = can("provider.cohorts.edit");
+  const newCourse = useNewCourse();
 
   useEffect(() => {
     const m = METHOD_ALIASES[getQuery("mode")] || getQuery("mode"); // old ?mode=on-demand links
@@ -186,8 +190,9 @@ export default function ProviderCohorts() {
     const now = { ...k, ...changing[k.id] };
     return { ...now, status: cohortState(now, today), course: courseOf[k.courseId] };
   });
-  const datedCourses = courses.filter((c) => c.method !== "self-paced");
-  const onDemand = courses.filter((c) => c.method === "self-paced");
+  // the courses taught on dates (classroom or live online among their learning options), and the ones offered self-paced
+  const datedCourses = courses.filter((c) => datedOf(c).length);
+  const onDemand = courses.filter((c) => waysOf(c).includes("self-paced"));
 
   const needle = q.trim().toLowerCase();
   const list = scoped
@@ -246,14 +251,14 @@ export default function ProviderCohorts() {
         <EmptyState
           title="No upcoming dates"
           text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live; online booking opens in a later update."
-          action={edit ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", href: "/provider/courses/new" }) : null}
+          action={edit ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", onClick: newCourse }) : null}
         />
       ) : null}
       {(!nothingYet || mode === "self-paced") && (
         <>
           <div className="rt-adm-toolbar">
             <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
-            {create}
+            {mode !== "self-paced" && create}
           </div>
           {mode !== "self-paced" && (
             <div className="rt-pws-coh__filterbox">
@@ -281,7 +286,7 @@ export default function ProviderCohorts() {
           {mode === "self-paced" ? (
             onDemand.length ? (
               <div className="rt-acc__card rt-biz__tablecard">
-                <p className="rt-acc__note">Self-paced courses have no dates: learners start as soon as they book.</p>
+                <p className="rt-acc__note">The self-paced option has no dates: learners start as soon as they book.</p>
                 <table className="rt-biz__table rt-adm-table">
                   <thead><tr><th scope="col">Course</th><th scope="col">Course status</th><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
                   <tbody>
@@ -289,13 +294,13 @@ export default function ProviderCohorts() {
                       <tr key={c.id}>
                         <td data-label="Course"><Link href={`/provider/courses/${c.id}`} className="rt-adm-strong">{c.title}</Link></td>
                         <td data-label="Course status"><Pill tone={c.status === "live" ? "ok" : c.status === "changes" ? "warn" : "muted"}>{pw.courseStatuses[c.status]}</Pill></td>
-                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Course pricing", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
+                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Price", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            ) : <EmptyState title="No self-paced courses yet." />
+            ) : <EmptyState title="No self-paced courses yet." text="A self-paced course has no dates: learners start as soon as they book." />
           ) : list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
@@ -311,24 +316,14 @@ export default function ProviderCohorts() {
                 </thead>
                 <tbody>
                   {pageRows.map((k) => {
-                    const s0 = k.sessions[0];
                     const name = `${k.courseTitle}, ${dayRange(k.startsOn, k.endsOn)}`;
                     const cancelled = Boolean(k.cancelledAt);
                     return (
                       <tr key={k.id}>
-                        <td data-label="Cohort">
-                          <div className="rt-pws-coh__cohort">
-                            <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.startsOn)}</small><b>{k.startsOn.slice(8)}</b></span>
-                            <div>
-                              <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>
-                              <small>{k.venue ? `${k.venue.name}, ${k.venue.city}` : ONLINE}</small>
-                              <small>{dayRange(k.startsOn, k.endsOn)}{s0 ? ` from ${s0.from} to ${s0.to}` : ""}{k.sessions.length > 1 ? ` · ${k.sessions.length} sessions` : ""}</small>
-                            </div>
-                          </div>
-                        </td>
+                        <td data-label="Cohort"><CohortCell k={k} /></td>
                         <td data-label="Status">
                           <span className="rt-pws-coh__pills">
-                            <Pill tone={COHORT_TONE[k.status]}>{STATUSES[k.status]}</Pill>
+                            <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
                             {!k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
                           </span>
                         </td>
@@ -375,6 +370,26 @@ export default function ProviderCohorts() {
   );
 }
 
+// A cohort's first cell, as the Cohorts list shows it: the date tile, then the course (a link to the cohort), the venue or Online,
+// and the dates, times and number of sessions. `forCourse` (one course's cohorts, on the course overview, whose title already
+// names the course): the link reads the dates instead, and the last line has only the times and sessions.
+export function CohortCell({ k, forCourse = false }) {
+  const s0 = k.sessions[0];
+  const range = dayRange(k.startsOn, k.endsOn);
+  const times = s0 ? `${forCourse ? "From" : " from"} ${s0.from} to ${s0.to}` : "";
+  const sessions = k.sessions.length > 1 ? `${times || !forCourse ? " · " : ""}${k.sessions.length} sessions` : "";
+  return (
+    <div className="rt-pws-coh__cohort">
+      <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.startsOn)}</small><b>{k.startsOn.slice(8)}</b></span>
+      <div>
+        <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{forCourse ? range : k.courseTitle}</Link>
+        <small>{k.venue ? `${k.venue.name}, ${k.venue.city}` : ONLINE}</small>
+        {(!forCourse || times || sessions) && <small>{forCourse ? "" : range}{times}{sessions}</small>}
+      </div>
+    </div>
+  );
+}
+
 // booked out of max, as the admin's seat bar
 export function Seats({ booked, max }) {
   const pct = max ? Math.min(100, Math.round((booked / max) * 100)) : 0;
@@ -407,7 +422,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
     cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]) });
   };
   return (
-    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close">
+    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose>
       {cohort && (
         <form className="rt-q__form" onSubmit={submit} noValidate>
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Nobody can book it after this, and it can&apos;t be undone.</p>
@@ -416,9 +431,9 @@ export function CancelSheet({ cohort, onClose, onDone }) {
             {error && <p className="rt-q__err" id="rt-coh-cancel-why-e"><span className="rt-sr">Error: </span>{error}</p>}
             <textarea id="rt-coh-cancel-why" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-coh-cancel-why-e" : undefined} autoComplete="off" />
           </div>
-          <div className="rt-pws-coh__actions">
-            <button type="submit" className="button -md -purple-1 text-white" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep it</button>
+          <div className="rt-pws-set__actions">
+            <button type="submit" className="button -md -outline-red-3 text-red-3" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Go back</button>
           </div>
         </form>
       )}
@@ -431,14 +446,14 @@ export function DeleteSheet({ cohort, onClose, onDone }) {
   const remove = api.provider.cohorts.remove.useMutation();
   const [error, setError] = useState("");
   return (
-    <Sheet open={Boolean(cohort)} onClose={() => { setError(""); onClose(); }} title="Delete this cohort?" closeLabel="Close">
+    <Sheet open={Boolean(cohort)} onClose={() => { setError(""); onClose(); }} title="Delete this cohort?" closeLabel="Close" noClose>
       {cohort && (
         <div className="rt-q__form">
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, is removed for good.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
-          <div className="rt-pws-coh__actions">
-            <button type="button" className="button -md -purple-1 text-white" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep it</button>
+          <div className="rt-pws-set__actions">
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
           </div>
         </div>
       )}
@@ -454,12 +469,16 @@ const MAX_PRICE = 100000; // pounds (the API's limit)
 const MEETING_LINK_ERROR = "Use the https link to one Zoom, Microsoft Teams or Google Meet meeting, like https://zoom.us/j/1234567890.";
 // the API's names for the form's fields, where they differ
 const FIELD_OF = { pricePence: "price", wasPricePence: "wasPrice" };
-const FORM_FIELDS = new Set(["courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "planId", "capacity", "details", "tutorUserId"]);
+const FORM_FIELDS = new Set(["method", "courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "planId", "capacity", "details", "tutorUserId"]);
 // a plan's packages in one line, for the plan picker ("Basic £249 · Plus £299 · Pro £399")
 const planLine = (p) => p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ");
 
+// a course's learning options taught on dates (classroom, live online), its primary first
+const datedOf = (c) => waysOf(c).filter(isDatedMethod);
+
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
-// `suggestCourseId`). `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on.
+// `suggestCourseId`). New dates are for one of the course's dated learning options: `mode` (the list's Classroom / Live online tab)
+// picks the one the form starts on, a suggested course starts on its first, and one offering both asks which. Dates keep theirs.
 export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
   const { organisationId } = useProviderAccess();
   const formRef = useRef(null);
@@ -499,11 +518,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       setView(monthStart(cohort.startsOn || todayIso()));
     } else {
       const c = courseOf(suggestCourseId);
-      const blank = blankFor(c && c.method !== "self-paced" ? c : null);
+      const ways = c ? datedOf(c) : [];
+      const blank = blankFor(ways.length ? c : null);
       setF(blank);
       setStart(JSON.stringify(blank));
       setView(monthStart(todayIso()));
-      setStudyMode(c?.method === "live-online" || (!c && mode === "live-online") ? "live-online" : "classroom");
+      setStudyMode(ways.includes(mode) ? mode : ways[0] || (mode === "live-online" ? "live-online" : "classroom"));
     }
     setErrors({});
     setAddingVenue(false);
@@ -513,7 +533,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   // not tied to `open`, so the filled form stays in place while the sheet closes
   const ready = Boolean(f && venuesQ.data);
   const course = ready ? courseOf(f.courseId) : null;
-  const method = cohort ? cohort.method : course?.method || studyMode;
+  const method = cohort ? cohort.method : studyMode;
   const today = todayIso();
   // changing a field takes its message away (the next save checks everything again)
   const set = (patch) => {
@@ -584,7 +604,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     };
     try {
       // an edit sends the version it was filled from, so one over a colleague's newer change is refused instead of undoing it
-      const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id, seen: cohort.updatedAt ? new Date(cohort.updatedAt).toISOString() : undefined }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
+      const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id, seen: cohort.updatedAt ? new Date(cohort.updatedAt).toISOString() : undefined }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId), method })).id;
       if (another) {
         const first = values.sessions[0]?.date;
         setF((x) => {
@@ -623,7 +643,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const err = (key) => errors[key] && <p className="rt-q__err" id={`rt-cf-${key}-e`}><span className="rt-sr">Error: </span>{errors[key]}</p>;
   const aria = (key) => ({ "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `rt-cf-${key}-e` : undefined });
 
-  const datedCourses = courses.filter((c) => c.method === studyMode);
+  // the courses offering the chosen way; a suggested course offering both dated ways asks which these dates are
+  const datedCourses = courses.filter((c) => datedOf(c).includes(studyMode));
+  const askMode = !cohort && (!suggestCourseId || (course && datedOf(course).length > 1));
   const tutors = tutorsQ.data || [];
   const venues = ready ? venuesQ.data.filter((v) => v.active || v.id === f.venueId) : [];
   const ordered = ready ? f.sessions.map((s, i) => ({ s, i })).sort((a, b) => a.s.date.localeCompare(b.s.date)) : [];
@@ -634,9 +656,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
           {savedNote && <p className="rt-acc__notice -ok" role="status">{savedNote}</p>}
-          {!cohort && !suggestCourseId && (
-            <Choice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
-              options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key) }))} />
+          {askMode && (
+            <CardChoice name="rt-cf-mode" legend="Learning option" value={studyMode} error={errors.method}
+              onChange={(v) => { setStudyMode(v); setErrors((e) => ({ ...e, method: undefined })); if (course && !datedOf(course).includes(v)) setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
+              options={pw.formats.filter((x) => (course && suggestCourseId ? datedOf(course) : ["classroom", "live-online"]).includes(x.key)).map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
           )}
           {!cohort && !(suggestCourseId && course) ? (
             <div className="rt-field">
@@ -692,6 +715,11 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                     </li>
                   ))}
                 </ol>
+              )}
+              {/* the course page lists a run only before its first day (the API's listings: starts_on after today), so a run that
+                  starts today is saved but learners won't see it: say so as soon as today is picked */}
+              {ordered.length > 0 && ordered[0].s.date <= today && (
+                <p className="rt-acc__notice -warn" role="status">This run {ordered[0].s.date === today ? "starts today" : "has already started"}, so learners won&apos;t see it on the course page: a run shows there until the day before it starts. You can still add learners you booked yourself.</p>
               )}
             </section>
             <DatePicker view={view} setView={setView} picked={f.sessions.map((s) => s.date)} onPick={toggleDay} min={cohort ? "" : today} />
@@ -756,14 +784,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </>
               )}
               <div className="rt-field">
-                <label htmlFor="rt-cf-capacity">Most learners</label>
+                <label htmlFor="rt-cf-capacity">Number of places</label>
                 {err("capacity")}
                 <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} autoComplete="off" {...aria("capacity")} />
               </div>
             </div>
             <div className="rt-field">
               <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
-              <p className="rt-acc__note" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
+              <p className="rt-field__hint" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
               {err("details")}
               <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-invalid={errors.details ? true : undefined} aria-describedby={`rt-cf-details-h${errors.details ? " rt-cf-details-e" : ""}`} autoComplete="off" />
             </div>

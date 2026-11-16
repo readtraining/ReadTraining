@@ -1,18 +1,24 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Toast from "@/components/courses/Toast";
+import { useRouter } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { useWorkspace } from "@/lib/workspaceContext";
-import { COURSE_TONE, Loading, Pill, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { errorsFrom } from "@/lib/useMe";
+import { COURSE_TONE, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
+import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import Sheet from "@/components/testPrep/runner/Sheet";
+import Toast from "@/components/courses/Toast";
+import { useNewCourse } from "./NewCourse";
+import { CohortForm } from "./ProviderCohorts";
+import { COURSE_SAID, DeleteBlocked, DeleteCourseForm, PAUSE_NOTE, pausable } from "./CourseSettings";
+import { Confirm } from "./settingsForm";
 
 const FILTERS = ["q", "format", "enrolment", "category", "model", "status"];
-const formatOf = (key) => pw.formats.find((f) => f.key === key) || pw.formats[0];
 const enrolmentOf = (c) => (c.isPublic ? "public" : "private");
 
 // The provider's courses, from the API: asked for only by a role that may see them (the API would refuse, and log, the rest).
@@ -21,18 +27,29 @@ export const useProviderCourses = () => {
   return api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && can("provider.courses.view") });
 };
 
-// Every course the provider runs, with Hurak's filters (search, mode of study, enrolment type, and under Filters the category and
-// performance model; status as tabs with counts), all kept in the address. Our layout: the profile sits in the page head
-// (CoursesProfile below), then one card holding the status tabs, the filters and the courses as a compact table (one
-// course per row: image or "Upload course image", mode, category, status, enrolment, performance model, upcoming dates,
-// Edit / manage course), then Hurak's offer of a free sales and marketing consultation.
+// Every course the provider runs, with Hurak's filters (search, learning option, enrolment type, and under Filters the category and
+// performance model; status as tabs with counts), all kept in the address. Our layout: one card holding the status tabs, the filters and the courses as a compact table (one
+// course per row: image or "Upload course image", mode, category, status, enrolment, performance model, upcoming dates; the row
+// opens the course, and its ⋮ menu has the actions its role allows), then Hurak's offer of a free sales and marketing consultation.
 export default function ProviderCourses() {
-  const { can, status } = useProviderAccess();
+  const { organisationId, can, status } = useProviderAccess();
+  const router = useRouter();
+  const utils = api.useUtils();
+  const newCourse = useNewCourse();
   const waiting = status === "pending" || status === "changes_requested"; // not approved yet
   const query = useProviderCourses();
   const courses = query.data;
   const [f, setF] = useState({ q: "", format: "", enrolment: "", category: "", model: "", status: "" });
   const [more, setMore] = useState(false);
+  // the ⋮ menu's actions: Create cohort's pop-up, "Pause this course?", "Delete this course?" (by id, so it shows the course as
+  // the list loads it again) and the message after each
+  const [cohortFor, setCohortFor] = useState({ open: false, courseId: "" });
+  const [pausing, setPausing] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const pause = api.provider.courses.setPaused.useMutation();
+  const withdraw = api.provider.courses.withdrawReview.useMutation();
+  const duplicate = api.provider.courses.duplicate.useMutation();
 
   useEffect(() => {
     const next = Object.fromEntries(FILTERS.map((k) => [k, getQuery(k) || ""]));
@@ -51,12 +68,12 @@ export default function ProviderCourses() {
   if (!courses.length) {
     // not approved yet: say when courses can be added, and where the application is
     if (waiting) return <EmptyState title="No courses yet" text={pw.notApproved.text} action={pw.notApproved.action} />;
-    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", href: "/provider/courses/new" } : null} />;
+    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", onClick: newCourse } : null} />;
   }
 
   const needle = f.q.trim().toLowerCase();
   const list = courses.filter((c) => (!needle || c.title.toLowerCase().includes(needle))
-    && (!f.format || c.method === f.format) && (!f.enrolment || enrolmentOf(c) === f.enrolment) && (!f.category || c.category === f.category)
+    && (!f.format || waysOf(c).includes(f.format)) && (!f.enrolment || enrolmentOf(c) === f.enrolment) && (!f.category || c.category === f.category)
     && (!f.model || c.model === f.model) && (!f.status || c.status === f.status));
   const filtered = Object.values(f).some((v) => v.trim());
   const set = (k) => (v) => {
@@ -68,6 +85,38 @@ export default function ProviderCourses() {
     FILTERS.forEach((k) => setQuery(k, ""));
   };
 
+  const refresh = () => utils.provider.courses.list.invalidate({ organisationId });
+  const failed = (e) => setToast({ message: errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0] || "We couldn't do that. Please try again." });
+  const setPaused = (c, paused) => pause.mutate({ organisationId, courseId: c.id, paused }, {
+    onSuccess: () => { setPausing(null); refresh(); setToast({ message: paused ? COURSE_SAID.paused : COURSE_SAID.resumed }); },
+    onError: (e) => { setPausing(null); refresh(); failed(e); },
+  });
+  // the copy is a new draft: its editor opens, saying it is a copy
+  const copy = (c) => {
+    if (duplicate.isPending) return;
+    setToast({ message: `Copying “${c.title}”…` });
+    duplicate.mutate({ organisationId, courseId: c.id }, {
+      onSuccess: ({ id }) => { refresh(); router.push(`/provider/courses/${id}?copied=1`); },
+      onError: failed,
+    });
+  };
+  const withdrawReview = (c) => withdraw.mutate({ organisationId, courseId: c.id }, {
+    onSuccess: () => { refresh(); setToast({ message: COURSE_SAID.withdrawn }); },
+    onError: (e) => { refresh(); failed(e); },
+  });
+  const deleting = deletingId ? courses.find((c) => c.id === deletingId) : null;
+  // each item only when it applies and the person's role allows it (the API checks again); Delete, red, last
+  const actions = (c, href) => [
+    // Details first, as Hurak's: the course's own page with its Learners, Venues, Cohorts, Packages and Orders tabs
+    { label: "Details", href: `${href}/overview` },
+    ...(can("provider.courses.editPage") ? [{ label: "Edit course", href }] : []),
+    { label: "Preview", href: `${href}/preview` },
+    ...(can("provider.cohorts.edit") && waysOf(c).some(isDatedMethod) ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
+    ...(can("provider.courses.edit") && pausable(c) ? [{ label: c.status === "live" ? "Pause course" : "Put back live", onClick: () => (c.status === "live" ? setPausing(c) : setPaused(c, false)) }] : []),
+    ...(can("provider.courses.edit") ? [{ label: "Duplicate course", onClick: () => copy(c) }] : []),
+    ...(can("provider.courses.delete") ? [{ label: "Delete course", danger: true, onClick: () => setDeletingId(c.id) }] : []),
+  ];
+
   const statusTabs = [{ key: "", label: "All" }, ...Object.entries(pw.courseStatuses).map(([key, label]) => ({ key, label }))]
     .map((t) => ({ ...t, count: courses.filter((c) => (!t.key || c.status === t.key)).length }));
   const catOf = (c) => [categoryName(c.category), subcategoryName(c.category, c.subcategory)].filter(Boolean).join(" › ");
@@ -76,18 +125,12 @@ export default function ProviderCourses() {
     <div className="rt-acc__stack">
       <section className="rt-cx" aria-label="Your courses">
         <div className="rt-cx__top">
-          <div className="rt-cx-tabs" role="group" aria-label="Course status">
-            {statusTabs.map((t) => (
-              <button key={t.key || "all"} type="button" className={`rt-cx-tabs__tab${f.status === t.key ? " is-on" : ""}`} aria-pressed={f.status === t.key} onClick={() => set("status")(t.key)}>
-                {t.label}<span>{t.count}</span>
-              </button>
-            ))}
-          </div>
+          <Tabs tabs={statusTabs.map((t) => ({ key: t.key, label: t.label, count: t.count }))} value={f.status} onChange={set("status")} label="Course status" />
         </div>
         <div className="rt-cx__bar" role="search" aria-label="Find courses">
           <Search value={f.q} onChange={set("q")} label="Search your courses" />
-          <ToolSelect id="rt-pws-cf-format" label="Mode of study" value={f.format} onChange={set("format")} options={[{ value: "", label: "All modes of study" }, ...pw.formats.map((x) => ({ value: x.key, label: methodName(x.key) }))]} />
-          <ToolSelect id="rt-pws-cf-enr" label="Enrollment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrollment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
+          <ToolSelect id="rt-pws-cf-format" label="Learning option" value={f.format} onChange={set("format")} options={[{ value: "", label: "All learning options" }, ...pw.formats.map((x) => ({ value: x.key, label: methodName(x.key) }))]} />
+          <ToolSelect id="rt-pws-cf-enr" label="Enrolment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrolment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
           <button type="button" className={`rt-cx__more${more ? " is-on" : ""}`} aria-expanded={more} aria-controls="rt-pws-cf-more" onClick={() => setMore(!more)}><i className="icon-setting text-14" aria-hidden="true"></i>Filters{(f.category || f.model) && <span className="rt-cx__dot" aria-label="filters on"></span>}</button>
           {filtered && <button type="button" className="rt-cd__link" onClick={reset}>Clear filters</button>}
         </div>
@@ -113,9 +156,8 @@ export default function ProviderCourses() {
             </thead>
             <tbody>
               {list.map((c) => {
-                const fm = formatOf(c.method);
                 const href = `/provider/courses/${c.id}`;
-                const meta = [methodName(fm.key), catOf(c)].filter(Boolean).join(" · ");
+                const meta = [waysLabel(c), catOf(c)].filter(Boolean).join(" · ");
                 return (
                   <tr key={c.id}>
                     <td data-label="Course">
@@ -130,8 +172,8 @@ export default function ProviderCourses() {
                     <td data-label="Course status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill>{c.pendingChange && <small className="rt-cx-note">Changes waiting for approval</small>}</td>
                     <td data-label="Enrolment">{pw.enrolment[enrolmentOf(c)]}</td>
                     <td data-label="Performance model">{pw.models[c.model]?.label}</td>
-                    <td data-label="Upcoming dates" className="-num">{c.method === "self-paced" ? "—" : c.upcomingCohorts}</td>
-                    <td data-label="Actions" className="-act"><Link href={href} className="rt-cx-manage" title="Edit / manage course"><span className="rt-cx-manage__text">Edit / manage course</span><span className="rt-sr">: {c.title}</span><i className="icon-chevron-right text-12" aria-hidden="true"></i></Link></td>
+                    <td data-label="Upcoming dates" className="-num">{waysOf(c).some(isDatedMethod) ? c.upcomingCohorts : "—"}</td>
+                    <td data-label="Actions" className="-act"><RowMenu label={`Actions for ${c.title}`} items={actions(c, href)} /></td>
                   </tr>
                 );
               })}
@@ -148,54 +190,37 @@ export default function ProviderCourses() {
           <h2 className="rt-cl-promo__title" id="rt-pws-cm-h">Let us help you increase sales</h2>
           <p className="rt-acc__note">Book a free consultation with our sales and marketing team.</p>
         </div>
-        <Link href="/contact-us" className="button -sm -purple-1 text-white">Schedule meeting</Link>
+        <Link href="/contact-us" className="button -sm -outline-purple-1 text-purple-1">Schedule meeting</Link>
       </section>
+
+      <CohortForm open={cohortFor.open} onClose={() => setCohortFor((x) => ({ ...x, open: false }))} suggestCourseId={cohortFor.courseId}
+        onSaved={(id) => { setCohortFor((x) => ({ ...x, open: false })); refresh(); utils.provider.cohorts.list.invalidate(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }}
+        onAnother={() => { refresh(); utils.provider.cohorts.list.invalidate(); }} />
+      <Confirm open={Boolean(pausing)} onClose={() => setPausing(null)} title="Pause this course?" text={PAUSE_NOTE} confirmLabel={pause.isPending ? "Pausing…" : "Yes, pause it"} busy={pause.isPending} onConfirm={() => setPaused(pausing, true)} />
+      <DeleteSheet course={deleting} onClose={() => setDeletingId(null)} withdrawing={withdraw.isPending} onWithdraw={() => withdrawReview(deleting)}
+        onDeleted={() => { setToast({ message: `“${deleting.title}” deleted` }); setDeletingId(null); }} />
+      <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
 }
 
-// The provider's profile in the page head, beside "New course" (Hurak's profile card: view, edit, copy the profile address, total
-// and live courses), so the list starts straight under the title.
-// The Courses page's New course, for those who may create one (and only once our team has approved the account).
-export function NewCourseButton() {
-  const { can } = useProviderAccess();
-  return can("provider.courses.edit") ? <Link href="/provider/courses/new" className="button -md -purple-1 text-white">New course</Link> : null;
-}
-
-export function CoursesProfile() {
-  const workspace = useWorkspace();
-  const courses = useProviderCourses().data;
-  const [toast, setToast] = useState(null);
-  const clearToast = useCallback(() => setToast(null), []);
-  if (!workspace) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
-  const org = { name: workspace.name, slug: workspace.slug };
-  const live = workspace.status === "active"; // the public profile opens once the account is approved
-  const copyProfile = async () => {
-    const profileUrl = `${window.location.origin}/providers/${org.slug}`;
-    try {
-      await navigator.clipboard.writeText(profileUrl);
-      setToast({ message: "Profile URL copied" });
-    } catch {
-      setToast({ message: profileUrl });
-    }
-  };
-  const initials = org.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+// "Delete this course?" from the ⋮ menu: the gear's own confirmation (DeleteCourseForm), or why it can't be deleted now with the
+// next step (DeleteBlocked: after Withdraw from review it asks, as the list loads the course again)
+function DeleteSheet({ course, onClose, withdrawing, onWithdraw, onDeleted }) {
+  const blocked = course?.deleteBlock === "in_use" || course?.deleteBlock === "paused_by_team";
   return (
-    <section className="rt-cx-org" aria-labelledby="rt-pws-cp-h">
-      <span className="rt-cx-org__logo" aria-hidden="true">{initials}</span>
-      <div className="rt-cx-org__who">
-        <h2 className="rt-cx-org__name" id="rt-pws-cp-h">{org.name}</h2>
-        <p className="rt-cx-org__links">
-          <Link href="/provider/profile">View</Link>
-          <Link href="/provider/settings">Edit</Link>
-          {live && <button type="button" onClick={copyProfile}>Copy Profile URL</button>}
-        </p>
-      </div>
-      <dl className="rt-cx-org__stats">
-        <div><dt>Total courses</dt><dd>{courses ? courses.length : "–"}</dd></div>
-        <div><dt>Live</dt><dd>{courses ? courses.filter((c) => c.status === "live").length : "–"}</dd></div>
-      </dl>
-      <Toast toast={toast} onDone={clearToast} />
-    </section>
+    <Sheet open={Boolean(course)} onClose={onClose} title={blocked ? "This course can't be deleted" : "Delete this course?"} closeLabel="Close" className="rt-pws-set__confirm" noClose>
+      {course && (course.deleteBlock ? (
+        <div className="rt-q__form">
+          <DeleteBlocked course={course} busy={withdrawing} withdrawing={withdrawing} onWithdraw={onWithdraw} />
+          <div className="rt-adm-cellrow">
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Close</button>
+          </div>
+        </div>
+      ) : (
+        <DeleteCourseForm key={course.id} course={course} onKeep={onClose} onDeleted={onDeleted} />
+      ))}
+    </Sheet>
   );
 }
+

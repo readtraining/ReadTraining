@@ -25,6 +25,7 @@ import {
   courseVersion,
   courseSlug,
   deleteCourse,
+  isDated,
   missing,
   notFound,
   refuseIfChanged,
@@ -69,6 +70,13 @@ const CHANGED_SINCE = 'The provider changed this since you opened it. Reload the
 const PROVIDER_PAUSED = 'The provider paused this course themselves, so they put it back live from their workspace.'
 // when the course (or its change) is no longer waiting: another admin may have decided on it, or the provider withdrawn it
 const DECIDED_OR_CHANGED = 'This has just been decided or changed. Reload the page to see where it stands.'
+// a course that was waiting is a draft again: the provider took it back (the gear's "Withdraw from review", or an edit)
+const WITHDRAWN = 'The provider withdrew this course from review.'
+// the course is gone: its provider deleted it (with any change that was waiting), or it never existed
+async function goneError(db: Pick<typeof Db, 'execute'>, courseId: number) {
+  const [deleted] = await db.execute<{ one: number }>(sql`select 1 one from public.activity_log where action = 'course.deleted' and target_type = 'course' and target_id = ${String(courseId)} limit 1`)
+  return deleted ? new TRPCError({ code: 'CONFLICT', message: 'The provider deleted this course, so there is nothing to decide.' }) : notFound()
+}
 // `seen` is when the version on the admin's screen was sent; anything else (or nothing) is not that version
 const notSeen = (seen: string | undefined, sentAt: Date | string | null) => !seen || !sentAt || new Date(seen).getTime() !== new Date(sentAt).getTime()
 
@@ -134,21 +142,22 @@ async function retiredInChange(tx: Tx, change: Record<string, unknown>) {
 const andList = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0])
 
 // a waiting change shown against the live version, field by field, in the editor's shape (catalogue places as slugs)
-// What learners will pay, for the admin to check before approving: a self-paced course's price or price plan, or each upcoming
+// What learners will pay, for the admin to check before approving: the self-paced option's price or price plan, and each upcoming
 // date's price (Flat: its own, with any was-price; Tiered: its plan's cheapest package), and every plan used, with all its packages.
-async function pricingView(db: typeof Db, course: { id: number; kind: string; method: string | null; planId: string | null; pricePence: number | null }) {
+async function pricingView(db: typeof Db, course: { id: number; kind: string; methods: string[]; planId: string | null; pricePence: number | null }) {
   if (course.kind !== 'provider') return null
+  const selfPaced = course.methods.includes('self-paced')
   const dates =
-    course.method === 'self-paced'
+    !course.methods.some(isDated)
       ? []
       : await db.execute<{ id: string; method: string; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; plan_id: string | null; bookable: boolean; venue: string | null; city: string | null; postcode: string | null }>(sql`
           select k.id, k.method, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.plan_id, k.bookable, v.name venue, v.city, v.postcode
           from public.cohorts k left join public.venues v on v.id = k.venue_id
           where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= current_date order by k.starts_on`)
-  const planIds = [...new Set([course.method === 'self-paced' ? course.planId : null, ...dates.map((k) => k.plan_id)].filter((x): x is string => Boolean(x)))]
+  const planIds = [...new Set([selfPaced ? course.planId : null, ...dates.map((k) => k.plan_id)].filter((x): x is string => Boolean(x)))]
   const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
   return {
-    selfPaced: course.method === 'self-paced' ? { pricePence: course.pricePence, planId: course.planId } : null,
+    selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId } : null,
     dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
     plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
   }
@@ -194,8 +203,8 @@ export const adminCoursesRouter = createTRPCRouter({
   queue: adminProcedure('admin.panel.open')
     .input(z.object({ tab: z.enum(['waiting', 'changes', 'decided']) }))
     .query(async ({ ctx, input }) => {
-      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; parent: string | null; requester: string | null }
-      const base = sql`(select name from public.organisations o where o.id = c.organisation_id) provider, (select status from public.organisations o where o.id = c.organisation_id) provider_status, c.method, (select p.title from public.courses p where p.id = c.parent_id) parent`
+      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; methods: string[]; parent: string | null; requester: string | null }
+      const base = sql`(select name from public.organisations o where o.id = c.organisation_id) provider, (select status from public.organisations o where o.id = c.organisation_id) provider_status, c.method, c.methods, (select p.title from public.courses p where p.id = c.parent_id) parent`
       const rows =
         input.tab === 'waiting'
           ? await ctx.db.execute<Row>(sql`
@@ -219,7 +228,7 @@ export const adminCoursesRouter = createTRPCRouter({
                 ) q order by at desc nulls last limit 100`)
       // own: the admin asked for it themselves; soleApprover: they may still decide it, with a reason (lib/soleApprover.mts)
       const sole = rows.some((r) => r.requester === ctx.user.id) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide'))
-      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
+      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, methods: r.methods, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
     }),
 
   // Every course, newest change first: shared pages and providers' courses, with search and filters.
@@ -230,7 +239,7 @@ export const adminCoursesRouter = createTRPCRouter({
     const [rows, listed] = await Promise.all([
       ctx.db.execute<{ id: number; title: string; kind: 'shared' | 'provider'; provider_id: string | null; provider: string | null; parent: string | null; from_pence: number | null }>(sql`
         select c.id, c.title, c.kind, c.organisation_id provider_id, o.name provider, (select p.title from public.courses p where p.id = c.parent_id) parent,
-               case when c.method = 'self-paced' then c.price_pence else (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date) end from_pence
+               least(case when 'self-paced' = any(c.methods) then c.price_pence end, (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date)) from_pence
         from public.courses c left join public.organisations o on o.id = c.organisation_id
         where c.status = 'live' and (c.kind = 'shared' or o.status = 'active')
         order by c.title, o.name`),
@@ -249,17 +258,17 @@ export const adminCoursesRouter = createTRPCRouter({
         const like = `%${input.q.replace(/[\\%_]/g, (x) => `\\${x}`)}%`
         where.push(sql`(c.title ilike ${like} or c.slug ilike ${like} or c.id::text = ${input.q} or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.name ilike ${like}))`)
       }
-      const rows = await ctx.db.execute<{ id: number; title: string; slug: string; kind: string; status: string; method: string | null; updated_at: string; provider: string | null; parent: string | null; upcoming: number; from_pence: number | null; providers: number; pending_change: boolean }>(sql`
-        select c.id, c.title, c.slug, c.kind, c.status, c.method, c.updated_at,
+      const rows = await ctx.db.execute<{ id: number; title: string; slug: string; kind: string; status: string; method: string | null; methods: string[]; updated_at: string; provider: string | null; parent: string | null; upcoming: number; from_pence: number | null; providers: number; pending_change: boolean }>(sql`
+        select c.id, c.title, c.slug, c.kind, c.status, c.method, c.methods, c.updated_at,
                (select name from public.organisations o where o.id = c.organisation_id) provider,
                (select p.title from public.courses p where p.id = c.parent_id) parent,
                (select count(*)::int from public.cohorts k where k.cancelled_at is null and k.ends_on >= current_date and (k.course_id = c.id or k.course_id in (select x.id from public.courses x where x.parent_id = c.id and x.status = 'live'))) upcoming,
-               case when c.method = 'self-paced' then c.price_pence else (select min(k.price_pence) from public.cohorts k where k.cancelled_at is null and k.ends_on >= current_date and (k.course_id = c.id or k.course_id in (select x.id from public.courses x where x.parent_id = c.id and x.status = 'live'))) end from_pence,
+               least(case when 'self-paced' = any(c.methods) then c.price_pence end, (select min(k.price_pence) from public.cohorts k where k.cancelled_at is null and k.ends_on >= current_date and (k.course_id = c.id or k.course_id in (select x.id from public.courses x where x.parent_id = c.id and x.status = 'live')))) from_pence,
                (select count(*)::int from public.courses x where x.parent_id = c.id and x.status = 'live') providers,
                exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
         from public.courses c where ${sql.join(where, sql` and `)}
         order by c.updated_at desc limit 300`)
-      return rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, kind: r.kind, status: r.status, method: r.method, updatedAt: iso(r.updated_at), provider: r.provider, parent: r.parent, upcoming: r.upcoming, fromPence: r.from_pence, providers: r.providers, pendingChange: r.pending_change }))
+      return rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, kind: r.kind, status: r.status, method: r.method, methods: r.methods, updatedAt: iso(r.updated_at), provider: r.provider, parent: r.parent, upcoming: r.upcoming, fromPence: r.from_pence, providers: r.providers, pendingChange: r.pending_change }))
     }),
 
   // A course as visitors will see it (Preview), whatever its status: a shared page with its live providers' dates; a provider's
@@ -312,7 +321,8 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input, path }) => {
       const rule = DECISIONS[input.decision]
-      const course = await findCourse(ctx.db, input.courseId)
+      const [course] = await ctx.db.select().from(courses).where(eq(courses.id, input.courseId))
+      if (!course) throw await goneError(ctx.db, input.courseId)
       if (course.kind !== 'provider') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Shared course pages are published from the catalogue, not approved.' })
       const isChange = input.decision === 'approveChange' || input.decision === 'rejectChange'
       const [revision] = isChange ? await ctx.db.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending'))) : []
@@ -332,6 +342,7 @@ export const adminCoursesRouter = createTRPCRouter({
       // decided on the version the admin saw (`seen`: when that version was sent): a new course sent again, or a change edited, since
       // the admin opened it is refused. Checked again under the row lock below, for an edit landing at the same moment.
       const onWaiting = input.decision === 'approve' || input.decision === 'changes'
+      if (onWaiting && course.status === 'draft') throw new TRPCError({ code: 'CONFLICT', message: WITHDRAWN })
       if (isChange && revision && notSeen(input.seen, revision.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
       if (onWaiting && notSeen(input.seen, course.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
       if (own && !ownReasonOk(input.ownReason)) throw bad(OWN_REASON_ERROR, 'ownReason')
@@ -354,7 +365,9 @@ export const adminCoursesRouter = createTRPCRouter({
       const done = await ctx.db.transaction(async (tx) => {
         // the provider's edits lock this row too (lockStatus in modules/provider/courses.mts): whichever comes second sees the other
         const [locked] = await tx.select().from(courses).where(eq(courses.id, course.id)).for('update')
-        if (!locked || !rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
+        if (!locked) throw await goneError(tx, course.id)
+        if (onWaiting && locked.status === 'draft') throw new TRPCError({ code: 'CONFLICT', message: WITHDRAWN })
+        if (!rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
         if (onWaiting && notSeen(input.seen, locked.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
         if (input.decision === 'resume' && !locked.statusNote) throw new TRPCError({ code: 'CONFLICT', message: PROVIDER_PAUSED })
         if (isChange) {
@@ -543,6 +556,7 @@ export const adminCoursesRouter = createTRPCRouter({
       const course = await sharedPage(ctx.db, input.courseId)
       const [n] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(courses).where(eq(courses.parentId, course.id))
       if (n.n) throw new TRPCError({ code: 'CONFLICT', message: 'Providers’ courses are listed on this page, so it can’t be deleted. Take it off the site instead.' })
-      return deleteCourse(ctx.db, course, (tx, m) => logFor(ctx, course, 'admin.shared_course_deleted', m)(tx))
+      await deleteCourse(ctx.db, course, (tx, m) => logFor(ctx, course, 'admin.shared_course_deleted', m)(tx))
+      return { ok: true }
     }),
 })

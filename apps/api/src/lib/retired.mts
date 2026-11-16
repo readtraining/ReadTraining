@@ -19,7 +19,7 @@ export async function retiredEntries(db: typeof Db | Tx, courseId: number): Prom
     union all
     select 'topic', e.name from public.courses c join public.topics e on e.id = c.topic_id where c.id = ${courseId} and not e.active
     union all
-    select 'delivery method', e.name from public.courses c join public.delivery_methods e on e.slug = c.method where c.id = ${courseId} and not e.active
+    select 'learning option', e.name from public.courses c join public.delivery_methods e on e.slug = any(c.methods) where c.id = ${courseId} and not e.active
     union all
     select 'level', e.name from public.courses c join public.course_levels e on e.slug = c.level where c.id = ${courseId} and not e.active`)
   return rows.map((r) => `${r.name} (${r.word})`)
@@ -32,18 +32,29 @@ export async function refuseRetired(db: typeof Db | Tx, courseId: number, who: '
   await db.execute(sql`select 1 from public.categories where id = (select category_id from public.courses where id = ${courseId}) for share`)
   await db.execute(sql`select 1 from public.subcategories where id = (select subcategory_id from public.courses where id = ${courseId}) for share`)
   await db.execute(sql`select 1 from public.topics where id = (select topic_id from public.courses where id = ${courseId}) for share`)
-  await db.execute(sql`select 1 from public.delivery_methods where slug = (select method from public.courses where id = ${courseId}) for share`)
+  await db.execute(sql`select 1 from public.delivery_methods where slug in (select unnest(methods) from public.courses where id = ${courseId}) for share`)
   await db.execute(sql`select 1 from public.course_levels where slug = (select level from public.courses where id = ${courseId}) for share`)
   const retired = await retiredEntries(db, courseId)
   if (!retired.length) return
   const list = retired.join(', ')
   const one = retired.length === 1
+  // a learning option isn't reviewed, so the provider can turn a retired one off and save straight away
+  const options = (await retiredMethods(db, courseId)).length === retired.length
   throw new TRPCError({
     code: 'CONFLICT',
     message:
       who === 'admin'
         ? `This course can't go live: ${list} ${one ? 'is' : 'are'} retired in Catalogue settings. Restore ${one ? 'it' : 'them'} there, or ask for the course to be moved, first.`
-        : // a paused course's new category or level waits for our team's approval, so it can't simply be re-chosen and resumed
-          `This course can't go back live: ${list} ${one ? 'is' : 'are'} no longer offered on ReadTraining. Choose another in the course editor and save: once our team has approved that change, you can put the course back live. Or contact us.`,
+        : options
+          ? `This course can't go back live: ${list} ${one ? 'is' : 'are'} no longer offered on ReadTraining. Turn ${one ? 'it' : 'them'} off in the course's Learning options and save, then put it back live.`
+          : // a paused course's new category or level waits for our team's approval, so it can't simply be re-chosen and resumed
+            `This course can't go back live: ${list} ${one ? 'is' : 'are'} no longer offered on ReadTraining. Choose another in the course editor and save: once our team has approved that change, you can put the course back live. Or contact us.`,
   })
+}
+
+/** The course's learning options (slugs) that are retired in Catalogue settings. */
+export async function retiredMethods(db: typeof Db | Tx, courseId: number): Promise<string[]> {
+  const rows = await db.execute<{ slug: string }>(sql`
+    select e.slug from public.courses c join public.delivery_methods e on e.slug = any(c.methods) where c.id = ${courseId} and not e.active`)
+  return rows.map((r) => r.slug)
 }

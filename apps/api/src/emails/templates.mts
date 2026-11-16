@@ -613,6 +613,22 @@ export const TEMPLATES: Record<string, Template> = {
     },
     sample: { firstName: 'Alex', provider: 'Harbour Training Group', course: 'Emergency First Aid at Work', courseId: '1000' },
   },
+  'admin-course-deleted': {
+    name: 'Live course deleted',
+    audience: 'Admin',
+    trigger: 'When a provider deletes a course that has been live (only possible while nobody has booked or reviewed it). Sent to every admin who can approve.',
+    status: 'live',
+    placeholders: ['firstName', 'provider', 'course', 'deletedBy', 'date'],
+    link: (s, v) => `${s}/admin/providers/${v.slug ?? ''}`,
+    footer: 'You are receiving this because you can approve providers and courses on ReadTraining.',
+    words: {
+      subject: '{provider} has deleted {course}',
+      heading: 'A live course has been deleted',
+      body: 'Hi {firstName},\n\n{provider} has deleted {course}. The course had been live on ReadTraining and is now removed from the site, with its dates and pictures.\n\n- Deleted by: {deletedBy}\n- When: {date}\n\nNobody had booked or reviewed the course, so no learner is affected. There is nothing you need to do: this email is for your records.',
+      button: 'Open the provider',
+    },
+    sample: { firstName: 'Alex', provider: 'Harbour Training Group', course: 'Emergency First Aid at Work', deletedBy: 'Sam Taylor (sam@harbourtraining.co.uk)', date: '16 November 2026 at 14:05', slug: 'harbour-training-group' },
+  },
   'auth-confirm': {
     name: 'Confirm your email',
     audience: 'Everyone',

@@ -65,7 +65,7 @@ export default function ProviderCalendar() {
 
   if (cohorts.isError) return <ErrorState title="We couldn't load your dates." text="Check your connection, then try again." onRetry={() => cohorts.refetch()} />;
   if (!cohorts.data) return <Loading rows={1} />;
-  if (!cohorts.data.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={can("provider.cohorts.edit") ? { label: "Add a cohort", href: "/provider/cohorts?new=1" } : null} />;
+  if (!cohorts.data.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={can("provider.cohorts.edit") ? { label: "Create cohort", href: "/provider/cohorts?new=1" } : null} />;
 
   const byDay = sessionsByDay(cohorts.data);
   const today = todayIso();
