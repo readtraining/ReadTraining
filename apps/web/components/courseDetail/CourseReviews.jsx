@@ -2,7 +2,9 @@
 
 import React, { useRef, useState } from "react";
 import { ReviewCard } from "@/components/customerReviews/ReviewsList";
+import HomeTextLink from "@/components/home/HomeTextLink";
 import { trustFigures } from "@/lib/siteContent";
+import { REVIEWS_HREF } from "@/lib/siteReviews";
 import RatingStars from "./RatingStars";
 
 // "Reviews of Read Training" on a course page: the published reviews that name this course's topic (lib/siteReviews.js
@@ -12,8 +14,10 @@ import RatingStars from "./RatingStars";
 // A long review is cut to six lines with Read more (ReviewCard `clamp`), so the cards in a row stay close in height. A course
 // page can list dates from several providers, so the heading says whose reviews they are. It opens on Read Training's rating
 // (the site's trust numbers, the same as the hero's), so the count there and the selection here don't read as a mismatch; each
-// card says when it was written (the course is the page itself). Left out when no review names the course. `course` is the
-// topic's name.
+// card says when it was written (the course is the page itself). When no review names the course, `reviews` is a few general ones
+// (none names a course or a kind of course: lib/siteReviews.js aboutUsOnly): the words then say they are about Read Training in general, not this
+// course, and "Read more reviews" leads to the Customer reviews page. Left out when there are none at all. `course` is the
+// topic's name ("" for general ones).
 const PAGE = 4;
 
 export default function CourseReviews({ reviews, course }) {
@@ -22,6 +26,7 @@ export default function CourseReviews({ reviews, course }) {
   if (!reviews?.length) return null;
   const left = reviews.length - count;
   const trust = trustFigures();
+  const general = reviews.every((r) => !r.topic);
   const fewer = () => {
     setCount(PAGE);
     ref.current?.scrollIntoView({ block: "start" });
@@ -34,11 +39,14 @@ export default function CourseReviews({ reviews, course }) {
           <strong className="rt-cd__rsum-n">{trust.rating}</strong>
           <div className="rt-cd__rsum-text">
             <RatingStars rating={trust.rating} />
-            <p>out of 5 from {trust.reviews} {trust.source ? `${trust.source} ` : ""}reviews of Read Training. Below, learners on {course} in their own words.</p>
+            <p>
+              out of 5 from {trust.reviews} {trust.source ? `${trust.source} ` : ""}reviews of Read Training.{" "}
+              {general ? "Below, a few learners in their own words, about Read Training in general rather than this course." : `Below, learners on ${course} in their own words.`}
+            </p>
           </div>
         </div>
       ) : (
-        <p className="rt-cd__lead">What learners said about their {course} training with us, in their own words.</p>
+        <p className="rt-cd__lead">{general ? "A few of our learners' reviews, in their own words, about Read Training in general rather than this course." : `What learners said about their ${course} training with us, in their own words.`}</p>
       )}
       <ul className={`rt-reviews__grid rt-cd__reviews${reviews.length === 1 ? " -one" : ""}`}>
         {reviews.slice(0, count).map((r) => (
@@ -47,7 +55,12 @@ export default function CourseReviews({ reviews, course }) {
           </li>
         ))}
       </ul>
-      {reviews.length > PAGE && (
+      {general && (
+        <div className="rt-cd__reviews-more">
+          <HomeTextLink href={REVIEWS_HREF}>Read more reviews</HomeTextLink>
+        </div>
+      )}
+      {!general && reviews.length > PAGE && (
         <div className="rt-cd__reviews-more">
           <span className="rt-cd__reviews-count" aria-live="polite">Showing {Math.min(count, reviews.length)} of {reviews.length} reviews</span>
           {left > 0 ? (

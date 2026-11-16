@@ -7,7 +7,8 @@ import { loadSiteContent } from "@/lib/siteContentServer";
 
 // Server only: everything the course page (components/courseDetail/CourseDetail) needs, from a course page's data (API
 // catalogue.course, or the editors' provider.courses.preview / admin.courses.preview): up to three more courses from its category,
-// its free mock test when it has one (lib/testPrep.js), and the published reviews that name its topic. The public page
+// its free mock test when it has one (lib/testPrep.js), and the published reviews that name its topic (or, when none does, a
+// few general ones: lib/siteReviews.js reviewsForCourse). The public page
 // (/course/<slug>) and the editors' Preview use this one function, so the preview is the page learners will see.
 export async function courseDetailFor(page) {
   // the site content too: the hero's rating line reads the trust numbers (trustFigures)

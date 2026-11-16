@@ -13,8 +13,8 @@ const CATALOGUE = CATALOGUE_HREF;
 
 // Hero, in this order: breadcrumb, badge, title, summary, provider link, the price row with Book now and "Get a team quote" (a
 // quote for this course, lib/teamTraining.js), then Read Training's rating (the site's trust numbers, Admin › Site content: our Google rating and its
-// number of reviews, worded as ours, not the course's; left out until an admin has entered one). With reviews of the course
-// on the page (`hasReviews`), the rating is a link down to them.
+// number of reviews, worded as ours, not the course's; left out until an admin has entered one). With reviews
+// on the page (`hasReviews`: the course's own, or a few general ones), the rating is a link down to them.
 // `heroTitle`: a course guide's heading for the hero (data/courseGuides.js); without one, the course's own name.
 export default function CourseHero({ course, hasReviews = false, heroTitle = null }) {
   const subject = getSubjectLabel(course);
