@@ -5284,14 +5284,17 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* ---------- end PLATFORM ADMIN ---------- */
 
 /* the header's right-hand row (components/home/HomeHeader): search, basket, the phone menu button and the account. Signed out it
-   keeps its old spacing (30px, 20px from 1199px down with 30px before Log in); signed in everything is 18px apart */
+   keeps its old spacing (30px, 20px from 1199px down with 30px before Log in). Signed in, search, basket and avatar are 24px
+   apart (20px from 1199px down): each 20px icon then has a full 44px target (Apple's and Google's minimum) without overlapping
+   the next, and the avatar clears the basket's count */
 .rt-hactions { gap: 30px; }
 @media (max-width: 1199px) {
   .rt-hactions { gap: 20px; }
   .rt-hactions > .rt-hactions__auth { margin-left: 10px; }
 }
-.rt-hactions:has(.rt-hauth--in) { gap: 18px; }
+.rt-hactions:has(.rt-hauth--in) { gap: 24px; }
 .rt-hactions:has(.rt-hauth--in) > .rt-hactions__auth { margin-left: 0; }
+@media (max-width: 1199px) { .rt-hactions:has(.rt-hauth--in) { gap: 20px; } }
 /* ---------- HEADER ACCOUNT MENU (components/home/HeaderAuth): signed in, the person's initials and first name open their account's
    pages and Sign out; signed out, Log in and Sign up as before ---------- */
 .rt-hauth { position: relative; display: flex; align-items: center; min-width: 150px; justify-content: flex-end; }
@@ -5340,8 +5343,8 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
    1399px). Keyboard focus keeps its outline. The green needs !important: the template forces every link to its parent's
    colour (a { color: inherit !important }). */
 @media (min-width: 1200px) {
-  /* the menu row starts 44px after the logo (the template centres it), so the cards have room to open under their names */
-  .header .header-menu .menu { left: 220px; transform: none; }
+  /* the menu row stays centred (the template's place), so opening the search slides it left to make room (HomeHeader); each
+     card opens under its own name (NavCard cardPlace) */
   .header .header-menu .menu__nav > li { position: relative; }
   .header .header-menu .menu__nav > li:hover > a:not(.is-open) { background-color: transparent; color: var(--rt-c-accent) !important; }
   .header .header-menu .menu__nav > li > a.is-open { background-color: transparent; }
@@ -7692,8 +7695,10 @@ html { scrollbar-gutter: stable; }
 .rt-adm--platform .rt-acc__cardhead .fb-textlink { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
 
 /* Header: when the search box opens, the menu slides left just far enough to make room for it (HomeHeader sets
-   --rt-menu-shift), in step with the box, and slides back when it closes. The menu always stays visible. */
-.header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1); }
+   --rt-menu-shift), in step with the box, and slides back when it closes. Only where even that can't make room (about 1200px
+   wide, signed out) does the menu fade out while the search is open (.is-searching), so the box never covers it. */
+.header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1), opacity 0.2s ease, visibility 0.2s ease; }
+.header.is-searching .menu__nav { opacity: 0; visibility: hidden; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .header .menu__nav { transition: none; } }
 /* Dashboard: the latest orders' course and reference stay on one line, ending with "…" (the full line is in its tooltip) */
 .rt-adm--platform .rt-adm-list__main { flex: 1 1 auto; min-width: 0; }
