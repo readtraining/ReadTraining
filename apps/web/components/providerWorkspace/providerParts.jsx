@@ -26,7 +26,7 @@ export function DemoTag({ note = "Made up for now, to show how this works. Real 
 
 // While the records load: grey blocks in the shape of the page (a strip of stats, then cards), not a spinner.
 // Loading, in the shape of what is coming (DESIGN-SYSTEM.md section 7): a list's table rows (TableSkeleton), or a record page's head
-// card and two cards (`detail`, DetailSkeleton), with the Dashboard's number strip (`stats`) above. The page is marked busy.
+// card and two cards (`detail`, DetailSkeleton), with Performance's number strip (`stats`) above. The page is marked busy.
 export function Loading({ rows = 3, stats = false, detail = false }) {
   return (
     <div className="rt-acc__stack" aria-busy="true" aria-label="Loading">

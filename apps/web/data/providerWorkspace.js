@@ -130,16 +130,16 @@ export const pw = {
     notifications: "These notifications are made up, to show how this page works. Real ones show here once booking goes live.",
     requests: "These refund requests and disputes are made up, to show how this page works. Real ones show here once booking goes live.",
     cohort: "This is a sample cohort with made-up learners, to show how the register and results work. Your real cohorts are in the Cohort list.",
-    attention: "Made up, to show how this works. Real refund requests, disputes, reviews, questions and leads show here once booking goes live.",
   },
 
   pages: {
-    dashboard: { title: "Dashboard", lead: "What needs you today, how sales are going and what is coming up." },
+    dashboard: { title: "Dashboard", lead: "What needs you today, what is with our team and what is coming up." },
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
     courses: { title: "Courses", lead: "Every course you run. New courses and changes are checked by our team before they go live." },
     packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates." },
     course: { title: "Edit course" },
+    courseOverview: { title: "Course details" },
     cohorts: { title: "Cohorts", lead: "Each run of a course: its dates, venue, tutor and places. Open one to take the register and record results." },
     cohort: { title: "Cohort" },
     calendar: { title: "Calendar", lead: "All your sessions by month, week or day, in each cohort's colour." },

@@ -6438,53 +6438,50 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @keyframes rt-chart-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rt-chart-grow { from { transform: scaleX(0.4); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .rt-chart__line, .rt-chart__area, .rt-chart-bars__bar { animation: none; } .rt-chart__tip { transition: none; } }
-/* provider dashboard (ours): greeting, what needs you, last 30 days, coming up, latest orders */
+/* provider dashboard (ours): greeting, to do, courses and what is with our team, coming up */
 .rt-dash__hello { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 24px 28px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: radial-gradient(80% 160% at 100% 0%, var(--rt-c-brand-soft) 0%, var(--rt-c-surface) 62%); }
 .rt-dash__hi { margin: 0; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
-.rt-dash__sub { max-width: 62ch; margin: 6px 0 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-dash__sub { max-width: 62ch; min-height: 1.5em; margin: 6px 0 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-dash__quick { display: flex; flex-wrap: wrap; gap: 10px; }
-/* the greeting's first things to do today, each a link to where it is done */
-.rt-dash__today { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
-.rt-dash__today li { display: flex; align-items: center; gap: 10px; list-style: none; font-size: var(--rt-text-sm); }
-.rt-dash__today a { display: inline-flex; align-items: center; min-height: 24px; font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--rt-c-brand) 35%, transparent); text-underline-offset: 3px; color: var(--rt-c-text) !important; }
-@media (hover: hover) and (pointer: fine) { .rt-dash__today a:hover { color: var(--rt-c-brand) !important; text-decoration-color: currentColor; } }
-.rt-dash__grid { display: grid; gap: var(--rt-gap); align-items: start; }
-/* one quarter grid for the whole Dashboard: three quarters + one beside the four number cards' edges, halves below, one gap */
-@media (min-width: 1200px) { .rt-dash__grid { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); } .rt-dash__grid.-even { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Your courses beside With our team, one height */
+.rt-dash__grid { display: grid; gap: var(--rt-gap); }
+@media (min-width: 1200px) { .rt-dash__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-dash__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .rt-dash__title { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
-.rt-dash__n { min-width: 24px; height: 24px; margin-right: auto; padding: 0 8px; border-radius: 999px; background: var(--rt-c-brand); font-size: var(--rt-text-xs); font-weight: 700; line-height: 24px; text-align: center; color: var(--rt-c-surface); }
-.rt-dash__list, .rt-dash__cohorts, .rt-dash__orders, .rt-dash__status, .rt-dash__kpis { margin: 0; padding: 0; list-style: none; }
-.rt-dash__list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
-.rt-dash__list li:first-child { border-top: 0; padding-top: 4px; }
+.rt-dash__list, .rt-dash__cohorts, .rt-dash__status, .rt-dash__sent { margin: 0; padding: 0; list-style: none; }
+/* a to-do row: the whole row opens it (its action's link stretched over the row, so hovering the row hovers the action too) */
+.rt-dash__list { display: grid; gap: 2px; margin: 0 -12px; }
+.rt-dash__list li { position: relative; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 12px; border-radius: var(--rt-radius-control); list-style: none; transition: background-color 150ms ease; }
+@media (hover: hover) and (pointer: fine) { .rt-dash__list li:hover { background: var(--rt-c-soft); } }
+.rt-dash__list .rt-dash__go::after { content: ""; position: absolute; inset: 0; border-radius: var(--rt-radius-control); }
+.rt-dash__list .rt-dash__go:focus-visible { outline: 0; }
+.rt-dash__list .rt-dash__go:focus-visible::after { outline: 3px solid var(--rt-c-brand); outline-offset: -3px; }
+.rt-dash__more { min-height: 44px; margin-top: 4px; }
 .rt-dash__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rt-c-brand); }
 .rt-dash__dot.-warn { background: var(--color-orange-1); }
-.rt-dash__dot.-late { background: var(--rt-c-error); }
 .rt-dash__dot.-muted { background: var(--rt-c-muted); }
-.rt-dash__text { flex: 1 1 auto; min-width: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-dash__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-dash__go { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--rt-radius-sm); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; transition: background-color 150ms ease, color 150ms ease; }
 @media (hover: hover) and (pointer: fine) { .rt-dash__go:hover { background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; } }
 .rt-dash__clear { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: var(--rt-radius-control); background: var(--rt-c-success-soft); color: var(--rt-c-success); }
 .rt-dash__clear p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-.rt-dash__courses { display: grid; gap: 4px; }
+/* while the records load: a skeleton line in each row of the final layout, so nothing moves when they arrive */
+.rt-dash__bar { display: inline-block; height: 1em; vertical-align: middle; }
+.rt-dash__skel { display: flex; align-items: center; min-height: 52px; list-style: none; }
+.rt-dash__courses { display: grid; align-content: start; gap: 4px; }
 .rt-dash__status { display: grid; gap: 2px; margin-bottom: 12px; }
-.rt-dash__status li { list-style: none; }
-.rt-dash__status a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--rt-radius-sm); text-decoration: none; }
-.rt-dash__status a:hover { background: var(--rt-c-soft); }
+.rt-dash__status li, .rt-dash__sent li { list-style: none; }
+.rt-dash__status a, .rt-dash__sent a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--rt-radius-sm); text-decoration: none; }
+.rt-dash__status a:hover, .rt-dash__sent a:hover { background: var(--rt-c-soft); }
 .rt-dash__status b { font-size: var(--rt-text); font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
-.rt-dash__kpis { display: grid; gap: var(--rt-gap); }
-@media (min-width: 576px) { .rt-dash__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 1200px) { .rt-dash__kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.rt-dash__kpis li { list-style: none; }
-.rt-dash__kpi { display: grid; gap: 8px; height: 100%; padding: 18px 20px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); text-decoration: none; color: inherit !important; transition: border-color 160ms ease, transform 160ms ease-out; }
-.rt-dash__kpi:active { transform: scale(0.99); }
-@media (hover: hover) and (pointer: fine) { .rt-dash__kpi:hover { border-color: color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); } }
-.rt-dash__kpitop { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); }
-.rt-dash__kpi strong { font-size: var(--rt-app-h2); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
-.rt-dash__kpivs { margin-top: -6px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
-.rt-dash__empty { margin: 0; padding: var(--rt-pad-card); }
-.rt-dash__cohorts li, .rt-dash__orders li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
-.rt-dash__cohorts li:first-child, .rt-dash__orders li:first-child { border-top: 0; padding-top: 4px; }
+/* With our team: each course waiting for approval, and when it was sent */
+.rt-dash__sent { display: grid; gap: 2px; margin: 0 -10px; }
+.rt-dash__sent span { min-width: 0; overflow: hidden; font-size: var(--rt-text-sm); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-text); }
+.rt-dash__sent small { flex: none; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-dash__sent .rt-dash__skel { min-height: 44px; padding: 0 10px; }
+.rt-dash__cohorts li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
+.rt-dash__cohorts li:first-child { border-top: 0; padding-top: 4px; }
+.rt-dash__cohorts .rt-dash__skel { min-height: 52px; box-sizing: content-box; }
 .rt-dash__date { display: inline-flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 52px; border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 12%, var(--rt-c-surface)); color: var(--rt-c-text); }
 .rt-dash__date small { font-size: var(--rt-text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .rt-dash__date b { font-size: var(--rt-app-h3); line-height: 1; }
@@ -6493,11 +6490,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-dash__cohorts .rt-adm-seats { flex: 0 0 110px; }
 .rt-dash__soon { font-weight: 600; color: var(--rt-c-text); }
 .rt-dash__ctitle { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
-.rt-dash__avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); }
-.rt-dash__amount { display: grid; flex: none; justify-items: end; gap: 4px; font-variant-numeric: tabular-nums; }
-.rt-dash__amount b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 @media (max-width: 575px) { .rt-dash__hello { padding: 20px; } .rt-dash__cohorts .rt-adm-seats { display: none; } }
-@media (prefers-reduced-motion: reduce) { .rt-dash__go, .rt-dash__kpi { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-dash__go, .rt-dash__list li { transition: none; } }
 /* segmented control (date ranges) */
 /* performance: KPI cards that switch the chart */
 .rt-perf-kpis { display: grid; gap: 16px; }
