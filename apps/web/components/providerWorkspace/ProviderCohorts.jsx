@@ -14,6 +14,7 @@ import { COHORT_TONE, CardChoice, Choice, Loading, Pill, RowMenu, Search, Tabs, 
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
+import { isDatedMethod, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import { VenueForm } from "./SettingsProfile";
@@ -189,8 +190,9 @@ export default function ProviderCohorts() {
     const now = { ...k, ...changing[k.id] };
     return { ...now, status: cohortState(now, today), course: courseOf[k.courseId] };
   });
-  const datedCourses = courses.filter((c) => c.method !== "self-paced");
-  const onDemand = courses.filter((c) => c.method === "self-paced");
+  // the courses taught on dates (classroom or live online among their learning options), and the ones offered self-paced
+  const datedCourses = courses.filter((c) => datedOf(c).length);
+  const onDemand = courses.filter((c) => waysOf(c).includes("self-paced"));
 
   const needle = q.trim().toLowerCase();
   const list = scoped
@@ -284,7 +286,7 @@ export default function ProviderCohorts() {
           {mode === "self-paced" ? (
             onDemand.length ? (
               <div className="rt-acc__card rt-biz__tablecard">
-                <p className="rt-acc__note">Self-paced courses have no dates: learners start as soon as they book.</p>
+                <p className="rt-acc__note">The self-paced option has no dates: learners start as soon as they book.</p>
                 <table className="rt-biz__table rt-adm-table">
                   <thead><tr><th scope="col">Course</th><th scope="col">Course status</th><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
                   <tbody>
@@ -467,12 +469,16 @@ const MAX_PRICE = 100000; // pounds (the API's limit)
 const MEETING_LINK_ERROR = "Use the https link to one Zoom, Microsoft Teams or Google Meet meeting, like https://zoom.us/j/1234567890.";
 // the API's names for the form's fields, where they differ
 const FIELD_OF = { pricePence: "price", wasPricePence: "wasPrice" };
-const FORM_FIELDS = new Set(["courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "planId", "capacity", "details", "tutorUserId"]);
+const FORM_FIELDS = new Set(["method", "courseId", "sessions", "venueId", "joinUrl", "price", "wasPrice", "planId", "capacity", "details", "tutorUserId"]);
 // a plan's packages in one line, for the plan picker ("Basic £249 · Plus £299 · Pro £399")
 const planLine = (p) => p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ");
 
+// a course's learning options taught on dates (classroom, live online), its primary first
+const datedOf = (c) => waysOf(c).filter(isDatedMethod);
+
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
-// `suggestCourseId`). `mode` (the list's Classroom / Live online tab) picks the mode of study the form starts on.
+// `suggestCourseId`). New dates are for one of the course's dated learning options: `mode` (the list's Classroom / Live online tab)
+// picks the one the form starts on, a suggested course starts on its first, and one offering both asks which. Dates keep theirs.
 export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
   const { organisationId } = useProviderAccess();
   const formRef = useRef(null);
@@ -512,11 +518,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       setView(monthStart(cohort.startsOn || todayIso()));
     } else {
       const c = courseOf(suggestCourseId);
-      const blank = blankFor(c && c.method !== "self-paced" ? c : null);
+      const ways = c ? datedOf(c) : [];
+      const blank = blankFor(ways.length ? c : null);
       setF(blank);
       setStart(JSON.stringify(blank));
       setView(monthStart(todayIso()));
-      setStudyMode(c?.method === "live-online" || (!c && mode === "live-online") ? "live-online" : "classroom");
+      setStudyMode(ways.includes(mode) ? mode : ways[0] || (mode === "live-online" ? "live-online" : "classroom"));
     }
     setErrors({});
     setAddingVenue(false);
@@ -526,7 +533,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   // not tied to `open`, so the filled form stays in place while the sheet closes
   const ready = Boolean(f && venuesQ.data);
   const course = ready ? courseOf(f.courseId) : null;
-  const method = cohort ? cohort.method : course?.method || studyMode;
+  const method = cohort ? cohort.method : studyMode;
   const today = todayIso();
   // changing a field takes its message away (the next save checks everything again)
   const set = (patch) => {
@@ -597,7 +604,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     };
     try {
       // an edit sends the version it was filled from, so one over a colleague's newer change is refused instead of undoing it
-      const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id, seen: cohort.updatedAt ? new Date(cohort.updatedAt).toISOString() : undefined }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId) })).id;
+      const id = cohort ? (await update.mutateAsync({ ...values, cohortId: cohort.id, seen: cohort.updatedAt ? new Date(cohort.updatedAt).toISOString() : undefined }), cohort.id) : (await create.mutateAsync({ ...values, courseId: Number(f.courseId), method })).id;
       if (another) {
         const first = values.sessions[0]?.date;
         setF((x) => {
@@ -636,7 +643,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const err = (key) => errors[key] && <p className="rt-q__err" id={`rt-cf-${key}-e`}><span className="rt-sr">Error: </span>{errors[key]}</p>;
   const aria = (key) => ({ "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `rt-cf-${key}-e` : undefined });
 
-  const datedCourses = courses.filter((c) => c.method === studyMode);
+  // the courses offering the chosen way; a suggested course offering both dated ways asks which these dates are
+  const datedCourses = courses.filter((c) => datedOf(c).includes(studyMode));
+  const askMode = !cohort && (!suggestCourseId || (course && datedOf(course).length > 1));
   const tutors = tutorsQ.data || [];
   const venues = ready ? venuesQ.data.filter((v) => v.active || v.id === f.venueId) : [];
   const ordered = ready ? f.sessions.map((s, i) => ({ s, i })).sort((a, b) => a.s.date.localeCompare(b.s.date)) : [];
@@ -647,9 +656,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
           {savedNote && <p className="rt-acc__notice -ok" role="status">{savedNote}</p>}
-          {!cohort && !suggestCourseId && (
-            <CardChoice name="rt-cf-mode" legend="Mode of study" value={studyMode} onChange={(v) => { setStudyMode(v); setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
-              options={pw.formats.filter((x) => x.key !== "self-paced").map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
+          {askMode && (
+            <CardChoice name="rt-cf-mode" legend="Learning option" value={studyMode} error={errors.method}
+              onChange={(v) => { setStudyMode(v); setErrors((e) => ({ ...e, method: undefined })); if (course && !datedOf(course).includes(v)) setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
+              options={pw.formats.filter((x) => (course && suggestCourseId ? datedOf(course) : ["classroom", "live-online"]).includes(x.key)).map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
           )}
           {!cohort && !(suggestCourseId && course) ? (
             <div className="rt-field">

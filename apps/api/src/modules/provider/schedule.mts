@@ -7,7 +7,7 @@ import { can } from '@readtraining/permissions'
 import { logActivity } from '../../lib/activity.mjs'
 import { formatPostcode, lookupDown, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
 import { createTRPCRouter, orgProcedure } from '../../trpc/trpc.mjs'
-import { ownCourse, ukToday as today } from './courses.mjs'
+import { isDated, ownCourse, ukToday as today } from './courses.mjs'
 import { usablePlan } from './plans.mjs'
 
 // A provider's venues and course dates (cohorts). Dates are part of the course's prices and timetable, so they change straight
@@ -298,10 +298,12 @@ async function refuseNotOnTeam(db: Parameters<typeof ownCourse>[0], organisation
   if (!m) throw bad('Choose a tutor from your team (someone who has joined).', 'tutorUserId')
 }
 
+const NOT_OFFERED = 'This course isn’t offered that way. Turn it on in the course’s Learning options first.'
+
 // checks a cohort against its course and provider; returns the values to save
 // keepVenueId / keepPlanId: the venue and price plan the dates already have (they stay allowed if since archived)
 async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keepVenueId: string | null = null, keepPlanId: string | null = null) {
-  if (method !== 'classroom' && method !== 'live-online') throw bad('Only classroom and live online courses have dates. Self-paced courses start any time.')
+  if (method !== 'classroom' && method !== 'live-online') throw bad('Only classroom and live online dates can be added. The self-paced option starts any time.')
   const sessions = [...input.sessions].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
   if (sessions.some((s) => daysBetween(today(), s.end) > MAX_AHEAD_DAYS)) throw bad('Dates can be up to 3 years ahead.', 'sessions')
   // the price: a plan's cheapest package (Tiered), or the date's own (Flat)
@@ -338,7 +340,7 @@ async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId:
 
 async function ownCohort(db: Parameters<typeof ownCourse>[0], organisationId: string, cohortId: string) {
   const [row] = await db
-    .select({ cohort: cohorts, course: { id: courses.id, method: courses.method } })
+    .select({ cohort: cohorts, course: { id: courses.id } })
     .from(cohorts)
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
     .where(and(eq(cohorts.id, cohortId), eq(courses.organisationId, organisationId)))
@@ -431,13 +433,25 @@ export const providerCohortsRouter = createTRPCRouter({
       })
     }),
 
+  // New dates for one of the course's dated learning options (`method`: classroom or live online; it can be left out when the course
+  // offers only one of them).
   create: orgProcedure('provider.cohorts.edit')
-    .input(cohortFields.extend({ courseId: z.number().int().positive() }))
+    .input(cohortFields.extend({ courseId: z.number().int().positive(), method: z.enum(['classroom', 'live-online']).optional() }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      const values = await cohortValues(ctx.db, input.organisationId, course.method, input)
+      const dated = course.methods.filter(isDated)
+      const method = input.method ?? (dated.length === 1 ? dated[0] : null)
+      if (!dated.length) throw bad('Only classroom and live online dates can be added. The self-paced option starts any time.')
+      if (!method) throw bad('Choose how these dates are taught.', 'method')
+      if (!dated.includes(method)) throw bad(NOT_OFFERED, 'method')
+      const values = await cohortValues(ctx.db, input.organisationId, method, input)
       if (values.startsOn < today()) throw bad('New dates can’t start in the past.', 'sessions')
       const made = await ctx.db.transaction(async (tx) => {
+        // the course's row is locked and its options read again, so an option turned off at the same moment (which locks the same
+        // row, then counts its upcoming dates) either sees these dates or refuses them here
+        const [now] = await tx.select({ methods: courses.methods }).from(courses).where(eq(courses.id, course.id)).for('update')
+        if (!now) throw new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
+        if (!now.methods.includes(method)) throw bad(NOT_OFFERED, 'method')
         await refuseClash(tx, course.id, values.venueId, values.sessions)
         const [c] = await tx.insert(cohorts).values({ ...values, courseId: course.id, createdBy: ctx.user.id }).returning({ id: cohorts.id })
         await log(tx, ctx, input.organisationId, 'cohort.created', 'cohort', c.id, { courseId: course.id, startsOn: values.startsOn })
@@ -453,7 +467,8 @@ export const providerCohortsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
-      const values = await cohortValues(ctx.db, input.organisationId, course.method, input, cohort.venueId, cohort.planId)
+      // dates keep the way they are taught (an option turned off since keeps its finished and cancelled dates as they were)
+      const values = await cohortValues(ctx.db, input.organisationId, cohort.method, input, cohort.venueId, cohort.planId)
       if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.', 'sessions')
       await ctx.db.transaction(async (tx) => {
         const now = await lockCohort(tx, cohort.id)

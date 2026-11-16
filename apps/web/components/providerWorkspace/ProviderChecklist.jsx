@@ -6,6 +6,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { waysOf } from "@/lib/courseModes";
 
 const copy = pw.checklist;
 // who can do each step (the shared permission table), so a step's link shows only to someone who can follow it
@@ -38,7 +39,7 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
     profile: Boolean(p.headline && p.bio && p.logoUrl),
     policy: Boolean(p.cancellationPolicy),
     course: list.length > 0,
-    date: (dates.data || []).length > 0 || list.some((c) => c.method === "self-paced"),
+    date: (dates.data || []).length > 0 || list.some((c) => waysOf(c).includes("self-paced")),
   };
   const keys = Object.keys(copy.steps);
   const count = keys.filter((k) => done[k]).length;

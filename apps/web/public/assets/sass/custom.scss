@@ -5891,15 +5891,26 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-optcard { display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
 .rt-pws-optcard.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
 .rt-pws-optcard.is-off { cursor: not-allowed; opacity: 0.6; }
-.rt-pws-optcard .rt-fp__radio { flex: none; margin-top: 2px; }
+.rt-pws-optcard .rt-fp__radio, .rt-pws-optcard input[type="checkbox"] { flex: none; margin-top: 2px; }
 .rt-pws-optcard:focus-within { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-optcard b { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-pws-optcard small { display: block; margin-top: 2px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-pws-optcard ul { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-pws-optcard li { display: flex; align-items: baseline; gap: 8px; list-style: none; }
 .rt-pws-optcard li i { color: var(--rt-c-brand); }
-@media (hover: hover) and (pointer: fine) { .rt-pws-optcard:not(.is-off):hover { border-color: var(--rt-c-brand); } }
+@media (hover: hover) and (pointer: fine) { .rt-pws-optcard:not(.is-off):not(.is-held):hover { border-color: var(--rt-c-brand); } }
 @media (prefers-reduced-motion: reduce) { .rt-pws-optcard { transition: none; } }
+/* editor: Learning options, the other ways a course is offered (option cards with a checkbox, one under another); an option kept on
+   by its upcoming dates says why under its words */
+.rt-pws-ce__ways { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.rt-pws-ce__ways legend { float: none; width: auto; margin: 0; font-size: var(--rt-text-sm); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
+.rt-pws-ce__ways > .rt-field__hint { margin-top: -8px; }
+.rt-pws-optcard.is-held { cursor: default; }
+.rt-pws-optcard .rt-pws-ce__waynote { margin-top: 8px; font-weight: 600; color: var(--rt-c-text); }
+/* editor: the price step's parts (the self-paced price, the dates) when a course has both */
+.rt-pws-ce__part { display: grid; gap: 16px; min-width: 0; }
+.rt-pws-ce__part > .rt-adm-h3, .rt-pws-ce__part > .rt-acc__note { margin: 0; }
+.rt-pws-ce__part + .rt-pws-ce__part { padding-top: 20px; border-top: 1px solid var(--rt-c-line); }
 /* editor: hero, review checklist */
 .rt-pws-course-herotext { flex: 1 1 360px; min-width: 0; }
 .rt-pws-course-unsaved { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); }
@@ -6700,7 +6711,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-nc__labelrow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .rt-pws-nc__labelrow > label { margin: 0; }
 .rt-pws-nc__count, .rt-pws-nc__opt { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); font-variant-numeric: tabular-nums; }
-.rt-pws-nc .rt-pws-optcard input[type="checkbox"] { flex: none; margin-top: 2px; }
 .rt-pws-set__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-top: 4px; }
 .rt-pws-set__foot .rt-acc__note { flex: 1 1 280px; margin: 0; }
 .rt-pws-set__textbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }

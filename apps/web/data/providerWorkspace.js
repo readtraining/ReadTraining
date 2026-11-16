@@ -164,6 +164,22 @@ export const pw = {
     { key: "live-online", label: "Live online", icon: "icon-online-learning-2", text: "For live, tutor-led training by video, one to one or in groups.", more: "Run sessions by video on dates you choose. Learners get the joining link in their joining instructions before each session." },
     { key: "self-paced", label: "Self-paced", icon: "icon-time-management", text: "For recorded lessons and self-paced e-learning.", more: "Build the course from lessons (text, video, quizzes and downloads). Learners start straight after booking and work at their own pace." },
   ],
+  // The course editor's Learning options step (Hurak's): the primary way a course is taught, and the other ways switched on beside
+  // it. One set of words, pictures and syllabus covers them all.
+  learningOptions: {
+    title: "Learning options",
+    lead: "Set the main way this course is taught, and switch on any other ways learners can take it.",
+    primary: "Primary learning option",
+    primaryHint: "Shown first on the course page and in search results.",
+    others: "Other ways to offer it",
+    othersHint: "The same course page, syllabus and FAQs cover every way you offer it.",
+    upcoming: (n) => `It has ${n} upcoming ${n === 1 ? "date" : "dates"}. Cancel ${n === 1 ? "it" : "them"} before turning this off.`,
+    retired: "No longer offered on ReadTraining.",
+    retiredOn: "No longer offered on ReadTraining. Turn it off, then save.",
+    selfPacedNote: "Self-paced has no dates: learners start straight after booking, at the price you set in the next step. Lessons for self-paced courses come in a later update.",
+    liveSelfPaced: "A live course offering self-paced needs its price: add it in the next step, then save.",
+    save: "Save to apply your changes, then add the dates or price for any new option in the next step.",
+  },
   courseStatuses: { draft: "Draft", pending: "Waiting for approval", changes: "Changes requested", live: "Live", paused: "Paused" },
 
   // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)

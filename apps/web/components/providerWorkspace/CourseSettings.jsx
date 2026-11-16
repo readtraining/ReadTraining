@@ -14,6 +14,7 @@ import { Choice, Toggle } from "./providerParts";
 import { pagesForSubject } from "@/lib/taxonomy";
 import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import { contactHref } from "@/lib/forms";
+import { isDatedMethod, waysOf } from "@/lib/courseModes";
 
 // The course editor's self-saving parts: SEO settings, and the gear's course settings (a provider's course, or a shared course
 // page in the admin). Each saves on its own (SEO with its button, the gear as you choose) and reports back through onSaved for the
@@ -212,6 +213,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const [askPause, setAskPause] = useState(false); // "Pause course" asks first
   const [error, setError] = useState("");
   const edit = can("provider.courses.edit");
+  const dated = waysOf(course).some(isDatedMethod); // taught on dates: the gear links to them
   const [url, setUrl] = useState("");
   React.useEffect(() => setUrl(`${window.location.origin}/course/${course.slug}`), [course.slug]);
 
@@ -298,7 +300,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
               </div>
             </div>
           </section>
-          {((edit && pausable(course)) || course.method !== "self-paced") && (
+          {((edit && pausable(course)) || dated) && (
             <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-avail">
               <h3 className="rt-pws-gear__h" id="rt-pws-gear-avail">Availability</h3>
               {edit && pausable(course) && (
@@ -315,7 +317,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
                   )}
                 </div>
               )}
-              {course.method !== "self-paced" && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true"> →</span></Link>}
+              {dated && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true"> →</span></Link>}
             </section>
           )}
           {can("provider.courses.delete") && (

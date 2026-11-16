@@ -143,13 +143,16 @@ const cents = (n) => Math.round(n * 100) / 100;
 const guidePackages = (guide, d) =>
   guide.packages.items.map((p) => ({ key: p.key, name: p.name, price: cents(d.price + (p.add || 0)), wasPrice: p.add ? null : d.wasPrice, tagline: p.text || "", popular: Boolean(p.badge), features: p.points.map((t) => ({ title: t, description: null, included: true })), firstAid: Boolean(p.firstAid) }));
 
+// a learning option's booking mode on the course page
+const MODE_OF = { classroom: "classroom", "live-online": "online", "self-paced": "ondemand" };
+
 const saverOf = (list) => (list.length && list.every((x) => x.skillSaver) ? "all" : list.some((x) => x.skillSaver) ? "some" : null);
 
 // A course page (catalogue.course) as the course page's parts read it. `related`: listings to show under it.
 export function toCourseDetail(page, related = []) {
   const sessions = [];
   for (const o of page.offerings) {
-    if (o.method === "self-paced" && o.selfPacedPence != null) {
+    if (o.selfPacedPence != null) {
       sessions.push({
         id: `sp-${o.courseId}`, mode: "ondemand", date: today(), endDate: today(), time: "Start any time", location: "Online", city: "", venue: "", address: "", postcode: "",
         provider: o.provider.name, providerSlug: o.provider.slug, courseId: o.courseId, courseSlug: o.slug, price: pounds(o.selfPacedPence), wasPrice: null, skillSaver: o.skillSaver,
@@ -194,7 +197,10 @@ export function toCourseDetail(page, related = []) {
   const countBy = (m) => sessions.filter((s) => s.mode === m).length;
   const popularMode = ["classroom", "online", "ondemand"].sort((a, b) => countBy(b) - countBy(a))[0];
   const cheapest = sessions.reduce((best, s) => (!best || s.price < best.price ? s : best), null);
-  const methods = [...new Set(page.offerings.map((o) => o.method).filter(Boolean))];
+  // every learning option offered (each course's primary first), and the primary way when the course's offerings share one
+  const methods = [...new Set(page.offerings.flatMap((o) => o.methods ?? [o.method]).filter(Boolean))];
+  const primaries = [...new Set(page.offerings.map((o) => o.method).filter(Boolean))];
+  const primaryMode = primaries.length === 1 ? MODE_OF[primaries[0]] : null;
   const providers = new Set(page.offerings.map((o) => o.provider.slug));
   const description = paragraphs(page.description);
   const entry = paragraphs(page.entryRequirements);
@@ -230,6 +236,7 @@ export function toCourseDetail(page, related = []) {
     sessions,
     upcoming: dated.length,
     popularMode,
+    primaryMode,
     inHouse: methods.some((m) => m === "classroom" || m === "live-online"),
     providerCount: providers.size,
     providers: providers.size,

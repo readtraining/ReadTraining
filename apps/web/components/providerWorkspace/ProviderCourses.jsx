@@ -9,6 +9,7 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { errorsFrom } from "@/lib/useMe";
 import { COURSE_TONE, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
+import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
@@ -18,7 +19,6 @@ import { COURSE_SAID, DeleteBlocked, DeleteCourseForm, PAUSE_NOTE, pausable } fr
 import { Confirm } from "./settingsForm";
 
 const FILTERS = ["q", "format", "enrolment", "category", "model", "status"];
-const formatOf = (key) => pw.formats.find((f) => f.key === key) || pw.formats[0];
 const enrolmentOf = (c) => (c.isPublic ? "public" : "private");
 
 // The provider's courses, from the API: asked for only by a role that may see them (the API would refuse, and log, the rest).
@@ -27,7 +27,7 @@ export const useProviderCourses = () => {
   return api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && can("provider.courses.view") });
 };
 
-// Every course the provider runs, with Hurak's filters (search, mode of study, enrolment type, and under Filters the category and
+// Every course the provider runs, with Hurak's filters (search, learning option, enrolment type, and under Filters the category and
 // performance model; status as tabs with counts), all kept in the address. Our layout: one card holding the status tabs, the filters and the courses as a compact table (one
 // course per row: image or "Upload course image", mode, category, status, enrolment, performance model, upcoming dates; the row
 // opens the course, and its ⋮ menu has the actions its role allows), then Hurak's offer of a free sales and marketing consultation.
@@ -73,7 +73,7 @@ export default function ProviderCourses() {
 
   const needle = f.q.trim().toLowerCase();
   const list = courses.filter((c) => (!needle || c.title.toLowerCase().includes(needle))
-    && (!f.format || c.method === f.format) && (!f.enrolment || enrolmentOf(c) === f.enrolment) && (!f.category || c.category === f.category)
+    && (!f.format || waysOf(c).includes(f.format)) && (!f.enrolment || enrolmentOf(c) === f.enrolment) && (!f.category || c.category === f.category)
     && (!f.model || c.model === f.model) && (!f.status || c.status === f.status));
   const filtered = Object.values(f).some((v) => v.trim());
   const set = (k) => (v) => {
@@ -111,7 +111,7 @@ export default function ProviderCourses() {
     { label: "Details", href: `${href}/overview` },
     ...(can("provider.courses.editPage") ? [{ label: "Edit course", href }] : []),
     { label: "Preview", href: `${href}/preview` },
-    ...(can("provider.cohorts.edit") && (c.method === "classroom" || c.method === "live-online") ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
+    ...(can("provider.cohorts.edit") && waysOf(c).some(isDatedMethod) ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
     ...(can("provider.courses.edit") && pausable(c) ? [{ label: c.status === "live" ? "Pause course" : "Put back live", onClick: () => (c.status === "live" ? setPausing(c) : setPaused(c, false)) }] : []),
     ...(can("provider.courses.edit") ? [{ label: "Duplicate course", onClick: () => copy(c) }] : []),
     ...(can("provider.courses.delete") ? [{ label: "Delete course", danger: true, onClick: () => setDeletingId(c.id) }] : []),
@@ -129,7 +129,7 @@ export default function ProviderCourses() {
         </div>
         <div className="rt-cx__bar" role="search" aria-label="Find courses">
           <Search value={f.q} onChange={set("q")} label="Search your courses" />
-          <ToolSelect id="rt-pws-cf-format" label="Mode of study" value={f.format} onChange={set("format")} options={[{ value: "", label: "All modes of study" }, ...pw.formats.map((x) => ({ value: x.key, label: methodName(x.key) }))]} />
+          <ToolSelect id="rt-pws-cf-format" label="Learning option" value={f.format} onChange={set("format")} options={[{ value: "", label: "All learning options" }, ...pw.formats.map((x) => ({ value: x.key, label: methodName(x.key) }))]} />
           <ToolSelect id="rt-pws-cf-enr" label="Enrolment type" value={f.enrolment} onChange={set("enrolment")} options={[{ value: "", label: "All enrolment types" }, ...Object.entries(pw.enrolment).map(([value, label]) => ({ value, label }))]} />
           <button type="button" className={`rt-cx__more${more ? " is-on" : ""}`} aria-expanded={more} aria-controls="rt-pws-cf-more" onClick={() => setMore(!more)}><i className="icon-setting text-14" aria-hidden="true"></i>Filters{(f.category || f.model) && <span className="rt-cx__dot" aria-label="filters on"></span>}</button>
           {filtered && <button type="button" className="rt-cd__link" onClick={reset}>Clear filters</button>}
@@ -156,9 +156,8 @@ export default function ProviderCourses() {
             </thead>
             <tbody>
               {list.map((c) => {
-                const fm = formatOf(c.method);
                 const href = `/provider/courses/${c.id}`;
-                const meta = [methodName(fm.key), catOf(c)].filter(Boolean).join(" · ");
+                const meta = [waysLabel(c), catOf(c)].filter(Boolean).join(" · ");
                 return (
                   <tr key={c.id}>
                     <td data-label="Course">
@@ -173,7 +172,7 @@ export default function ProviderCourses() {
                     <td data-label="Course status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill>{c.pendingChange && <small className="rt-cx-note">Changes waiting for approval</small>}</td>
                     <td data-label="Enrolment">{pw.enrolment[enrolmentOf(c)]}</td>
                     <td data-label="Performance model">{pw.models[c.model]?.label}</td>
-                    <td data-label="Upcoming dates" className="-num">{c.method === "self-paced" ? "—" : c.upcomingCohorts}</td>
+                    <td data-label="Upcoming dates" className="-num">{waysOf(c).some(isDatedMethod) ? c.upcomingCohorts : "—"}</td>
                     <td data-label="Actions" className="-act"><RowMenu label={`Actions for ${c.title}`} items={actions(c, href)} /></td>
                   </tr>
                 );

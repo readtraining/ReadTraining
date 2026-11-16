@@ -8,12 +8,12 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { formatPrice } from "@/lib/format";
-import { methodName } from "@/lib/taxonomy";
+import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { COHORT_TONE, COURSE_TONE, Loading, Pill, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { COHORT_STATUSES, CohortCell, CohortForm, Seats, WHEN, cohortState, todayIso, useSchedule } from "./ProviderCohorts";
 
-// One course's overview (Hurak's course Details): a head card with the cover picture, status, mode of study and performance model,
+// One course's overview (Hurak's course Details): a head card with the cover picture, status, learning options and performance model,
 // the shared course page it is listed on, Edit course and Preview; then Hurak's tabs, in Hurak's order: Learners, Venues, Cohorts,
 // Packages and Orders, opening on Cohorts (the chosen tab is kept in ?tab=). Venues, cohorts and packages are real (API
 // provider.venues.forCourse, provider.cohorts.list with the course, provider.plans.forCourse). Booking arrives in a later
@@ -29,7 +29,6 @@ const TABS = [
 ];
 const DEFAULT_TAB = "cohorts";
 const PER_PAGE = 10;
-const isDated = (method) => method === "classroom" || method === "live-online";
 const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export default function ProviderCourseOverview({ courseId }) {
@@ -80,7 +79,7 @@ export default function ProviderCourseOverview({ courseId }) {
   );
 }
 
-// The head card: picture, status, mode of study and performance model, the shared page it is listed on, and its two buttons.
+// The head card: picture, status, learning options and performance model, the shared page it is listed on, and its two buttons.
 function Head({ course }) {
   const { can } = useProviderAccess();
   const cover = course.images[0];
@@ -93,7 +92,7 @@ function Head({ course }) {
       <div className="rt-pws-cov__text">
         <p className="rt-pws-ce__meta">
           <Pill tone={COURSE_TONE[course.status]}>{pw.courseStatuses[course.status]}</Pill>
-          <span>{[methodName(course.method), pw.models[course.model]?.label].filter(Boolean).join(" · ")}</span>
+          <span>{[waysLabel(course), pw.models[course.model]?.label].filter(Boolean).join(" · ")}</span>
         </p>
         {course.pendingChanges && <p className="rt-acc__note">Changes waiting for approval: learners see the live version until our team has checked them.</p>}
         {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
@@ -107,10 +106,10 @@ function Head({ course }) {
   );
 }
 
-// A course whose mode of study isn't chosen yet has neither dates nor venues: say where to choose it.
+// A course whose learning options aren't chosen yet has neither dates nor venues: say where to choose them.
 function NoMethod({ course }) {
   const { can } = useProviderAccess();
-  return <EmptyState title="No mode of study yet" text="Choose how this course is taught (classroom, live online or self-paced), then add its dates." action={can("provider.courses.edit") ? { label: "Choose mode of study", href: `/provider/courses/${course.id}?tab=mode` } : null} />;
+  return <EmptyState title="No learning options yet" text="Choose how this course is taught (classroom, live online or self-paced), then add its dates." action={can("provider.courses.edit") ? { label: "Choose learning options", href: `/provider/courses/${course.id}?tab=mode` } : null} />;
 }
 
 // ---- Cohorts ----------------------------------------------------------------------------------------------------------------
@@ -131,8 +130,9 @@ function CohortsTab({ course }) {
   }, []);
   useEffect(() => setPage(1), [when]);
 
-  if (!course.method) return <NoMethod course={course} />;
-  if (!isDated(course.method)) return <EmptyState title="No dates for a self-paced course" text="Self-paced courses have no dates: learners start as soon as they book." />;
+  const dated = waysOf(course).filter(isDatedMethod);
+  if (!waysOf(course).length) return <NoMethod course={course} />;
+  if (!dated.length) return <EmptyState title="No dates for a self-paced course" text="This course is offered self-paced only, so it has no dates: learners start as soon as they book." />;
   if (s.cohorts.isError) return <ErrorState title="We couldn't load this course's cohorts." text="Check your connection, then try again." onRetry={() => s.cohorts.refetch()} />;
 
   const edit = can("provider.cohorts.edit");
@@ -147,7 +147,7 @@ function CohortsTab({ course }) {
   const create = () => setFormOpen(true);
   const form = (
     <>
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={String(course.id)} mode={course.method}
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={String(course.id)} mode={dated[0]}
         onSaved={(cohortId) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${cohortId}`, label: "Open" }); }} onAnother={() => refresh()} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </>
@@ -217,12 +217,12 @@ function CohortsTab({ course }) {
 // The venues this course's dates use, with how many upcoming cohorts each has; managed in Settings › Venues.
 function VenuesTab({ course }) {
   const { organisationId, can } = useProviderAccess();
-  const classroom = course.method === "classroom";
+  const ways = waysOf(course);
+  const classroom = ways.includes("classroom");
   const query = api.provider.venues.forCourse.useQuery({ organisationId, courseId: course.id }, { enabled: Boolean(organisationId) && classroom });
 
-  if (!course.method) return <NoMethod course={course} />;
-  if (course.method === "self-paced") return <EmptyState title="Venues don't apply" text="Self-paced courses are studied online, so they have no venue." />;
-  if (course.method === "live-online") return <EmptyState title="Venues don't apply" text="Live online courses are taught online, so learners join from anywhere." />;
+  if (!ways.length) return <NoMethod course={course} />;
+  if (!classroom) return <EmptyState title="Venues don't apply" text={ways.includes("live-online") ? "This course isn't taught in a classroom: live online learners join from anywhere." : "Self-paced courses are studied online, so they have no venue."} />;
   if (query.isError) return <ErrorState title="We couldn't load this course's venues." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!query.data) return <Loading rows={2} />;
   if (!query.data.length) return <EmptyState title="No venues yet." text="Venues appear here once this course has classroom dates." />;
@@ -263,7 +263,7 @@ function VenuesTab({ course }) {
 function PackagesTab({ course }) {
   const { organisationId, can } = useProviderAccess();
   const query = api.provider.plans.forCourse.useQuery({ organisationId, courseId: course.id }, { enabled: Boolean(organisationId) });
-  const selfPaced = course.method === "self-paced";
+  const selfPaced = waysOf(course).includes("self-paced");
 
   if (query.isError) return <ErrorState title="We couldn't load this course's price plans." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!query.data) return <Loading rows={2} />;

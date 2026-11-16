@@ -92,7 +92,7 @@ export function Choice({ name, legend, value, onChange, options, error, hint }) 
 }
 
 // Two or three larger choices, each a card with a line of explanation (and optional points), for questions that need it
-// (course type, performance model, mode of study).
+// (course type, performance model, learning option).
 export function CardChoice({ name, legend, value, onChange, options, error, hideLegend = false }) {
   const errId = `${name}-e`;
   return (

@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { categories, courseLevels, deliveryMethods, sql, subcategories, topics } from '@readtraining/db'
+import { categories, courseLevels, deliveryMethods, sql, subcategories, topics, type SQL } from '@readtraining/db'
 
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
@@ -24,7 +24,9 @@ const PARENT = { subcategory: sql`category_id`, topic: sql`subcategory_id` } as 
 const WORD = { category: 'category', subcategory: 'sub-category', topic: 'topic', method: 'delivery method', level: 'level' }
 const byKey = (kind: Kind) => (kind === 'method' || kind === 'level' ? sql`slug` : sql`id`)
 // the course column that files a course under an entry, compared with the entry's key as text
-const FILED = { category: sql`category_id::text`, subcategory: sql`subcategory_id::text`, topic: sql`topic_id::text`, method: sql`method`, level: sql`level` } as const
+const FILED = { category: sql`c.category_id::text`, subcategory: sql`c.subcategory_id::text`, topic: sql`c.topic_id::text`, level: sql`c.level` } as const
+// a course (`c`) filed under the entry with this key: a delivery method by being one of the course's learning options
+const filedUnder = (k: Kind, key: SQL) => (k === 'method' ? sql`${key} = any(c.methods)` : sql`${FILED[k]} = ${key}`)
 
 // the address made from a name, exactly as the database's rule for methods and levels makes it
 export const addressOf = (name: string) =>
@@ -57,7 +59,7 @@ async function rows(db: typeof Db | Tx, k: Kind): Promise<Row[]> {
   const parent = k === 'subcategory' || k === 'topic' ? sql`${PARENT[k]}::text` : sql`null`
   return db.execute<Row>(sql`
     select ${byKey(k)}::text "key", ${parent} parent, slug, name, position, active,
-      (select count(*)::int from public.courses c where c.status = 'live' and c.${FILED[k]} = t.${byKey(k)}::text) live
+      (select count(*)::int from public.courses c where c.status = 'live' and ${filedUnder(k, sql`t.${byKey(k)}::text`)}) live
     from ${TABLE[k]} t order by position, name`)
 }
 
@@ -134,14 +136,17 @@ export const catalogueAdminRouter = createTRPCRouter({
         if (row.active === input.active) return // already so
         if (!input.active) {
           const live = await tx.execute<{ title: string }>(sql`
-            select title from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key} order by title limit 4`)
+            select c.title from public.courses c where c.status = 'live' and ${filedUnder(input.kind, sql`${input.key}`)} order by c.title limit 4`)
           if (live.length) {
-            const [n] = await tx.execute<{ n: number }>(sql`select count(*)::int n from public.courses where status = 'live' and ${FILED[input.kind]} = ${input.key}`)
+            const [n] = await tx.execute<{ n: number }>(sql`select count(*)::int n from public.courses c where c.status = 'live' and ${filedUnder(input.kind, sql`${input.key}`)}`)
             const names = live.slice(0, 3).map((c) => c.title).join(', ') + (n.n > 3 ? ` and ${n.n - 3} more` : '')
             const one = n.n === 1
             throw new TRPCError({
               code: 'BAD_REQUEST',
-              message: `${row.name} can't be retired while ${n.n} live ${one ? 'course is' : 'courses are'} filed under it (${names}). Move ${one ? 'it' : 'them'} to another ${WORD[input.kind]}, or pause ${one ? 'it' : 'them'}, first.`,
+              message:
+                input.kind === 'method'
+                  ? `${row.name} can't be retired while ${n.n} live ${one ? 'course offers' : 'courses offer'} it (${names}). Ask ${one ? 'its provider' : 'their providers'} to turn it off in the course’s learning options, or pause ${one ? 'it' : 'them'}, first.`
+                  : `${row.name} can't be retired while ${n.n} live ${one ? 'course is' : 'courses are'} filed under it (${names}). Move ${one ? 'it' : 'them'} to another ${WORD[input.kind]}, or pause ${one ? 'it' : 'them'}, first.`,
             })
           }
         }
@@ -184,7 +189,7 @@ export const catalogueAdminRouter = createTRPCRouter({
       let courses = 0
       let pending = 0
       if (input.kind === 'method' || input.kind === 'level') {
-        courses = await count(sql`select count(*)::int n from public.courses where ${FILED[input.kind]} = ${input.key}`)
+        courses = await count(sql`select count(*)::int n from public.courses c where ${filedUnder(input.kind, sql`${input.key}`)}`)
         if (input.kind === 'method') {
           const dates = await count(sql`select count(*)::int n from public.cohorts where method = ${input.key}`)
           if (dates) uses.push(`${dates} course ${dates === 1 ? 'date' : 'dates'}`)

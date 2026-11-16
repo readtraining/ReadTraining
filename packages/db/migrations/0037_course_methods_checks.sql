@@ -1,0 +1,2 @@
+ALTER TABLE "courses" ADD CONSTRAINT "courses_methods_taught" CHECK ("courses"."methods" <@ array['classroom', 'live-online', 'self-paced']::text[]);--> statement-breakpoint
+ALTER TABLE "courses" ADD CONSTRAINT "courses_method_offered" CHECK (("courses"."method" is null and cardinality("courses"."methods") = 0) or "courses"."method" = any("courses"."methods"));

@@ -21,23 +21,28 @@ import { CohortForm } from "./ProviderCohorts";
 import { COURSE_TONE, CardChoice, Choice, Loading, Pill, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
+import { LEARNING_OPTIONS, isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 
-// The course editor's sections, in the order a provider fills them in, each ticked in the side list when it is complete. Mode of
-// study comes before the price, as the price step depends on it: a self-paced course has one price, a course on dates is priced
-// on each date, so its step is its dates. FAQs and SEO are optional: they never stop a course being sent for approval.
+// The course editor's sections, in the order a provider fills them in, each ticked in the side list when it is complete. Learning
+// options come before the price, as the price step depends on them: the self-paced option has one price, a course on dates is
+// priced on each date, so its step holds its dates. FAQs and SEO are optional: they never stop a course being sent for approval.
 const SECTIONS = [
   { key: "landing", label: "Course landing page" },
   { key: "info", label: "Course information" },
   { key: "syllabus", label: "Syllabus and exam" },
   { key: "faqs", label: "FAQs", optional: true },
-  { key: "mode", label: "Mode of study" },
+  { key: "mode", label: "Learning options" },
   { key: "pricing", label: "Price" },
   { key: "seo", label: "SEO settings", optional: true },
 ];
-// the price step's name: a course on dates is priced on each date
-const pricingLabel = (method) => (method === "self-paced" ? "Price" : "Dates and prices");
+// the price step's name: the self-paced option has one price, and a course on dates is priced on each date
+const pricingLabel = (methods) => {
+  const own = methods.includes("self-paced");
+  const dated = methods.some(isDatedMethod);
+  return own && dated ? "Prices and dates" : own ? "Price" : "Dates and prices";
+};
 // a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
 const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "mode", "pricing"];
@@ -50,7 +55,7 @@ const MAX_PRICE = 100000; // pounds (the API's pricePence limit)
 const SECTION_OF = {
   model: "mode", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
   features: "info", outcomes: "info", audience: "info", entryRequirements: "info",
-  images: "landing", units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode",
+  images: "landing", units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode", methods: "mode",
 };
 const sectionOf = (key) => SECTION_OF[key] || (/^(passMark|examUnit|examDuration)\d+$/.test(key) ? "syllabus" : null);
 // course pictures follow the rule every picture upload does (lib/images.js): JPG, PNG, WebP or GIF up to 15 MB, big ones made
@@ -97,7 +102,8 @@ const draftOf = (c) => {
   const p = c.pendingChanges?.content || {};
   const pick = (k) => (p[k] !== undefined ? p[k] : c[k]);
   return {
-    model: c.model, method: c.method || "classroom", skillSaver: c.skillSaver, planId: c.planId || "", price: c.pricePence == null || c.planId ? "" : (c.pricePence / 100).toFixed(2).replace(/\.00$/, ""),
+    // the learning options in their usual order; a course with none yet opens on classroom
+    model: c.model, method: c.method || "classroom", methods: c.methods?.length ? LEARNING_OPTIONS.filter((m) => c.methods.includes(m)) : [c.method || "classroom"], skillSaver: c.skillSaver, planId: c.planId || "", price: c.pricePence == null || c.planId ? "" : (c.pricePence / 100).toFixed(2).replace(/\.00$/, ""),
     title: pick("title") || "", summary: pick("summary") || "", description: pick("description") || "", audience: pick("audience") || "", entryRequirements: pick("entryRequirements") || "",
     outcomes: pick("outcomes") || [], features: pick("features") || [], category: pick("category") || "", subcategory: pick("subcategory") || "", topic: pick("topic") || "", level: pick("level") || "",
     videoUrl: pick("videoUrl") || "",
@@ -115,9 +121,9 @@ function sectionOk(d, course, key) {
   if (key === "info") return d.outcomes.length >= 4;
   if (key === "syllabus") return d.units.length > 0;
   if (key === "faqs") return d.faqs.length > 0;
-  // priced: a self-paced course has its own price; one on dates is priced on each date, so it has a price once it has a date
-  if (key === "pricing") return d.method === "self-paced" ? d.price !== "" || Boolean(d.planId) : course.upcomingCohorts > 0;
-  if (key === "mode") return Boolean(d.method);
+  // priced: the self-paced option has its own price; dates are priced each, so a course on dates has a price once it has a date
+  if (key === "pricing") return (!d.methods.includes("self-paced") || d.price !== "" || Boolean(d.planId)) && (!d.methods.some(isDatedMethod) || course.upcomingCohorts > 0);
+  if (key === "mode") return d.methods.includes(d.method);
   return Boolean(course.seoTitle && course.seoDescription);
 }
 
@@ -134,14 +140,15 @@ function stillNeeded(d, course) {
   if (!course.images.length) add("landing", "at least one picture");
   if (d.outcomes.length < 4) add("info", `at least 4 things learners will learn (${d.outcomes.length} so far)`);
   if (!d.units.length) add("syllabus", "at least one syllabus unit");
-  if (course.kind === "provider" && !d.method) add("mode", "how it is taught");
-  if (course.kind === "provider" && d.method === "self-paced" && d.price === "" && !d.planId) add("pricing", "a price or a price plan");
+  if (course.kind === "provider" && !d.methods.includes(d.method)) add("mode", "a learning option");
+  if (course.kind === "provider" && d.methods.includes("self-paced") && d.price === "" && !d.planId) add("pricing", "a price or a price plan for the self-paced option");
   // filed under something no longer offered (retired in Catalogue settings since it was chosen): the API refuses to send it
   for (const entry of course.retired || []) {
     const [, name, word] = entry.match(/^(.*) \(([^)]+)\)$/) || [];
     const key = RETIRED_KEY[word];
-    if (key && d[key] === (course[key] || "")) add(key === "method" ? "mode" : "landing", `another ${word}: ${name} is no longer offered`);
+    if (key && d[key] === (course[key] || "")) add("landing", `another ${word}: ${name} is no longer offered`);
   }
+  for (const m of course.retiredMethods || []) if (d.methods.includes(m)) add("mode", `${methodName(m)} turned off, as it is no longer offered`);
   return out;
 }
 // What the step `key` still needs before Continue moves on, as { field: message } (the same rules as stillNeeded and the API's
@@ -164,12 +171,13 @@ function stepGaps(d, course, key) {
     if (!x.passMark.trim()) e[`passMark${i}`] = "Enter the pass mark, like 70% or 26 out of 40.";
     if (!x.duration.trim()) e[`examDuration${i}`] = "Enter how long it takes, like 45 minutes.";
   });
-  if (key === "mode" && course.kind === "provider" && !d.method) e.method = "Choose how the course is taught.";
-  if (key === "pricing" && course.kind === "provider" && d.method === "self-paced" && d.price === "" && !d.planId) e.price = "Enter the price per learner, or choose a price plan.";
+  if (key === "mode" && course.kind === "provider" && !d.methods.includes(d.method)) e.method = "Choose the primary learning option.";
+  if (key === "pricing" && course.kind === "provider" && d.methods.includes("self-paced") && d.price === "" && !d.planId) e.price = "Enter the self-paced price per learner, or choose a price plan.";
   return e;
 }
 // the draft's field for each kind of catalogue entry the API names as retired ("Name (sub-category)": provider/courses.mts retired)
-const RETIRED_KEY = { category: "category", "sub-category": "subcategory", topic: "topic", level: "level", "delivery method": "method" };
+// (a retired learning option comes in `retiredMethods`: it is turned off in Learning options, not chosen again)
+const RETIRED_KEY = { category: "category", "sub-category": "subcategory", topic: "topic", level: "level" };
 
 // What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together).
 function changes(draft, base, access) {
@@ -183,6 +191,8 @@ function changes(draft, base, access) {
       if (!draft.planId) out.pricePence = draft.price === "" ? null : Math.round(Number(draft.price) * 100);
     }
     else if (["category", "subcategory", "topic"].includes(k)) Object.assign(out, { category: draft.category, subcategory: draft.subcategory, topic: draft.topic || null });
+    // the learning options and the primary one go together (the primary is always one of them)
+    else if (k === "method" || k === "methods") Object.assign(out, { method: draft.method, methods: draft.methods });
     else out[k] = draft[k];
   }
   return out;
@@ -199,7 +209,7 @@ function alreadySaved(patch, fresh, access) {
 // ?tab=), the section on the right. The sections' fields are one draft saved with "Save"; images and SEO save themselves. The
 // header shows the status and performance model, with Preview and the gear (course settings). "Send for approval" sends a draft
 // once nothing required is missing. Leaving with unsaved changes asks first. Course data comes from the API.
-// scope "admin": the same editor for a shared course page in the admin (lib/courseEditorApi.js): no pricing or mode of study,
+// scope "admin": the same editor for a shared course page in the admin (lib/courseEditorApi.js): no pricing or learning options,
 // changes go live on Save, and the page is published from here instead of sent for approval.
 // The page title (ProviderShell's h1): the course's name once it has loaded.
 export function CourseTitle({ courseId, scope = "provider", fallback }) {
@@ -258,7 +268,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     const made = ["created", "copied"].find((k) => getQuery(k));
     if (made) {
       const message = made === "copied"
-        ? "This is a copy, saved as a draft without its dates. Change what's different, such as the mode of study, then send it for approval."
+        ? "This is a copy, saved as a draft without its dates. Change what's different, then send it for approval."
         : "Draft created. Fill in each section, then send it for approval.";
       setToast({ message });
       setSaid(message);
@@ -307,21 +317,24 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const status = sent ? (ep.admin ? "live" : "pending") : course.status;
   const canSubmit = access.full && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
   const isLive = course.status === "live" || course.status === "paused";
+  // the catalogue places it is filed under that are retired (a retired learning option has its own notice)
+  const retiredPlaces = (course.retired || []).filter((e) => !e.endsWith("(learning option)"));
   // a course taught on dates can go live without one, but learners then have no date to book
-  const noDates = course.kind === "provider" && (course.method === "classroom" || course.method === "live-online") && !course.upcomingCohorts;
-  const ticks = sections.map((x) => ({ ...x, label: x.key === "pricing" ? pricingLabel(base.method) : x.label, ok: sectionOk(base, course, x.key) }));
+  const noDates = course.kind === "provider" && waysOf(course).some(isDatedMethod) && !course.upcomingCohorts;
+  const ticks = sections.map((x) => ({ ...x, label: x.key === "pricing" ? pricingLabel(base.methods) : x.label, ok: sectionOk(base, course, x.key) }));
   const steps = ticks.filter((x) => !x.optional);
   // before a course is live, the first required step still to do is marked Next, so a new provider sees where to start
   const nextKey = isLive ? null : steps.find((x) => !x.ok)?.key;
-  // a step's status under its name, from what is saved: Complete (a mode of study names itself and the performance model, which a
-  // new course starts as Bookings: "Classroom · Bookings"), "3 to add", No dates yet, Optional
+  // a step's status under its name, from what is saved: Complete (the learning options name themselves, the primary first, and the
+  // performance model, which a new course starts as Bookings: "Classroom · Live online · Bookings"), "3 to add", No dates yet,
+  // Optional
   const stepStatus = (x) => {
-    if (x.key === "mode" && x.ok) return ep.admin ? methodName(base.method) : `${methodName(base.method)} · ${pw.models[base.model]?.label || ""}`;
+    if (x.key === "mode" && x.ok) return `${waysLabel(base)} · ${pw.models[base.model]?.label || ""}`;
     if (x.ok) return "Complete";
-    if (x.key === "pricing" && base.method !== "self-paced") return "No dates yet";
     if (x.optional) return "Optional";
     const n = x.key === "info" ? Math.max(0, 4 - base.outcomes.length) : Object.keys(stepGaps(base, course, x.key)).length;
-    return n ? `${n} to add` : "";
+    if (n) return `${n} to add`;
+    return x.key === "pricing" ? "No dates yet" : "";
   };
   const done = steps.filter((x) => x.ok).length;
   // the section before and after this one, for the bar under the form (Back, Save and continue)
@@ -349,10 +362,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (!draft.title.trim() || draft.title.trim().length < 3) e.title = "Enter a title of at least 3 characters.";
     if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
     else if (draft.price !== "" && Number(draft.price) > MAX_PRICE) e.price = "Enter a price of £100,000 or less.";
-    // a live self-paced course shows its price (the API refuses it without one)
-    else if (isLive && draft.method === "self-paced" && draft.price === "" && !draft.planId) {
-      e.price = "Enter the price per learner: a live self-paced course needs one.";
-      e.planId = "Choose a price plan: a live self-paced course needs a price.";
+    // a live course offering self-paced shows its price (the API refuses it without one)
+    else if (isLive && draft.methods.includes("self-paced") && draft.price === "" && !draft.planId) {
+      e.price = "Enter the self-paced price: a live course offering self-paced needs one.";
+      e.planId = "Choose a price plan: a live course offering self-paced needs a price.";
     }
     // the same rule as the course page's player and the API (videoEmbed): one YouTube or Vimeo video that can actually play
     if (draft.videoUrl.trim() && !videoEmbed(draft.videoUrl.trim())) e.videoUrl = "Use a link to one YouTube or Vimeo video, starting https://";
@@ -535,7 +548,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
         <div className="rt-pws-ce__headtext">
           <p className="rt-pws-ce__meta">
             <span title={status === "draft" ? (ep.admin ? SHARED_NOTES : STATUS_NOTES).draft : undefined}><Pill tone={COURSE_TONE[status]}>{pw.courseStatuses[status]}</Pill>{status === "draft" && <span className="rt-sr">: {(ep.admin ? SHARED_NOTES : STATUS_NOTES).draft}</span>}</span>
-            <span>{ep.admin ? "Shared course page" : `${pw.models[course.model]?.label} · ${methodName(course.method)}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
+            <span>{ep.admin ? "Shared course page" : `${pw.models[course.model]?.label} · ${waysLabel(course)}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
           </p>
           {ep.admin && <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>}
           {status !== "draft" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
@@ -543,7 +556,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
           {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
           {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-acc__notice -warn"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
-          {isLive && course.retired?.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {course.retired.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
+          {isLive && retiredPlaces.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {retiredPlaces.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
+          {isLive && course.retiredMethods?.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {course.retiredMethods.map(methodName).join(", ")}. Turn {course.retiredMethods.length === 1 ? "it" : "them"} off in Learning options and save.</p>}
           {!ep.admin && isLive && noDates && <p className="rt-acc__note">{NO_DATES_NOTE}</p>}
         </div>
         <div className="rt-pws-ce__headactions">
@@ -649,10 +663,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
                 {sections.filter((x) => needed.some((n) => n.section === x.key)).map((x) => (
                   <li key={x.key}>
                     <div>
-                      <b>{x.key === "pricing" ? pricingLabel(draft.method) : x.label}</b>
+                      <b>{x.key === "pricing" ? pricingLabel(draft.methods) : x.label}</b>
                       <small>{needed.filter((n) => n.section === x.key).map((n) => n.text.charAt(0).toUpperCase() + n.text.slice(1)).join(" · ")}</small>
                     </div>
-                    <div className="rt-adm-list__side"><button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setShowNeed(false); changeTab(x.key, { scroll: true }); }} aria-label={`Go to ${x.key === "pricing" ? pricingLabel(draft.method) : x.label}`}>Go to step</button></div>
+                    <div className="rt-adm-list__side"><button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setShowNeed(false); changeTab(x.key, { scroll: true }); }} aria-label={`Go to ${x.key === "pricing" ? pricingLabel(draft.methods) : x.label}`}>Go to step</button></div>
                   </li>
                 ))}
               </ul>
@@ -1230,8 +1244,9 @@ function FaqSheet({ open, onClose, faq, onSave }) {
 
 // ---- Course pricing --------------------------------------------------------------------------------------------------------
 
-// Skill Saver, and the price: a self-paced course has one price or a price plan; classroom and live online courses are priced on
-// each date, so this step holds their dates (Create cohort opens the same form as the Cohorts page).
+// Skill Saver, and the prices: the self-paced option has one price or a price plan; classroom and live online are priced on each
+// date, so this step holds the course's dates (Create cohort opens the same form as the Cohorts page). The self-paced price saves
+// with the learning options (a live course turning self-paced on needs one); the dates follow the options as saved.
 // Prices include VAT and change straight away, even on a live course.
 function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
   const set = useSet(setDraft);
@@ -1240,7 +1255,10 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
   const [adding, setAdding] = useState(false);
   const ep = useEndpoints();
   const enquiries = course.model === "enquiries";
-  const plans = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && draft.method === "self-paced", retry: false }).data || [];
+  const selfPaced = draft.methods.includes("self-paced");
+  const dated = draft.methods.filter(isDatedMethod);
+  const savedDated = LEARNING_OPTIONS.filter((m) => isDatedMethod(m) && waysOf(course).includes(m));
+  const plans = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && selfPaced, retry: false }).data || [];
   // Tiered is shown once chosen even before a plan is picked. Choosing it puts the flat price aside (so the course has no price
   // until a plan is picked, and the editor knows something changed); picking Flat again clears the plan and brings the price back.
   const [tieredPick, setTieredPick] = useState(Boolean(draft.planId));
@@ -1257,10 +1275,12 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
       set("price")(flatPrice.current);
     }
   };
+  // what each date has of its own: a venue (classroom), a joining link (live online)
+  const own = savedDated.length > 1 ? "venue or joining link, " : savedDated[0] === "classroom" ? "venue, " : "joining link, ";
   return (
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-price-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-price-h">{pricingLabel(draft.method)}</h2>
+        <h2 className="rt-acc__h2" id="rt-pws-ce-price-h">{pricingLabel(draft.methods)}</h2>
         <div className="rt-pws-ce__loyalty">
           <label className="rt-fp__opt">
             <input name="skillSaver" type="checkbox" className="rt-fp__check" checked={draft.skillSaver} disabled={locked} onChange={(e) => set("skillSaver")(e.target.checked)} />
@@ -1269,8 +1289,9 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
           <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link>
         </div>
         <FieldErr id="rt-pws-ce-saver" text={errors.skillSaver} />
-        {draft.method === "self-paced" ? (
-          <>
+        {selfPaced && (
+          <div className="rt-pws-ce__part">
+            {dated.length > 0 && <h3 className="rt-adm-h3">{methodName("self-paced")}</h3>}
             {/* Hurak's pricing mode: Flat (one price) or Tiered (packages from a price plan) */}
             <Choice name="rt-pws-ce-pricing" legend="Pricing" value={tiered ? "tiered" : "flat"} onChange={(v) => !locked && setTiered(v === "tiered")}
               options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
@@ -1293,18 +1314,24 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
                 </div>
               </div>
             )}
-          </>
-        ) : draft.method !== course.method ? (
-          <p className="rt-acc__note">Save the new mode of study first: its dates and prices follow from it.</p>
-        ) : (
-          <>
-            <p className="rt-acc__note">Each date (a cohort) has its own {course.method === "classroom" ? "venue, " : "joining link, "}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live; online booking opens in a later update."}</p>
-            <div className="rt-pws-ce__dates">
-              <p className="rt-pws-ce__datecount">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}` : course.cohortCount ? "No upcoming dates: learners only see a run before its first day" : "No upcoming dates yet"}</p>
-              {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Create cohort</button>}
-              {course.cohortCount > 0 && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>}
-            </div>
-          </>
+          </div>
+        )}
+        {dated.length > 0 && (
+          <div className="rt-pws-ce__part">
+            {selfPaced && <h3 className="rt-adm-h3">Dates</h3>}
+            {!same(dated, savedDated) ? (
+              <p className="rt-acc__note">Save your learning options first: the dates follow from them.</p>
+            ) : (
+              <>
+                <p className="rt-acc__note">Each date (a cohort) has its own {own}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live; online booking opens in a later update."}</p>
+                <div className="rt-pws-ce__dates">
+                  <p className="rt-pws-ce__datecount">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}` : course.cohortCount ? "No upcoming dates: learners only see a run before its first day" : "No upcoming dates yet"}</p>
+                  {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Create cohort</button>}
+                  {course.cohortCount > 0 && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </section>
       <CohortForm open={adding} onClose={() => setAdding(false)} suggestCourseId={course.id} onSaved={() => {
@@ -1316,25 +1343,63 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
   );
 }
 
-// ---- Mode of study ---------------------------------------------------------------------------------------------------------
+// ---- Learning options ------------------------------------------------------------------------------------------------------
 
+// Hurak's learning options: the primary way the course is taught (shown first on its page and in search) and the other ways it is
+// offered, switched on beside it. Choosing a primary switches it on, and the primary can't be switched off. A dated option with
+// upcoming dates stays on until they are cancelled, and a retired one can be switched off but not on (the API checks both).
 function ModeSection({ course, draft, setDraft, access, errors }) {
   const set = useSet(setDraft);
-  const locked = !access.full || course.cohortCount > 0;
+  const lo = pw.learningOptions;
+  const locked = !access.full;
+  const saved = waysOf(course);
+  const retired = course.retiredMethods || [];
+  const upcoming = (m) => course.upcomingByMethod?.[m] || 0;
+  const inOrder = (list) => LEARNING_OPTIONS.filter((m) => list.includes(m));
+  const choosePrimary = (m) => !locked && setDraft((d) => ({ ...d, method: m, methods: inOrder([...d.methods, m]) }));
+  // turning self-paced off clears its price and plan too (the API does the same), so turning it on again starts without one
+  const turn = (m, on) => setDraft((d) => ({ ...d, methods: inOrder(on ? [...d.methods, m] : d.methods.filter((x) => x !== m)), ...(m === "self-paced" && !on ? { price: "", planId: "" } : {}) }));
+  const changed = draft.method !== course.method || !same(draft.methods, inOrder(saved));
+  const isLive = course.status === "live" || course.status === "paused";
+  const needsPrice = isLive && draft.methods.includes("self-paced") && !saved.includes("self-paced") && draft.price === "" && !draft.planId;
 
   return (
     <div className="rt-acc__stack">
       <form className="rt-acc__card rt-pws-course-form" noValidate onSubmit={(e) => e.preventDefault()} aria-labelledby="rt-pws-ce-mode-h">
-        <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">Mode of study</h2>
-        {course.cohortCount > 0 && <p className="rt-acc__notice">This course has dates, so how it is taught can&apos;t change. Remove its dates first, or create a new course for another mode of study.</p>}
-        <CardChoice name="rt-pws-ce-format" legend="How is the course taught?" value={draft.method} onChange={(v) => !locked && set("method")(v)}
-          options={pw.formats.map((f) => ({ value: f.key, label: methodName(f.key), text: f.text, disabled: locked && f.key !== draft.method }))} />
-        <FieldErr id="rt-pws-ce-format" text={errors.method} />
+        <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">{lo.title}</h2>
+        <p className="rt-acc__note">{lo.lead}</p>
+        <CardChoice name="rt-pws-ce-format" legend={lo.primary} value={draft.method} onChange={choosePrimary} error={errors.method}
+          options={pw.formats.map((f) => {
+            // a retired option can stay the primary it already is, but not become one
+            const gone = retired.includes(f.key) && f.key !== course.method;
+            return { value: f.key, label: methodName(f.key), text: gone ? lo.retired : f.text, disabled: (locked && f.key !== draft.method) || gone };
+          })} />
+        <fieldset className="rt-field rt-pws-ce__ways" aria-describedby={`rt-pws-ce-ways-h${errors.methods ? " rt-pws-ce-ways-e" : ""}`}>
+          <legend>{lo.others}</legend>
+          <p className="rt-field__hint" id="rt-pws-ce-ways-h">{lo.othersHint}</p>
+          <FieldErr id="rt-pws-ce-ways" text={errors.methods} />
+          {pw.formats.filter((f) => f.key !== draft.method).map((f) => {
+            const on = draft.methods.includes(f.key);
+            const held = on && saved.includes(f.key) && upcoming(f.key) > 0; // it has upcoming dates: on until they are cancelled
+            const gone = retired.includes(f.key);
+            const note = held ? lo.upcoming(upcoming(f.key)) : gone ? (on ? lo.retiredOn : lo.retired) : "";
+            const noteId = `rt-pws-ce-way-${f.key}-n`;
+            return (
+              <label key={f.key} className={`rt-pws-optcard${on ? " is-on" : ""}${locked || (gone && !on) ? " is-off" : ""}${held ? " is-held" : ""}`}>
+                <input type="checkbox" name="methods" value={f.key} checked={on} disabled={locked || held || (gone && !on)} onChange={(e) => turn(f.key, e.target.checked)} aria-describedby={note ? noteId : undefined} />
+                <span>
+                  <b>{methodName(f.key)}</b>
+                  <small>{f.text}</small>
+                  {note && <small className="rt-pws-ce__waynote" id={noteId}>{note}</small>}
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
         <CardChoice name="rt-pws-ce-model" legend="How do learners reach you?" value={draft.model} onChange={(v) => access.full && set("model")(v)}
-          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: !access.full && value !== draft.model }))} />
-        <FieldErr id="rt-pws-ce-model" text={errors.model} />
-        {draft.method !== course.method && <p className="rt-acc__note">{draft.method === "self-paced" && (course.status === "live" || course.status === "paused") ? "Save to change how the course is taught. A live self-paced course needs its price: add it in the Price step first." : "Save to change how the course is taught."}</p>}
-        {draft.method === "self-paced" && draft.method === course.method && <p className="rt-acc__note">Self-paced courses have no dates: learners start straight away. The course shows on ReadTraining with its price; lessons for self-paced courses come in a later update.</p>}
+          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: !access.full && value !== draft.model }))} error={errors.model} />
+        {draft.methods.includes("self-paced") && <p className="rt-acc__note">{lo.selfPacedNote}</p>}
+        {needsPrice ? <p className="rt-acc__notice -warn">{lo.liveSelfPaced}</p> : changed && <p className="rt-acc__note">{lo.save}</p>}
       </form>
     </div>
   );
