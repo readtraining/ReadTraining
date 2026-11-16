@@ -228,7 +228,7 @@ function LogoForm({ profile, say }) {
           <p className="rt-field__hint">{hintFor("logo")} It is saved as soon as you choose it.</p>
         </div>
       </div>
-      <Confirm open={asking} onClose={() => setAsking(false)} title="Remove your logo?" text="It comes off your public profile and course pages, and your initials show instead. You can upload a logo again at any time." confirmLabel="Remove logo" onConfirm={remove} />
+      <Confirm danger open={asking} onClose={() => setAsking(false)} title="Remove your logo?" text="It comes off your public profile and course pages, and your initials show instead. You can upload a logo again at any time." confirmLabel="Remove logo" onConfirm={remove} />
     </div>
   );
 }
@@ -354,7 +354,7 @@ export function VenuesTab({ say }) {
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : r.unchecked ? "Venue saved. We couldn't check its town just now; we'll try again." : "Venue saved, but we couldn't find its postcode on the map"); }} />
       <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked} busy={remove.isPending}
+      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked} busy={remove.isPending}
         onConfirm={() => remove.mutate({ organisationId, venueId: removing.id }, { onSuccess: () => { setRemoving(null); refresh(); say("Venue deleted"); }, onError: (e) => setBlocked(firstError(e)) })} />
     </div>
   );

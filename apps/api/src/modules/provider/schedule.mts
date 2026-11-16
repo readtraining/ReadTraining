@@ -125,6 +125,25 @@ export const providerVenuesRouter = createTRPCRouter({
     return rows.map((r) => ({ ...r, problem: r.located ? null : (problems.get(r.id) ?? null) }))
   }),
 
+  // The venues one course's dates use (the course overview's Venues tab): each venue its dates (not cancelled) have used, with
+  // how many of them are upcoming, busiest first. A tutor gets only the venues of the dates they teach (as cohorts.list).
+  forCourse: orgProcedure('provider.workspace.open')
+    .input(z.object({ courseId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const all = can(ctx.actor, 'provider.cohorts.view', { organisationId: input.organisationId })
+      const own = !all && can(ctx.actor, 'provider.cohorts.view', { organisationId: input.organisationId, tutorUserId: ctx.user.id })
+      if (!all && !own) throw new TRPCError({ code: 'FORBIDDEN' })
+      await ownCourse(ctx.db, input.organisationId, input.courseId)
+      const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; upcoming: number; dates: number }>(sql`
+        select v.id, v.name, v.street, v.city, v.postcode, v.active,
+               (count(*) filter (where k.ends_on >= ${today()}::date))::int upcoming, count(*)::int dates
+        from public.cohorts k join public.venues v on v.id = k.venue_id
+        where k.course_id = ${input.courseId} and v.organisation_id = ${input.organisationId}::uuid and k.cancelled_at is null
+          ${own ? sql`and k.tutor_user_id = ${ctx.user.id}::uuid` : sql``}
+        group by v.id order by upcoming desc, v.name`)
+      return [...rows]
+    }),
+
   save: orgProcedure('provider.cohorts.edit')
     .input(venueFields.extend({ venueId: z.string().uuid().optional() }))
     .mutation(async ({ ctx, input }) => {

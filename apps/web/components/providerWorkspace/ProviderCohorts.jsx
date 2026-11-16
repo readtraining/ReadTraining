@@ -34,12 +34,12 @@ const MODES = [
   // self-paced courses have no dates, so this tab lists courses, not cohorts (its count is not part of All)
   { key: "self-paced", label: "Self-paced courses" },
 ];
-const WHEN = [
+export const WHEN = [
   { value: "upcoming", label: "Upcoming and in progress" },
   { value: "past", label: "Past" },
   { value: "all", label: "Any date" },
 ];
-const STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
+export const COHORT_STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
 const ONLINE = "Online";
 const PER_PAGE = 10;
 const monthShortFmt = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
@@ -85,8 +85,9 @@ const DEFAULT_SLOT = { from: "09:30", to: "16:30" };
 // The provider's dates, courses, venues and team, from the API (shared by the list, the form and the calendar). Only what this
 // role may see is asked for (the API refuses the rest): a tutor gets the dates they teach and no venue list (only the date form,
 // which they can't open, needs it); roles without dates or courses get an empty list. `may` says which ones the role sees.
+// `courseId`: only that course's dates (the course overview).
 const NONE = { data: [], isError: false, refetch: () => {} };
-export function useSchedule(when = "upcoming") {
+export function useSchedule(when = "upcoming", courseId = null) {
   const access = useProviderAccess();
   const { organisationId } = access;
   const may = {
@@ -96,7 +97,7 @@ export function useSchedule(when = "upcoming") {
     courses: access.can("provider.courses.view"),
   };
   const on = (ok) => ({ enabled: Boolean(organisationId) && ok });
-  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when }, on(may.dates));
+  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when, ...(courseId ? { courseId } : {}) }, on(may.dates));
   const courses = api.provider.courses.list.useQuery({ organisationId }, on(may.courses));
   const venues = api.provider.venues.list.useQuery({ organisationId }, on(may.venues));
   const tutors = api.provider.cohorts.tutors.useQuery({ organisationId }, on(may.team));
@@ -313,24 +314,14 @@ export default function ProviderCohorts() {
                 </thead>
                 <tbody>
                   {pageRows.map((k) => {
-                    const s0 = k.sessions[0];
                     const name = `${k.courseTitle}, ${dayRange(k.startsOn, k.endsOn)}`;
                     const cancelled = Boolean(k.cancelledAt);
                     return (
                       <tr key={k.id}>
-                        <td data-label="Cohort">
-                          <div className="rt-pws-coh__cohort">
-                            <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.startsOn)}</small><b>{k.startsOn.slice(8)}</b></span>
-                            <div>
-                              <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>
-                              <small>{k.venue ? `${k.venue.name}, ${k.venue.city}` : ONLINE}</small>
-                              <small>{dayRange(k.startsOn, k.endsOn)}{s0 ? ` from ${s0.from} to ${s0.to}` : ""}{k.sessions.length > 1 ? ` · ${k.sessions.length} sessions` : ""}</small>
-                            </div>
-                          </div>
-                        </td>
+                        <td data-label="Cohort"><CohortCell k={k} /></td>
                         <td data-label="Status">
                           <span className="rt-pws-coh__pills">
-                            <Pill tone={COHORT_TONE[k.status]}>{STATUSES[k.status]}</Pill>
+                            <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
                             {!k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
                           </span>
                         </td>
@@ -377,6 +368,26 @@ export default function ProviderCohorts() {
   );
 }
 
+// A cohort's first cell, as the Cohorts list shows it: the date tile, then the course (a link to the cohort), the venue or Online,
+// and the dates, times and number of sessions. `forCourse` (one course's cohorts, on the course overview, whose title already
+// names the course): the link reads the dates instead, and the last line has only the times and sessions.
+export function CohortCell({ k, forCourse = false }) {
+  const s0 = k.sessions[0];
+  const range = dayRange(k.startsOn, k.endsOn);
+  const times = s0 ? `${forCourse ? "From" : " from"} ${s0.from} to ${s0.to}` : "";
+  const sessions = k.sessions.length > 1 ? `${times || !forCourse ? " · " : ""}${k.sessions.length} sessions` : "";
+  return (
+    <div className="rt-pws-coh__cohort">
+      <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.startsOn)}</small><b>{k.startsOn.slice(8)}</b></span>
+      <div>
+        <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{forCourse ? range : k.courseTitle}</Link>
+        <small>{k.venue ? `${k.venue.name}, ${k.venue.city}` : ONLINE}</small>
+        {(!forCourse || times || sessions) && <small>{forCourse ? "" : range}{times}{sessions}</small>}
+      </div>
+    </div>
+  );
+}
+
 // booked out of max, as the admin's seat bar
 export function Seats({ booked, max }) {
   const pct = max ? Math.min(100, Math.round((booked / max) * 100)) : 0;
@@ -409,7 +420,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
     cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]) });
   };
   return (
-    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close">
+    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose>
       {cohort && (
         <form className="rt-q__form" onSubmit={submit} noValidate>
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Nobody can book it after this, and it can&apos;t be undone.</p>
@@ -419,8 +430,8 @@ export function CancelSheet({ cohort, onClose, onDone }) {
             <textarea id="rt-coh-cancel-why" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-coh-cancel-why-e" : undefined} autoComplete="off" />
           </div>
           <div className="rt-pws-coh__actions">
-            <button type="submit" className="button -md -purple-1 text-white" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep it</button>
+            <button type="submit" className="button -md -outline-red-3 text-red-3" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Go back</button>
           </div>
         </form>
       )}
@@ -433,14 +444,14 @@ export function DeleteSheet({ cohort, onClose, onDone }) {
   const remove = api.provider.cohorts.remove.useMutation();
   const [error, setError] = useState("");
   return (
-    <Sheet open={Boolean(cohort)} onClose={() => { setError(""); onClose(); }} title="Delete this cohort?" closeLabel="Close">
+    <Sheet open={Boolean(cohort)} onClose={() => { setError(""); onClose(); }} title="Delete this cohort?" closeLabel="Close" noClose>
       {cohort && (
         <div className="rt-q__form">
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, is removed for good.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-pws-coh__actions">
-            <button type="button" className="button -md -purple-1 text-white" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep it</button>
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
           </div>
         </div>
       )}

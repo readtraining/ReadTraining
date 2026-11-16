@@ -10,8 +10,10 @@ import FilterScrollPill from "@/components/courses/FilterScrollPill";
 // sheet on phones. Locks page scroll, traps Tab, closes on Esc and on the backdrop, and puts focus on the title.
 // fallbackFocus: a ref to focus when the opener has gone (it was inside another pop-up that has closed).
 // unsaved: its form has typed changes, so closing it (X, Esc or the backdrop) asks first; a save closes it as usual.
+// noClose: a short confirmation (delete, cancel, remove) shows no ×: its own Cancel button, Esc and the backdrop close it, as
+// Apple's and Material's confirmation dialogs do; forms and longer pop-ups keep the ×.
 export const DISCARD_MESSAGE = "Close without saving? What you typed will be lost.";
-export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, unsaved = false, children }) {
+export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, unsaved = false, noClose = false, children }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const panelRef = useRef(null);
@@ -88,7 +90,7 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
       <div className="rt-dd__panel" role="dialog" aria-modal="true" aria-labelledby="rt-tq-sheet-title" ref={panelRef}>
         <div className="rt-dd__head">
           <h2 id="rt-tq-sheet-title" className="rt-dd__title" tabIndex={-1}>{title}</h2>
-          <button type="button" className="rt-icon-btn" aria-label={closeLabel} onClick={close}><Icon name="close" /></button>
+          {!noClose && <button type="button" className="rt-icon-btn" aria-label={closeLabel} onClick={close}><Icon name="close" /></button>}
         </div>
         <div className="rt-tq-sheet__body rt-pill-scroll" ref={bodyRef}>{children}</div>
         <FilterScrollPill scrollRef={bodyRef} />

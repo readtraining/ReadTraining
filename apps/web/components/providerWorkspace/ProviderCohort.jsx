@@ -299,12 +299,12 @@ export default function ProviderCohort({ cohortId }) {
       <CancelBookingSheet enrolment={cancelling1} onClose={() => setCancelling1(null)} onSaved={(msg) => { setCancelling1(null); setToast({ message: msg }); }} />
       <BulkSheet open={bulk} cohort={k} onClose={() => setBulk(false)} onSaved={(n) => { setBulk(false); setToast({ message: `${n} ${n === 1 ? "student" : "students"} enrolled` }); }} />
 
-      <Sheet open={cancelling} onClose={() => setCancelling(false)} title="Cancel this cohort?" closeLabel="Close">
+      <Sheet open={cancelling} onClose={() => setCancelling(false)} title="Cancel this cohort?" closeLabel="Close" noClose>
         <div className="rt-q__form">
           <p className="rt-acc__note">{k.booked ? `The ${k.booked} booked ${k.booked === 1 ? "learner is" : "learners are"} told straight away and offered another date or a full refund.` : "Nobody is booked yet, so nobody needs to be told."} This can't be undone.</p>
           <div className="rt-pws-coh__actions">
-            <button type="button" className="button -md -purple-1 text-white" onClick={() => { cancelCohort(k.id); setCancelling(false); setToast({ message: "Cohort cancelled" }); }}>Cancel cohort</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setCancelling(false)}>Keep it</button>
+            <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => { cancelCohort(k.id); setCancelling(false); setToast({ message: "Cohort cancelled" }); }}>Cancel cohort</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setCancelling(false)}>Go back</button>
           </div>
         </div>
       </Sheet>

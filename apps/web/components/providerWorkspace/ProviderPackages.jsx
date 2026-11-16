@@ -126,7 +126,7 @@ export default function ProviderPackages() {
 
       {editor_}
       {/* a plan in use only says why it can't go (no "will be deleted" above it) */}
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title={inUse ? "This plan can’t be deleted" : "Delete this plan?"} confirmLabel="Delete plan" busy={remove.isPending}
+      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title={inUse ? "This plan can’t be deleted" : "Delete this plan?"} confirmLabel="Delete plan" busy={remove.isPending}
         text={removing && !inUse ? `${removing.name} and its packages will be deleted. This can’t be undone.` : ""}
         blocked={inUse ? `${usedText(removing.used)} use this plan, so it can’t be deleted. Archive it instead.` : ""}
         onConfirm={() => remove.mutate({ organisationId, planId: removing.id }, { onSuccess: () => { refresh(); say("Plan deleted"); setRemoving(null); }, onError: (er) => { fail(er); setRemoving(null); } })} />

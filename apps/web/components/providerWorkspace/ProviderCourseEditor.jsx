@@ -108,7 +108,8 @@ const draftOf = (c) => {
 };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// whether each section is complete, from the draft (and the saved images and dates)
+// whether each section is complete, from the draft (and the saved images and dates). The API counts a draft's required steps
+// left by the same rules for the Dashboard's to-do list (provider/courses.mts stepsLeft): keep the two the same.
 function sectionOk(d, course, key) {
   if (key === "landing") return Boolean(d.title.trim() && d.summary.trim() && d.description.trim() && d.category && d.subcategory && d.level && course.images.length);
   if (key === "info") return d.outcomes.length >= 4;
@@ -252,12 +253,16 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   useEffect(() => {
     const t = getQuery("tab");
     if (sections.some((x) => x.key === t)) setTab(t);
-    // just made by the new course steps: say so (once; the address loses ?created so a reload doesn't say it again)
-    if (getQuery("created")) {
-      const message = "Draft created. Fill in each section, then send it for approval.";
+    // just made by the new course steps, or copied by the Courses list's Duplicate course: say so (once; the address loses ?created
+    // or ?copied so a reload doesn't say it again)
+    const made = ["created", "copied"].find((k) => getQuery(k));
+    if (made) {
+      const message = made === "copied"
+        ? "This is a copy, saved as a draft without its dates. Change what's different, such as the mode of study, then send it for approval."
+        : "Draft created. Fill in each section, then send it for approval.";
       setToast({ message });
       setSaid(message);
-      setQuery("created", "");
+      setQuery(made, "");
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- read the address once
 
@@ -623,7 +628,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       </div>
 
       {ep.admin ? <SharedGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} /> : <CourseGear course={course} open={gear} onClose={() => setGear(false)} onSaved={saved} onStale={() => { setGear(false); setStale(true); requestAnimationFrame(() => staleRef.current?.focus()); }} />}
-      <Confirm open={withdrawing} onClose={() => setWithdrawing(false)} title="Withdraw your changes?" text="The changes waiting for our team's approval are thrown away, and the live course stays as it is. This can't be undone." confirmLabel="Withdraw changes" onConfirm={withdraw} />
+      <Confirm danger open={withdrawing} onClose={() => setWithdrawing(false)} title="Withdraw your changes?" text="The changes waiting for our team's approval are thrown away, and the live course stays as it is. This can't be undone." confirmLabel="Withdraw changes" onConfirm={withdraw} />
       <Sheet open={preview} onClose={() => setPreview(false)} title="Save your changes first?" closeLabel="Close">
         <div className="rt-q__form">
           <p className="rt-acc__note">The preview is the real course page, so it shows the course as saved. Save your changes to see them in it.</p>
@@ -957,7 +962,7 @@ function ImagesCard({ course, disabled, onSaved, required }) {
         </>
       ) : <EmptyState inCard title="No images yet. Upload one: a course needs an image before it can be sent for approval." />}
 
-      <Sheet open={Boolean(removing)} onClose={() => setRemoving(null)} title={lastOfLive ? "This image can't be removed yet" : "Remove this image?"} closeLabel="Close">
+      <Sheet open={Boolean(removing)} onClose={() => setRemoving(null)} title={lastOfLive ? "This image can't be removed yet" : "Remove this image?"} closeLabel="Close" noClose>
         {removing && (
           <div className="rt-q__form">
             <img src={removing.url} alt="" className="rt-pws-course-removeimg" />
@@ -967,8 +972,8 @@ function ImagesCard({ course, disabled, onSaved, required }) {
               <p className="rt-acc__note">It comes off the course page and is deleted for good. {shown[0]?.id === removing.id && shown.length > 1 ? "The next image becomes the cover." : shown.length === 1 ? "The course then has no image, and needs one before it can be sent for approval." : ""}</p>
             )}
             <div className="rt-adm-cellrow">
-              {!lastOfLive && <button type="button" className="button -md -purple-1 text-white" onClick={doRemove} disabled={busy}>Remove image</button>}
-              <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setRemoving(null)}>{lastOfLive ? "OK" : "Keep it"}</button>
+              {!lastOfLive && <button type="button" className="button -md -outline-red-3 text-red-3" onClick={doRemove} disabled={busy}>Remove image</button>}
+              <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setRemoving(null)}>{lastOfLive ? "OK" : "Cancel"}</button>
             </div>
           </div>
         )}
@@ -1090,7 +1095,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         else set("units")(draft.units.map((u, i) => (i === editing ? rows[0] : u)));
         setSheet(false);
       }} />
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title={removing?.list === "exams" ? "Remove this exam row?" : "Remove this unit?"} text={removing ? `“${removing.name}” comes out of the syllabus when you save the course. Until then you can leave without saving to keep it.` : ""} confirmLabel={removing?.list === "exams" ? "Remove row" : "Remove unit"} onConfirm={() => { const r = removing; setRemoving(null); set(r.list)(draft[r.list].filter((_, j) => j !== r.index)); }} />
+      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title={removing?.list === "exams" ? "Remove this exam row?" : "Remove this unit?"} text={removing ? `“${removing.name}” comes out of the syllabus when you save the course. Until then you can leave without saving to keep it.` : ""} confirmLabel={removing?.list === "exams" ? "Remove row" : "Remove unit"} onConfirm={() => { const r = removing; setRemoving(null); set(r.list)(draft[r.list].filter((_, j) => j !== r.index)); }} />
     </form>
   );
 }
@@ -1180,7 +1185,7 @@ function FaqSection({ draft, setDraft, access, errors }) {
         set("faqs")(typeof editing === "number" ? draft.faqs.map((x, i) => (i === editing ? f : x)) : [...draft.faqs, f]);
         setEditing(undefined);
       }} />
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this question?" text={removing ? `“${removing.name}” comes off the course's FAQs when you save the course.` : ""} confirmLabel="Remove question" onConfirm={() => { const r = removing; setRemoving(null); set("faqs")(draft.faqs.filter((_, j) => j !== r.index)); }} />
+      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title="Remove this question?" text={removing ? `“${removing.name}” comes off the course's FAQs when you save the course.` : ""} confirmLabel="Remove question" onConfirm={() => { const r = removing; setRemoving(null); set("faqs")(draft.faqs.filter((_, j) => j !== r.index)); }} />
     </form>
   );
 }

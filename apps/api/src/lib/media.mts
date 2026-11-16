@@ -24,6 +24,16 @@ export async function mediaUploadUrl(folder: string, contentType: ImageType) {
   return error || !data ? null : { path: data.path, token: data.token }
 }
 
+/** Copies a stored file into `folder` under a new name (a duplicated course gets its own copy of each picture). Returns the new
+ *  path, or null when it couldn't be copied. */
+export async function copyMedia(path: string, folder: string) {
+  if (!supabase) return null
+  const to = `${folder}/${randomUUID()}.${path.slice(path.lastIndexOf('.') + 1)}`
+  const { error } = await supabase.storage.from(COURSE_MEDIA).copy(path, to)
+  if (error) console.error('course-media: could not copy a file', error.message)
+  return error ? null : to
+}
+
 /** Deletes stored files (errors are only reported: a left-over file is harmless). */
 export async function removeMedia(paths: string[]) {
   if (!supabase || !paths.length) return

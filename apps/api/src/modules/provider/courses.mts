@@ -18,6 +18,7 @@ import {
   inArray,
   like,
   or,
+  pricePlans,
   sql,
   subcategories,
   topics,
@@ -28,15 +29,15 @@ import { logActivity } from '../../lib/activity.mjs'
 import { refuseRetired, retiredEntries } from '../../lib/retired.mjs'
 import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
-import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
+import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, copyMedia, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { notify, notifyApprovers, ownerOf, personOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
 import { usablePlan } from './plans.mjs'
 import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's courses (Milestone 2): create one (under a shared course page or on its own), write its page, add images, send it
-// for approval (and withdraw it), pause it, delete it (deleteBlock). Every change is checked against the provider's permission
-// table and logged.
+// for approval (and withdraw it), pause it, duplicate it, delete it (deleteBlock). Every change is checked against the provider's
+// permission table and logged.
 //
 // A live (or paused) course keeps showing while a content edit waits for an admin: the reviewed fields below go into one pending
 // course_revisions row instead of onto the course. Prices, settings and search wording change straight away. A course that isn't
@@ -203,6 +204,15 @@ export async function resolveCatalogue(db: Writer, input: { category?: string; s
   return out
 }
 
+// The catalogue ids for the slugs a change waiting for approval holds, whether or not each is still offered (a duplicated course
+// is a draft: sending it says if one has been retired). The topic stays `topicId` when the change doesn't name one.
+async function subjectOf(db: Writer, c: { category?: unknown; subcategory?: unknown; topic?: unknown }, topicId: string | null) {
+  const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, String(c.category)))
+  const [sub] = cat ? await db.select({ id: subcategories.id }).from(subcategories).where(and(eq(subcategories.slug, String(c.subcategory)), eq(subcategories.categoryId, cat.id))) : []
+  const [top] = sub && c.topic ? await db.select({ id: topics.id }).from(topics).where(and(eq(topics.slug, String(c.topic)), eq(topics.subcategoryId, sub.id))) : []
+  return { categoryId: cat?.id ?? null, subcategoryId: sub?.id ?? null, topicId: c.topic === undefined ? topicId : (top?.id ?? null) }
+}
+
 // A provider's course on a shared course page is the same course as the page, so their subjects must match: the same sub-category,
 // and the same topic when both have one. (A web development course can't be listed on the first aid page.)
 type Subject = { subcategoryId: string | null; topicId: string | null }
@@ -276,6 +286,23 @@ export async function missing(db: Writer, course: typeof courses.$inferSelect) {
   if (!img.n) gaps.push('at least one image')
   if (course.method === 'self-paced' && course.pricePence === null) gaps.push('a price')
   return gaps
+}
+
+// How many of the course editor's required steps a provider course still has to finish (the editor's "3 of 5 required steps
+// complete"; the Dashboard's to-do list shows the rest on each draft). The steps and their rules are the editor's own
+// (ProviderCourseEditor.jsx SECTIONS without the optional ones, ticked by sectionOk from the draft as it is typed): keep the two
+// the same. They ask a little more than `missing`: a course taught on dates finishes its Price step with its first date.
+export type StepFacts = { title: boolean; summary: boolean; description: boolean; filed: boolean; level: boolean; images: boolean; outcomes: number; units: boolean; method: string | null; priced: boolean; upcoming: number }
+export function stepsLeft(f: StepFacts) {
+  const method = f.method || 'classroom' // the editor opens a course with no method on classroom
+  const done = [
+    f.title && f.summary && f.description && f.filed && f.level && f.images, // Course landing page
+    f.outcomes >= 4, // Course information
+    f.units, // Syllabus and exam
+    Boolean(method), // Mode of study
+    method === 'self-paced' ? f.priced : f.upcoming > 0, // Price: its own price or plan, or a date to be priced on
+  ]
+  return done.filter((ok) => !ok).length
 }
 
 // a course as the editors show it: the course, its lists and images, its shared page, any change waiting for approval, and the
@@ -421,15 +448,19 @@ export const hasBeenLive = (course: Pick<Course, 'status' | 'publishedAt'>) => B
  * Why a provider's course can't be deleted now, or null when it can: 'in_review' while it waits for our team's review,
  * 'paused_by_team' while our team has paused it (paused with their reason in status_note, as setPaused's "put back live" rule
  * and the admin's pause decision use it; a course the provider paused has no note), 'in_use' once a learner has booked it (an
- * order) or reviewed it (a review). The gear (courseDetail's `deleteBlock`) and `remove` both ask this, so they never disagree.
+ * order) or reviewed it (a review). The gear (courseDetail's `deleteBlock`), the Courses list (`list`, through blockFor) and
+ * `remove` all ask this, so they never disagree.
  */
-export async function deleteBlock(db: Writer, course: Pick<Course, 'id' | 'status' | 'statusNote'>): Promise<'in_review' | 'paused_by_team' | 'in_use' | null> {
-  if (course.status === 'pending') return 'in_review'
-  if (course.status === 'paused' && course.statusNote) return 'paused_by_team'
+export async function deleteBlock(db: Writer, course: Pick<Course, 'id' | 'status' | 'statusNote'>) {
+  const first = blockFor(course, false)
+  if (first) return first
   const [row] = await db.execute<{ used: boolean }>(sql`
     select exists (select 1 from public.orders where course_id = ${course.id}) or exists (select 1 from public.reviews where course_id = ${course.id}) used`)
-  return row?.used ? 'in_use' : null
+  return blockFor(course, Boolean(row?.used))
 }
+/** deleteBlock's rule, given whether a learner has booked or reviewed the course (`used`). */
+const blockFor = (course: Pick<Course, 'status' | 'statusNote'>, used: boolean): 'in_review' | 'paused_by_team' | 'in_use' | null =>
+  course.status === 'pending' ? 'in_review' : course.status === 'paused' && course.statusNote ? 'paused_by_team' : used ? 'in_use' : null
 
 const DELETE_REFUSED = {
   in_review: 'This course is waiting for our team’s review. Withdraw it from review first (in the course settings), then you can delete it.',
@@ -523,20 +554,34 @@ async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string |
 }
 
 export const providerCoursesRouter = createTRPCRouter({
-  // Every course of this provider, newest first, with what the course list shows.
+  // Every course of this provider, newest first, with what the course list shows: when it was last sent for approval
+  // (`submittedAt`); a draft's editor steps still to finish (`stepsLeft`, null on the others); and for its ⋮ menu, Pause or Put
+  // back live, and Delete with deleteBlock's reason when it can't be deleted.
   list: orgProcedure('provider.courses.view').query(async ({ ctx, input }) => {
-    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: string; method: string | null; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; parent: string | null; cover: string | null; upcoming: number; pending_change: boolean }>(sql`
-      select c.id, c.title, c.slug, c.status, c.method, c.model, c.is_public, c.listed, c.updated_at,
+    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; outcomes: number; has_units: boolean; priced: boolean; used: boolean }>(sql`
+      select c.id, c.title, c.slug, c.status, c.status_note, c.published_at, c.method, c.model, c.is_public, c.listed, c.updated_at, c.submitted_at,
              (select slug from public.categories where id = c.category_id) category,
              (select slug from public.subcategories where id = c.subcategory_id) subcategory,
              (select p.title from public.courses p where p.id = c.parent_id) parent,
              (select i.path from public.course_images i where i.course_id = c.id order by i.position limit 1) cover,
              (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) upcoming,
-             exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
+             exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change,
+             btrim(c.title) <> '' has_title, coalesce(btrim(c.summary), '') <> '' has_summary, coalesce(btrim(c.description), '') <> '' has_description,
+             c.category_id is not null and c.subcategory_id is not null filed, c.level is not null has_level, cardinality(c.outcomes) outcomes,
+             exists (select 1 from public.course_units u where u.course_id = c.id) has_units, c.price_pence is not null or c.plan_id is not null priced,
+             exists (select 1 from public.orders o where o.provider_id = c.organisation_id and o.course_id = c.id) or exists (select 1 from public.reviews v where v.course_id = c.id) used
       from public.courses c
       where c.organisation_id = ${input.organisationId}::uuid and c.kind = 'provider'
       order by c.updated_at desc`)
-    return rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, status: r.status, method: r.method, model: r.model, category: r.category, subcategory: r.subcategory, isPublic: r.is_public, listed: r.listed, updatedAt: r.updated_at, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, pendingChange: r.pending_change }))
+    return rows.map((r) => ({
+      id: r.id, title: r.title, slug: r.slug, status: r.status, statusNote: r.status_note, publishedAt: r.published_at, method: r.method, model: r.model, category: r.category, subcategory: r.subcategory, isPublic: r.is_public, listed: r.listed,
+      // ISO times: the database's own text form ("2026-11-14 11:46:40.1+00") isn't a date every browser reads
+      updatedAt: new Date(r.updated_at).toISOString(), submittedAt: r.submitted_at ? new Date(r.submitted_at).toISOString() : null, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, pendingChange: r.pending_change,
+      stepsLeft: r.status === 'draft'
+        ? stepsLeft({ title: r.has_title, summary: r.has_summary, description: r.has_description, filed: r.filed, level: r.has_level, images: Boolean(r.cover), outcomes: r.outcomes, units: r.has_units, method: r.method, priced: r.priced, upcoming: r.upcoming })
+        : null,
+      deleteBlock: blockFor({ status: r.status, statusNote: r.status_note }, r.used),
+    }))
   }),
 
   get: orgProcedure('provider.courses.view')
@@ -605,6 +650,97 @@ export const providerCoursesRouter = createTRPCRouter({
         await log(tx, ctx, input.organisationId, 'course.created', made.id, { title: input.title, parentId: input.parentId ?? null })
         return { id: made.id }
       })
+    }),
+
+  // The Courses list's "Duplicate course": a new draft, "Copy of …", with the course as its editor shows it (a change waiting for
+  // approval included): its words, lists, catalogue place, level, mode of study, model, Skill Saver, price, search words, shared
+  // course page (while that page is live and still the same subject) and pictures with their descriptions. Not its dates, orders,
+  // reviews, changes or status. This is how a provider offers the same course another way: change the copy's mode of study, then
+  // send it for approval. Each picture is copied into the new course's own folder, so deleting either course (or removing a
+  // picture from one) never touches the other's files.
+  duplicate: orgProcedure('provider.courses.edit')
+    .input(z.object({ courseId: id }))
+    .mutation(async ({ ctx, input }) => {
+      const { organisationId } = input
+      const source = await ownCourse(ctx.db, organisationId, input.courseId)
+      const [pics] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, source.id))
+      // copying pictures stores new files: counted with the uploads
+      if (pics.n) {
+        await limit(ctx, 'uploadHour')
+        await limit(ctx, 'uploadDay')
+      }
+      const copied: string[] = [] // the new files, removed again if the copy isn't saved
+      try {
+        return await ctx.db.transaction(async (tx) => {
+          // the course is locked while it is copied, so a change saved at the same moment (a picture removed and its file deleted)
+          // waits for the copy, and the copy is of one version
+          const now = await lockCourse(tx, source.id)
+          if (!now) throw notFound()
+          const [[rev], units, exams, faqs, images] = await Promise.all([
+            tx.select({ content: courseRevisions.content }).from(courseRevisions).where(and(eq(courseRevisions.courseId, now.id), eq(courseRevisions.status, 'pending'))),
+            tx.select().from(courseUnits).where(eq(courseUnits.courseId, now.id)).orderBy(asc(courseUnits.position)),
+            tx.select().from(courseExams).where(eq(courseExams.courseId, now.id)).orderBy(asc(courseExams.position)),
+            tx.select().from(courseFaqs).where(eq(courseFaqs.courseId, now.id)).orderBy(asc(courseFaqs.position)),
+            tx.select().from(courseImages).where(eq(courseImages.courseId, now.id)).orderBy(asc(courseImages.position)),
+          ])
+          const p = (rev?.content ?? {}) as Partial<Record<(typeof REVIEWED)[number], unknown>>
+          const pick = <T,>(k: (typeof REVIEWED)[number], saved: T) => (p[k] !== undefined ? (p[k] as T) : saved)
+          const subject = p.category !== undefined ? await subjectOf(tx, p, now.topicId) : { categoryId: now.categoryId, subcategoryId: now.subcategoryId, topicId: now.topicId }
+          // the shared course page stays only while it is live and the same subject (as choosing one in the gear requires)
+          const [page] = now.parentId ? await tx.select({ subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(and(eq(courses.id, now.parentId), eq(courses.kind, 'shared'), eq(courses.status, 'live'))) : []
+          // an archived price plan isn't chosen again: the copy then has no price until one is set
+          const [plan] = now.planId ? await tx.select({ archivedAt: pricePlans.archivedAt }).from(pricePlans).where(eq(pricePlans.id, now.planId)) : []
+          const keepPlan = Boolean(plan && !plan.archivedAt)
+          const title = `Copy of ${pick('title', now.title)}`.slice(0, 80).trim()
+          const [made] = await tx
+            .insert(courses)
+            .values({
+              kind: 'provider',
+              organisationId,
+              parentId: page && sameSubject(page, subject) ? now.parentId : null,
+              slug: await courseSlug(tx, title),
+              title,
+              summary: pick('summary', now.summary),
+              description: pick('description', now.description),
+              audience: pick('audience', now.audience),
+              entryRequirements: pick('entryRequirements', now.entryRequirements),
+              outcomes: pick('outcomes', now.outcomes),
+              features: pick('features', now.features),
+              ...subject,
+              level: pick('level', now.level),
+              method: now.method,
+              model: now.model,
+              skillSaver: now.skillSaver,
+              isPublic: now.isPublic,
+              listed: now.listed,
+              pricePence: now.planId && !keepPlan ? null : now.pricePence,
+              planId: keepPlan ? now.planId : null,
+              videoUrl: pick('videoUrl', now.videoUrl) || null,
+              seoTitle: now.seoTitle,
+              seoDescription: now.seoDescription,
+              seoKeywords: now.seoKeywords,
+              createdBy: ctx.user.id,
+            })
+            .returning({ id: courses.id })
+          await writeLists(tx, made.id, {
+            units: pick('units', units.map((u) => ({ title: u.title, body: u.body }))),
+            exams: pick('exams', exams.map((e) => ({ unit: e.unit, passMark: e.passMark, duration: e.duration }))),
+            faqs: pick('faqs', faqs.map((f) => ({ question: f.question, answer: f.answer }))),
+          })
+          if (images.length) {
+            const folder = imageFolder({ ...now, id: made.id })
+            const paths = await Promise.all(images.map((i) => copyMedia(i.path, folder)))
+            copied.push(...paths.filter((x): x is string => Boolean(x)))
+            if (copied.length < images.length) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'We couldn’t copy the course’s pictures. Please try again.' })
+            await tx.insert(courseImages).values(images.map((i, n) => ({ courseId: made.id, position: i.position, path: paths[n]!, alt: i.alt })))
+          }
+          await log(tx, ctx, organisationId, 'course.duplicated', made.id, { from: now.id, title })
+          return { id: made.id }
+        })
+      } catch (error) {
+        await removeMedia(copied)
+        throw error
+      }
     }),
 
   // Save the editor. Any of the fields; the lists replace what was there. On a live or paused course the reviewed content waits

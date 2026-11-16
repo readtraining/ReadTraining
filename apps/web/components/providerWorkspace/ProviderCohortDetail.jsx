@@ -11,13 +11,11 @@ import { formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { COHORT_TONE, Loading, Pill } from "./providerParts";
-import { CancelSheet, CohortForm, DeleteSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
+import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
 
 // One run of a course (Hurak's Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
 // whether it takes bookings and its tutor, with Edit, Cancel and Delete. Learners appear under it once booking opens (a later
 // milestone); until then the list is empty.
-
-const STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
 
 const useCohort = (cohortId) => {
   const { organisationId } = useProviderAccess();
@@ -73,7 +71,7 @@ export default function ProviderCohortDetail({ cohortId }) {
       <section className="rt-acc__card" aria-labelledby="rt-coh-det-h">
         <div className="rt-acc__cardhead rt-adm-cardhead">
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
-          <Pill tone={COHORT_TONE[status]}>{STATUSES[status]}</Pill>
+          <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
         </div>
         <dl className="rt-pws-coh__details">
           <div><dt>Course</dt><dd><Link href={`/provider/courses/${k.courseId}`} className="rt-adm-strong">{k.courseTitle}</Link><small>{methodName(k.method)}</small></dd></div>

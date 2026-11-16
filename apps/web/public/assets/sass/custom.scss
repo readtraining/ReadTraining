@@ -5820,9 +5820,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-table th:first-child, .rt-cx-table td:first-child { padding-left: 20px; }
 .rt-cx-table th:last-child, .rt-cx-table td:last-child { padding-right: 20px; }
 .rt-cx-table .-num { text-align: right; font-variant-numeric: tabular-nums; }
-/* fixed columns from 1360px so long titles truncate instead of squeezing the course column; the row action is a chevron button
-   (its name and tooltip say "Edit / manage course"), and the course title opens the course too */
-@media (min-width: 1360px) {
+/* fixed columns where the page column is 1015px or wider (a 1360px window beside the menu at its default width; the column is the
+   rt-pws-main container, from 992px) so long titles truncate instead of squeezing the course column; the row opens its course (its title
+   link), and its ⋮ menu (RowMenu) holds the course's actions */
+@container rt-pws-main (width >= 1015px) {
   .rt-cx-table { table-layout: fixed; }
   .rt-cx-table th:nth-child(1) { width: 27%; }
   .rt-cx-table th:nth-child(2) { width: 19%; }
@@ -5832,8 +5833,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-cx-table th:nth-child(7) { width: 8%; }
   .rt-cx-table th:nth-child(8) { width: 72px; }
   .rt-cx-table th, .rt-cx-table td:not(.-act) { overflow: hidden; text-overflow: ellipsis; }
-  .rt-cx-table .rt-cx-manage { justify-content: center; width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 10px; }
-  .rt-cx-table .rt-cx-manage__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 .rt-cx-table .-act { white-space: nowrap; text-align: right; }
 .rt-cx-table tbody tr { transition: background-color 120ms ease; }
@@ -5850,11 +5849,11 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-course__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-cx-rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 .rt-cx-rating i { color: var(--color-yellow-1); }
-.rt-cx-manage { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); font-size: var(--rt-text-xs); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
-@media (hover: hover) and (pointer: fine) { .rt-cx-manage:hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; } }
-.rt-cx-manage:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-/* below 1360px (the table needs the room) each course becomes a labelled block, as the other workspace tables do */
-@media (max-width: 1359px) {
+/* the ⋮ menu: Delete course (red) sits apart from the other actions */
+.rt-cx-table .rt-rowmenu__list li:has(> .-danger) { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--rt-c-line); }
+/* narrower than that (the table needs the room), and below 992px, each course becomes a labelled block, as the other workspace
+   tables do */
+@mixin rt-cx-stacked {
   .rt-cx-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-cx-table, .rt-cx-table tbody, .rt-cx-table tr, .rt-cx-table td { display: block; width: 100%; }
   .rt-cx-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
@@ -5862,16 +5861,18 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-cx-table td, .rt-cx-table td:first-child, .rt-cx-table td:last-child { padding: 0; border: 0; border-radius: 0; text-align: left; }
   .rt-cx-table tbody tr:hover > td { background: none; }
   .rt-cx-table td::before { content: attr(data-label); display: block; margin-bottom: 2px; font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
-  .rt-cx-table td[data-label="Course"], .rt-cx-table td.-act { grid-column: 1 / -1; }
+  /* the course across the top, its ⋮ menu at the top right beside it */
+  .rt-cx-table td[data-label="Course"] { grid-row: 1; grid-column: 1 / -1; padding-right: 56px; }
+  .rt-cx-table td.-act { grid-row: 1; grid-column: -2 / -1; justify-self: end; width: auto; }
   .rt-cx-table td.-num { text-align: left; }
   .rt-cx-table td[data-label="Course"]::before, .rt-cx-table td.-act::before { content: none; }
-  .rt-cx-table td.-act { width: 100%; }
-  .rt-cx-manage { width: 100%; justify-content: center; }
 }
+@media (max-width: 991px) { @include rt-cx-stacked; }
+@container rt-pws-main (width < 1015px) { @include rt-cx-stacked; }
 @media (max-width: 575px) {
   .rt-cx-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (prefers-reduced-motion: reduce) { .rt-cx__more, .rt-cx-table tbody tr, .rt-cx-manage { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-cx__more, .rt-cx-table tbody tr { transition: none; } }
 .rt-cl-promo { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; padding: 20px 24px; border: 1px dashed color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); border-radius: var(--rt-radius-card); background: var(--rt-c-brand-soft); }
 .rt-cl-promo > div { flex: 1 1 260px; }
 .rt-cl-promo__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-surface); color: var(--rt-c-brand); }
@@ -5939,8 +5940,22 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__loyalty .rt-fp__opt { margin: 0; }
 .rt-pws-ce__plans { margin: 0; }
 .rt-pws-gear__check { margin: 0; }
-.rt-pws-gear__danger { padding-top: 16px; border-top: 1px solid var(--rt-c-line); }
+/* the course settings pop-up (CourseGear): settings in groups with small headings (Visibility, Sharing, Availability), each
+   action button the size of its label beside what it acts on, Delete in its own danger zone at the end, and Done at the bottom
+   right (the pop-ups' sticky button row); on phones the row buttons take the full width */
+.rt-pws-gear__sec { display: grid; gap: 14px; padding-top: 20px; border-top: 1px solid var(--rt-c-line); }
+.rt-pws-gear__sec .rt-field, .rt-pws-gear__sec .rt-pws-choice { margin: 0; }
+.rt-pws-gear__h { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; line-height: 1.4; color: var(--rt-c-text); }
+.rt-pws-gear__h.-danger { color: var(--rt-c-error); }
+.rt-pws-gear__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.rt-pws-gear__row > .rt-acc__note { flex: 1 1 240px; min-width: 0; margin: 0; }
+.rt-pws-gear__btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.rt-pws-gear__more { justify-self: start; }
+.rt-pws-gear__danger { display: grid; gap: 10px; padding: 16px; border: 1px solid color-mix(in srgb, var(--rt-c-error) 30%, var(--rt-c-line)); border-radius: var(--rt-radius-control); background: color-mix(in srgb, var(--rt-c-error) 3%, var(--rt-c-surface)); }
 .rt-pws-gear__danger .rt-acc__note { margin: 0; }
+@media (max-width: 575px) {
+  .rt-pws-gear__row > .button, .rt-pws-gear__btns, .rt-pws-gear__btns .button { flex: 1 1 100%; justify-content: center; }
+}
 @media (prefers-reduced-motion: reduce) { .rt-pws-ce__step, .rt-pws-ce__gear { transition: none; } }
 /* editor: forms */
 .rt-pws-course-form { display: grid; gap: 20px; }
@@ -6103,6 +6118,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__peoplehead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 /* Phase 1 (Hurak cohort operations). RowMenu: a row's "…" menu, in the site's dropdown panel look. */
 .rt-rowmenu { position: relative; display: inline-flex; }
+/* a row whose ⋮ menu is open sits above the rows after it, so their own lifted buttons (kept above the whole-row link) never
+   draw over the open menu */
+:is(.rt-adm-table, .rt-cx-table) tbody tr:has(.rt-rowmenu.is-open) { position: relative; z-index: 30; }
 .rt-rowmenu__btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: 11px; letter-spacing: 1px; color: var(--rt-c-text); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
 .rt-rowmenu__btn:hover, .rt-rowmenu.is-open .rt-rowmenu__btn { border-color: var(--rt-c-text); }
 .rt-rowmenu__btn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
@@ -6832,6 +6850,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-pws .rt-adm-table tbody tr:has(a.rt-adm-strong):hover { background: var(--rt-c-soft); }
   .rt-pws .rt-adm-table tbody a.rt-adm-strong::after, .rt-pws .rt-cx-table tbody a.rt-cx-course__title::after { content: ""; position: absolute; inset: 0; }
   .rt-pws :is(.rt-adm-table, .rt-cx-table) tbody td :is(button, a, input, label, .rt-rowmenu):not(a.rt-adm-strong, a.rt-cx-course__title) { position: relative; z-index: 1; }
+  /* an open ⋮ menu stays over the rows below it (their own menus and links are on that same level) */
 }
 /* tap targets of 24px or more (WCAG 2.2): calendar chips, and on phones (rows stacked into cards, not one link) each row's record link */
 .rt-pws .rt-pws-cal__chip { min-height: 24px; }
@@ -6850,6 +6869,26 @@ body.rt-pws-open .rt-dd.rt-tq-sheet:not(.rt-pws-coh__sheet):not(.rt-pws-pkg__she
 body.rt-pws-open .rt-dd.rt-pws-set__confirm .rt-dd__panel { width: 480px; }
 body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form, .rt-pws-set__confirmbody) > :is(.rt-adm-cellrow, .rt-pws-set__actions, .rt-pws-coh__formfoot):last-child { position: sticky; bottom: 0; z-index: 2; display: flex; flex-direction: row-reverse; flex-wrap: wrap; justify-content: flex-start; background: var(--rt-c-surface); }
 body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form) > button.rt-btn-block:last-child { position: sticky; bottom: 0; z-index: 2; }
+/* the button row is a proper footer: it reaches the pop-up's edges (over the body's 18px padding), with a line above it and
+   white below, so the content scrolls cleanly underneath instead of showing around and under the buttons */
+body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form, .rt-pws-set__confirmbody) > :is(.rt-adm-cellrow, .rt-pws-set__actions, .rt-pws-coh__formfoot):last-child { bottom: -18px; margin: 4px -18px -18px; padding: 14px 18px 18px; border-top: 1px solid var(--rt-c-line); }
+/* the pop-ups' buttons at the workspace's sizes: 44px like its fields (the template's 60px -md is for the public site's big
+   calls to action), 40px for the small ones in rows (Copy, Pause course) */
+body.rt-pws-open .rt-dd .button.-md { height: 44px; padding: 0 24px; font-size: 15px; line-height: 1.2; }
+
+/* buttons in the provider workspace's pop-ups (confirmations and forms): only the main action stands out. The secondary
+   (Cancel, Go back, Copy, Pause course) keeps the site's purple outline and only takes a light purple tint on hover; a solid
+   button darkens a shade on hover instead of the template's flip to an outline (and an outline button no longer fills in); the
+   red outline (every Delete and Remove, in the gear and in its confirmation) tints on hover; and a switched-off button looks switched off (Delete course before its
+   name is typed) */
+body.rt-pws-open .rt-dd .button { transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease; }
+body.rt-pws-open .rt-dd .button.-outline-purple-1:hover:not(:disabled) { border-color: var(--rt-c-brand); background-color: var(--rt-c-brand-soft) !important; color: var(--rt-c-brand) !important; }
+body.rt-pws-open .rt-dd .button.-purple-1:hover:not(:disabled) { border-color: color-mix(in srgb, var(--rt-c-brand) 86%, black); background-color: color-mix(in srgb, var(--rt-c-brand) 86%, black) !important; color: var(--rt-c-surface) !important; }
+body.rt-pws-open .rt-dd .button.-outline-red-3:disabled { background-color: transparent !important; color: var(--rt-c-error) !important; }
+body.rt-pws-open .rt-dd .button.-outline-red-3:hover:not(:disabled) { border-color: var(--rt-c-error); background-color: color-mix(in srgb, var(--rt-c-error) 8%, var(--rt-c-surface)) !important; color: var(--rt-c-error) !important; }
+body.rt-pws-open .rt-dd .button:disabled { opacity: 0.4; cursor: not-allowed; }
+body.rt-pws-open .rt-dd .button.-purple-1:disabled { background-color: var(--rt-c-brand) !important; color: var(--rt-c-surface) !important; }
+body.rt-pws-open .rt-dd .button.-outline-purple-1:disabled { background-color: transparent !important; color: var(--rt-c-brand) !important; }
 
 /* ---- the course editor: layout ---- */
 .rt-pws-cepage { max-width: 1120px; }
@@ -6858,6 +6897,20 @@ body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form) > button.rt-bt
 .rt-pws-ce__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-pws-ce__head :is(.rt-acc__note, .rt-acc__notice) { margin: 0; }
 .rt-pws-ce__headactions { display: flex; align-items: center; gap: 8px; }
+/* a course's overview (ProviderCourseOverview): the head card's cover picture, then the status and notes, then Edit course and
+   Preview; on phones they stack, the buttons full width */
+.rt-pws-cov__head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 24px; }
+.rt-pws-cov__img { flex: none; width: 160px; aspect-ratio: 16 / 10; border-radius: var(--rt-radius-sm); object-fit: cover; background: var(--rt-c-soft); }
+.rt-pws-cov__img.-none { display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--rt-c-line); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
+.rt-pws-cov__text { display: grid; flex: 1 1 280px; gap: 8px; min-width: 0; }
+.rt-pws-cov__text .rt-acc__note { margin: 0; }
+.rt-pws-cov__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@media (max-width: 575px) {
+  .rt-pws-cov__head { flex-direction: column; align-items: stretch; }
+  .rt-pws-cov__img { width: 100%; }
+  .rt-pws-cov__text { flex-basis: auto; }
+  .rt-pws-cov__actions .button { flex: 1 1 100%; justify-content: center; }
+}
 /* the step list scrolls inside itself when it is taller than the screen, with the site's scroll pill (FilterScrollPill), as the sidebar */
 @media (min-width: 1200px) { .rt-pws-ce__nav { max-height: calc(100dvh - 104px); overflow-y: auto; } }
 .rt-pws-ce__main { display: grid; gap: var(--rt-gap); }
@@ -7647,11 +7700,19 @@ html { scrollbar-gutter: stable; }
 .rt-adm-open .rt-tq-sheet .button.-md { height: 40px; padding: 0 16px; font-size: 14px; }
 .rt-adm-open .rt-tq-sheet .rt-field select, .rt-adm-open .rt-tq-sheet .rt-field input:not([type="checkbox"]):not([type="radio"]),
 .rt-adm-open .rt-tq-sheet .rt-field-dd .rt-cat-dd__trigger, .rt-adm-open .rt-tq-sheet .rt-datefield__btn { height: 44px; }
-/* C4: a page's sections are an underline tab bar (the status filters stay pills) */
-.rt-adm--platform .rt-adm-sections { gap: 4px; border-bottom: 1px solid var(--rt-c-line); }
-.rt-adm--platform .rt-adm-sections .rt-tr__filter { height: 40px; margin-bottom: -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--rt-c-muted); box-shadow: none; }
-.rt-adm--platform .rt-adm-sections .rt-tr__filter:hover { color: var(--rt-c-text); }
-.rt-adm--platform .rt-adm-sections .rt-tr__filter.is-on { border-bottom-color: var(--rt-c-brand); background: none; color: var(--rt-c-brand); }
+/* C4: a page's sections are an underline tab bar (the status filters stay pills); the provider workspace's too (a course's overview) */
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections { gap: 4px; border-bottom: 1px solid var(--rt-c-line); }
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections .rt-tr__filter { height: 40px; margin-bottom: -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--rt-c-muted); box-shadow: none; }
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections .rt-tr__filter:hover { color: var(--rt-c-text); }
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections .rt-tr__filter.is-on { border-bottom-color: var(--rt-c-brand); background: none; color: var(--rt-c-brand); }
+/* in the provider workspace the tabs stay on one row that scrolls sideways when it is too narrow, without the browser's bar (as
+   .rt-pill-scroll); the line under them is drawn inside the row, so the chosen tab's underline isn't cut off by the scrolling */
+.rt-pws .rt-adm-sections { flex-wrap: nowrap; overflow-x: auto; border-bottom: 0; box-shadow: inset 0 -1px 0 var(--rt-c-line); }
+.rt-pws .rt-adm-sections .rt-tr__filter { flex: none; margin-bottom: 0; }
+@media (forced-colors: none) {
+  .rt-pws .rt-adm-sections { scrollbar-width: none; }
+  .rt-pws .rt-adm-sections::-webkit-scrollbar { display: none; }
+}
 /* Financial settings: the three fees side by side (Payout day no longer alone in half a row) */
 @media (min-width: 992px) { .rt-adm--platform .rt-adm-fees .rt-adm-fees__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 /* Platform settings: 16px after the notice, 20px after each counter, and the Google preview stays in view beside the fields */

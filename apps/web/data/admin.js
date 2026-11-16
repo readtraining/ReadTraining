@@ -271,6 +271,7 @@ export const admin = {
       "course.paused": "Paused a course",
       "course.resumed": "Put a course live again",
       "course.deleted": "Deleted a course",
+      "course.duplicated": "Duplicated a course",
       "cohort.created": "Added a course date",
       "cohort.updated": "Changed a course date",
       "cohort.bookings_off": "Stopped bookings on a course date",
