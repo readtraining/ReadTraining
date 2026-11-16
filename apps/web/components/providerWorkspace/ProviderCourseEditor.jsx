@@ -261,8 +261,12 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- read the address once
 
-  // the course as loaded again has its new status: show that
-  useEffect(() => setSent(false), [course?.status]);
+  // the course as loaded again has its new status: show that (and once it is back with the provider, withdrawn from review in
+  // the gear, no "Sent for approval" note)
+  useEffect(() => {
+    setSent(false);
+    if (course?.status === "draft" || course?.status === "changes") setSentNote("");
+  }, [course?.status]);
 
   const dirty = Boolean(draft && base && !same(draft, base));
   // the course as loaded: the first time, or a newer version (another tab or a colleague) while nothing is unsaved here, fills

@@ -13,6 +13,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { Choice, Toggle } from "./providerParts";
 import { pagesForSubject } from "@/lib/taxonomy";
 import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
+import { contactHref } from "@/lib/forms";
 
 // The course editor's self-saving parts: SEO settings, and the gear's course settings (a provider's course, or a shared course
 // page in the admin). Each saves on its own (SEO with its button, the gear as you choose) and reports back through onSaved for the
@@ -104,9 +105,20 @@ export function SeoPanel({ course, onSaved, formId, onState }) {
   );
 }
 
+// The name typed to confirm deleting a course that has been live: its title, ignoring spaces around it and case (the API checks
+// the same, sameName in modules/provider/courses.mts).
+const sameName = (typed, title) => typed.trim().toLowerCase() === title.trim().toLowerCase();
+// our team's reason for pausing a course, as one sentence (it may or may not end with a full stop)
+const teamReason = (note = "") => {
+  const t = note.trim().replace(/\.+$/, "");
+  return /[!?]$/.test(t) ? t : `${t}.`;
+};
+
 // The gear on every editor page (Hurak's course settings): who can enrol (public or private), the address to share, the shared
-// course page it is listed under, showing it in ReadTraining's search, pausing a live course, and deleting a course that has never
-// been live. Each choice saves at once.
+// course page it is listed under, showing it in ReadTraining's search, pausing a live course, and deleting it (the API's
+// deleteBlock says when it can't be: waiting for review, it offers Withdraw from review; paused by our team, it says so with
+// their reason and a link to contact us, with no Delete or Put back live; booked or reviewed, Pause). A course that has been live
+// is deleted only with its name typed. Each choice saves at once.
 export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const router = useRouter();
   // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
@@ -115,11 +127,16 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const utils = api.useUtils();
   const update = api.provider.courses.update.useMutation();
   const pause = api.provider.courses.setPaused.useMutation();
+  const withdraw = api.provider.courses.withdrawReview.useMutation();
   const remove = api.provider.courses.remove.useMutation();
   const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: open && Boolean(organisationId) });
   const [confirm, setConfirm] = useState(false);
   const [askPause, setAskPause] = useState(false); // "Pause course" asks first
   const [error, setError] = useState("");
+  const [typed, setTyped] = useState(""); // the course name, typed to confirm deleting a course that has been live
+  const [nameError, setNameError] = useState("");
+  const nameRef = useRef(null);
+  const wasLive = Boolean(course.publishedAt) || course.status === "live" || course.status === "paused";
   const edit = can("provider.courses.edit");
   const [url, setUrl] = useState("");
   React.useEffect(() => setUrl(`${window.location.origin}/course/${course.slug}`), [course.slug]);
@@ -153,16 +170,41 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
       onSaved("Press Ctrl+C to copy the link");
     }
   };
+  const doWithdraw = () => {
+    setError("");
+    withdraw.mutate({ organisationId, courseId: course.id, seen: ep?.seen() }, {
+      onSuccess: (r) => { ep?.keep(r); refresh(); onSaved("Withdrawn from review. The course is a draft again"); },
+      onError: fail,
+    });
+  };
   const doRemove = () => {
     setError("");
-    remove.mutate({ organisationId, courseId: course.id }, { onSuccess: () => { utils.provider.courses.list.invalidate({ organisationId }); leaveWithoutAsking(() => router.push("/provider/courses")); }, onError: fail });
+    setNameError("");
+    remove.mutate({ organisationId, courseId: course.id, ...(wasLive ? { confirmTitle: typed } : {}) }, {
+      onSuccess: () => { utils.provider.courses.list.invalidate({ organisationId }); leaveWithoutAsking(() => router.push("/provider/courses")); },
+      onError: (e) => {
+        const { fields, general } = errorsFrom(e);
+        if (fields.confirmTitle) {
+          setNameError(fields.confirmTitle);
+          return requestAnimationFrame(() => nameRef.current?.focus());
+        }
+        // refused (booked or reviewed meanwhile, or sent for review in another tab): the settings show why once reloaded
+        refresh();
+        setError(general || Object.values(fields)[0]);
+      },
+    });
+  };
+  const leaveConfirm = () => {
+    setConfirm(false);
+    setTyped("");
+    setNameError("");
+    setError("");
   };
   const close = () => {
-    setConfirm(false);
-    setError("");
+    leaveConfirm();
     onClose();
   };
-  const busy = update.isPending || pause.isPending || remove.isPending;
+  const busy = update.isPending || pause.isPending || withdraw.isPending || remove.isPending;
   const pages = pagesForSubject(shared.data || [], course); // only pages for this course's subject
   const parentOptions = [{ value: "", label: "None: the course has its own page" }, ...pages.map((p) => ({ value: String(p.id), label: p.title }))];
   const wrongPage = course.parent && !course.parent.sameSubject;
@@ -171,14 +213,25 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   return (
     <Sheet open={open} onClose={close} title={confirm ? "Delete this course?" : "Course settings"} closeLabel="Close">
       {confirm ? (
-        <div className="rt-q__form">
-          <p className="rt-acc__note">“{course.title}”, its dates and its images will be deleted for good.</p>
+        <form className="rt-q__form" noValidate onSubmit={(e) => { e.preventDefault(); if (!wasLive || sameName(typed, course.title)) doRemove(); }}>
+          {wasLive ? (
+            <>
+              <p className="rt-acc__note">This takes “{course.title}” off ReadTraining straight away, with its dates and images, and can&apos;t be undone. Type the course name to confirm.</p>
+              <div className="rt-field">
+                <label htmlFor="rt-pws-gear-name">Course name</label>
+                <Err id="rt-pws-gear-name" text={nameError} />
+                <input id="rt-pws-gear-name" ref={nameRef} type="text" autoComplete="off" spellCheck={false} maxLength={200} value={typed} onChange={(e) => { setTyped(e.target.value); setNameError(""); }} aria-invalid={nameError ? true : undefined} aria-describedby={nameError ? "rt-pws-gear-name-e" : undefined} />
+              </div>
+            </>
+          ) : (
+            <p className="rt-acc__note">“{course.title}”, its dates and its images will be deleted. This can&apos;t be undone.</p>
+          )}
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-adm-cellrow">
-            <button type="button" className="button -md -purple-1 text-white" onClick={doRemove} disabled={busy} aria-busy={remove.isPending || undefined}>{remove.isPending ? "Deleting…" : "Delete course"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)}>Keep it</button>
+            <button type="submit" className="button -md -purple-1 text-white" disabled={busy || (wasLive && !sameName(typed, course.title))} aria-busy={remove.isPending || undefined}>{remove.isPending ? "Deleting…" : "Delete course"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={leaveConfirm} disabled={busy}>Keep it</button>
           </div>
-        </div>
+        </form>
       ) : (
         <div className="rt-q__form" aria-busy={busy || undefined}>
           <p className="rt-acc__note">Each setting is saved as soon as you change it.</p>
@@ -217,9 +270,18 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
           )}
           {can("provider.courses.delete") && (
             <div className="rt-pws-gear__danger">
-              {course.publishedAt
-                ? <p className="rt-acc__note">A course that has been live can&apos;t be deleted, so its history stays. Pause it to take it off ReadTraining.</p>
-                : <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setConfirm(true)}>Delete course</button>}
+              {course.deleteBlock === "in_review" ? (
+                <>
+                  <p className="rt-acc__note">This course is waiting for our team&apos;s review. Withdraw it from review to edit or delete it.</p>
+                  <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={withdraw.isPending || undefined} onClick={doWithdraw}>{withdraw.isPending ? "Withdrawing…" : "Withdraw from review"}</button>
+                </>
+              ) : course.deleteBlock === "paused_by_team" ? (
+                <p className="rt-acc__note">Our team has paused this course: {teamReason(course.statusNote)} You can&apos;t delete it while we&apos;ve paused it. <Link href={contactHref()} className="rt-cd__link">Contact us</Link> if you&apos;d like it removed.</p>
+              ) : course.deleteBlock === "in_use" ? (
+                <p className="rt-acc__note">Courses can&apos;t be deleted once learners have booked or reviewed them.{course.status === "live" ? " Pause it to take it off ReadTraining." : ""}</p>
+              ) : (
+                <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setConfirm(true)}>Delete course</button>
+              )}
             </div>
           )}
           {course.method !== "self-paced" && <p className="rt-acc__note"><Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">See this course&apos;s dates</Link></p>}
@@ -273,7 +335,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-adm-cellrow">
             <button type="button" className="button -md -purple-1 text-white" disabled={remove.isPending} onClick={() => remove.mutate({ courseId: course.id }, { onSuccess: () => { utils.admin.courses.list.invalidate(); leaveWithoutAsking(() => router.push("/admin/catalogue")); }, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete page"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)}>Keep it</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)} disabled={remove.isPending}>Keep it</button>
           </div>
         </div>
       ) : (

@@ -69,6 +69,13 @@ const CHANGED_SINCE = 'The provider changed this since you opened it. Reload the
 const PROVIDER_PAUSED = 'The provider paused this course themselves, so they put it back live from their workspace.'
 // when the course (or its change) is no longer waiting: another admin may have decided on it, or the provider withdrawn it
 const DECIDED_OR_CHANGED = 'This has just been decided or changed. Reload the page to see where it stands.'
+// a course that was waiting is a draft again: the provider took it back (the gear's "Withdraw from review", or an edit)
+const WITHDRAWN = 'The provider withdrew this course from review.'
+// the course is gone: its provider deleted it (with any change that was waiting), or it never existed
+async function goneError(db: Pick<typeof Db, 'execute'>, courseId: number) {
+  const [deleted] = await db.execute<{ one: number }>(sql`select 1 one from public.activity_log where action = 'course.deleted' and target_type = 'course' and target_id = ${String(courseId)} limit 1`)
+  return deleted ? new TRPCError({ code: 'CONFLICT', message: 'The provider deleted this course, so there is nothing to decide.' }) : notFound()
+}
 // `seen` is when the version on the admin's screen was sent; anything else (or nothing) is not that version
 const notSeen = (seen: string | undefined, sentAt: Date | string | null) => !seen || !sentAt || new Date(seen).getTime() !== new Date(sentAt).getTime()
 
@@ -312,7 +319,8 @@ export const adminCoursesRouter = createTRPCRouter({
     .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input, path }) => {
       const rule = DECISIONS[input.decision]
-      const course = await findCourse(ctx.db, input.courseId)
+      const [course] = await ctx.db.select().from(courses).where(eq(courses.id, input.courseId))
+      if (!course) throw await goneError(ctx.db, input.courseId)
       if (course.kind !== 'provider') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Shared course pages are published from the catalogue, not approved.' })
       const isChange = input.decision === 'approveChange' || input.decision === 'rejectChange'
       const [revision] = isChange ? await ctx.db.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending'))) : []
@@ -332,6 +340,7 @@ export const adminCoursesRouter = createTRPCRouter({
       // decided on the version the admin saw (`seen`: when that version was sent): a new course sent again, or a change edited, since
       // the admin opened it is refused. Checked again under the row lock below, for an edit landing at the same moment.
       const onWaiting = input.decision === 'approve' || input.decision === 'changes'
+      if (onWaiting && course.status === 'draft') throw new TRPCError({ code: 'CONFLICT', message: WITHDRAWN })
       if (isChange && revision && notSeen(input.seen, revision.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
       if (onWaiting && notSeen(input.seen, course.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
       if (own && !ownReasonOk(input.ownReason)) throw bad(OWN_REASON_ERROR, 'ownReason')
@@ -354,7 +363,9 @@ export const adminCoursesRouter = createTRPCRouter({
       const done = await ctx.db.transaction(async (tx) => {
         // the provider's edits lock this row too (lockStatus in modules/provider/courses.mts): whichever comes second sees the other
         const [locked] = await tx.select().from(courses).where(eq(courses.id, course.id)).for('update')
-        if (!locked || !rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
+        if (!locked) throw await goneError(tx, course.id)
+        if (onWaiting && locked.status === 'draft') throw new TRPCError({ code: 'CONFLICT', message: WITHDRAWN })
+        if (!rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
         if (onWaiting && notSeen(input.seen, locked.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
         if (input.decision === 'resume' && !locked.statusNote) throw new TRPCError({ code: 'CONFLICT', message: PROVIDER_PAUSED })
         if (isChange) {
@@ -543,6 +554,7 @@ export const adminCoursesRouter = createTRPCRouter({
       const course = await sharedPage(ctx.db, input.courseId)
       const [n] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(courses).where(eq(courses.parentId, course.id))
       if (n.n) throw new TRPCError({ code: 'CONFLICT', message: 'Providers’ courses are listed on this page, so it can’t be deleted. Take it off the site instead.' })
-      return deleteCourse(ctx.db, course, (tx, m) => logFor(ctx, course, 'admin.shared_course_deleted', m)(tx))
+      await deleteCourse(ctx.db, course, (tx, m) => logFor(ctx, course, 'admin.shared_course_deleted', m)(tx))
+      return { ok: true }
     }),
 })

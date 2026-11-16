@@ -207,6 +207,10 @@ export const ordersRouter = createTRPCRouter({
       const [buyer] = await ctx.db.execute<{ id: string }>(sql`select id from auth.users where lower(email) = ${input.buyerEmail} and deleted_at is null limit 1`)
       const ref = await newRef(ctx.db, 'RT')
       const id = await ctx.db.transaction(async (tx) => {
+        // the course's row is held until the booking is saved: a provider deleting the course at the same moment (it locks the same
+        // row, modules/provider/courses.mts deleteCourse) either goes first, and this booking is refused, or sees the booking
+        const [held] = await tx.execute(sql`select 1 from public.courses where id = ${input.courseId} and organisation_id = ${prov.id}::uuid and kind = 'provider' and status = 'live' for share`)
+        if (!held) throw fieldError('courseId', 'Choose one of this provider’s live courses.')
         const [row] = await tx
           .insert(orders)
           .values({ ref, buyerUserId: buyer?.id ?? null, buyerName: input.buyerName, buyerEmail: input.buyerEmail, buyerCompany: input.buyerCompany || null, providerId: prov.id, courseId: input.courseId, courseTitle: course.title, startsOn: input.startsOn, quantity: input.quantity, unitPence: input.unitPence, grossPence: gross, method: input.method, feeBps, commissionBps, bookedBy: ctx.user.id, note: input.note || null })

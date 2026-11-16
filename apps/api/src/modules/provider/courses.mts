@@ -29,13 +29,14 @@ import { refuseRetired, retiredEntries } from '../../lib/retired.mjs'
 import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
-import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
+import { notify, notifyApprovers, ownerOf, personOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
 import { usablePlan } from './plans.mjs'
 import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's courses (Milestone 2): create one (under a shared course page or on its own), write its page, add images, send it
-// for approval, pause it, delete a draft. Every change is checked against the provider's permission table and logged.
+// for approval (and withdraw it), pause it, delete it (deleteBlock). Every change is checked against the provider's permission
+// table and logged.
 //
 // A live (or paused) course keeps showing while a content edit waits for an admin: the reviewed fields below go into one pending
 // course_revisions row instead of onto the course. Prices, settings and search wording change straight away. A course that isn't
@@ -321,6 +322,8 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     missing: await missing(db, course),
     // "Name (category)" for each catalogue entry the course is filed under that is no longer offered (it can't go live under one)
     retired: await retiredEntries(db, course.id),
+    // why the gear can't offer Delete (a provider's course): 'in_review', 'paused_by_team', 'in_use', or null (see deleteBlock)
+    deleteBlock: course.kind === 'provider' ? await deleteBlock(db, course) : null,
   }
 }
 
@@ -405,20 +408,65 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
   return { ok: true }
 }
 
-// deletes a course that has never been live, with its dates, lists and images
-export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog) {
-  const images = await db.transaction(async (tx) => {
-    // checked under the row lock: a second delete, or an approval at the same moment, sees the other's result
+// ---- deleting a provider's course (Hurak's and Udemy's rule) -------------------------------------------------------------------
+// A draft, or a course our team asked to change, can be deleted. One waiting for our team's review can't: the provider withdraws
+// it from review first (withdrawReview), so an admin is never deciding on a course that is being deleted. A course that has been
+// live (live or paused) can be deleted only while nobody has booked or reviewed it, and the provider types its name to confirm.
+// One our team has paused can't be deleted while it is paused (the provider contacts us). The editor's gear asks deleteBlock before showing Delete, and `remove` asks it again under the course's row lock.
+
+/** Whether a course has been live: deleting one takes it off ReadTraining, so it needs its name typed and our team is told. */
+export const hasBeenLive = (course: Pick<Course, 'status' | 'publishedAt'>) => Boolean(course.publishedAt) || course.status === 'live' || course.status === 'paused'
+
+/**
+ * Why a provider's course can't be deleted now, or null when it can: 'in_review' while it waits for our team's review,
+ * 'paused_by_team' while our team has paused it (paused with their reason in status_note, as setPaused's "put back live" rule
+ * and the admin's pause decision use it; a course the provider paused has no note), 'in_use' once a learner has booked it (an
+ * order) or reviewed it (a review). The gear (courseDetail's `deleteBlock`) and `remove` both ask this, so they never disagree.
+ */
+export async function deleteBlock(db: Writer, course: Pick<Course, 'id' | 'status' | 'statusNote'>): Promise<'in_review' | 'paused_by_team' | 'in_use' | null> {
+  if (course.status === 'pending') return 'in_review'
+  if (course.status === 'paused' && course.statusNote) return 'paused_by_team'
+  const [row] = await db.execute<{ used: boolean }>(sql`
+    select exists (select 1 from public.orders where course_id = ${course.id}) or exists (select 1 from public.reviews where course_id = ${course.id}) used`)
+  return row?.used ? 'in_use' : null
+}
+
+const DELETE_REFUSED = {
+  in_review: 'This course is waiting for our team’s review. Withdraw it from review first (in the course settings), then you can delete it.',
+  paused_by_team: 'Our team has paused this course, so it can’t be deleted while it’s paused. Contact us if you’d like it removed.',
+  in_use: 'Courses can’t be deleted once learners have booked or reviewed them.',
+}
+const PAUSE_INSTEAD = ' Pause it to take it off ReadTraining.'
+/** The refusal for a course deleteBlock blocks (a live course is pointed to Pause). */
+export const deleteRefusal = (block: keyof typeof DELETE_REFUSED, status: Course['status']) => DELETE_REFUSED[block] + (block === 'in_use' && status === 'live' ? PAUSE_INSTEAD : '')
+
+// the name typed to confirm deleting a course that has been live: the same as its title, ignoring spaces around it and case
+const sameName = (typed: string, title: string) => typed.trim().toLowerCase() === title.trim().toLowerCase()
+
+// the rule for a shared course page (and the default): one that has been live is never deleted
+const neverLive = async (_tx: Tx, now: Course) => {
+  if (now.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
+  return {}
+}
+
+/**
+ * Deletes a course with its dates, lists, images and any change waiting for approval (they go with the course's row). `allowed`
+ * runs under the course's row lock and throws when it may not be deleted (by default, when it has been live: the rule for shared
+ * course pages); what it returns joins the log line. Returns the course as it was deleted.
+ */
+export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog, allowed: (tx: Tx, now: Course) => Promise<Record<string, unknown>> = neverLive) {
+  const { paths, now } = await db.transaction(async (tx) => {
+    // checked under the row lock: a second delete, an approval or a staff booking at the same moment sees the other's result
     const now = await lockCourse(tx, course.id)
     if (!now) throw new TRPCError({ code: 'CONFLICT', message: 'This course has already been deleted.' })
-    if (now.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
+    const more = await allowed(tx, now)
     const paths = await tx.select({ path: courseImages.path }).from(courseImages).where(eq(courseImages.courseId, course.id))
     await tx.delete(courses).where(eq(courses.id, course.id))
-    await onLog(tx, { title: course.title })
-    return paths
+    await onLog(tx, { title: now.title, ...more })
+    return { paths, now }
   })
-  await removeUnusedImages(db, images.map((i) => i.path))
-  return { ok: true }
+  await removeUnusedImages(db, paths.map((i) => i.path))
+  return now
 }
 
 const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, courseId: number, metadata: Record<string, unknown> = {}) =>
@@ -767,12 +815,57 @@ export const providerCoursesRouter = createTRPCRouter({
       })
     }),
 
-  // Delete a course that has never been live (with its dates, lists and images). A course that has been live is paused instead,
-  // so its history and bookings stay.
-  remove: orgProcedure('provider.courses.delete')
-    .input(z.object({ courseId: id }))
+  // Take a course that is waiting for our team's review back to a draft (the gear's "Withdraw from review"), to edit or delete it.
+  // It leaves the admins' approvals list; a decision they then try is refused (modules/admin/courses.mts).
+  withdrawReview: orgProcedure('provider.courses.edit')
+    .input(z.object({ courseId: id, seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      return deleteCourse(ctx.db, course, (tx, m) => log(tx, ctx, input.organisationId, 'course.deleted', course.id, m))
+      return ctx.db.transaction(async (tx) => {
+        // under the row lock, so an admin deciding at the same moment either decides first (and this is refused) or is refused
+        const now = await lockCourse(tx, course.id)
+        if (!now) throw notFound()
+        if (now.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: now.status === 'live' ? 'Our team has just approved this course: it is live.' : now.status === 'changes' ? 'Our team has just asked for changes to this course, so it is back with you.' : 'This course isn’t waiting for review.' })
+        await refuseIfChanged(tx, course.id, input.seen)
+        await leaveReview(tx, ctx, input.organisationId, now)
+        return { ok: true, version: await courseVersion(tx, course.id) }
+      })
+    }),
+
+  // Delete a course, with its dates, lists, images and any change waiting for approval: a draft or a course our team asked to
+  // change, or one that has been live while nobody has booked or reviewed it (its name typed in `confirmTitle`; the admins who
+  // approve are told). One waiting for review is withdrawn first. One our team has paused stays while it is paused. One learners
+  // have booked or reviewed is paused instead, so its history stays. (deleteBlock)
+  remove: orgProcedure('provider.courses.delete')
+    .input(z.object({ courseId: id, confirmTitle: z.string().max(200).optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
+      const deleted = await deleteCourse(
+        ctx.db,
+        course,
+        (tx, m) => log(tx, ctx, input.organisationId, 'course.deleted', course.id, m),
+        async (tx, now) => {
+          const block = await deleteBlock(tx, now)
+          if (block) throw new TRPCError({ code: 'CONFLICT', message: deleteRefusal(block, now.status) })
+          const wasLive = hasBeenLive(now)
+          if (wasLive && !input.confirmTitle?.trim()) throw bad('Type the course name to confirm.', 'confirmTitle')
+          if (wasLive && !sameName(input.confirmTitle!, now.title)) throw bad('That isn’t this course’s name. Type it as it is shown above.', 'confirmTitle')
+          return { status: now.status, wasLive }
+        },
+      )
+      // a course that was live has left the site: the admins who approve are told, after the delete is saved and never holding it up
+      if (hasBeenLive(deleted)) {
+        try {
+          const [[org], who] = await Promise.all([
+            ctx.db.execute<{ name: string; slug: string }>(sql`select name, slug from public.organisations where id = ${input.organisationId}::uuid`),
+            personOf(ctx.db, ctx.user.id),
+          ])
+          const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }).format(new Date())
+          await notifyApprovers(ctx.db, 'admin-course-deleted', { provider: org?.name ?? '', slug: org?.slug ?? '', course: deleted.title, deletedBy: who?.label ?? 'Someone on their team', date }, { organisationId: input.organisationId, targetType: 'course', targetId: String(course.id), action: 'email.approvers_told' }, ctx.user.id)
+        } catch (error) {
+          console.error('email admin-course-deleted: could not tell the admins', error instanceof Error ? error.message : error)
+        }
+      }
+      return { ok: true }
     }),
 })
