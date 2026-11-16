@@ -18,6 +18,7 @@ import { EmptyState, ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import { VenueForm } from "./SettingsProfile";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { useNewCourse } from "./NewCourse";
 
 // Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
@@ -148,6 +149,7 @@ export default function ProviderCohorts() {
   const assignTutor = api.provider.cohorts.setTutor.useMutation();
   const bookable = api.provider.cohorts.setBookable.useMutation();
   const edit = can("provider.cohorts.edit");
+  const newCourse = useNewCourse();
 
   useEffect(() => {
     const m = METHOD_ALIASES[getQuery("mode")] || getQuery("mode"); // old ?mode=on-demand links
@@ -246,7 +248,7 @@ export default function ProviderCohorts() {
         <EmptyState
           title="No upcoming dates"
           text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live; online booking opens in a later update."
-          action={edit ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", href: "/provider/courses/new" }) : null}
+          action={edit ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", onClick: newCourse }) : null}
         />
       ) : null}
       {(!nothingYet || mode === "self-paced") && (

@@ -80,7 +80,7 @@ export const pw = {
       approved: { title: "Get approved by our team", text: { pending: "We're checking your details and will email you.", changes_requested: "Our team has asked for a few changes.", active: "Your account is approved." }, action: { label: "Review changes", href: "/provider/review" } },
       profile: { title: "Complete your public profile", text: "A headline, a short biography and your logo.", action: { label: "Edit profile", href: "/provider/settings?tab=info" } },
       policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
-      course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses/new" } },
+      course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses?newcourse=1" } },
       date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Create cohort", href: "/provider/cohorts?new=1" } },
     },
   },
@@ -139,7 +139,6 @@ export const pw = {
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
     courses: { title: "Courses", lead: "Every course you run. New courses and changes are checked by our team before they go live." },
     packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates." },
-    newCourse: { title: "New course", lead: "Five quick questions. You fill in the rest of the course in the editor." },
     course: { title: "Edit course" },
     cohorts: { title: "Cohorts", lead: "Each run of a course: its dates, venue, tutor and places. Open one to take the register and record results." },
     cohort: { title: "Cohort" },
@@ -171,10 +170,6 @@ export const pw = {
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
     enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
-  },
-  courseTypes: {
-    compliance: { label: "Compliance", text: "Required by law, regulation or an employer's policy. For example First Aid at Work, Food Hygiene or Door Supervisor." },
-    other: { label: "Non compliance", text: "Learned by choice. For example personal development, photography or sales." },
   },
   enrolment: { public: "Public", private: "Private" },
   // the colour a cohort shows in on the calendar (Hurak's cohort colour picker)

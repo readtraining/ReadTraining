@@ -10,6 +10,7 @@ import { useWorkspace } from "@/lib/workspaceContext";
 import { COURSE_TONE, Loading, Pill, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { useNewCourse } from "./NewCourse";
 
 const FILTERS = ["q", "format", "enrolment", "category", "model", "status"];
 const formatOf = (key) => pw.formats.find((f) => f.key === key) || pw.formats[0];
@@ -28,6 +29,7 @@ export const useProviderCourses = () => {
 // Edit / manage course), then Hurak's offer of a free sales and marketing consultation.
 export default function ProviderCourses() {
   const { can, status } = useProviderAccess();
+  const newCourse = useNewCourse();
   const waiting = status === "pending" || status === "changes_requested"; // not approved yet
   const query = useProviderCourses();
   const courses = query.data;
@@ -51,7 +53,7 @@ export default function ProviderCourses() {
   if (!courses.length) {
     // not approved yet: say when courses can be added, and where the application is
     if (waiting) return <EmptyState title="No courses yet" text={pw.notApproved.text} action={pw.notApproved.action} />;
-    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", href: "/provider/courses/new" } : null} />;
+    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", onClick: newCourse } : null} />;
   }
 
   const needle = f.q.trim().toLowerCase();

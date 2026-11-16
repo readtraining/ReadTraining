@@ -304,9 +304,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const steps = ticks.filter((x) => !x.optional);
   // before a course is live, the first required step still to do is marked Next, so a new provider sees where to start
   const nextKey = isLive ? null : steps.find((x) => !x.ok)?.key;
-  // a step's status under its name, from what is saved: Complete (a mode of study names itself), "3 to add", No dates yet, Optional
+  // a step's status under its name, from what is saved: Complete (a mode of study names itself and the performance model, which a
+  // new course starts as Bookings: "Classroom · Bookings"), "3 to add", No dates yet, Optional
   const stepStatus = (x) => {
-    if (x.key === "mode" && x.ok) return methodName(base.method);
+    if (x.key === "mode" && x.ok) return ep.admin ? methodName(base.method) : `${methodName(base.method)} · ${pw.models[base.model]?.label || ""}`;
     if (x.ok) return "Complete";
     if (x.key === "pricing" && base.method !== "self-paced") return "No dates yet";
     if (x.optional) return "Optional";

@@ -12,6 +12,7 @@ import { Delta, Sparkline, money } from "./charts";
 import { Seats, dayRange, todayIso, useSchedule } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 import ProviderAccountStatus from "./ProviderAccountStatus";
+import { NewCourseButton } from "./NewCourse";
 
 // Our dashboard (Hurak has none; everything on it opens the Hurak-style page it comes from). The greeting lists the first real
 // things to do today as links; under it, the getting-set-up checklist folded to its next step (ProviderChecklist compact) until
@@ -146,7 +147,7 @@ export default function ProviderDashboard() {
                 </li>
               ))}
             </ul>
-            {access.can("provider.courses.edit") && <Link href="/provider/courses/new" className="button -sm -purple-1 text-white rt-btn-block">New course</Link>}
+            {access.can("provider.courses.edit") && <NewCourseButton className="button -sm -purple-1 text-white rt-btn-block" />}
           </section>
         )}
       </div>

@@ -19,6 +19,7 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { SHOW_DEMO } from "@/lib/demo";
 import { api } from "@/lib/trpc/react";
 import ProviderAccountStatus from "./ProviderAccountStatus";
+import { NewCourseButton, NewCourseProvider, NewCourseSheet } from "./NewCourse";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -43,6 +44,16 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
   const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);
+  // New course: a pop-up over this page (NewCourse.jsx), from any New course button, or from a link with ?newcourse=1 (the set-up
+  // checklist, the old /provider/courses/new address), which is then taken off the address
+  const [newCourse, setNewCourse] = useState(false);
+  useEffect(() => {
+    const q = new URLSearchParams(search);
+    if (q.get("newcourse") !== "1") return;
+    setNewCourse(true);
+    q.delete("newcourse");
+    router.replace(`${path}${q.size ? `?${q}` : ""}`, { scroll: false });
+  }, [search, path, router]);
   // pop-ups (Sheet) render on <body>, outside the workspace: this class gives them the workspace's form and button look
   useEffect(() => {
     document.body.classList.add("rt-pws-open");
@@ -93,6 +104,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   };
 
   return (
+    <NewCourseProvider value={() => setNewCourse(true)}>
     <div className={`rt-home rt-adm rt-pws${sideHidden ? " is-sideclosed" : ""}`}>
       <a href="#rt-pws-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
@@ -103,7 +115,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-adm__tag">{pw.tag}</span>
           </Link>
           <div className="rt-adm__topside">
-            {access.can("provider.courses.edit") && <Link href="/provider/courses/new" className="button -sm -purple-1 text-white rt-pws__new">New course</Link>}
+            {access.can("provider.courses.edit") && <NewCourseButton className="button -sm -purple-1 text-white rt-pws__new" />}
             <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}><i className="icon-person text-16" aria-hidden="true"></i><span>Student</span></Link>
             <Link href="/provider/notifications" className="rt-pws__bell" aria-label={counts.unread ? `Notifications, ${counts.unread} unread` : "Notifications"}>
               <i className="icon-notification text-18" aria-hidden="true"></i>
@@ -204,5 +216,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         </main>
       </div>
     </div>
+    <NewCourseSheet open={newCourse} onClose={() => setNewCourse(false)} />
+    </NewCourseProvider>
   );
 }

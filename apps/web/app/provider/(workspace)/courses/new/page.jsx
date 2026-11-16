@@ -1,18 +1,7 @@
-import React from "react";
-import ProviderShell from "@/components/providerWorkspace/ProviderShell";
-import ProviderNewCourse from "@/components/providerWorkspace/ProviderNewCourse";
-import { pw } from "@/data/providerWorkspace";
-import { pageMetadata } from "@/lib/seo";
+import { redirect } from "next/navigation";
 
-// Provider workspace: newCourse (components/providerWorkspace/ProviderNewCourse; copy: data/providerWorkspace.js; records: lib/providerWorkspace.js).
-// Private, so kept out of search; proxy.js sends signed-out visitors to log in.
-const p = pw.pages.newCourse;
-export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, description: p.lead, path: "/provider/courses/new", noindex: true });
-
+// The old New course page: New course is now a pop-up (components/providerWorkspace/NewCourse.jsx). A saved link or bookmark
+// opens the courses with the pop-up open.
 export default function Page() {
-  return (
-    <ProviderShell current="courses" title={p.title} lead={p.lead}>
-      <ProviderNewCourse />
-    </ProviderShell>
-  );
+  redirect("/provider/courses?newcourse=1");
 }
