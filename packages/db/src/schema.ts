@@ -137,6 +137,9 @@ export const organisationMembers = pgTable(
     jobTitle: text('job_title'),
     status: memberStatus('status').notNull().default('active'),
     invitedBy: uuid('invited_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    // when this person last saw the account's status message (a provider's "Your account is approved"…): a message that shows
+    // once is gone after it, until the status changes again (organisations.status_changed_at is later)
+    statusSeenAt: timestamp('status_seen_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

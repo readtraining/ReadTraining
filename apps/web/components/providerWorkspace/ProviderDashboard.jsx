@@ -11,6 +11,7 @@ import { COURSE_TONE, DemoTag, Loading, ORDER_TONE, Pill, formatWhen } from "./p
 import { Delta, Sparkline, money } from "./charts";
 import { Seats, dayRange, todayIso, useSchedule } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
+import ProviderAccountStatus from "./ProviderAccountStatus";
 
 // Our dashboard (Hurak has none; everything on it opens the Hurak-style page it comes from). The greeting lists the first real
 // things to do today as links; under it, the getting-set-up checklist folded to its next step (ProviderChecklist compact) until
@@ -96,6 +97,7 @@ export default function ProviderDashboard() {
 
   return (
     <div className="rt-acc__stack rt-dash">
+      <ProviderAccountStatus place="dashboard" />
       <section className="rt-dash__hello" aria-labelledby="rt-dash-hi">
         <div>
           <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}{firstName ? `, ${firstName}` : ""}</h2>

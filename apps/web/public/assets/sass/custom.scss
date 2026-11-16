@@ -5097,10 +5097,10 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
   .rt-adm-cat__move { display: none; }
   .rt-rowmenu__phone { display: block; }
 }
-/* The provider account's status (ProviderAccountStatus): one line at the top of every workspace page, as GOV.UK's notification
-   banner and Polaris / Atlassian banners: an icon in the tone's colour, the title and one sentence, at most one action and, for a
-   message that can be hidden, a close button. The tones are the status system's (info blue, warning amber, critical red, success
-   green). On a phone the action takes the full width and the close button sits in the corner. */
+/* The provider account's status (ProviderAccountStatus): one line at the top of the dashboard (suspended: of every workspace
+   page), as GOV.UK's notification banner and Polaris / Atlassian banners: an icon in the tone's colour, the title and one
+   sentence, at most one action and, for news shown once, a close button. The tones are the status system's (info blue, warning
+   amber, critical red, success green). On a phone the action takes the full width and the close button sits in the corner. */
 .rt-pws-status { position: relative; display: flex; align-items: center; gap: 14px; margin: 0 0 20px; padding: 14px 16px; border-radius: var(--rt-radius-control); background: var(--rt-adm-info-bg); }
 .rt-pws-status.-warning { background: var(--color-orange-7); }
 .rt-pws-status.-critical { background: var(--color-red-2); }
@@ -5113,6 +5113,7 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-status__title { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; line-height: 1.4; color: var(--rt-c-text); }
 .rt-pws-status__text { margin: 2px 0 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); }
 .rt-pws-status__side { flex: none; display: flex; align-items: center; gap: 4px; }
+.rt-dash > .rt-pws-status { margin: 0; }
 .rt-pws-status__action { background: var(--rt-c-surface); white-space: nowrap; }
 .rt-pws-status__close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: transparent; color: var(--rt-c-muted); cursor: pointer; }.rt-pws-status__close:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 0; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-status__close:hover { background: var(--rt-c-surface); } }

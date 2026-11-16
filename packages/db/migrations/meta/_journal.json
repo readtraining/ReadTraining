@@ -239,6 +239,13 @@
       "when": 1794505096363,
       "tag": "0033_api_only_policies_in_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794815430779,
+      "tag": "0034_member_status_seen",
+      "breakpoints": true
     }
   ]
 }

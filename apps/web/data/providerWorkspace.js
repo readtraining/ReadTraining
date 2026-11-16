@@ -14,11 +14,11 @@ export const pw = {
   // the provider account's status: one line at the top of every workspace page (the status bar), with at most one action. The
   // work itself (the team's message, the changes, sending it back) is on the Account review page (/provider/review).
   accountStatus: {
-    pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. Meanwhile, complete your public profile and cancellation policy; you can add courses once you're approved.", action: { label: "View review", href: "/provider/review" }, dismissible: true },
+    pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. Meanwhile, complete your public profile and cancellation policy; you can add courses once you're approved.", action: { label: "View review", href: "/provider/review" } },
     changes_requested: { tone: "warning", title: "A few changes are needed before we approve you", text: "Our team has asked for some changes to your account.", action: { label: "Review changes", href: "/provider/review" } },
     suspended: { tone: "critical", title: "Your account is suspended", text: "Your courses can't be booked and you can't make changes.", action: { label: "See why", href: "/provider/review" } },
-    approved: { tone: "success", title: "Your account is approved", text: "Learners find you on ReadTraining once you have a live course. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" }, dismissible: true },
-    reinstated: { tone: "success", title: "Your account is active again", text: "Everything works as before.", dismissible: true },
+    approved: { tone: "success", title: "Your account is approved", text: "Learners find you on ReadTraining once you have a live course. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" } },
+    reinstated: { tone: "success", title: "Your account is active again", text: "Everything works as before." },
     hide: "Hide this message",
   },
 
