@@ -15,7 +15,7 @@ const ONCE = new Set(["pending", "approved", "reinstated"]);
 // still says "not seen", so the message isn't shown again on the way back to the dashboard
 const shownThisVisit = new Set();
 
-// The provider account's status from the ReadTraining team: one line, with at most one action (GOV.UK's notification banner,
+// The provider account's status from the ReadTraining team: one line, with at most one action as a link at the end of its sentence (GOV.UK's notification banner,
 // Polaris and Atlassian's banners: one message at a time, the work itself on its own page). `place`:
 // - "page" (every workspace page, from ProviderShell): only "suspended", which blocks everything and is explained nowhere else;
 // - "dashboard": the rest. Waiting for review, approved and active again show once (and can be closed at once with ×); changes
@@ -45,17 +45,12 @@ export default function ProviderAccountStatus({ place = "page" }) {
       <span className="rt-pws-status__icon" aria-hidden="true"><i className={`${ICON[c.tone]} text-14`}></i></span>
       <div className="rt-pws-status__body">
         <h2 className="rt-pws-status__title" id="rt-pws-status-h">{c.title}</h2>
-        <p className="rt-pws-status__text">{c.text}</p>
+        <p className="rt-pws-status__text">{c.text}{c.action && <> <Link href={c.action.href} className="rt-pws-status__link">{c.action.label}<i className="icon-arrow-right text-10" aria-hidden="true"></i></Link></>}</p>
       </div>
-      {(c.action || once) && (
-        <div className="rt-pws-status__side">
-          {c.action && <Link href={c.action.href} className="button -sm -outline-purple-1 text-purple-1 rt-pws-status__action">{c.action.label}</Link>}
-          {once && (
-            <button type="button" className="rt-pws-status__close" onClick={() => setShow(false)} aria-label={copy.hide}>
-              <i className="icon-close text-10" aria-hidden="true"></i>
-            </button>
-          )}
-        </div>
+      {once && (
+        <button type="button" className="rt-pws-status__close" onClick={() => setShow(false)} aria-label={copy.hide}>
+          <i className="icon-close text-10" aria-hidden="true"></i>
+        </button>
       )}
     </section>
   );
