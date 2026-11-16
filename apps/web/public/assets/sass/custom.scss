@@ -4209,9 +4209,11 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
   .rt-biz__table td small { display: inline; margin: 0 0 0 6px; }
   .rt-biz__act { justify-content: flex-end; }
 }
-/* workspace tables stack into labelled rows from 1199px down (decision D4, 14 Nov 2026): the standard table's own phone layout,
-   for tablets and, from 992px, beside the sidebar too, where 6 to 9 columns are wider than the content area (about 745px) */
-@media (min-width: 768px) and (max-width: 1199px) {
+/* workspace tables stack into labelled rows (decision D4, 14 Nov 2026): the standard table's own phone layout, for tablets and,
+   from 992px, while the page column beside the menu is narrower than 855px, where 6 to 9 columns don't fit. That is the column a
+   1200px window left beside the 264px menu, so at the menu's default width the tables stack below 1200px as before; a folded or
+   narrower menu keeps them whole when there is room (the column is the rt-pws-main container, from 992px) */
+@mixin rt-pws-stacked-tables {
   .rt-pws .rt-biz__tablecard { padding: 4px 16px; }
   .rt-pws .rt-biz__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-pws .rt-biz__table, .rt-pws .rt-biz__table tbody, .rt-pws .rt-biz__table tr, .rt-pws .rt-biz__table td { display: block; width: 100%; }
@@ -4224,6 +4226,8 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
   .rt-pws .rt-biz__table td small { display: inline; margin: 0 0 0 6px; }
   .rt-pws .rt-biz__act { justify-content: flex-end; }
 }
+@media (min-width: 768px) and (max-width: 991px) { @include rt-pws-stacked-tables; }
+@container rt-pws-main (width < 855px) { @include rt-pws-stacked-tables; }
 /* pop-ups: add a learner, a learner's details, pay, an invoice */
 .rt-biz__sheetform { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 /* a long name or email in a pop-up wraps instead of making the pop-up scroll sideways */
@@ -4792,20 +4796,30 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__group ul { margin: 0; padding: 0; list-style: none; }
 .rt-adm__group li { list-style: none; }
 /* group headings: a fold arrow, then the name in dark small capitals; the group's pages sit indented under a guide line */
-/* the button that hides the sidebar, at its top right; while hidden, the same button sits on the screen's left edge to bring it
-   back (from 992px; below, the sidebar is the drawer) */
+/* the button at the sidebar's top that folds it to its icon rail and opens it again (from 992px; below, the sidebar is the drawer).
+   Each layout draws its own rail: the admin's (.rt-adm--platform.is-sideclosed) and the provider workspace's (.rt-pws.is-sideclosed) */
 .rt-adm__sidetools { display: none; }
-.rt-adm__sidehide, .rt-adm__sideopen { display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--rt-c-muted); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
-.rt-adm__sidehide { width: 32px; height: 32px; border: 0; border-radius: var(--rt-radius-sm); background: none; }
-.rt-adm__sideopen { display: none; }
-@media (hover: hover) and (pointer: fine) { .rt-adm__sidehide:hover, .rt-adm__sideopen:hover { background: var(--color-light-4); color: var(--rt-c-text); } }
+.rt-adm__sidehide { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+@media (hover: hover) and (pointer: fine) { .rt-adm__sidehide:hover { background: var(--color-light-4); color: var(--rt-c-text); } }
 @media (min-width: 992px) {
   .rt-adm__sidetools { display: flex; justify-content: flex-end; padding: 2px 4px 0; }
-  .rt-adm.is-sideclosed .rt-adm__body { grid-template-columns: minmax(0, 1fr); }
-  .rt-adm.is-sideclosed .rt-adm__side { display: none; }
-  .rt-adm.is-sideclosed .rt-adm__main { padding-left: 72px; }
-  .rt-adm__sideopen { position: fixed; top: 84px; left: 0; z-index: 20; display: inline-flex; width: 40px; height: 40px; border: 1px solid var(--rt-c-line); border-left: 0; border-radius: 0 var(--rt-radius-control) var(--rt-radius-control) 0; background: var(--rt-c-surface); box-shadow: var(--rt-shadow-raised); color: var(--rt-c-text); }
 }
+/* the sidebar's edge that resizes it (SideResizer, workNav.jsx; placed by the layout that uses it): an 8px strip over the border,
+   showing a brand line when pointed at, focused or dragged */
+.rt-adm__resize { display: none; }
+@media (min-width: 992px) {
+  .rt-adm__resize { position: relative; display: block; width: 8px; cursor: col-resize; touch-action: none; }
+  .rt-adm__resize::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: var(--rt-c-brand); opacity: 0; transition: opacity 150ms ease; }
+  .rt-adm__resize:focus-visible { outline: 0; }
+  .rt-adm__resize:focus-visible::after { left: 2px; width: 3px; opacity: 1; }
+  body.rt-side-resizing .rt-adm__resize::after { opacity: 1; }
+}
+@media (hover: hover) and (pointer: fine) { .rt-adm__resize:hover::after { opacity: 1; } }
+/* while the edge is dragged: no text selection, no hover underneath, the resize cursor everywhere */
+body.rt-side-resizing { cursor: col-resize; user-select: none; }
+body.rt-side-resizing :is(.rt-adm__top, .rt-adm__side, .rt-adm__main) { pointer-events: none; }
+/* a rail icon's name (useRailTip, workNav.jsx): beside the icon, outside the rail, in the charts' tooltip look */
+.rt-adm__tip { position: fixed; z-index: 60; padding: 6px 10px; border-radius: var(--rt-radius-sm); background: var(--rt-c-dark); box-shadow: var(--rt-shadow-dialog); font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.3; white-space: nowrap; color: var(--rt-c-surface); pointer-events: none; transform: translateY(-50%); }
 .rt-adm__grouplabel { display: flex; align-items: center; gap: 6px; width: calc(100% - 8px); margin: 10px 4px 2px; padding: 7px 8px 7px 6px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.05em; text-align: left; text-transform: uppercase; color: var(--rt-c-muted); cursor: pointer; }
 .rt-adm__grouplabel > span:first-of-type { flex: 1; }
 .rt-adm__chev { flex: none; color: var(--rt-c-muted); transition: transform 150ms ease; }
@@ -4816,7 +4830,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__grouplabel .rt-adm__count { min-width: 20px; height: 20px; margin: 0; font-size: var(--rt-text-xs); line-height: 20px; letter-spacing: 0; text-transform: none; }
 .rt-adm__group ul { margin: 0 0 4px 17px; padding-left: 8px; border-left: 1px solid var(--rt-c-line); }
 .rt-adm__group .rt-adm__link { padding: 8px 10px; }
-@media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__chev, .rt-adm__sidehide, .rt-adm__sideopen { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__chev, .rt-adm__sidehide, .rt-adm__resize::after { transition: none; } }
 .rt-adm__link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: var(--rt-text-sm); font-weight: 500; color: var(--color-dark-1) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-adm__link i, .rt-adm__icon { flex: none; color: var(--color-light-1); }
 @media (hover: hover) and (pointer: fine) { a.rt-adm__link:hover { background: var(--color-light-4); } }
@@ -5698,7 +5712,14 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (max-width: 575px) { .rt-adm__tag { display: none; } }
 @media (prefers-reduced-motion: reduce) { .rt-pws__bell { transition: none; } }
 .rt-pws__orgmark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-surface); }
-.rt-pws__orgname { min-width: 0; }
+.rt-pws__orgname { flex: 1 1 auto; min-width: 0; }
+/* the fold button: in the account card while the menu is open, from 992px (the drawer below that has its own close); the rail's
+   copy at its top only while folded */
+.rt-pws__org .rt-adm__sidehide { display: none; flex: none; margin-right: -4px; }
+@media (min-width: 992px) {
+  .rt-pws__org .rt-adm__sidehide { display: inline-flex; }
+  .rt-pws:not(.is-sideclosed) .rt-adm__sidetools { display: none; }
+}
 .rt-pws__orgname strong { display: block; overflow: hidden; font-size: var(--rt-text-sm); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-text); }
 .rt-pws__orgname span { display: block; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* "← Orders" above a page title: the arrow and words centred on one line */
@@ -6140,9 +6161,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (max-width: 991px) {
   .rt-pws-coh__details { grid-template-columns: minmax(0, 1fr); }
 }
-/* below 1200px the students table on a cohort's page stacks into labelled rows (as the account tables do on phones), so its
-   dropdowns and menus are never clipped (the cohorts list stacks with the other workspace tables, decision D4) */
-@media (max-width: 1199px) {
+/* below 992px, and from there in a page column narrower than 855px (as the other workspace tables, decision D4), the students table
+   on a cohort's page stacks into labelled rows (as the account tables do on phones), so its dropdowns and menus are never clipped */
+@mixin rt-pws-coh-stacked {
   .rt-pws-coh__students thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-pws-coh__students, .rt-pws-coh__students tbody, .rt-pws-coh__students tr, .rt-pws-coh__students td { display: block; width: 100%; }
   .rt-pws-coh__students tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }
@@ -6157,6 +6178,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-pws-coh__morerow td { display: block; padding: 12px; }
   .rt-pws-coh__morerow td::before { content: none; }
 }
+@media (max-width: 991px) { @include rt-pws-coh-stacked; }
+@container rt-pws-main (width < 855px) { @include rt-pws-coh-stacked; }
 @media (max-width: 767px) {
   :is(.rt-pws-coh__table, .rt-pws-coh__students) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   :is(.rt-pws-coh__table, .rt-pws-coh__students), :is(.rt-pws-coh__table, .rt-pws-coh__students) tbody, :is(.rt-pws-coh__table, .rt-pws-coh__students) tr, :is(.rt-pws-coh__table, .rt-pws-coh__students) td { display: block; width: 100%; }
@@ -6492,8 +6515,10 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-rq-reason { min-width: 240px; max-width: 420px; line-height: 1.5; }
 .rt-rq-note { max-width: 220px; }
 .rt-rq-act { white-space: nowrap; }
-/* the reason's 240px only where the table has the room (from 1360px, as the Courses table): beside the sidebar below that, all 8 columns fit */
-@media (max-width: 1359px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
+/* the reason's 240px only where the table has the room (a page column of 1015px or wider, as the Courses table): in a narrower
+   one, all 8 columns fit without it (the table needs about 846px, and stacks below 855px) */
+@media (max-width: 991px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
+@container rt-pws-main (width < 1015px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
 /* phones: the stacked rows keep each cell's small line (date, decision note, email) under its value */
 @media (max-width: 767px) {
   .rt-rq-table td { flex-wrap: wrap; }
@@ -6766,9 +6791,28 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (min-width: 992px) {
   .rt-pws .rt-adm__main { --rt-pws-w: 1200px; padding-inline: max(32px, calc((100% - var(--rt-pws-w)) / 2)); }
   .rt-pws .rt-adm__main:has(.rt-pws-cepage) { --rt-pws-w: 1120px; }
-  /* the menu folded away: room on the left for the button that opens it */
-  .rt-pws.is-sideclosed .rt-adm__main { padding-left: max(72px, calc((100% - var(--rt-pws-w)) / 2)); }
 }
+/* the menu (from 992px): open at the width its edge was dragged to (--rt-side-w on .rt-pws, from 200px to 280px or a quarter of the
+   window, never less than the 264px default), or folded to a 64px rail; the change slides unless it is being dragged. Its edge
+   (.rt-adm__resize) sits over the menu's border, in the same grid cell, and stays in view as the page scrolls. The page column is
+   a container (rt-pws-main), so the tables stack by the room they really have, not the window's width. */
+@media (min-width: 992px) {
+  .rt-pws .rt-adm__body { grid-template-columns: clamp(200px, var(--rt-side-w, 264px), min(280px, max(264px, 25vw))) minmax(0, 1fr); transition: grid-template-columns 200ms ease; }
+  .rt-pws.is-sideclosed .rt-adm__body { grid-template-columns: 64px minmax(0, 1fr); }
+  body.rt-side-resizing .rt-pws .rt-adm__body { transition: none; }
+  .rt-pws .rt-adm__side { grid-column: 1; grid-row: 1; }
+  .rt-pws .rt-adm__main { grid-column: 2; grid-row: 1; container: rt-pws-main / inline-size; }
+  .rt-pws .rt-adm__resize { position: sticky; top: 64px; z-index: 3; grid-column: 1; grid-row: 1; justify-self: end; align-self: start; height: calc(100vh - 64px); margin-right: -4px; }
+  /* the rail: the button at the top, where it is when open, then one icon per item (the open menu's list is hidden) */
+  .rt-pws.is-sideclosed .rt-adm__side { padding: 12px 8px 32px; overflow-x: hidden; }
+  .rt-pws.is-sideclosed .rt-adm__sidetools { justify-content: center; padding: 2px 0 0; }
+  .rt-pws.is-sideclosed :is(.rt-pws__org, .rt-pws__nav) { display: none; }
+  .rt-pws__rail { display: grid; gap: 2px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .rt-pws__rail li { list-style: none; }
+  .rt-pws__rail .rt-adm__link { justify-content: center; padding: 10px 0; }
+}
+@media (max-width: 991px) { .rt-pws__rail { display: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-pws .rt-adm__body { transition: none; } }
 /* the page title is the app H1 (DESIGN-SYSTEM.md section 2) */
 .rt-pws .rt-adm__h1 { font-size: var(--rt-app-h1); }
 /* a hint written as a <span> lost to `.rt-field > span` (dark and bold): it gets the hint's own style back */
@@ -7570,9 +7614,7 @@ html { scrollbar-gutter: stable; }
   .rt-adm--platform .rt-adm__sidetools { position: sticky; top: -12px; z-index: 2; margin: -12px -12px 4px; padding: 12px 16px 4px; background: var(--rt-c-surface); }
   .rt-adm--platform .rt-adm__find { margin: 0 auto; }
   .rt-adm--platform.is-sideclosed .rt-adm__body { grid-template-columns: 64px minmax(0, 1fr); }
-  .rt-adm--platform.is-sideclosed .rt-adm__side { display: block; padding: 12px 8px 32px; overflow-x: hidden; }
-  .rt-adm--platform.is-sideclosed .rt-adm__main { padding-left: 32px; }
-  .rt-adm--platform.is-sideclosed .rt-adm__sideopen { display: none; }
+  .rt-adm--platform.is-sideclosed .rt-adm__side { padding: 12px 8px 32px; overflow-x: hidden; }
   .rt-adm--platform.is-sideclosed .rt-adm__sidetools { justify-content: center; margin: -12px -8px 4px; padding: 12px 0 4px; }
   .rt-adm--platform.is-sideclosed .rt-adm__grouplabel { display: none; }
   .rt-adm--platform.is-sideclosed .rt-adm__group ul[hidden] { display: block; }

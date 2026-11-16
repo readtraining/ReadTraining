@@ -8,7 +8,7 @@ import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { RowMenu } from "@/components/admin/adminParts";
 import NavIcon from "@/components/admin/navIcons";
-import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, useFoldedGroups, useSideMenu, useWorkDrawer } from "@/components/admin/workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "@/components/admin/workNav";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
 import { actAs } from "@/lib/providerWorkspace";
@@ -27,20 +27,26 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // shell pattern"). The dark band: the logo and "Provider" tag, then New course, Student (the learner side), the bell with unread
 // notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
-// sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups, the button at its top right that hides it
-// and, below 992px, the menu drawer. Then the page head (title, intro, actions) and the page.
+// sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups and, below 992px, the menu drawer. From
+// 992px the button at its top (or Ctrl+B) folds it to a rail of icons, one per item (a group's goes to its first page, each with
+// its name as a tooltip), and its right edge resizes it (dragged in far enough, it folds). Then the page head (title, intro,
+// actions) and the page.
 // `current` marks the section; the page inside it is matched on the address. `demo` marks a page whose records are still made up
 // (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's. It is true (the
 // general note), "partly", or the page's own note (data/providerWorkspace.js pw.demo), which the tag then explains.
 export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = false, children }) {
+  const rootRef = useRef(null);
   const sideRef = useRef(null);
   const router = useRouter();
   const path = usePathname();
   const [search, setSearch] = useState("");
   const [folded, fold] = useFoldedGroups("rt-pws-nav-folded");
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
-  const { closed: sideHidden } = useSideMenu(); // the sidebar hidden, from 992px
+  const { closed: rail, width: sideWidth } = useSideMenu(); // from 992px: folded to its icon rail, or open at this width
+  useSideShortcut();
+  const [tipProps, railTip] = useRailTip(rail);
   const access = useProviderAccess();
+  const nav = pw.nav.filter((x) => !x.can || access.can(x.can));
   const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
   const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);
@@ -68,6 +74,9 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
     if (q) return search.includes(q);
     return !siblings.some((x) => x.href.includes("?") && x.href.startsWith(`${p}?`) && search.includes(x.href.split("?")[1]));
   };
+  // a menu link; one to this same page with another ?tab= or ?mode= loads the page again, so it opens on that view
+  const pageLink = (href, props, inner) =>
+    href.split("?")[0] === path && href !== `${path}${search}` ? <a href={href} {...props}>{inner}</a> : <Link href={href} {...props}>{inner}</Link>;
   // the bell's unread number and the menu's badges count DEMO records (lib/providerWorkspace.js), so they stay hidden until those
   // records are real: a made-up "3 unread" must not look like real news
   const counts = {};
@@ -105,7 +114,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
 
   return (
     <NewCourseProvider value={() => setNewCourse(true)}>
-    <div className={`rt-home rt-adm rt-pws${sideHidden ? " is-sideclosed" : ""}`}>
+    <div className={`rt-home rt-adm rt-pws${rail ? " is-sideclosed" : ""}`} style={sideWidthStyle(sideWidth)} ref={rootRef}>
       <a href="#rt-pws-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">
@@ -134,15 +143,18 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         {drawer.menuOpen && <div className="rt-adm__scrim" onClick={drawer.closeMenu} aria-hidden="true"></div>}
         <nav id="rt-pws-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Provider workspace" ref={sideRef}>
           <DrawerHead drawer={drawer} />
+          {/* the fold button sits in the account card while the menu is open (one row, as the account it belongs to) and alone at
+              the top of the icon rail when folded, where the card is hidden */}
           <div className="rt-adm__sidetools">
-            <SideMenuButton where="side" controls="rt-pws-side" />
+            <SideMenuButton controls="rt-pws-side" shortcut />
           </div>
           <div className="rt-pws__org">
             <span className="rt-pws__orgmark" aria-hidden="true">{org ? initials(org) : ""}</span>
             <span className="rt-pws__orgname"><strong>{org || " "}</strong><span>Training provider</span></span>
+            <SideMenuButton controls="rt-pws-side" shortcut />
           </div>
           <ul className="rt-pws__nav">
-            {pw.nav.filter((x) => !x.can || access.can(x.can)).map((x) => {
+            {nav.map((x) => {
               const here = x.key === current;
               const badge = x.badge && counts[x.badge] > 0 ? <span className="rt-adm__count" aria-label={`${counts[x.badge]} new`}>{counts[x.badge]}</span> : null;
               if (!x.items) {
@@ -171,20 +183,24 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
                       const n = it.badge && counts[it.badge] > 0 ? counts[it.badge] : 0;
                       const cls = `rt-adm__link${on ? " is-active" : ""}`;
                       const inner = <><span>{it.label}</span>{n > 0 && <span className="rt-adm__count" aria-label={`${n} new`}>{n}</span>}</>;
-                      // a link to this same page with another ?tab= or ?mode= loads the page again, so it opens on that view
-                      return (
-                        <li key={it.href}>
-                          {it.href.split("?")[0] === path && it.href !== `${path}${search}`
-                            ? <a href={it.href} className={cls} aria-current={on ? "page" : undefined}>{inner}</a>
-                            : <Link href={it.href} className={cls} aria-current={on ? "page" : undefined}>{inner}</Link>}
-                        </li>
-                      );
+                      return <li key={it.href}>{pageLink(it.href, { className: cls, "aria-current": on ? "page" : undefined }, inner)}</li>;
                     })}
                   </ul>
                 </li>
               );
             })}
           </ul>
+          {/* folded (from 992px): one icon per item, straight to its page (a group's first page), its name in a tooltip */}
+          {rail && (
+            <ul className="rt-pws__rail">
+              {nav.map((x) => {
+                const here = x.key === current;
+                const props = { className: `rt-adm__link${here ? " is-active" : ""}`, "aria-current": here ? "page" : undefined, "data-tip": x.label, ...tipProps };
+                const inner = <><NavIcon name={x.navIcon || x.key} /><span className="rt-sr">{x.label}</span></>;
+                return <li key={x.key}>{x.items ? pageLink(x.items[0].href, props, inner) : <Link href={x.href} {...props}>{inner}</Link>}</li>;
+              })}
+            </ul>
+          )}
           <div className="rt-adm__drawerfoot">
             {meName && (
               <div className="rt-adm__me">
@@ -197,9 +213,10 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
           </div>
           <FilterScrollPill scrollRef={sideRef} />
         </nav>
+        <SideResizer rootRef={rootRef} sideRef={sideRef} controls="rt-pws-side" />
+        {railTip}
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
-          {sideHidden && <SideMenuButton where="page" controls="rt-pws-side" />}
           <ProviderAccountStatus />
           {backTo && <Link href={backTo.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backTo.label}</Link>}
           <div className="rt-adm__head">
