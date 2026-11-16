@@ -9,7 +9,7 @@ import { EMAIL_KEY, editableTemplate, wordsSchema } from '../../emails/templates
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { adminProcedure, createTRPCRouter, publicProcedure, refuse } from '../../trpc/trpc.mjs'
-import { publishedReviews } from '../admin/reviews.mjs'
+import { courseReviews, publishedReviews } from '../admin/reviews.mjs'
 
 // The site's editable content (Part B, B2), one value per key. The website reads them all at once (public); a key with no
 // value uses the website's built-in wording. Admins with the "content" switch save one key at a time; each save is checked
@@ -130,6 +130,12 @@ export async function providerTermsVersion(db: typeof Db, builtIn: string) {
 export const contentRouter = createTRPCRouter({
   // The customer reviews the website shows: the published ones, newest first (admin.reviews keeps them).
   reviews: publicProcedure.query(({ ctx }) => publishedReviews(ctx.db)),
+
+  // One page of a course page's reviews (admin/reviews.mts courseReviews): `topic` is the course's catalogue place, `page`
+  // from 1 (one past the last answers with the last). Read-only; the API's per-connection cap applies, as for every query.
+  courseReviews: publicProcedure
+    .input(z.object({ topic: z.string().max(200).regex(/^[a-z0-9-]+(\/[a-z0-9-]+){0,2}$/).nullable(), page: z.number().int().min(1).max(1000) }))
+    .query(({ ctx, input }) => courseReviews(ctx.db, input.topic, input.page)),
 
   // Everything that has been set (keys never set are left out, so the website uses its own wording for them).
   site: publicProcedure.query(async ({ ctx }) => {

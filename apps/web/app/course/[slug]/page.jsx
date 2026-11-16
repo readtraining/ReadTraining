@@ -41,11 +41,11 @@ export default async function page(props) {
   const query = (await props.searchParams) || {};
   const found = await findCourse(slug);
   if (!found) notFound();
-  const { course, reviews, reviewsCourse } = found;
+  const { course, reviews } = found;
   if (slug !== course.slug) {
     const search = new URLSearchParams(Object.entries(query).flatMap(([k, v]) => [].concat(v).map((x) => [k, x]))).toString();
     permanentRedirect(`${coursePath(course.slug)}${search ? `?${search}` : ""}`);
   }
-  // the published reviews that name this course's topic, with the topic's name (the Customer reviews filter uses the same)
-  return <CourseDetail course={course} query={query} path={coursePath(course.slug)} reviews={reviews} reviewsCourse={reviewsCourse} />;
+  // the first page of its reviews (lib/courseDetailServer.js), or null when there are none
+  return <CourseDetail course={course} query={query} path={coursePath(course.slug)} reviews={reviews} />;
 }

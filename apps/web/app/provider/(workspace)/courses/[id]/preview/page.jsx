@@ -40,7 +40,7 @@ export default async function Page(props) {
   return (
     <>
       <PreviewBar back={`/provider/courses/${courseId}`} status={status} missing={course.status === "draft" || course.status === "changes" ? course.missing || [] : []} />
-      <CourseDetail course={{ ...detail.course, preview: true }} query={{}} path={coursePath(detail.course.slug)} reviews={detail.reviews} reviewsCourse={detail.reviewsCourse} />
+      <CourseDetail course={{ ...detail.course, preview: true }} query={{}} path={coursePath(detail.course.slug)} reviews={detail.reviews} />
     </>
   );
 }

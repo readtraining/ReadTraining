@@ -62,8 +62,8 @@ type Status = 'pending' | 'published' | 'hidden'
 type Row = { id: string; source: 'imported' | 'booking'; status: Status; reviewer_name: string; rating: number; body: string; review_date: string | null; date_is_approximate: boolean; topic: string | null; origin: string | null; origin_url: string | null; on_home: boolean; updated_at: string }
 const shape = (r: Row) => ({ id: r.id, source: r.source, status: r.status, name: r.reviewer_name, rating: r.rating, text: r.body, reviewDate: r.review_date, dateIsApproximate: r.date_is_approximate, topic: r.topic, origin: r.origin, originUrl: r.origin_url, onHome: r.on_home, updatedAt: new Date(r.updated_at).toISOString() })
 const COLUMNS = sql`id, source, status, reviewer_name, rating, body, to_char(review_date, 'YYYY-MM-DD') review_date, date_is_approximate, topic, origin, origin_url, on_home, updated_at`
-// newest first: by its date when known, else when it was added
-const NEWEST = sql`coalesce(review_date::timestamptz, created_at) desc, created_at desc`
+// newest first: by its date when known, else when it was added (then by id, so a page of them is always the same page)
+const NEWEST = sql`coalesce(review_date::timestamptz, created_at) desc, created_at desc, id desc`
 const logged = (d: Details) => ({ name: d.name, rating: d.rating, topic: d.topic, origin: d.origin, onHome: d.onHome, status: d.status })
 const values = (d: Details) => ({ ...d, origin: d.origin || null, originUrl: d.origin ? d.originUrl || null : null })
 
@@ -141,8 +141,46 @@ export const adminReviewsRouter = createTRPCRouter({
     }),
 })
 
+// a published review as the website reads it
+const onSite = (r: Row) => ({ id: r.id, name: r.reviewer_name, rating: r.rating, text: r.body, date: r.review_date, dateIsApproximate: r.date_is_approximate, topic: r.topic, origin: r.origin, originUrl: r.origin_url, onHome: r.on_home })
+
 /** The website's reviews: the published ones, newest first, at most 1,000 (content.reviews; the page shows them a few at a time). */
 export async function publishedReviews(db: typeof Db) {
   const rows = await db.execute<Row>(sql`select ${COLUMNS} from ${reviews} where status = 'published' order by ${NEWEST} limit 1000`)
-  return rows.map((r) => ({ id: r.id, name: r.reviewer_name, rating: r.rating, text: r.body, date: r.review_date, dateIsApproximate: r.date_is_approximate, topic: r.topic, origin: r.origin, originUrl: r.origin_url, onHome: r.on_home }))
+  return rows.map(onSite)
+}
+
+// ---- a course page's reviews (content.courseReviews) ----------------------------------------------------------------------
+const COURSE_PAGE = 6
+const GENERAL_MAX = 4
+// Words that tie a review to a kind of course or a subject (a Postgres pattern: \y is a word boundary). Many reviews with no
+// topic still say what they trained for ("my SIA training"), which on the Food Hygiene page would read as a review of that
+// course; a general review shown on a course page has none of them. Generous on purpose: leaving out a review that only seems
+// to name a subject costs nothing.
+const SUBJECT_WORDS =
+  '\\y(sia|door\\w*|bouncers?|steward\\w*|guard\\w*|secur\\w*|cctv|surveillance|close protection|conflict|physical|top[ -]?ups?|licen[cs]\\w*|first[ -]?aid\\w*|e?faw|paediatric|cpr|cscs|citb|hs&e|smsts|sssts|construction|asbestos|forklift|ipaf|pasma|iosh|nebosh|health and safety|manual handling|mental health|fire\\w*|marshal\\w*|warden\\w*|food|hygiene|haccp|allergen\\w*|aplh|alcohol|barista|coffee|marketing|social media|officers?|supervisors?|operators?|level\\s*\\d)\\y'
+
+/**
+ * One page of a course page's reviews. `topic` is the course's catalogue place ("category/sub-category/topic", or shorter when
+ * it has no topic or sub-category; null for none). The reviews shown are the published ones that name that place or a part of
+ * it (a review filed under "category/sub-category" is about every topic in it), newest first, COURSE_PAGE at a time, only the
+ * page asked for being read. When none does, the newest GENERAL_MAX about Read Training in general (no topic, and no kind of
+ * course or subject in their words), as one page, `general`. Chosen by words and date only, never by stars, so a lower rating
+ * is shown like any other (DMCC Act 2024). A page past the last is the last page (`page` says which was sent).
+ */
+export async function courseReviews(db: typeof Db, topic: string | null, page: number) {
+  const parts = topic ? topic.split('/') : []
+  const places = parts.map((_, i) => parts.slice(0, i + 1).join('/'))
+  if (places.length) {
+    const named = sql`status = 'published' and topic in (${sql.join(places.map((p) => sql`${p}`), sql`, `)})`
+    const [{ n }] = await db.execute<{ n: number }>(sql`select count(*)::int n from ${reviews} where ${named}`)
+    if (n) {
+      const pages = Math.ceil(n / COURSE_PAGE)
+      const at = Math.min(page, pages)
+      const rows = await db.execute<Row>(sql`select ${COLUMNS} from ${reviews} where ${named} order by ${NEWEST} limit ${COURSE_PAGE} offset ${(at - 1) * COURSE_PAGE}`)
+      return { items: rows.map(onSite), total: n, pages, page: at, general: false }
+    }
+  }
+  const rows = await db.execute<Row>(sql`select ${COLUMNS} from ${reviews} where status = 'published' and topic is null and body !~* ${SUBJECT_WORDS} order by ${NEWEST} limit ${GENERAL_MAX}`)
+  return { items: rows.map(onSite), total: rows.length, pages: rows.length ? 1 : 0, page: 1, general: true }
 }

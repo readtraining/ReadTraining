@@ -8,3 +8,8 @@ import { apiQuery, withLastGood } from "@/lib/apiServer";
 // ones this server had, else the error (lib/apiServer.js withLastGood); while the site is built, none (pages rebuild within 5
 // minutes). cache(): one request asks once.
 export const loadReviews = cache(withLastGood(async () => (await apiQuery("content.reviews", undefined, { tags: ["reviews"], whenBuilding: [] })) ?? []));
+
+// The first page of one course page's reviews (API content.courseReviews: { items, total, pages, page, general }), saved the same
+// way under the tag "reviews"; the browser asks for the other pages itself (components/courseDetail/CourseReviews.jsx). `topic`
+// is the course's catalogue place (lib/siteReviews.js reviewPlace).
+export const loadCourseReviews = cache(async (topic) => apiQuery("content.courseReviews", { topic, page: 1 }, { tags: ["reviews"] }));
