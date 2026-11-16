@@ -40,7 +40,7 @@ export default function ProviderOrder({ reference }) {
   const noteRef = useRef(null);
   const invoiceRef = useRef(null);
   const clearToast = useCallback(() => setToast(null), []);
-  if (!data) return <Loading rows={3} />;
+  if (!data) return <Loading detail />;
   const o = data.orders.find((x) => x.ref === reference);
   if (!o) {
     return <EmptyState title={`Order ${reference} was not found.`} action={{ href: "/provider/orders", label: "Back to orders" }} />;

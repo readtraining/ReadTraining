@@ -822,7 +822,7 @@
 .rt-field input::placeholder { color: var(--color-light-1); opacity: 0.8; }
 .rt-field select:focus, .rt-field input:focus { outline: none; background-color: #fff; border-color: var(--color-dark-1); }
 /* form pages: a <label> as the field title, textareas, hints and errors */
-.rt-field > label { font-size: 12px; font-weight: 600; color: var(--color-dark-1); }
+.rt-field > label, .rt-pws-nc__labelrow > label { font-size: 12px; font-weight: 600; color: var(--color-dark-1); }
 .rt-field textarea { width: 100%; min-height: 120px; padding: 14px; border: 1px solid var(--color-light-5); border-radius: 10px; background: var(--color-light-4); font: inherit; font-size: 14px; color: var(--color-dark-1); resize: vertical; }
 .rt-field textarea:focus { outline: none; background-color: #fff; border-color: var(--color-dark-1); }
 .rt-field [aria-invalid="true"] { border-color: var(--color-red-3); }
@@ -1138,6 +1138,9 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
   transition: opacity 0.22s ease-in, transform 0.22s ease-in, visibility 0s linear 0.22s;
 }
 .rt-cat-dd.is-open .rt-cat-dd__panel { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity 0.22s ease-in, transform 0.22s ease-in, visibility 0s; }
+/* inside a pop-up a closed list takes no room: it is only invisible while closed, and in a pop-up that scrolls it would still add
+   empty space to scroll into below the form */
+.rt-dd .rt-cat-dd:not(.is-open) .rt-cat-dd__panel { display: none; }
 .rt-cat-dd__panel::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
 .rt-cat-dd--sort .rt-cat-dd__panel { left: auto; right: 0; min-width: 220px; }
 .rt-cat-dd__search { display: flex; align-items: center; gap: 8px; height: 40px; margin: 0 0 6px; padding: 0 12px; border: 1px solid var(--color-light-5); border-radius: var(--cat-radius-sm); }
@@ -3038,6 +3041,9 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 .rt-tr__filter { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border: 1px solid var(--color-border-strong); border-radius: 999px; background: var(--color-white); font-size: 14px; font-weight: 600; color: var(--color-dark-1); cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
 .rt-tr__filter:hover { border-color: var(--color-purple-1); }
 .rt-tr__filter.is-on { border-color: var(--color-purple-1); background: var(--color-purple-1); color: var(--color-white); }
+/* a tab that goes to another page is a link (Cohorts' List / Calendar): it keeps the tab's colours, not the template's link colour */
+a.rt-tr__filter { text-decoration: none; color: var(--color-dark-1) !important; }
+a.rt-tr__filter.is-on { color: var(--color-white) !important; }
 .rt-tr__filter-n { min-width: 22px; padding: 0 6px; border-radius: 999px; background: var(--color-light-4); font-size: 12px; line-height: 20px; text-align: center; color: var(--color-dark-1); }
 .rt-tr__filter.is-on .rt-tr__filter-n { background: var(--color-white); color: var(--color-purple-1); }
 /* phones: the pinned filters stay on one row that scrolls sideways (the chips run off the edge to show there are more), so
@@ -3405,13 +3411,14 @@ body.rt-tq-running .rt-tq__after, body.rt-tq-running .rt-helpcta, body.rt-tq-run
 /* the same height with or without a course line under the name, so the dividers line up across a row */
 .rt-reviews__grid .rt-review__who { box-sizing: border-box; min-height: 56px; }
 .rt-reviews__grid .rt-review__quote { white-space: pre-line; }
+/* a long review cut to five lines (ReviewCard `clamp`), with Read more / Read less under it; it opens in the card */
+.rt-reviews__grid .rt-review__quote.-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
+.rt-review__more { align-self: flex-start; margin-top: 8px; padding: 0; border: 0; background: none; color: var(--color-purple-1); font-size: 14px; font-weight: 600; cursor: pointer; }
+.rt-review__more:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rt-review__more:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; border-radius: var(--rt-radius-sm); }
 .rt-reviews__empty { max-width: 560px; margin: 32px auto 0; }
 .rt-reviews__more { display: flex; justify-content: center; margin-top: 32px; }
 .rt-reviews__more-n { margin-left: 6px; font-weight: 400; }
-/* a long review cut to six lines (ReviewCard `clamp`), with Read more / Show less under it */
-.rt-reviews__grid .rt-review__quote.-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden; }
-.rt-review__more { align-self: flex-start; margin-top: 8px; padding: 0; border: 0; background: none; color: var(--color-purple-1); font-size: 14px; font-weight: 600; cursor: pointer; }
-.rt-review__more:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* the closing call to action, spaced from the FAQ's tinted band */
 .rt-reviews__cta { padding-top: 64px; }
 
@@ -4202,6 +4209,25 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
   .rt-biz__table td small { display: inline; margin: 0 0 0 6px; }
   .rt-biz__act { justify-content: flex-end; }
 }
+/* workspace tables stack into labelled rows (decision D4, 14 Nov 2026): the standard table's own phone layout, for tablets and,
+   from 992px, while the page column beside the menu is narrower than 855px, where 6 to 9 columns don't fit. That is the column a
+   1200px window left beside the 264px menu, so at the menu's default width the tables stack below 1200px as before; a folded or
+   narrower menu keeps them whole when there is room (the column is the rt-pws-main container, from 992px) */
+@mixin rt-pws-stacked-tables {
+  .rt-pws .rt-biz__tablecard { padding: 4px 16px; }
+  .rt-pws .rt-biz__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .rt-pws .rt-biz__table, .rt-pws .rt-biz__table tbody, .rt-pws .rt-biz__table tr, .rt-pws .rt-biz__table td { display: block; width: 100%; }
+  .rt-pws .rt-biz__table tr { padding: 14px 0; border-bottom: 1px solid var(--color-light-5); }
+  .rt-pws .rt-biz__table tr:last-child { border-bottom: 0; }
+  .rt-pws .rt-biz__table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border: 0; text-align: right; }
+  .rt-pws .rt-biz__table td::before { content: attr(data-label); flex: none; font-size: 12px; font-weight: 600; color: var(--color-light-1); text-align: left; }
+  .rt-pws .rt-biz__table td:first-child { padding-bottom: 8px; }
+  .rt-pws .rt-biz__table td:first-child::before, .rt-pws .rt-biz__table td.rt-biz__act::before { content: none; }
+  .rt-pws .rt-biz__table td small { display: inline; margin: 0 0 0 6px; }
+  .rt-pws .rt-biz__act { justify-content: flex-end; }
+}
+@media (min-width: 768px) and (max-width: 991px) { @include rt-pws-stacked-tables; }
+@container rt-pws-main (width < 855px) { @include rt-pws-stacked-tables; }
 /* pop-ups: add a learner, a learner's details, pay, an invoice */
 .rt-biz__sheetform { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 /* a long name or email in a pop-up wraps instead of making the pop-up scroll sideways */
@@ -4770,20 +4796,30 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__group ul { margin: 0; padding: 0; list-style: none; }
 .rt-adm__group li { list-style: none; }
 /* group headings: a fold arrow, then the name in dark small capitals; the group's pages sit indented under a guide line */
-/* the button that hides the sidebar, at its top right; while hidden, the same button sits on the screen's left edge to bring it
-   back (from 992px; below, the sidebar is the drawer) */
+/* the button at the sidebar's top that folds it to its icon rail and opens it again (from 992px; below, the sidebar is the drawer).
+   Each layout draws its own rail: the admin's (.rt-adm--platform.is-sideclosed) and the provider workspace's (.rt-pws.is-sideclosed) */
 .rt-adm__sidetools { display: none; }
-.rt-adm__sidehide, .rt-adm__sideopen { display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--rt-c-muted); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
-.rt-adm__sidehide { width: 32px; height: 32px; border: 0; border-radius: var(--rt-radius-sm); background: none; }
-.rt-adm__sideopen { display: none; }
-@media (hover: hover) and (pointer: fine) { .rt-adm__sidehide:hover, .rt-adm__sideopen:hover { background: var(--color-light-4); color: var(--rt-c-text); } }
+.rt-adm__sidehide { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+@media (hover: hover) and (pointer: fine) { .rt-adm__sidehide:hover { background: var(--color-light-4); color: var(--rt-c-text); } }
 @media (min-width: 992px) {
   .rt-adm__sidetools { display: flex; justify-content: flex-end; padding: 2px 4px 0; }
-  .rt-adm.is-sideclosed .rt-adm__body { grid-template-columns: minmax(0, 1fr); }
-  .rt-adm.is-sideclosed .rt-adm__side { display: none; }
-  .rt-adm.is-sideclosed .rt-adm__main { padding-left: 72px; }
-  .rt-adm__sideopen { position: fixed; top: 84px; left: 0; z-index: 20; display: inline-flex; width: 40px; height: 40px; border: 1px solid var(--rt-c-line); border-left: 0; border-radius: 0 var(--rt-radius-control) var(--rt-radius-control) 0; background: var(--rt-c-surface); box-shadow: var(--rt-shadow-raised); color: var(--rt-c-text); }
 }
+/* the sidebar's edge that resizes it (SideResizer, workNav.jsx; placed by the layout that uses it): an 8px strip over the border,
+   showing a brand line when pointed at, focused or dragged */
+.rt-adm__resize { display: none; }
+@media (min-width: 992px) {
+  .rt-adm__resize { position: relative; display: block; width: 8px; cursor: col-resize; touch-action: none; }
+  .rt-adm__resize::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: var(--rt-c-brand); opacity: 0; transition: opacity 150ms ease; }
+  .rt-adm__resize:focus-visible { outline: 0; }
+  .rt-adm__resize:focus-visible::after { left: 2px; width: 3px; opacity: 1; }
+  body.rt-side-resizing .rt-adm__resize::after { opacity: 1; }
+}
+@media (hover: hover) and (pointer: fine) { .rt-adm__resize:hover::after { opacity: 1; } }
+/* while the edge is dragged: no text selection, no hover underneath, the resize cursor everywhere */
+body.rt-side-resizing { cursor: col-resize; user-select: none; }
+body.rt-side-resizing :is(.rt-adm__top, .rt-adm__side, .rt-adm__main) { pointer-events: none; }
+/* a rail icon's name (useRailTip, workNav.jsx): beside the icon, outside the rail, in the charts' tooltip look */
+.rt-adm__tip { position: fixed; z-index: 60; padding: 6px 10px; border-radius: var(--rt-radius-sm); background: var(--rt-c-dark); box-shadow: var(--rt-shadow-dialog); font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.3; white-space: nowrap; color: var(--rt-c-surface); pointer-events: none; transform: translateY(-50%); }
 .rt-adm__grouplabel { display: flex; align-items: center; gap: 6px; width: calc(100% - 8px); margin: 10px 4px 2px; padding: 7px 8px 7px 6px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.05em; text-align: left; text-transform: uppercase; color: var(--rt-c-muted); cursor: pointer; }
 .rt-adm__grouplabel > span:first-of-type { flex: 1; }
 .rt-adm__chev { flex: none; color: var(--rt-c-muted); transition: transform 150ms ease; }
@@ -4794,7 +4830,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__grouplabel .rt-adm__count { min-width: 20px; height: 20px; margin: 0; font-size: var(--rt-text-xs); line-height: 20px; letter-spacing: 0; text-transform: none; }
 .rt-adm__group ul { margin: 0 0 4px 17px; padding-left: 8px; border-left: 1px solid var(--rt-c-line); }
 .rt-adm__group .rt-adm__link { padding: 8px 10px; }
-@media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__chev, .rt-adm__sidehide, .rt-adm__sideopen { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__chev, .rt-adm__sidehide, .rt-adm__resize::after { transition: none; } }
 .rt-adm__link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: var(--rt-text-sm); font-weight: 500; color: var(--color-dark-1) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-adm__link i, .rt-adm__icon { flex: none; color: var(--color-light-1); }
 @media (hover: hover) and (pointer: fine) { a.rt-adm__link:hover { background: var(--color-light-4); } }
@@ -4886,7 +4922,7 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 @media (max-width: 575px) { .rt-adm-item__actions { padding-left: 0; } .rt-adm-item__actions .button { flex: 1 1 auto; } }
 /* cards and lists */
 .rt-adm-grid2 { display: grid; gap: 16px; }
-@media (min-width: 1100px) { .rt-adm-grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+@media (min-width: 1200px) { .rt-adm-grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .rt-adm-cardnote { margin: -8px 0 12px; }
 .rt-adm-cardhead { margin: 16px 0 6px; }
 .rt-adm-strong { font-weight: 600; color: var(--color-dark-1) !important; text-decoration: none; }
@@ -5079,10 +5115,10 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
   .rt-adm-cat__move { display: none; }
   .rt-rowmenu__phone { display: block; }
 }
-/* The provider account's status (ProviderAccountStatus): one line at the top of every workspace page, as GOV.UK's notification
-   banner and Polaris / Atlassian banners: an icon in the tone's colour, the title and one sentence, at most one action and, for a
-   message that can be hidden, a close button. The tones are the status system's (info blue, warning amber, critical red, success
-   green). On a phone the action takes the full width and the close button sits in the corner. */
+/* The provider account's status (ProviderAccountStatus): one line at the top of the dashboard (suspended: of every workspace
+   page), as GOV.UK's notification banner and Polaris / Atlassian banners: an icon in the tone's colour, the title and one
+   sentence ending in at most one action as a bold link and, for news shown once, a close button. The tones are the status
+   system's (info blue, warning amber, critical red, success green). On a phone the close button sits in the corner. */
 .rt-pws-status { position: relative; display: flex; align-items: center; gap: 14px; margin: 0 0 20px; padding: 14px 16px; border-radius: var(--rt-radius-control); background: var(--rt-adm-info-bg); }
 .rt-pws-status.-warning { background: var(--color-orange-7); }
 .rt-pws-status.-critical { background: var(--color-red-2); }
@@ -5094,17 +5130,15 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-status__body { flex: 1 1 auto; min-width: 0; }
 .rt-pws-status__title { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; line-height: 1.4; color: var(--rt-c-text); }
 .rt-pws-status__text { margin: 2px 0 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); }
-.rt-pws-status__side { flex: none; display: flex; align-items: center; gap: 4px; }
-.rt-pws-status__action { background: var(--rt-c-surface); white-space: nowrap; }
-.rt-pws-status__close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: transparent; color: var(--rt-c-muted); cursor: pointer; }.rt-pws-status__close:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 0; }
+.rt-dash > .rt-pws-status { margin: 0; }
+.rt-pws-status__link { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; color: var(--rt-c-text) !important; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-status__link:hover { text-decoration-thickness: 2px; } }
+.rt-pws-status__close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: transparent; color: var(--rt-c-muted); cursor: pointer; }.rt-pws-status__close:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 0; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-status__close:hover { background: var(--rt-c-surface); } }
 @media (max-width: 575px) {
   .rt-pws-status { flex-wrap: wrap; align-items: flex-start; }
   .rt-pws-status:has(.rt-pws-status__close) { padding-right: 52px; }
   .rt-pws-status__body { flex-basis: calc(100% - 46px); }
-  .rt-pws-status__side { flex-basis: 100%; }
-  .rt-pws-status__side:not(:has(.rt-pws-status__action)) { flex-basis: auto; }
-  .rt-pws-status__action { flex: 1 1 auto; justify-content: center; }
   .rt-pws-status__close { position: absolute; top: 4px; right: 4px; margin: 0; }
 }
 
@@ -5146,6 +5180,16 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-check__bar { height: 6px; margin: 12px 0 4px; overflow: hidden; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); }
 .rt-pws-check__bar span { display: block; height: 100%; border-radius: inherit; background: var(--rt-c-brand); transition: width 0.3s ease; }
 .rt-pws-check__list { margin: 0; padding: 0; list-style: none; }
+/* the dashboard's folded checklist: the next step, its link, and every step a click away */
+.rt-pws-check__next { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-top: 10px; }
+.rt-pws-check__next p { flex: 1 1 280px; min-width: 0; margin: 0; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
+.rt-pws-check__nextlabel { color: var(--rt-c-brand); }
+.rt-pws-check__nexttext { font-weight: 400; color: var(--rt-c-muted); }
+.rt-pws-check__nextactions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.rt-pws-check__toggle { min-height: 36px; padding: 0; border: 0; background: none; font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); cursor: pointer; }
+.rt-pws-check__toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rt-pws-check__toggle:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; border-radius: var(--rt-radius-sm); }
+.rt-pws-check__next + .rt-pws-check__list { margin-top: 12px; border-top: 1px solid var(--rt-c-line); }
 .rt-pws-check__item { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: 1px solid var(--rt-c-line); }
 .rt-pws-check__item:first-child { border-top: 0; }
 .rt-pws-check__mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 2px solid var(--rt-c-line); border-radius: 50%; color: var(--rt-c-surface); }
@@ -5240,14 +5284,17 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 /* ---------- end PLATFORM ADMIN ---------- */
 
 /* the header's right-hand row (components/home/HomeHeader): search, basket, the phone menu button and the account. Signed out it
-   keeps its old spacing (30px, 20px from 1199px down with 30px before Log in); signed in everything is 18px apart */
+   keeps its old spacing (30px, 20px from 1199px down with 30px before Log in). Signed in, search, basket and avatar are 24px
+   apart (20px from 1199px down): each 20px icon then has a full 44px target (Apple's and Google's minimum) without overlapping
+   the next, and the avatar clears the basket's count */
 .rt-hactions { gap: 30px; }
 @media (max-width: 1199px) {
   .rt-hactions { gap: 20px; }
   .rt-hactions > .rt-hactions__auth { margin-left: 10px; }
 }
-.rt-hactions:has(.rt-hauth--in) { gap: 18px; }
+.rt-hactions:has(.rt-hauth--in) { gap: 24px; }
 .rt-hactions:has(.rt-hauth--in) > .rt-hactions__auth { margin-left: 0; }
+@media (max-width: 1199px) { .rt-hactions:has(.rt-hauth--in) { gap: 20px; } }
 /* ---------- HEADER ACCOUNT MENU (components/home/HeaderAuth): signed in, the person's initials and first name open their account's
    pages and Sign out; signed out, Log in and Sign up as before ---------- */
 .rt-hauth { position: relative; display: flex; align-items: center; min-width: 150px; justify-content: flex-end; }
@@ -5296,8 +5343,8 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
    1399px). Keyboard focus keeps its outline. The green needs !important: the template forces every link to its parent's
    colour (a { color: inherit !important }). */
 @media (min-width: 1200px) {
-  /* the menu row starts 44px after the logo (the template centres it), so the cards have room to open under their names */
-  .header .header-menu .menu { left: 220px; transform: none; }
+  /* the menu row stays centred (the template's place), so opening the search slides it left to make room (HomeHeader); each
+     card opens under its own name (NavCard cardPlace) */
   .header .header-menu .menu__nav > li { position: relative; }
   .header .header-menu .menu__nav > li:hover > a:not(.is-open) { background-color: transparent; color: var(--rt-c-accent) !important; }
   .header .header-menu .menu__nav > li > a.is-open { background-color: transparent; }
@@ -5625,12 +5672,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
    the sidebar, plus the parts in providerParts.jsx. Tokens only (DESIGN-SYSTEM.md).
    ===================================================================== */
 .rt-pws { --fp-text: var(--rt-c-text); --fp-muted: var(--rt-c-muted); --fp-border: var(--rt-c-line); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--rt-c-brand); --fp-surface: var(--rt-c-surface); }
+/* the page head's buttons line up with the title, so a description on two lines doesn't move them (Cohorts and Calendar share a switch) */
+.rt-pws .rt-adm__head { align-items: flex-start; }
 .rt-pws__org { display: flex; align-items: center; gap: 10px; margin: 4px 4px 0; padding: 10px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
 /* cohorts: List / Calendar switch */
-.rt-pws-views { display: inline-flex; padding: 4px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-pill); background: var(--rt-c-surface); }
-.rt-pws-views__link { display: inline-flex; align-items: center; min-height: 36px; padding: 0 18px; border-radius: var(--rt-radius-pill); font-size: var(--rt-text-sm); font-weight: 600; text-decoration: none; color: var(--rt-c-text) !important; }
-.rt-pws-views__link.is-on { background: var(--rt-c-brand); color: var(--rt-c-surface) !important; }
-.rt-pws-views__link:not(.is-on):hover { color: var(--rt-c-brand) !important; }
 /* Hurak's top bar: New course, Student, the bell and the account menu */
 .rt-pws__nav { display: grid; gap: 2px; margin: 16px 0 0; padding: 0; list-style: none; }
 .rt-pws__nav li { list-style: none; }
@@ -5667,10 +5712,17 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-pws__student span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .rt-pws__student { justify-content: center; width: 44px; }
 }
-@media (max-width: 420px) { .rt-adm__tag { display: none; } }
+@media (max-width: 575px) { .rt-adm__tag { display: none; } }
 @media (prefers-reduced-motion: reduce) { .rt-pws__bell { transition: none; } }
 .rt-pws__orgmark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-surface); }
-.rt-pws__orgname { min-width: 0; }
+.rt-pws__orgname { flex: 1 1 auto; min-width: 0; }
+/* the fold button: in the account card while the menu is open, from 992px (the drawer below that has its own close); the rail's
+   copy at its top only while folded */
+.rt-pws__org .rt-adm__sidehide { display: none; flex: none; margin-right: -4px; }
+@media (min-width: 992px) {
+  .rt-pws__org .rt-adm__sidehide { display: inline-flex; }
+  .rt-pws:not(.is-sideclosed) .rt-adm__sidetools { display: none; }
+}
 .rt-pws__orgname strong { display: block; overflow: hidden; font-size: var(--rt-text-sm); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-text); }
 .rt-pws__orgname span { display: block; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 /* "← Orders" above a page title: the arrow and words centred on one line */
@@ -5740,7 +5792,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-note__body { flex: 1; min-width: 0; }
 .rt-pws-note__text { display: block; font-size: var(--rt-text-sm); line-height: 1.5; }
 .rt-pws-note li.is-unread .rt-pws-note__text { font-weight: 600; }
-.rt-pws-note__body small { display: block; margin-top: 2px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-pws-note__body small { display: block; margin-top: 2px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-pws-note__link i { color: var(--rt-c-muted); }
 @media (hover: hover) and (pointer: fine) { .rt-pws-note__link:hover .rt-pws-note__text { color: var(--rt-c-brand); } }
 
@@ -5750,52 +5802,28 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-linkbtn { min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
 /* courses list (ours, with Hurak's fields): slim profile bar, then one card with status tabs, filters and a compact course table */
 /* the page head's right side: the profile card, then "New course" */
-.rt-cx-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px 16px; }
-.rt-adm__head:has(.rt-cx-head) { align-items: center; flex-wrap: nowrap; }
-.rt-adm__head:has(.rt-cx-head) > div:first-child { flex: 1 1 260px; min-width: 0; }
-.rt-adm__head:has(.rt-cx-head) .rt-cx-head { flex: 0 0 auto; }
-@media (max-width: 1199px) { .rt-adm__head:has(.rt-cx-head) { flex-wrap: wrap; } }
-.rt-cx-org { display: flex; align-items: center; gap: 14px; padding: 10px 16px 10px 10px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-.rt-cx-org.-loading { width: 380px; height: 66px; background: var(--rt-c-soft); }
-.rt-cx-org__logo { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-brand); font-size: var(--rt-text-sm); font-weight: 700; color: var(--rt-c-surface); }
-.rt-cx-org__who { min-width: 0; }
-.rt-cx-org__name { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; white-space: nowrap; color: var(--rt-c-text); }
-.rt-cx-org__links { display: flex; flex-wrap: wrap; gap: 0 14px; margin: 2px 0 0; font-size: var(--rt-text-xs); }
-.rt-cx-org__links a, .rt-cx-org__links button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--rt-c-brand) !important; text-decoration: none; cursor: pointer; }
-.rt-cx-org__links a:hover, .rt-cx-org__links button:hover { text-decoration: underline; text-underline-offset: 3px; }
-.rt-cx-org__stats { display: flex; margin: 0; }
-.rt-cx-org__stats > div { padding: 0 0 0 14px; margin-left: 14px; border-left: 1px solid var(--rt-c-line); }
-.rt-cx-org__stats dt { font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
-.rt-cx-org__stats dd { margin: 0; font-size: var(--rt-text); font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
 .rt-cx { border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-.rt-cx__top { padding: 0 20px; border-bottom: 1px solid var(--rt-c-line); }
-.rt-cx-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
-.rt-cx-tabs::-webkit-scrollbar { display: none; }
-.rt-cx-tabs__tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 8px; min-height: 52px; padding: 0 12px; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); cursor: pointer; transition: color 150ms ease; }
-.rt-cx-tabs__tab span { min-width: 22px; padding: 1px 7px; border-radius: var(--rt-radius-pill); background: var(--rt-c-soft); font-size: 11px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; color: var(--rt-c-muted); }
-.rt-cx-tabs__tab::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--rt-c-brand); transform: scaleX(0); transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1); }
-.rt-cx-tabs__tab.is-on { color: var(--rt-c-text); }
-.rt-cx-tabs__tab.is-on span { background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
-.rt-cx-tabs__tab.is-on::after { transform: scaleX(1); }
-.rt-cx-tabs__tab:hover { color: var(--rt-c-text); }
-.rt-cx-tabs__tab:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: -3px; border-radius: 8px; }
+.rt-cx__top { padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-cx__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 14px 20px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-cx__bar.-more { padding-top: 14px; background: var(--rt-c-soft); }
+/* a filter bar on its own in its card (Orders, Learners): no line under it */
+.rt-cx > .rt-cx__bar:last-child { border-bottom: 0; }
 .rt-cx__bar .rt-adm-search { flex: 1 1 260px; }
 .rt-cx__more { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
 .rt-cx__more.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
 .rt-cx__more:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-cx__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rt-c-brand); }
 .rt-cx-table { width: 100%; border-collapse: collapse; }
-.rt-cx-table th { padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; text-align: left; white-space: nowrap; color: var(--rt-c-muted); }
+.rt-cx-table th { padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.04em; text-align: left; text-transform: uppercase; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-cx-table td { padding: 12px 16px; border-bottom: 1px solid var(--rt-c-line); font-size: var(--rt-text-sm); vertical-align: middle; color: var(--rt-c-text); }
 .rt-cx-table tbody tr:last-child td { border-bottom: 0; }
 .rt-cx-table th:first-child, .rt-cx-table td:first-child { padding-left: 20px; }
 .rt-cx-table th:last-child, .rt-cx-table td:last-child { padding-right: 20px; }
 .rt-cx-table .-num { text-align: right; font-variant-numeric: tabular-nums; }
-/* fixed columns from 1360px so long titles truncate instead of squeezing the course column; the row action is a chevron button
-   (its name and tooltip say "Edit / manage course"), and the course title opens the course too */
-@media (min-width: 1360px) {
+/* fixed columns where the page column is 1015px or wider (a 1360px window beside the menu at its default width; the column is the
+   rt-pws-main container, from 992px) so long titles truncate instead of squeezing the course column; the row opens its course (its title
+   link), and its ⋮ menu (RowMenu) holds the course's actions */
+@container rt-pws-main (width >= 1015px) {
   .rt-cx-table { table-layout: fixed; }
   .rt-cx-table th:nth-child(1) { width: 27%; }
   .rt-cx-table th:nth-child(2) { width: 19%; }
@@ -5805,8 +5833,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-cx-table th:nth-child(7) { width: 8%; }
   .rt-cx-table th:nth-child(8) { width: 72px; }
   .rt-cx-table th, .rt-cx-table td:not(.-act) { overflow: hidden; text-overflow: ellipsis; }
-  .rt-cx-table .rt-cx-manage { justify-content: center; width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 10px; }
-  .rt-cx-table .rt-cx-manage__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 .rt-cx-table .-act { white-space: nowrap; text-align: right; }
 .rt-cx-table tbody tr { transition: background-color 120ms ease; }
@@ -5823,11 +5849,11 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-course__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-cx-rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 .rt-cx-rating i { color: var(--color-yellow-1); }
-.rt-cx-manage { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); font-size: var(--rt-text-xs); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
-@media (hover: hover) and (pointer: fine) { .rt-cx-manage:hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; } }
-.rt-cx-manage:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-/* below 1360px (the table needs the room) each course becomes a labelled block, as the other workspace tables do */
-@media (max-width: 1359px) {
+/* the ⋮ menu: Delete course (red) sits apart from the other actions */
+.rt-cx-table .rt-rowmenu__list li:has(> .-danger) { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--rt-c-line); }
+/* narrower than that (the table needs the room), and below 992px, each course becomes a labelled block, as the other workspace
+   tables do */
+@mixin rt-cx-stacked {
   .rt-cx-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-cx-table, .rt-cx-table tbody, .rt-cx-table tr, .rt-cx-table td { display: block; width: 100%; }
   .rt-cx-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
@@ -5835,37 +5861,27 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-cx-table td, .rt-cx-table td:first-child, .rt-cx-table td:last-child { padding: 0; border: 0; border-radius: 0; text-align: left; }
   .rt-cx-table tbody tr:hover > td { background: none; }
   .rt-cx-table td::before { content: attr(data-label); display: block; margin-bottom: 2px; font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
-  .rt-cx-table td[data-label="Course"], .rt-cx-table td.-act { grid-column: 1 / -1; }
+  /* the course across the top, its ⋮ menu at the top right beside it */
+  .rt-cx-table td[data-label="Course"] { grid-row: 1; grid-column: 1 / -1; padding-right: 56px; }
+  .rt-cx-table td.-act { grid-row: 1; grid-column: -2 / -1; justify-self: end; width: auto; }
   .rt-cx-table td.-num { text-align: left; }
   .rt-cx-table td[data-label="Course"]::before, .rt-cx-table td.-act::before { content: none; }
-  .rt-cx-table td.-act { width: 100%; }
-  .rt-cx-manage { width: 100%; justify-content: center; }
 }
+@media (max-width: 991px) { @include rt-cx-stacked; }
+@container rt-pws-main (width < 1015px) { @include rt-cx-stacked; }
 @media (max-width: 575px) {
   .rt-cx-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .rt-cx-head, .rt-cx-org { width: 100%; }
-  .rt-cx-org { flex-wrap: wrap; }
-  .rt-cx-org__stats { width: 100%; padding-top: 8px; border-top: 1px solid var(--rt-c-line); }
-  .rt-cx-org__stats > div:first-child { margin-left: 0; padding-left: 0; border-left: 0; }
-  .rt-cx-head > .button { width: 100%; justify-content: center; }
 }
-@media (prefers-reduced-motion: reduce) { .rt-cx-tabs__tab, .rt-cx-tabs__tab::after, .rt-cx__more, .rt-cx-table tbody tr, .rt-cx-manage { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-cx__more, .rt-cx-table tbody tr { transition: none; } }
 .rt-cl-promo { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; padding: 20px 24px; border: 1px dashed color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); border-radius: var(--rt-radius-card); background: var(--rt-c-brand-soft); }
 .rt-cl-promo > div { flex: 1 1 260px; }
 .rt-cl-promo__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-surface); color: var(--rt-c-brand); }
 .rt-cl-promo__title { margin: 0 0 2px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
 .rt-cl-promo .rt-acc__note { margin: 0; }
 /* new course: Hurak's five-step wizard */
-.rt-pws-wiz { display: grid; gap: 20px; max-width: 760px; }
-.rt-pws-wiz__top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.rt-pws-wiz__step { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); }
+/* the course editor's progress line (it began as the old New course page's step bar) */
 .rt-pws-wiz__bar { height: 6px; overflow: hidden; border-radius: 999px; background: var(--rt-c-line); }
 .rt-pws-wiz__bar span { display: block; width: var(--rt-wiz); height: 100%; border-radius: inherit; background: var(--rt-c-brand); transition: width 250ms cubic-bezier(0.23, 1, 0.32, 1); }
-.rt-pws-wiz h2:focus { outline: none; }
-.rt-pws-wiz h2 + .rt-acc__note { margin-top: -12px; }
-.rt-pws-wiz__fields { display: grid; gap: 16px; }
-.rt-pws-wiz__fields .rt-field { margin: 0; }
-.rt-pws-wiz__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; border-top: 1px solid var(--rt-c-line); }
 @media (prefers-reduced-motion: reduce) { .rt-pws-wiz__bar span { transition: none; } }
 /* larger radio choices (course type, performance model, mode of study) */
 .rt-pws-optcards { min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -5875,15 +5891,26 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-optcard { display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
 .rt-pws-optcard.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
 .rt-pws-optcard.is-off { cursor: not-allowed; opacity: 0.6; }
-.rt-pws-optcard .rt-fp__radio { flex: none; margin-top: 2px; }
+.rt-pws-optcard .rt-fp__radio, .rt-pws-optcard input[type="checkbox"] { flex: none; margin-top: 2px; }
 .rt-pws-optcard:focus-within { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-optcard b { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-pws-optcard small { display: block; margin-top: 2px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-pws-optcard ul { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-pws-optcard li { display: flex; align-items: baseline; gap: 8px; list-style: none; }
 .rt-pws-optcard li i { color: var(--rt-c-brand); }
-@media (hover: hover) and (pointer: fine) { .rt-pws-optcard:not(.is-off):hover { border-color: var(--rt-c-brand); } }
+@media (hover: hover) and (pointer: fine) { .rt-pws-optcard:not(.is-off):not(.is-held):hover { border-color: var(--rt-c-brand); } }
 @media (prefers-reduced-motion: reduce) { .rt-pws-optcard { transition: none; } }
+/* editor: Learning options, the other ways a course is offered (option cards with a checkbox, one under another); an option kept on
+   by its upcoming dates says why under its words */
+.rt-pws-ce__ways { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.rt-pws-ce__ways legend { float: none; width: auto; margin: 0; font-size: var(--rt-text-sm); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
+.rt-pws-ce__ways > .rt-field__hint { margin-top: -8px; }
+.rt-pws-optcard.is-held { cursor: default; }
+.rt-pws-optcard .rt-pws-ce__waynote { margin-top: 8px; font-weight: 600; color: var(--rt-c-text); }
+/* editor: the price step's parts (the self-paced price, the dates) when a course has both */
+.rt-pws-ce__part { display: grid; gap: 16px; min-width: 0; }
+.rt-pws-ce__part > .rt-adm-h3, .rt-pws-ce__part > .rt-acc__note { margin: 0; }
+.rt-pws-ce__part + .rt-pws-ce__part { padding-top: 20px; border-top: 1px solid var(--rt-c-line); }
 /* editor: hero, review checklist */
 .rt-pws-course-herotext { flex: 1 1 360px; min-width: 0; }
 .rt-pws-course-unsaved { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); }
@@ -5904,15 +5931,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-tick.is-ok { border-color: var(--rt-c-success); background: var(--rt-c-success); color: var(--rt-c-surface); }
 .rt-pws-ce__need { display: grid; gap: 6px; margin: 0; }
 .rt-pws-ce__need:focus { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-.rt-pws-ce__need p { margin: 0; }
-.rt-pws-ce__need ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.rt-pws-ce__need li { display: grid; gap: 0; }
-.rt-pws-ce__need .rt-cd__link { min-height: 0; justify-self: start; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
-.rt-pws-ce__need small { color: var(--rt-c-muted); font-size: var(--rt-text-xs); }
-.rt-pws-ce__need.is-pressed { border-left-width: 5px; }
 .rt-pws-ce__status { margin: 0; }
 @media (max-width: 1199px) {
-  .rt-pws-ce__steps { display: flex; gap: 6px; margin: 0 -4px; padding: 0 4px 4px; overflow-x: auto; scrollbar-width: thin; }
+  /* below 1200px the steps are chips that wrap onto more lines, as the tabs do: every step in view, no sideways strip or scrollbar */
+  .rt-pws-ce__steps { display: flex; flex-wrap: wrap; gap: 6px; }
   .rt-pws-ce__step { white-space: nowrap; border: 1px solid var(--rt-c-line); }
   .rt-pws-ce__step.is-on { border-color: var(--rt-c-brand); }
   .rt-pws-ce__nav .rt-btn-block { width: auto; justify-self: start; }
@@ -5929,8 +5951,22 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__loyalty .rt-fp__opt { margin: 0; }
 .rt-pws-ce__plans { margin: 0; }
 .rt-pws-gear__check { margin: 0; }
-.rt-pws-gear__danger { padding-top: 16px; border-top: 1px solid var(--rt-c-line); }
+/* the course settings pop-up (CourseGear): settings in groups with small headings (Visibility, Sharing, Availability), each
+   action button the size of its label beside what it acts on, Delete in its own danger zone at the end, and Done at the bottom
+   right (the pop-ups' sticky button row); on phones the row buttons take the full width */
+.rt-pws-gear__sec { display: grid; gap: 14px; padding-top: 20px; border-top: 1px solid var(--rt-c-line); }
+.rt-pws-gear__sec .rt-field, .rt-pws-gear__sec .rt-pws-choice { margin: 0; }
+.rt-pws-gear__h { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; line-height: 1.4; color: var(--rt-c-text); }
+.rt-pws-gear__h.-danger { color: var(--rt-c-error); }
+.rt-pws-gear__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.rt-pws-gear__row > .rt-acc__note { flex: 1 1 240px; min-width: 0; margin: 0; }
+.rt-pws-gear__btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.rt-pws-gear__more { justify-self: start; }
+.rt-pws-gear__danger { display: grid; gap: 10px; padding: 16px; border: 1px solid color-mix(in srgb, var(--rt-c-error) 30%, var(--rt-c-line)); border-radius: var(--rt-radius-control); background: color-mix(in srgb, var(--rt-c-error) 3%, var(--rt-c-surface)); }
 .rt-pws-gear__danger .rt-acc__note { margin: 0; }
+@media (max-width: 575px) {
+  .rt-pws-gear__row > .button, .rt-pws-gear__btns, .rt-pws-gear__btns .button { flex: 1 1 100%; justify-content: center; }
+}
 @media (prefers-reduced-motion: reduce) { .rt-pws-ce__step, .rt-pws-ce__gear { transition: none; } }
 /* editor: forms */
 .rt-pws-course-form { display: grid; gap: 20px; }
@@ -5939,7 +5975,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-cardhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0; }
 .rt-pws-course-cardhead .rt-acc__h2 { margin: 0; }
 .rt-pws-course-count { align-self: flex-end; }
-.rt-pws-course-grid3, .rt-pws-course-grid2 { display: grid; gap: 16px; }
+/* fields side by side line up on their boxes: a hint or an error above one box doesn't push it below its neighbour */
+.rt-pws-course-grid3, .rt-pws-course-grid2 { display: grid; gap: 16px; align-items: end; }
 @media (min-width: 768px) { .rt-pws-course-grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rt-pws-course-grid2 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
 .rt-pws-course-addrow { display: flex; align-items: center; gap: 8px; }
 .rt-pws-course-addrow > input, .rt-pws-course-addrow > .rt-field { flex: 1 1 auto; min-width: 0; }
@@ -5968,11 +6005,30 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__pending .rt-acc__note { flex: 1 1 320px; margin: 0; }
 .rt-pws-ce__stale { display: grid; justify-items: start; gap: 8px; }
 .rt-pws-ce__stale p { margin: 0; }
-.rt-pws-ce__opt { font-weight: 400; color: var(--rt-c-muted); }
 .rt-pws-ce__unitbody { white-space: pre-line; }
+/* the editor's syllabus units and FAQs: what a unit covers and an FAQ's answer are content, at the body size (not the 12px meta of
+   .rt-adm-list); the row's icon buttons stay in one line at the top right, whatever the text's length */
+.rt-pws-ce__main .rt-adm-list li { align-items: flex-start; }
+.rt-pws-ce__main .rt-adm-list small { font-size: var(--rt-text); line-height: 1.5; color: var(--rt-c-text); }
+.rt-pws-ce__main .rt-adm-list__side { flex: none; flex-wrap: nowrap; gap: 4px; }
 .rt-pws-ce__iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); cursor: pointer; }
 .rt-pws-ce__iconbtn:hover:not(:disabled) { background: var(--rt-c-soft); color: var(--rt-c-text); }
 .rt-pws-ce__iconbtn:disabled { opacity: 0.35; cursor: default; }
+/* a remove (bin) icon button: red on hover */
+.rt-pws-ce__iconbtn.-danger:hover:not(:disabled) { color: var(--rt-c-error); }
+/* the side list: how far along, and a step's short hint under its name */
+.rt-pws-ce__progress { display: grid; gap: 6px; }
+.rt-pws-ce__progress p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-ce__steptext { display: grid; }
+/* the bar under each section: the existing card (.rt-acc__card), kept in view at the bottom of the screen; Back on the left, Save
+   and Continue on the right. Layout only: its surface, border and padding are the card's */
+.rt-pws-ce__bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.rt-pws-ce__baractions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; margin-left: auto; }
+.rt-pws-ce__bar .rt-cd__link { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 575px) { .rt-pws-ce__baractions { width: 100%; } .rt-pws-ce__baractions .button { flex: 1 1 auto; } }
+/* the price step's dates: how many, Create cohort and the link to them, on one row (no panel of its own) */
+.rt-pws-ce__dates { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.rt-pws-ce__datecount { margin: 0 auto 0 0; font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-ce__exams { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .rt-pws-ce__exam { display: grid; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); list-style: none; }
 @media (min-width: 768px) { .rt-pws-ce__exam { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; } .rt-pws-ce__exam .rt-pws-course-linkbtn { margin-bottom: 12px; } }
@@ -6069,10 +6125,12 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__check input:disabled { cursor: not-allowed; opacity: 0.5; }
 .rt-pws-coh__table th.rt-pws-coh__pick, .rt-pws-coh__table td.rt-pws-coh__pick { width: 44px; }
 .rt-pws-coh__table tr.is-picked td { background: var(--rt-c-brand-soft); }
-.rt-pws-coh__actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .rt-pws-coh__peoplehead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 /* Phase 1 (Hurak cohort operations). RowMenu: a row's "…" menu, in the site's dropdown panel look. */
 .rt-rowmenu { position: relative; display: inline-flex; }
+/* a row whose ⋮ menu is open sits above the rows after it, so their own lifted buttons (kept above the whole-row link) never
+   draw over the open menu */
+:is(.rt-adm-table, .rt-cx-table) tbody tr:has(.rt-rowmenu.is-open) { position: relative; z-index: 30; }
 .rt-rowmenu__btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: 11px; letter-spacing: 1px; color: var(--rt-c-text); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
 .rt-rowmenu__btn:hover, .rt-rowmenu.is-open .rt-rowmenu__btn { border-color: var(--rt-c-text); }
 .rt-rowmenu__btn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
@@ -6134,10 +6192,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (max-width: 991px) {
   .rt-pws-coh__details { grid-template-columns: minmax(0, 1fr); }
 }
-/* below 1200px the students table on a cohort's page stacks into labelled rows (as the account tables do on phones), so its
-   dropdowns and menus are never clipped; the cohorts list stays a table down to 768px (one status column, the favourite
-   beside the menu) and stacks on phones */
-@media (max-width: 1199px) {
+/* below 992px, and from there in a page column narrower than 855px (as the other workspace tables, decision D4), the students table
+   on a cohort's page stacks into labelled rows (as the account tables do on phones), so its dropdowns and menus are never clipped */
+@mixin rt-pws-coh-stacked {
   .rt-pws-coh__students thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-pws-coh__students, .rt-pws-coh__students tbody, .rt-pws-coh__students tr, .rt-pws-coh__students td { display: block; width: 100%; }
   .rt-pws-coh__students tr { padding: 14px 0; border-bottom: 1px solid var(--rt-c-line); }
@@ -6152,6 +6209,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-pws-coh__morerow td { display: block; padding: 12px; }
   .rt-pws-coh__morerow td::before { content: none; }
 }
+@media (max-width: 991px) { @include rt-pws-coh-stacked; }
+@container rt-pws-main (width < 855px) { @include rt-pws-coh-stacked; }
 @media (max-width: 767px) {
   :is(.rt-pws-coh__table, .rt-pws-coh__students) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   :is(.rt-pws-coh__table, .rt-pws-coh__students), :is(.rt-pws-coh__table, .rt-pws-coh__students) tbody, :is(.rt-pws-coh__table, .rt-pws-coh__students) tr, :is(.rt-pws-coh__table, .rt-pws-coh__students) td { display: block; width: 100%; }
@@ -6186,7 +6245,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (min-width: 768px) { .rt-pws-coh__sheet .rt-dd__panel { width: 1040px; max-width: 94vw; } }
 .rt-pws-coh__form { padding-bottom: 8px; }
 .rt-pws-coh__for { margin: 0; }
-.rt-pws-coh__h3 { margin: 0 0 4px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
+.rt-pws-coh__h3 { margin: 0 0 4px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-coh__dates { display: grid; gap: var(--rt-gap); }
 @media (min-width: 992px) { .rt-pws-coh__dates { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; } }
 .rt-pws-coh__slots .rt-acc__note { margin: 0 0 12px; }
@@ -6227,7 +6286,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__swatch.is-on { border-color: var(--rt-coh); }
 .rt-pws-coh__swatch:focus-within { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-coh__formfoot { display: flex; flex-wrap: wrap; gap: 12px; }
-.rt-pws-coh__formfoot .button { flex: 1 1 200px; }
+.rt-pws-coh__formfoot .button { flex: 0 1 auto; min-width: 160px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws-coh__day { transition: none; } }
 
 /* calendar */
@@ -6250,7 +6309,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal__cell.is-today .rt-pws-cal__daynum { background: var(--rt-c-brand); color: var(--rt-c-surface); }
 .rt-pws-cal__chips { display: grid; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; }
 .rt-pws-cal__chips li { min-width: 0; list-style: none; }
-.rt-pws-cal__chip { display: block; overflow: hidden; padding: 3px 6px; border-left: 3px solid var(--rt-coh, var(--rt-c-brand)); border-radius: 4px; background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 14%, var(--rt-c-surface)); font-size: var(--rt-text-xs); line-height: 1.35; text-decoration: none; color: var(--rt-c-text) !important; }
+.rt-pws-cal__chip { display: block; overflow: hidden; padding: 3px 6px; border-left: 3px solid var(--rt-coh, var(--rt-c-brand)); border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 14%, var(--rt-c-surface)); font-size: var(--rt-text-xs); line-height: 1.35; text-decoration: none; color: var(--rt-c-text) !important; }
 /* cohort colours (Hurak's cohort colour), from the template palette; past cohorts are grey on the calendar */
 .-c-purple { --rt-coh: var(--color-purple-1); }
 .-c-blue { --rt-coh: var(--color-blue-1); }
@@ -6389,63 +6448,61 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @keyframes rt-chart-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rt-chart-grow { from { transform: scaleX(0.4); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .rt-chart__line, .rt-chart__area, .rt-chart-bars__bar { animation: none; } .rt-chart__tip { transition: none; } }
-/* provider dashboard (ours): greeting, what needs you, last 30 days, coming up, latest orders */
+/* provider dashboard (ours): greeting, to do, courses and what is with our team, coming up */
 .rt-dash__hello { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 24px 28px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: radial-gradient(80% 160% at 100% 0%, var(--rt-c-brand-soft) 0%, var(--rt-c-surface) 62%); }
 .rt-dash__hi { margin: 0; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
-.rt-dash__sub { max-width: 62ch; margin: 6px 0 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-dash__sub { max-width: 62ch; min-height: 1.5em; margin: 6px 0 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-dash__quick { display: flex; flex-wrap: wrap; gap: 10px; }
-.rt-dash__grid { display: grid; gap: var(--rt-gap); align-items: start; }
-@media (min-width: 1200px) { .rt-dash__grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } .rt-dash__grid.-even { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Your courses beside With our team, one height */
+.rt-dash__grid { display: grid; gap: var(--rt-gap); }
+@media (min-width: 1200px) { .rt-dash__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-dash__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .rt-dash__title { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
-.rt-dash__n { min-width: 24px; height: 24px; margin-right: auto; padding: 0 8px; border-radius: 999px; background: var(--rt-c-brand); font-size: var(--rt-text-xs); font-weight: 700; line-height: 24px; text-align: center; color: var(--rt-c-surface); }
-.rt-dash__list, .rt-dash__cohorts, .rt-dash__orders, .rt-dash__status, .rt-dash__kpis { margin: 0; padding: 0; list-style: none; }
-.rt-dash__list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
-.rt-dash__list li:first-child { border-top: 0; padding-top: 4px; }
+.rt-dash__list, .rt-dash__cohorts, .rt-dash__status, .rt-dash__sent { margin: 0; padding: 0; list-style: none; }
+/* a to-do row: the whole row opens it (its action's link stretched over the row, so hovering the row hovers the action too) */
+.rt-dash__list { display: grid; gap: 2px; margin: 0 -12px; }
+.rt-dash__list li { position: relative; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 12px; border-radius: var(--rt-radius-control); list-style: none; transition: background-color 150ms ease; }
+@media (hover: hover) and (pointer: fine) { .rt-dash__list li:hover { background: var(--rt-c-soft); } }
+.rt-dash__list .rt-dash__go::after { content: ""; position: absolute; inset: 0; border-radius: var(--rt-radius-control); }
+.rt-dash__list .rt-dash__go:focus-visible { outline: 0; }
+.rt-dash__list .rt-dash__go:focus-visible::after { outline: 3px solid var(--rt-c-brand); outline-offset: -3px; }
+.rt-dash__more { min-height: 44px; margin-top: 4px; }
 .rt-dash__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rt-c-brand); }
 .rt-dash__dot.-warn { background: var(--color-orange-1); }
-.rt-dash__dot.-late { background: var(--rt-c-error); }
 .rt-dash__dot.-muted { background: var(--rt-c-muted); }
-.rt-dash__text { flex: 1 1 auto; min-width: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-dash__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-dash__go { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--rt-radius-sm); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; transition: background-color 150ms ease, color 150ms ease; }
 @media (hover: hover) and (pointer: fine) { .rt-dash__go:hover { background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; } }
 .rt-dash__clear { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: var(--rt-radius-control); background: var(--rt-c-success-soft); color: var(--rt-c-success); }
 .rt-dash__clear p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-.rt-dash__courses { display: grid; gap: 4px; }
+/* while the records load: a skeleton line in each row of the final layout, so nothing moves when they arrive */
+.rt-dash__bar { display: inline-block; height: 1em; vertical-align: middle; }
+.rt-dash__skel { display: flex; align-items: center; min-height: 52px; list-style: none; }
+.rt-dash__courses { display: grid; align-content: start; gap: 4px; }
 .rt-dash__status { display: grid; gap: 2px; margin-bottom: 12px; }
-.rt-dash__status li { list-style: none; }
-.rt-dash__status a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--rt-radius-sm); text-decoration: none; }
-.rt-dash__status a:hover { background: var(--rt-c-soft); }
+.rt-dash__status li, .rt-dash__sent li { list-style: none; }
+.rt-dash__status a, .rt-dash__sent a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--rt-radius-sm); text-decoration: none; }
+.rt-dash__status a:hover, .rt-dash__sent a:hover { background: var(--rt-c-soft); }
 .rt-dash__status b { font-size: var(--rt-text); font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
-.rt-dash__kpis { display: grid; gap: 16px; }
-@media (min-width: 576px) { .rt-dash__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 1200px) { .rt-dash__kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.rt-dash__kpis li { list-style: none; }
-.rt-dash__kpi { display: grid; gap: 8px; height: 100%; padding: 18px 20px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); text-decoration: none; color: inherit !important; transition: border-color 160ms ease, transform 160ms ease-out; }
-.rt-dash__kpi:active { transform: scale(0.99); }
-@media (hover: hover) and (pointer: fine) { .rt-dash__kpi:hover { border-color: color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); } }
-.rt-dash__kpitop { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); }
-.rt-dash__kpi strong { font-size: var(--rt-app-h2); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
-.rt-dash__cohorts li, .rt-dash__orders li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
-.rt-dash__cohorts li:first-child, .rt-dash__orders li:first-child { border-top: 0; padding-top: 4px; }
-.rt-dash__date { display: inline-flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 52px; border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 12%, var(--rt-c-surface)); color: var(--rt-coh, var(--rt-c-brand)); }
-.rt-dash__date small { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+/* With our team: each course waiting for approval, and when it was sent */
+.rt-dash__sent { display: grid; gap: 2px; margin: 0 -10px; }
+.rt-dash__sent span { min-width: 0; overflow: hidden; font-size: var(--rt-text-sm); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-text); }
+.rt-dash__sent small { flex: none; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-dash__sent .rt-dash__skel { min-height: 44px; padding: 0 10px; }
+.rt-dash__cohorts li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
+.rt-dash__cohorts li:first-child { border-top: 0; padding-top: 4px; }
+.rt-dash__cohorts .rt-dash__skel { min-height: 52px; box-sizing: content-box; }
+.rt-dash__date { display: inline-flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 52px; border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 12%, var(--rt-c-surface)); color: var(--rt-c-text); }
+.rt-dash__date small { font-size: var(--rt-text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .rt-dash__date b { font-size: var(--rt-app-h3); line-height: 1; }
 .rt-dash__cmeta { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
 .rt-dash__cmeta small { overflow: hidden; font-size: var(--rt-text-xs); text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-dash__cohorts .rt-adm-seats { flex: 0 0 110px; }
-.rt-dash__avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); }
-.rt-dash__amount { display: grid; flex: none; justify-items: end; gap: 4px; font-variant-numeric: tabular-nums; }
-.rt-dash__amount b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-dash__soon { font-weight: 600; color: var(--rt-c-text); }
+.rt-dash__ctitle { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
 @media (max-width: 575px) { .rt-dash__hello { padding: 20px; } .rt-dash__cohorts .rt-adm-seats { display: none; } }
-@media (prefers-reduced-motion: reduce) { .rt-dash__go, .rt-dash__kpi { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-dash__go, .rt-dash__list li { transition: none; } }
 /* segmented control (date ranges) */
-.rt-seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-soft); }
-.rt-seg__opt { display: inline-flex; align-items: center; min-height: 36px; margin: 0; padding: 0 14px; border-radius: var(--rt-radius-sm); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
-.rt-seg__opt.is-on { background: var(--rt-c-surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--rt-c-dark) 12%, transparent), 0 0 0 1px var(--rt-c-line); color: var(--rt-c-text); }
-.rt-seg__opt:has(:focus-visible) { outline: 3px solid var(--rt-c-brand); outline-offset: 1px; }
-@media (hover: hover) and (pointer: fine) { .rt-seg__opt:not(.is-on):hover { color: var(--rt-c-text); } }
-@media (max-width: 575px) { .rt-seg { display: grid; grid-template-columns: 1fr 1fr; width: 100%; } .rt-seg__opt { justify-content: center; } }
 /* performance: KPI cards that switch the chart */
 .rt-perf-kpis { display: grid; gap: 16px; }
 @media (min-width: 992px) { .rt-perf-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -6471,7 +6528,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-perf-split { display: grid; gap: var(--rt-gap); }
 @media (min-width: 992px) { .rt-perf-split { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .rt-perf-split__note { margin: 4px 0 16px; }
-@media (prefers-reduced-motion: reduce) { .rt-seg__opt, button.rt-perf-kpi { transition: none; } }
+@media (prefers-reduced-motion: reduce) { button.rt-perf-kpi { transition: none; } }
 /* requests (Hurak's refunds list) */
 .rt-rq-sum { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-rq-sum b { color: var(--rt-c-text); }
@@ -6483,20 +6540,15 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-rq-reason { min-width: 240px; max-width: 420px; line-height: 1.5; }
 .rt-rq-note { max-width: 220px; }
 .rt-rq-act { white-space: nowrap; }
-.rt-rq-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-left: 4px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text) !important; text-decoration: none; cursor: pointer; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
-.rt-rq-icon:first-child { margin-left: 0; }
-.rt-rq-icon:disabled { opacity: 0.4; cursor: not-allowed; }
-@media (hover: hover) and (pointer: fine) { .rt-rq-icon:not(:disabled):hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; } }
-.rt-rq-icon:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-@media (max-width: 1199px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
-.rt-rq-acts { display: inline-flex; gap: 4px; }
-.rt-rq-acts .rt-rq-icon { margin-left: 0; }
+/* the reason's 240px only where the table has the room (a page column of 1015px or wider, as the Courses table): in a narrower
+   one, all 8 columns fit without it (the table needs about 846px, and stacks below 855px) */
+@media (max-width: 991px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
+@container rt-pws-main (width < 1015px) { .rt-rq-reason, .rt-rq-note { min-width: 0; max-width: none; } }
 /* phones: the stacked rows keep each cell's small line (date, decision note, email) under its value */
 @media (max-width: 767px) {
   .rt-rq-table td { flex-wrap: wrap; }
   .rt-rq-table td small, .rt-rq-table td .rt-rq-note { flex-basis: 100%; max-width: none; text-align: right; }
 }
-@media (prefers-reduced-motion: reduce) { .rt-rq-icon { transition: none; } }
 /* public profile and student profile (Hurak's): initials or logo, name, details, one action */
 .rt-pws-prof { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; }
 .rt-pws-prof__logo { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 96px; height: 96px; overflow: hidden; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-app-h2); font-weight: 700; color: var(--rt-c-brand); }
@@ -6510,39 +6562,20 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-prof__body:last-child { margin-bottom: 0; }
 @media (max-width: 575px) { .rt-pws-prof > .button { width: 100%; justify-content: center; } }
 /* learners (ours, Hurak's fields): one filter bar, the table, the profile header and booking timeline */
-.rt-lr-find { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-.rt-lr-find__field { display: grid; gap: 2px; padding: 12px 16px; border-left: 1px solid var(--rt-c-line); transition: background-color 150ms ease; }
-.rt-lr-find__field:first-child { border-left: 0; }
-.rt-lr-find__field:focus-within { background: var(--rt-c-soft); }
-.rt-lr-find__field label { font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
-.rt-lr-find__input { display: flex; align-items: center; gap: 8px; }
-.rt-lr-find__input i { flex: none; color: var(--rt-c-muted); }
-.rt-lr-find__input input { width: 100%; min-width: 0; height: 32px; padding: 0; border: 0; background: transparent; font-size: var(--rt-text-sm); color: var(--rt-c-text); outline: none; }
-.rt-lr-find__field:focus-within label { color: var(--rt-c-brand); }
-@media (max-width: 991px) { .rt-lr-find { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rt-lr-find__field:nth-child(3) { border-left: 0; } .rt-lr-find__field:nth-child(n + 3) { border-top: 1px solid var(--rt-c-line); } }
-@media (max-width: 575px) { .rt-lr-find { grid-template-columns: minmax(0, 1fr); } .rt-lr-find__field { border-left: 0; } .rt-lr-find__field + .rt-lr-find__field { border-top: 1px solid var(--rt-c-line); } }
 .rt-lr-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -8px; }
 .rt-lr-count p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-lr-count b { color: var(--rt-c-text); }
 .rt-lr-who { display: flex; align-items: center; gap: 12px; }
 .rt-lr-who small { display: block; margin-top: 2px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
-.rt-lr-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 11px; background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); }
-.rt-lr-avatar.-lg { width: 72px; height: 72px; border-radius: 20px; font-size: var(--rt-app-h3); }
-.rt-lr-view { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--rt-radius-sm); font-size: var(--rt-text-sm); font-weight: 600; text-decoration: none; color: var(--rt-c-brand) !important; transition: background-color 150ms ease; }
-@media (hover: hover) and (pointer: fine) { .rt-lr-view:hover { background: var(--rt-c-brand-soft); } .rt-lr-table tbody tr:hover td { background: var(--rt-c-soft); } }
+.rt-lr-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 700; color: var(--rt-c-brand); }
+.rt-lr-avatar.-lg { width: 72px; height: 72px; border-radius: var(--rt-radius-card); font-size: var(--rt-app-h3); }
 .rt-lr-head { display: grid; gap: 20px; }
 .rt-lr-head__top { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; }
 .rt-lr-head__who { flex: 1 1 320px; min-width: 0; }
-.rt-lr-head__name { margin: 0 0 8px; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
 .rt-lr-head__contact { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-lr-head__contact li { display: grid; list-style: none; overflow-wrap: anywhere; }
 .rt-lr-head__contact span { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
-.rt-lr-head__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--rt-c-line); }
-.rt-lr-head__stats > div { padding: 16px 0 0 16px; border-left: 1px solid var(--rt-c-line); }
-.rt-lr-head__stats > div:first-child { padding-left: 0; border-left: 0; }
-.rt-lr-head__stats dt { font-size: var(--rt-text-xs); font-weight: 500; color: var(--rt-c-muted); }
-.rt-lr-head__stats dd { margin: 2px 0 0; font-size: var(--rt-app-h3); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--rt-c-text); }
-@media (max-width: 575px) { .rt-lr-head__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 12px; } .rt-lr-head__stats > div:nth-child(3) { padding-left: 0; border-left: 0; } .rt-lr-head__top > .button { width: 100%; justify-content: center; } }
+@media (max-width: 575px) { .rt-lr-head__top > .button { width: 100%; justify-content: center; } }
 .rt-lr-h { margin: 0 0 12px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-lr-timeline { position: relative; display: grid; gap: 14px; margin: 0; padding: 0 0 0 28px; list-style: none; }
 .rt-lr-timeline::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--rt-c-line); }
@@ -6560,7 +6593,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-lr-booking__facts .-wide { grid-column: 1 / -1; }
 .rt-lr-booking__facts dt { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-lr-booking__facts dd { margin: 2px 0 0; font-size: var(--rt-text-sm); font-weight: 600; overflow-wrap: anywhere; color: var(--rt-c-text); }
-@media (prefers-reduced-motion: reduce) { .rt-lr-find__field, .rt-lr-view { transition: none; } }
 /* provider help (ours, Hurak's three ways to get help): search, provider guides, ways to reach us */
 .rt-hp-search { display: grid; gap: 14px; padding: 28px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: radial-gradient(90% 180% at 0% 0%, var(--rt-c-brand-soft) 0%, var(--rt-c-surface) 60%); }
 .rt-hp-search__title { margin: 0; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
@@ -6588,9 +6620,11 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-hp-guides small { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-hp-guides > li > a > i { color: var(--rt-c-muted); }
 .rt-hp-guides__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
-.rt-hp-ways { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.rt-hp-ways li { display: flex; align-items: flex-start; gap: 14px; list-style: none; }
-.rt-hp-ways__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-brand); color: var(--rt-c-surface); }
+/* Get help: one card, its heading inside as Guides for providers', the three ways divided as that list's rows */
+.rt-hp-ways { display: grid; margin: 0; padding: 0; list-style: none; }
+.rt-hp-ways li { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rt-c-line); list-style: none; }
+.rt-hp-ways li:first-child { padding-top: 0; border-top: 0; }
+.rt-hp-ways__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand); color: var(--rt-c-surface); }
 .rt-hp-ways__title { margin: 0 0 2px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
 .rt-hp-ways .rt-acc__note { margin: 0 0 2px; }
 @media (max-width: 575px) { .rt-hp-search { padding: 20px; } }
@@ -6601,11 +6635,6 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__zoommark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
 .rt-pws-set__zoomlist { display: grid; gap: 4px; margin: 6px 0 10px; padding-left: 18px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 /* orders list: Hurak's four search fields, then the channel and status filters */
-.rt-pws-ord__search { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.rt-pws-ord__search .rt-field { margin: 0; }
-.rt-pws-ord__searchfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; grid-column: 1 / -1; }
-@media (max-width: 991px) { .rt-pws-ord__search { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 575px) { .rt-pws-ord__search { grid-template-columns: minmax(0, 1fr); } .rt-pws-ord__searchfoot > * { flex: 1 1 100%; } }
 .rt-pws-ord__table td { vertical-align: middle; }
 .rt-pws-ord__table .rt-pws-money__num { white-space: nowrap; }
 .rt-pws-ord__flag { font-weight: 600; color: var(--rt-c-error) !important; }
@@ -6623,7 +6652,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 }
 /* order details: one card per booking */
 .rt-pws-ord__bookings { display: grid; gap: 16px; margin-top: 12px; }
-@media (min-width: 1100px) { .rt-pws-ord__bookings { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+@media (min-width: 1200px) { .rt-pws-ord__bookings { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .rt-pws-ord__booking { display: grid; gap: 12px; justify-items: start; padding: 20px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-soft); }
 .rt-pws-ord__bookhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
 .rt-pws-ord__bookhead > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -6648,7 +6677,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 992px) { .rt-pws-set { grid-template-columns: 220px minmax(0, 1fr); gap: var(--rt-gap); align-items: start; } }
 .rt-pws-set__navcard { display: none; }
-.rt-pws-set__chips { margin: 0; padding: 0 0 4px; }
+/* below 992px the sections are chips that wrap onto more lines, as the course editor's steps: all nine in view, no hidden sideways strip */
+.rt-pws-set__chips { flex-wrap: wrap; margin: 0; padding: 0; overflow: visible; }
 @media (min-width: 992px) {
   .rt-pws-set__nav { position: sticky; top: 88px; }
   .rt-pws-set__navcard { display: block; padding: 8px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
@@ -6658,8 +6688,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__panel { display: grid; gap: 16px; min-width: 0; }
 .rt-pws-set__head .rt-acc__h2 { margin: 0; }
 .rt-pws-set__head .rt-acc__note { margin-top: 4px; }
-.rt-pws-set__h3 { margin: 0 0 12px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-set__form { max-width: 760px; }
+.rt-pws-set__h3 { margin: 0 0 12px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
+/* every Settings tab's card is the full content width (decision D2, 14 Nov 2026); the fields inside keep their readable width */
 .rt-pws-set__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .rt-pws-set__grid.-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 575px) { .rt-pws-set__grid.-two { grid-template-columns: minmax(0, 1fr); } }
@@ -6668,6 +6698,19 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__short { max-width: 260px; }
 .rt-pws-set__count { align-self: flex-end; font-variant-numeric: tabular-nums; }
 .rt-pws-set__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+/* New course pop-up (NewCourse.jsx): two groups, the course (title; category and sub-category side by side from 576px; topic) and
+   its options (the site's option cards), divided by a line; the title's character count sits on its label's row */
+.rt-pws-nc { display: grid; gap: 24px; }
+/* it may grow to 90% of the screen (not the pop-ups' 720px), so with the shared page cards the whole form shows on a laptop */
+@media (min-width: 768px) { .rt-pws-nc__sheet .rt-dd__panel { max-height: 90dvh; } }
+.rt-pws-nc__group { display: grid; gap: 16px; }
+.rt-pws-nc__group + .rt-pws-nc__group { padding-top: 24px; border-top: 1px solid var(--rt-c-line); }
+.rt-pws-nc__group .rt-field { margin: 0; }
+.rt-pws-nc__row { display: grid; gap: 16px; }
+@media (min-width: 576px) { .rt-pws-nc__row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rt-pws-nc__labelrow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rt-pws-nc__labelrow > label { margin: 0; }
+.rt-pws-nc__count, .rt-pws-nc__opt { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); font-variant-numeric: tabular-nums; }
 .rt-pws-set__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-top: 4px; }
 .rt-pws-set__foot .rt-acc__note { flex: 1 1 280px; margin: 0; }
 .rt-pws-set__textbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
@@ -6698,7 +6741,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 
 /* ---------- provider workspace: price package editor (PackageEditor) and the packages list ---------- */
 .rt-pws-pkg__sheet .rt-dd__panel { width: 1040px; }
-.rt-pws-pkg__h3 { margin: 0; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
+.rt-pws-pkg__h3 { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-pkg__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 /* 2, 3 or 4 packages side by side on wide screens (4 go two by two below 1200px); one under another on phones */
 @media (min-width: 768px) { .rt-pws-pkg__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
@@ -6730,14 +6773,14 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__tierhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .rt-pws-pkg__badge { padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); }
 .rt-pws-pkg__money { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; }
-.rt-pws-pkg__save { min-height: 20px; margin: -4px 0 0; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-success); }
+.rt-pws-pkg__save { min-height: 18px; margin: -4px 0 0; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-pws-pkg__perkbtns { display: inline-flex; gap: 12px; }
 .rt-pws-pkg__perkbtns .rt-pws-set__textbtn { min-height: 32px; font-size: var(--rt-text-xs); }
 .rt-pws-pkg__move { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; }
 .rt-pws-pkg__move:disabled { opacity: 0.4; cursor: not-allowed; }
 .rt-pws-pkg__move:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 /* pricing plans table */
-.rt-pws-pkgs__name { display: block; padding: 0; border: 0; background: none; font-weight: 600; color: var(--rt-c-text); text-align: left; cursor: pointer; }
+.rt-pws-pkgs__name { display: block; min-height: 24px; padding: 0; border: 0; background: none; font-weight: 600; color: var(--rt-c-text); text-align: left; cursor: pointer; }
 .rt-pws-pkgs__name:hover { color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; }
 .rt-pws-pkgs small { display: block; margin-top: 2px; }
 .rt-pws-pkg__itemset { display: grid; justify-items: start; gap: 12px; margin: 0; padding: 0; border: 0; }
@@ -6759,6 +6802,137 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-dd:is(.rt-pws-coh__sheet, .rt-pws-pkg__sheet) { padding: 88px 0 24px; }
   .rt-dd:is(.rt-pws-coh__sheet, .rt-pws-pkg__sheet) .rt-dd__panel { max-height: calc(100dvh - 112px); }
 }
+/* =====================================================================
+   PROVIDER WORKSPACE LAYOUT (2026-11-14): layout fixes only. Every look comes from the existing parts and tokens
+   (DESIGN-SYSTEM.md): .rt-field, .rt-acc__card, the template's button classes, Sheet, EmptyState. Nothing here adds a colour,
+   size, border, shadow or button style.
+   ===================================================================== */
+/* the template's `main { overflow: hidden }` stops anything inside from staying in view (position: sticky); clip cuts off the same
+   overflow without that side effect */
+.rt-pws .rt-adm__main { overflow: clip; }
+/* one content width, centred on a wide screen: the page head, back link and content move together, so they stay lined up (on a
+   laptop the content fills the space beside the menu and nothing changes); the course editor is a little narrower */
+@media (min-width: 992px) {
+  .rt-pws .rt-adm__main { --rt-pws-w: 1200px; padding-inline: max(32px, calc((100% - var(--rt-pws-w)) / 2)); }
+  .rt-pws .rt-adm__main:has(.rt-pws-cepage) { --rt-pws-w: 1120px; }
+}
+/* the menu (from 992px): open at the width its edge was dragged to (--rt-side-w on .rt-pws, from 200px to 280px or a quarter of the
+   window, never less than the 264px default), or folded to a 64px rail; the change slides unless it is being dragged. Its edge
+   (.rt-adm__resize) sits over the menu's border, in the same grid cell, and stays in view as the page scrolls. The page column is
+   a container (rt-pws-main), so the tables stack by the room they really have, not the window's width. */
+@media (min-width: 992px) {
+  .rt-pws .rt-adm__body { grid-template-columns: clamp(200px, var(--rt-side-w, 264px), min(280px, max(264px, 25vw))) minmax(0, 1fr); transition: grid-template-columns 200ms ease; }
+  .rt-pws.is-sideclosed .rt-adm__body { grid-template-columns: 64px minmax(0, 1fr); }
+  body.rt-side-resizing .rt-pws .rt-adm__body { transition: none; }
+  .rt-pws .rt-adm__side { grid-column: 1; grid-row: 1; }
+  .rt-pws .rt-adm__main { grid-column: 2; grid-row: 1; container: rt-pws-main / inline-size; }
+  .rt-pws .rt-adm__resize { position: sticky; top: 64px; z-index: 3; grid-column: 1; grid-row: 1; justify-self: end; align-self: start; height: calc(100vh - 64px); margin-right: -4px; }
+  /* the rail: the button at the top, where it is when open, then one icon per item (the open menu's list is hidden) */
+  .rt-pws.is-sideclosed .rt-adm__side { padding: 12px 8px 32px; overflow-x: hidden; }
+  .rt-pws.is-sideclosed .rt-adm__sidetools { justify-content: center; padding: 2px 0 0; }
+  .rt-pws.is-sideclosed :is(.rt-pws__org, .rt-pws__nav) { display: none; }
+  .rt-pws__rail { display: grid; gap: 2px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .rt-pws__rail li { list-style: none; }
+  .rt-pws__rail .rt-adm__link { justify-content: center; padding: 10px 0; }
+}
+@media (max-width: 991px) { .rt-pws__rail { display: none; } }
+@media (prefers-reduced-motion: reduce) { .rt-pws .rt-adm__body { transition: none; } }
+/* the page title is the app H1 (DESIGN-SYSTEM.md section 2) */
+.rt-pws .rt-adm__h1 { font-size: var(--rt-app-h1); }
+/* a hint written as a <span> lost to `.rt-field > span` (dark and bold): it gets the hint's own style back */
+:is(.rt-pws, body.rt-pws-open .rt-dd) .rt-field > .rt-field__hint { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); }
+/* a plain <small> under a value (an email under a name, who and when under a note) is meta: the meta size, not the browser's 87.5% */
+.rt-pws dd > small:not([class]), .rt-pws li > p + small:not([class]) { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+/* a page's description doesn't end on one word alone */
+.rt-pws .rt-adm__lead { text-wrap: pretty; }
+/* a row that opens its record is one big link with a hover: the admin's rule (.rt-adm--platform .rt-adm-table), for the
+   workspace's tables (their main link is a.rt-adm-strong) and the Courses table (its title link); the row's own buttons, links and
+   menus stay on top */
+@media (min-width: 576px) {
+  .rt-pws .rt-adm-table tbody tr:has(a.rt-adm-strong), .rt-pws .rt-cx-table tbody tr { position: relative; cursor: pointer; }
+  .rt-pws .rt-adm-table tbody tr:has(a.rt-adm-strong):hover { background: var(--rt-c-soft); }
+  .rt-pws .rt-adm-table tbody a.rt-adm-strong::after, .rt-pws .rt-cx-table tbody a.rt-cx-course__title::after { content: ""; position: absolute; inset: 0; }
+  .rt-pws :is(.rt-adm-table, .rt-cx-table) tbody td :is(button, a, input, label, .rt-rowmenu):not(a.rt-adm-strong, a.rt-cx-course__title) { position: relative; z-index: 1; }
+  /* an open ⋮ menu stays over the rows below it (their own menus and links are on that same level) */
+}
+/* tap targets of 24px or more (WCAG 2.2): calendar chips, and on phones (rows stacked into cards, not one link) each row's record link */
+.rt-pws .rt-pws-cal__chip { min-height: 24px; }
+@media (max-width: 575px) { .rt-pws .rt-adm-table a.rt-adm-strong { display: inline-block; padding-block: 3px; } }
+/* sub-headings inside cards are the card-title size, 20px at the heading weight (decision D1, 14 Nov 2026) */
+.rt-pws .rt-adm-h3 { font-size: var(--rt-app-h3); }
+/* destructive actions side by side, apart from the others (each is the existing red text button) */
+.rt-pws-danger-group { display: flex; flex-wrap: wrap; gap: 12px; margin-left: auto; }
+
+/* text fields in the workspace's pop-ups keep the field's own focus (.rt-field: dark border, white fill), not the course page
+   pop-ups' outline (.rt-dd input:focus-visible); buttons and dropdowns keep their keyboard focus ring */
+body.rt-pws-open .rt-dd .rt-field :is(input, textarea):focus-visible { outline: none; }
+/* pop-ups: forms 640px wide, questions 480px (the cohort and price plan pop-ups keep their own 1040px: a two-month calendar and the
+   package cards need it); a form's button row stays at the bottom of the pop-up while it scrolls, the main button on the right */
+body.rt-pws-open .rt-dd.rt-tq-sheet:not(.rt-pws-coh__sheet):not(.rt-pws-pkg__sheet) .rt-dd__panel { width: 640px; }
+body.rt-pws-open .rt-dd.rt-pws-set__confirm .rt-dd__panel { width: 480px; }
+body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form, .rt-pws-set__confirmbody) > :is(.rt-adm-cellrow, .rt-pws-set__actions, .rt-pws-coh__formfoot):last-child { position: sticky; bottom: 0; z-index: 2; display: flex; flex-direction: row-reverse; flex-wrap: wrap; justify-content: flex-start; background: var(--rt-c-surface); }
+body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form) > button.rt-btn-block:last-child { position: sticky; bottom: 0; z-index: 2; }
+/* the button row is a proper footer: it reaches the pop-up's edges (over the body's 18px padding), with a line above it and
+   white below, so the content scrolls cleanly underneath instead of showing around and under the buttons */
+body.rt-pws-open .rt-dd .rt-tq-sheet__body :is(form, .rt-q__form, .rt-pws-set__confirmbody) > :is(.rt-adm-cellrow, .rt-pws-set__actions, .rt-pws-coh__formfoot):last-child { bottom: -18px; margin: 4px -18px -18px; padding: 14px 18px 18px; border-top: 1px solid var(--rt-c-line); }
+/* the pop-ups' buttons at the workspace's sizes: 44px like its fields (the template's 60px -md is for the public site's big
+   calls to action), 40px for the small ones in rows (Copy, Pause course) */
+body.rt-pws-open .rt-dd .button.-md { height: 44px; padding: 0 24px; font-size: 15px; line-height: 1.2; }
+
+/* buttons in the provider workspace's pop-ups (confirmations and forms): only the main action stands out. The secondary
+   (Cancel, Go back, Copy, Pause course) keeps the site's purple outline and only takes a light purple tint on hover; a solid
+   button darkens a shade on hover instead of the template's flip to an outline (and an outline button no longer fills in); the
+   red outline (every Delete and Remove, in the gear and in its confirmation) tints on hover; and a switched-off button looks switched off (Delete course before its
+   name is typed) */
+body.rt-pws-open .rt-dd .button { transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease; }
+body.rt-pws-open .rt-dd .button.-outline-purple-1:hover:not(:disabled) { border-color: var(--rt-c-brand); background-color: var(--rt-c-brand-soft) !important; color: var(--rt-c-brand) !important; }
+body.rt-pws-open .rt-dd .button.-purple-1:hover:not(:disabled) { border-color: color-mix(in srgb, var(--rt-c-brand) 86%, black); background-color: color-mix(in srgb, var(--rt-c-brand) 86%, black) !important; color: var(--rt-c-surface) !important; }
+body.rt-pws-open .rt-dd .button.-outline-red-3:disabled { background-color: transparent !important; color: var(--rt-c-error) !important; }
+body.rt-pws-open .rt-dd .button.-outline-red-3:hover:not(:disabled) { border-color: var(--rt-c-error); background-color: color-mix(in srgb, var(--rt-c-error) 8%, var(--rt-c-surface)) !important; color: var(--rt-c-error) !important; }
+body.rt-pws-open .rt-dd .button:disabled { opacity: 0.4; cursor: not-allowed; }
+body.rt-pws-open .rt-dd .button.-purple-1:disabled { background-color: var(--rt-c-brand) !important; color: var(--rt-c-surface) !important; }
+body.rt-pws-open .rt-dd .button.-outline-purple-1:disabled { background-color: transparent !important; color: var(--rt-c-brand) !important; }
+
+/* ---- the course editor: layout ---- */
+.rt-pws-cepage { max-width: 1120px; }
+.rt-pws-ce__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 24px; }
+.rt-pws-ce__headtext { display: grid; flex: 1 1 360px; gap: 8px; min-width: 0; }
+.rt-pws-ce__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-ce__head :is(.rt-acc__note, .rt-acc__notice) { margin: 0; }
+.rt-pws-ce__headactions { display: flex; align-items: center; gap: 8px; }
+/* a course's overview (ProviderCourseOverview): the head card's cover picture, then the status and notes, then Edit course and
+   Preview; on phones they stack, the buttons full width */
+.rt-pws-cov__head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 24px; }
+.rt-pws-cov__img { flex: none; width: 160px; aspect-ratio: 16 / 10; border-radius: var(--rt-radius-sm); object-fit: cover; background: var(--rt-c-soft); }
+.rt-pws-cov__img.-none { display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--rt-c-line); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
+.rt-pws-cov__text { display: grid; flex: 1 1 280px; gap: 8px; min-width: 0; }
+.rt-pws-cov__text .rt-acc__note { margin: 0; }
+.rt-pws-cov__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@media (max-width: 575px) {
+  .rt-pws-cov__head { flex-direction: column; align-items: stretch; }
+  .rt-pws-cov__img { width: 100%; }
+  .rt-pws-cov__text { flex-basis: auto; }
+  .rt-pws-cov__actions .button { flex: 1 1 100%; justify-content: center; }
+}
+/* the step list scrolls inside itself when it is taller than the screen, with the site's scroll pill (FilterScrollPill), as the sidebar */
+@media (min-width: 1200px) { .rt-pws-ce__nav { max-height: calc(100dvh - 104px); overflow-y: auto; } }
+.rt-pws-ce__main { display: grid; gap: var(--rt-gap); }
+/* one card per step: its parts (details, images, video; units, exam) are sections of the step's card, with sub-headings, more space
+   between them than between fields */
+.rt-pws-ce__groups { display: grid; gap: 40px; }
+.rt-pws-ce__groups .rt-adm-h3 { margin: 0; }
+/* the editor's column is already a readable width: its fields fill it, so every right edge lines up */
+.rt-pws .rt-pws-ce__main .rt-field { max-width: none; }
+/* Mode of study's choice cards: one height in a row */
+.rt-pws .rt-pws-optcards__row { align-items: stretch; }
+/* images: the picture, its ALT text and its actions in one row */
+.rt-pws-course-mediaitem { align-items: center; }
+.rt-pws-course-mediaitem img { width: 160px; height: 100px; flex: none; object-fit: cover; border-radius: var(--rt-radius-sm); }
+.rt-pws-course-mediahead { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+/* each step's status under its name (12px, the label size); one still to do in the text colour */
+.rt-pws-ce__stepstatus { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); }
+.rt-pws-ce__stepstatus.-todo { color: var(--rt-c-text); }
+/* ---- the new course steps: the card in the middle of the page ---- */
 /* end PROVIDER WORKSPACE */
 
 /* =====================================================================
@@ -7169,13 +7343,17 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-biz__table td.rt-adm-rv__who small.rt-adm-rv__line, .rt-biz__table td.rt-adm-rv__who small.rt-adm-rv__text { margin: 4px 0 0; }
 }
 
-/* ---- a course page's "Reviews of Read Training" (CourseReviews): the Customer reviews cards, two across in the main column */
+/* ---- a course page's "Reviews of Read Training" (CourseReviews): the Customer reviews cards with their whole text, one across
+   on a phone, two on a tablet, three on a laptop; from 992px to 1199px the main column beside the booking card is too narrow
+   for three, so it keeps two */
 .rt-cd__reviews { margin: 0 0 16px; }
-/* under the course page's reviews: how many are showing, then Show more / Show fewer */
-.rt-cd__reviews-more { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
-.rt-cd__reviews-count { font-size: 14px; line-height: 20px; color: var(--cd-muted); }
-@media (min-width: 992px) { .rt-cd__reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* two cards a row from 768px (as col-md-6), one on phones: six reviews a page are three rows of two */
+@media (min-width: 768px) { .rt-cd__reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 576px) { .rt-cd__reviews.-one { grid-template-columns: minmax(0, 1fr); } }
+/* while another page of them loads, the page showing is dimmed */
+.rt-cd__reviews[aria-busy="true"] { opacity: 0.6; }
+/* the page numbers under them (CataloguePagination), in the course page's colours */
+.rt-cd__reviews-pages { --pg-border-strong: var(--cd-border); --pg-text: var(--cd-text); --pg-muted: var(--cd-muted); --pg-brand: var(--cd-brand); }
 
 /* the image shown in "Remove this image?" (course editor) */
 .rt-pws-course-removeimg { display: block; width: 100%; max-width: 320px; aspect-ratio: 5 / 3; object-fit: cover; border-radius: 8px; }
@@ -7185,7 +7363,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* ---------- The editors' course Preview (components/courseDetail/PreviewBar): a strip above the real course page ---------- */
 .rt-preview { position: sticky; top: 0; z-index: 1100; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 16px; border-bottom: 1px solid var(--color-orange-6); background: var(--color-orange-7); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-preview__text { margin: 0; }
-.rt-preview__back { font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.rt-preview__back { display: inline-block; padding: 6px 0; font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 /* ---------- HUMAN CHECK (lib/humanCheck.js) ----------
    Cloudflare Turnstile runs invisibly; in the rare case it wants a click, its small box shows here, above everything */
 /* the scrollbar's space is always kept, so the page (and its fixed and sticky bars) doesn't move sideways when a pop-up stops it
@@ -7495,9 +7673,7 @@ html { scrollbar-gutter: stable; }
   .rt-adm--platform .rt-adm__sidetools { position: sticky; top: -12px; z-index: 2; margin: -12px -12px 4px; padding: 12px 16px 4px; background: var(--rt-c-surface); }
   .rt-adm--platform .rt-adm__find { margin: 0 auto; }
   .rt-adm--platform.is-sideclosed .rt-adm__body { grid-template-columns: 64px minmax(0, 1fr); }
-  .rt-adm--platform.is-sideclosed .rt-adm__side { display: block; padding: 12px 8px 32px; overflow-x: hidden; }
-  .rt-adm--platform.is-sideclosed .rt-adm__main { padding-left: 32px; }
-  .rt-adm--platform.is-sideclosed .rt-adm__sideopen { display: none; }
+  .rt-adm--platform.is-sideclosed .rt-adm__side { padding: 12px 8px 32px; overflow-x: hidden; }
   .rt-adm--platform.is-sideclosed .rt-adm__sidetools { justify-content: center; margin: -12px -8px 4px; padding: 12px 0 4px; }
   .rt-adm--platform.is-sideclosed .rt-adm__grouplabel { display: none; }
   .rt-adm--platform.is-sideclosed .rt-adm__group ul[hidden] { display: block; }
@@ -7527,11 +7703,19 @@ html { scrollbar-gutter: stable; }
 .rt-adm-open .rt-tq-sheet .button.-md { height: 40px; padding: 0 16px; font-size: 14px; }
 .rt-adm-open .rt-tq-sheet .rt-field select, .rt-adm-open .rt-tq-sheet .rt-field input:not([type="checkbox"]):not([type="radio"]),
 .rt-adm-open .rt-tq-sheet .rt-field-dd .rt-cat-dd__trigger, .rt-adm-open .rt-tq-sheet .rt-datefield__btn { height: 44px; }
-/* C4: a page's sections are an underline tab bar (the status filters stay pills) */
-.rt-adm--platform .rt-adm-sections { gap: 4px; border-bottom: 1px solid var(--rt-c-line); }
-.rt-adm--platform .rt-adm-sections .rt-tr__filter { height: 40px; margin-bottom: -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--rt-c-muted); box-shadow: none; }
-.rt-adm--platform .rt-adm-sections .rt-tr__filter:hover { color: var(--rt-c-text); }
-.rt-adm--platform .rt-adm-sections .rt-tr__filter.is-on { border-bottom-color: var(--rt-c-brand); background: none; color: var(--rt-c-brand); }
+/* C4: a page's sections are an underline tab bar (the status filters stay pills); the provider workspace's too (a course's overview) */
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections { gap: 4px; border-bottom: 1px solid var(--rt-c-line); }
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections .rt-tr__filter { height: 40px; margin-bottom: -1px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--rt-c-muted); box-shadow: none; }
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections .rt-tr__filter:hover { color: var(--rt-c-text); }
+:is(.rt-adm--platform, .rt-pws) .rt-adm-sections .rt-tr__filter.is-on { border-bottom-color: var(--rt-c-brand); background: none; color: var(--rt-c-brand); }
+/* in the provider workspace the tabs stay on one row that scrolls sideways when it is too narrow, without the browser's bar (as
+   .rt-pill-scroll); the line under them is drawn inside the row, so the chosen tab's underline isn't cut off by the scrolling */
+.rt-pws .rt-adm-sections { flex-wrap: nowrap; overflow-x: auto; border-bottom: 0; box-shadow: inset 0 -1px 0 var(--rt-c-line); }
+.rt-pws .rt-adm-sections .rt-tr__filter { flex: none; margin-bottom: 0; }
+@media (forced-colors: none) {
+  .rt-pws .rt-adm-sections { scrollbar-width: none; }
+  .rt-pws .rt-adm-sections::-webkit-scrollbar { display: none; }
+}
 /* Financial settings: the three fees side by side (Payout day no longer alone in half a row) */
 @media (min-width: 992px) { .rt-adm--platform .rt-adm-fees .rt-adm-fees__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 /* Platform settings: 16px after the notice, 20px after each counter, and the Google preview stays in view beside the fields */
@@ -7575,8 +7759,10 @@ html { scrollbar-gutter: stable; }
 .rt-adm--platform .rt-acc__cardhead .fb-textlink { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
 
 /* Header: when the search box opens, the menu slides left just far enough to make room for it (HomeHeader sets
-   --rt-menu-shift), in step with the box, and slides back when it closes. The menu always stays visible. */
-.header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1); }
+   --rt-menu-shift), in step with the box, and slides back when it closes. Only where even that can't make room (about 1200px
+   wide, signed out) does the menu fade out while the search is open (.is-searching), so the box never covers it. */
+.header .menu__nav { transform: translateX(calc(var(--rt-menu-shift, 0px) * -1)); transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1), opacity 0.2s ease, visibility 0.2s ease; }
+.header.is-searching .menu__nav { opacity: 0; visibility: hidden; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .header .menu__nav { transition: none; } }
 /* Dashboard: the latest orders' course and reference stay on one line, ending with "…" (the full line is in its tooltip) */
 .rt-adm--platform .rt-adm-list__main { flex: 1 1 auto; min-width: 0; }

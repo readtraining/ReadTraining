@@ -14,11 +14,11 @@ export const pw = {
   // the provider account's status: one line at the top of every workspace page (the status bar), with at most one action. The
   // work itself (the team's message, the changes, sending it back) is on the Account review page (/provider/review).
   accountStatus: {
-    pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. Meanwhile, complete your public profile and cancellation policy; you can add courses once you're approved.", action: { label: "View review", href: "/provider/review" }, dismissible: true },
+    pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. Meanwhile, complete your public profile and cancellation policy; you can add courses once you're approved.", action: { label: "View review", href: "/provider/review" } },
     changes_requested: { tone: "warning", title: "A few changes are needed before we approve you", text: "Our team has asked for some changes to your account.", action: { label: "Review changes", href: "/provider/review" } },
     suspended: { tone: "critical", title: "Your account is suspended", text: "Your courses can't be booked and you can't make changes.", action: { label: "See why", href: "/provider/review" } },
-    approved: { tone: "success", title: "Your account is approved", text: "Learners find you on ReadTraining once you have a live course. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" }, dismissible: true },
-    reinstated: { tone: "success", title: "Your account is active again", text: "Everything works as before.", dismissible: true },
+    approved: { tone: "success", title: "Your account is approved", text: "Learners find you on ReadTraining once you have a live course. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" } },
+    reinstated: { tone: "success", title: "Your account is active again", text: "Everything works as before." },
     hide: "Hide this message",
   },
 
@@ -80,8 +80,8 @@ export const pw = {
       approved: { title: "Get approved by our team", text: { pending: "We're checking your details and will email you.", changes_requested: "Our team has asked for a few changes.", active: "Your account is approved." }, action: { label: "Review changes", href: "/provider/review" } },
       profile: { title: "Complete your public profile", text: "A headline, a short biography and your logo.", action: { label: "Edit profile", href: "/provider/settings?tab=info" } },
       policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
-      course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses/new" } },
-      date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Add a date", href: "/provider/cohorts?new=1" } },
+      course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses?newcourse=1" } },
+      date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Create cohort", href: "/provider/cohorts?new=1" } },
     },
   },
 
@@ -113,7 +113,7 @@ export const pw = {
   // identities on this login, added by ProviderShell from the API) and log out
   accountMenu: [
     { label: "Account settings", href: "/account/settings" },
-    { label: "Requests", href: "/provider/requests" },
+    { label: "Refunds", href: "/provider/requests" },
     { label: "Public profile", href: "/provider/profile" },
     { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
@@ -130,17 +130,16 @@ export const pw = {
     notifications: "These notifications are made up, to show how this page works. Real ones show here once booking goes live.",
     requests: "These refund requests and disputes are made up, to show how this page works. Real ones show here once booking goes live.",
     cohort: "This is a sample cohort with made-up learners, to show how the register and results work. Your real cohorts are in the Cohort list.",
-    attention: "Made up, to show how this works. Real refund requests, disputes, reviews, questions and leads show here once booking goes live.",
   },
 
   pages: {
-    dashboard: { title: "Dashboard", lead: "What needs you today, how sales are going and what is coming up." },
+    dashboard: { title: "Dashboard", lead: "What needs you today, what is with our team and what is coming up." },
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
     courses: { title: "Courses", lead: "Every course you run. New courses and changes are checked by our team before they go live." },
     packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates." },
-    newCourse: { title: "New course", lead: "Five quick questions. You fill in the rest of the course in the editor." },
     course: { title: "Edit course" },
+    courseOverview: { title: "Course details" },
     cohorts: { title: "Cohorts", lead: "Each run of a course: its dates, venue, tutor and places. Open one to take the register and record results." },
     cohort: { title: "Cohort" },
     calendar: { title: "Calendar", lead: "All your sessions by month, week or day, in each cohort's colour." },
@@ -150,11 +149,11 @@ export const pw = {
     newOrder: { title: "Create order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
     order: { title: "Order details" },
     notifications: { title: "Notifications", lead: "Updates on your courses, orders and reviews." },
-    settings: { title: "Provider settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
+    settings: { title: "Settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
     requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
-    team: { title: "Manage team members", lead: "People who can use this workspace, and what each of them can do." },
-    help: { title: "Help", lead: "Videos, guides and a person to talk to when you need one." },
+    team: { title: "Team", lead: "People who can use this workspace, and what each of them can do." },
+    help: { title: "Help", lead: "Guides, help articles and a person to talk to when you need one." },
   },
 
   // How each delivery method is explained in the course wizard (Hurak's wording). `key` is the method's slug in the catalogue
@@ -165,16 +164,28 @@ export const pw = {
     { key: "live-online", label: "Live online", icon: "icon-online-learning-2", text: "For live, tutor-led training by video, one to one or in groups.", more: "Run sessions by video on dates you choose. Learners get the joining link in their joining instructions before each session." },
     { key: "self-paced", label: "Self-paced", icon: "icon-time-management", text: "For recorded lessons and self-paced e-learning.", more: "Build the course from lessons (text, video, quizzes and downloads). Learners start straight after booking and work at their own pace." },
   ],
+  // The course editor's Learning options step (Hurak's): the primary way a course is taught, and the other ways switched on beside
+  // it. One set of words, pictures and syllabus covers them all.
+  learningOptions: {
+    title: "Learning options",
+    lead: "Set the main way this course is taught, and switch on any other ways learners can take it.",
+    primary: "Primary learning option",
+    primaryHint: "Shown first on the course page and in search results.",
+    others: "Other ways to offer it",
+    othersHint: "The same course page, syllabus and FAQs cover every way you offer it.",
+    upcoming: (n) => `It has ${n} upcoming ${n === 1 ? "date" : "dates"}. Cancel ${n === 1 ? "it" : "them"} before turning this off.`,
+    retired: "No longer offered on ReadTraining.",
+    retiredOn: "No longer offered on ReadTraining. Turn it off, then save.",
+    selfPacedNote: "Self-paced has no dates: learners start straight after booking, at the price you set in the next step. Lessons for self-paced courses come in a later update.",
+    liveSelfPaced: "A live course offering self-paced needs its price: add it in the next step, then save.",
+    save: "Save to apply your changes, then add the dates or price for any new option in the next step.",
+  },
   courseStatuses: { draft: "Draft", pending: "Waiting for approval", changes: "Changes requested", live: "Live", paused: "Paused" },
 
   // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
     enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
-  },
-  courseTypes: {
-    compliance: { label: "Compliance", text: "Required by law, regulation or an employer's policy. For example First Aid at Work, Food Hygiene or Door Supervisor." },
-    other: { label: "Non compliance", text: "Learned by choice. For example personal development, photography or sales." },
   },
   enrolment: { public: "Public", private: "Private" },
   // the colour a cohort shows in on the calendar (Hurak's cohort colour picker)
@@ -204,7 +215,7 @@ export const pw = {
     card: { label: "Payment via card", hint: "Take the card details on the phone." },
     link: { label: "Payment via link", hint: "The customer pays by email. Places are held for 48 hours." },
     offline: { label: "Offline payment", hint: "Bank transfer, invoice or cash. Mark the order paid when the money arrives." },
-    free: { label: "Enroll for free", hint: "No payment. For staff, resits or goodwill." },
+    free: { label: "Enrol for free", hint: "No payment. For staff, resits or goodwill." },
   },
   // Hurak's course activity types, in its order
   lessonTypes: {
@@ -243,7 +254,7 @@ export const pw = {
   settingsTabs: [
     { key: "info", label: "Provider information" },
     { key: "logo", label: "Company logo" },
-    { key: "terms", label: "Terms" },
+    { key: "terms", label: "Cancellation and terms" },
     { key: "venues", label: "Venues" },
     { key: "vat", label: "VAT" },
     { key: "affiliate", label: "Affiliate" },

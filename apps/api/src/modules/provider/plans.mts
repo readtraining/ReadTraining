@@ -137,6 +137,33 @@ export const providerPlansRouter = createTRPCRouter({
       return view(p, (await usage(ctx.db, [p.id])).get(p.id))
     }),
 
+  // The plans one course is sold on (the course overview's Packages tab): its upcoming dates' plans (Tiered) and a self-paced
+  // course's own, each with how many of the course's upcoming dates use it (`course`: the self-paced course's plan); and how many
+  // upcoming dates have their own price (Flat). The course must be this provider's (NOT_FOUND otherwise, as provider/courses.mts
+  // ownCourse; not imported, so the two modules don't import each other).
+  forCourse: orgProcedure('provider.pricing.view')
+    .input(z.object({ courseId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const [course] = await ctx.db
+        .select({ planId: courses.planId })
+        .from(courses)
+        .where(and(eq(courses.id, input.courseId), eq(courses.organisationId, input.organisationId), eq(courses.kind, 'provider')))
+      if (!course) throw new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
+      const dates = await ctx.db
+        .select({ planId: cohorts.planId, n: sql<number>`count(*)::int` })
+        .from(cohorts)
+        .where(and(eq(cohorts.courseId, input.courseId), isNull(cohorts.cancelledAt), sql`${cohorts.endsOn} >= ${ukToday()}::date`))
+        .groupBy(cohorts.planId)
+      const onPlan = new Map(dates.filter((d) => d.planId).map((d) => [d.planId!, d.n]))
+      const ids = [...new Set([...onPlan.keys(), ...(course.planId ? [course.planId] : [])])]
+      const rows = ids.length ? await ctx.db.select().from(pricePlans).where(and(inArray(pricePlans.id, ids), eq(pricePlans.organisationId, input.organisationId))).orderBy(asc(pricePlans.name)) : []
+      const used = await usage(ctx.db, rows.map((r) => r.id))
+      return {
+        plans: rows.map((r) => ({ ...view(r, used.get(r.id)), forCourse: { dates: onPlan.get(r.id) ?? 0, course: r.id === course.planId } })),
+        ownPriceDates: dates.find((d) => !d.planId)?.n ?? 0,
+      }
+    }),
+
   // Create a plan, or change one: learners see it at once, and every date and course on it takes its cheapest package as their
   // price. `seen`: the version the form was opened on (a save over a newer one is refused).
   save: orgProcedure('provider.pricing.edit')

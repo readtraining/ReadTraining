@@ -19,7 +19,7 @@ export default function ProviderProfile() {
   if (!allowed) return <EmptyState title="Your public profile isn't part of your role" text="Ask your provider's owner or an admin if something on it needs changing." />;
   if (query.isError) return <ErrorState title="We couldn't load your profile." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   const o = query.data;
-  if (!o) return <Loading rows={3} />;
+  if (!o) return <Loading detail />;
   const initials = o.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const social = [["Facebook", o.socials.facebook], ["LinkedIn", o.socials.linkedin], ["YouTube", o.socials.youtube]].filter(([, url]) => url);
   const live = courses ? courses.filter((c) => c.status === "live" && c.isPublic && c.listed).length : null;
@@ -49,9 +49,9 @@ export default function ProviderProfile() {
       <section className="rt-acc__card" aria-labelledby="rt-pws-prof-pol">
         <h2 className="rt-acc__h2" id="rt-pws-prof-pol">Policies</h2>
         <h3 className="rt-adm-h3">Booking terms</h3>
-        <p className="rt-pws-prof__body">{o.bookingTerms || "Not added yet."}</p>
+        {o.bookingTerms ? <p className="rt-pws-prof__body">{o.bookingTerms}</p> : <EmptyState inCard title="No booking terms yet." action={can("provider.terms.edit") ? { label: "Add booking terms", href: "/provider/settings?tab=terms" } : null} />}
         <h3 className="rt-adm-h3">Cancellation policy</h3>
-        <p className="rt-pws-prof__body">{o.cancellationPolicy || "Not added yet."}</p>
+        {o.cancellationPolicy ? <p className="rt-pws-prof__body">{o.cancellationPolicy}</p> : <EmptyState inCard title="No cancellation policy yet." action={can("provider.terms.edit") ? { label: "Add cancellation policy", href: "/provider/settings?tab=terms" } : null} />}
       </section>
     </div>
   );

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import NoAccess from "@/components/account/NoAccess";
 import { SideMenuProvider } from "@/components/admin/workNav";
-import { sideClosed } from "@/lib/sideMenu";
+import { sideClosed, sideWidth } from "@/lib/sideMenu";
 import { getWorkspace } from "@/lib/workspace";
 import { WorkspaceProvider } from "@/lib/workspaceContext";
 
@@ -10,10 +10,11 @@ import { WorkspaceProvider } from "@/lib/workspaceContext";
 export default async function ProviderWorkspaceLayout({ children }) {
   const { workspace, unavailable } = await getWorkspace("provider");
   if (!workspace) return <NoAccess type="provider" unavailable={unavailable} />;
-  // the sidebar starts hidden when this browser left it that way
+  // the sidebar starts folded to its icon rail, or open at its chosen width, as this browser left it
+  const cookieStore = await cookies();
   return (
     <WorkspaceProvider value={workspace}>
-      <SideMenuProvider closed={sideClosed(await cookies())}>{children}</SideMenuProvider>
+      <SideMenuProvider closed={sideClosed(cookieStore)} width={sideWidth(cookieStore)}>{children}</SideMenuProvider>
     </WorkspaceProvider>
   );
 }

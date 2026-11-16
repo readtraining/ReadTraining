@@ -62,8 +62,8 @@ const lengthText = (n: number) => (n ? `${n} ${n === 1 ? 'day' : 'days'}` : '')
 // The live offerings and their bookable dates (starting after today, the UK's date, so a course already under way isn't offered;
 // not cancelled, taking bookings). A date or self-paced course on a price plan carries its packages (`plan_tiers`).
 async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = false) {
-  const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null; plan_tiers: unknown }>(sql`
-    select c.id, c.parent_id, c.slug, c.title, c.method, c.model, c.skill_saver, c.is_public, c.listed, c.organisation_id,
+  const offers = await db.execute<{ id: number; parent_id: number | null; slug: string; title: string; method: string | null; methods: string[]; model: string; price_pence: number | null; skill_saver: boolean; is_public: boolean; listed: boolean; organisation_id: string; provider: string; provider_slug: string; logo_path: string | null; provider_city: string | null; plan_tiers: unknown }>(sql`
+    select c.id, c.parent_id, c.slug, c.title, c.method, c.methods, c.model, c.skill_saver, c.is_public, c.listed, c.organisation_id,
            c.price_pence, p.tiers plan_tiers,
            o.name provider, o.slug provider_slug, o.logo_path, o.city provider_city
     from public.courses c join public.organisations o on o.id = c.organisation_id left join public.price_plans p on p.id = c.plan_id
@@ -79,6 +79,11 @@ async function offeringsAndDates(db: typeof Db, where = sql`true`, anyStatus = f
     : []
   return { offers, dates }
 }
+
+// an offering's learning options, its primary first
+const ways = (o: { method: string | null; methods: string[] }) => (o.method ? [o.method, ...o.methods.filter((m) => m !== o.method)] : o.methods)
+// an offering whose self-paced option can be booked (it has its price)
+const selfPacedOn = (o: { methods: string[]; price_pence: number | null }) => o.methods.includes('self-paced') && o.price_pence !== null
 
 // Every listing, most popular first. (Popularity counts providers and upcoming dates until there are bookings to count.)
 export async function loadListings(db: typeof Db): Promise<Listing[]> {
@@ -102,7 +107,7 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
     const mine = p.kind === 'shared' ? offers.filter((o) => o.parent_id === p.id) : offers.filter((o) => o.id === p.id)
     if (!mine.length) continue
     const ds = mine.flatMap((o) => datesOf.get(o.id) ?? [])
-    const selfPaced = mine.filter((o) => o.method === 'self-paced' && o.price_pence !== null)
+    const selfPaced = mine.filter(selfPacedOn)
     const prices = [...ds.map((d) => ({ p: d.price_pence, was: d.was_price_pence })), ...selfPaced.map((o) => ({ p: o.price_pence as number, was: null }))]
     const cheapest = prices.sort((a, b) => a.p - b.p)[0]
     const venues = new Map<string, Venue>()
@@ -118,7 +123,7 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
       if (!had || x.pence < had.pence) priceList.set(key, x)
     }
     const first = ds[0]
-    const methods = [...new Set(mine.map((o) => o.method).filter((m): m is string => Boolean(m)))]
+    const methods = [...new Set(mine.flatMap(ways))]
     const providers = new Set(mine.map((o) => o.organisation_id)).size
     out.push({
       id: p.id,
@@ -221,11 +226,12 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
       courseId: o.id,
       slug: o.slug,
       title: o.title,
-      method: o.method,
+      method: o.method, // the primary learning option
+      methods: ways(o), // every learning option, the primary first
       model: o.model,
       skillSaver: o.skill_saver,
-      selfPacedPence: o.method === 'self-paced' ? o.price_pence : null,
-      selfPacedPlan: o.method === 'self-paced' ? publicTiers(o.plan_tiers) : null, // its packages, when sold in packages
+      selfPacedPence: o.methods.includes('self-paced') ? o.price_pence : null,
+      selfPacedPlan: o.methods.includes('self-paced') ? publicTiers(o.plan_tiers) : null, // its packages, when sold in packages
       provider: { name: o.provider, slug: o.provider_slug, logoUrl: mediaUrl(o.logo_path), city: o.provider_city ?? '' },
       dates: dates
         .filter((d) => d.course_id === o.id)
@@ -337,15 +343,15 @@ export async function loadProviderCourses(db: typeof Db, organisationId: string)
   return offers
     .map((o) => {
       const ds = dates.filter((d) => d.course_id === o.id)
-      const prices = [...ds.map((d) => ({ p: d.price_pence, was: d.was_price_pence })), ...(o.method === 'self-paced' && o.price_pence != null ? [{ p: o.price_pence, was: null }] : [])].sort((a, b) => a.p - b.p)
+      const prices = [...ds.map((d) => ({ p: d.price_pence, was: d.was_price_pence })), ...(selfPacedOn(o) ? [{ p: o.price_pence as number, was: null }] : [])].sort((a, b) => a.p - b.p)
       const x = extra.find((e) => e.id === o.id)
       return {
         slug: o.slug,
         title: o.title,
         imageUrl: mediaUrl(x?.cover),
-        duration: ds[0] ? lengthText(runLength(ds[0].sessions)) : o.method === 'self-paced' ? 'Self-paced' : '',
+        duration: ds[0] ? lengthText(runLength(ds[0].sessions)) : o.methods.includes('self-paced') ? 'Self-paced' : '',
         category: x?.category ?? null,
-        methods: o.method ? [o.method] : [],
+        methods: ways(o),
         cities: [...new Set(ds.map((d) => d.city).filter((c): c is string => Boolean(c)))].sort(),
         fromPence: prices[0]?.p ?? null,
         wasPence: prices[0]?.was ?? null,

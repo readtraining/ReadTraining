@@ -239,6 +239,34 @@
       "when": 1794505096363,
       "tag": "0033_api_only_policies_in_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794815430779,
+      "tag": "0034_member_status_seen",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794843037481,
+      "tag": "0035_course_methods",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794843044047,
+      "tag": "0036_course_methods_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794843062226,
+      "tag": "0037_course_methods_checks",
+      "breakpoints": true
     }
   ]
 }

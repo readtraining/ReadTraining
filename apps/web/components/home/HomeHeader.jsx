@@ -19,16 +19,19 @@ import { headerNav } from "@/data/headerNav";
 export default function HomeHeader() {
   const [activeMobileMenu, setActiveMobileMenu] = useState(false);
   // the search box opening: the menu slides left by just the room it needs (to the space beside the logo at most), and where
-  // even that isn't enough the box opens narrower; closing slides the menu back
+  // even that isn't enough the box opens narrower (to 180px); on a screen too narrow even for that (about 1200px signed out),
+  // the menu fades out while the search is open, so the box never covers it; closing brings the menu back
   const headerRef = useRef(null);
   const [menuShift, setMenuShift] = useState(0);
   const [searchWidth, setSearchWidth] = useState(SEARCH_WIDTH);
+  const [menuHidden, setMenuHidden] = useState(false);
   const searchOpened = (open) => {
     const header = headerRef.current;
     const items = header ? [...header.querySelectorAll(".menu__nav > li")].map((li) => li.getBoundingClientRect()).filter((r) => r.width) : [];
     if (!open || !items.length) {
       setMenuShift(0);
       setSearchWidth(SEARCH_WIDTH);
+      setMenuHidden(false);
       return;
     }
     const GAP = 16; // between the menu's last item and the box
@@ -38,8 +41,17 @@ export default function HomeHeader() {
     const menuRight = Math.max(...items.map((r) => r.right));
     const need = Math.max(0, menuRight + GAP - (right - SEARCH_WIDTH)); // how far the menu must move for the full box
     const room = Math.max(0, menuLeft - logo - 24); // how far it can move before reaching the logo
+    const MIN = 180; // the narrowest box worth typing in
+    if (need - room > SEARCH_WIDTH - MIN) {
+      // even a slid menu and the narrowest box don't fit: the menu steps aside while the search is open
+      setMenuShift(0);
+      setSearchWidth(SEARCH_WIDTH);
+      setMenuHidden(true);
+      return;
+    }
+    setMenuHidden(false);
     setMenuShift(Math.min(need, room));
-    setSearchWidth(need > room ? Math.max(180, SEARCH_WIDTH - (need - room)) : SEARCH_WIDTH);
+    setSearchWidth(need > room ? SEARCH_WIDTH - (need - room) : SEARCH_WIDTH);
   };
   // the four menus: the open one's card shows under the header, with the page dimmed behind it
   const menu = useNavMenu();
@@ -49,7 +61,7 @@ export default function HomeHeader() {
   return (
     <>
       <HomeTopBar />
-      <header ref={headerRef} className="header -type-1 " style={{ position: "sticky", top: 0, "--rt-menu-shift": `${menuShift}px` }} data-rt-nav>
+      <header ref={headerRef} className={`header -type-1${menuHidden ? " is-searching" : ""}`} style={{ position: "sticky", top: 0, "--rt-menu-shift": `${menuShift}px` }} data-rt-nav>
         <div className="header__container">
           <div className="row justify-between items-center">
             <div className="col-auto">
@@ -75,7 +87,7 @@ export default function HomeHeader() {
             />
 
             <div className="col-auto">
-              {/* search, basket, the phone menu button and the account in one row (rt-hactions): 18px apart when signed in,
+              {/* search, basket, the phone menu button and the account in one row (rt-hactions): 24px apart when signed in,
                   the old spacing when signed out (custom.scss) */}
               <div className="header-right rt-hactions text-white d-flex items-center">
                 <HomeSearch onOpenChange={searchOpened} width={searchWidth} />

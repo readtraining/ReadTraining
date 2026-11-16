@@ -137,6 +137,9 @@ export const organisationMembers = pgTable(
     jobTitle: text('job_title'),
     status: memberStatus('status').notNull().default('active'),
     invitedBy: uuid('invited_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    // when this person last saw the account's status message (a provider's "Your account is approved"…): a message that shows
+    // once is gone after it, until the status changes again (organisations.status_changed_at is later)
+    statusSeenAt: timestamp('status_seen_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [
@@ -354,15 +357,18 @@ export const courses = pgTable(
     subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'restrict' }),
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'restrict' }),
     level: text('level').references(() => courseLevels.slug, { onDelete: 'restrict' }),
-    // how a provider course is taught: classroom and live-online have dates (cohorts); self-paced is "start any time" at price_pence
+    // a provider course's learning options (Hurak's): `methods` are the ways it is offered and `method` the primary one, shown
+    // first. Classroom and live-online have dates (cohorts); self-paced is "start any time" at price_pence. A shared page has
+    // neither.
     method: text('method').references(() => deliveryMethods.slug, { onDelete: 'restrict' }),
+    methods: text('methods').array().notNull().default(sql`'{}'::text[]`),
     model: courseModel('model').notNull().default('bookings'),
     skillSaver: boolean('skill_saver').notNull().default(false),
     // false = only people with the link can book (the editor's "private"); listed = shown on ReadTraining's search and pages
     isPublic: boolean('is_public').notNull().default(true),
     listed: boolean('listed').notNull().default(true),
-    pricePence: integer('price_pence'), // self-paced price, including VAT; classroom and live-online prices are on each cohort
-    // a self-paced course sold in packages (Hurak's "Tiered"): its price plan, whose cheapest package is price_pence; null = one
+    pricePence: integer('price_pence'), // the self-paced option's price, including VAT; classroom and live-online prices are on each cohort
+    // the self-paced option sold in packages (Hurak's "Tiered"): its price plan, whose cheapest package is price_pence; null = one
     // flat price. Classroom and live-online dates choose their own plan (cohorts.plan_id).
     planId: uuid('plan_id').references((): AnyPgColumn => pricePlans.id, { onDelete: 'restrict' }),
     videoUrl: text('video_url'),
@@ -395,6 +401,9 @@ export const courses = pgTable(
     // a shared page belongs to no provider and sits under nothing; a provider course always has its provider
     check('courses_kind_shape', sql`(${t.kind} = 'shared' and ${t.organisationId} is null and ${t.parentId} is null) or (${t.kind} = 'provider' and ${t.organisationId} is not null)`),
     check('courses_price_range', sql`${t.pricePence} is null or ${t.pricePence} between 0 and 10000000`),
+    // the options are the three taught ways, and the primary is one of them (a shared page: neither)
+    check('courses_methods_taught', sql`${t.methods} <@ array['classroom', 'live-online', 'self-paced']::text[]`),
+    check('courses_method_offered', sql`(${t.method} is null and cardinality(${t.methods}) = 0) or ${t.method} = any(${t.methods})`),
     index('courses_plan_idx').on(t.planId),
     apiOnly('courses'),
   ],

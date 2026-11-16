@@ -8,7 +8,7 @@ import SourceLabel from "./SourceLabel";
 
 // One review card (.rt-review, in the reviews grid .rt-reviews__grid): the reviewer first (initials, name, the course the
 // review names), their own stars and, when set, where it was first posted (as text), then the full text with its line
-// breaks. `clamp`: a long text is cut to six lines with "Read more" under it (it opens in the card), so one long review doesn't
+// breaks. `clamp`: a long text is cut to five lines with "Read more" under it (it opens in the card), so one long review doesn't
 // stretch its row of cards; the button shows only when the text is really cut. `meta`: what goes under the name, the course the
 // review names (the reviews page) or when it was written (a course page, where the course is the page itself).
 

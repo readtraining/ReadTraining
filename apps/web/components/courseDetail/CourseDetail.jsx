@@ -38,9 +38,10 @@ const unitKey = (name) => String(name).toLowerCase().replace(/[^a-z0-9]+/g, " ")
 // nothing it doesn't have (a rating of its own) is shown. A course with a guide (data/courseGuides.js, by catalogue topic) also
 // gets the guide's sections (CourseGuide.jsx) in the same parts: a comparison, the course week, what's included, packages,
 // business training, the licence steps, costs and careers, plus a questions column and intro lines for the exams table. `path` is the page's own address (canonical and structured data);
-// `query` is its search params (?mode=&session=). `reviews`: the published reviews that name this course's topic, shown as
-// reviews of Read Training (CourseReviews; `reviewsCourse` is the topic's name); none, and the section is left out.
-export default function CourseDetail({ course, query = {}, path, reviews = [], reviewsCourse = "" }) {
+// `query` is its search params (?mode=&session=). `reviews`: the first page of the reviews shown as reviews of Read Training
+// (lib/courseDetailServer.js: those that name this course's topic, or, when none does, a few general ones, said to be about
+// Read Training in general; CourseReviews asks for the other pages); null when there are none, and the section is left out.
+export default function CourseDetail({ course, query = {}, path, reviews = null }) {
   const subject = getSubjectLabel(course);
   const prices = course.sessions.map((s) => s.price);
   const guide = courseGuides.find((g) => matchesPick(course, g.pick)) || null;
@@ -63,7 +64,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
     ...(guide?.packages ? [{ id: "packages", label: "Packages" }] : []),
     ...(guide?.business ? [{ id: "business", label: "For business" }] : []),
     ...(guide?.licence ? [{ id: "licence", label: "Your licence" }] : []),
-    ...(reviews.length ? [{ id: "course-reviews", label: "Reviews" }] : []),
+    ...(reviews ? [{ id: "course-reviews", label: "Reviews" }] : []),
     ...(course.faqs.length ? [{ id: "faqs", label: "FAQs" }] : []),
   ];
 
@@ -109,7 +110,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
           <BookingProvider course={course} initialMode={query.mode} initialSession={query.session}>
             <div className="container rt-cd__wrap">
               <div className="rt-cd__grid">
-                <CourseHero course={course} hasReviews={reviews.length > 0} heroTitle={guide?.heroTitle} />
+                <CourseHero course={course} hasReviews={!!reviews} heroTitle={guide?.heroTitle} />
 
                 <aside className="rt-cd__aside" aria-label="Book this course">
                   <BookingCard />
@@ -224,7 +225,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = [], r
 
                   <TrustBoxes />
 
-                  <CourseReviews reviews={reviews} course={reviewsCourse} />
+                  <CourseReviews key={course.slug} reviews={reviews} />
 
                   {course.provider && (course.provider.bookingTerms || course.provider.cancellationPolicy) && (
                     <section className="rt-cd__sec" id="terms" aria-labelledby="rt-cd-terms-h">

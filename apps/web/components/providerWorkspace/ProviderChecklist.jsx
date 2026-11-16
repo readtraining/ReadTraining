@@ -6,6 +6,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { waysOf } from "@/lib/courseModes";
 
 const copy = pw.checklist;
 // who can do each step (the shared permission table), so a step's link shows only to someone who can follow it
@@ -14,8 +15,10 @@ const NEEDS = { approved: "provider.review.send", profile: "provider.profile.edi
 // Getting set up to sell (Hurak's provider checklist, in our design): approval, the public profile, the cancellation policy, a
 // first course and a first date, each worked out from the real records, with how many are done. Shown on the dashboard to the
 // people who set the account up (and on the Account review page while waiting), until every step is done. `heading` picks the
-// heading level for where it sits.
-export default function ProviderChecklist({ heading = 2 }) {
+// heading level for where it sits. `compact` (the dashboard): the progress and only the next step to do, with every step a click
+// away (Show all steps), so a new provider still sees the rest of the dashboard on the first screen.
+export default function ProviderChecklist({ heading = 2, compact = false }) {
+  const [open, setOpen] = React.useState(false);
   const workspace = useWorkspace();
   const { organisationId, can } = useProviderAccess();
   const shown = can("provider.profile.edit") || can("provider.courses.edit");
@@ -36,13 +39,22 @@ export default function ProviderChecklist({ heading = 2 }) {
     profile: Boolean(p.headline && p.bio && p.logoUrl),
     policy: Boolean(p.cancellationPolicy),
     course: list.length > 0,
-    date: (dates.data || []).length > 0 || list.some((c) => c.method === "self-paced"),
+    date: (dates.data || []).length > 0 || list.some((c) => waysOf(c).includes("self-paced")),
   };
   const keys = Object.keys(copy.steps);
   const count = keys.filter((k) => done[k]).length;
   if (count === keys.length) return null;
   const H = `h${heading}`;
   const S = `h${heading + 1}`;
+  const textOf = (k) => {
+    const step = copy.steps[k];
+    // a step's words can depend on the account's status; a step already done reads as it does once approved
+    return typeof step.text === "string" ? step.text : step.text[done[k] && k !== "approved" ? "active" : status] || "";
+  };
+  // approval has an action only when our team is waiting on the provider
+  const actionOf = (k) => (k === "approved" ? (status === "changes_requested" ? copy.steps[k].action : null) : copy.steps[k].action);
+  const next = keys.find((k) => !done[k]);
+  const listShown = !compact || open;
 
   return (
     <section className="rt-acc__card rt-pws-check" aria-labelledby="rt-pws-check-h">
@@ -53,13 +65,20 @@ export default function ProviderChecklist({ heading = 2 }) {
       <div className="rt-pws-check__bar" role="progressbar" aria-label={copy.title} aria-valuemin={0} aria-valuemax={keys.length} aria-valuenow={count} aria-valuetext={copy.done(count, keys.length)}>
         <span style={{ width: `${(count / keys.length) * 100}%` }}></span>
       </div>
-      <ol className="rt-pws-check__list">
+      {compact && (
+        <div className="rt-pws-check__next">
+          <p><span className="rt-pws-check__nextlabel">Next:</span> {copy.steps[next].title}<span className="rt-pws-check__nexttext"> · {textOf(next)}</span></p>
+          <div className="rt-pws-check__nextactions">
+            {actionOf(next) && can(NEEDS[next]) && <Link href={actionOf(next).href} className="rt-dash__go">{actionOf(next).label}<span className="rt-sr">: {copy.steps[next].title}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>}
+            <button type="button" className="rt-pws-check__toggle" aria-expanded={open} aria-controls="rt-pws-check-list" onClick={() => setOpen((x) => !x)}>{open ? "Hide steps" : "Show all steps"}</button>
+          </div>
+        </div>
+      )}
+      {listShown && <ol className="rt-pws-check__list" id="rt-pws-check-list">
         {keys.map((k) => {
           const step = copy.steps[k];
-          // a step's words can depend on the account's status; a step already done reads as it does once approved
-          const text = typeof step.text === "string" ? step.text : step.text[done[k] && k !== "approved" ? "active" : status] || "";
-          // approval has an action only when our team is waiting on the provider
-          const action = k === "approved" ? (status === "changes_requested" ? step.action : null) : step.action;
+          const text = textOf(k);
+          const action = actionOf(k);
           return (
             <li key={k} className={`rt-pws-check__item${done[k] ? " is-done" : ""}`}>
               <span className="rt-pws-check__mark" aria-hidden="true">{done[k] && <i className="icon-check text-10"></i>}</span>
@@ -71,7 +90,7 @@ export default function ProviderChecklist({ heading = 2 }) {
             </li>
           );
         })}
-      </ol>
+      </ol>}
     </section>
   );
 }

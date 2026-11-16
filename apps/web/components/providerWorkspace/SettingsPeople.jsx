@@ -139,7 +139,7 @@ export function QaTab({ data, say }) {
         </form>
       </Sheet>
 
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this question?" confirmLabel="Delete question"
+      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this question?" confirmLabel="Delete question"
         text={removing ? `“${removing.question}” will be removed from the course page.` : ""}
         onConfirm={() => { deleteQuestion(removing.id); setRemoving(null); say("Question deleted"); }} />
     </div>
@@ -245,7 +245,7 @@ export function TeamTab({ data, say }) {
         </form>
       </Sheet>
 
-      <Confirm open={Boolean(removing)} onClose={() => setRemoving(null)} title={removing ? `Remove ${removing.name || removing.email}?` : ""} confirmLabel="Remove from team"
+      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title={removing ? `Remove ${removing.name || removing.email}?` : ""} confirmLabel="Remove from team"
         text={removing ? `They will lose access to this workspace straight away.${cohortsOf(removing.id) ? ` They tutor ${cohortsOf(removing.id)} upcoming ${cohortsOf(removing.id) === 1 ? "cohort, which will show no tutor" : "cohorts, which will show no tutor"} until you choose another.` : ""}` : ""}
         onConfirm={() => { removeMember(removing.id); say(`${removing.name || removing.email} removed`); setRemoving(null); }} />
     </div>

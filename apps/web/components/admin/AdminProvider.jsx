@@ -13,7 +13,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { formatWhen, Said, DetailSkeleton, Empty, actionLabel } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
-import { methodName } from "@/lib/taxonomy";
+import { waysLabel } from "@/lib/courseModes";
 
 const copy = A.providers;
 const d = copy.detail;
@@ -129,7 +129,7 @@ export default function AdminProvider({ slug }) {
               <ul className="rt-adm-list">
                 {p.courses.map((c) => (
                   <li key={c.id}>
-                    <div><Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link><small>Number {c.id}{c.method ? ` · ${methodName(c.method)}` : ""}</small></div>
+                    <div><Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link><small>Number {c.id}{waysLabel(c) ? ` · ${waysLabel(c)}` : ""}</small></div>
                     <span className="rt-adm-cellrow">
                       {c.pendingChange && <AdminStatus kind="course" status="pending">{A.catalogue.detail.change}</AdminStatus>}
                       <AdminStatus kind="course" status={c.status}>{A.catalogue.statuses[c.status]}</AdminStatus>

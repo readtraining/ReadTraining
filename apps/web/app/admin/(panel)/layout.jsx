@@ -13,7 +13,7 @@ export default async function AdminPanelLayout({ children }) {
   const admin = await getAdminAccess();
   if (!admin) redirect(AUTH_ROUTES.adminLogin);
   if (admin.unavailable) return <NoAccess type="admin" unavailable />;
-  // the sidebar starts hidden when this browser left it that way
+  // the sidebar starts folded to its icon rail when this browser left it that way
   return (
     <AdminAccessProvider value={admin}>
       <SideMenuProvider closed={sideClosed(await cookies())}>{children}</SideMenuProvider>

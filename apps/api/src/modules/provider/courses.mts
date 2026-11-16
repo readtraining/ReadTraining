@@ -5,7 +5,6 @@ import {
   and,
   asc,
   categories,
-  cohorts,
   courseExams,
   courseFaqs,
   courseImages,
@@ -18,6 +17,7 @@ import {
   inArray,
   like,
   or,
+  pricePlans,
   sql,
   subcategories,
   topics,
@@ -25,17 +25,18 @@ import {
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { refuseRetired, retiredEntries } from '../../lib/retired.mjs'
+import { refuseRetired, retiredEntries, retiredMethods } from '../../lib/retired.mjs'
 import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
-import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
-import { notify, notifyApprovers, ownerOf } from '../../lib/notify.mjs'
+import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, copyMedia, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
+import { notify, notifyApprovers, ownerOf, personOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
 import { usablePlan } from './plans.mjs'
 import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's courses (Milestone 2): create one (under a shared course page or on its own), write its page, add images, send it
-// for approval, pause it, delete a draft. Every change is checked against the provider's permission table and logged.
+// for approval (and withdraw it), pause it, duplicate it, delete it (deleteBlock). Every change is checked against the provider's
+// permission table and logged.
 //
 // A live (or paused) course keeps showing while a content edit waits for an admin: the reviewed fields below go into one pending
 // course_revisions row instead of onto the course. Prices, settings and search wording change straight away. A course that isn't
@@ -124,28 +125,39 @@ export const content = {
     .optional()
     .nullable(),
   units: z.array(z.object({ title: line(120, 'unit title').min(1, 'Give every unit a title.'), body: text(2000, 'unit text') })).max(40, 'Add up to 40 units.'),
-  exams: z.array(z.object({ unit: line(120, 'exam unit').min(1, 'Name every exam row.'), passMark: text(40, 'pass mark').refine((v) => !passMarkProblem(v ?? ''), (v) => ({ message: passMarkProblem(v ?? '') })), duration: text(40, 'duration') })).max(20, 'Add up to 20 exam rows.'),
+  // the course page shows each row as a line of a table (unit, pass mark, duration): a row needs all three, or no row at all
+  exams: z.array(z.object({
+    unit: line(120, 'exam unit').min(1, 'Name every exam row.'),
+    passMark: line(40, 'pass mark').min(1, 'Give every exam row its pass mark.').refine((v) => !passMarkProblem(v), (v) => ({ message: passMarkProblem(v) })),
+    duration: line(40, 'duration').min(1, 'Give every exam row its duration.'),
+  })).max(20, 'Add up to 20 exam rows.'),
   faqs: z.array(z.object({ question: line(160, 'question').min(1, 'Write every question.'), answer: line(1200, 'answer').min(1, 'Write every answer.') })).max(30, 'Add up to 30 FAQs.'),
 }
-// The ways of teaching a provider course can use: booking only knows these (classroom and live online are priced on their dates,
-// self-paced has its own price). A method an admin adds in Catalogue settings names catalogue pages, but a provider course on it
-// could never have dates or a price, so it is refused until booking supports it.
-const TAUGHT = ['classroom', 'live-online', 'self-paced']
-const taughtOnly = (method: string | undefined) => {
-  if (method !== undefined && !TAUGHT.includes(method)) throw bad('Choose classroom, live online or self-paced.', 'method')
+// The ways of teaching a provider course can use (its learning options), in the order they are shown: booking only knows these
+// (classroom and live online are priced on their dates, self-paced has its own price). A method an admin adds in Catalogue
+// settings names catalogue pages, but a provider course on it could never have dates or a price, so it is refused until booking
+// supports it. A course offers one or more (`methods`), one of them its primary (`method`, shown first).
+export const TAUGHT = ['classroom', 'live-online', 'self-paced']
+/** Whether a learning option is taught on dates (cohorts). */
+export const isDated = (method: string) => method === 'classroom' || method === 'live-online'
+const taughtAll = (list: string[]) => {
+  if (list.some((m) => !TAUGHT.includes(m))) throw bad('Choose classroom, live online or self-paced.', 'methods')
 }
+/** The options given, once each, in the order they are shown. */
+const inOrder = (list: string[]) => TAUGHT.filter((m) => list.includes(m))
 
 export const settings = {
   seoTitle: text(60, 'search title'),
   seoDescription: text(320, 'search description'),
   seoKeywords: z.array(line(40, 'keyword').min(1)).max(20, 'Add up to 20 keywords.'),
   pricePence: z.number().int().min(0).max(10000000, 'Enter a price of £100,000 or less.').nullable(),
-  planId: z.string().uuid().nullable(), // a self-paced course sold in packages (its price is then the plan's cheapest package)
+  planId: z.string().uuid().nullable(), // the self-paced option sold in packages (its price is then the plan's cheapest package)
   skillSaver: z.boolean(),
   isPublic: z.boolean(),
   listed: z.boolean(),
   model: z.enum(['bookings', 'enquiries']),
-  method: slugRef,
+  method: slugRef, // the primary learning option, one of `methods`
+  methods: z.array(slugRef).min(1, 'Choose at least one learning option.').max(3),
   parentId: z.number().int().positive().nullable(), // the shared course page it is listed under, or none
 }
 const PAGE_ONLY = new Set(['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'videoUrl', 'seoTitle', 'seoDescription', 'seoKeywords'])
@@ -166,8 +178,8 @@ export async function ownCourse(db: Writer, organisationId: string, courseId: nu
   return c
 }
 
-/** Category, sub-category and topic slugs to ids, checked to belong together and to be in use; level and method checked too. */
-export async function resolveCatalogue(db: Writer, input: { category?: string; subcategory?: string; topic?: string | null; level?: string; method?: string }) {
+/** Category, sub-category and topic slugs to ids, checked to belong together and to be in use; level and methods checked too. */
+export async function resolveCatalogue(db: Writer, input: { category?: string; subcategory?: string; topic?: string | null; level?: string; method?: string; methods?: string[] }) {
   const out: { categoryId?: string; subcategoryId?: string; topicId?: string | null; level?: string; method?: string } = {}
   if (input.category !== undefined) {
     const [cat] = await db.select({ id: categories.id }).from(categories).where(and(eq(categories.slug, input.category), eq(categories.active, true)))
@@ -194,7 +206,21 @@ export async function resolveCatalogue(db: Writer, input: { category?: string; s
     if (!m) throw bad('Choose how the course is taught.', 'method')
     out.method = m.slug
   }
+  if (input.methods?.length) {
+    const wanted = [...new Set(input.methods)]
+    const active = await db.select({ slug: deliveryMethods.slug }).from(deliveryMethods).where(and(inArray(deliveryMethods.slug, wanted), eq(deliveryMethods.active, true)))
+    if (active.length < wanted.length) throw bad('Choose learning options from the list.', 'methods')
+  }
   return out
+}
+
+// The catalogue ids for the slugs a change waiting for approval holds, whether or not each is still offered (a duplicated course
+// is a draft: sending it says if one has been retired). The topic stays `topicId` when the change doesn't name one.
+async function subjectOf(db: Writer, c: { category?: unknown; subcategory?: unknown; topic?: unknown }, topicId: string | null) {
+  const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, String(c.category)))
+  const [sub] = cat ? await db.select({ id: subcategories.id }).from(subcategories).where(and(eq(subcategories.slug, String(c.subcategory)), eq(subcategories.categoryId, cat.id))) : []
+  const [top] = sub && c.topic ? await db.select({ id: topics.id }).from(topics).where(and(eq(topics.slug, String(c.topic)), eq(topics.subcategoryId, sub.id))) : []
+  return { categoryId: cat?.id ?? null, subcategoryId: sub?.id ?? null, topicId: c.topic === undefined ? topicId : (top?.id ?? null) }
 }
 
 // A provider's course on a shared course page is the same course as the page, so their subjects must match: the same sub-category,
@@ -264,12 +290,31 @@ export async function missing(db: Writer, course: typeof courses.$inferSelect) {
   if (!course.description) gaps.push('a description')
   if (!course.categoryId || !course.subcategoryId) gaps.push('a category and sub-category')
   if (!course.level) gaps.push('a level')
-  if (course.kind === 'provider' && !course.method) gaps.push('how it is taught')
+  if (course.kind === 'provider' && (!course.method || !course.methods.length)) gaps.push('a learning option')
   if (course.outcomes.length < 4) gaps.push('at least 4 things learners will learn')
   if (!units.n) gaps.push('the syllabus (at least one unit)')
   if (!img.n) gaps.push('at least one image')
-  if (course.method === 'self-paced' && course.pricePence === null) gaps.push('a price')
+  if (course.methods.includes('self-paced') && course.pricePence === null) gaps.push('a price for the self-paced option')
   return gaps
+}
+
+// How many of the course editor's required steps a provider course still has to finish (the editor's "3 of 5 required steps
+// complete"; the Dashboard's to-do list shows the rest on each draft). The steps and their rules are the editor's own
+// (ProviderCourseEditor.jsx SECTIONS without the optional ones, ticked by sectionOk from the draft as it is typed): keep the two
+// the same. They ask a little more than `missing`: a course taught on dates finishes its Price step with its first date.
+export type StepFacts = { title: boolean; summary: boolean; description: boolean; filed: boolean; level: boolean; images: boolean; outcomes: number; units: boolean; method: string | null; methods: string[]; priced: boolean; upcoming: number }
+export function stepsLeft(f: StepFacts) {
+  const method = f.method || 'classroom' // the editor opens a course with no method on classroom
+  const methods = f.methods.length ? f.methods : [method]
+  const done = [
+    f.title && f.summary && f.description && f.filed && f.level && f.images, // Course landing page
+    f.outcomes >= 4, // Course information
+    f.units, // Syllabus and exam
+    methods.includes(method), // Learning options
+    // Price: the self-paced option's own price or plan, and a date to be priced on when it is taught on dates
+    (!methods.includes('self-paced') || f.priced) && (!methods.some(isDated) || f.upcoming > 0),
+  ]
+  return done.filter((ok) => !ok).length
 }
 
 // a course as the editors show it: the course, its lists and images, its shared page, any change waiting for approval, and the
@@ -286,7 +331,12 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
       select (select slug from public.categories where id = ${course.categoryId}) category,
              (select slug from public.subcategories where id = ${course.subcategoryId}) subcategory,
              (select slug from public.topics where id = ${course.topicId}) topic`),
-    db.execute<{ upcoming: number; total: number }>(sql`select count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date)::int upcoming, count(*)::int total from public.cohorts where course_id = ${course.id}`),
+    db.execute<{ upcoming: number; classroom: number; live_online: number; total: number }>(sql`
+      select count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date)::int upcoming,
+             count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date and method = 'classroom')::int classroom,
+             count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date and method = 'live-online')::int live_online,
+             count(*)::int total
+      from public.cohorts where course_id = ${course.id}`),
     db
       .select({ status: courseRevisions.status, note: courseRevisions.note, decidedAt: courseRevisions.decidedAt })
       .from(courseRevisions)
@@ -313,9 +363,15 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     lastChange: last ?? null,
     upcomingCohorts: dates?.upcoming ?? 0,
     cohortCount: dates?.total ?? 0,
+    // a dated learning option with upcoming dates can't be turned off until they are cancelled
+    upcomingByMethod: { classroom: dates?.classroom ?? 0, 'live-online': dates?.live_online ?? 0 },
     missing: await missing(db, course),
     // "Name (category)" for each catalogue entry the course is filed under that is no longer offered (it can't go live under one)
     retired: await retiredEntries(db, course.id),
+    // its learning options that are retired in Catalogue settings (one can be turned off, not on)
+    retiredMethods: course.kind === 'provider' ? await retiredMethods(db, course.id) : [],
+    // why the gear can't offer Delete (a provider's course): 'in_review', 'paused_by_team', 'in_use', or null (see deleteBlock)
+    deleteBlock: course.kind === 'provider' ? await deleteBlock(db, course) : null,
   }
 }
 
@@ -400,20 +456,69 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
   return { ok: true }
 }
 
-// deletes a course that has never been live, with its dates, lists and images
-export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog) {
-  const images = await db.transaction(async (tx) => {
-    // checked under the row lock: a second delete, or an approval at the same moment, sees the other's result
+// ---- deleting a provider's course (Hurak's and Udemy's rule) -------------------------------------------------------------------
+// A draft, or a course our team asked to change, can be deleted. One waiting for our team's review can't: the provider withdraws
+// it from review first (withdrawReview), so an admin is never deciding on a course that is being deleted. A course that has been
+// live (live or paused) can be deleted only while nobody has booked or reviewed it, and the provider types its name to confirm.
+// One our team has paused can't be deleted while it is paused (the provider contacts us). The editor's gear asks deleteBlock before showing Delete, and `remove` asks it again under the course's row lock.
+
+/** Whether a course has been live: deleting one takes it off ReadTraining, so it needs its name typed and our team is told. */
+export const hasBeenLive = (course: Pick<Course, 'status' | 'publishedAt'>) => Boolean(course.publishedAt) || course.status === 'live' || course.status === 'paused'
+
+/**
+ * Why a provider's course can't be deleted now, or null when it can: 'in_review' while it waits for our team's review,
+ * 'paused_by_team' while our team has paused it (paused with their reason in status_note, as setPaused's "put back live" rule
+ * and the admin's pause decision use it; a course the provider paused has no note), 'in_use' once a learner has booked it (an
+ * order) or reviewed it (a review). The gear (courseDetail's `deleteBlock`), the Courses list (`list`, through blockFor) and
+ * `remove` all ask this, so they never disagree.
+ */
+export async function deleteBlock(db: Writer, course: Pick<Course, 'id' | 'status' | 'statusNote'>) {
+  const first = blockFor(course, false)
+  if (first) return first
+  const [row] = await db.execute<{ used: boolean }>(sql`
+    select exists (select 1 from public.orders where course_id = ${course.id}) or exists (select 1 from public.reviews where course_id = ${course.id}) used`)
+  return blockFor(course, Boolean(row?.used))
+}
+/** deleteBlock's rule, given whether a learner has booked or reviewed the course (`used`). */
+const blockFor = (course: Pick<Course, 'status' | 'statusNote'>, used: boolean): 'in_review' | 'paused_by_team' | 'in_use' | null =>
+  course.status === 'pending' ? 'in_review' : course.status === 'paused' && course.statusNote ? 'paused_by_team' : used ? 'in_use' : null
+
+const DELETE_REFUSED = {
+  in_review: 'This course is waiting for our team’s review. Withdraw it from review first (in the course settings), then you can delete it.',
+  paused_by_team: 'Our team has paused this course, so it can’t be deleted while it’s paused. Contact us if you’d like it removed.',
+  in_use: 'Courses can’t be deleted once learners have booked or reviewed them.',
+}
+const PAUSE_INSTEAD = ' Pause it to take it off ReadTraining.'
+/** The refusal for a course deleteBlock blocks (a live course is pointed to Pause). */
+export const deleteRefusal = (block: keyof typeof DELETE_REFUSED, status: Course['status']) => DELETE_REFUSED[block] + (block === 'in_use' && status === 'live' ? PAUSE_INSTEAD : '')
+
+// the name typed to confirm deleting a course that has been live: the same as its title, ignoring spaces around it and case
+const sameName = (typed: string, title: string) => typed.trim().toLowerCase() === title.trim().toLowerCase()
+
+// the rule for a shared course page (and the default): one that has been live is never deleted
+const neverLive = async (_tx: Tx, now: Course) => {
+  if (now.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
+  return {}
+}
+
+/**
+ * Deletes a course with its dates, lists, images and any change waiting for approval (they go with the course's row). `allowed`
+ * runs under the course's row lock and throws when it may not be deleted (by default, when it has been live: the rule for shared
+ * course pages); what it returns joins the log line. Returns the course as it was deleted.
+ */
+export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog, allowed: (tx: Tx, now: Course) => Promise<Record<string, unknown>> = neverLive) {
+  const { paths, now } = await db.transaction(async (tx) => {
+    // checked under the row lock: a second delete, an approval or a staff booking at the same moment sees the other's result
     const now = await lockCourse(tx, course.id)
     if (!now) throw new TRPCError({ code: 'CONFLICT', message: 'This course has already been deleted.' })
-    if (now.publishedAt) throw new TRPCError({ code: 'CONFLICT', message: 'A course that has been live can’t be deleted. Pause it instead.' })
+    const more = await allowed(tx, now)
     const paths = await tx.select({ path: courseImages.path }).from(courseImages).where(eq(courseImages.courseId, course.id))
     await tx.delete(courses).where(eq(courses.id, course.id))
-    await onLog(tx, { title: course.title })
-    return paths
+    await onLog(tx, { title: now.title, ...more })
+    return { paths, now }
   })
-  await removeUnusedImages(db, images.map((i) => i.path))
-  return { ok: true }
+  await removeUnusedImages(db, paths.map((i) => i.path))
+  return now
 }
 
 const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, courseId: number, metadata: Record<string, unknown> = {}) =>
@@ -462,6 +567,48 @@ async function lockStatus(tx: Writer, courseId: number) {
   return row?.status ?? 'draft'
 }
 
+// The learning options and the self-paced option's price, from an editor save (`direct`) onto `directSet`, checked against the
+// course as it stands (`now`, its row locked): the primary is one of the options; an option newly turned on (or a new primary) is
+// one still offered in Catalogue settings, while one already on that has since been retired may stay so other changes save; a
+// dated option with upcoming dates can't be turned off until they are cancelled (a date added at the same moment locks the same
+// row first, modules/provider/schedule.mts); and only the self-paced option has a price or price plan of its own, so turning it
+// off clears them, and a live course offering it needs one.
+async function setLearningOptions(tx: Tx, now: Course, direct: Record<string, unknown>, directSet: Partial<typeof courses.$inferInsert>, organisationId: string, isLive: boolean) {
+  const methodsAfter = direct.methods !== undefined ? inOrder(direct.methods as string[]) : now.methods
+  if (direct.methods !== undefined || direct.method !== undefined) {
+    const methodAfter = (direct.method as string | undefined) ?? now.method
+    if (!methodAfter || !methodsAfter.includes(methodAfter)) throw bad('Make the primary learning option one of the ways this course is offered.', 'method')
+    const added = methodsAfter.filter((m) => !now.methods.includes(m))
+    await resolveCatalogue(tx, { methods: methodAfter === now.method ? added : [...added, methodAfter] })
+    const removed = now.methods.filter((m) => !methodsAfter.includes(m) && isDated(m))
+    if (removed.length) {
+      const [busy] = await tx.execute<{ name: string; n: number }>(sql`
+        select (select name from public.delivery_methods where slug = k.method) name, count(*)::int n
+        from public.cohorts k
+        where k.course_id = ${now.id} and k.method in (${sql.join(removed.map((m) => sql`${m}`), sql`, `)}) and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date
+        group by k.method order by k.method limit 1`)
+      if (busy) throw bad(`${busy.name} has ${busy.n} upcoming ${busy.n === 1 ? 'date' : 'dates'}. Cancel ${busy.n === 1 ? 'it' : 'them'} first, then turn it off.`, 'methods')
+    }
+    directSet.method = methodAfter
+    directSet.methods = methodsAfter
+  }
+  const selfPaced = methodsAfter.includes('self-paced')
+  if (direct.planId !== undefined) {
+    if (direct.planId === null) directSet.planId = null
+    else if (!selfPaced) throw bad('Only the self-paced option has a price plan of its own: dates choose theirs.', 'planId')
+    else {
+      const plan = await usablePlan(tx, organisationId, direct.planId as string, now.planId)
+      Object.assign(directSet, { planId: plan.id, pricePence: plan.from.pricePence })
+    }
+  }
+  if (direct.pricePence !== undefined && !directSet.planId) directSet.pricePence = direct.pricePence as number | null
+  // classroom and live online are priced on their dates: without the self-paced option the course has no price of its own
+  if (!selfPaced && (now.pricePence !== null || now.planId !== null || 'pricePence' in directSet || 'planId' in directSet)) Object.assign(directSet, { pricePence: null, planId: null })
+  // a live course offering self-paced shows its price: turning the option on (or clearing its price) needs one
+  const priceAfter = directSet.pricePence !== undefined ? directSet.pricePence : now.pricePence
+  if (isLive && selfPaced && priceAfter === null) throw bad('Enter the price for the self-paced option: a live course offering it needs one.', 'price')
+}
+
 async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, course: { id: number; status: string }) {
   if (course.status !== 'pending') return false
   await tx.update(courses).set({ status: 'draft', updatedAt: new Date() }).where(eq(courses.id, course.id))
@@ -470,20 +617,34 @@ async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string |
 }
 
 export const providerCoursesRouter = createTRPCRouter({
-  // Every course of this provider, newest first, with what the course list shows.
+  // Every course of this provider, newest first, with what the course list shows: when it was last sent for approval
+  // (`submittedAt`); a draft's editor steps still to finish (`stepsLeft`, null on the others); and for its ⋮ menu, Pause or Put
+  // back live, and Delete with deleteBlock's reason when it can't be deleted.
   list: orgProcedure('provider.courses.view').query(async ({ ctx, input }) => {
-    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: string; method: string | null; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; parent: string | null; cover: string | null; upcoming: number; pending_change: boolean }>(sql`
-      select c.id, c.title, c.slug, c.status, c.method, c.model, c.is_public, c.listed, c.updated_at,
+    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; methods: string[]; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; outcomes: number; has_units: boolean; priced: boolean; used: boolean }>(sql`
+      select c.id, c.title, c.slug, c.status, c.status_note, c.published_at, c.method, c.methods, c.model, c.is_public, c.listed, c.updated_at, c.submitted_at,
              (select slug from public.categories where id = c.category_id) category,
              (select slug from public.subcategories where id = c.subcategory_id) subcategory,
              (select p.title from public.courses p where p.id = c.parent_id) parent,
              (select i.path from public.course_images i where i.course_id = c.id order by i.position limit 1) cover,
              (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) upcoming,
-             exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
+             exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change,
+             btrim(c.title) <> '' has_title, coalesce(btrim(c.summary), '') <> '' has_summary, coalesce(btrim(c.description), '') <> '' has_description,
+             c.category_id is not null and c.subcategory_id is not null filed, c.level is not null has_level, cardinality(c.outcomes) outcomes,
+             exists (select 1 from public.course_units u where u.course_id = c.id) has_units, c.price_pence is not null or c.plan_id is not null priced,
+             exists (select 1 from public.orders o where o.provider_id = c.organisation_id and o.course_id = c.id) or exists (select 1 from public.reviews v where v.course_id = c.id) used
       from public.courses c
       where c.organisation_id = ${input.organisationId}::uuid and c.kind = 'provider'
       order by c.updated_at desc`)
-    return rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, status: r.status, method: r.method, model: r.model, category: r.category, subcategory: r.subcategory, isPublic: r.is_public, listed: r.listed, updatedAt: r.updated_at, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, pendingChange: r.pending_change }))
+    return rows.map((r) => ({
+      id: r.id, title: r.title, slug: r.slug, status: r.status, statusNote: r.status_note, publishedAt: r.published_at, method: r.method, methods: r.methods, model: r.model, category: r.category, subcategory: r.subcategory, isPublic: r.is_public, listed: r.listed,
+      // ISO times: the database's own text form ("2026-11-14 11:46:40.1+00") isn't a date every browser reads
+      updatedAt: new Date(r.updated_at).toISOString(), submittedAt: r.submitted_at ? new Date(r.submitted_at).toISOString() : null, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, pendingChange: r.pending_change,
+      stepsLeft: r.status === 'draft'
+        ? stepsLeft({ title: r.has_title, summary: r.has_summary, description: r.has_description, filed: r.filed, level: r.has_level, images: Boolean(r.cover), outcomes: r.outcomes, units: r.has_units, method: r.method, methods: r.methods, priced: r.priced, upcoming: r.upcoming })
+        : null,
+      deleteBlock: blockFor({ status: r.status, statusNote: r.status_note }, r.used),
+    }))
   }),
 
   get: orgProcedure('provider.courses.view')
@@ -521,8 +682,8 @@ export const providerCoursesRouter = createTRPCRouter({
         .limit(200)
     }),
 
-  // The new-course wizard: a title, the catalogue place, how it is taught, the model, Skill Saver, and optionally the shared page
-  // it joins. Starts as a draft; the editor fills in the rest.
+  // The new-course wizard: a title, the catalogue place, how it is taught (its primary learning option, the only one to start
+  // with), the model, Skill Saver, and optionally the shared page it joins. Starts as a draft; the editor fills in the rest.
   create: orgProcedure('provider.courses.edit')
     .input(
       z.object({
@@ -537,7 +698,7 @@ export const providerCoursesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      taughtOnly(input.method)
+      taughtAll([input.method])
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
       if (input.parentId) {
         const p = await livePage(ctx.db, input.parentId)
@@ -547,11 +708,102 @@ export const providerCoursesRouter = createTRPCRouter({
       return ctx.db.transaction(async (tx) => {
         const [made] = await tx
           .insert(courses)
-          .values({ kind: 'provider', organisationId: input.organisationId, parentId: input.parentId ?? null, slug, title: input.title, ...resolved, model: input.model, skillSaver: input.skillSaver, createdBy: ctx.user.id })
+          .values({ kind: 'provider', organisationId: input.organisationId, parentId: input.parentId ?? null, slug, title: input.title, ...resolved, methods: [input.method], model: input.model, skillSaver: input.skillSaver, createdBy: ctx.user.id })
           .returning({ id: courses.id })
         await log(tx, ctx, input.organisationId, 'course.created', made.id, { title: input.title, parentId: input.parentId ?? null })
         return { id: made.id }
       })
+    }),
+
+  // The Courses list's "Duplicate course": a new draft, "Copy of …", with the course as its editor shows it (a change waiting for
+  // approval included): its words, lists, catalogue place, level, learning options, model, Skill Saver, price, search words,
+  // shared course page (while that page is live and still the same subject) and pictures with their descriptions. Not its dates,
+  // orders, reviews, changes or status. Each picture is copied into the new course's own folder, so deleting either course (or
+  // removing a picture from one) never touches the other's files.
+  duplicate: orgProcedure('provider.courses.edit')
+    .input(z.object({ courseId: id }))
+    .mutation(async ({ ctx, input }) => {
+      const { organisationId } = input
+      const source = await ownCourse(ctx.db, organisationId, input.courseId)
+      const [pics] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, source.id))
+      // copying pictures stores new files: counted with the uploads
+      if (pics.n) {
+        await limit(ctx, 'uploadHour')
+        await limit(ctx, 'uploadDay')
+      }
+      const copied: string[] = [] // the new files, removed again if the copy isn't saved
+      try {
+        return await ctx.db.transaction(async (tx) => {
+          // the course is locked while it is copied, so a change saved at the same moment (a picture removed and its file deleted)
+          // waits for the copy, and the copy is of one version
+          const now = await lockCourse(tx, source.id)
+          if (!now) throw notFound()
+          const [[rev], units, exams, faqs, images] = await Promise.all([
+            tx.select({ content: courseRevisions.content }).from(courseRevisions).where(and(eq(courseRevisions.courseId, now.id), eq(courseRevisions.status, 'pending'))),
+            tx.select().from(courseUnits).where(eq(courseUnits.courseId, now.id)).orderBy(asc(courseUnits.position)),
+            tx.select().from(courseExams).where(eq(courseExams.courseId, now.id)).orderBy(asc(courseExams.position)),
+            tx.select().from(courseFaqs).where(eq(courseFaqs.courseId, now.id)).orderBy(asc(courseFaqs.position)),
+            tx.select().from(courseImages).where(eq(courseImages.courseId, now.id)).orderBy(asc(courseImages.position)),
+          ])
+          const p = (rev?.content ?? {}) as Partial<Record<(typeof REVIEWED)[number], unknown>>
+          const pick = <T,>(k: (typeof REVIEWED)[number], saved: T) => (p[k] !== undefined ? (p[k] as T) : saved)
+          const subject = p.category !== undefined ? await subjectOf(tx, p, now.topicId) : { categoryId: now.categoryId, subcategoryId: now.subcategoryId, topicId: now.topicId }
+          // the shared course page stays only while it is live and the same subject (as choosing one in the gear requires)
+          const [page] = now.parentId ? await tx.select({ subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(and(eq(courses.id, now.parentId), eq(courses.kind, 'shared'), eq(courses.status, 'live'))) : []
+          // an archived price plan isn't chosen again: the copy then has no price until one is set
+          const [plan] = now.planId ? await tx.select({ archivedAt: pricePlans.archivedAt }).from(pricePlans).where(eq(pricePlans.id, now.planId)) : []
+          const keepPlan = Boolean(plan && !plan.archivedAt)
+          const title = `Copy of ${pick('title', now.title)}`.slice(0, 80).trim()
+          const [made] = await tx
+            .insert(courses)
+            .values({
+              kind: 'provider',
+              organisationId,
+              parentId: page && sameSubject(page, subject) ? now.parentId : null,
+              slug: await courseSlug(tx, title),
+              title,
+              summary: pick('summary', now.summary),
+              description: pick('description', now.description),
+              audience: pick('audience', now.audience),
+              entryRequirements: pick('entryRequirements', now.entryRequirements),
+              outcomes: pick('outcomes', now.outcomes),
+              features: pick('features', now.features),
+              ...subject,
+              level: pick('level', now.level),
+              method: now.method,
+              methods: now.methods,
+              model: now.model,
+              skillSaver: now.skillSaver,
+              isPublic: now.isPublic,
+              listed: now.listed,
+              pricePence: now.planId && !keepPlan ? null : now.pricePence,
+              planId: keepPlan ? now.planId : null,
+              videoUrl: pick('videoUrl', now.videoUrl) || null,
+              seoTitle: now.seoTitle,
+              seoDescription: now.seoDescription,
+              seoKeywords: now.seoKeywords,
+              createdBy: ctx.user.id,
+            })
+            .returning({ id: courses.id })
+          await writeLists(tx, made.id, {
+            units: pick('units', units.map((u) => ({ title: u.title, body: u.body }))),
+            exams: pick('exams', exams.map((e) => ({ unit: e.unit, passMark: e.passMark, duration: e.duration }))),
+            faqs: pick('faqs', faqs.map((f) => ({ question: f.question, answer: f.answer }))),
+          })
+          if (images.length) {
+            const folder = imageFolder({ ...now, id: made.id })
+            const paths = await Promise.all(images.map((i) => copyMedia(i.path, folder)))
+            copied.push(...paths.filter((x): x is string => Boolean(x)))
+            if (copied.length < images.length) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'We couldn’t copy the course’s pictures. Please try again.' })
+            await tx.insert(courseImages).values(images.map((i, n) => ({ courseId: made.id, position: i.position, path: paths[n]!, alt: i.alt })))
+          }
+          await log(tx, ctx, organisationId, 'course.duplicated', made.id, { from: now.id, title })
+          return { id: made.id }
+        })
+      } catch (error) {
+        await removeMedia(copied)
+        throw error
+      }
     }),
 
   // Save the editor. Any of the fields; the lists replace what was there. On a live or paused course the reviewed content waits
@@ -580,11 +832,9 @@ export const providerCoursesRouter = createTRPCRouter({
       if (fields.category !== undefined && fields.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
       if (fields.topic !== undefined && fields.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')
 
-      // how it is taught can change only while the course has no dates
-      if (fields.method !== undefined && fields.method !== course.method) {
-        const [n] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(cohorts).where(eq(cohorts.courseId, courseId))
-        if (n.n) throw bad('Remove this course’s dates before changing how it is taught.', 'method')
-      }
+      // the learning options are the taught ways only (checked against the course as it stands in the transaction below)
+      if (fields.methods !== undefined) taughtAll(fields.methods as string[])
+      if (fields.method !== undefined) taughtAll([fields.method as string])
       const reviewed = Object.fromEntries(keys.filter((k) => (REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
       const direct = Object.fromEntries(keys.filter((k) => !(REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
       // check the catalogue choices now, so a pending change never holds an impossible one
@@ -592,23 +842,9 @@ export const providerCoursesRouter = createTRPCRouter({
       const subjectAfter = { subcategoryId: subject.subcategoryId ?? course.subcategoryId, topicId: subject.topicId !== undefined ? subject.topicId : course.topicId }
       const subjectChanged = subjectAfter.subcategoryId !== course.subcategoryId || subjectAfter.topicId !== course.topicId
       const directSet: Partial<typeof courses.$inferInsert> = {}
-      if (direct.method !== undefined) {
-        taughtOnly(direct.method as string)
-        directSet.method = (await resolveCatalogue(ctx.db, { method: direct.method as string })).method
-      }
-      // only a self-paced course has a price (or price plan) of its own (classroom and live online are priced on their dates)
-      if (directSet.method !== undefined && directSet.method !== 'self-paced') Object.assign(directSet, { pricePence: null, planId: null })
-      if (direct.planId !== undefined) {
-        if ((directSet.method ?? course.method) !== 'self-paced') throw bad('Only a self-paced course has a price plan of its own: dates choose theirs.', 'planId')
-        if (direct.planId === null) directSet.planId = null
-        else {
-          const plan = await usablePlan(ctx.db, organisationId, direct.planId as string, course.planId)
-          Object.assign(directSet, { planId: plan.id, pricePence: plan.from.pricePence })
-        }
-      }
       for (const k of ['seoTitle', 'seoDescription'] as const) if (direct[k] !== undefined) directSet[k] = (direct[k] as string | null) || null
       if (direct.seoKeywords !== undefined) directSet.seoKeywords = [...new Set((direct.seoKeywords as string[]).map((w) => w.toLowerCase()))]
-      for (const k of ['pricePence', 'skillSaver', 'isPublic', 'listed', 'model'] as const) if (direct[k] !== undefined && !(k === 'pricePence' && directSet.planId)) (directSet as Record<string, unknown>)[k] = direct[k]
+      for (const k of ['skillSaver', 'isPublic', 'listed', 'model'] as const) if (direct[k] !== undefined) (directSet as Record<string, unknown>)[k] = direct[k]
       if (direct.parentId !== undefined) {
         if (direct.parentId !== null) {
           const p = await livePage(ctx.db, direct.parentId as number)
@@ -627,10 +863,7 @@ export const providerCoursesRouter = createTRPCRouter({
         // saved over a newer version (another tab, or someone else): refused, nothing written
         await refuseIfChanged(tx, courseId, seen)
         const isLive = status === 'live' || status === 'paused'
-        // a live self-paced course shows its price: switching a live course to self-paced (or clearing its price) needs one
-        const methodAfter = directSet.method ?? now.method
-        const priceAfter = directSet.pricePence !== undefined ? directSet.pricePence : now.pricePence
-        if (isLive && methodAfter === 'self-paced' && priceAfter === null) throw bad('Enter the price per learner: a live self-paced course needs one.', 'price')
+        await setLearningOptions(tx, now, direct, directSet, organisationId, isLive)
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
         // only a change our team checks takes a waiting course back to a draft (search and privacy settings leave it waiting)
         const backToDraft = keys.some((k) => !KEEPS_REVIEW.has(k)) && (await leaveReview(tx, ctx, organisationId, { id: courseId, status }))
@@ -762,12 +995,57 @@ export const providerCoursesRouter = createTRPCRouter({
       })
     }),
 
-  // Delete a course that has never been live (with its dates, lists and images). A course that has been live is paused instead,
-  // so its history and bookings stay.
-  remove: orgProcedure('provider.courses.delete')
-    .input(z.object({ courseId: id }))
+  // Take a course that is waiting for our team's review back to a draft (the gear's "Withdraw from review"), to edit or delete it.
+  // It leaves the admins' approvals list; a decision they then try is refused (modules/admin/courses.mts).
+  withdrawReview: orgProcedure('provider.courses.edit')
+    .input(z.object({ courseId: id, seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
-      return deleteCourse(ctx.db, course, (tx, m) => log(tx, ctx, input.organisationId, 'course.deleted', course.id, m))
+      return ctx.db.transaction(async (tx) => {
+        // under the row lock, so an admin deciding at the same moment either decides first (and this is refused) or is refused
+        const now = await lockCourse(tx, course.id)
+        if (!now) throw notFound()
+        if (now.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: now.status === 'live' ? 'Our team has just approved this course: it is live.' : now.status === 'changes' ? 'Our team has just asked for changes to this course, so it is back with you.' : 'This course isn’t waiting for review.' })
+        await refuseIfChanged(tx, course.id, input.seen)
+        await leaveReview(tx, ctx, input.organisationId, now)
+        return { ok: true, version: await courseVersion(tx, course.id) }
+      })
+    }),
+
+  // Delete a course, with its dates, lists, images and any change waiting for approval: a draft or a course our team asked to
+  // change, or one that has been live while nobody has booked or reviewed it (its name typed in `confirmTitle`; the admins who
+  // approve are told). One waiting for review is withdrawn first. One our team has paused stays while it is paused. One learners
+  // have booked or reviewed is paused instead, so its history stays. (deleteBlock)
+  remove: orgProcedure('provider.courses.delete')
+    .input(z.object({ courseId: id, confirmTitle: z.string().max(200).optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
+      const deleted = await deleteCourse(
+        ctx.db,
+        course,
+        (tx, m) => log(tx, ctx, input.organisationId, 'course.deleted', course.id, m),
+        async (tx, now) => {
+          const block = await deleteBlock(tx, now)
+          if (block) throw new TRPCError({ code: 'CONFLICT', message: deleteRefusal(block, now.status) })
+          const wasLive = hasBeenLive(now)
+          if (wasLive && !input.confirmTitle?.trim()) throw bad('Type the course name to confirm.', 'confirmTitle')
+          if (wasLive && !sameName(input.confirmTitle!, now.title)) throw bad('That isn’t this course’s name. Type it as it is shown above.', 'confirmTitle')
+          return { status: now.status, wasLive }
+        },
+      )
+      // a course that was live has left the site: the admins who approve are told, after the delete is saved and never holding it up
+      if (hasBeenLive(deleted)) {
+        try {
+          const [[org], who] = await Promise.all([
+            ctx.db.execute<{ name: string; slug: string }>(sql`select name, slug from public.organisations where id = ${input.organisationId}::uuid`),
+            personOf(ctx.db, ctx.user.id),
+          ])
+          const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }).format(new Date())
+          await notifyApprovers(ctx.db, 'admin-course-deleted', { provider: org?.name ?? '', slug: org?.slug ?? '', course: deleted.title, deletedBy: who?.label ?? 'Someone on their team', date }, { organisationId: input.organisationId, targetType: 'course', targetId: String(course.id), action: 'email.approvers_told' }, ctx.user.id)
+        } catch (error) {
+          console.error('email admin-course-deleted: could not tell the admins', error instanceof Error ? error.message : error)
+        }
+      }
+      return { ok: true }
     }),
 })
