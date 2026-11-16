@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { useWorkspace } from "@/lib/workspaceContext";
 import { COURSE_TONE, Loading, Pill, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -23,8 +21,7 @@ export const useProviderCourses = () => {
 };
 
 // Every course the provider runs, with Hurak's filters (search, mode of study, enrolment type, and under Filters the category and
-// performance model; status as tabs with counts), all kept in the address. Our layout: the profile sits in the page head
-// (CoursesProfile below), then one card holding the status tabs, the filters and the courses as a compact table (one
+// performance model; status as tabs with counts), all kept in the address. Our layout: one card holding the status tabs, the filters and the courses as a compact table (one
 // course per row: image or "Upload course image", mode, category, status, enrolment, performance model, upcoming dates,
 // Edit / manage course), then Hurak's offer of a free sales and marketing consultation.
 export default function ProviderCourses() {
@@ -150,38 +147,3 @@ export default function ProviderCourses() {
   );
 }
 
-// The provider's profile in the page head (Hurak's profile card: view, edit, copy the profile address, total and live courses), so
-// the list starts straight under the title. New course is the top bar's, on every page.
-
-export function CoursesProfile() {
-  const workspace = useWorkspace();
-  const [toast, setToast] = useState(null);
-  const clearToast = useCallback(() => setToast(null), []);
-  if (!workspace) return <span className="rt-cx-org -loading" aria-hidden="true"></span>;
-  const org = { name: workspace.name, slug: workspace.slug };
-  const live = workspace.status === "active"; // the public profile opens once the account is approved
-  const copyProfile = async () => {
-    const profileUrl = `${window.location.origin}/providers/${org.slug}`;
-    try {
-      await navigator.clipboard.writeText(profileUrl);
-      setToast({ message: "Profile link copied" });
-    } catch {
-      setToast({ message: profileUrl });
-    }
-  };
-  const initials = org.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <section className="rt-cx-org" aria-labelledby="rt-pws-cp-h">
-      <span className="rt-cx-org__logo" aria-hidden="true">{initials}</span>
-      <div className="rt-cx-org__who">
-        <h2 className="rt-cx-org__name" id="rt-pws-cp-h">{org.name}</h2>
-        <p className="rt-cx-org__links">
-          <Link href="/provider/profile">View</Link>
-          <Link href="/provider/settings">Edit</Link>
-          {live && <button type="button" onClick={copyProfile}>Copy profile link</button>}
-        </p>
-      </div>
-      <Toast toast={toast} onDone={clearToast} />
-    </section>
-  );
-}
