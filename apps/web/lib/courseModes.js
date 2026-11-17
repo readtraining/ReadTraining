@@ -24,14 +24,21 @@ export function defaultMode(course) {
   return [...dated].sort((a, b) => cheapest(a) - cheapest(b))[0];
 }
 
-// A provider course's learning options (Hurak's): `methods` are the ways it is offered and `method` the primary one. The ways
-// in the order they are always shown, then helpers for a course from the API (an older record with only `method` still reads).
+// A provider course's learning options (Hurak's): `methods` are the ways it is offered and `method` the primary one, and
+// `closedMethods` the ones whose new bookings the provider stopped (still offered, their booked dates still run, nothing of
+// them on sale; never the primary). The ways in the order they are always shown, then helpers for a course from the API (an older
+// record with only `method` still reads).
 export const LEARNING_OPTIONS = ["classroom", "live-online", "self-paced"];
 export const isDatedMethod = (m) => m === "classroom" || m === "live-online";
-/** The course's learning options, its primary first. */
-export const waysOf = (c) => {
+/** Whether the course's option `m` isn't taking new bookings. */
+export const isClosedWay = (c, m) => Boolean(c?.closedMethods?.includes(m));
+/** The course's learning options, its primary first; `open`: only the ones taking bookings. */
+export const waysOf = (c, { open = false } = {}) => {
   const all = c?.methods?.length ? LEARNING_OPTIONS.filter((m) => c.methods.includes(m)) : c?.method ? [c.method] : [];
-  return c?.method && all.includes(c.method) ? [c.method, ...all.filter((m) => m !== c.method)] : all;
+  const ways = c?.method && all.includes(c.method) ? [c.method, ...all.filter((m) => m !== c.method)] : all;
+  return open ? ways.filter((m) => !isClosedWay(c, m)) : ways;
 };
-/** "Classroom · Live online": the course's learning options by name, its primary first. */
-export const waysLabel = (c) => waysOf(c).map(methodName).join(" · ");
+/** "Live online (not taking bookings)": an option's name, marked when its new bookings are stopped. */
+export const wayName = (c, m) => `${methodName(m)}${isClosedWay(c, m) ? " (not taking bookings)" : ""}`;
+/** "Classroom · Live online (not taking bookings)": the course's learning options by name, its primary first. */
+export const waysLabel = (c) => waysOf(c).map((m) => wayName(c, m)).join(" · ");

@@ -32,6 +32,7 @@ export function useCourseEndpoints(scope, courseId) {
     upload: api.provider.courses.imageUploadUrl.useMutation(),
     add: api.provider.courses.addImage.useMutation(),
     images: api.provider.courses.setImages.useMutation(),
+    option: api.provider.courses.setOptionOpen.useMutation(),
   };
   const a = {
     update: api.admin.courses.updateShared.useMutation(),
@@ -68,6 +69,9 @@ export function useCourseEndpoints(scope, courseId) {
     setStatus: (status) => a.status.mutateAsync({ courseId, status, seen: seen() }).then(keep),
     discard: () => p.discard.mutateAsync({ ...base, seen: seen() }).then(keep),
     discarding: p.discard.isPending,
+    // stop new bookings for one learning option, or take bookings for it again (a provider's course only)
+    setOptionOpen: (method, open) => p.option.mutateAsync({ ...base, method, open, seen: seen() }).then(keep),
+    settingOption: p.option.isPending,
     uploadUrl: (contentType) => (admin ? a.upload : p.upload).mutateAsync({ ...base, contentType }),
     addImage: (path) => (admin ? a.add : p.add).mutateAsync({ ...base, path, seen: seen() }).then(keep),
     setImages: (images) => (admin ? a.images : p.images).mutateAsync({ ...base, images, seen: seen() }).then(keep),
@@ -83,6 +87,8 @@ export function useCourseEndpoints(scope, courseId) {
       return true;
     },
     fetch: () => (admin ? utils.admin.courses.get.fetch({ courseId }) : utils.provider.courses.get.fetch({ organisationId, courseId })),
+    // shows a change the API has just answered with on the course at once, before the full reload (refresh) catches up
+    patch: (fields) => !admin && utils.provider.courses.get.setData({ organisationId, courseId }, (old) => (old ? { ...old, ...fields } : old)),
     refresh: () => {
       if (admin) {
         utils.admin.courses.get.invalidate({ courseId });

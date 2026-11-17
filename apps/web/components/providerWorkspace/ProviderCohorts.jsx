@@ -20,6 +20,7 @@ import DateField from "@/components/admin/DateField";
 import { VenueForm } from "./SettingsProfile";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { useNewCourse } from "./NewCourse";
+import TextArea from "@/components/forms/TextArea";
 
 // Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
@@ -429,7 +430,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
           <div className="rt-field">
             <label htmlFor="rt-coh-cancel-why">Reason</label>
             {error && <p className="rt-q__err" id="rt-coh-cancel-why-e"><span className="rt-sr">Error: </span>{error}</p>}
-            <textarea id="rt-coh-cancel-why" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-coh-cancel-why-e" : undefined} autoComplete="off" />
+            <TextArea id="rt-coh-cancel-why" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-coh-cancel-why-e" : undefined} autoComplete="off" />
           </div>
           <div className="rt-pws-set__actions">
             <button type="submit" className="button -md -outline-red-3 text-red-3" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
@@ -473,8 +474,9 @@ const FORM_FIELDS = new Set(["method", "courseId", "sessions", "venueId", "joinU
 // a plan's packages in one line, for the plan picker ("Basic £249 · Plus £299 · Pro £399")
 const planLine = (p) => p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ");
 
-// a course's learning options taught on dates (classroom, live online), its primary first
-const datedOf = (c) => waysOf(c).filter(isDatedMethod);
+// a course's learning options taught on dates (classroom, live online), its primary first; `open`: only the ones taking bookings
+// (new dates are only for those: the API refuses one for an option whose new bookings were stopped)
+const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(isDatedMethod);
 
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
 // `suggestCourseId`). New dates are for one of the course's dated learning options: `mode` (the list's Classroom / Live online tab)
@@ -518,7 +520,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       setView(monthStart(cohort.startsOn || todayIso()));
     } else {
       const c = courseOf(suggestCourseId);
-      const ways = c ? datedOf(c) : [];
+      const ways = c ? datedOf(c, { open: true }) : [];
       const blank = blankFor(ways.length ? c : null);
       setF(blank);
       setStart(JSON.stringify(blank));
@@ -644,8 +646,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const aria = (key) => ({ "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `rt-cf-${key}-e` : undefined });
 
   // the courses offering the chosen way; a suggested course offering both dated ways asks which these dates are
-  const datedCourses = courses.filter((c) => datedOf(c).includes(studyMode));
-  const askMode = !cohort && (!suggestCourseId || (course && datedOf(course).length > 1));
+  const datedCourses = courses.filter((c) => datedOf(c, { open: true }).includes(studyMode));
+  const askMode = !cohort && (!suggestCourseId || (course && datedOf(course, { open: true }).length > 1));
   const tutors = tutorsQ.data || [];
   const venues = ready ? venuesQ.data.filter((v) => v.active || v.id === f.venueId) : [];
   const ordered = ready ? f.sessions.map((s, i) => ({ s, i })).sort((a, b) => a.s.date.localeCompare(b.s.date)) : [];
@@ -658,8 +660,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           {savedNote && <p className="rt-acc__notice -ok" role="status">{savedNote}</p>}
           {askMode && (
             <CardChoice name="rt-cf-mode" legend="Learning option" value={studyMode} error={errors.method}
-              onChange={(v) => { setStudyMode(v); setErrors((e) => ({ ...e, method: undefined })); if (course && !datedOf(course).includes(v)) setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
-              options={pw.formats.filter((x) => (course && suggestCourseId ? datedOf(course) : ["classroom", "live-online"]).includes(x.key)).map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
+              onChange={(v) => { setStudyMode(v); setErrors((e) => ({ ...e, method: undefined })); if (course && !datedOf(course, { open: true }).includes(v)) setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
+              options={pw.formats.filter((x) => (course && suggestCourseId ? datedOf(course, { open: true }) : ["classroom", "live-online"]).includes(x.key)).map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
           )}
           {!cohort && !(suggestCourseId && course) ? (
             <div className="rt-field">
@@ -793,7 +795,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
               <p className="rt-field__hint" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
               {err("details")}
-              <textarea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-invalid={errors.details ? true : undefined} aria-describedby={`rt-cf-details-h${errors.details ? " rt-cf-details-e" : ""}`} autoComplete="off" />
+              <TextArea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-invalid={errors.details ? true : undefined} aria-describedby={`rt-cf-details-h${errors.details ? " rt-cf-details-e" : ""}`} autoComplete="off" />
             </div>
           </section>
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}

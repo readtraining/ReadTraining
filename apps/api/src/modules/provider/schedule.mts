@@ -299,6 +299,12 @@ async function refuseNotOnTeam(db: Parameters<typeof ownCourse>[0], organisation
 }
 
 const NOT_OFFERED = 'This course isn’t offered that way. Turn it on in the course’s Learning options first.'
+// a learning option whose new bookings were stopped (courses.closed_methods) takes no new dates: they would be dates nobody can book
+async function refuseStopped(db: Parameters<typeof ownCourse>[0], closedMethods: string[], method: string) {
+  if (!closedMethods.includes(method)) return
+  const [m] = await db.execute<{ name: string }>(sql`select name from public.delivery_methods where slug = ${method}`)
+  throw bad(`${m?.name ?? method} isn’t taking bookings. Take bookings again first.`, 'method')
+}
 
 // checks a cohort against its course and provider; returns the values to save
 // keepVenueId / keepPlanId: the venue and price plan the dates already have (they stay allowed if since archived)
@@ -444,14 +450,17 @@ export const providerCohortsRouter = createTRPCRouter({
       if (!dated.length) throw bad('Only classroom and live online dates can be added. The self-paced option starts any time.')
       if (!method) throw bad('Choose how these dates are taught.', 'method')
       if (!dated.includes(method)) throw bad(NOT_OFFERED, 'method')
+      await refuseStopped(ctx.db, course.closedMethods, method)
       const values = await cohortValues(ctx.db, input.organisationId, method, input)
       if (values.startsOn < today()) throw bad('New dates can’t start in the past.', 'sessions')
       const made = await ctx.db.transaction(async (tx) => {
         // the course's row is locked and its options read again, so an option turned off at the same moment (which locks the same
         // row, then counts its upcoming dates) either sees these dates or refuses them here
-        const [now] = await tx.select({ methods: courses.methods }).from(courses).where(eq(courses.id, course.id)).for('update')
+        // (and one whose new bookings were stopped takes no new dates)
+        const [now] = await tx.select({ methods: courses.methods, closedMethods: courses.closedMethods }).from(courses).where(eq(courses.id, course.id)).for('update')
         if (!now) throw new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
         if (!now.methods.includes(method)) throw bad(NOT_OFFERED, 'method')
+        await refuseStopped(tx, now.closedMethods, method)
         await refuseClash(tx, course.id, values.venueId, values.sessions)
         const [c] = await tx.insert(cohorts).values({ ...values, courseId: course.id, createdBy: ctx.user.id }).returning({ id: cohorts.id })
         await log(tx, ctx, input.organisationId, 'cohort.created', 'cohort', c.id, { courseId: course.id, startsOn: values.startsOn })

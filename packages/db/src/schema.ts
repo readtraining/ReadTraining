@@ -362,6 +362,10 @@ export const courses = pgTable(
     // neither.
     method: text('method').references(() => deliveryMethods.slug, { onDelete: 'restrict' }),
     methods: text('methods').array().notNull().default(sql`'{}'::text[]`),
+    // the learning options not taking new bookings (Hurak's "Retire from future sales"): they stay in `methods`, their dates already
+    // booked still run, and none of them is on sale (a date is on sale only while its own `bookable` is on and its method isn't
+    // here). Never the primary, and at least one option stays open.
+    closedMethods: text('closed_methods').array().notNull().default(sql`'{}'::text[]`),
     model: courseModel('model').notNull().default('bookings'),
     skillSaver: boolean('skill_saver').notNull().default(false),
     // false = only people with the link can book (the editor's "private"); listed = shown on ReadTraining's search and pages
@@ -404,6 +408,10 @@ export const courses = pgTable(
     // the options are the three taught ways, and the primary is one of them (a shared page: neither)
     check('courses_methods_taught', sql`${t.methods} <@ array['classroom', 'live-online', 'self-paced']::text[]`),
     check('courses_method_offered', sql`(${t.method} is null and cardinality(${t.methods}) = 0) or ${t.method} = any(${t.methods})`),
+    // an option not taking bookings is one of the course's options, never the primary, and never the last one open
+    check('courses_closed_methods_offered', sql`${t.closedMethods} <@ ${t.methods}`),
+    check('courses_closed_methods_not_primary', sql`${t.method} is null or not (${t.method} = any(${t.closedMethods}))`),
+    check('courses_closed_methods_one_open', sql`cardinality(${t.methods}) = 0 or not (${t.methods} <@ ${t.closedMethods})`),
     index('courses_plan_idx').on(t.planId),
     apiOnly('courses'),
   ],

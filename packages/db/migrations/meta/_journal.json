@@ -267,6 +267,13 @@
       "when": 1794843062226,
       "tag": "0037_course_methods_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794915114129,
+      "tag": "0038_course_closed_methods",
+      "breakpoints": true
     }
   ]
 }

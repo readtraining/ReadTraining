@@ -153,18 +153,18 @@ export const settings = {
   pricePence: z.number().int().min(0).max(10000000, 'Enter a price of £100,000 or less.').nullable(),
   planId: z.string().uuid().nullable(), // the self-paced option sold in packages (its price is then the plan's cheapest package)
   skillSaver: z.boolean(),
+  // Visibility (the gear's Public / Private, Hurak v2's "Publish on marketplace"): one choice for the provider. It sets both
+  // stored values, `is_public` and `listed`, which the catalogue always reads together (a private course still opens from its link).
   isPublic: z.boolean(),
-  listed: z.boolean(),
   model: z.enum(['bookings', 'enquiries']),
   method: slugRef, // the primary learning option, one of `methods`
   methods: z.array(slugRef).min(1, 'Choose at least one learning option.').max(3),
-  parentId: z.number().int().positive().nullable(), // the shared course page it is listed under, or none
 }
 const PAGE_ONLY = new Set(['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'videoUrl', 'seoTitle', 'seoDescription', 'seoKeywords'])
 const PRICING = new Set(['pricePence', 'skillSaver', 'planId'])
-// Settings our team doesn't check at approval (approval checks the shared page's subject itself): changing only these leaves a
+// Settings our team doesn't check at approval (where it is listed follows its subject, placeOn): changing only these leaves a
 // course that is waiting for review where it is. Anything else (its wording, pictures, price, how it is taught) takes it back.
-const KEEPS_REVIEW = new Set(['seoTitle', 'seoDescription', 'seoKeywords', 'isPublic', 'listed', 'parentId'])
+const KEEPS_REVIEW = new Set(['seoTitle', 'seoDescription', 'seoKeywords', 'isPublic'])
 // today's date in the UK: dates are UK days (the database's current_date is UTC, still yesterday for an hour after midnight in summer)
 export const ukToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
 
@@ -228,16 +228,22 @@ async function subjectOf(db: Writer, c: { category?: unknown; subcategory?: unkn
 type Subject = { subcategoryId: string | null; topicId: string | null }
 export const sameSubject = (page: Subject, course: Subject) =>
   page.subcategoryId !== null && page.subcategoryId === course.subcategoryId && (!page.topicId || !course.topicId || page.topicId === course.topicId)
-const OTHER_SUBJECT = (title: string) => `“${title}” is a page for a different course. A course can only go on a shared course page with the same subject, so choose a page that matches, or none.`
 
-// A live shared course page a provider may list a course on, with its subject.
-async function livePage(db: Writer, id: number) {
-  const [p] = await db
-    .select({ id: courses.id, title: courses.title, subcategoryId: courses.subcategoryId, topicId: courses.topicId })
+
+// Where a provider course is listed (Hurak's rule: the provider never chooses; the subject decides): on the live shared course
+// page for its topic, or on its sub-category's only shared page when it has no topic match; otherwise on a page of its own
+// (null). Used when a course is created, when a draft's subject changes, and when a change to a live course's subject is
+// approved (admin.courses), so the placement always follows the subject. The New course pop-up shows the same choice
+// (sharedPageFor in NewCourse.jsx): keep the two the same.
+export async function placeOn(db: Writer, subject: Subject): Promise<number | null> {
+  if (!subject.subcategoryId) return null
+  const pages = await db
+    .select({ id: courses.id, topicId: courses.topicId })
     .from(courses)
-    .where(and(eq(courses.id, id), eq(courses.kind, 'shared'), eq(courses.status, 'live')))
-  if (!p) throw bad('Choose a course page from the list.', 'parentId')
-  return p
+    .where(and(eq(courses.kind, 'shared'), eq(courses.status, 'live'), eq(courses.subcategoryId, subject.subcategoryId)))
+  const fits = pages.filter((p) => !p.topicId || !subject.topicId || p.topicId === subject.topicId)
+  const exact = subject.topicId ? fits.find((p) => p.topicId === subject.topicId) : undefined
+  return exact?.id ?? (fits.length === 1 ? fits[0].id : null)
 }
 
 /** A free web address for a course title. Never only digits: /course/1000 means course number 1000. */
@@ -568,16 +574,18 @@ async function lockStatus(tx: Writer, courseId: number) {
 }
 
 // The learning options and the self-paced option's price, from an editor save (`direct`) onto `directSet`, checked against the
-// course as it stands (`now`, its row locked): the primary is one of the options; an option newly turned on (or a new primary) is
-// one still offered in Catalogue settings, while one already on that has since been retired may stay so other changes save; a
-// dated option with upcoming dates can't be turned off until they are cancelled (a date added at the same moment locks the same
-// row first, modules/provider/schedule.mts); and only the self-paced option has a price or price plan of its own, so turning it
-// off clears them, and a live course offering it needs one.
+// course as it stands (`now`, its row locked): the primary is one of the options and one taking bookings; an option newly turned
+// on (or a new primary) is one still offered in Catalogue settings, while one already on that has since been retired may stay so
+// other changes save; a dated option with upcoming dates can't be turned off until they are cancelled (its new bookings can be
+// stopped instead: setOptionOpen; a date added at the same moment locks the same row first, modules/provider/schedule.mts); an
+// option turned off is no longer one not taking bookings; and only the self-paced option has a price or price plan of its own,
+// so turning it off clears them, and a live course offering it needs one.
 async function setLearningOptions(tx: Tx, now: Course, direct: Record<string, unknown>, directSet: Partial<typeof courses.$inferInsert>, organisationId: string, isLive: boolean) {
   const methodsAfter = direct.methods !== undefined ? inOrder(direct.methods as string[]) : now.methods
   if (direct.methods !== undefined || direct.method !== undefined) {
     const methodAfter = (direct.method as string | undefined) ?? now.method
     if (!methodAfter || !methodsAfter.includes(methodAfter)) throw bad('Make the primary learning option one of the ways this course is offered.', 'method')
+    if (methodAfter !== now.method && now.closedMethods.includes(methodAfter)) throw bad(`Take bookings again for ${await methodLabel(tx, methodAfter)} before making it the main way.`, 'method')
     const added = methodsAfter.filter((m) => !now.methods.includes(m))
     await resolveCatalogue(tx, { methods: methodAfter === now.method ? added : [...added, methodAfter] })
     const removed = now.methods.filter((m) => !methodsAfter.includes(m) && isDated(m))
@@ -587,10 +595,13 @@ async function setLearningOptions(tx: Tx, now: Course, direct: Record<string, un
         from public.cohorts k
         where k.course_id = ${now.id} and k.method in (${sql.join(removed.map((m) => sql`${m}`), sql`, `)}) and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date
         group by k.method order by k.method limit 1`)
-      if (busy) throw bad(`${busy.name} has ${busy.n} upcoming ${busy.n === 1 ? 'date' : 'dates'}. Cancel ${busy.n === 1 ? 'it' : 'them'} first, then turn it off.`, 'methods')
+      if (busy) throw bad(`${busy.name} has ${busy.n} upcoming ${busy.n === 1 ? 'date' : 'dates'}. Stop new bookings instead, or cancel ${busy.n === 1 ? 'it' : 'them'} first.`, 'methods')
     }
     directSet.method = methodAfter
     directSet.methods = methodsAfter
+    // an option turned off leaves the ones not taking bookings (turned on again later, it takes bookings)
+    const closedAfter = now.closedMethods.filter((m) => methodsAfter.includes(m))
+    if (closedAfter.length !== now.closedMethods.length) directSet.closedMethods = closedAfter
   }
   const selfPaced = methodsAfter.includes('self-paced')
   if (direct.planId !== undefined) {
@@ -609,6 +620,12 @@ async function setLearningOptions(tx: Tx, now: Course, direct: Record<string, un
   if (isLive && selfPaced && priceAfter === null) throw bad('Enter the price for the self-paced option: a live course offering it needs one.', 'price')
 }
 
+/** A learning option's name as Catalogue settings has it ("Live online"). */
+async function methodLabel(db: Writer, slug: string) {
+  const [m] = await db.select({ name: deliveryMethods.name }).from(deliveryMethods).where(eq(deliveryMethods.slug, slug))
+  return m?.name ?? slug
+}
+
 async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, course: { id: number; status: string }) {
   if (course.status !== 'pending') return false
   await tx.update(courses).set({ status: 'draft', updatedAt: new Date() }).where(eq(courses.id, course.id))
@@ -617,17 +634,18 @@ async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string |
 }
 
 export const providerCoursesRouter = createTRPCRouter({
-  // Every course of this provider, newest first, with what the course list shows: when it was last sent for approval
-  // (`submittedAt`); a draft's editor steps still to finish (`stepsLeft`, null on the others); and for its ⋮ menu, Pause or Put
+  // Every course of this provider, last edited first, with what the course list shows: when it was last sent for approval
+  // (`submittedAt`); the first day of its next date (`nextDate`, YYYY-MM-DD, a date running now included); a draft's editor steps still to finish (`stepsLeft`, null on the others); and for its ⋮ menu, Pause or Put
   // back live, and Delete with deleteBlock's reason when it can't be deleted.
   list: orgProcedure('provider.courses.view').query(async ({ ctx, input }) => {
-    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; methods: string[]; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; outcomes: number; has_units: boolean; priced: boolean; used: boolean }>(sql`
-      select c.id, c.title, c.slug, c.status, c.status_note, c.published_at, c.method, c.methods, c.model, c.is_public, c.listed, c.updated_at, c.submitted_at,
+    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; methods: string[]; closed_methods: string[]; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; next_on: string | null; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; outcomes: number; has_units: boolean; priced: boolean; used: boolean }>(sql`
+      select c.id, c.title, c.slug, c.status, c.status_note, c.published_at, c.method, c.methods, c.closed_methods, c.model, c.is_public, c.listed, c.updated_at, c.submitted_at,
              (select slug from public.categories where id = c.category_id) category,
              (select slug from public.subcategories where id = c.subcategory_id) subcategory,
              (select p.title from public.courses p where p.id = c.parent_id) parent,
              (select i.path from public.course_images i where i.course_id = c.id order by i.position limit 1) cover,
              (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) upcoming,
+             (select min(k.starts_on)::text from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) next_on,
              exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change,
              btrim(c.title) <> '' has_title, coalesce(btrim(c.summary), '') <> '' has_summary, coalesce(btrim(c.description), '') <> '' has_description,
              c.category_id is not null and c.subcategory_id is not null filed, c.level is not null has_level, cardinality(c.outcomes) outcomes,
@@ -637,9 +655,9 @@ export const providerCoursesRouter = createTRPCRouter({
       where c.organisation_id = ${input.organisationId}::uuid and c.kind = 'provider'
       order by c.updated_at desc`)
     return rows.map((r) => ({
-      id: r.id, title: r.title, slug: r.slug, status: r.status, statusNote: r.status_note, publishedAt: r.published_at, method: r.method, methods: r.methods, model: r.model, category: r.category, subcategory: r.subcategory, isPublic: r.is_public, listed: r.listed,
+      id: r.id, title: r.title, slug: r.slug, status: r.status, statusNote: r.status_note, publishedAt: r.published_at, method: r.method, methods: r.methods, closedMethods: r.closed_methods, model: r.model, category: r.category, subcategory: r.subcategory, isPublic: r.is_public, listed: r.listed,
       // ISO times: the database's own text form ("2026-11-14 11:46:40.1+00") isn't a date every browser reads
-      updatedAt: new Date(r.updated_at).toISOString(), submittedAt: r.submitted_at ? new Date(r.submitted_at).toISOString() : null, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, pendingChange: r.pending_change,
+      updatedAt: new Date(r.updated_at).toISOString(), submittedAt: r.submitted_at ? new Date(r.submitted_at).toISOString() : null, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, nextDate: r.next_on, pendingChange: r.pending_change,
       stepsLeft: r.status === 'draft'
         ? stepsLeft({ title: r.has_title, summary: r.has_summary, description: r.has_description, filed: r.filed, level: r.has_level, images: Boolean(r.cover), outcomes: r.outcomes, units: r.has_units, method: r.method, methods: r.methods, priced: r.priced, upcoming: r.upcoming })
         : null,
@@ -694,23 +712,19 @@ export const providerCoursesRouter = createTRPCRouter({
         method: settings.method,
         model: settings.model,
         skillSaver: settings.skillSaver,
-        parentId: id.optional().nullable(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       taughtAll([input.method])
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
-      if (input.parentId) {
-        const p = await livePage(ctx.db, input.parentId)
-        if (!sameSubject(p, { subcategoryId: resolved.subcategoryId ?? null, topicId: resolved.topicId ?? null })) throw bad(OTHER_SUBJECT(p.title), 'parentId')
-      }
+      const parentId = await placeOn(ctx.db, { subcategoryId: resolved.subcategoryId ?? null, topicId: resolved.topicId ?? null })
       const slug = await courseSlug(ctx.db, input.title)
       return ctx.db.transaction(async (tx) => {
         const [made] = await tx
           .insert(courses)
-          .values({ kind: 'provider', organisationId: input.organisationId, parentId: input.parentId ?? null, slug, title: input.title, ...resolved, methods: [input.method], model: input.model, skillSaver: input.skillSaver, createdBy: ctx.user.id })
+          .values({ kind: 'provider', organisationId: input.organisationId, parentId, slug, title: input.title, ...resolved, methods: [input.method], model: input.model, skillSaver: input.skillSaver, createdBy: ctx.user.id })
           .returning({ id: courses.id })
-        await log(tx, ctx, input.organisationId, 'course.created', made.id, { title: input.title, parentId: input.parentId ?? null })
+        await log(tx, ctx, input.organisationId, 'course.created', made.id, { title: input.title, parentId })
         return { id: made.id }
       })
     }),
@@ -718,7 +732,8 @@ export const providerCoursesRouter = createTRPCRouter({
   // The Courses list's "Duplicate course": a new draft, "Copy of …", with the course as its editor shows it (a change waiting for
   // approval included): its words, lists, catalogue place, level, learning options, model, Skill Saver, price, search words,
   // shared course page (while that page is live and still the same subject) and pictures with their descriptions. Not its dates,
-  // orders, reviews, changes or status. Each picture is copied into the new course's own folder, so deleting either course (or
+  // orders, reviews, changes or status, and every learning option of the copy takes bookings (one the original stopped is about
+  // the original's dates, which the copy doesn't have). Each picture is copied into the new course's own folder, so deleting either course (or
   // removing a picture from one) never touches the other's files.
   duplicate: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id }))
@@ -844,17 +859,9 @@ export const providerCoursesRouter = createTRPCRouter({
       const directSet: Partial<typeof courses.$inferInsert> = {}
       for (const k of ['seoTitle', 'seoDescription'] as const) if (direct[k] !== undefined) directSet[k] = (direct[k] as string | null) || null
       if (direct.seoKeywords !== undefined) directSet.seoKeywords = [...new Set((direct.seoKeywords as string[]).map((w) => w.toLowerCase()))]
-      for (const k of ['skillSaver', 'isPublic', 'listed', 'model'] as const) if (direct[k] !== undefined) (directSet as Record<string, unknown>)[k] = direct[k]
-      if (direct.parentId !== undefined) {
-        if (direct.parentId !== null) {
-          const p = await livePage(ctx.db, direct.parentId as number)
-          if (!sameSubject(p, subjectAfter)) throw bad(OTHER_SUBJECT(p.title), 'parentId')
-        }
-        directSet.parentId = direct.parentId as number | null
-      } else if (course.parentId && subjectChanged) {
-        const [p] = await ctx.db.select({ title: courses.title, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, course.parentId))
-        if (p && !sameSubject(p, subjectAfter)) throw bad(`This course is on the shared course page “${p.title}”, so its subject has to stay the same as that page's. To change the subject, first set the shared course page to None in the course settings.`, 'subcategory')
-      }
+      for (const k of ['skillSaver', 'isPublic', 'model'] as const) if (direct[k] !== undefined) (directSet as Record<string, unknown>)[k] = direct[k]
+      if (direct.isPublic !== undefined) directSet.listed = direct.isPublic as boolean // public or private sets both (see `settings`)
+      // where it is listed follows its subject (placeOn): a draft's at once, below; a live course's when the change is approved
 
       const result = await ctx.db.transaction(async (tx) => {
         const now = await lockCourse(tx, courseId)
@@ -864,6 +871,7 @@ export const providerCoursesRouter = createTRPCRouter({
         await refuseIfChanged(tx, courseId, seen)
         const isLive = status === 'live' || status === 'paused'
         await setLearningOptions(tx, now, direct, directSet, organisationId, isLive)
+        if (subjectChanged && !isLive) directSet.parentId = await placeOn(tx, subjectAfter)
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
         // only a change our team checks takes a waiting course back to a draft (search and privacy settings leave it waiting)
         const backToDraft = keys.some((k) => !KEEPS_REVIEW.has(k)) && (await leaveReview(tx, ctx, organisationId, { id: courseId, status }))
@@ -992,6 +1000,43 @@ export const providerCoursesRouter = createTRPCRouter({
         if (!input.paused) await refuseRetired(tx, course.id, 'provider')
         await log(tx, ctx, input.organisationId, input.paused ? 'course.paused' : 'course.resumed', course.id)
         return { ok: true, version: await courseVersion(tx, course.id) }
+      })
+    }),
+
+  // Stop new bookings for one learning option, or take bookings for it again (Hurak's "Retire from future sales"): the option stays
+  // one of the course's (`closed_methods`), its dates already booked still run and nothing is cancelled, but none of it is on sale
+  // (the catalogue, the course page, new dates and staff bookings leave it out). Stopping the primary makes the first option still
+  // taking bookings the primary; the last one taking bookings can't be stopped (that is pausing the course). It isn't reviewed
+  // (like the learning options and prices) and applies at once; like them, it takes a course waiting for review back to a draft.
+  setOptionOpen: orgProcedure('provider.courses.edit')
+    .input(z.object({ courseId: id, method: z.enum(['classroom', 'live-online', 'self-paced']), open: z.boolean(), seen: seenVersion }))
+    .mutation(async ({ ctx, input }) => {
+      const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
+      return ctx.db.transaction(async (tx) => {
+        // under the row lock: a date added, an option turned off or a staff booking at the same moment takes its turn
+        const now = await lockCourse(tx, course.id)
+        if (!now) throw notFound()
+        await refuseIfChanged(tx, course.id, input.seen)
+        const name = () => methodLabel(tx, input.method) // only for a message, so a change asks the database as little as it can
+        if (!now.methods.includes(input.method)) throw bad(`${await name()} isn’t one of this course’s learning options.`)
+        const closed = now.closedMethods
+        const set: Partial<typeof courses.$inferInsert> = {}
+        if (input.open) {
+          if (!closed.includes(input.method)) throw new TRPCError({ code: 'CONFLICT', message: `${await name()} is already taking bookings.` })
+          // a learning option retired in Catalogue settings since stays as it is: it can be turned off, not sold again
+          if ((await retiredMethods(tx, course.id)).includes(input.method)) throw bad(`${await name()} is no longer offered on ReadTraining, so it can’t take bookings again.`)
+          set.closedMethods = closed.filter((m) => m !== input.method)
+        } else {
+          if (closed.includes(input.method)) throw new TRPCError({ code: 'CONFLICT', message: `${await name()} is already not taking bookings.` })
+          const open = inOrder(now.methods.filter((m) => m !== input.method && !closed.includes(m)))
+          if (!open.length) throw bad('To stop all bookings, pause the course.')
+          set.closedMethods = inOrder([...closed, input.method])
+          if (now.method === input.method) set.method = open[0]
+        }
+        await tx.update(courses).set({ ...set, updatedAt: new Date() }).where(eq(courses.id, course.id))
+        const backToDraft = await leaveReview(tx, ctx, input.organisationId, now)
+        await log(tx, ctx, input.organisationId, input.open ? 'course.option_reopened' : 'course.option_stopped', course.id, { method: input.method, ...(set.method ? { primary: set.method } : {}) })
+        return { ok: true, method: set.method ?? now.method, closedMethods: set.closedMethods!, backToDraft, version: await courseVersion(tx, course.id) }
       })
     }),
 
