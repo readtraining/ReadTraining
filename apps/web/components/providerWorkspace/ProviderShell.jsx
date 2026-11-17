@@ -19,13 +19,13 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { SHOW_DEMO } from "@/lib/demo";
 import { api } from "@/lib/trpc/react";
 import ProviderAccountStatus from "./ProviderAccountStatus";
-import { NewCourseButton, NewCourseProvider, NewCourseSheet } from "./NewCourse";
+import { NewCourseProvider, NewCourseSheet } from "./NewCourse";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
 // The provider workspace's layout, with Hurak's navigation in our design (DESIGN-SYSTEM.md, "Provider workspace follows the same
-// shell pattern"). The dark band: the logo and "Provider" tag, then New course, Student (the learner side), the bell with unread
-// notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
+// shell pattern"). The dark band, the same on every page: the logo and "Provider" tag, then Student (a plain text link to the learner
+// side, as Udemy's and Airbnb's), the bell with unread notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
 // sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups and, below 992px, the menu drawer. From
 // 992px the button at its top (or Ctrl+B) folds it to a rail of icons, one per item (a group's goes to its first page, each with
@@ -51,15 +51,17 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);
   // New course: a pop-up over this page (NewCourse.jsx), from any New course button, or from a link with ?newcourse=1 (the set-up
-  // checklist, the old /provider/courses/new address), which is then taken off the address
+  // checklist, the old /provider/courses/new address), which is taken off the address at once (replaceState, which Next's router
+  // follows): left there until a slower router.replace, typing would make the unsaved-changes guard keep ?newcourse=1 in the
+  // history, and closing the pop-up would step back to it and open New course again
   const [newCourse, setNewCourse] = useState(false);
   useEffect(() => {
     const q = new URLSearchParams(search);
     if (q.get("newcourse") !== "1") return;
     setNewCourse(true);
     q.delete("newcourse");
-    router.replace(`${path}${q.size ? `?${q}` : ""}`, { scroll: false });
-  }, [search, path, router]);
+    window.history.replaceState(null, "", `${path}${q.size ? `?${q}` : ""}`);
+  }, [search, path]);
   // pop-ups (Sheet) render on <body>, outside the workspace: this class gives them the workspace's form and button look
   useEffect(() => {
     document.body.classList.add("rt-pws-open");
@@ -124,8 +126,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-adm__tag">{pw.tag}</span>
           </Link>
           <div className="rt-adm__topside">
-            {access.can("provider.courses.edit") && <NewCourseButton className="button -sm -purple-1 text-white rt-pws__new" />}
-            <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}><i className="icon-person text-16" aria-hidden="true"></i><span>Student</span></Link>
+            <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}>Student</Link>
             <Link href="/provider/notifications" className="rt-pws__bell" aria-label={counts.unread ? `Notifications, ${counts.unread} unread` : "Notifications"}>
               <i className="icon-notification text-18" aria-hidden="true"></i>
               {counts.unread > 0 && <span className="rt-pws__bellcount" aria-hidden="true">{counts.unread}</span>}
