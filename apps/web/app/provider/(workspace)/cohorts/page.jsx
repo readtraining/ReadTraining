@@ -1,7 +1,6 @@
 import React from "react";
 import ProviderShell from "@/components/providerWorkspace/ProviderShell";
 import ProviderCohorts from "@/components/providerWorkspace/ProviderCohorts";
-import { CohortViews } from "@/components/providerWorkspace/providerParts";
 import { pw } from "@/data/providerWorkspace";
 import { pageMetadata } from "@/lib/seo";
 
@@ -12,7 +11,7 @@ export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, descri
 
 export default function Page() {
   return (
-    <ProviderShell current="cohorts" title={p.title} lead={p.lead} actions={<CohortViews current="list" />}>
+    <ProviderShell current="cohorts" title={p.title} lead={p.lead}>
       <ProviderCohorts />
     </ProviderShell>
   );

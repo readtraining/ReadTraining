@@ -10,6 +10,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { AdminStatus } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = W.jobs;
 const d = copy.detail;
@@ -88,8 +89,8 @@ export default function AdminCandidate({ reference }) {
           <p className="rt-acc__note">{c.ref} · {c.licence.type} licence · {c.city || c.postcode}</p>
         </div>
         <div className="rt-adm-hero__actions">
-          {c.status === "new" && <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setCandidateStatus(c, "screening"); setSaid("Call booked"); }}>Book a call</button>}
           {!closed && c.status !== "started" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setCandidateStatus(c, "unsuitable"); setSaid("Marked not suitable"); }}>Not suitable</button>}
+          {c.status === "new" && <button type="button" className="button -sm -purple-1 text-white" onClick={() => { setCandidateStatus(c, "screening"); setSaid("Call booked"); }}>Book a call</button>}
           {closed && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setCandidateStatus(c, "screening"); setSaid("Reopened"); }}>Reopen</button>}
         </div>
       </section>
@@ -161,7 +162,7 @@ export default function AdminCandidate({ reference }) {
           <div className="rt-field">
             <label htmlFor="rt-adm-cnote" className="rt-sr">{A.providers.detail.notePlaceholder}</label>
             {errors.note && <p className="rt-q__err" id="rt-adm-cnote-e"><span className="rt-sr">Error: </span>{errors.note}</p>}
-            <textarea id="rt-adm-cnote" rows={3} maxLength={1000} placeholder={A.providers.detail.notePlaceholder} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-adm-cnote-e" : undefined} />
+            <TextArea id="rt-adm-cnote" rows={3} maxLength={1000} placeholder={A.providers.detail.notePlaceholder} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-adm-cnote-e" : undefined} />
           </div>
           <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{A.providers.detail.addNote}</button>
         </form>

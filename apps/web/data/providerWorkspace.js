@@ -136,7 +136,7 @@ export const pw = {
     dashboard: { title: "Dashboard", lead: "What needs you today, what is with our team and what is coming up." },
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
-    courses: { title: "Courses", lead: "Every course you run. New courses and changes are checked by our team before they go live." },
+    courses: { title: "Courses", lead: "Every course you run. New courses and edits are reviewed before they go live." },
     packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates." },
     course: { title: "Edit course" },
     courseOverview: { title: "Course details" },
@@ -173,21 +173,46 @@ export const pw = {
     primaryHint: "Shown first on the course page and in search results.",
     others: "Other ways to offer it",
     othersHint: "The same course page, syllabus and FAQs cover every way you offer it.",
-    upcoming: (n) => `It has ${n} upcoming ${n === 1 ? "date" : "dates"}. Cancel ${n === 1 ? "it" : "them"} before turning this off.`,
+    upcoming: (n) => `It has ${n} upcoming ${n === 1 ? "date" : "dates"}. Stop new bookings for it instead (below), or cancel ${n === 1 ? "it" : "them"} before turning this off.`,
+    closedUpcoming: (n) => `Not taking bookings. It has ${n} upcoming ${n === 1 ? "date" : "dates"}, so it stays on until ${n === 1 ? "it is" : "they are"} over or cancelled.`,
+    closed: "Not taking bookings.",
+    closedPrimary: "Not taking bookings. Take bookings again before making it the main way.",
     retired: "No longer offered on ReadTraining.",
     retiredOn: "No longer offered on ReadTraining. Turn it off, then save.",
+    // stopping new bookings for one way (Hurak's "Retire from future sales"): saved at once, undone with "Take bookings again"
+    bookings: {
+      title: "Taking bookings",
+      lead: "Stop new bookings for a way you no longer run. Nothing is cancelled: dates already booked still go ahead, and you can take bookings again at any time.",
+      main: "Main way",
+      open: "Taking bookings",
+      stop: "Stop new bookings",
+      stopping: "Stopping…",
+      pause: "To stop all bookings, pause the course.",
+      closedTitle: "Not taking bookings",
+      closedNote: "Dates already booked still go ahead.",
+      reopen: "Take bookings again",
+      reopening: "Taking bookings…",
+      confirmTitle: (name) => `Stop new bookings for ${name}?`,
+      confirmText: (name, next) => `Learners can't book ${name} any more. Dates already booked still go ahead, and those learners keep their places.${next ? ` ${next} becomes this course's main way.` : ""}`,
+      stopped: (name) => `${name} is no longer taking bookings.`,
+      reopened: (name) => `${name} is taking bookings again.`,
+      backToDraft: "The course is back with you as a draft: send it for approval again when you're ready.",
+    },
     selfPacedNote: "Self-paced has no dates: learners start straight after booking, at the price you set in the next step. Lessons for self-paced courses come in a later update.",
     liveSelfPaced: "A live course offering self-paced needs its price: add it in the next step, then save.",
     save: "Save to apply your changes, then add the dates or price for any new option in the next step.",
   },
-  courseStatuses: { draft: "Draft", pending: "Waiting for approval", changes: "Changes requested", live: "Live", paused: "Paused" },
+  courseStatuses: { draft: "Draft", pending: "In review", changes: "Changes requested", live: "Live", paused: "Paused" },
+  // the Courses list on a status tab with none
+  noCourses: { draft: "No drafts.", pending: "No courses in review.", changes: "No courses waiting for changes.", live: "No live courses yet.", paused: "No paused courses." },
 
   // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
     enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
   },
-  enrolment: { public: "Public", private: "Private" },
+  // a course's visibility (the gear's Public / Private)
+  visibility: { public: "Public", private: "Private" },
   // the colour a cohort shows in on the calendar (Hurak's cohort colour picker)
   cohortColours: [
     { key: "purple", label: "Purple" },

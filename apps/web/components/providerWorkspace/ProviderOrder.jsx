@@ -16,6 +16,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
+import TextArea from "@/components/forms/TextArea";
 
 // Order details, as Hurak's: the order (amount, number, status, sales channel, payment method, purchase date, card), billing
 // details, the timeline with notes, the invoice (upload it, record when it was paid), the enrolled students (one card per
@@ -154,8 +155,8 @@ export default function ProviderOrder({ reference }) {
           <p className="rt-acc__note">{learnerName(data.byId.learner[request.learnerId])} asked for {formatPrice(request.amount)} back on {formatWhen(request.at)}. Reply within 3 working days.</p>
           <blockquote className="rt-pws-ord__reason">{request.reason}</blockquote>
           <div className="rt-pws-ord__actions">
-            <button type="button" className="button -sm -purple-1 text-white" onClick={() => open("approve", { note: "" })}>Approve refund</button>
             <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("decline", { note: "" })}>Decline</button>
+            <button type="button" className="button -sm -purple-1 text-white" onClick={() => open("approve", { note: "" })}>Approve refund</button>
           </div>
         </section>
       )}
@@ -200,7 +201,7 @@ export default function ProviderOrder({ reference }) {
             <div className="rt-field">
               <label htmlFor="rt-pws-ord-note" className="rt-sr">Add a note for your team</label>
               {noteErr && <p className="rt-q__err" id="rt-pws-ord-note-e"><span className="rt-sr">Error: </span>{noteErr}</p>}
-              <textarea id="rt-pws-ord-note" rows={3} maxLength={1000} placeholder="Add a note for your team (the customer does not see it)" value={note} onChange={(e) => setNote(e.target.value)} autoComplete="off" aria-invalid={noteErr ? true : undefined} aria-describedby={noteErr ? "rt-pws-ord-note-e" : undefined} />
+              <TextArea id="rt-pws-ord-note" rows={3} maxLength={1000} placeholder="Add a note for your team (the customer does not see it)" value={note} onChange={(e) => setNote(e.target.value)} autoComplete="off" aria-invalid={noteErr ? true : undefined} aria-describedby={noteErr ? "rt-pws-ord-note-e" : undefined} />
             </div>
             <button type="submit" className="button -sm -outline-purple-1 text-purple-1">Add note</button>
           </form>
@@ -305,7 +306,7 @@ export default function ProviderOrder({ reference }) {
                 <div className="rt-field">
                   <label htmlFor="rt-pws-ord-rnote">{sheet === "approve" ? "Note to the learner (optional)" : "Reason"}</label>
                   <Err k="note" />
-                  <textarea id="rt-pws-ord-rnote" rows={3} maxLength={500} value={form.note || ""} onChange={field("note")} autoComplete="off" {...aria("note")} />
+                  <TextArea id="rt-pws-ord-rnote" rows={3} maxLength={500} value={form.note || ""} onChange={field("note")} autoComplete="off" {...aria("note")} />
                 </div>
               </>
             )}
@@ -315,7 +316,7 @@ export default function ProviderOrder({ reference }) {
                 <div className="rt-field">
                   <label htmlFor="rt-pws-ord-reason">Reason</label>
                   <Err k="reason" />
-                  <textarea id="rt-pws-ord-reason" rows={3} maxLength={500} value={form.reason || ""} onChange={field("reason")} autoComplete="off" {...aria("reason")} />
+                  <TextArea id="rt-pws-ord-reason" rows={3} maxLength={500} value={form.reason || ""} onChange={field("reason")} autoComplete="off" {...aria("reason")} />
                 </div>
               </>
             )}
@@ -339,7 +340,7 @@ export default function ProviderOrder({ reference }) {
                 <div className="rt-field">
                   <label htmlFor="rt-pws-ord-notes">Refund notes</label>
                   <Err k="notes" />
-                  <textarea id="rt-pws-ord-notes" rows={3} maxLength={500} value={form.notes || ""} onChange={field("notes")} autoComplete="off" {...aria("notes")} />
+                  <TextArea id="rt-pws-ord-notes" rows={3} maxLength={500} value={form.notes || ""} onChange={field("notes")} autoComplete="off" {...aria("notes")} />
                 </div>
               </>
             )}
@@ -349,7 +350,7 @@ export default function ProviderOrder({ reference }) {
                 <div className="rt-field">
                   <label htmlFor="rt-pws-ord-message">What happened</label>
                   <Err k="message" />
-                  <textarea id="rt-pws-ord-message" rows={5} maxLength={2000} value={form.message || ""} onChange={field("message")} autoComplete="off" {...aria("message")} />
+                  <TextArea id="rt-pws-ord-message" rows={5} maxLength={2000} value={form.message || ""} onChange={field("message")} autoComplete="off" {...aria("message")} />
                 </div>
                 <div className="rt-field">
                   <label htmlFor="rt-pws-ord-file">Attach a file (optional)</label>

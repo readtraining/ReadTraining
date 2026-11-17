@@ -206,7 +206,7 @@ export function Tabs({ tabs, value, onChange, label, sections = false }) {
       {tabs.map((t) => (
         <button key={t.key} type="button" className={`rt-tr__filter${value === t.key ? " is-on" : ""}`} aria-pressed={value === t.key} onClick={() => onChange(t.key)}>
           {t.label}
-          {t.count !== undefined && <span className="rt-tr__filter-n">{t.count}</span>}
+          {t.count !== undefined && <span className="rt-tr__filter-n" data-n={t.count}>{t.count}</span>}
         </button>
       ))}
     </div>
@@ -230,14 +230,31 @@ export function Search({ value, onChange, label }) {
 // the ones after them (`title`: the button's hover name, for an icon-only trigger). An item's `icon` (an icon class) goes before its label. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
 export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null, title }) {
   const [open, setOpen] = React.useState(false);
+  // where the list opens. In a table row: beside its button, its top in line with the button's, sliding up just enough to stay on
+  // screen near the bottom (`shift`), so it always stays next to its own row (the way desktop and Figma menus open). Elsewhere (the
+  // top bar's menus) and where the row has no room on its left: below the button.
+  const [place, setPlace] = React.useState({ side: false, shift: 0 });
   const wrap = React.useRef(null);
   const btn = React.useRef(null);
+  const list = React.useRef(null);
   const id = React.useId();
+  // measured before it is painted, so it never shows in one place and then moves
+  React.useLayoutEffect(() => {
+    if (!open || !list.current || !btn.current) return;
+    const b = btn.current.getBoundingClientRect();
+    const w = list.current.offsetWidth;
+    const h = list.current.offsetHeight;
+    const side = Boolean(btn.current.closest("td")) && b.left - w - 8 >= 8;
+    if (!side) return setPlace({ side: false, shift: 0 });
+    const barBottom = Math.max(document.querySelector(".rt-adm__top")?.getBoundingClientRect().bottom ?? 0, 0);
+    const over = b.top + h - (window.innerHeight - 12); // how far it would run past the bottom of the screen
+    setPlace({ side: true, shift: over > 0 ? Math.max(0, Math.min(over, b.top - barBottom - 12)) : 0 });
+  }, [open]);
   // the items on show (a `phone` item is hidden on wider screens)
   const shownItems = () => [...(wrap.current?.querySelectorAll('[role="menuitem"]') ?? [])].filter((el) => el.offsetParent !== null);
   React.useEffect(() => {
     if (!open) return;
-    shownItems()[0]?.focus();
+    shownItems()[0]?.focus({ preventScroll: true }); // the list is placed to be in view; focusing must not scroll the page
     const out = (e) => wrap.current && !wrap.current.contains(e.target) && setOpen(false);
     // Esc closes it wherever focus is (a menu opened with the mouse may not have it inside), and focus goes back to the button
     const esc = (e) => {
@@ -272,7 +289,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
         {trigger || <span aria-hidden="true">•••</span>}<span className="rt-sr">{label}</span>
       </button>
       {open && (
-        <ul className="rt-rowmenu__list" role="menu" id={id} aria-label={label}>
+        <ul ref={list} className={`rt-rowmenu__list${place.side ? " -side" : ""}`} style={place.shift ? { top: -place.shift } : undefined} role="menu" id={id} aria-label={label}>
           {head && <li role="none" className="rt-rowmenu__head">{head}</li>}
           {items.map((item) => (
             <li key={item.key || item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>

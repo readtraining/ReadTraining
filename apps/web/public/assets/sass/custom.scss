@@ -1807,7 +1807,7 @@ a.rt-card__title-link:hover, a.rt-card__title-link:focus-visible { color: var(--
 .rt-fp__subtitle { margin: 14px 0 8px; font-size: 13px; font-weight: 600; color: var(--fp-muted); }
 .rt-fp__range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .rt-fp__range label { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 10px; border: 1px solid var(--fp-border-strong); border-radius: 8px; background: var(--fp-surface); color: var(--fp-muted); }
-.rt-fp__range label:focus-within { border-color: var(--fp-brand); outline: 2px solid var(--fp-brand); outline-offset: 2px; }
+.rt-fp__range label:has(:focus-visible) { border-color: var(--fp-brand); outline: 2px solid var(--fp-brand); outline-offset: 2px; }
 .rt-fp__range input { flex: 1; min-width: 0; width: auto; border: 0; outline: 0; background: transparent; font-size: 14px; color: var(--fp-text); -moz-appearance: textfield; }
 .rt-fp__range input::-webkit-outer-spin-button, .rt-fp__range input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
@@ -3770,7 +3770,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__opt { position: relative; cursor: pointer; border: 1px solid var(--color-light-5); border-radius: 12px; background: #fff; transition: border-color 0.15s ease, background 0.15s ease; }
 .rt-bk__opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .rt-bk__opt:hover { border-color: var(--color-purple-1); }
-.rt-bk__opt:focus-within { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
+.rt-bk__opt:has(:focus-visible) { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
 .rt-bk__opt.is-on { border-color: var(--color-purple-1); box-shadow: inset 0 0 0 1px var(--color-purple-1); background: var(--color-purple-3); }
 .rt-bk__fs.rt-bk__req { margin-top: 16px; padding: 16px; border: 1px solid var(--color-light-5); border-radius: 12px; background: var(--color-light-4); }
 .rt-bk__fs.rt-bk__req.is-open { border-color: var(--color-purple-1); }
@@ -4056,7 +4056,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-acc__rows { display: grid; gap: 12px; }
 .rt-acc__row { position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 16px; border: 1px solid var(--color-light-5); border-radius: var(--rt-radius-card); background: #fff; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .rt-acc__row:hover { border-color: var(--color-purple-1); box-shadow: var(--rt-shadow-card-hover); }
-.rt-acc__row:focus-within { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
+.rt-acc__row:has(:focus-visible) { outline: 2px solid var(--color-purple-1); outline-offset: 2px; }
 .rt-acc__datetile { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 64px; border-radius: 12px; background: var(--color-purple-3); color: var(--color-purple-1); }
 .rt-acc__datetile b { font-size: 22px; line-height: 1; font-weight: 700; }
 .rt-acc__datetile span { margin-top: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -4295,7 +4295,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-biz__pick:hover { border-color: var(--rt-c-brand); }
 .rt-biz__pick.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
 .rt-biz__pick.is-full { opacity: 0.55; cursor: not-allowed; }
-.rt-biz__pick:focus-within { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-biz__pick:has(:focus-visible) { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-biz__pick > span { display: grid; min-width: 0; }
 .rt-biz__pick b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-biz__pick small { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
@@ -4830,6 +4830,7 @@ body.rt-side-resizing :is(.rt-adm__top, .rt-adm__side, .rt-adm__main) { pointer-
 .rt-adm__grouplabel .rt-adm__count { min-width: 20px; height: 20px; margin: 0; font-size: var(--rt-text-xs); line-height: 20px; letter-spacing: 0; text-transform: none; }
 .rt-adm__group ul { margin: 0 0 4px 17px; padding-left: 8px; border-left: 1px solid var(--rt-c-line); }
 .rt-adm__group .rt-adm__link { padding: 8px 10px; }
+.rt-pws .rt-adm__group ul .rt-adm__link { padding-left: 14px; } /* in line with the group name above (its icon's room) */
 @media (prefers-reduced-motion: reduce) { .rt-adm__side, .rt-adm__chev, .rt-adm__sidehide, .rt-adm__resize::after { transition: none; } }
 .rt-adm__link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: var(--rt-text-sm); font-weight: 500; color: var(--color-dark-1) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-adm__link i, .rt-adm__icon { flex: none; color: var(--color-light-1); }
@@ -5671,7 +5672,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
    PROVIDER WORKSPACE (/provider/*, components/providerWorkspace): the admin's work layout (.rt-adm) with the provider's organisation in
    the sidebar, plus the parts in providerParts.jsx. Tokens only (DESIGN-SYSTEM.md).
    ===================================================================== */
-.rt-pws { --fp-text: var(--rt-c-text); --fp-muted: var(--rt-c-muted); --fp-border: var(--rt-c-line); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--rt-c-brand); --fp-surface: var(--rt-c-surface); }
+/* the radio and tick box colours: the workspace's pages and its pop-ups, which are drawn at the end of the page (outside .rt-pws,
+   so without this their radios and tick boxes had no border or fill) */
+.rt-pws, body.rt-pws-open .rt-dd, body.rt-adm-open .rt-dd { --fp-text: var(--rt-c-text); --fp-muted: var(--rt-c-muted); --fp-border: var(--rt-c-line); --fp-border-strong: var(--color-border-strong); --fp-brand: var(--rt-c-brand); --fp-surface: var(--rt-c-surface); }
 /* the page head's buttons line up with the title, so a description on two lines doesn't move them (Cohorts and Calendar share a switch) */
 .rt-pws .rt-adm__head { align-items: flex-start; }
 .rt-pws__org { display: flex; align-items: center; gap: 10px; margin: 4px 4px 0; padding: 10px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
@@ -5708,9 +5711,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-rowmenu__list > .rt-rowmenu__group:first-child { margin-top: 0; padding-top: 4px; border-top: 0; }
 @media (max-width: 767px) {
   .rt-adm__topside { gap: 4px; }
-  .rt-pws__new { display: none; }
-  .rt-pws__student span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .rt-pws__student { justify-content: center; width: 44px; }
 }
 @media (max-width: 575px) { .rt-adm__tag { display: none; } }
 @media (prefers-reduced-motion: reduce) { .rt-pws__bell { transition: none; } }
@@ -5757,6 +5757,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* radio choices */
 .rt-pws-choice { margin: 0; padding: 0; border: 0; }
 .rt-pws-choice legend { margin-bottom: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); float: none; width: auto; }
+.rt-pws-choice legend.rt-sr { width: 1px; margin: -1px; } /* a quiet legend (Choice quietLegend) stays hidden */
 .rt-pws-choice__row { display: flex; flex-wrap: wrap; gap: 4px 24px; }
 .rt-pws-choice__opt { margin: 0; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); }
 
@@ -5803,16 +5804,31 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* courses list (ours, with Hurak's fields): slim profile bar, then one card with status tabs, filters and a compact course table */
 /* the page head's right side: the profile card, then "New course" */
 .rt-cx { border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-.rt-cx__top { padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-cx__top { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-cx__top .rt-acc__tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; margin: -4px; padding: 4px; overflow-x: auto; scrollbar-width: none; }
+.rt-cx__top .rt-acc__tabs::-webkit-scrollbar { display: none; }
+.rt-cx__top .rt-tr__filter { flex: none; }
+.rt-cx__clear { flex: none; white-space: nowrap; }
+/* a status tab with no courses: its count is quiet, so the tabs with courses stand out */
+.rt-cx__top .rt-tr__filter:not(.is-on):has(.rt-tr__filter-n[data-n="0"]) { color: var(--rt-c-muted); }
+/* phones: the four filters fold behind one Filters button (open: one per line, full width, every name readable) */
+.rt-cx__filters { display: none; flex: none; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border: 1px solid var(--rt-c-line); border-radius: 10px; background: var(--rt-c-soft); font: inherit; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); }
+.rt-cx__filters[aria-expanded="true"] { border-color: var(--rt-c-text); }
+.rt-cx__filters:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+@media (max-width: 575px) {
+  .rt-cx__filters { display: inline-flex; }
+  .rt-cx__bar .rt-adm-search { flex: 1 1 0; min-width: 0; }
+  .rt-cx__bar:not(.is-open) .rt-adm-select.-inline { display: none; }
+  .rt-cx__bar.is-open .rt-adm-select.-inline { flex: 1 1 100%; width: 100%; min-width: 0; }
+}
 .rt-cx__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 14px 20px; border-bottom: 1px solid var(--rt-c-line); }
-.rt-cx__bar.-more { padding-top: 14px; background: var(--rt-c-soft); }
 /* a filter bar on its own in its card (Orders, Learners): no line under it */
 .rt-cx > .rt-cx__bar:last-child { border-bottom: 0; }
-.rt-cx__bar .rt-adm-search { flex: 1 1 260px; }
-.rt-cx__more { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
-.rt-cx__more.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
-.rt-cx__more:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-.rt-cx__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rt-c-brand); }
+/* the search takes the room the filters leave (at least 200px); the row wraps to a second line where they don't fit */
+.rt-cx__bar .rt-adm-search { flex: 1 1 200px; }
+/* each filter as wide as its words (never cut short, at least 150px so choosing a short value hardly moves the row); on phones the
+   search is full width and the filters two to a row */
+.rt-cx__bar .rt-adm-select.-inline { width: auto; min-width: 150px; }
 .rt-cx-table { width: 100%; border-collapse: collapse; }
 .rt-cx-table th { padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.04em; text-align: left; text-transform: uppercase; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-cx-table td { padding: 12px 16px; border-bottom: 1px solid var(--rt-c-line); font-size: var(--rt-text-sm); vertical-align: middle; color: var(--rt-c-text); }
@@ -5820,20 +5836,33 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-table th:first-child, .rt-cx-table td:first-child { padding-left: 20px; }
 .rt-cx-table th:last-child, .rt-cx-table td:last-child { padding-right: 20px; }
 .rt-cx-table .-num { text-align: right; font-variant-numeric: tabular-nums; }
-/* fixed columns where the page column is 1015px or wider (a 1360px window beside the menu at its default width; the column is the
-   rt-pws-main container, from 992px) so long titles truncate instead of squeezing the course column; the row opens its course (its title
-   link), and its ⋮ menu (RowMenu) holds the course's actions */
+/* Where the page column is 1015px or wider (the rt-pws-main container): the small columns have set widths, just wide enough for
+   what they hold, and the course column takes all the rest, so nothing is cut short and there are no empty gaps. The row opens its
+   course (its title link), and its ⋮ menu (RowMenu) holds the course's actions. */
 @container rt-pws-main (width >= 1015px) {
   .rt-cx-table { table-layout: fixed; }
-  .rt-cx-table th:nth-child(1) { width: 27%; }
-  .rt-cx-table th:nth-child(2) { width: 19%; }
-  .rt-cx-table th:nth-child(3) { width: 10%; }
-  .rt-cx-table th:nth-child(4) { width: 15%; }
-  .rt-cx-table th:nth-child(5), .rt-cx-table th:nth-child(6) { width: 9%; }
-  .rt-cx-table th:nth-child(7) { width: 8%; }
-  .rt-cx-table th:nth-child(8) { width: 72px; }
+  .rt-cx-table th:nth-child(2) { width: 200px; } /* status, and what it needs next */
+  .rt-cx-table th:nth-child(3) { width: 120px; } /* visibility */
+  .rt-cx-table th:nth-child(4) { width: 150px; } /* next date */
+  .rt-cx-table th:nth-child(5) { width: 80px; }  /* the ⋮ menu: its 44px button and the cell padding */
   .rt-cx-table th, .rt-cx-table td:not(.-act) { overflow: hidden; text-overflow: ellipsis; }
+  .rt-cx-table td:not(.-act) { white-space: nowrap; }
 }
+/* the second line under a cell's value (a draft's steps left, our team's note, "+2 more dates"): one line, cut with … */
+.rt-cx-table .rt-cx-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-cx-muted { color: var(--rt-c-muted); }
+.rt-cx-skel .rt-skel { flex: none; }
+.rt-cx-skel .-tabs { width: min(560px, 100%); height: 38px; border-radius: var(--rt-radius-pill); }
+.rt-cx-skel .-search { flex: 1 1 200px; height: 44px; }
+.rt-cx-skel .-filters { width: min(560px, 60%); height: 44px; }
+.rt-cx-skel__row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--rt-c-line); }
+.rt-cx-skel .-img { width: 64px; height: 42px; border-radius: 8px; }
+.rt-cx-skel__text { display: grid; flex: 1 1 auto; gap: 6px; min-width: 0; }
+.rt-cx-skel .-title { width: 45%; height: 12px; }
+.rt-cx-skel .-meta { width: 65%; height: 10px; }
+.rt-cx-skel .-cell { width: 90px; height: 12px; }
+.rt-cx-skel .-menu { width: 44px; height: 44px; border-radius: var(--rt-radius-sm); }
+@media (max-width: 991px) { .rt-cx-skel .-cell { display: none; } .rt-cx-skel .-filters { display: none; } }
 .rt-cx-table .-act { white-space: nowrap; text-align: right; }
 .rt-cx-table tbody tr { transition: background-color 120ms ease; }
 @media (hover: hover) and (pointer: fine) { .rt-cx-table tbody tr:hover, .rt-cx-table tbody tr:hover > td { background: color-mix(in srgb, var(--rt-c-brand-soft) 45%, var(--rt-c-surface)); } }
@@ -5844,7 +5873,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cx-course__img.-none { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; border: 1px dashed color-mix(in srgb, var(--rt-c-brand) 40%, var(--rt-c-line)); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
 .rt-cx-course__text { display: grid; gap: 2px; min-width: 0; }
 .rt-cx-course__title { font-size: var(--rt-text-sm); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; }
-.rt-cx-course__title:hover { color: var(--rt-c-brand) !important; text-decoration: underline; text-underline-offset: 3px; }
+.rt-cx-course__title:hover { color: var(--rt-c-brand) !important; } /* no underline: the whole row is the link (its tint shows that), so an underline would mark only the name */
 .rt-cx-course__text small { overflow: hidden; font-size: var(--rt-text-xs); text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-cx-course__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-cx-rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
@@ -5856,7 +5885,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @mixin rt-cx-stacked {
   .rt-cx-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .rt-cx-table, .rt-cx-table tbody, .rt-cx-table tr, .rt-cx-table td { display: block; width: 100%; }
-  .rt-cx-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
+  .rt-cx-table tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 16px; padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
   .rt-cx-table tbody tr:last-child { border-bottom: 0; border-radius: 0 0 calc(var(--rt-radius-card) - 1px) calc(var(--rt-radius-card) - 1px); }
   .rt-cx-table td, .rt-cx-table td:first-child, .rt-cx-table td:last-child { padding: 0; border: 0; border-radius: 0; text-align: left; }
   .rt-cx-table tbody tr:hover > td { background: none; }
@@ -5866,14 +5895,15 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   .rt-cx-table td.-act { grid-row: 1; grid-column: -2 / -1; justify-self: end; width: auto; }
   .rt-cx-table td.-num { text-align: left; }
   .rt-cx-table td[data-label="Course"]::before, .rt-cx-table td.-act::before { content: none; }
+  .rt-cx-course__title, .rt-cx-course__text small { display: -webkit-box; overflow: hidden; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 }
 @media (max-width: 991px) { @include rt-cx-stacked; }
 @container rt-pws-main (width < 1015px) { @include rt-cx-stacked; }
 @media (max-width: 575px) {
   .rt-cx-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (prefers-reduced-motion: reduce) { .rt-cx__more, .rt-cx-table tbody tr { transition: none; } }
-.rt-cl-promo { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; padding: 20px 24px; border: 1px dashed color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); border-radius: var(--rt-radius-card); background: var(--rt-c-brand-soft); }
+@media (prefers-reduced-motion: reduce) { .rt-cx-table tbody tr { transition: none; } }
+.rt-cl-promo { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 20px; padding: 20px 24px; border: 1px solid color-mix(in srgb, var(--rt-c-brand) 25%, var(--rt-c-line)); border-radius: var(--rt-radius-card); background: var(--rt-c-brand-soft); }
 .rt-cl-promo > div { flex: 1 1 260px; }
 .rt-cl-promo__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-surface); color: var(--rt-c-brand); }
 .rt-cl-promo__title { margin: 0 0 2px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
@@ -5892,7 +5922,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-optcard.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
 .rt-pws-optcard.is-off { cursor: not-allowed; opacity: 0.6; }
 .rt-pws-optcard .rt-fp__radio, .rt-pws-optcard input[type="checkbox"] { flex: none; margin-top: 2px; }
-.rt-pws-optcard:focus-within { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
+/* the focus ring only for keyboard users: a mouse click on a card already shows it chosen (its border and fill), and a ring
+   then would look like a second border */
+.rt-pws-optcard:has(:focus-visible) { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-optcard b { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-pws-optcard small { display: block; margin-top: 2px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-pws-optcard ul { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
@@ -5907,6 +5939,12 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__ways > .rt-field__hint { margin-top: -8px; }
 .rt-pws-optcard.is-held { cursor: default; }
 .rt-pws-optcard .rt-pws-ce__waynote { margin-top: 8px; font-weight: 600; color: var(--rt-c-text); }
+/* editor: Learning options' "Taking bookings" card, each way with Stop new bookings, then the ways not taking bookings with Take
+   bookings again (rows of .rt-adm-list; their line under the name is a meta line, not the syllabus's body text) */
+.rt-pws-ce__book .rt-adm-list { margin-top: 16px; }
+.rt-pws-ce__main .rt-pws-ce__book .rt-adm-list li { align-items: center; }
+.rt-pws-ce__main .rt-pws-ce__book .rt-adm-list small { font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-ce__book .rt-acc__h3 { margin-top: 24px; }
 /* editor: the price step's parts (the self-paced price, the dates) when a course has both */
 .rt-pws-ce__part { display: grid; gap: 16px; min-width: 0; }
 .rt-pws-ce__part > .rt-adm-h3, .rt-pws-ce__part > .rt-acc__note { margin: 0; }
@@ -6135,6 +6173,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-rowmenu__btn:hover, .rt-rowmenu.is-open .rt-rowmenu__btn { border-color: var(--rt-c-text); }
 .rt-rowmenu__btn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-rowmenu__list { position: absolute; z-index: 40; top: calc(100% + 6px); right: 0; min-width: 190px; margin: 0; padding: 6px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); box-shadow: var(--rt-shadow-dialog); list-style: none; }
+.rt-rowmenu__list.-side { top: 0; right: calc(100% + 8px); } /* in a table row: beside its button, top in line (RowMenu slides it up near the screen's bottom) */
 .rt-rowmenu__list li { list-style: none; }
 .rt-rowmenu__list :is(a, button) { display: flex; align-items: center; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; text-align: left; text-decoration: none; color: var(--rt-c-text) !important; cursor: pointer; }
 .rt-rowmenu__list :is(a, button):hover, .rt-rowmenu__list :is(a, button):focus-visible { outline: none; background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; }
@@ -6284,7 +6323,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__swatch { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: 0; border: 2px solid transparent; border-radius: 50%; cursor: pointer; }
 .rt-pws-coh__swatch > span[aria-hidden] { width: 28px; height: 28px; border-radius: 50%; background: var(--rt-coh); }
 .rt-pws-coh__swatch.is-on { border-color: var(--rt-coh); }
-.rt-pws-coh__swatch:focus-within { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-pws-coh__swatch:has(:focus-visible) { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-pws-coh__formfoot { display: flex; flex-wrap: wrap; gap: 12px; }
 .rt-pws-coh__formfoot .button { flex: 0 1 auto; min-width: 160px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws-coh__day { transition: none; } }
@@ -6698,8 +6737,9 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__short { max-width: 260px; }
 .rt-pws-set__count { align-self: flex-end; font-variant-numeric: tabular-nums; }
 .rt-pws-set__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-/* New course pop-up (NewCourse.jsx): two groups, the course (title; category and sub-category side by side from 576px; topic) and
-   its options (the site's option cards), divided by a line; the title's character count sits on its label's row */
+/* New course pop-up (NewCourse.jsx): two groups divided by a line, what the course is (title; category and sub-category side by
+   side from 576px; topic) and how learners get it (how it is taught, where they find it, Skill Saver); the title's character
+   count sits on its label's row */
 .rt-pws-nc { display: grid; gap: 24px; }
 /* it may grow to 90% of the screen (not the pop-ups' 720px), so with the shared page cards the whole form shows on a laptop */
 @media (min-width: 768px) { .rt-pws-nc__sheet .rt-dd__panel { max-height: 90dvh; } }
@@ -6711,6 +6751,42 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-nc__labelrow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .rt-pws-nc__labelrow > label { margin: 0; }
 .rt-pws-nc__count, .rt-pws-nc__opt { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); font-variant-numeric: tabular-nums; }
+/* every question in the pop-up reads in the fields' label style (12px, semibold), whether it labels a field or a group of
+   choices; "How will you teach it?" is the site's compact radio row (Choice), one line on a laptop, stacked on phones */
+.rt-pws-nc legend { margin-bottom: 4px; font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
+/* hint lines: under a question, under Skill Saver, and the notes under the title and the topic */
+.rt-pws-nc__hint, .rt-pws-nc__check p, .rt-pws-nc__note { margin: 0; font-size: var(--rt-text-xs); line-height: 1.5; color: var(--rt-c-muted); }
+/* "How will you teach it?": three small cards in a row (stacked on phones). The selected one has the brand border and soft fill;
+   a press dips it to 0.98, hover tints the border only on a mouse, and a keyboard user sees the focus ring. Only the colours and
+   the press move, never the layout. */
+.rt-pws-nc__ways { display: block; }
+.rt-pws-nc__ways legend { margin: 0 0 4px; }
+.rt-pws-nc__ways .rt-pws-nc__hint { margin-bottom: 12px; }
+.rt-pws-nc__wayrow { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 575px) { .rt-pws-nc__wayrow { grid-template-columns: 1fr; } }
+.rt-pws-nc__way { position: relative; display: grid; align-content: start; gap: 2px; margin: 0; padding: 14px; border: 1px solid color-mix(in srgb, var(--rt-c-text) 16%, var(--rt-c-line)); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+.rt-pws-nc__way input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.rt-pws-nc__way b { font-size: var(--rt-text-sm); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
+.rt-pws-nc__way small { font-size: var(--rt-text-xs); line-height: 1.4; color: var(--rt-c-muted); }
+.rt-pws-nc__wayicon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-bottom: 10px; border-radius: 10px; background: var(--rt-c-brand-soft); color: var(--rt-c-brand); transition: background-color 150ms ease, color 150ms ease; }
+.rt-pws-nc__way.is-on { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); box-shadow: inset 0 0 0 1px var(--rt-c-brand); }
+.rt-pws-nc__way.is-on .rt-pws-nc__wayicon { background: var(--rt-c-brand); color: var(--rt-c-surface); }
+.rt-pws-nc__way:active { transform: scale(0.98); }
+.rt-pws-nc__way:has(input:focus-visible) { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-nc__way:not(.is-on):hover { border-color: color-mix(in srgb, var(--rt-c-brand) 45%, var(--rt-c-line)); } }
+@media (prefers-reduced-motion: reduce) { .rt-pws-nc__way { transition: border-color 150ms ease, background-color 150ms ease; } .rt-pws-nc__way:active { transform: none; } }
+/* a link inside a hint line stays a plain inline link (the course page's 44px tap height would stretch the line) */
+.rt-pws-nc__check .rt-cd__link, .rt-pws-nc__note .rt-cd__link { display: inline; min-height: 0; }
+/* Skill Saver: a plain tick box with its label and hint, as quiet as the questions above it */
+.rt-pws-nc__check { display: flex; align-items: flex-start; gap: 12px; }
+.rt-pws-nc__check input { flex: none; width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--rt-c-brand); cursor: pointer; } /* centred on the 24px label line */
+.rt-pws-nc__check label { display: block; margin: 0 0 2px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
+/* under the title: a course of theirs with the same title, and the subject the title points to with Use this */
+.rt-pws-nc__note { margin-top: 8px; }
+.rt-pws-nc__live:empty { display: none; }
+.rt-pws-nc__suggest { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin: -6px 0 0; padding: 8px 8px 8px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-pws-nc__suggest b { font-weight: 600; }
+.rt-pws-nc__suggest .rt-pws-set__textbtn { min-height: 32px; padding: 0 8px; }
 .rt-pws-set__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-top: 4px; }
 .rt-pws-set__foot .rt-acc__note { flex: 1 1 280px; margin: 0; }
 .rt-pws-set__textbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
@@ -6852,6 +6928,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-pws .rt-adm-table tbody tr:has(a.rt-adm-strong), .rt-pws .rt-cx-table tbody tr { position: relative; cursor: pointer; }
   .rt-pws .rt-adm-table tbody tr:has(a.rt-adm-strong):hover { background: var(--rt-c-soft); }
   .rt-pws .rt-adm-table tbody a.rt-adm-strong::after, .rt-pws .rt-cx-table tbody a.rt-cx-course__title::after { content: ""; position: absolute; inset: 0; }
+  .rt-pws .rt-adm-table tbody a.rt-adm-strong:hover { text-decoration: none; } /* the whole row is the link (its tint shows that), so no underline on its name */
   .rt-pws :is(.rt-adm-table, .rt-cx-table) tbody td :is(button, a, input, label, .rt-rowmenu):not(a.rt-adm-strong, a.rt-cx-course__title) { position: relative; z-index: 1; }
   /* an open ⋮ menu stays over the rows below it (their own menus and links are on that same level) */
 }
@@ -7106,6 +7183,9 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-pill-scroll::-webkit-scrollbar { display: none; }
 }
 .rt-dd__panel, .rt-mini__scroll { position: relative; }
+/* a text box (TextArea) holds its scroll pill in this frame, which takes the box's place in the layout */
+.rt-textarea { position: relative; display: block; width: 100%; }
+.rt-textarea > textarea { display: block; }
 
 /* Sizes that used to sit in the JSX as inline styles (cleanup, 2026-10-14): the shared FAQ section's heading widths, and the
    catalogue's error message. Same values as before. */
@@ -7545,6 +7625,7 @@ html { scrollbar-gutter: stable; }
   .rt-adm--platform .rt-adm-table tbody tr:hover { background: var(--rt-c-soft); }
   .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) { position: relative; cursor: pointer; }
   .rt-adm--platform .rt-adm-table tbody td:first-child a.rt-adm-strong::after { content: ""; position: absolute; inset: 0; }
+  .rt-adm--platform .rt-adm-table tbody td:first-child a.rt-adm-strong:hover { text-decoration: none; } /* the whole row is the link (its tint shows that), so no underline on its name */
   .rt-adm--platform .rt-adm-table tbody td :is(button, a, input, label, .rt-rowmenu):not(td:first-child > a.rt-adm-strong) { position: relative; z-index: 1; }
   /* a row that opens a record ends in a chevron (unless its last cell holds row actions) */
   .rt-adm--platform .rt-adm-table tbody tr:has(td:first-child a.rt-adm-strong) td:last-child:not(:has(.rt-rowmenu, button)) { padding-right: 40px; }
