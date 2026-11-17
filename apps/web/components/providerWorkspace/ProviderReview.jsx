@@ -15,6 +15,7 @@ import ProviderChecklist from "./ProviderChecklist";
 import { Loading, Pill, formatWhen } from "./providerParts";
 import { Counter, Field, aria } from "./settingsForm";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = pw.review;
 const REPLY_MAX = 1000;
@@ -122,7 +123,7 @@ function Changes({ review, onSent }) {
         {canSend ? (
           <form className="rt-q__form rt-pws-rev__form" onSubmit={send} noValidate ref={formRef}>
             <Field id="rt-pws-reply" label={c.reply} hint={c.hint} error={error} count={<Counter value={reply} max={REPLY_MAX} />}>
-              <textarea {...aria("rt-pws-reply", error, true)} rows={4} maxLength={REPLY_MAX} autoComplete="off" value={reply} onChange={(e) => setReply(e.target.value)} />
+              <TextArea {...aria("rt-pws-reply", error, true)} rows={4} maxLength={REPLY_MAX} autoComplete="off" value={reply} onChange={(e) => setReply(e.target.value)} />
             </Field>
             <div className="rt-pws-rev__foot">
               <button type="submit" className="button -md -purple-1 text-white" disabled={resubmit.isPending} aria-busy={resubmit.isPending || undefined}>{resubmit.isPending ? c.busy : c.button}</button>

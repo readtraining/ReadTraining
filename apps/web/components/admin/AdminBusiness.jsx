@@ -10,6 +10,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = W.businesses;
 const d = copy.detail;
@@ -161,7 +162,7 @@ export default function AdminBusiness({ slug }) {
           <div className="rt-field">
             <label htmlFor="rt-adm-bnote" className="rt-sr">{A.providers.detail.notePlaceholder}</label>
             {errors.note && <p className="rt-q__err" id="rt-adm-bnote-e"><span className="rt-sr">Error: </span>{errors.note}</p>}
-            <textarea id="rt-adm-bnote" rows={3} maxLength={1000} placeholder={A.providers.detail.notePlaceholder} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-adm-bnote-e" : undefined} />
+            <TextArea id="rt-adm-bnote" rows={3} maxLength={1000} placeholder={A.providers.detail.notePlaceholder} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-adm-bnote-e" : undefined} />
           </div>
           <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{A.providers.detail.addNote}</button>
         </form>

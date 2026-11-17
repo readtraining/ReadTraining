@@ -12,6 +12,7 @@ import { hideReview, keepReview, showReview } from "@/lib/adminReviews";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.reviews;
 const TABS = Object.keys(copy.tabs);
@@ -122,7 +123,7 @@ function HideForm({ review, onDone }) {
         <label htmlFor="rt-adm-rv-reason">{copy.reason}</label>
         <small className="rt-field__hint" id="rt-adm-rv-reason-hint">{copy.reasonHint}</small>
         {error && <p className="rt-q__err" id="rt-adm-rv-reason-e"><span className="rt-sr">Error: </span>{error}</p>}
-        <textarea id="rt-adm-rv-reason" rows={4} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-rv-reason-hint${error ? " rt-adm-rv-reason-e" : ""}`} />
+        <TextArea id="rt-adm-rv-reason" rows={4} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-rv-reason-hint${error ? " rt-adm-rv-reason-e" : ""}`} />
       </div>
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{copy.hide}</button>
     </form>

@@ -15,6 +15,7 @@ import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
+import TextArea from "@/components/forms/TextArea";
 
 // Settings tabs that use the API: provider information (the name while under review, headline, biography, town, social links), the logo, the terms learners
 // see before they book, and the venues used by classroom dates. Every change shows on the public profile and course pages at once.
@@ -108,7 +109,7 @@ function InfoForm({ profile, say }) {
         <input {...aria("rt-set-headline", errors.headline)} type="text" maxLength={120} autoComplete="off" value={f.headline} onChange={set("headline")} disabled={locked} />
       </Field>
       <Field id="rt-set-bio" label="Biography" hint="Who you are, where you train and what makes your courses good." error={errors.bio} count={<Counter value={f.bio} max={5000} />}>
-        <textarea {...aria("rt-set-bio", errors.bio, true)} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
+        <TextArea {...aria("rt-set-bio", errors.bio, true)} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
       </Field>
       <Field id="rt-set-city" label="Town or city (optional)" hint="Where you are based, shown on your public profile." error={errors.city}>
         <input {...aria("rt-set-city", errors.city, true)} type="text" maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} disabled={locked} className="rt-pws-set__short" />
@@ -282,10 +283,10 @@ function TermsForms({ profile, say }) {
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
       <Field id="rt-set-policy" label="Cancellation policy" hint="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain." error={errors.policy} count={<Counter value={policy} max={10000} />}>
-        <textarea {...aria("rt-set-policy", errors.policy, true)} rows={9} maxLength={10000} autoComplete="off" value={policy} onChange={(e) => { setPolicy(e.target.value); if (errors.policy) setErrors({}); }} disabled={locked} />
+        <TextArea {...aria("rt-set-policy", errors.policy, true)} rows={9} maxLength={10000} autoComplete="off" value={policy} onChange={(e) => { setPolicy(e.target.value); if (errors.policy) setErrors({}); }} disabled={locked} />
       </Field>
       <Field id="rt-set-terms" label="Booking terms (optional)" hint="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms." error={errors.terms} count={<Counter value={terms} max={20000} />}>
-        <textarea {...aria("rt-set-terms", errors.terms, true)} rows={9} maxLength={20000} autoComplete="off" value={terms} onChange={(e) => { setTerms(e.target.value); if (errors.terms) setErrors({}); }} disabled={locked} />
+        <TextArea {...aria("rt-set-terms", errors.terms, true)} rows={9} maxLength={20000} autoComplete="off" value={terms} onChange={(e) => { setTerms(e.target.value); if (errors.terms) setErrors({}); }} disabled={locked} />
       </Field>
       {!locked && (
         <div className="rt-pws-set__foot">

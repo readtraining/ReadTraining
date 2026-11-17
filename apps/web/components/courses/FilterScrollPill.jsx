@@ -9,7 +9,8 @@ const INSET = 8; // space kept above and below the pill's track
 // It follows the body's scroll position, is always visible while the body can scroll, and can be dragged. It is decoration only: aria-hidden, and wheel / touch / keyboard scrolling are untouched.
 // Rendered after the scrolling body inside a positioned parent, or inside the body itself when the body is positioned (a
 // sticky sidebar, a <dialog>). Nothing is rendered when the body does not need to scroll.
-export default function FilterScrollPill({ scrollRef }) {
+// `watch`: a value whose change can change the height of what scrolls (a text box's words), so it is checked again.
+export default function FilterScrollPill({ scrollRef, watch }) {
   const pillRef = useRef(null);
   const [scrollable, setScrollable] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -24,11 +25,13 @@ export default function FilterScrollPill({ scrollRef }) {
     ro.observe(body);
     if (body.firstElementChild) ro.observe(body.firstElementChild);
     window.addEventListener("resize", check);
+    body.addEventListener("input", check); // a text box's words grow without the box changing size
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", check);
+      body.removeEventListener("input", check);
     };
-  }, [scrollRef]);
+  }, [scrollRef, watch]);
 
   // Position, scrolling flag. Positions are written straight to the element (no React re-render while scrolling).
   useEffect(() => {
@@ -44,23 +47,25 @@ export default function FilterScrollPill({ scrollRef }) {
       const bodyTop = parent === body ? body.scrollTop : body.getBoundingClientRect().top - parent.getBoundingClientRect().top + parent.clientTop;
       const range = body.scrollHeight - body.clientHeight;
       const ratio = range > 0 ? body.scrollTop / range : 0;
-      pill.style.top = `${bodyTop + INSET + ratio * (body.clientHeight - PILL - INSET * 2)}px`;
+      pill.style.top = `${bodyTop + INSET + ratio * Math.max(0, body.clientHeight - PILL - INSET * 2)}px`;
     };
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(place);
     };
     place();
     body.addEventListener("scroll", schedule, { passive: true });
+    body.addEventListener("input", schedule);
     const ro = new ResizeObserver(schedule);
     ro.observe(body);
     window.addEventListener("resize", schedule);
     return () => {
       body.removeEventListener("scroll", schedule);
+      body.removeEventListener("input", schedule);
       ro.disconnect();
       window.removeEventListener("resize", schedule);
       cancelAnimationFrame(raf);
     };
-  }, [scrollable, scrollRef]);
+  }, [scrollable, scrollRef, watch]);
 
   // Dragging the pill scrolls the body in proportion.
   const onPointerDown = (e) => {

@@ -18,6 +18,7 @@ import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { useSavedSnapshot } from "@/lib/unsavedChanges";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.customerReviews;
 const f = copy.fields;
@@ -226,7 +227,7 @@ function ReviewForm({ review, topics, onDone }) {
   return (
     <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
       {field("rt-rv-name", f.name.label, f.name.hint, errors.name, text("name", { maxLength: 60 }))}
-      {field("rt-rv-text", f.text.label, f.text.hint, errors.text, <textarea id="rt-rv-text" rows={7} maxLength={2000} value={v.text} onChange={set("text")} aria-invalid={errors.text ? true : undefined} aria-describedby={describedBy("rt-rv-text", f.text.hint, errors.text)} />)}
+      {field("rt-rv-text", f.text.label, f.text.hint, errors.text, <TextArea id="rt-rv-text" rows={7} maxLength={2000} value={v.text} onChange={set("text")} aria-invalid={errors.text ? true : undefined} aria-describedby={describedBy("rt-rv-text", f.text.hint, errors.text)} />)}
       {field("rt-rv-rating", f.rating.label, f.rating.hint, errors.rating, <FieldSelect id="rt-rv-rating" label={f.rating.label} value={v.rating} onChange={(r) => setV((x) => ({ ...x, rating: r }))} options={[{ value: "", label: f.rating.choose }, ...RATINGS]} invalid={Boolean(errors.rating)} describedBy={describedBy("rt-rv-rating", f.rating.hint, errors.rating)} />)}
       {field("rt-rv-reviewDate", f.reviewDate.label, f.reviewDate.hint, errors.reviewDate, <DateField id="rt-rv-reviewDate" clearable max={today()} value={v.reviewDate} onChange={(d) => setV((x) => ({ ...x, reviewDate: d }))} invalid={Boolean(errors.reviewDate)} describedBy={describedBy("rt-rv-reviewDate", f.reviewDate.hint, errors.reviewDate)} />)}
       {v.reviewDate && (

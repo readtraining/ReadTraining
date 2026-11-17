@@ -14,6 +14,7 @@ import { formatWhen, Said, DetailSkeleton, Empty, actionLabel } from "./adminPar
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { waysLabel } from "@/lib/courseModes";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.providers;
 const d = copy.detail;
@@ -247,7 +248,7 @@ function DecisionSheet({ provider, decision, onClose, onDone }) {
               <label htmlFor="rt-adm-pmsg">{sheet.label}</label>
               <small className="rt-field__hint" id="rt-adm-pmsg-hint">{sheet.hint}</small>
               {error && <p className="rt-q__err" id="rt-adm-pmsg-e"><span className="rt-sr">Error: </span>{error}</p>}
-              <textarea id="rt-adm-pmsg" rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-pmsg-hint${error ? " rt-adm-pmsg-e" : ""}`} />
+              <TextArea id="rt-adm-pmsg" rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-pmsg-hint${error ? " rt-adm-pmsg-e" : ""}`} />
             </div>
           )}
           {own && (
@@ -255,7 +256,7 @@ function DecisionSheet({ provider, decision, onClose, onDone }) {
               <label htmlFor="rt-adm-pown">{A.own.label}</label>
               <small className="rt-field__hint" id="rt-adm-pown-hint">{A.own.hint}</small>
               {reasonError && <p className="rt-q__err" id="rt-adm-pown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
-              <textarea id="rt-adm-pown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-pown-hint${reasonError ? " rt-adm-pown-e" : ""}`} />
+              <TextArea id="rt-adm-pown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-pown-hint${reasonError ? " rt-adm-pown-e" : ""}`} />
             </div>
           )}
           {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}

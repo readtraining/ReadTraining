@@ -16,6 +16,7 @@ import { Confirm } from "@/components/providerWorkspace/settingsForm";
 import { ErrorState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import Sheet from "@/components/testPrep/runner/Sheet";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = account.profile;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -560,7 +561,7 @@ function CloseSection({ me }) {
             <div className="rt-field">
               <label htmlFor="rt-pf-close-reason">{c.sheet.reason}</label>
               {errors.reason && <p className="rt-q__err" id="rt-pf-close-reason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
-              <textarea id="rt-pf-close-reason" rows={3} maxLength={1000} value={values.reason} onChange={(e) => setValues((v) => ({ ...v, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-pf-close-reason-e" : undefined} />
+              <TextArea id="rt-pf-close-reason" rows={3} maxLength={1000} value={values.reason} onChange={(e) => setValues((v) => ({ ...v, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-pf-close-reason-e" : undefined} />
             </div>
             {me.hasPassword && (
               <Field id="rt-pf-close-pw" label={c.sheet.password} error={errors.currentPassword} type="password" autoComplete="current-password" value={values.currentPassword} onChange={(e) => { const v = e.target.value; setValues((x) => ({ ...x, currentPassword: v })); }} />

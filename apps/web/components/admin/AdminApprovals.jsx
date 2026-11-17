@@ -14,6 +14,7 @@ import { waysLabel } from "@/lib/courseModes";
 import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.approvals;
 const TABS = ["waiting", "changes", "decided"];
@@ -203,7 +204,7 @@ export default function AdminApprovals() {
             <div className="rt-field">
               <label htmlFor="rt-adm-reason">{copy.reasonLabel}</label>
               {error && <p className="rt-q__err" id="rt-adm-reason-e"><span className="rt-sr">Error: </span>{error}</p>}
-              <textarea id="rt-adm-reason" rows={5} maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-reason-e" : undefined} />
+              <TextArea id="rt-adm-reason" rows={5} maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-reason-e" : undefined} />
             </div>
             <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy || undefined}>{asking.decision === "rejectChange" ? copy.rejectChange : copy.requestChanges}</button>
           </form>

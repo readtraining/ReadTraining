@@ -11,6 +11,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { AdminStatus, AdminDue } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = W.requests;
 const d = copy.detail;
@@ -176,7 +177,7 @@ export default function AdminRequest({ reference }) {
             <div className="rt-field">
               <label htmlFor="rt-adm-rnote" className="rt-sr">{A.providers.detail.notePlaceholder}</label>
               {errors.note && <p className="rt-q__err" id="rt-adm-rnote-e"><span className="rt-sr">Error: </span>{errors.note}</p>}
-              <textarea id="rt-adm-rnote" rows={3} maxLength={1000} placeholder={A.providers.detail.notePlaceholder} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-adm-rnote-e" : undefined} />
+              <TextArea id="rt-adm-rnote" rows={3} maxLength={1000} placeholder={A.providers.detail.notePlaceholder} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-adm-rnote-e" : undefined} />
             </div>
             <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{A.providers.detail.addNote}</button>
           </form>
@@ -205,7 +206,7 @@ export default function AdminRequest({ reference }) {
           <div className="rt-field">
             <label htmlFor="rt-adm-creason">{d.cancelReason}</label>
             {errors.reason && <p className="rt-q__err" id="rt-adm-creason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
-            <textarea id="rt-adm-creason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-adm-creason-e" : undefined} />
+            <TextArea id="rt-adm-creason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-adm-creason-e" : undefined} />
           </div>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{d.cancel}</button>
         </form>

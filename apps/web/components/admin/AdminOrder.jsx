@@ -14,6 +14,7 @@ import { DetailSkeleton, Said, SortTh, formatWhen, Empty } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { DisputeForm, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.orders;
 const d = copy.detail;
@@ -192,7 +193,7 @@ function CancelForm({ order, onDone }) {
     <form className="rt-q__form rt-biz__sheetform" ref={ref} noValidate onSubmit={submit}>
       <p className="rt-acc__note">{d.cancelText} {A.recordOnly}</p>
       <p className="rt-adm-strong">{order.ref} · {formatPrice(order.left)} left</p>
-      {field("rt-cn-reason", d.cancelReason, null, error, <textarea id="rt-cn-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={describedBy("rt-cn-reason", null, error)} />)}
+      {field("rt-cn-reason", d.cancelReason, null, error, <TextArea id="rt-cn-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={describedBy("rt-cn-reason", null, error)} />)}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={cancel.isPending}>{d.cancel}</button>
     </form>
   );
