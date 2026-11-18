@@ -309,7 +309,7 @@ export const organisationsRouter = createTRPCRouter({
       select o.slug, array_agg(distinct v.city order by v.city) towns
       from public.organisations o
       join public.courses c on c.organisation_id = o.id and c.kind = 'provider' and c.status = 'live' and c.is_public and c.listed
-      join public.cohorts k on k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date
+      join public.cohorts k on k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date and k.method <> all(c.closed_methods)
       join public.venues v on v.id = k.venue_id and coalesce(v.city, '') <> ''
       where o.type = 'provider' and o.status = 'active'
       group by o.slug`)

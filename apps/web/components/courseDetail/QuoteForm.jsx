@@ -5,6 +5,7 @@ import Link from "next/link";
 import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import FormGate from "@/components/forms/FormGate";
+import TextArea from "@/components/forms/TextArea";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -58,7 +59,7 @@ function QuoteFormFields({ courseTitle, backHref }) {
       {hint && <small className="rt-field__hint" id={`rt-q-${name}-h`}>{hint}</small>}
       {errors[name] && <p className="rt-q__err" id={`rt-q-${name}-e`}><span className="rt-sr">Error: </span>{errors[name]}</p>}
       {props.as === "textarea" ? (
-        <textarea id={`rt-q-${name}`} name={name} rows={5} value={values[name]} onChange={set(name)} aria-invalid={errors[name] ? true : undefined} aria-describedby={[errors[name] && `rt-q-${name}-e`, hint && `rt-q-${name}-h`].filter(Boolean).join(" ") || undefined} />
+        <TextArea id={`rt-q-${name}`} name={name} rows={5} value={values[name]} onChange={set(name)} aria-invalid={errors[name] ? true : undefined} aria-describedby={[errors[name] && `rt-q-${name}-e`, hint && `rt-q-${name}-h`].filter(Boolean).join(" ") || undefined} />
       ) : (
         <input id={`rt-q-${name}`} name={name} value={values[name]} onChange={set(name)} aria-invalid={errors[name] ? true : undefined} aria-describedby={[errors[name] && `rt-q-${name}-e`, hint && `rt-q-${name}-h`].filter(Boolean).join(" ") || undefined} {...props} />
       )}

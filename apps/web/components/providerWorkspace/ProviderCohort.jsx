@@ -14,6 +14,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
+import TextArea from "@/components/forms/TextArea";
 
 // Manage cohort, as Hurak's: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
 // whether it takes bookings, tutor), with Edit cohort details, Enrol student (a new order on these dates), Bulk enrolment (a
@@ -158,8 +159,8 @@ export default function ProviderCohort({ cohortId }) {
         </dl>
         {!k.cancelled && (
           <div className="rt-pws-coh__heroactions">
-            {!k.disabled && k.left > 0 && <Link href={`/provider/orders/new?cohort=${k.id}`} className="button -sm -purple-1 text-white">Enrol student</Link>}
             {!k.disabled && k.left > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setBulk(true)}>Bulk enrolment</button>}
+            {!k.disabled && k.left > 0 && <Link href={`/provider/orders/new?cohort=${k.id}`} className="button -sm -purple-1 text-white">Enrol student</Link>}
             {canCancel && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
           </div>
         )}
@@ -397,7 +398,7 @@ function EmailSheet({ value, people, cohort: k, orderOf, onClose, onSent }) {
             <input id="rt-mail-subject" type="text" maxLength={140} value={subject} onChange={(e) => setSubject(e.target.value)} autoComplete="off" {...ariaFor("rt-mail-subject", errors.subject)} />
           </Field>
           <Field id="rt-mail-message" label="Message" error={errors.message}>
-            <textarea id="rt-mail-message" rows={7} maxLength={4000} value={message} onChange={(e) => setMessage(e.target.value)} autoComplete="off" {...ariaFor("rt-mail-message", errors.message)} />
+            <TextArea id="rt-mail-message" rows={7} maxLength={4000} value={message} onChange={(e) => setMessage(e.target.value)} autoComplete="off" {...ariaFor("rt-mail-message", errors.message)} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Send</button>
         </form>
@@ -495,7 +496,7 @@ export function MoveSheet({ enrolment: e, options, course, onClose, onSaved }) {
                 <FieldSelect id="rt-mv-to" label="New dates" placeholder="Choose the dates" value={to} onChange={(v) => { setTo(v); setError(""); }} options={options.map((x) => ({ value: x.id, label: `${dayRange(x.first, x.last)} · ${x.venue ? x.venue.city : "Online"} · ${x.left} left` }))} invalid={Boolean(error)} describedBy={error ? "rt-mv-to-e" : undefined} />
               </Field>
               <Field id="rt-mv-note" label="Note (optional)">
-                <textarea id="rt-mv-note" rows={3} maxLength={500} value={note} onChange={(ev) => setNote(ev.target.value)} autoComplete="off" />
+                <TextArea id="rt-mv-note" rows={3} maxLength={500} value={note} onChange={(ev) => setNote(ev.target.value)} autoComplete="off" />
               </Field>
               <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Reschedule</button>
             </>
@@ -562,7 +563,7 @@ function CancelBookingSheet({ enrolment: e, onClose, onSaved }) {
         <form className="rt-q__form" onSubmit={save} noValidate ref={formRef}>
           <p className="rt-acc__note">{learnerName(e.learner)}'s place is freed for someone else. Any refund is made from the order.</p>
           <Field id="rt-cb-reason" label="Reason" error={error}>
-            <textarea id="rt-cb-reason" rows={4} maxLength={500} value={reason} onChange={(ev) => setReason(ev.target.value)} autoComplete="off" {...ariaFor("rt-cb-reason", error)} />
+            <TextArea id="rt-cb-reason" rows={4} maxLength={500} value={reason} onChange={(ev) => setReason(ev.target.value)} autoComplete="off" {...ariaFor("rt-cb-reason", error)} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Cancel booking</button>
         </form>
@@ -596,7 +597,7 @@ function NotesSheet({ title, intro, open, list, onAdd, onClose }) {
         ) : <p className="rt-acc__note">No notes yet.</p>}
         <form className="rt-q__form" onSubmit={add} noValidate ref={formRef}>
           <Field id="rt-note-text" label="Add a note" error={error}>
-            <textarea id="rt-note-text" rows={3} maxLength={1000} value={text} onChange={(ev) => setText(ev.target.value)} autoComplete="off" {...ariaFor("rt-note-text", error)} />
+            <TextArea id="rt-note-text" rows={3} maxLength={1000} value={text} onChange={(ev) => setText(ev.target.value)} autoComplete="off" {...ariaFor("rt-note-text", error)} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Add note</button>
         </form>

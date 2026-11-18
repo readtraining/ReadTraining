@@ -1,0 +1,4 @@
+ALTER TABLE "courses" ADD COLUMN "closed_methods" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "courses" ADD CONSTRAINT "courses_closed_methods_offered" CHECK ("courses"."closed_methods" <@ "courses"."methods");--> statement-breakpoint
+ALTER TABLE "courses" ADD CONSTRAINT "courses_closed_methods_not_primary" CHECK ("courses"."method" is null or not ("courses"."method" = any("courses"."closed_methods")));--> statement-breakpoint
+ALTER TABLE "courses" ADD CONSTRAINT "courses_closed_methods_one_open" CHECK (cardinality("courses"."methods") = 0 or not ("courses"."methods" <@ "courses"."closed_methods"));

@@ -85,7 +85,7 @@ export default function AdminCoursePrices({ pricing }) {
                   <tr key={k.id}>
                     <td data-label="Dates">
                       {formatDateRange(k.startsOn, k.endsOn)}
-                      {!k.bookable && <> <AdminTag>Bookings off</AdminTag></>}
+                      {k.optionClosed ? <> <AdminTag>Bookings stopped</AdminTag></> : !k.bookable && <> <AdminTag>Bookings off</AdminTag></>}
                     </td>
                     <td data-label="Where">{k.place || methodName(k.method)}</td>
                     <td data-label="Price" className="rt-adm-num-cell">

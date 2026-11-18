@@ -10,6 +10,7 @@ import { Pill, Tabs, ToolSelect, formatDay } from "./providerParts";
 import { Confirm, Field, aria, isEmail, useParam } from "./settingsForm";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import TextArea from "@/components/forms/TextArea";
 
 // Settings › QA (learners' questions about a course, answered here and shown on the course page, plus questions the provider
 // answers up front) and the Team page (who can use the workspace, with a role each; the account owner can't be changed or removed).
@@ -37,7 +38,7 @@ function AnswerForm({ q, onDone, say }) {
   return (
     <form className="rt-adm-noteform rt-pws-set__answer" onSubmit={submit} noValidate ref={ref}>
       <Field id={id} label={q.answer ? "Your answer" : "Answer this question"} error={error} hint="Shown on the course page under the question.">
-        <textarea {...aria(id, error, true)} rows={3} maxLength={1500} autoComplete="off" value={v} onChange={(e) => setV(e.target.value)} />
+        <TextArea {...aria(id, error, true)} rows={3} maxLength={1500} autoComplete="off" value={v} onChange={(e) => setV(e.target.value)} />
       </Field>
       <div className="rt-pws-set__actions">
         <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{q.answer ? "Save answer" : "Post answer"}</button>
@@ -133,7 +134,7 @@ export function QaTab({ data, say }) {
             <input {...aria("rt-qa-q", errors.question)} type="text" maxLength={200} autoComplete="off" value={f.question} onChange={(e) => setF((x) => ({ ...x, question: e.target.value }))} />
           </Field>
           <Field id="rt-qa-a" label="Answer" error={errors.answer}>
-            <textarea {...aria("rt-qa-a", errors.answer)} rows={5} maxLength={1500} autoComplete="off" value={f.answer} onChange={(e) => setF((x) => ({ ...x, answer: e.target.value }))} />
+            <TextArea {...aria("rt-qa-a", errors.answer)} rows={5} maxLength={1500} autoComplete="off" value={f.answer} onChange={(e) => setF((x) => ({ ...x, answer: e.target.value }))} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Add question</button>
         </form>

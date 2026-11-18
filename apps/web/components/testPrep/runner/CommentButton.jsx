@@ -6,6 +6,7 @@ import { testPrepPage } from "@/data/testPrep";
 import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import FormGate from "@/components/forms/FormGate";
+import TextArea from "@/components/forms/TextArea";
 
 // "Leave a comment" (as on the reference, hurak.com): a button that opens the runner's pop-up (Sheet) with name, email (optional,
 // for a reply) and the comment. It checks the comment, sends through lib/comments.js (simulated until the endpoint exists) and
@@ -49,7 +50,7 @@ function CommentForm({ subject, test, onDone }) {
       <div className="rt-field">
         <label htmlFor="rt-cm-text">{c.textLabel}</label>
         {error && <p className="rt-q__err" id="rt-cm-text-err"><span className="rt-sr">Error: </span>{error}</p>}
-        <textarea id="rt-cm-text" value={text} onChange={(e) => { setText(e.target.value); if (error && e.target.value.trim().length >= MIN_TEXT) setError(""); }} placeholder={c.textPlaceholder} maxLength={1000} aria-invalid={error ? "true" : undefined} aria-describedby={error ? "rt-cm-text-err" : undefined}></textarea>
+        <TextArea id="rt-cm-text" value={text} onChange={(e) => { setText(e.target.value); if (error && e.target.value.trim().length >= MIN_TEXT) setError(""); }} placeholder={c.textPlaceholder} maxLength={1000} aria-invalid={error ? "true" : undefined} aria-describedby={error ? "rt-cm-text-err" : undefined} />
       </div>
       {status === "failed" && <p className="rt-q__err" role="alert">{c.failed}</p>}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={status === "sending"}>

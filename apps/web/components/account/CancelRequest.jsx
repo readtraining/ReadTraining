@@ -11,6 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import { contactHref } from "@/lib/forms";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = account.cancel;
 
@@ -123,7 +124,7 @@ export default function CancelRequest({ reference }) {
         </div>
         <div className="rt-field">
           <label htmlFor="rt-cx-details">{copy.details}</label>
-          <textarea id="rt-cx-details" rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} />
+          <TextArea id="rt-cx-details" rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} />
         </div>
 
         <div className="rt-acc__refund">

@@ -10,6 +10,7 @@ import { Loading, formatWhen, Pill, RowMenu } from "./providerParts";
 import { money } from "./charts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
+import TextArea from "@/components/forms/TextArea";
 
 // Requests (Hurak's, from the account menu): every learner's refund request in one place. Hurak's columns: refund number, booking
 // reference, learner, course, refund type (full, or partial with the amount), the learner's reason, and two actions: view the order,
@@ -121,7 +122,7 @@ export default function ProviderRequests() {
               <label htmlFor="rt-rq-note">Description{decision === "rejected" ? "" : " (optional)"}</label>
               <p className="rt-field__hint">The learner sees this with your decision.</p>
               {errors.note && <p className="rt-q__err" id="rt-rq-note-e"><span className="rt-sr">Error: </span>{errors.note}</p>}
-              <textarea id="rt-rq-note" rows={4} maxLength={500} placeholder="Enter description here" value={note} onChange={(e) => setNote(e.target.value)} autoComplete="off" aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-rq-note-e" : undefined} />
+              <TextArea id="rt-rq-note" rows={4} maxLength={500} placeholder="Enter description here" value={note} onChange={(e) => setNote(e.target.value)} autoComplete="off" aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-rq-note-e" : undefined} />
             </div>
             <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy || undefined}>{busy ? "Saving…" : "Save"}</button>
           </form>

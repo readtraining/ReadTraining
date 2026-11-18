@@ -18,6 +18,7 @@ import { LedgerTable } from "./AdminOrder";
 import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const P = A.payouts;
 const L = A.ledger;
@@ -157,7 +158,7 @@ function HoldForm({ payout, onDone }) {
   return (
     <form className="rt-q__form rt-biz__sheetform" ref={ref} noValidate onSubmit={submit}>
       <p className="rt-adm-strong">{payout.ref} · {formatPrice(payout.amount)} to {payout.provider}</p>
-      {field("rt-po-reason", P.holdReason, null, error, <textarea id="rt-po-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={describedBy("rt-po-reason", null, error)} />)}
+      {field("rt-po-reason", P.holdReason, null, error, <TextArea id="rt-po-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={describedBy("rt-po-reason", null, error)} />)}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={hold.isPending}>{P.hold}</button>
     </form>
   );
@@ -260,7 +261,7 @@ function AdjustForm({ providers, onDone }) {
       {field("rt-adj-provider", L.provider, null, errors.providerId, <FieldSelect id="rt-adj-provider" label={L.provider} value={v.providerId} onChange={(id) => setV((x) => ({ ...x, providerId: id }))} options={providers} invalid={Boolean(errors.providerId)} describedBy={describedBy("rt-adj-provider", null, errors.providerId)} />)}
       <Choice name="rt-adj-type" legend={L.adjustType} value={v.type} onChange={(t) => setV((x) => ({ ...x, type: t }))} options={Object.keys(L.adjustTypes).map((k) => ({ value: k, label: L.adjustTypes[k] }))} />
       {field("rt-adj-amount", L.adjustAmount, L.adjustAmountHint, errors.amountPence, <input id="rt-adj-amount" type="text" inputMode="decimal" className="rt-adm-num" value={v.amount} onChange={(e) => setV((x) => ({ ...x, amount: e.target.value }))} aria-invalid={errors.amountPence ? true : undefined} aria-describedby={describedBy("rt-adj-amount", L.adjustAmountHint, errors.amountPence)} />)}
-      {field("rt-adj-note", L.adjustNote, null, errors.note, <textarea id="rt-adj-note" rows={3} maxLength={500} value={v.note} onChange={(e) => setV((x) => ({ ...x, note: e.target.value }))} aria-invalid={errors.note ? true : undefined} aria-describedby={describedBy("rt-adj-note", null, errors.note)} />)}
+      {field("rt-adj-note", L.adjustNote, null, errors.note, <TextArea id="rt-adj-note" rows={3} maxLength={500} value={v.note} onChange={(e) => setV((x) => ({ ...x, note: e.target.value }))} aria-invalid={errors.note ? true : undefined} aria-describedby={describedBy("rt-adj-note", null, errors.note)} />)}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={adjust.isPending}>{L.adjust}</button>
     </form>
   );

@@ -7,6 +7,7 @@ import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import FormGate from "@/components/forms/FormGate";
+import TextArea from "@/components/forms/TextArea";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_MESSAGE = 1500;
@@ -97,7 +98,7 @@ function ContactFormFields({ form }) {
         <label htmlFor={`rt-c-${name}`}>{label}</label>
         {hint && <small className="rt-field__hint" id={`rt-c-${name}-hint`}>{hint}</small>}
         {errors[name] && <p className="rt-q__err" id={`rt-c-${name}-e`}><span className="rt-sr">Error: </span>{errors[name]}</p>}
-        {props.as === "textarea" ? <textarea rows={4} maxLength={MAX_MESSAGE} {...common} /> : props.as === "select" ? (
+        {props.as === "textarea" ? <TextArea rows={4} maxLength={MAX_MESSAGE} {...common} /> : props.as === "select" ? (
           <FieldSelect id={common.id} label={label} placeholder="Select a topic" value={common.value} onChange={(value) => set(name)({ target: { value } })} options={form.topics} invalid={Boolean(errors[name])} describedBy={describedBy} />
         ) : <input {...common} {...props} />}
       </div>

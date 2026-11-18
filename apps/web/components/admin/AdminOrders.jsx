@@ -18,6 +18,7 @@ import { describedBy, field } from "./contentParts";
 import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.orders;
 const TABS = Object.keys(copy.tabs);
@@ -166,7 +167,7 @@ function BookForm() {
         {field("rt-bk-unit", b.unit, null, errors.unitPence, <input id="rt-bk-unit" type="text" inputMode="decimal" className="rt-adm-num" value={free ? "0.00" : v.unit} readOnly={free} onChange={set("unit")} aria-invalid={errors.unitPence ? true : undefined} aria-describedby={describedBy("rt-bk-unit", null, errors.unitPence)} />)}
       </div>
       <p className="rt-adm-book__total"><span>{b.total}</span> <strong>{qty && (unit || free) ? formatPrice(((unit || 0) * qty) / 100) : "–"}</strong></p>
-      {field("rt-bk-note", b.note, null, errors.note, <textarea id="rt-bk-note" rows={2} maxLength={500} value={v.note} onChange={set("note")} />)}
+      {field("rt-bk-note", b.note, null, errors.note, <TextArea id="rt-bk-note" rows={2} maxLength={500} value={v.note} onChange={set("note")} />)}
       {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={book.isPending}>{b.submit}</button>
     </form>

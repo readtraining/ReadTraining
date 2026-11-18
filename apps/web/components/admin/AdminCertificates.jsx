@@ -10,6 +10,7 @@ import { Search, Said, TableSkeleton, Empty, HeaderAction, RowMenu } from "./adm
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.certificates;
 const CertPill = ({ cert, now }) => {
@@ -113,7 +114,7 @@ export default function AdminCertificates() {
             <div className="rt-field">
               <label htmlFor="rt-adm-reason">{copy.revokeReason}</label>
               {err("reason")}
-              <textarea id="rt-adm-reason" rows={3} maxLength={600} value={form.reason || ""} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-adm-reason-e" : undefined} />
+              <TextArea id="rt-adm-reason" rows={3} maxLength={600} value={form.reason || ""} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-adm-reason-e" : undefined} />
             </div>
             <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{copy.revoke}</button>
           </form>
