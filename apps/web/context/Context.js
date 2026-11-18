@@ -49,7 +49,7 @@ export const useContextElement = () => {
         const existing = cartCourses.find((elm)=>lineKey(elm) === lineKey(item))
         if (existing) {
             const total = Math.min(maxDelegates(existing),(Number(existing.quantity) || 1) + quantity)
-            try { window.sessionStorage.setItem(MERGED_KEY, JSON.stringify({ title: item.title, quantity: total })) } catch {}
+            try { window.sessionStorage.setItem(MERGED_KEY, JSON.stringify({ key: lineKey(item), title: item.title, quantity: total })) } catch {}
         }
         setCartCourses(pre=>pre.some((elm)=>lineKey(elm) === lineKey(item)) ? pre.map((elm)=>lineKey(elm) === lineKey(item) ? {...elm,quantity:Math.min(maxDelegates(elm),(Number(elm.quantity) || 1) + quantity)} : elm) : mergeLines([...pre,item]))
     }
