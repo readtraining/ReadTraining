@@ -15,7 +15,7 @@ import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listing
 import { providerTermsVersion } from '../content/content.router.mjs'
 import { PRIVATE_ROLES } from '../provider/profile.mjs'
 
-// One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
+// One login, several identities: every account is a student; a provider and a business are organisations the
 // person belongs to. These procedures add an identity, open a workspace (the server-side check behind every /provider and
 // /business page), log a switch between identities, and read a provider's public profile.
 
@@ -120,7 +120,7 @@ export const organisationsRouter = createTRPCRouter({
       return org
     }),
 
-  // Create a business account (Hurak's "Create a Business Account"): company name, your role, phone. Ready straight away.
+  // Create a business account: company name, your role, phone. Ready straight away.
   createBusiness: protectedProcedure
     .input(z.object({ companyName: orgName('company name'), jobTitle: z.string().trim().min(2, 'Enter your role, like Operations Manager.').max(80, 'Your role must be 80 characters or fewer.'), phone }))
     .mutation(async ({ ctx, input }) => {

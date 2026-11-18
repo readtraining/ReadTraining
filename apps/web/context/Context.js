@@ -42,7 +42,7 @@ export const useContextElement = () => {
     const addCourseToCart = (id, course)=>{
         const found = course
         // the delegates chosen with the date (the dates pop-up's counter), 1 otherwise; the same date already in the basket gets them
-        // added to its line (as Hurak's), up to the date's places
+        // added to its line, up to the date's places
         const quantity = Math.min(maxDelegates(found), Math.max(1, Number(found.quantity) || 1))
         const item = {...found,quantity}
         // the same date (and package) already in the basket: its line grows, and the basket says so once it opens (BasketPage)

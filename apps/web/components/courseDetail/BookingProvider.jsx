@@ -154,7 +154,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   }, []);
 
   // ---- Book now: one shared flow for the date pop-up, the card and the mobile bar. It puts the date in the basket (never twice:
-  // the basket merges the same date and package) and goes straight to the basket, as Hurak's "Book now" does. A date sold in
+  // the basket merges the same date and package) and goes straight to the basket. A date sold in
   // packages asks which one first: the dates pop-up has its own step for it; the card and the bar open the packages here ----
   const router = useRouter();
   const [status, setStatus] = useState("idle"); // idle | loading | error
@@ -188,7 +188,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
     [status, session, isInHouse, addCourseToCart, course, notify, router, needsAid],
   );
   const addToBasket = useCallback(() => book(), [book]);
-  // Book now, wherever it is on the page (hero, card, mobile bar), as Hurak's: nothing is chosen for the learner. A course with
+  // Book now, wherever it is on the page (hero, card, mobile bar): nothing is chosen for the learner. A course with
   // dates opens them (venue, date, then the package and first aid); a self-paced course has no date, so it goes on to its steps.
   const bookNow = useCallback(() => (mode === "ondemand" ? book() : openDates()), [mode, book, openDates]);
   // What a study method offers, for the card, the mobile bar and Learning options: how many dates and venues, the towns, the

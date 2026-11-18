@@ -1,4 +1,4 @@
-// ReadTraining's own draft, kept for later. Not used while the client's current hurak.com text is in data/legal/terms.js.
+// ReadTraining's own draft, kept for later. Not used while the client's current site's text is in data/legal/terms.js.
 // It is in the earlier shape ("In short" summaries, numbered clauses): convert it to sections of `blocks` before using it.
 // Terms and Conditions (DRAFT: needs review by a solicitor before launch). Read through lib/legal.js.
 //

@@ -14,7 +14,7 @@ const PER_PAGE = 10;
 const CHANNELS = [{ value: "", label: "All sales channels" }, ...Object.entries(pw.channels).map(([value, label]) => ({ value, label }))];
 const STATUSES = [{ value: "", label: "All statuses" }, ...Object.entries(pw.orderStatuses).map(([value, label]) => ({ value, label }))];
 
-// Orders, as Hurak's: find an order by its number, the customer's first name, last name or email (one search box, the workspace's
+// Orders: find an order by its number, the customer's first name, last name or email (one search box, the workspace's
 // filter bar as on Courses), filter by sales channel and status (all kept in the address), newest first, 10 a page. Columns: order no, customer name and email, sales channel, who booked it, status, amount,
 // payment method, date, and the actions (view the order, its first cohort). "Create order" adds one by hand.
 export default function ProviderOrders() {

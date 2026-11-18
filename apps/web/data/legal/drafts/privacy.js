@@ -1,11 +1,11 @@
-// ReadTraining's own draft, kept for later. Not used while the client's current hurak.com text is in data/legal/privacy.js.
+// ReadTraining's own draft, kept for later. Not used while the client's current site's text is in data/legal/privacy.js.
 // It is in the earlier shape ("In short" summaries, numbered clauses): convert it to sections of `blocks` before using it.
 // Privacy Policy (DRAFT: needs review by a solicitor before launch). Read through lib/legal.js; same shape as terms.js
 // (sections with an "In short" summary and clauses of blocks; see that file). Extra block: { type: "cards", items }.
 //
 // Covers the UK GDPR "right to be informed" list (ICO): who we are, what we collect and where from, purposes and lawful
 // bases, who we share with, transfers outside the UK, retention, rights, the right to complain to the ICO.
-// Third-party services are the ones the reference site (hurak.com) uses, as the client asked: Stripe (cards and Klarna),
+// Third-party services are the ones the reference site uses, as the client asked: Stripe (cards and Klarna),
 // Google Tag Manager / Analytics / Ads, Meta Pixel, Microsoft Advertising, Zoho (PageSense, SalesIQ chat, Desk), Sentry,
 // reCAPTCHA, Cloudflare, Vimeo / YouTube; plus our own database host, Supabase. Unlike the reference, analytics and
 // advertising only run with consent (UK PECR), which needs a cookie consent tool before launch. Values in [brackets] are

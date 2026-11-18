@@ -15,7 +15,7 @@ import { HeaderAction } from "@/components/admin/adminParts";
 const SHOW = [{ value: "", label: "In use" }, { value: "archive", label: "Archived" }, { value: "all", label: "All plans" }];
 const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date" : "dates"}` : "", u.courses ? `${u.courses} self-paced ${u.courses === 1 ? "course" : "courses"}` : ""].filter(Boolean).join(" and ") || "Not used yet";
 
-// Price plans (Hurak's Tiered Plans), from the API (provider.plans): each plan's packages and prices, and how many dates and
+// Price plans (Tiered Plans), from the API (provider.plans): each plan's packages and prices, and how many dates and
 // courses use it. A plan is the provider's own pricing: saving it changes what learners see at once. A date chooses its plan in its own form ("Tiered" pricing); a self-paced course in its
 // course pricing. Edit opens the plan; a plan is archived (dates on it keep it) or, when nothing
 // ever used it, deleted. Search and the archive filter are kept in the address.

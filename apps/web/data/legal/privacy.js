@@ -1,5 +1,5 @@
 // Privacy Policy, written for ReadTraining in our own words, following the sections and meaning of the client's current
-// policy (hurak.com/terms/privacy-policy). Read through lib/legal.js; same shape as terms.js. Our longer draft with the UK GDPR
+// policy. Read through lib/legal.js; same shape as terms.js. Our longer draft with the UK GDPR
 // and ICO detail and the third-party services: data/legal/drafts/privacy.js.
 
 export const privacy = {

@@ -17,7 +17,7 @@ import { loadCatalogue, liveHref } from "@/lib/catalogueServer";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // A single mock test (/mock-exams-test/<subject>/<test>). A test with questions opens the test runner (the paper is sent
-// without answers; marking happens on the server). As on the reference (hurak.com/mock-exams-test/...): a compact flat band
+// without answers; marking happens on the server). As on the reference: a compact flat band
 // (breadcrumb + title), "Book a course" and "Leave a comment" beside the test, then "Ready to book your course?" and
 // "Still looking for an answer?" under it. A test without questions yet has no page (404): nothing links to it until its
 // questions are added.

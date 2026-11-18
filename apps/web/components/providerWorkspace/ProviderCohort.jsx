@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
 
-// Manage cohort, as Hurak's: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
+// Manage cohort: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
 // whether it takes bookings, tutor), with Edit cohort details, Enrol student (a new order on these dates), Bulk enrolment (a
 // file of people booked outside ReadTraining) and Manage curriculum. Then its students: each one's status, name and email, the
 // customer who paid (name and email), pricing plan, sales channel, payment, notes and LMS access, an email button, the learner record, and a menu
@@ -336,7 +336,7 @@ const fill = (text, e, k, o) => text
   .replace(/\{order\}/g, o?.ref || "");
 
 // "Send email": to one student (address can be changed, e.g. the order confirmation to someone else) or to every picked student.
-// Hurak's "Select email template" (filled in for each student) or "Create new".
+// "Select email template" (filled in for each student) or "Create new".
 function EmailSheet({ value, people, cohort: k, orderOf, onClose, onSent }) {
   const formRef = useRef(null);
   const [mode, setMode] = useState("template");

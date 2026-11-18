@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/states/States";
 import FormGate from "@/components/forms/FormGate";
 import TextArea from "@/components/forms/TextArea";
 
-// "Mock exam reviews" at the end of a subject page (as on the reference, hurak.com): the home section head (eyebrow + title),
+// "Mock exam reviews" at the end of a subject page (as on the reference site): the home section head (eyebrow + title),
 // then the reviews, or an empty state with "Give a review". The button opens the test runner's pop-up (Sheet: centred on
 // desktop, a bottom sheet on phones) with a 1-5 star rating, name and review; it checks the fields, sends through
 // lib/reviews.js (simulated until the reviews endpoint exists) and thanks the reader.

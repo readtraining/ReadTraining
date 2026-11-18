@@ -22,7 +22,7 @@ import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { useNewCourse } from "./NewCourse";
 import TextArea from "@/components/forms/TextArea";
 
-// Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
+// Cohorts: every run of a course on set dates: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
 // Filtered by delivery, course, date, venue, tutor and when, with a search; 10 a page; filters are kept in the address. The
 // Self-paced tab lists the self-paced courses (they have no dates). CohortForm (named export) is the create and edit panel: dates
@@ -509,7 +509,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const courses = coursesQ.data || [];
   const courseOf = (id) => courses.find((c) => String(c.id) === String(id));
 
-  // pricing: "flat" (the date's own price) or "tiered" (a price plan's packages, Hurak's Tiered)
+  // pricing: "flat" (the date's own price) or "tiered" (a price plan's packages, Tiered)
   const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "12", details: "" });
 
   // fill the form each time the panel opens (once the courses are in)
@@ -567,7 +567,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   };
   const setSlot = (i, patch) => setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
 
-  // "Save and create another" (Hurak's "Create another cohort"): the form stays open for the same course and settings
+  // "Save and create another": the form stays open for the same course and settings
   const save = async (e, another = false) => {
     e.preventDefault();
     setPressed(another ? "another" : "save");

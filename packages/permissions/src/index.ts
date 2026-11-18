@@ -2,8 +2,8 @@
 // (layouts); the browser may only use it to hide buttons, never as the real check. Plain data and pure functions, no I/O,
 // so every caller gets the same answer.
 //
-// Provider roles and what each may do follow the Hurak research (docs/auth-and-permissions.md §6, for the client to
-// confirm); business roles are Hurak's owner/member; admins are one role with permission switches and presets.
+// Provider roles and what each may do follow the research (docs/auth-and-permissions.md §6, for the client to
+// confirm); business roles are owner/member; admins are one role with permission switches and presets.
 
 export const PROVIDER_ROLES = ['owner', 'admin', 'tutor', 'course_editor', 'support', 'sales', 'accounts', 'marketing', 'assistant'] as const
 export const BUSINESS_ROLES = ['owner', 'member'] as const

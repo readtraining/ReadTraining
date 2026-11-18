@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/format";
 
 // The client's packages for the course (data/courseGuides.js), shown like the learning options' cards above (.rt-lc): what each
 // includes and its starting price (the course's lowest live price plus its `add`). Information only: the package is chosen when a
-// date is booked (Book now on a date, then "Choose your package", as Hurak's).
+// date is booked (Book now on a date, then "Choose your package").
 export default function PackagePicker({ packages }) {
   const { course } = useBooking();
   if (!packages?.items?.length) return null;

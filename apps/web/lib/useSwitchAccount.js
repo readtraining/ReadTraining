@@ -9,7 +9,7 @@ import { useMe } from "@/lib/useMe";
 const c = account.switchAccount;
 const initialsOf = (s = "") => s.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
-// Switch account (Hurak's model: one login, several identities). The entries are the identities this login really has (from
+// Switch account (one login, several identities). The entries are the identities this login really has (from
 // the API), the current one marked, then "Become a provider" / "Create a business account" for the ones it hasn't got.
 // `current`: { kind: "student" } or { kind: "provider" | "business", organisationId }. go(entry) logs the switch, then opens it.
 export function useSwitchAccount(current) {

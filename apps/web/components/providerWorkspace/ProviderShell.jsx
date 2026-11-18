@@ -23,9 +23,9 @@ import { NewCourseProvider, NewCourseSheet } from "./NewCourse";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
-// The provider workspace's layout, with Hurak's navigation in our design (DESIGN-SYSTEM.md, "Provider workspace follows the same
+// The provider workspace's layout, with navigation in our design (DESIGN-SYSTEM.md, "Provider workspace follows the same
 // shell pattern"). The dark band, the same on every page: the logo and "Provider" tag, then Student (a plain text link to the learner
-// side, as Udemy's and Airbnb's), the bell with unread notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
+// side), the bell with unread notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
 // sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups and, below 992px, the menu drawer. From
 // 992px the button at its top (or Ctrl+B) folds it to a rail of icons, one per item (a group's goes to its first page, each with

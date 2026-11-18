@@ -14,7 +14,7 @@ import { adminProcedure, createTRPCRouter, refuse } from '../../trpc/trpc.mjs'
 import { defaultCommission } from './commission.mjs'
 
 // Orders, refunds and disputes (Part B, B4), real in the database, with no payment provider yet. Orders come from staff bookings
-// (invoice, payment link or free, as Hurak's staff do) and test data; every money movement is a ledger entry (lib/money.mts does
+// (invoice, payment link or free, as staff do) and test data; every money movement is a ledger entry (lib/money.mts does
 // the maths). Refunds and lost disputes are RECORDED: the ledger and the order change, but no money moves until a payment
 // provider is connected (the screens say so).
 // Rules: anyone who can see orders can ask for a refund; deciding needs the "refunds" switch, never on your own request, and
@@ -28,7 +28,7 @@ const pence = z.number().int().positive('Enter an amount above £0.').max(100_00
 const text = (min: number, max: number, what: string) => z.string().trim().min(min, `Enter ${what}.`).max(max, `Keep it to ${max} characters or fewer.`)
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a date, like 2026-11-30.')
 
-// ---- fees: the payment fee each method pays (platform setting `fees`; Hurak's 3% card and 6% Klarna until changed) -----------
+// ---- fees: the payment fee each method pays (platform setting `fees`; 3% card and 6% Klarna until changed) -----------
 export const FEES_KEY = 'fees'
 export const DEFAULT_FEES = { cardBps: 300, bnplBps: 600, payoutDay: 28 }
 export async function fees(db: Writer) {
@@ -173,7 +173,7 @@ export const ordersRouter = createTRPCRouter({
       }
     }),
 
-  // A staff booking (Hurak's "Booked by" staff sales): invoice or payment link, or free with the "free bookings" switch. The order
+  // A staff booking ("Booked by" staff sales): invoice or payment link, or free with the "free bookings" switch. The order
   // takes today's payment fee and the provider's commission rate, and its purchase goes into the ledger.
   book: adminProcedure('admin.orders.book')
     .input(

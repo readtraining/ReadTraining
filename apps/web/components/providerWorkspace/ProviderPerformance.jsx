@@ -23,7 +23,7 @@ const RATING_OPTIONS = [{ value: "", label: "All ratings" }, ...[5, 4, 3, 2, 1].
 const LEAD_STATUSES = { new: "New", replied: "Replied", closed: "Closed" };
 const LEAD_TONE = { new: "warn", replied: "info", closed: "muted" };
 
-// Performance: Hurak's three tabs (Overview, Reviews, Leads) and date ranges, in our design. Overview: the three KPI cards
+// Performance: three tabs (Overview, Reviews, Leads) and date ranges, in our design. Overview: the three KPI cards
 // (total revenue, leads, enrolments, each with this month's figure) switch one interactive chart; each card also shows the change
 // on the previous period and a sparkline, and the chart draws the previous period dashed. Below it, revenue by course and by sales
 // channel. The tab, range and filters are kept in the address.
@@ -60,7 +60,7 @@ export default function ProviderPerformance() {
   );
 }
 
-// Hurak's four date ranges as one segmented control (a radio group: arrow keys move between them)
+// four date ranges as one segmented control (a radio group: arrow keys move between them)
 // the date range: the standard Tabs, as every other switch
 function RangeTabs({ value, onChange }) {
   return <Tabs tabs={pw.ranges.map((r) => ({ key: r.key, label: r.label }))} value={value} onChange={onChange} label="Date range" />;

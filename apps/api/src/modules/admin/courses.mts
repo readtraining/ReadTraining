@@ -43,7 +43,7 @@ import {
 
 type Course = typeof courses.$inferSelect
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
-// Where the course is listed follows its subject (Hurak's rule, placeOn): when a course or a change to it is approved, it goes on
+// Where the course is listed follows its subject (placeOn): when a course or a change to it is approved, it goes on
 // the shared course page for its subject (or a page of its own when there is none).
 async function placeBySubject(tx: Tx, courseId: number) {
   const [c] = await tx.select({ kind: courses.kind, parentId: courses.parentId, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, courseId))

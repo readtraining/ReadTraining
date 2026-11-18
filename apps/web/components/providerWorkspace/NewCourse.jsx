@@ -20,9 +20,8 @@ import { NavIcon } from "@/components/header/navIcons";
 
 // New course: one pop-up on one screen, over whatever workspace page it was opened from (ProviderShell holds it). What the
 // course is (working title; category, sub-category and topic, the topic optional) and how it is taught (its primary learning
-// option, as Hurak's first step asks, three cards in a row; more ways later in the editor's Learning options), plus Skill Saver
-// (an unticked opt-in, changeable later in the editor's Dates and prices step). Where learners find it is not asked (Hurak never
-// asks it): when the subject has a shared course page, the course goes on it (sharedPageFor), said in one quiet line, and the
+// option, three cards in a row; more ways later in the editor's Learning options), plus Skill Saver
+// (an unticked opt-in, changeable later in the editor's Dates and prices step). Where learners find it is not asked: when the subject has a shared course page, the course goes on it (sharedPageFor), said in one quiet line, and the
 // course settings (the gear) can change it later. The pop-up also does some of the work: the subject is suggested from the
 // title (subjectFor; "Use this" fills all three), and a title the provider already has is pointed out (a note, not a block).
 // The cursor starts in the title, Enter creates the draft, and the performance model (Bookings to start) is set in its editor

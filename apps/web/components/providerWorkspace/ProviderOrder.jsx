@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/states/States";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
 
-// Order details, as Hurak's: the order (amount, number, status, sales channel, payment method, purchase date, card), billing
+// Order details: the order (amount, number, status, sales channel, payment method, purchase date, card), billing
 // details, the timeline with notes, the invoice (upload it, record when it was paid), the enrolled students (one card per
 // booking: reference, course, delivery, venue, dates, timings, price, pricing plan, learner, View cohort, and Reschedule / Resit /
 // Upsell / Addon) and the earning details. Actions: Initiate refund (full or partial), Send confirmation mail; an unpaid order can

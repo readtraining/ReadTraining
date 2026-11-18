@@ -2,7 +2,7 @@ import { topBar } from "@/data/home";
 import { BASKET_HREF, CATALOGUE_HREF, CHECKOUT_HREF } from "@/lib/routes";
 
 // The checkout (/checkout) and the booking confirmation (/checkout/confirmation). One page, as the client's current site
-// (hurak.com) and the large booking sites do it: your details (individual or business), the billing address, the delegates for
+// and the large booking sites do it: your details (individual or business), the billing address, the delegates for
 // each place, then payment, beside the order summary. The menu is left out so nothing pulls people away mid-payment. Our own wording.
 
 export const checkout = {

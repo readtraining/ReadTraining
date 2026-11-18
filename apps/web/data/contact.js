@@ -3,7 +3,7 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 import { contactHref } from "@/lib/forms";
 
 // Contact us (/contact-us). Contact details come from data/home (top bar, help section), so every page shows the same ones.
-// The routes follow the client's current contact page (hurak.com/contact-us: sales and help & support), the form follows the
+// The routes follow the client's current contact page (sales and help & support), the form follows the
 // GOV.UK patterns (labels above fields, "(optional)", an error summary, a confirmation with a reference).
 
 const tel = topBar.phoneHref;

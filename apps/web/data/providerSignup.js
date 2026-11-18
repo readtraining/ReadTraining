@@ -1,4 +1,4 @@
-// Becoming a provider, as the client's site (hurak.com) does it: "Become a provider" on the provider page opens a pop-up that
+// Becoming a provider, as the client's site does it: "Become a provider" on the provider page opens a pop-up that
 // creates a normal account (first name, last name, email, password, agreeing to the provider terms; the same login as learners,
 // with a "log in" link for people who already have one); then provider onboarding asks for the provider details and opens the
 // workspace. The client's onboarding screen is behind sign-in, so its fields are the brief's: company or instructor name,

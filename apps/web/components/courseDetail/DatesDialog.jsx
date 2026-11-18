@@ -42,7 +42,7 @@ const tile = (iso) => {
 
 // One date: a calendar tile, the dates, how long and when, the days themselves when they aren't all in a row, what the provider
 // wrote about the date, the price and Skill Saver when only some dates are in it. With `onBook` (course page, course cards) the
-// date has its own delegates counter (as Hurak's, up to the places left) and "Book now", which books that many; otherwise the whole
+// date has its own delegates counter (up to the places left) and "Book now", which books that many; otherwise the whole
 // row picks it, with a tick once chosen (the basket's "Change date").
 function DateRow({ s, selected, onSelect, onBook, classroom, markSaver }) {
   const [qty, setQty] = useState(1);
@@ -126,7 +126,7 @@ const SHOWN = 3;
 const FOLD_AT = 4;
 const VENUES_STEP = 10;
 
-// A venue (as Hurak's): a plain row with its name, address, how far it is from the place searched for, next date and
+// A venue: a plain row with its name, address, how far it is from the place searched for, next date and
 // lowest price, and "Show dates" on the right; its dates open under it, one venue at a time, so many venues stay easy to scan.
 function VenueCard({ v, current, onSelect, onBook, open, onToggle, more, onMore, markSaver }) {
   const id = `rt-dd-v-${v.key.replace(/\W+/g, "-")}`;
@@ -277,7 +277,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
   // which place the distances are from (the visitor can tell which Newport was used), or why the words typed are matched instead
   const placeNote = !lookup ? "" : place ? `Nearest to ${[place.label, place.area].filter(Boolean).join(", ")} first` : located.isError ? "We can't look places up right now, so venues are matched by name." : "";
   const toggle = (k) => setMore((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));
-  // Booking (Book now on each date): every venue starts closed, as Hurak's, so the visitor picks the venue first; only a course
+  // Booking (Book now on each date): every venue starts closed, so the visitor picks the venue first; only a course
   // with one venue opens it (there is nothing to pick). Changing a date in the basket opens the venue of the date already chosen.
   const autoOpen = !classroom ? null : list.length === 1 ? list[0].key : !onBook && chosenVenue && list.some((v) => v.key === chosenVenue) ? chosenVenue : null;
   const openKey = openPick === undefined ? autoOpen : openPick;
@@ -391,7 +391,7 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
 }
 
 // The course page's pop-up for Classroom and Live online, on the page's booking state: every date has its own "Book now", which
-// books it and goes to the basket (as Hurak's).
+// books it and goes to the basket.
 // When the course runs both, the pop-up's own tabs switch between their dates; the page follows only once a date is chosen.
 export default function DatesDialog() {
   const { course, mode, session, selectSession, datesOpen, closeDates, book } = useBooking();

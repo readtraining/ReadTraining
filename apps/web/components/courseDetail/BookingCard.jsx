@@ -60,7 +60,7 @@ const QUOTE_TEXT = TEAM.quoteText;
 const SAVER_DATE = "In Skill Saver: members get their discount";
 const IN_HOUSE_LINE = TEAM.line;
 
-// The booking card, as Hurak's: nothing is chosen for the learner. The SELECTED study method on top: its lowest price ("From",
+// The booking card: nothing is chosen for the learner. The SELECTED study method on top: its lowest price ("From",
 // with that date's was-price), how many dates at how many venues and the next one, the towns, and Book now, which opens the dates
 // (venue, date, package, first aid, then the basket); a self-paced course shows "Start any time" and goes on to its steps. Then
 // one row for every other option the course offers (choosing a row selects it everywhere), then a grey footer with Save.

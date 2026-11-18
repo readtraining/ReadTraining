@@ -96,7 +96,7 @@ function PlaceCard({ p, learners, highlight, onChange }) {
 }
 
 // Team training assignments: every upcoming course the team has places on, each with its places bar, the learners who have a place
-// and the places still free. As Hurak's Courses page: the course type, a title search, Clear filter and how many courses match, and
+// and the places still free. Its filters: the course type, a title search, Clear filter and how many courses match, and
 // each course tagged with its type. Filter to the courses with places to assign; ?place= (from the dashboard
 // and bookings) scrolls to one.
 export default function BizAssignments() {

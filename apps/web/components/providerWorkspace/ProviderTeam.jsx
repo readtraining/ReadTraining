@@ -9,7 +9,7 @@ import FormGate from "@/components/forms/FormGate";
 import { Loading } from "./providerParts";
 import { TeamTab } from "./SettingsPeople";
 
-// Team (Hurak's "Manage Team Members", from the account menu): the linked members with their roles, add a member by email and
+// Team ("Manage Team Members", from the account menu): the linked members with their roles, add a member by email and
 // role, change a role, remove a member. Owners and admins only. Its records are still demo ones (lib/providerWorkspace.js), so it
 // stays behind the "coming soon" switch (lib/forms.js `providerTeam`) until it saves through the API.
 export default function ProviderTeam() {

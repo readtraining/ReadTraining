@@ -14,7 +14,7 @@ const TABS = ["all", "credit", "overdue", "suspended"];
 const BUSINESS_SORT = { name: (b) => b.name, places: (b) => b.places.bought, credit: (b) => b.credit, owed: (b) => b.owed, overdue: (b) => b.overdue };
 
 // Business accounts (admin plan module 11): every company with its places used, credit facility, what it owes and how much is
-// overdue. Tabs: all, eligible for credit (regular customers we can offer credit to, as on Hurak), overdue money, credit on hold (kept in the address); a search by company or contact.
+// overdue. Tabs: all, eligible for credit (regular customers we can offer credit to), overdue money, credit on hold (kept in the address); a search by company or contact.
 export default function AdminBusinesses() {
   const data = useAdmin();
   const [tab, setTab] = useState("all");

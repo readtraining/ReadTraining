@@ -15,7 +15,7 @@ import TextArea from "@/components/forms/TextArea";
 const copy = W.businesses;
 const d = copy.detail;
 
-// One business account: the company, places bought vs assigned, the credit facility (as on Hurak, companies don't apply: we offer
+// One business account: the company, places bought vs assigned, the credit facility (companies don't apply: we offer
 // credit with a limit once their history meets every eligibility check; then change the limit, put credit on hold or lift it), money owed by age, the invoices with their purchase orders (send a reminder,
 // mark paid), and the team's notes. Each change is saved.
 export default function AdminBusiness({ slug }) {

@@ -209,7 +209,7 @@ function alreadySaved(patch, fresh, access) {
   return Object.keys(patch).every((k) => same(tidy(patch[k]), tidy(saved[k])));
 }
 
-// One course, as Hurak's editor: the "Publish your course" list on the left (one item per section, ticked when complete, kept in
+// One course in the editor: the "Publish your course" list on the left (one item per section, ticked when complete, kept in
 // ?tab=), the section on the right. The sections' fields are one draft saved with "Save"; images and SEO save themselves. The
 // header shows the status and performance model, with Preview and the gear (course settings). "Send for approval" sends a draft
 // once nothing required is missing. Leaving with unsaved changes asks first. Course data comes from the API.
@@ -1334,7 +1334,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
         {selfPaced && (
           <div className="rt-pws-ce__part">
             {dated.length > 0 && <h3 className="rt-adm-h3">{methodName("self-paced")}</h3>}
-            {/* Hurak's pricing mode: Flat (one price) or Tiered (packages from a price plan) */}
+            {/* pricing mode: Flat (one price) or Tiered (packages from a price plan) */}
             <Choice name="rt-pws-ce-pricing" legend="Pricing" value={tiered ? "tiered" : "flat"} onChange={(v) => !locked && setTiered(v === "tiered")}
               options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
             {tiered ? (
@@ -1387,10 +1387,10 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
 
 // ---- Learning options ------------------------------------------------------------------------------------------------------
 
-// Hurak's learning options: the primary way the course is taught (shown first on its page and in search) and the other ways it is
+// learning options: the primary way the course is taught (shown first on its page and in search) and the other ways it is
 // offered, switched on beside it. Choosing a primary switches it on, and the primary can't be switched off. A dated option with
 // upcoming dates stays on until they are cancelled, and a retired one can be switched off but not on (the API checks both).
-// Below them, with more than one way saved, each way taking bookings can stop new bookings (Hurak's "Retire from future sales",
+// Below them, with more than one way saved, each way taking bookings can stop new bookings ("Retire from future sales",
 // saved at once, after "Stop new bookings for …?"): its booked dates still go ahead, and "Take bookings again" undoes it. The last
 // way taking bookings can't be stopped (that is pausing the course), and one not taking bookings can't be made the primary.
 function ModeSection({ course, draft, setDraft, access, errors, onBookings, bookingsBusy }) {

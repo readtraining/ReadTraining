@@ -1,6 +1,6 @@
 // Skill Saver, the learner loyalty programme: the levels and the rules for reaching them, shared by the learner page
 // (/skill-saver) and the provider page (/provider-skill-saver) so both always show the same numbers. Rules from the client's
-// current site (hurak.com/skill-saver): Level 1 on signing in; Level 2 for 3 completed courses in 1 year; Level 3 for
+// current site: Level 1 on signing in; Level 2 for 3 completed courses in 1 year; Level 3 for
 // 5 completed courses in 2 years; only completed courses count; a level once reached is kept for life.
 export const SKILL_SAVER_LEVELS = [
   { level: 1, discount: 10, upTo: true, rule: "Sign in to your ReadTraining account", short: "Sign in" },
