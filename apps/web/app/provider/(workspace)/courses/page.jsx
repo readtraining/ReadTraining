@@ -1,6 +1,7 @@
 import React from "react";
 import ProviderShell from "@/components/providerWorkspace/ProviderShell";
 import ProviderCourses from "@/components/providerWorkspace/ProviderCourses";
+import { NewCourseButton } from "@/components/providerWorkspace/NewCourse";
 import { pw } from "@/data/providerWorkspace";
 import { pageMetadata } from "@/lib/seo";
 
@@ -11,7 +12,7 @@ export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, descri
 
 export default function Page() {
   return (
-    <ProviderShell current="courses" title={p.title} lead={p.lead}>
+    <ProviderShell current="courses" title={p.title} lead={p.lead} actions={<NewCourseButton className="button -md -purple-1 text-white" />}>
       <ProviderCourses />
     </ProviderShell>
   );

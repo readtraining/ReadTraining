@@ -11,6 +11,7 @@ import { Stars, buckets, isRange, rangeStart } from "./insightParts";
 import { AreaChart, BarList, Delta, Sparkline, money } from "./charts";
 import { downloadCsv } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
+import TextArea from "@/components/forms/TextArea";
 
 const VIEWS = [
   { key: "overview", label: "Overview" },
@@ -275,7 +276,7 @@ function ReviewCard({ r, course, onSaved }) {
           <div className="rt-field">
             <label htmlFor={id}>{r.reply ? "Edit your reply" : "Reply publicly"}</label>
             {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
-            <textarea id={id} rows={3} maxLength={1000} autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-e` : undefined} />
+            <TextArea id={id} rows={3} maxLength={1000} autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-e` : undefined} />
           </div>
           <div className="rt-adm-cellrow">
             <button type="submit" className="button -sm -outline-purple-1 text-purple-1">{r.reply ? "Save reply" : "Post reply"}</button>

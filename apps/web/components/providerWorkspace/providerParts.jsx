@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { SHOW_DEMO } from "@/lib/demo";
 import { DetailSkeleton, TableSkeleton } from "@/components/admin/adminParts";
@@ -36,17 +35,6 @@ export function Loading({ rows = 3, stats = false, detail = false }) {
   );
 }
 
-// Hurak's List / Calendar switch above the cohorts and the calendar: two pages, so links, in the look of every tab (Tabs).
-export function CohortViews({ current }) {
-  return (
-    <nav className="rt-acc__tabs" aria-label="Cohort views">
-      {[["list", "List", "/provider/cohorts"], ["calendar", "Calendar", "/provider/calendar"]].map(([key, label, href]) => (
-        <Link key={key} href={href} className={`rt-tr__filter${current === key ? " is-on" : ""}`} aria-current={current === key ? "page" : undefined}>{label}</Link>
-      ))}
-    </nav>
-  );
-}
-
 // An on/off switch with its label (a real checkbox, so it works with the keyboard and screen readers).
 export function Toggle({ id, checked, onChange, label, hint, disabled = false }) {
   return (
@@ -72,12 +60,14 @@ export function ToolSelect({ id, label, value, onChange, options }) {
 }
 
 // Yes / No (or any two to four choices) as the catalogue's radio style.
-export function Choice({ name, legend, value, onChange, options, error, hint }) {
+// `quietLegend`: the legend is read by screen readers only, where a heading just above already names the choice.
+export function Choice({ name, legend, value, onChange, options, error, hint, quietLegend = false }) {
   const errId = `${name}-e`;
+  const hintId = `${name}-h`;
   return (
-    <fieldset className="rt-field rt-pws-choice" aria-describedby={error ? errId : undefined}>
-      <legend>{legend}</legend>
-      {hint && <p className="rt-acc__note">{hint}</p>}
+    <fieldset className="rt-field rt-pws-choice" aria-describedby={[hint && hintId, error && errId].filter(Boolean).join(" ") || undefined}>
+      <legend className={quietLegend ? "rt-sr" : undefined}>{legend}</legend>
+      {hint && <p className="rt-acc__note" id={hintId}>{hint}</p>}
       {error && <p className="rt-q__err" id={errId}><span className="rt-sr">Error: </span>{error}</p>}
       <div className="rt-pws-choice__row">
         {options.map((o) => (

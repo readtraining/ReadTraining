@@ -72,8 +72,8 @@ export default function AccountDashboard() {
               <p className="rt-acc__note">{account.detail.joining}</p>
             </div>
             <div className="rt-acc__actions">
-              <Link href={`/account/bookings/${next.reference}`} className="button -md -purple-1 text-white">{account.bookings.view}</Link>
               {nextLine.mode !== "ondemand" && <a href={calendarFile(next, nextLine)} download={`${next.reference}.ics`} className="button -md -outline-purple-1 text-purple-1">{account.detail.actions.calendar}</a>}
+              <Link href={`/account/bookings/${next.reference}`} className="button -md -purple-1 text-white">{account.bookings.view}</Link>
               {nextLine.postcode && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextLine.postcode)}`} target="_blank" rel="noopener" className="fb-textlink">{account.detail.actions.map}<Arrow /></a>}
             </div>
           </div>

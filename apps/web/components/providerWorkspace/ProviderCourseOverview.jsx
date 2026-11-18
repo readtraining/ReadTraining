@@ -99,8 +99,8 @@ function Head({ course }) {
         {!cover && <p className="rt-acc__note">No picture yet: a course needs one before it can be sent for approval.</p>}
       </div>
       <div className="rt-pws-cov__actions">
-        <Link href={`/provider/courses/${course.id}`} className="button -md -purple-1 text-white">{edit ? "Edit course" : "View course"}</Link>
         <Link href={`/provider/courses/${course.id}/preview`} target="_blank" rel="noopener" className="button -md -outline-purple-1 text-purple-1">Preview<span className="rt-sr"> (opens in a new tab)</span></Link>
+        <Link href={`/provider/courses/${course.id}`} className="button -md -purple-1 text-white">{edit ? "Edit course" : "View course"}</Link>
       </div>
     </section>
   );
@@ -135,7 +135,9 @@ function CohortsTab({ course }) {
   if (!dated.length) return <EmptyState title="No dates for a self-paced course" text="This course is offered self-paced only, so it has no dates: learners start as soon as they book." />;
   if (s.cohorts.isError) return <ErrorState title="We couldn't load this course's cohorts." text="Check your connection, then try again." onRetry={() => s.cohorts.refetch()} />;
 
-  const edit = can("provider.cohorts.edit");
+  // new cohorts only for a dated option still taking bookings
+  const selling = waysOf(course, { open: true }).filter(isDatedMethod);
+  const edit = can("provider.cohorts.edit") && selling.length > 0;
   const refresh = () =>
     Promise.all([
       utils.provider.cohorts.list.invalidate(),
@@ -147,7 +149,7 @@ function CohortsTab({ course }) {
   const create = () => setFormOpen(true);
   const form = (
     <>
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={String(course.id)} mode={dated[0]}
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={String(course.id)} mode={selling[0]}
         onSaved={(cohortId) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${cohortId}`, label: "Open" }); }} onAnother={() => refresh()} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </>
@@ -192,7 +194,7 @@ function CohortsTab({ course }) {
                   <td data-label="Status">
                     <span className="rt-pws-coh__pills">
                       <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
-                      {!k.bookable && !k.cancelledAt && <Pill tone="warn">Bookings off</Pill>}
+                      {!k.cancelledAt && (k.optionClosed ? <Pill tone="warn">Bookings stopped</Pill> : !k.bookable && <Pill tone="warn">Bookings off</Pill>)}
                     </span>
                   </td>
                   <td data-label="Tutor">{tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>}</td>

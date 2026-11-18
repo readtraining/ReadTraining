@@ -289,8 +289,8 @@ export default function ProviderNewOrder() {
             </dl>
           </section>
           <div className="rt-pws-ord__actions">
-            <button type="button" className="button -md -purple-1 text-white" onClick={place} disabled={busy} aria-busy={busy || undefined}>{busy ? "Placing order…" : payment === "link" ? "Place order and send link" : "Place order"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setStep("edit")} disabled={busy}>Back to edit</button>
+            <button type="button" className="button -md -purple-1 text-white" onClick={place} disabled={busy} aria-busy={busy || undefined}>{busy ? "Placing order…" : payment === "link" ? "Place order and send link" : "Place order"}</button>
           </div>
         </div>
         {summary}

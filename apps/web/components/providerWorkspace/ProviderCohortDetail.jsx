@@ -73,6 +73,10 @@ export default function ProviderCohortDetail({ cohortId }) {
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
           <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
         </div>
+        {/* its learning option isn't taking bookings on the course: these dates can't be booked until it takes them again */}
+        {!cancelled && k.optionClosed && (
+          <p className="rt-acc__notice -warn">{methodName(k.method)} isn’t taking new bookings on this course, so nobody can book these dates. <Link href={`/provider/courses/${k.courseId}?tab=mode`} className="rt-cd__link">Take bookings again in Learning options</Link></p>
+        )}
         <dl className="rt-pws-coh__details">
           <div><dt>Course</dt><dd><Link href={`/provider/courses/${k.courseId}`} className="rt-adm-strong">{k.courseTitle}</Link><small>{methodName(k.method)}</small></dd></div>
           <div><dt>Dates</dt><dd>{dayRange(k.startsOn, k.endsOn)}{k.sessions.length > 1 && <small>{k.sessions.length} sessions</small>}</dd></div>
@@ -82,8 +86,10 @@ export default function ProviderCohortDetail({ cohortId }) {
           <div>
             <dt>Bookings</dt>
             <dd className="rt-pws-coh__inline">
-              <Pill tone={k.bookable && !cancelled ? "ok" : "muted"}>{k.bookable && !cancelled ? "On" : "Off"}</Pill>
-              {edit && !cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
+              {!cancelled && k.optionClosed
+                ? <Pill tone="warn">Stopped</Pill>
+                : <Pill tone={k.bookable && !cancelled ? "ok" : "muted"}>{k.bookable && !cancelled ? "On" : "Off"}</Pill>}
+              {edit && !cancelled && !k.optionClosed && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
             </dd>
           </div>
           <div><dt>Tutor</dt><dd>{k.tutorName || <span className="rt-adm-muted">Not assigned</span>}</dd></div>

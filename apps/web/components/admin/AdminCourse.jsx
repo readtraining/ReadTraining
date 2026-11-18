@@ -12,11 +12,12 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
-import { isDatedMethod, waysOf } from "@/lib/courseModes";
+import { isDatedMethod, wayName, waysOf } from "@/lib/courseModes";
 import { Said, DetailSkeleton, formatWhen, Empty } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import AdminCoursePrices from "./AdminCoursePrices";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.catalogue;
 const d = copy.detail;
@@ -147,15 +148,15 @@ export default function AdminCourse({ id }) {
           {canDecide && c.status === "paused" && !c.statusNote && <p className="rt-acc__note">{ap.providerPaused}</p>}
         </div>
         <div className="rt-adm-hero__actions">
-          {canDecide && c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
-          {canDecide && c.status === "pending" && allowedFor("changes") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
-          {canDecide && c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
-          {canDecide && c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
+          {c.status === "live" && <Link href={`/course/${c.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{d.publicPage}</Link>}
+          {!shared && <Link href={`/admin/catalogue/${c.id}/preview`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{c.pendingChanges ? d.previewChange : d.preview}</Link>}
+          {canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className={`button -md ${canDecide && ((c.status === "pending" && providerReady && allowedFor("approve")) || (c.pendingChanges && allowedFor("approveChange"))) ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`}>{d.edit}</Link>}
           {canDecide && c.status === "live" && allowedFor("pause") && <button type="button" className="button -md -outline-red-3 text-red-3" disabled={busy} onClick={() => act("pause")}>{ap.pause}</button>}
           {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>}
-          {canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -md -purple-1 text-white">{d.edit}</Link>}
-          {!shared && <Link href={`/admin/catalogue/${c.id}/preview`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{c.pendingChanges ? d.previewChange : d.preview}</Link>}
-          {c.status === "live" && <Link href={`/course/${c.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{d.publicPage}</Link>}
+          {canDecide && c.status === "pending" && allowedFor("changes") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
+          {canDecide && c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
+          {canDecide && c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
+          {canDecide && c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
         </div>
       </section>
 
@@ -203,7 +204,7 @@ export default function AdminCourse({ id }) {
           <dl className="rt-adm-dl">
             <div><dt>Category</dt><dd>{place || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
             <div><dt>Level</dt><dd>{levelName(c.level) || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
-            {!shared && <div><dt>Learning options</dt><dd>{waysOf(c).length ? <>{methodName(c.method)}{waysOf(c).length > 1 && <span className="rt-adm-muted"> (primary) · also {waysOf(c).slice(1).map(methodName).join(", ")}</span>}</> : "–"}</dd></div>}
+            {!shared && <div><dt>Learning options</dt><dd>{waysOf(c).length ? <>{methodName(c.method)}{waysOf(c).length > 1 && <span className="rt-adm-muted"> (primary) · also {waysOf(c).slice(1).map((m) => wayName(c, m)).join(", ")}</span>}</> : "–"}</dd></div>}
             {!shared && <div><dt>Price</dt><dd>{[
               waysOf(c).includes("self-paced") ? `Self-paced: ${c.pricePence != null ? formatPrice(c.pricePence / 100) : "not set"}` : "",
               waysOf(c).some(isDatedMethod) ? `Set on each date · ${c.upcomingCohorts} upcoming` : "",
@@ -257,7 +258,7 @@ export default function AdminCourse({ id }) {
             <div className="rt-field">
               <label htmlFor="rt-adm-cnote">{ap.reasonLabel}</label>
               {error && <p className="rt-q__err" id="rt-adm-cnote-e"><span className="rt-sr">Error: </span>{error}</p>}
-              <textarea id="rt-adm-cnote" rows={5} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cnote-e" : undefined} />
+              <TextArea id="rt-adm-cnote" rows={5} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cnote-e" : undefined} />
             </div>
           )}
           {asking && ownFor(asking) && (
@@ -265,7 +266,7 @@ export default function AdminCourse({ id }) {
               <label htmlFor="rt-adm-cown">{A.own.label}</label>
               <small className="rt-field__hint" id="rt-adm-cown-hint">{A.own.hint}</small>
               {reasonError && <p className="rt-q__err" id="rt-adm-cown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
-              <textarea id="rt-adm-cown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-cown-hint${reasonError ? " rt-adm-cown-e" : ""}`} />
+              <TextArea id="rt-adm-cown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-cown-hint${reasonError ? " rt-adm-cown-e" : ""}`} />
             </div>
           )}
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy || undefined}>{sheetTitle}</button>

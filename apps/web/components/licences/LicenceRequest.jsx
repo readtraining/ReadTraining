@@ -10,6 +10,7 @@ import { validPostcode } from "@/lib/checkout";
 import FormGate from "@/components/forms/FormGate";
 import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = licencesHub.request;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -165,7 +166,7 @@ export default function LicenceRequest({ licence, children }) {
             {kind !== "service" && field("postcode", c.postcode, { type: "text", autoComplete: "postal-code", autoCapitalize: "characters", spellCheck: false, className: "rt-ck__short" })}
             <div className="rt-field">
               <label htmlFor="rt-lr-notes">{c.notes}</label>
-              <textarea id="rt-lr-notes" rows={3} maxLength={1000} value={v.notes} onChange={set("notes")} />
+              <TextArea id="rt-lr-notes" rows={3} maxLength={1000} value={v.notes} onChange={set("notes")} />
             </div>
             {kind === "service" && (
               <div className="rt-lic__consent">

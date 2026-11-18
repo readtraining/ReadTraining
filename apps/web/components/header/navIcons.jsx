@@ -13,6 +13,7 @@ const PATHS = {
   megaphone: "M4 10v4h3l7 4V6l-7 4zM18 9a4 4 0 0 1 0 6",
   growth: "M4 19h16M6 15l4-4 3 3 5-6M14 8h4v4",
   screen: "M3 5h18v11H3zM8 20h8M12 16v4",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
   glass: "M6 3h12l-1 7a5 5 0 0 1-10 0zM12 15v6M8 21h8",
   tag: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01",
   town: "M3 21h18M5 21V9l7-5 7 5v12M10 21v-5h4v5",

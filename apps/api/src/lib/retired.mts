@@ -6,7 +6,8 @@ import type { db as Db } from './db.mjs'
 // settings): it would sit under something no menu or filter offers. Retiring an entry is refused while live courses are filed
 // under it (modules/admin/catalogue.mts); this is the other side, checked by every step that puts a course live (approving it
 // or a change to it, resuming it, publishing a shared page), inside that step's transaction after the change, so it sees the
-// course as it would go live.
+// course as it would go live. A learning option not taking bookings (courses.closed_methods) isn't on sale, so a retired one
+// doesn't hold the course back: taking bookings for it again is refused instead (provider.courses.setOptionOpen).
 
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
 
@@ -19,7 +20,7 @@ export async function retiredEntries(db: typeof Db | Tx, courseId: number): Prom
     union all
     select 'topic', e.name from public.courses c join public.topics e on e.id = c.topic_id where c.id = ${courseId} and not e.active
     union all
-    select 'learning option', e.name from public.courses c join public.delivery_methods e on e.slug = any(c.methods) where c.id = ${courseId} and not e.active
+    select 'learning option', e.name from public.courses c join public.delivery_methods e on e.slug = any(c.methods) and e.slug <> all(c.closed_methods) where c.id = ${courseId} and not e.active
     union all
     select 'level', e.name from public.courses c join public.course_levels e on e.slug = c.level where c.id = ${courseId} and not e.active`)
   return rows.map((r) => `${r.name} (${r.word})`)
@@ -39,7 +40,7 @@ export async function refuseRetired(db: typeof Db | Tx, courseId: number, who: '
   const list = retired.join(', ')
   const one = retired.length === 1
   // a learning option isn't reviewed, so the provider can turn a retired one off and save straight away
-  const options = (await retiredMethods(db, courseId)).length === retired.length
+  const options = retired.every((r) => r.endsWith('(learning option)'))
   throw new TRPCError({
     code: 'CONFLICT',
     message:

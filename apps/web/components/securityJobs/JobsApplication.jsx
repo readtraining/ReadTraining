@@ -12,6 +12,7 @@ import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import FormGate from "@/components/forms/FormGate";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = securityJobs.application;
 const q = copy.check;
@@ -257,12 +258,12 @@ function JobsApplicationForm() {
                           <label htmlFor="rt-sj-gaps">Gaps in your five-year history</label>
                           <small className="rt-field__hint" id="rt-sj-gaps-hint">{f.gapsHint}</small>
                           {err("gaps")}
-                          <textarea id="rt-sj-gaps" rows={3} maxLength={1000} value={v.gaps} onChange={set("gaps")} aria-invalid={errors.gaps ? true : undefined} aria-describedby={`rt-sj-gaps-hint${errors.gaps ? " rt-sj-gaps-e" : ""}`} />
+                          <TextArea id="rt-sj-gaps" rows={3} maxLength={1000} value={v.gaps} onChange={set("gaps")} aria-invalid={errors.gaps ? true : undefined} aria-describedby={`rt-sj-gaps-hint${errors.gaps ? " rt-sj-gaps-e" : ""}`} />
                         </div>
                       )}
                       <div className="rt-field">
                         <label htmlFor="rt-sj-notes">Anything else we should know? (optional)</label>
-                        <textarea id="rt-sj-notes" rows={3} maxLength={1000} value={v.notes} onChange={set("notes")} />
+                        <TextArea id="rt-sj-notes" rows={3} maxLength={1000} value={v.notes} onChange={set("notes")} />
                       </div>
                       <div className="rt-jobs__consent">
                         {err("consent")}

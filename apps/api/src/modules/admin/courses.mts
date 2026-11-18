@@ -28,10 +28,10 @@ import {
   isDated,
   missing,
   notFound,
+  placeOn,
   refuseIfChanged,
   resolveCatalogue,
   REVIEWED,
-  sameSubject,
   seenVersion,
   setCourseImages,
 } from '../provider/courses.mjs'
@@ -43,13 +43,13 @@ import {
 
 type Course = typeof courses.$inferSelect
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
-// The course (as it is about to be approved) and its shared course page must have the same subject (sameSubject).
-async function refuseOtherSubject(tx: Tx, courseId: number) {
-  const [c] = await tx.select({ parentId: courses.parentId, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, courseId))
-  if (!c?.parentId) return
-  const [page] = await tx.select({ title: courses.title, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, c.parentId))
-  if (page && !sameSubject(page, c))
-    throw new TRPCError({ code: 'CONFLICT', message: `This would file the course under a different subject from its shared course page “${page.title}”. Ask the provider to choose a matching page (or none) first, or send the change back.` })
+// Where the course is listed follows its subject (Hurak's rule, placeOn): when a course or a change to it is approved, it goes on
+// the shared course page for its subject (or a page of its own when there is none).
+async function placeBySubject(tx: Tx, courseId: number) {
+  const [c] = await tx.select({ kind: courses.kind, parentId: courses.parentId, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, courseId))
+  if (!c || c.kind !== 'provider') return
+  const parentId = await placeOn(tx, c)
+  if (parentId !== c.parentId) await tx.update(courses).set({ parentId }).where(eq(courses.id, courseId))
 }
 
 type Decision = 'approve' | 'changes' | 'approveChange' | 'rejectChange' | 'pause' | 'resume'
@@ -144,7 +144,7 @@ const andList = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).j
 // a waiting change shown against the live version, field by field, in the editor's shape (catalogue places as slugs)
 // What learners will pay, for the admin to check before approving: the self-paced option's price or price plan, and each upcoming
 // date's price (Flat: its own, with any was-price; Tiered: its plan's cheapest package), and every plan used, with all its packages.
-async function pricingView(db: typeof Db, course: { id: number; kind: string; methods: string[]; planId: string | null; pricePence: number | null }) {
+async function pricingView(db: typeof Db, course: { id: number; kind: string; methods: string[]; closedMethods: string[]; planId: string | null; pricePence: number | null }) {
   if (course.kind !== 'provider') return null
   const selfPaced = course.methods.includes('self-paced')
   const dates =
@@ -158,7 +158,7 @@ async function pricingView(db: typeof Db, course: { id: number; kind: string; me
   const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
   return {
     selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId } : null,
-    dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
+    dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, optionClosed: course.closedMethods.includes(k.method), place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
     plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
   }
 }
@@ -203,8 +203,8 @@ export const adminCoursesRouter = createTRPCRouter({
   queue: adminProcedure('admin.panel.open')
     .input(z.object({ tab: z.enum(['waiting', 'changes', 'decided']) }))
     .query(async ({ ctx, input }) => {
-      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; methods: string[]; parent: string | null; requester: string | null }
-      const base = sql`(select name from public.organisations o where o.id = c.organisation_id) provider, (select status from public.organisations o where o.id = c.organisation_id) provider_status, c.method, c.methods, (select p.title from public.courses p where p.id = c.parent_id) parent`
+      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; methods: string[]; closed_methods: string[]; parent: string | null; requester: string | null }
+      const base = sql`(select name from public.organisations o where o.id = c.organisation_id) provider, (select status from public.organisations o where o.id = c.organisation_id) provider_status, c.method, c.methods, c.closed_methods, (select p.title from public.courses p where p.id = c.parent_id) parent`
       const rows =
         input.tab === 'waiting'
           ? await ctx.db.execute<Row>(sql`
@@ -228,18 +228,18 @@ export const adminCoursesRouter = createTRPCRouter({
                 ) q order by at desc nulls last limit 100`)
       // own: the admin asked for it themselves; soleApprover: they may still decide it, with a reason (lib/soleApprover.mts)
       const sole = rows.some((r) => r.requester === ctx.user.id) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide'))
-      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, methods: r.methods, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
+      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, methods: r.methods, closedMethods: r.closed_methods, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
     }),
 
   // Every course, newest change first: shared pages and providers' courses, with search and filters.
   // Every live course, for the admin's pickers: a staff booking (a provider's own course), a coupon's courses and the home page's
   // featured courses (`listed`: it has its own place in the public listings). `fromPence`: the lowest price of a bookable
-  // upcoming date, or the self-paced price.
+  // upcoming date, or the self-paced price (of a learning option still taking bookings).
   options: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
     const [rows, listed] = await Promise.all([
       ctx.db.execute<{ id: number; title: string; kind: 'shared' | 'provider'; provider_id: string | null; provider: string | null; parent: string | null; from_pence: number | null }>(sql`
         select c.id, c.title, c.kind, c.organisation_id provider_id, o.name provider, (select p.title from public.courses p where p.id = c.parent_id) parent,
-               least(case when 'self-paced' = any(c.methods) then c.price_pence end, (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date)) from_pence
+               least(case when 'self-paced' = any(c.methods) and 'self-paced' <> all(c.closed_methods) then c.price_pence end, (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable and k.starts_on >= current_date and k.method <> all(c.closed_methods))) from_pence
         from public.courses c left join public.organisations o on o.id = c.organisation_id
         where c.status = 'live' and (c.kind = 'shared' or o.status = 'active')
         order by c.title, o.name`),
@@ -258,8 +258,8 @@ export const adminCoursesRouter = createTRPCRouter({
         const like = `%${input.q.replace(/[\\%_]/g, (x) => `\\${x}`)}%`
         where.push(sql`(c.title ilike ${like} or c.slug ilike ${like} or c.id::text = ${input.q} or exists (select 1 from public.organisations o where o.id = c.organisation_id and o.name ilike ${like}))`)
       }
-      const rows = await ctx.db.execute<{ id: number; title: string; slug: string; kind: string; status: string; method: string | null; methods: string[]; updated_at: string; provider: string | null; parent: string | null; upcoming: number; from_pence: number | null; providers: number; pending_change: boolean }>(sql`
-        select c.id, c.title, c.slug, c.kind, c.status, c.method, c.methods, c.updated_at,
+      const rows = await ctx.db.execute<{ id: number; title: string; slug: string; kind: string; status: string; method: string | null; methods: string[]; closed_methods: string[]; updated_at: string; provider: string | null; parent: string | null; upcoming: number; from_pence: number | null; providers: number; pending_change: boolean }>(sql`
+        select c.id, c.title, c.slug, c.kind, c.status, c.method, c.methods, c.closed_methods, c.updated_at,
                (select name from public.organisations o where o.id = c.organisation_id) provider,
                (select p.title from public.courses p where p.id = c.parent_id) parent,
                (select count(*)::int from public.cohorts k where k.cancelled_at is null and k.ends_on >= current_date and (k.course_id = c.id or k.course_id in (select x.id from public.courses x where x.parent_id = c.id and x.status = 'live'))) upcoming,
@@ -268,7 +268,7 @@ export const adminCoursesRouter = createTRPCRouter({
                exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
         from public.courses c where ${sql.join(where, sql` and `)}
         order by c.updated_at desc limit 300`)
-      return rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, kind: r.kind, status: r.status, method: r.method, methods: r.methods, updatedAt: iso(r.updated_at), provider: r.provider, parent: r.parent, upcoming: r.upcoming, fromPence: r.from_pence, providers: r.providers, pendingChange: r.pending_change }))
+      return rows.map((r) => ({ id: r.id, title: r.title, slug: r.slug, kind: r.kind, status: r.status, method: r.method, methods: r.methods, closedMethods: r.closed_methods, updatedAt: iso(r.updated_at), provider: r.provider, parent: r.parent, upcoming: r.upcoming, fromPence: r.from_pence, providers: r.providers, pendingChange: r.pending_change }))
     }),
 
   // A course as visitors will see it (Preview), whatever its status: a shared page with its live providers' dates; a provider's
@@ -400,7 +400,7 @@ export const adminCoursesRouter = createTRPCRouter({
         // never live under a retired category, method or level (a change may move it into one retired since it was sent)
         if (input.decision === 'approve' || input.decision === 'resume' || (input.decision === 'approveChange' && locked.status === 'live')) await refuseRetired(tx, course.id, 'admin')
         // a course on a shared course page keeps the page's subject: the shared page may have been chosen after the change was sent
-        if (input.decision === 'approve' || input.decision === 'approveChange') await refuseOtherSubject(tx, course.id)
+        if (input.decision === 'approve' || input.decision === 'approveChange') await placeBySubject(tx, course.id)
         if (input.decision === 'rejectChange') {
           await tx.update(courseRevisions).set({ status: 'rejected', note: message, decidedAt: now, decidedBy: ctx.user.id }).where(eq(courseRevisions.id, revision.id))
           // the course's version moves on (it would otherwise fall back to before the change, and an editor still showing the

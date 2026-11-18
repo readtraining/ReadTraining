@@ -21,9 +21,10 @@ import { CohortForm } from "./ProviderCohorts";
 import { COURSE_TONE, CardChoice, Choice, Loading, Pill, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
-import { LEARNING_OPTIONS, isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
+import { LEARNING_OPTIONS, isClosedWay, isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
+import TextArea from "@/components/forms/TextArea";
 
 // The course editor's sections, in the order a provider fills them in, each ticked in the side list when it is complete. Learning
 // options come before the price, as the price step depends on them: the self-paced option has one price, a course on dates is
@@ -80,11 +81,11 @@ export function passMarkProblem(text) {
   return "";
 }
 const STATUS_NOTES = {
-  draft: "This course is a draft. Only your team can see it.",
-  pending: "We're checking this course. If you change it now (apart from its search and privacy settings), it comes back to you as a draft and you send it for approval again.",
-  changes: "Our team has asked for changes. Make them, then send the course for approval again.",
-  live: "This course is live. Changes to its wording are checked by our team before learners see them; prices, dates and settings change straight away.",
-  paused: "This course is paused, so it doesn't show on ReadTraining. Put it back live from the course settings (the gear).",
+  draft: "Your course is a draft. Only your team can see it.",
+  pending: "Your course is being reviewed. Editing it now (apart from search and privacy settings) returns it to draft, and you'll need to send it again.",
+  changes: "Our team has asked for changes. Make them, then send your course for review again.",
+  live: "Your course is live. Edits to the course page are reviewed before they go live. Prices, dates and settings update straight away.",
+  paused: "Your course is paused, so it isn't shown on ReadTraining. Put it back live from Course settings.",
 };
 const SHARED_NOTES = {
   draft: "This shared course page is a draft: nobody outside the team can see it, and providers can't list their courses on it yet. Publish it when it is complete.",
@@ -113,6 +114,9 @@ const draftOf = (c) => {
   };
 };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// the course's learning options retired in Catalogue settings that are still on sale (one not taking bookings holds nothing back:
+// lib/retired.mts in the API)
+const retiredOnSale = (course) => (course.retiredMethods || []).filter((m) => !isClosedWay(course, m));
 
 // whether each section is complete, from the draft (and the saved images and dates). The API counts a draft's required steps
 // left by the same rules for the Dashboard's to-do list (provider/courses.mts stepsLeft): keep the two the same.
@@ -148,7 +152,7 @@ function stillNeeded(d, course) {
     const key = RETIRED_KEY[word];
     if (key && d[key] === (course[key] || "")) add("landing", `another ${word}: ${name} is no longer offered`);
   }
-  for (const m of course.retiredMethods || []) if (d.methods.includes(m)) add("mode", `${methodName(m)} turned off, as it is no longer offered`);
+  for (const m of retiredOnSale(course)) if (d.methods.includes(m)) add("mode", `${methodName(m)} turned off, as it is no longer offered`);
   return out;
 }
 // What the step `key` still needs before Continue moves on, as { field: message } (the same rules as stillNeeded and the API's
@@ -263,6 +267,20 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   useEffect(() => {
     const t = getQuery("tab");
     if (sections.some((x) => x.key === t)) setTab(t);
+    // from the Courses list's "Upload course image": to the images, with their upload button focused (once the course has loaded)
+    if (getQuery("focus") === "images") {
+      setTab(sections[0].key);
+      setQuery("focus", "");
+      let tries = 0;
+      const find = () => {
+        const h = document.getElementById("rt-pws-ce-media-h");
+        if (h) {
+          h.scrollIntoView({ block: "center" });
+          h.closest("section")?.querySelector(".rt-pws-course-mediabar button")?.focus({ preventScroll: true });
+        } else if (tries++ < 40) setTimeout(find, 150);
+      };
+      find();
+    }
     // just made by the new course steps, or copied by the Courses list's Duplicate course: say so (once; the address loses ?created
     // or ?copied so a reload doesn't say it again)
     const made = ["created", "copied"].find((k) => getQuery(k));
@@ -329,7 +347,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   // performance model, which a new course starts as Bookings: "Classroom · Live online · Bookings"), "3 to add", No dates yet,
   // Optional
   const stepStatus = (x) => {
-    if (x.key === "mode" && x.ok) return `${waysLabel(base)} · ${pw.models[base.model]?.label || ""}`;
+    if (x.key === "mode" && x.ok) return `${waysLabel({ ...base, closedMethods: course.closedMethods })} · ${pw.models[base.model]?.label || ""}`;
     if (x.ok) return "Complete";
     if (x.optional) return "Optional";
     const n = x.key === "info" ? Math.max(0, 4 - base.outcomes.length) : Object.keys(stepGaps(base, course, x.key)).length;
@@ -536,6 +554,30 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (gapRef.current.length) return showErrors(gaps);
     changeTab(x.key, { scroll: true });
   };
+  // Learning options' "Stop new bookings" and "Take bookings again": saved at once (not with the draft). Stopping the primary makes
+  // the API choose the next one taking bookings: the draft and what it is compared with take that primary, so nothing shows as
+  // unsaved and the next save doesn't send the old one back. Returns what went wrong (shown in "Stop new bookings for …?"), or "".
+  const setOptionOpen = async (method, open) => {
+    try {
+      const r = await ep.setOptionOpen(method, open);
+      const follow = (d) => (d && d.method === method && r.method !== method ? { ...d, method: r.method } : d);
+      setDraft(follow);
+      setBase(follow);
+      ep.patch({ method: r.method, closedMethods: r.closedMethods }); // the new state shows straight away
+      refresh();
+      const lo = pw.learningOptions.bookings;
+      const message = (open ? lo.reopened : lo.stopped)(methodName(method)) + (r.backToDraft ? ` ${lo.backToDraft}` : "");
+      setSaid(message);
+      setToast({ message });
+      return "";
+    } catch (error) {
+      if (ep.stale(error)) return "";
+      const message = errorsFrom(error).general || "We couldn't change it. Check your connection, then try again.";
+      setSaid(message);
+      if (open) setToast({ message });
+      return message;
+    }
+  };
   const lastSaved = course.updatedAt ? SAVED_AT.format(new Date(course.updatedAt)) : "";
   const busy = ep.updating || ep.submitting;
   const sectionProps = { course, draft, setDraft, errors, access };
@@ -557,7 +599,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
           {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-acc__notice -warn"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
           {isLive && retiredPlaces.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {retiredPlaces.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
-          {isLive && course.retiredMethods?.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {course.retiredMethods.map(methodName).join(", ")}. Turn {course.retiredMethods.length === 1 ? "it" : "them"} off in Learning options and save.</p>}
+          {isLive && retiredOnSale(course).length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {retiredOnSale(course).map(methodName).join(", ")}. Turn {retiredOnSale(course).length === 1 ? "it" : "them"} off in Learning options and save.</p>}
           {!ep.admin && isLive && noDates && <p className="rt-acc__note">{NO_DATES_NOTE}</p>}
         </div>
         <div className="rt-pws-ce__headactions">
@@ -619,7 +661,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {tab === "info" && <InfoSection {...sectionProps} />}
           {tab === "syllabus" && <SyllabusSection {...sectionProps} />}
           {tab === "faqs" && <FaqSection {...sectionProps} />}
-          {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} />}
+          {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} onBookings={setOptionOpen} bookingsBusy={ep.settingOption} />}
           {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} onSaved={saved} />}
           {tab === "seo" && (
             <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-seo-h">
@@ -732,7 +774,7 @@ function LineList({ id, label, hint, items, onChange, max, most, placeholder, or
                 <span className="rt-pws-course-list__tools">
                   <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move up: ${o}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
                   <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} aria-label={`Move down: ${o}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
-                  <button type="button" onClick={() => onChange(items.filter((x) => x !== o))} aria-label={`Remove: ${o}`}><i className="icon-bin text-12" aria-hidden="true"></i></button>
+                  <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => onChange(items.filter((x) => x !== o))} aria-label={`Remove: ${o}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>
                 </span>
               )}
             </li>
@@ -773,7 +815,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
           <label htmlFor="rt-pws-ce-sub">Short description</label>
           <span className="rt-field__hint" id="rt-pws-ce-sub-h">One or two sentences under the title: who it is for and what they get.</span>
           <FieldErr id="rt-pws-ce-sub" text={errors.summary} />
-          <textarea id="rt-pws-ce-sub" rows={2} value={draft.summary} maxLength={LIMITS.summary} onChange={(e) => set("summary")(e.target.value)} disabled={page} aria-invalid={errors.summary ? true : undefined} aria-describedby={`rt-pws-ce-sub-h${errors.summary ? " rt-pws-ce-sub-e" : ""}`} autoComplete="off" />
+          <TextArea id="rt-pws-ce-sub" rows={2} value={draft.summary} maxLength={LIMITS.summary} onChange={(e) => set("summary")(e.target.value)} disabled={page} aria-invalid={errors.summary ? true : undefined} aria-describedby={`rt-pws-ce-sub-h${errors.summary ? " rt-pws-ce-sub-e" : ""}`} autoComplete="off" />
           <Counter value={draft.summary} max={LIMITS.summary} />
         </div>
         <div className="rt-pws-course-grid3">
@@ -802,7 +844,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
           <label htmlFor="rt-pws-ce-details">Course description</label>
           <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs.</span>
           <FieldErr id="rt-pws-ce-details" text={errors.description} />
-          <textarea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-invalid={errors.description ? true : undefined} aria-describedby={`rt-pws-ce-details-h${errors.description ? " rt-pws-ce-details-e" : ""}`} autoComplete="off" />
+          <TextArea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-invalid={errors.description ? true : undefined} aria-describedby={`rt-pws-ce-details-h${errors.description ? " rt-pws-ce-details-e" : ""}`} autoComplete="off" />
         </div>
       </section>
 
@@ -1012,13 +1054,13 @@ function InfoSection({ draft, setDraft, access, errors }) {
           <label htmlFor="rt-pws-ce-aud">Who is it for? (optional)</label>
           <span className="rt-field__hint" id="rt-pws-ce-aud-h">The people and jobs the course suits.</span>
           <FieldErr id="rt-pws-ce-aud" text={errors.audience} />
-          <textarea id="rt-pws-ce-aud" rows={3} maxLength={2000} value={draft.audience} onChange={(e) => set("audience")(e.target.value)} disabled={page} aria-invalid={errors.audience ? true : undefined} aria-describedby={`rt-pws-ce-aud-h${errors.audience ? " rt-pws-ce-aud-e" : ""}`} autoComplete="off" />
+          <TextArea id="rt-pws-ce-aud" rows={3} maxLength={2000} value={draft.audience} onChange={(e) => set("audience")(e.target.value)} disabled={page} aria-invalid={errors.audience ? true : undefined} aria-describedby={`rt-pws-ce-aud-h${errors.audience ? " rt-pws-ce-aud-e" : ""}`} autoComplete="off" />
         </div>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-req">Entry requirements (optional)</label>
           <span className="rt-field__hint" id="rt-pws-ce-req-h">What learners need before they book, like an age, ID or an earlier qualification. Leave it empty if there are none.</span>
           <FieldErr id="rt-pws-ce-req" text={errors.entryRequirements} />
-          <textarea id="rt-pws-ce-req" rows={3} maxLength={2000} value={draft.entryRequirements} onChange={(e) => set("entryRequirements")(e.target.value)} disabled={page} aria-invalid={errors.entryRequirements ? true : undefined} aria-describedby={`rt-pws-ce-req-h${errors.entryRequirements ? " rt-pws-ce-req-e" : ""}`} autoComplete="off" />
+          <TextArea id="rt-pws-ce-req" rows={3} maxLength={2000} value={draft.entryRequirements} onChange={(e) => set("entryRequirements")(e.target.value)} disabled={page} aria-invalid={errors.entryRequirements ? true : undefined} aria-describedby={`rt-pws-ce-req-h${errors.entryRequirements ? " rt-pws-ce-req-e" : ""}`} autoComplete="off" />
         </div>
       </section>
     </form>
@@ -1150,7 +1192,7 @@ function UnitSheet({ open, onClose, unit, room, onSave }) {
             </div>
             <div className="rt-field">
               <label htmlFor={`rt-pws-cu-b${i}`}>What it covers (optional)</label>
-              <textarea id={`rt-pws-cu-b${i}`} rows={4} value={r.body} maxLength={2000} onChange={(e) => change(i, "body", e.target.value)} autoComplete="off" />
+              <TextArea id={`rt-pws-cu-b${i}`} rows={4} value={r.body} maxLength={2000} onChange={(e) => change(i, "body", e.target.value)} autoComplete="off" />
             </div>
             {rows.length > 1 && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>Remove unit {i + 1}</button>}
           </fieldset>
@@ -1234,7 +1276,7 @@ function FaqSheet({ open, onClose, faq, onSave }) {
         <div className="rt-field">
           <label htmlFor="rt-pws-cf-a">Answer</label>
           {errors.a && <p className="rt-q__err" id="rt-pws-cf-a-e"><span className="rt-sr">Error: </span>{errors.a}</p>}
-          <textarea id="rt-pws-cf-a" rows={5} value={f.answer} maxLength={1200} onChange={(e) => setF({ ...f, answer: e.target.value })} aria-invalid={errors.a ? true : undefined} aria-describedby={errors.a ? "rt-pws-cf-a-e" : undefined} autoComplete="off" />
+          <TextArea id="rt-pws-cf-a" rows={5} value={f.answer} maxLength={1200} onChange={(e) => setF({ ...f, answer: e.target.value })} aria-invalid={errors.a ? true : undefined} aria-describedby={errors.a ? "rt-pws-cf-a-e" : undefined} autoComplete="off" />
         </div>
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{faq ? "Save FAQ" : "Add to course"}</button>
       </form>
@@ -1348,11 +1390,16 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
 // Hurak's learning options: the primary way the course is taught (shown first on its page and in search) and the other ways it is
 // offered, switched on beside it. Choosing a primary switches it on, and the primary can't be switched off. A dated option with
 // upcoming dates stays on until they are cancelled, and a retired one can be switched off but not on (the API checks both).
-function ModeSection({ course, draft, setDraft, access, errors }) {
+// Below them, with more than one way saved, each way taking bookings can stop new bookings (Hurak's "Retire from future sales",
+// saved at once, after "Stop new bookings for …?"): its booked dates still go ahead, and "Take bookings again" undoes it. The last
+// way taking bookings can't be stopped (that is pausing the course), and one not taking bookings can't be made the primary.
+function ModeSection({ course, draft, setDraft, access, errors, onBookings, bookingsBusy }) {
   const set = useSet(setDraft);
   const lo = pw.learningOptions;
   const locked = !access.full;
   const saved = waysOf(course);
+  const selling = waysOf(course, { open: true });
+  const closed = saved.filter((m) => isClosedWay(course, m));
   const retired = course.retiredMethods || [];
   const upcoming = (m) => course.upcomingByMethod?.[m] || 0;
   const inOrder = (list) => LEARNING_OPTIONS.filter((m) => list.includes(m));
@@ -1362,6 +1409,20 @@ function ModeSection({ course, draft, setDraft, access, errors }) {
   const changed = draft.method !== course.method || !same(draft.methods, inOrder(saved));
   const isLive = course.status === "live" || course.status === "paused";
   const needsPrice = isLive && draft.methods.includes("self-paced") && !saved.includes("self-paced") && draft.price === "" && !draft.planId;
+  // "Stop new bookings for …?" is open for this way; stopping the primary makes the first other way taking bookings the primary
+  const [stopping, setStopping] = useState(null);
+  const [stopError, setStopError] = useState("");
+  const [reopening, setReopening] = useState(null); // "Take bookings again" working for this way
+  const nextMain = stopping === course.method ? LEARNING_OPTIONS.find((m) => m !== stopping && selling.includes(m)) : null;
+  const ask = (m) => {
+    setStopError("");
+    setStopping(m);
+  };
+  const stop = async () => {
+    const problem = await onBookings(stopping, false);
+    if (problem) setStopError(problem);
+    else setStopping(null);
+  };
 
   return (
     <div className="rt-acc__stack">
@@ -1370,9 +1431,10 @@ function ModeSection({ course, draft, setDraft, access, errors }) {
         <p className="rt-acc__note">{lo.lead}</p>
         <CardChoice name="rt-pws-ce-format" legend={lo.primary} value={draft.method} onChange={choosePrimary} error={errors.method}
           options={pw.formats.map((f) => {
-            // a retired option can stay the primary it already is, but not become one
+            // a retired option can stay the primary it already is, but not become one; nor can one not taking bookings
             const gone = retired.includes(f.key) && f.key !== course.method;
-            return { value: f.key, label: methodName(f.key), text: gone ? lo.retired : f.text, disabled: (locked && f.key !== draft.method) || gone };
+            const shut = isClosedWay(course, f.key);
+            return { value: f.key, label: methodName(f.key), text: gone ? lo.retired : shut ? lo.closedPrimary : f.text, disabled: (locked && f.key !== draft.method) || gone || shut };
           })} />
         <fieldset className="rt-field rt-pws-ce__ways" aria-describedby={`rt-pws-ce-ways-h${errors.methods ? " rt-pws-ce-ways-e" : ""}`}>
           <legend>{lo.others}</legend>
@@ -1382,7 +1444,8 @@ function ModeSection({ course, draft, setDraft, access, errors }) {
             const on = draft.methods.includes(f.key);
             const held = on && saved.includes(f.key) && upcoming(f.key) > 0; // it has upcoming dates: on until they are cancelled
             const gone = retired.includes(f.key);
-            const note = held ? lo.upcoming(upcoming(f.key)) : gone ? (on ? lo.retiredOn : lo.retired) : "";
+            const shut = isClosedWay(course, f.key);
+            const note = held ? (shut ? lo.closedUpcoming(upcoming(f.key)) : lo.upcoming(upcoming(f.key))) : gone ? (on ? lo.retiredOn : lo.retired) : shut && on ? lo.closed : "";
             const noteId = `rt-pws-ce-way-${f.key}-n`;
             return (
               <label key={f.key} className={`rt-pws-optcard${on ? " is-on" : ""}${locked || (gone && !on) ? " is-off" : ""}${held ? " is-held" : ""}`}>
@@ -1401,6 +1464,52 @@ function ModeSection({ course, draft, setDraft, access, errors }) {
         {draft.methods.includes("self-paced") && <p className="rt-acc__note">{lo.selfPacedNote}</p>}
         {needsPrice ? <p className="rt-acc__notice -warn">{lo.liveSelfPaced}</p> : changed && <p className="rt-acc__note">{lo.save}</p>}
       </form>
+      {saved.length > 1 && (
+        <section className="rt-acc__card rt-pws-ce__book" aria-labelledby="rt-pws-ce-book-h">
+          <h2 className="rt-acc__h2" id="rt-pws-ce-book-h">{lo.bookings.title}</h2>
+          <p className="rt-acc__note">{lo.bookings.lead}</p>
+          <ul className="rt-adm-list">
+            {selling.map((m) => (
+              <li key={m}>
+                <div>
+                  <b>{methodName(m)}</b>
+                  <small>{m === course.method ? lo.bookings.main : lo.bookings.open}</small>
+                </div>
+                {access.full && selling.length > 1 && (
+                  <div className="rt-adm-list__side">
+                    <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => ask(m)} disabled={bookingsBusy}>{lo.bookings.stop}<span className="rt-sr"> for {methodName(m)}</span></button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          {selling.length === 1 && course.status === "live" && <p className="rt-acc__note">{lo.bookings.pause}</p>}
+          {closed.length > 0 && (
+            <>
+              <h3 className="rt-acc__h3">{lo.bookings.closedTitle}</h3>
+              <ul className="rt-adm-list">
+                {closed.map((m) => (
+                  <li key={m}>
+                    <div>
+                      <b>{methodName(m)}</b>
+                      <small>{retired.includes(m) ? lo.retired : lo.bookings.closedNote}</small>
+                    </div>
+                    {access.full && !retired.includes(m) && (
+                      <div className="rt-adm-list__side">
+                        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={async () => { setReopening(m); await onBookings(m, true); setReopening(null); }} disabled={bookingsBusy} aria-busy={reopening === m || undefined}>{reopening === m ? lo.bookings.reopening : lo.bookings.reopen}<span className="rt-sr"> for {methodName(m)}</span></button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
+      <Confirm open={Boolean(stopping)} onClose={() => setStopping(null)} busy={bookingsBusy} blocked={stopError}
+        title={stopping ? lo.bookings.confirmTitle(methodName(stopping)) : ""}
+        text={stopping ? lo.bookings.confirmText(methodName(stopping), nextMain ? methodName(nextMain) : "") : ""}
+        confirmLabel={bookingsBusy ? lo.bookings.stopping : lo.bookings.stop} onConfirm={stop} />
     </div>
   );
 }

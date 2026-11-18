@@ -8,13 +8,12 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { useEndpoints } from "@/lib/courseEditorApi";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Choice, Toggle } from "./providerParts";
-import { pagesForSubject } from "@/lib/taxonomy";
 import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import { contactHref } from "@/lib/forms";
 import { isDatedMethod, waysOf } from "@/lib/courseModes";
+import TextArea from "@/components/forms/TextArea";
 
 // The course editor's self-saving parts: SEO settings, and the gear's course settings (a provider's course, or a shared course
 // page in the admin). Each saves on its own (SEO with its button, the gear as you choose) and reports back through onSaved for the
@@ -76,7 +75,7 @@ export function SeoPanel({ course, onSaved, formId, onState }) {
       <div className="rt-field">
         <label htmlFor="rt-pws-cset-sd">SEO description (optional)</label>
         <Err id="rt-pws-cset-sd" text={errors.desc} />
-        <textarea id="rt-pws-cset-sd" rows={4} maxLength={320} autoComplete="off" value={desc} onChange={(e) => setDesc(e.target.value)} aria-invalid={errors.desc ? true : undefined} aria-describedby={`${errors.desc ? "rt-pws-cset-sd-e " : ""}rt-pws-cset-sd-c`} />
+        <TextArea id="rt-pws-cset-sd" rows={4} maxLength={320} autoComplete="off" value={desc} onChange={(e) => setDesc(e.target.value)} aria-invalid={errors.desc ? true : undefined} aria-describedby={`${errors.desc ? "rt-pws-cset-sd-e " : ""}rt-pws-cset-sd-c`} />
         <small className="rt-field__hint rt-pws-cset__count" id="rt-pws-cset-sd-c">{desc.length} of 320 characters</small>
       </div>
       <div className="rt-field">
@@ -196,8 +195,9 @@ export function DeleteCourseForm({ course, onKeep, onDeleted }) {
   );
 }
 
-// The gear on every editor page (Hurak's course settings): who can enrol (public or private), the address to share, the shared
-// course page it is listed under, showing it in ReadTraining's search, pausing a live course, and deleting it (DeleteBlocked says
+// The gear on every editor page (Hurak's course settings): its visibility (Public, or Private: only people with its link can book
+// it; one choice, as Hurak v2's "Publish on marketplace"), where it is listed (read only: the subject decides, as on Hurak, placeOn
+// in the API), the address to share, pausing a live course, and deleting it (DeleteBlocked says
 // when it can't be, and a course our team paused has no Put back live; DeleteCourseForm asks). Each choice saves at once.
 export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const router = useRouter();
@@ -208,7 +208,6 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const update = api.provider.courses.update.useMutation();
   const pause = api.provider.courses.setPaused.useMutation();
   const withdraw = api.provider.courses.withdrawReview.useMutation();
-  const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: open && Boolean(organisationId) });
   const [confirm, setConfirm] = useState(false);
   const [askPause, setAskPause] = useState(false); // "Pause course" asks first
   const [error, setError] = useState("");
@@ -233,9 +232,19 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
       onError: (e) => { setAskPause(false); fail(e); },
     });
   };
-  const change = (patch, message) => {
+  const change = (patch, message, undo) => {
     setError("");
-    update.mutate({ organisationId, courseId: course.id, ...patch, seen: ep?.seen() }, { onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(message); }, onError: fail });
+    update.mutate({ organisationId, courseId: course.id, ...patch, seen: ep?.seen() }, { onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(message); }, onError: (e) => { undo?.(); fail(e); } });
+  };
+  // Visibility moves the moment it is chosen (the save follows); the saved course takes over once it has reloaded, or a failed
+  // save puts it back
+  const [shownPublic, setShownPublic] = useState(null);
+  useEffect(() => setShownPublic(null), [course.isPublic, course.listed]);
+  const isPublic = shownPublic ?? (course.isPublic && course.listed);
+  const choose = (v) => {
+    if (!edit || (v === "public") === isPublic) return;
+    setShownPublic(v === "public");
+    change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public", () => setShownPublic(null));
   };
   const copy = async () => {
     try {
@@ -262,10 +271,6 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
     onClose();
   };
   const busy = update.isPending || pause.isPending || withdraw.isPending;
-  const pages = pagesForSubject(shared.data || [], course); // only pages for this course's subject
-  const parentOptions = [{ value: "", label: "None: the course has its own page" }, ...pages.map((p) => ({ value: String(p.id), label: p.title }))];
-  const wrongPage = course.parent && !course.parent.sameSubject;
-  if (course.parent && !pages.some((p) => p.id === course.parent.id)) parentOptions.push({ value: String(course.parent.id), label: course.parent.title });
 
   return (
     <Sheet open={open} onClose={close} title={confirm ? "Delete this course?" : "Course settings"} closeLabel="Close" noClose={confirm}>
@@ -278,16 +283,9 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
           {/* who can find the course */}
           <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-vis">
             <h3 className="rt-pws-gear__h" id="rt-pws-gear-vis">Visibility</h3>
-            <Choice name="rt-pws-gear-enrol" legend="Enrolment (privacy)" hint="Private courses don't show in search; you share the link or book learners yourself." value={course.isPublic ? "public" : "private"} onChange={(v) => edit && change({ isPublic: v === "public" }, v === "private" ? "The course is private" : "The course is public")} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
-            <Toggle id="rt-pws-gear-market" checked={course.listed} disabled={!edit || busy} onChange={(v) => change({ listed: v }, v ? "The course shows in ReadTraining's search" : "The course is hidden from ReadTraining's search")} label="Show this course in ReadTraining's search" hint="If it is off, the course page still opens from its address, so you can share it yourself." />
-            {(pages.length > 0 || course.parent) && (
-              <div className="rt-field">
-                <label htmlFor="rt-pws-gear-parent">Shared course page</label>
-                <p className="rt-field__hint" id="rt-pws-gear-parent-h">A page on ReadTraining that lists every provider running this course, so learners can compare dates and prices. Only pages with this course's subject are offered.</p>
-                {wrongPage && <p className="rt-acc__notice -warn" role="status">“{course.parent.title}” is a page for a different course, so learners looking for this course won&apos;t find it there. Choose None to give it its own page.</p>}
-                <FieldSelect id="rt-pws-gear-parent" label="Shared course page" value={course.parent ? String(course.parent.id) : ""} onChange={(v) => change({ parentId: v ? Number(v) : null }, v ? "Listed on the shared course page" : "The course now has its own page")} options={parentOptions} disabled={!edit || busy} describedBy="rt-pws-gear-parent-h" />
-              </div>
-            )}
+            <Choice name="rt-pws-gear-enrol" legend="Visibility" quietLegend hint="Private courses don't show in search; you share the link or book learners yourself." value={isPublic ? "public" : "private"} onChange={choose} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
+            {/* where learners find it: decided by its subject, so shown here, not chosen */}
+            <p className="rt-acc__note">{course.parent ? <>Listed on the shared course page <b>{course.parent.title}</b>, beside other providers.</> : "Listed on its own page."}</p>
           </section>
           <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-share">
             <h3 className="rt-pws-gear__h" id="rt-pws-gear-share">Sharing</h3>

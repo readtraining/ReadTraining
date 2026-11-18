@@ -12,6 +12,7 @@ import { trackEvent } from "@/lib/analytics";
 import FormGate from "@/components/forms/FormGate";
 import { sendForm } from "@/lib/forms";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = hseTest.request;
 const Ctx = createContext({ open: () => {} });
@@ -121,7 +122,7 @@ export default function TestBooking({ children }) {
             </div>
             <div className="rt-field">
               <label htmlFor="rt-hb-notes">{copy.notes}</label>
-              <textarea id="rt-hb-notes" rows={3} maxLength={1000} value={v.notes} onChange={set("notes")} />
+              <TextArea id="rt-hb-notes" rows={3} maxLength={1000} value={v.notes} onChange={set("notes")} />
             </div>
             {status === "failed" && <p className="rt-q__err" role="alert">{copy.failed}</p>}
             <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={status === "sending"} aria-busy={status === "sending"}>{status === "sending" ? copy.sending : copy.submit}</button>

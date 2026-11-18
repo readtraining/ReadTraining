@@ -9,6 +9,7 @@ import { sendForm } from "@/lib/forms";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { EmptyState } from "@/components/states/States";
 import FormGate from "@/components/forms/FormGate";
+import TextArea from "@/components/forms/TextArea";
 
 // "Mock exam reviews" at the end of a subject page (as on the reference, hurak.com): the home section head (eyebrow + title),
 // then the reviews, or an empty state with "Give a review". The button opens the test runner's pop-up (Sheet: centred on
@@ -68,7 +69,7 @@ function ReviewForm({ subject, onDone }) {
       <div className="rt-field">
         <label htmlFor="rt-rv-text">{r.textLabel}</label>
         {errors.text && <p className="rt-q__err" id="rt-rv-text-err"><span className="rt-sr">Error: </span>{errors.text}</p>}
-        <textarea id="rt-rv-text" value={text} onChange={(e) => { setText(e.target.value); if (errors.text && e.target.value.trim().length >= MIN_TEXT) setErrors((x) => ({ ...x, text: undefined })); }} placeholder={r.textPlaceholder} maxLength={1000} aria-invalid={errors.text ? "true" : undefined} aria-describedby={errors.text ? "rt-rv-text-err" : undefined}></textarea>
+        <TextArea id="rt-rv-text" value={text} onChange={(e) => { setText(e.target.value); if (errors.text && e.target.value.trim().length >= MIN_TEXT) setErrors((x) => ({ ...x, text: undefined })); }} placeholder={r.textPlaceholder} maxLength={1000} aria-invalid={errors.text ? "true" : undefined} aria-describedby={errors.text ? "rt-rv-text-err" : undefined} />
       </div>
 
       {status === "failed" && <p className="rt-q__err" role="alert">{r.failed}</p>}

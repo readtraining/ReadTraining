@@ -8,6 +8,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu, Empty } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.sessions;
 const TABS = ["upcoming", "week", "cancelled", "venues"];
@@ -150,7 +151,7 @@ export default function AdminSessions() {
             <div className="rt-field">
               <label htmlFor="rt-adm-cancel">{copy.cancelReason}</label>
               {error && <p className="rt-q__err" id="rt-adm-cancel-e"><span className="rt-sr">Error: </span>{error}</p>}
-              <textarea id="rt-adm-cancel" rows={3} maxLength={600} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cancel-e" : undefined} />
+              <TextArea id="rt-adm-cancel" rows={3} maxLength={600} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cancel-e" : undefined} />
             </div>
             <button type="submit" className="button -md -purple-1 text-white rt-btn-block">{copy.cancelConfirm}</button>
           </form>

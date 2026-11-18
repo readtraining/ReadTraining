@@ -14,6 +14,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { formatWhen, Said, DetailSkeleton, Empty, actionLabel } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { CloseAccountSheet } from "./AdminClosures";
+import TextArea from "@/components/forms/TextArea";
 
 const copy = A.learners;
 const d = copy.detail;
@@ -235,7 +236,7 @@ function BlockSheet({ learner, kind, onClose, onDone }) {
               <label htmlFor="rt-adm-block-reason">{d.blockReason}</label>
               <small className="rt-field__hint" id="rt-adm-block-reason-hint">{d.blockReasonHint}</small>
               {error && <p className="rt-q__err" id="rt-adm-block-reason-e"><span className="rt-sr">Error: </span>{error}</p>}
-              <textarea id="rt-adm-block-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-block-reason-hint${error ? " rt-adm-block-reason-e" : ""}`} />
+              <TextArea id="rt-adm-block-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-block-reason-hint${error ? " rt-adm-block-reason-e" : ""}`} />
             </div>
           )}
           {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
