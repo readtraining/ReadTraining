@@ -194,7 +194,7 @@ function CohortsTab({ course }) {
                   <td data-label="Status">
                     <span className="rt-pws-coh__pills">
                       <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
-                      {!k.bookable && !k.cancelledAt && <Pill tone="warn">Bookings off</Pill>}
+                      {!k.cancelledAt && (k.optionClosed ? <Pill tone="warn">Bookings stopped</Pill> : !k.bookable && <Pill tone="warn">Bookings off</Pill>)}
                     </span>
                   </td>
                   <td data-label="Tutor">{tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>}</td>

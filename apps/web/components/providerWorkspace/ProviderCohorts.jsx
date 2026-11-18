@@ -325,7 +325,9 @@ export default function ProviderCohorts() {
                         <td data-label="Status">
                           <span className="rt-pws-coh__pills">
                             <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
-                            {!k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
+                            {/* its learning option isn't taking bookings on the course (Learning options › Stop new bookings): nobody can book it,
+                                whatever its own switch; taking bookings again puts it back as it was */}
+                            {!cancelled && k.optionClosed ? <Pill tone="warn">Bookings stopped</Pill> : !k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
                           </span>
                         </td>
                         <td data-label="Tutor">

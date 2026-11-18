@@ -144,7 +144,7 @@ const andList = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).j
 // a waiting change shown against the live version, field by field, in the editor's shape (catalogue places as slugs)
 // What learners will pay, for the admin to check before approving: the self-paced option's price or price plan, and each upcoming
 // date's price (Flat: its own, with any was-price; Tiered: its plan's cheapest package), and every plan used, with all its packages.
-async function pricingView(db: typeof Db, course: { id: number; kind: string; methods: string[]; planId: string | null; pricePence: number | null }) {
+async function pricingView(db: typeof Db, course: { id: number; kind: string; methods: string[]; closedMethods: string[]; planId: string | null; pricePence: number | null }) {
   if (course.kind !== 'provider') return null
   const selfPaced = course.methods.includes('self-paced')
   const dates =
@@ -158,7 +158,7 @@ async function pricingView(db: typeof Db, course: { id: number; kind: string; me
   const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
   return {
     selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId } : null,
-    dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
+    dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, optionClosed: course.closedMethods.includes(k.method), place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
     plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
   }
 }

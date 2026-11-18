@@ -219,6 +219,13 @@ export const ordersRouter = createTRPCRouter({
             from public.cohorts k join public.courses c on c.id = k.course_id
             where k.course_id = ${input.courseId} and k.starts_on = ${input.startsOn}::date and k.cancelled_at is null`)
           if (day.length && day.every((d) => d.closed)) throw fieldError('startsOn', `${day[0].name} isn’t taking bookings on this course: its provider has stopped new bookings for it.`)
+        } else {
+          // no date: a place on its self-paced option, refused when that option isn't taking bookings (a course without one keeps
+          // "date to be arranged")
+          const [sp] = await tx.execute<{ name: string; closed: boolean }>(sql`
+            select (select name from public.delivery_methods where slug = 'self-paced') name, 'self-paced' = any(c.closed_methods) closed
+            from public.courses c where c.id = ${input.courseId}`)
+          if (sp?.closed) throw fieldError('startsOn', `${sp.name} isn’t taking bookings on this course: its provider has stopped new bookings for it. Choose a date instead.`)
         }
         const [row] = await tx
           .insert(orders)

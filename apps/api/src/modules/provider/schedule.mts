@@ -365,7 +365,7 @@ export const providerCohortsRouter = createTRPCRouter({
       if (!all && !own) throw new TRPCError({ code: 'FORBIDDEN' })
       if (input.courseId) await ownCourse(ctx.db, input.organisationId, input.courseId)
       const rows = await ctx.db
-        .select({ cohort: cohorts, courseTitle: courses.title, venueName: venues.name, venueCity: venues.city })
+        .select({ cohort: cohorts, courseTitle: courses.title, optionClosed: sql<boolean>`${cohorts.method} = any(${courses.closedMethods})`, venueName: venues.name, venueCity: venues.city })
         .from(cohorts)
         .innerJoin(courses, eq(courses.id, cohorts.courseId))
         .leftJoin(venues, eq(venues.id, cohorts.venueId))
@@ -379,7 +379,8 @@ export const providerCohortsRouter = createTRPCRouter({
         )
         .orderBy(input.when === 'past' ? sql`${cohorts.startsOn} desc` : asc(cohorts.startsOn))
         .limit(1000)
-      return rows.map((r) => ({ ...r.cohort, courseTitle: r.courseTitle, venue: r.venueName ? { name: r.venueName, city: r.venueCity } : null }))
+      // optionClosed: its learning option isn't taking new bookings on the course (courses.closed_methods), so nobody can book it
+      return rows.map((r) => ({ ...r.cohort, courseTitle: r.courseTitle, optionClosed: r.optionClosed, venue: r.venueName ? { name: r.venueName, city: r.venueCity } : null }))
     }),
 
   // One date with its course, venue and tutor. A tutor can open only the dates they teach.
@@ -389,11 +390,11 @@ export const providerCohortsRouter = createTRPCRouter({
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (!can(ctx.actor, 'provider.cohorts.view', { organisationId: input.organisationId, tutorUserId: cohort.tutorUserId })) throw new TRPCError({ code: 'NOT_FOUND', message: 'These dates were not found.' })
       const [[c], [venue], [tutor]] = await Promise.all([
-        ctx.db.select({ title: courses.title, status: courses.status }).from(courses).where(eq(courses.id, course.id)),
+        ctx.db.select({ title: courses.title, status: courses.status, optionClosed: sql<boolean>`${cohort.method} = any(${courses.closedMethods})` }).from(courses).where(eq(courses.id, course.id)),
         cohort.venueId ? ctx.db.select({ name: venues.name, street: venues.street, city: venues.city, postcode: venues.postcode }).from(venues).where(eq(venues.id, cohort.venueId)) : Promise.resolve([]),
         cohort.tutorUserId ? ctx.db.select({ firstName: profiles.firstName, lastName: profiles.lastName }).from(profiles).where(eq(profiles.id, cohort.tutorUserId)) : Promise.resolve([]),
       ])
-      return { ...cohort, courseTitle: c.title, courseStatus: c.status, venue: venue ?? null, tutorName: tutor ? `${tutor.firstName} ${tutor.lastName}`.trim() || 'Team member' : null }
+      return { ...cohort, courseTitle: c.title, courseStatus: c.status, optionClosed: c.optionClosed, venue: venue ?? null, tutorName: tutor ? `${tutor.firstName} ${tutor.lastName}`.trim() || 'Team member' : null }
     }),
 
   // The team members who can be a date's tutor (everyone on the team), A to Z.

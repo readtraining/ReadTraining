@@ -774,7 +774,7 @@ function LineList({ id, label, hint, items, onChange, max, most, placeholder, or
                 <span className="rt-pws-course-list__tools">
                   <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move up: ${o}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
                   <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} aria-label={`Move down: ${o}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
-                  <button type="button" onClick={() => onChange(items.filter((x) => x !== o))} aria-label={`Remove: ${o}`}><i className="icon-bin text-12" aria-hidden="true"></i></button>
+                  <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => onChange(items.filter((x) => x !== o))} aria-label={`Remove: ${o}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>
                 </span>
               )}
             </li>
