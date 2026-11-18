@@ -3904,26 +3904,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__undo button { padding: 4px 0; border: 0; background: none; font-weight: 700; color: var(--color-purple-1); text-decoration: underline; cursor: pointer; }
 .rt-bk__more { background: var(--color-light-4); }
 .rt-bk__moreh { margin: 18px 0 0; font-size: 30px; line-height: 36px; font-weight: 700; color: var(--color-dark-1); }
-/* the header's mini basket */
-.rt-mini { width: 380px; max-width: calc(100vw - 32px); }
-.rt-mini__list { max-height: 320px; margin: 0; padding: 12px 20px 0; overflow-y: auto; list-style: none; }
-.rt-mini__item { display: grid; grid-template-columns: 64px minmax(0, 1fr) 24px; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--color-light-5); list-style: none; }
-.rt-mini__item:last-child { border-bottom: 0; }
-.rt-mini__thumb { display: block; overflow: hidden; border-radius: 8px; aspect-ratio: 3 / 2; background: var(--color-light-4); }
-.rt-mini__thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.rt-mini__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-/* the header paints its links white and a global rule makes links inherit it; the dropdown is a white card */
-.header-cart .rt-mini__title { font-size: 14px; line-height: 1.35; font-weight: 600; color: var(--color-dark-1) !important; text-decoration: none; }
-.header-cart .rt-mini__title:hover { color: var(--color-purple-1) !important; }
-.rt-mini__meta { font-size: 12px; color: var(--color-light-1); }
-.rt-mini__price { font-size: 13px; color: var(--color-dark-1); }
-.rt-mini__remove { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; color: var(--color-light-1); cursor: pointer; }
-.rt-mini__remove:hover { background: var(--color-light-4); color: var(--color-dark-1); }
-.rt-mini__empty { margin: 0; padding: 24px 20px 8px; font-size: 15px; color: var(--color-dark-1); }
-.rt-mini__foot { display: grid; gap: 14px; padding: 16px 20px 20px; border-top: 1px solid var(--color-light-5); }
-.rt-mini__total { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; color: var(--color-dark-1); }
-.rt-mini__total strong { font-size: 20px; }
-.rt-mini__foot .button { display: flex; align-items: center; justify-content: center; width: 100%; }
 /* ---------- CUSTOMER ACCOUNT (/account): the basket's page head, then the account menu beside the content; cards as the basket
    lines and checkout (white, light border, 16px radius), the site's fields, pills, filter chips and key facts ---------- */
 .rt-acc__eyebrow { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: var(--rt-eyebrow-ls); text-transform: uppercase; color: var(--color-purple-1); }
@@ -5284,18 +5264,17 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-adm--platform .rt-adm-feed p .rt-adm-muted { display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 /* ---------- end PLATFORM ADMIN ---------- */
 
-/* the header's right-hand row (components/home/HomeHeader): search, basket, the phone menu button and the account. Signed out it
-   keeps its old spacing (30px, 20px from 1199px down with 30px before Log in). Signed in, search, basket and avatar are 24px
-   apart (20px from 1199px down): each 20px icon then has a full 44px target (Apple's and Google's minimum) without overlapping
-   the next, and the avatar clears the basket's count */
-.rt-hactions { gap: 30px; }
-@media (max-width: 1199px) {
-  .rt-hactions { gap: 20px; }
-  .rt-hactions > .rt-hactions__auth { margin-left: 10px; }
-}
-.rt-hactions:has(.rt-hauth--in) { gap: 24px; }
+/* the header's right-hand row (components/home/HomeHeader): search, basket, the phone menu button and the account. Search, basket
+   and the menu button are 40px round buttons (.rt-hicon), the size of the signed-in avatar, 16px apart, so all of them sit an even
+   56px apart and each has a full target; signed out, Log in and Sign up start 24px after the basket */
+.rt-hactions { gap: 16px; }
+.rt-hactions > .rt-hactions__auth { margin-left: 8px; }
 .rt-hactions:has(.rt-hauth--in) > .rt-hactions__auth { margin-left: 0; }
-@media (max-width: 1199px) { .rt-hactions:has(.rt-hauth--in) { gap: 20px; } }
+.rt-hicon { display: inline-flex !important; align-items: center; justify-content: center; flex: none; width: 40px; height: 40px; border-radius: 50%; transition: background-color 0.15s ease; }
+@media (hover: hover) { .rt-hicon:hover { background-color: color-mix(in srgb, var(--color-white) 12%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .rt-hicon { transition: none; } }
+/* the basket's count sits on the top-right edge of its own circle, so it never reaches into the gap before the next button */
+.rt-hicon .cartProductCount { top: 0; right: 0; transform: none; }
 /* ---------- HEADER ACCOUNT MENU (components/home/HeaderAuth): signed in, the person's initials and first name open their account's
    pages and Sign out; signed out, Log in and Sign up as before ---------- */
 .rt-hauth { position: relative; display: flex; align-items: center; min-width: 150px; justify-content: flex-end; }
@@ -5329,10 +5308,6 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-hauth-mobile { display: flex; align-items: center; gap: 10px; min-height: 24px; }
 .rt-hauth__out { padding: 0; border: 0; background: none; font-size: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .rt-hauth__menu { animation: none; } .rt-hauth__btn { transition: none; } }
-/* the header's mini basket (the template's toggle-element, used only there): closed, it is also hidden (out of the Tab order and
-   from screen readers) once its fade has finished */
-.toggle-element { visibility: hidden; transition: all 0.2s cubic-bezier(0.215, 0.61, 0.355, 1), visibility 0s linear 0.2s; }
-.toggle-element.-is-el-visible { visibility: visible; transition: all 0.2s cubic-bezier(0.215, 0.61, 0.355, 1), visibility 0s; }
 /* ---------- end HEADER ACCOUNT MENU ---------- */
 
 /* ---------- SITE HEADER MENUS: the four menus (components/home/HomeMenu) and the card each opens (components/header/NavCard)
@@ -5340,8 +5315,7 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 
 /* the four menus in the template's own row and type size. Pointing at a closed menu turns its name green. A click opens it:
    the open menu keeps its white name, gets a 5px green bar along the header's bottom edge (the width of its name) and its
-   arrow points up. A steady 24px gap between the menus on laptop widths too (the template drops to 12px from 1200px to
-   1399px). Keyboard focus keeps its outline. The green needs !important: the template forces every link to its parent's
+   arrow points up. The menus are 40px apart (32px from 1200px to 1399px, where the bar has less room). Keyboard focus keeps its outline. The green needs !important: the template forces every link to its parent's
    colour (a { color: inherit !important }). */
 @media (min-width: 1200px) {
   /* the menu row stays centred (the template's place), so opening the search slides it left to make room (HomeHeader); each
@@ -5355,8 +5329,12 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
   .header .header-menu .menu__nav > li.menu-item-has-children > a.is-open .icon-chevron-right { transform: rotate(-90deg); }
 }
 @media (min-width: 1200px) and (max-width: 1399px) {
-  .header .header-menu .menu__nav > li > a { padding: 6px 12px; }
-  .header .header-menu .menu__nav > li:has(> a.is-open)::after { right: 12px; bottom: -8px; left: 12px; }
+  .header .header-menu .menu__nav > li > a { padding: 6px 16px; }
+  .header .header-menu .menu__nav > li:has(> a.is-open)::after { right: 16px; bottom: -8px; left: 16px; }
+}
+@media (min-width: 1400px) {
+  .header .header-menu .menu__nav > li > a { padding: 7px 20px; }
+  .header .header-menu .menu__nav > li:has(> a.is-open)::after { right: 20px; left: 20px; }
 }
 @media (min-width: 1200px) and (prefers-reduced-motion: reduce) { .header .header-menu .menu__nav > li.menu-item-has-children > a .icon-chevron-right { transition: none; } }
 
@@ -7182,7 +7160,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-pill-scroll { scrollbar-width: none; }
   .rt-pill-scroll::-webkit-scrollbar { display: none; }
 }
-.rt-dd__panel, .rt-mini__scroll { position: relative; }
+.rt-dd__panel { position: relative; }
 /* a text box (TextArea) holds its scroll pill in this frame, which takes the box's place in the layout */
 .rt-textarea { position: relative; display: block; width: 100%; }
 .rt-textarea > textarea { display: block; }

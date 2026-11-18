@@ -159,14 +159,14 @@ export default function HomeSearch({ onOpenChange, width = SEARCH_WIDTH }) {
         ref={openBtnRef}
         type="button"
         onClick={() => setOpen(true)}
-        className="d-flex items-center text-white"
+        className="rt-hicon text-white"
         aria-label="Open search"
         aria-hidden={open}
         tabIndex={open ? -1 : 0}
         style={{
           overflow: "hidden",
           transition: "width .3s cubic-bezier(.215,.61,.355,1), opacity .3s ease",
-          width: open ? 0 : 20,
+          width: open ? 0 : 40,
           opacity: open ? 0 : 1,
           pointerEvents: open ? "none" : "auto",
         }}
