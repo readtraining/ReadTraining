@@ -44,11 +44,6 @@ export default function AdminShell({ current, title, lead, actions = null, detai
     document.body.classList.add("rt-adm-open");
     return () => document.body.classList.remove("rt-adm-open");
   }, []);
-  // the group holding the page you are on always opens, so its link is never hidden
-  const hereGroup = A.nav.find((g) => g.items.some((x) => x.key === current))?.group;
-  useEffect(() => {
-    if (hereGroup && folded.includes(hereGroup)) fold(hereGroup);
-  }, [hereGroup, folded]); // eslint-disable-line react-hooks/exhaustive-deps -- `fold` toggles; it runs once per folded group
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
   const { closed, width: sideWidth } = useSideMenu(); // from 992px: folded to its icon rail, or open at this width
   useSideShortcut();

@@ -7731,13 +7731,14 @@ html { scrollbar-gutter: stable; }
 /* an empty "saved" line takes no room until it has something to say (it stays in the page for screen readers) */
 .rt-adm--platform .rt-acc__stack > p[role="status"]:empty { position: absolute; }
 /* G1, G2, G12: the admin sidebar (from 992px). Folded, it is a 64px rail of icons (each with its name as a tooltip), drawn by
-   the shared rail rules (.rt-adm__body, under the provider workspace's) plus its group lines below; the top bar's search is
+   the shared rail rules (.rt-adm__body, under the provider workspace's) plus its icon list below; the top bar's search is
    centred, so it no longer depends on the sidebar's width */
 @media (min-width: 992px) {
   .rt-adm--platform .rt-adm__find { margin: 0 auto; }
   .rt-adm--platform.is-sideclosed .rt-adm__grouplabel { display: none; }
-  .rt-adm--platform.is-sideclosed .rt-adm__group ul[hidden] { display: block; }
-  .rt-adm--platform.is-sideclosed .rt-adm__group + .rt-adm__group { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rt-c-line); }
+  /* one column of icons, as the provider workspace's rail: no group guide line, indent or dividers */
+  .rt-adm--platform.is-sideclosed .rt-adm__group ul { display: grid; gap: 2px; margin: 0; padding: 0; border: 0; }
+  .rt-adm--platform.is-sideclosed .rt-adm__group + .rt-adm__group { margin-top: 2px; }
   .rt-adm--platform.is-sideclosed .rt-adm__link { position: relative; justify-content: center; padding: 10px 0; }
   .rt-adm--platform.is-sideclosed .rt-adm__link > span:not(.rt-adm__count) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .rt-adm--platform.is-sideclosed .rt-adm__link .rt-adm__count { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; line-height: 18px; }
