@@ -1,0 +1,1730 @@
+[
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "Barista masterclass packages",
+    "tiers": [
+      {
+        "name": "Masterclass",
+        "popular": false,
+        "tagline": "A full day on the machines.",
+        "features": [
+          {
+            "title": "1-day masterclass on commercial machines",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of attendance",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "All coffee and milk provided",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Milk jug and tamper to keep",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "1-hour follow-up session",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 13500
+      },
+      {
+        "name": "Masterclass + kit",
+        "popular": true,
+        "tagline": "Take the tools home with you.",
+        "features": [
+          {
+            "title": "1-day masterclass on commercial machines",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of attendance",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "All coffee and milk provided",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Milk jug and tamper to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "1-hour follow-up session",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 16500
+      },
+      {
+        "name": "Masterclass + follow-up",
+        "popular": false,
+        "tagline": "Come back for an hour once you have practised.",
+        "features": [
+          {
+            "title": "1-day masterclass on commercial machines",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of attendance",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "All coffee and milk provided",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Milk jug and tamper to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "1-hour follow-up session",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 18500
+      }
+    ],
+    "dateCourses": [
+      "barista-skills-masterclass"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "Digital marketing packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The two days, live online.",
+        "features": [
+          {
+            "title": "2 days of live online training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Slides and templates to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of completion",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "45-minute one-to-one review of your plan",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 5000,
+        "pricePence": 24900
+      },
+      {
+        "name": "Course + review",
+        "popular": true,
+        "tagline": "A trainer reviews your plan with you.",
+        "features": [
+          {
+            "title": "2 days of live online training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Slides and templates to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of completion",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "45-minute one-to-one review of your plan",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 29900
+      }
+    ],
+    "dateCourses": [
+      "digital-marketing-essentials-live"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "Emergency First Aid at Work packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "The qualification, nothing extra.",
+        "features": [
+          {
+            "title": "1-day Emergency First Aid at Work course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Level 3 certificate, valid for 3 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Annual 3-hour refresher (recommended by the HSE)",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 8500
+      },
+      {
+        "name": "Complete",
+        "popular": true,
+        "tagline": "Includes your refresher next year.",
+        "features": [
+          {
+            "title": "1-day Emergency First Aid at Work course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Level 3 certificate, valid for 3 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Annual 3-hour refresher (recommended by the HSE)",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 12500
+      }
+    ],
+    "dateCourses": [
+      "apex-emergency-first-aid-at-work"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "Fire Marshal (live online) packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "The training and certificate.",
+        "features": [
+          {
+            "title": "Half-day fire marshal course, live online",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of training (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Fire marshal hi-vis vest posted to you",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 1000,
+        "pricePence": 5900
+      },
+      {
+        "name": "Plus",
+        "popular": true,
+        "tagline": "With a hi-vis vest sent to you.",
+        "features": [
+          {
+            "title": "Half-day fire marshal course, live online",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of training (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Fire marshal hi-vis vest posted to you",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 6900
+      }
+    ],
+    "dateCourses": [
+      "apex-fire-marshal-online"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "Food hygiene (online) packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "Everything you need to qualify.",
+        "features": [
+          {
+            "title": "Level 2 Food Hygiene course online",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate (PDF) as soon as you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "12 months' access",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Printed certificate posted to you",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Kitchen food safety posters",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 500,
+        "pricePence": 1999
+      },
+      {
+        "name": "Plus",
+        "popular": true,
+        "tagline": "With a printed certificate and posters.",
+        "features": [
+          {
+            "title": "Level 2 Food Hygiene course online",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate (PDF) as soon as you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "12 months' access",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Printed certificate posted to you",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Kitchen food safety posters",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 2999
+      }
+    ],
+    "dateCourses": [],
+    "selfPacedCourses": [
+      "apex-level-2-food-hygiene"
+    ]
+  },
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "IOSH Managing Safely (live online) packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The course, exam and project.",
+        "features": [
+          {
+            "title": "IOSH Managing Safely, live online over 3 days",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "IOSH certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Digital workbook",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "One-to-one help with your risk assessment project",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 44900
+      },
+      {
+        "name": "Course + resit",
+        "popular": true,
+        "tagline": "Peace of mind if the exam doesn't go your way.",
+        "features": [
+          {
+            "title": "IOSH Managing Safely, live online over 3 days",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "IOSH certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Digital workbook",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One-to-one help with your risk assessment project",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 47900
+      },
+      {
+        "name": "Complete",
+        "popular": false,
+        "tagline": "With a trainer to help with your project.",
+        "features": [
+          {
+            "title": "IOSH Managing Safely, live online over 3 days",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "IOSH certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Digital workbook",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One-to-one help with your risk assessment project",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 51900
+      }
+    ],
+    "dateCourses": [
+      "apex-iosh-managing-safely-online"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "Personal Licence packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The qualification on its own.",
+        "features": [
+          {
+            "title": "1-day APLH course and exam",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock exam",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Help with your personal licence application",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Basic DBS check applied for, fee included",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 12900
+      },
+      {
+        "name": "Course + application",
+        "popular": true,
+        "tagline": "We check your form before it goes to the council.",
+        "features": [
+          {
+            "title": "1-day APLH course and exam",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock exam",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Help with your personal licence application",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Basic DBS check applied for, fee included",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 15900
+      },
+      {
+        "name": "Complete",
+        "popular": false,
+        "tagline": "With your basic DBS check too.",
+        "features": [
+          {
+            "title": "1-day APLH course and exam",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock exam",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Help with your personal licence application",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Basic DBS check applied for, fee included",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 18900
+      }
+    ],
+    "dateCourses": [
+      "apex-personal-licence-aplh"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "apex-skills-academy-sample",
+    "name": "Social media (online) packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "Learn at your own pace.",
+        "features": [
+          {
+            "title": "Online course, about 6 hours",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of completion (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "12 months' access",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Content calendar and post templates",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Tutor feedback on your first month's plan",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 4900
+      },
+      {
+        "name": "Plus",
+        "popular": true,
+        "tagline": "With templates and feedback on your plan.",
+        "features": [
+          {
+            "title": "Online course, about 6 hours",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of completion (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "12 months' access",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Content calendar and post templates",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Tutor feedback on your first month's plan",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 7900
+      }
+    ],
+    "dateCourses": [],
+    "selfPacedCourses": [
+      "social-media-marketing-for-small-businesses"
+    ]
+  },
+  {
+    "provider": "harbour-training-group-sample",
+    "name": "CCTV Operator packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The qualification for your licence.",
+        "features": [
+          {
+            "title": "CCTV Operator course in the classroom",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exams and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Help with your SIA licence application",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 2000,
+        "pricePence": 19900
+      },
+      {
+        "name": "Course + resit",
+        "popular": true,
+        "tagline": "Peace of mind if an exam doesn't go your way.",
+        "features": [
+          {
+            "title": "CCTV Operator course in the classroom",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exams and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Help with your SIA licence application",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 21900
+      },
+      {
+        "name": "Licence package",
+        "popular": false,
+        "tagline": "From the classroom to your licence application.",
+        "features": [
+          {
+            "title": "CCTV Operator course in the classroom",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exams and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Help with your SIA licence application",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 23900
+      }
+    ],
+    "dateCourses": [
+      "harbour-sia-cctv-operator"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "harbour-training-group-sample",
+    "name": "Conflict management (online) packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "Learn at your own pace.",
+        "features": [
+          {
+            "title": "Online course, about 3 hours",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of completion (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "12 months' access",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Printed certificate posted to you",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Tutor support by email",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 3900
+      },
+      {
+        "name": "Plus",
+        "popular": true,
+        "tagline": "With a tutor to answer your questions.",
+        "features": [
+          {
+            "title": "Online course, about 3 hours",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of completion (PDF)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "12 months' access",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Printed certificate posted to you",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Tutor support by email",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 5500
+      }
+    ],
+    "dateCourses": [],
+    "selfPacedCourses": [
+      "conflict-management-for-security-staff"
+    ]
+  },
+  {
+    "provider": "harbour-training-group-sample",
+    "name": "Door Supervisor Top-Up packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "Your renewal training, nothing extra.",
+        "features": [
+          {
+            "title": "Door Supervisor top-up training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exams and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Help with your SIA licence renewal application",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 14900
+      },
+      {
+        "name": "Course + resit",
+        "popular": true,
+        "tagline": "Peace of mind if an exam doesn't go your way.",
+        "features": [
+          {
+            "title": "Door Supervisor top-up training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exams and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Help with your SIA licence renewal application",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 16900
+      },
+      {
+        "name": "Renewal package",
+        "popular": false,
+        "tagline": "We help you through the SIA renewal too.",
+        "features": [
+          {
+            "title": "Door Supervisor top-up training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exams and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free online mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Help with your SIA licence renewal application",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 18900
+      }
+    ],
+    "dateCourses": [
+      "harbour-sia-door-supervisor-top-up"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "harbour-training-group-sample",
+    "name": "Emergency First Aid at Work packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "The qualification, nothing extra.",
+        "features": [
+          {
+            "title": "1-day Emergency First Aid at Work course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Level 3 certificate, valid for 3 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CPR face shield to keep",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Annual 3-hour refresher (recommended by the HSE)",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 1600,
+        "pricePence": 7900
+      },
+      {
+        "name": "Plus",
+        "popular": false,
+        "tagline": "With a face shield for your first aid kit.",
+        "features": [
+          {
+            "title": "1-day Emergency First Aid at Work course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Level 3 certificate, valid for 3 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CPR face shield to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Annual 3-hour refresher (recommended by the HSE)",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 8900
+      },
+      {
+        "name": "Complete",
+        "popular": true,
+        "tagline": "Includes your refresher next year.",
+        "features": [
+          {
+            "title": "1-day Emergency First Aid at Work course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Level 3 certificate, valid for 3 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CPR face shield to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Annual 3-hour refresher (recommended by the HSE)",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 11900
+      }
+    ],
+    "dateCourses": [
+      "harbour-emergency-first-aid-at-work"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "harbour-training-group-sample",
+    "name": "First Aid at Work packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "The full qualification.",
+        "features": [
+          {
+            "title": "3-day First Aid at Work course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Level 3 certificate, valid for 3 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Annual 3-hour refresher (recommended by the HSE)",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "Reminder before your certificate runs out",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 2000,
+        "pricePence": 22900
+      },
+      {
+        "name": "Complete",
+        "popular": true,
+        "tagline": "Stay up to date for all three years.",
+        "features": [
+          {
+            "title": "3-day First Aid at Work course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Level 3 certificate, valid for 3 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Annual 3-hour refresher (recommended by the HSE)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Reminder before your certificate runs out",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 26900
+      }
+    ],
+    "dateCourses": [
+      "harbour-first-aid-at-work"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "kestrel-safety-training-sample",
+    "name": "Asbestos Awareness packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "The training and certificate.",
+        "features": [
+          {
+            "title": "Half-day Category A asbestos awareness course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Online refresher a year later",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 5900
+      },
+      {
+        "name": "Plus",
+        "popular": true,
+        "tagline": "Includes the yearly refresher.",
+        "features": [
+          {
+            "title": "Half-day Category A asbestos awareness course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Online refresher a year later",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 7900
+      }
+    ],
+    "dateCourses": [
+      "kestrel-asbestos-awareness"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "kestrel-safety-training-sample",
+    "name": "CSCS Green Card packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The Level 1 Award on its own.",
+        "features": [
+          {
+            "title": "Level 1 Health and Safety course (1 day)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exam and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free CITB HS&E mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB HS&E test booked for you, fee included",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "CSCS card application made for you, fee included",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 9900
+      },
+      {
+        "name": "Course + test",
+        "popular": true,
+        "tagline": "The course and the test the card needs.",
+        "features": [
+          {
+            "title": "Level 1 Health and Safety course (1 day)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exam and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free CITB HS&E mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB HS&E test booked for you, fee included",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CSCS card application made for you, fee included",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 13900
+      },
+      {
+        "name": "Complete card package",
+        "popular": false,
+        "tagline": "Course, test and card application in one.",
+        "features": [
+          {
+            "title": "Level 1 Health and Safety course (1 day)",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Exam and certificate",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Free CITB HS&E mock tests",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB HS&E test booked for you, fee included",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CSCS card application made for you, fee included",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 18900
+      }
+    ],
+    "dateCourses": [
+      "kestrel-cscs-green-card"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "kestrel-safety-training-sample",
+    "name": "Fire Marshal packages",
+    "tiers": [
+      {
+        "name": "Standard",
+        "popular": false,
+        "tagline": "The training and certificate.",
+        "features": [
+          {
+            "title": "Half-day fire marshal course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Fire marshal hi-vis vest to keep",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 9500
+      },
+      {
+        "name": "Plus",
+        "popular": true,
+        "tagline": "With a hi-vis vest for your role.",
+        "features": [
+          {
+            "title": "Half-day fire marshal course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Certificate of training",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course handbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Fire marshal hi-vis vest to keep",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 10900
+      }
+    ],
+    "dateCourses": [
+      "kestrel-fire-marshal"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "kestrel-safety-training-sample",
+    "name": "IOSH Managing Safely packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The course, exam and project.",
+        "features": [
+          {
+            "title": "3-day IOSH Managing Safely course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "IOSH certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course workbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "One-to-one help with your risk assessment project",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 5000,
+        "pricePence": 49500
+      },
+      {
+        "name": "Course + resit",
+        "popular": true,
+        "tagline": "Peace of mind if the exam doesn't go your way.",
+        "features": [
+          {
+            "title": "3-day IOSH Managing Safely course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "IOSH certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course workbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One-to-one help with your risk assessment project",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 52500
+      },
+      {
+        "name": "Complete",
+        "popular": false,
+        "tagline": "With a trainer to help with your project.",
+        "features": [
+          {
+            "title": "3-day IOSH Managing Safely course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "IOSH certificate when you pass",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course workbook to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One-to-one help with your risk assessment project",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 56500
+      }
+    ],
+    "dateCourses": [
+      "kestrel-iosh-managing-safely"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "kestrel-safety-training-sample",
+    "name": "SMSTS packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The five-day course and exam.",
+        "features": [
+          {
+            "title": "5-day SMSTS course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB certificate, valid for 5 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course notes to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": false,
+            "description": null
+          },
+          {
+            "title": "CITB Managers and Professionals HS&E test booked for you",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 54900
+      },
+      {
+        "name": "Course + resit",
+        "popular": true,
+        "tagline": "Peace of mind if the exam doesn't go your way.",
+        "features": [
+          {
+            "title": "5-day SMSTS course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB certificate, valid for 5 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course notes to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB Managers and Professionals HS&E test booked for you",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 58900
+      },
+      {
+        "name": "Course + HS&E test",
+        "popular": false,
+        "tagline": "With the HS&E test for managers too.",
+        "features": [
+          {
+            "title": "5-day SMSTS course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB certificate, valid for 5 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course notes to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB Managers and Professionals HS&E test booked for you",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 62900
+      }
+    ],
+    "dateCourses": [
+      "kestrel-citb-smsts"
+    ],
+    "selfPacedCourses": []
+  },
+  {
+    "provider": "kestrel-safety-training-sample",
+    "name": "SSSTS packages",
+    "tiers": [
+      {
+        "name": "Course only",
+        "popular": false,
+        "tagline": "The two-day course and exam.",
+        "features": [
+          {
+            "title": "2-day SSSTS course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB certificate, valid for 5 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course notes to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": false,
+            "description": null
+          }
+        ],
+        "savePence": 2000,
+        "pricePence": 27900
+      },
+      {
+        "name": "Course + resit",
+        "popular": true,
+        "tagline": "Peace of mind if the exam doesn't go your way.",
+        "features": [
+          {
+            "title": "2-day SSSTS course",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "CITB certificate, valid for 5 years",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "Course notes to keep",
+            "included": true,
+            "description": null
+          },
+          {
+            "title": "One free exam resit",
+            "included": true,
+            "description": null
+          }
+        ],
+        "savePence": null,
+        "pricePence": 29900
+      }
+    ],
+    "dateCourses": [
+      "kestrel-citb-sssts"
+    ],
+    "selfPacedCourses": []
+  }
+]
