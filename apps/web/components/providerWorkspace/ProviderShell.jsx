@@ -8,7 +8,7 @@ import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { RowMenu } from "@/components/admin/adminParts";
 import NavIcon from "@/components/admin/navIcons";
-import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "@/components/admin/workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useNameTip, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "@/components/admin/workNav";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
 import { actAs } from "@/lib/providerWorkspace";
@@ -45,6 +45,8 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const { closed: rail, width: sideWidth } = useSideMenu(); // from 992px: folded to its icon rail, or open at this width
   useSideShortcut();
   const [tipProps, railTip] = useRailTip(rail);
+  const openRail = useRailOpen(); // a click on the folded rail's empty space opens the menu
+  const [nameTipProps, nameTip] = useNameTip(); // the account card's name, when it is cut short
   const access = useProviderAccess();
   const nav = pw.nav.filter((x) => !x.can || access.can(x.can));
   const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
@@ -142,17 +144,15 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
 
       <div className="rt-adm__body">
         {drawer.menuOpen && <div className="rt-adm__scrim" onClick={drawer.closeMenu} aria-hidden="true"></div>}
-        <nav id="rt-pws-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Provider workspace" ref={sideRef}>
+        <nav id="rt-pws-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Provider workspace" ref={sideRef} onClick={openRail}>
           <DrawerHead drawer={drawer} />
-          {/* the fold button sits in the account card while the menu is open (one row, as the account it belongs to) and alone at
-              the top of the icon rail when folded, where the card is hidden */}
+          {/* the open menu has no fold button (Ctrl+B or its edge folds it); the folded rail keeps one at its top to open it again */}
           <div className="rt-adm__sidetools">
-            <SideMenuButton controls="rt-pws-side" shortcut />
+            <SideMenuButton controls="rt-pws-side" />
           </div>
           <div className="rt-pws__org">
             <span className="rt-pws__orgmark" aria-hidden="true">{org ? initials(org) : ""}</span>
-            <span className="rt-pws__orgname"><strong>{org || " "}</strong><span>Training provider</span></span>
-            <SideMenuButton controls="rt-pws-side" shortcut />
+            <span className="rt-pws__orgname"><strong {...nameTipProps}>{org || " "}</strong><span>Training provider</span></span>
           </div>
           <ul className="rt-pws__nav">
             {nav.map((x) => {
@@ -216,6 +216,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         </nav>
         <SideResizer rootRef={rootRef} sideRef={sideRef} controls="rt-pws-side" />
         {railTip}
+        {nameTip}
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
           <ProviderAccountStatus />

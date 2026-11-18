@@ -9,9 +9,9 @@ import { SIDE, SIDE_COOKIE, SIDE_WIDTH_COOKIE } from "@/lib/sideMenu";
 // behave the same: below 992px the sidebar is a drawer opened from the top bar's menu button (focus moves into it and is kept
 // there, Esc or the close button shuts it, the page behind doesn't scroll, and it shuts when a page opens), and its groups fold
 // one by one, remembered in this browser. From 992px the button at the sidebar's top folds it to a 64px rail of icons and opens
-// it again (kept in a cookie, so the server draws the page the same way and nothing jumps on load). The provider workspace also
-// has Ctrl+B for that button (useSideShortcut), an edge that resizes the open menu (SideResizer; the width is kept in a cookie
-// too) and the rail's tooltips (useRailTip).
+// it again (kept in a cookie, so the server draws the page the same way and nothing jumps on load), with Ctrl+B for that button
+// (useSideShortcut), an edge that resizes the open menu (SideResizer; the width is kept in a cookie too) and the rail's tooltips
+// (useRailTip).
 
 const keep = (name, value) => {
   try {
@@ -19,7 +19,7 @@ const keep = (name, value) => {
   } catch {}
 };
 
-// The sidebar folded or open, from 992px, and the provider workspace's chosen width (null: the default). The layouts read the
+// The sidebar folded or open, from 992px, and its chosen width (null: the default). The layouts read the
 // cookies on the server (lib/sideMenu.js).
 const SideMenu = createContext({ closed: false, width: null, fold: () => {}, toggle: () => {}, resize: () => {} });
 export function SideMenuProvider({ closed: initialClosed = false, width: initialWidth = null, children }) {
@@ -38,14 +38,14 @@ export function SideMenuProvider({ closed: initialClosed = false, width: initial
 }
 export const useSideMenu = () => useContext(SideMenu);
 
-// The button at the sidebar's top that folds it to the rail and opens it again (it stays in place in the rail). `shortcut`: the
-// provider workspace's wording, which names Ctrl+B (useSideShortcut); the admin keeps "Hide menu" / "Show menu".
-export function SideMenuButton({ controls, shortcut = false }) {
+// The button at the folded rail's top that opens the menu again (from 992px; the open menu folds with Ctrl+B, useSideShortcut,
+// or its edge, SideResizer). Its title names the shortcut.
+export function SideMenuButton({ controls }) {
   const { closed, toggle } = useSideMenu();
-  const label = shortcut ? (closed ? "Expand menu" : "Collapse menu") : closed ? "Show menu" : "Hide menu";
+  const label = closed ? "Expand menu" : "Collapse menu";
   return (
     <button type="button" className="rt-adm__sidehide" onClick={toggle} aria-expanded={!closed} aria-controls={controls}
-      title={shortcut ? `${label} (Ctrl+B)` : label} aria-keyshortcuts={shortcut ? "Control+B Meta+B" : undefined}>
+      title={`${label} (Ctrl+B)`} aria-keyshortcuts="Control+B Meta+B">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d={closed ? "m13.5 10 2 2-2 2" : "m15.5 10-2 2 2 2"} />
       </svg>
@@ -81,7 +81,7 @@ export function useSideShortcut() {
 }
 
 // the widest open menu for this window: 280px, or a quarter of the window, but never narrower than the default (the CSS keeps the
-// same limits, .rt-pws .rt-adm__body)
+// same limits, .rt-adm__body)
 const widest = () => Math.min(SIDE.max, Math.max(SIDE.base, Math.floor(window.innerWidth / 4)));
 
 // The open menu's width for the layout's root element (the grid reads --rt-side-w)
@@ -142,11 +142,17 @@ export function SideResizer({ rootRef, sideRef, controls }) {
     const raw = d.from + dx;
     const rail = raw < SIDE.snap;
     if (rail !== d.rail) {
+      // folding or opening mid-drag slides (the drag's own moves don't): the sliding is let back for that step
       d.rail = rail;
+      document.body.classList.remove("rt-side-resizing");
       fold(rail);
+      clearTimeout(d.slide);
+      d.slide = setTimeout(() => drag.current === d && document.body.classList.add("rt-side-resizing"), 220);
     }
     if (!rail) {
-      d.w = Math.round(Math.min(Math.max(raw, SIDE.min), widest()));
+      // past the narrowest it still gives a little (half the pointer's move), so pushing it towards the rail can be seen
+      const w = raw < SIDE.min ? SIDE.min - (SIDE.min - raw) / 2 : raw;
+      d.w = Math.round(Math.min(w, widest()));
       setVar(d.w);
     }
   };
@@ -154,9 +160,15 @@ export function SideResizer({ rootRef, sideRef, controls }) {
     const d = drag.current;
     if (!d) return;
     drag.current = null;
+    clearTimeout(d.slide);
     document.body.classList.remove("rt-side-resizing");
     if (d.rail) setVar(d.saved); // left folded: it opens again at the width it had before
-    else if (d.w !== null) resize(d.w);
+    else if (d.w !== null) {
+      // let go short of the rail: it slides back to the narrowest width
+      const w = Math.max(d.w, SIDE.min);
+      setVar(w);
+      resize(w);
+    }
   };
   return (
     <div className="rt-adm__resize" role="separator" aria-orientation="vertical" tabIndex={0} aria-label="Resize menu" aria-controls={controls}
@@ -165,6 +177,16 @@ export function SideResizer({ rootRef, sideRef, controls }) {
       onKeyDown={onKeyDown} onDoubleClick={toggle} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd} onLostPointerCapture={onPointerEnd}></div>
   );
+}
+
+// The folded rail opens when its empty space is clicked (its icons and button keep their own clicks): the whole rail is a target,
+// not just the small button at its top. Returns the sidebar <nav>'s onClick.
+export function useRailOpen() {
+  const { closed, fold } = useSideMenu();
+  return (e) => {
+    if (!closed || e.target.closest("a, button, input, [role='separator']")) return;
+    fold(false);
+  };
 }
 
 // The rail's tooltips: pointing at or focusing an icon shows its name beside it, drawn outside the rail (which scrolls, so it would
@@ -194,6 +216,32 @@ export function useRailTip(on) {
   const tipProps = { onPointerEnter: show, onPointerLeave: hide, onFocus: show, onBlur: hide };
   const tipEl = on && tip && <span className="rt-adm__tip" style={{ top: tip.top, left: tip.left }} aria-hidden="true">{tip.label}</span>;
   return [tipProps, tipEl];
+}
+
+// A name cut short with "…" (an account card's, one line): pointing at it shows the whole name in the rail's tooltip, under it,
+// only when it is actually cut. The text is all there for screen readers, so the tooltip is for the eye only.
+export function useNameTip() {
+  const [tip, setTip] = useState(null);
+  const show = (e) => {
+    const el = e.currentTarget;
+    if (el.scrollWidth <= el.clientWidth) return;
+    const r = el.getBoundingClientRect();
+    setTip({ label: el.textContent, top: r.bottom + 6, left: r.left });
+  };
+  const hide = () => setTip(null);
+  useEffect(() => {
+    if (!tip) return;
+    const onKey = (e) => e.key === "Escape" && setTip(null);
+    const onScroll = () => setTip(null);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [tip]);
+  const tipEl = tip && <span className="rt-adm__tip -below" style={{ top: tip.top, left: tip.left }} aria-hidden="true">{tip.label}</span>;
+  return [{ onPointerEnter: show, onPointerLeave: hide }, tipEl];
 }
 
 // The drawer: `sideRef` is the sidebar <nav>.

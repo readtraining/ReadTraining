@@ -36,7 +36,7 @@ export default function BasketPage({ recommended }) {
   const [dates, setDates] = useState(null); // { key, detail, mode, selectedId } while the date pop-up is in use
   const [datesOpen, setDatesOpen] = useState(false);
   const [announce, setAnnounce] = useState("");
-  const [merged, setMerged] = useState(null); // { title, quantity }: a date booked again joined its line (context/Context.js)
+  const [merged, setMerged] = useState(null); // { key, title, quantity, seen }: a date booked again joined its line (context/Context.js)
   const allRef = useRef(null);
   useHeaderOffset();
 
@@ -47,7 +47,8 @@ export default function BasketPage({ recommended }) {
       const note = window.sessionStorage.getItem(MERGED_KEY);
       if (note) {
         window.sessionStorage.removeItem(MERGED_KEY);
-        setMerged(JSON.parse(note));
+        const n = JSON.parse(note);
+        if (n?.key) setMerged(n);
       }
     } catch {}
     setReady(true);
@@ -114,6 +115,17 @@ export default function BasketPage({ recommended }) {
     setRemoved(null);
   };
 
+  // the "already in your basket" notice is about one line as it was then: it goes once that line is removed, its delegates change
+  // or its date or package changes (its key), and never comes back (`seen`: the line was found, so a basket still loading doesn't clear it)
+  const mergedLine = merged && cartCourses.find((i) => lineKey(i) === merged.key);
+  const mergedNow = Boolean(mergedLine && Number(mergedLine.quantity) === merged.quantity);
+  useEffect(() => {
+    if (!merged) return;
+    if (mergedNow) {
+      if (!merged.seen) setMerged((m) => m && { ...m, seen: true });
+    } else if (merged.seen) setMerged(null);
+  }, [merged, mergedNow]);
+
   const chosen = cartCourses.filter(isSelected);
   const saver = useSkillSaver(); // the signed-in learner's level; null signed out, undefined while checking
   const totals = basketTotals(chosen, promo, saver || null);
@@ -142,7 +154,7 @@ export default function BasketPage({ recommended }) {
 
       <section className="rt-bk layout-pt-md layout-pb-lg" aria-label="Your courses">
         <div className="container">
-          {merged && !removed && (
+          {mergedNow && !removed && (
             <div className="rt-bk__undo" role="status">
               <span><b>{merged.title}</b> on that date was already in your basket, so it now has {merged.quantity} {merged.quantity === 1 ? "delegate" : "delegates"}.</span>
               <button type="button" onClick={() => setMerged(null)}>OK</button>

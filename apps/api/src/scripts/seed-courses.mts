@@ -14,6 +14,7 @@
 //   pnpm live --filter @readtraining/api seed:courses --live-review   the review set on the live project (--remove takes the samples out)
 //   pnpm live --filter @readtraining/api seed:courses --content       update the words of the courses already there
 //   pnpm live --filter @readtraining/api seed:courses --prices        update the prices of their dates
+//   pnpm live --filter @readtraining/api seed:courses --plans         give the sample providers their price plans (packages)
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -24,6 +25,7 @@ import { and, categories, cohorts, courseExams, courseFaqs, courseImages, course
 import { db } from '../lib/db.mjs'
 import { logActivity } from '../lib/activity.mjs'
 import { COURSE_MEDIA } from '../lib/media.mjs'
+import { cheapest, type Tier } from '../modules/provider/plans.mjs'
 import { supabase } from '../lib/supabase.mjs'
 
 const env = process.env
@@ -33,7 +35,9 @@ const review = process.argv.includes('--live-review')
 const contentOnly = process.argv.includes('--content')
 // only set the prices of the sample providers' dates that are already there (from OFFERS below)
 const pricesOnly = process.argv.includes('--prices')
-if (live && !review && !contentOnly && !pricesOnly && !process.argv.includes('--remove')) {
+// only give the sample providers already there their price plans (data/sample-price-plans.json) and put their courses on them
+const plansOnly = process.argv.includes('--plans')
+if (live && !review && !contentOnly && !pricesOnly && !plansOnly && !process.argv.includes('--remove')) {
   console.error('seed:courses is for development and test databases only. For the client review on live, add --live-review.')
   process.exit(1)
 }
@@ -93,6 +97,51 @@ if (remove) {
   // the shared course pages stay, with their words and pictures: hidden until a real provider lists a course on one
   const pages = await db.select({ slug: courses.slug }).from(courses).where(sql`${courses.slug} in ${SHARED_SLUGS} and ${courses.kind} = 'shared'`)
   console.log(`Removed ${orgIds.length} sample providers and their courses. The ${pages.length} shared course pages stay (hidden until a real provider lists a course on one): ${pages.map((p) => p.slug).join(', ')}.`)
+  process.exit(0)
+}
+// --plans: the sample providers' price plans (packages), as made on the development database (data/sample-price-plans.json):
+// each plan is added to its provider (or, when one of that name is there, its packages are set again), then the provider's
+// courses named with it go on it: their upcoming dates, or the self-paced option. A date or course on a plan is priced at the
+// plan's cheapest package, as when a provider picks it (plans.mts). Only the three sample providers are touched, so --remove
+// takes it all out with them. Run it again any time: nothing is added twice.
+//   pnpm live --filter @readtraining/api seed:courses --plans
+if (plansOnly) {
+  type SamplePlan = { provider: string; name: string; tiers: Tier[]; dateCourses: string[]; selfPacedCourses: string[] }
+  const plans = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'data', 'sample-price-plans.json'), 'utf8')) as SamplePlan[]
+  const counts = await db.transaction(async (tx) => {
+    const n = { plans: 0, dates: 0, selfPaced: 0, skipped: [] as string[] }
+    for (const p of plans) {
+      if (!PROVIDERS.some((x) => x.slug === p.provider)) continue
+      const [org] = await tx.select({ id: organisations.id }).from(organisations).where(eq(organisations.slug, p.provider))
+      if (!org) {
+        n.skipped.push(`${p.name} (${p.provider} is not on this database)`)
+        continue
+      }
+      const [had] = await tx.select({ id: pricePlans.id }).from(pricePlans).where(and(eq(pricePlans.organisationId, org.id), eq(pricePlans.name, p.name)))
+      const planId = had
+        ? (await tx.update(pricePlans).set({ tiers: p.tiers, archivedAt: null, updatedAt: new Date() }).where(eq(pricePlans.id, had.id)).returning({ id: pricePlans.id }))[0].id
+        : (await tx.insert(pricePlans).values({ organisationId: org.id, name: p.name, tiers: p.tiers }).returning({ id: pricePlans.id }))[0].id
+      n.plans++
+      const from = cheapest(p.tiers)
+      for (const slug of p.dateCourses) {
+        const [c] = await tx.select({ id: courses.id }).from(courses).where(and(eq(courses.slug, slug), eq(courses.organisationId, org.id)))
+        if (!c) {
+          n.skipped.push(`${slug} (not on this database)`)
+          continue
+        }
+        const done = await tx.update(cohorts).set({ planId, ...from, updatedAt: new Date() }).where(sql`${cohorts.courseId} = ${c.id} and ${cohorts.cancelledAt} is null and ${cohorts.endsOn} >= current_date`).returning({ id: cohorts.id })
+        n.dates += done.length
+      }
+      for (const slug of p.selfPacedCourses) {
+        const done = await tx.update(courses).set({ planId, pricePence: from.pricePence, updatedAt: new Date() }).where(sql`${courses.slug} = ${slug} and ${courses.organisationId} = ${org.id} and 'self-paced' = any(${courses.methods})`).returning({ id: courses.id })
+        if (done.length) n.selfPaced++
+        else n.skipped.push(`${slug} (not on this database, or not self-paced)`)
+      }
+    }
+    return n
+  })
+  console.log(`Price plans: ${counts.plans} added or updated; ${counts.dates} upcoming dates and ${counts.selfPaced} self-paced courses put on them.`)
+  if (counts.skipped.length) console.log(`Left out: ${counts.skipped.join('; ')}.`)
   process.exit(0)
 }
 if (provRows.length && !contentOnly && !pricesOnly) {
