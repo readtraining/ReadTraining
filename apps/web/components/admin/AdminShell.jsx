@@ -8,7 +8,7 @@ import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
 import NavIcon from "./navIcons";
-import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, useFoldedGroups, useSideMenu, useWorkDrawer } from "./workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useNameTip, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "./workNav";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -25,13 +25,15 @@ const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0])
 // signed-in admin (from the server check: name, access level), "View site" and Sign out; a sidebar with the plan's groups (each page with its icon and a live count where
 // something waits); then the page head (title, intro, the page's actions) and the page. Each sidebar group folds (remembered in
 // this browser; a folded group still shows how many things wait in it, and the page you are on is marked on its heading), and the
-// button at the sidebar's top right folds it to a rail of icons (components/admin/workNav.jsx). Below 992px the sidebar is a menu
+// button at the sidebar's top right (or Ctrl+B) folds it to a rail of icons, each with its name as a tooltip, and its right edge
+// resizes it (dragged in far enough, it folds), as the provider workspace's (components/admin/workNav.jsx). Below 992px the sidebar is a menu
 // drawer opened from the top bar. `current` marks the page. The top bar's search (Ctrl+K) reaches
 // every page and the real learners and providers. A page that still shows made-up records says so beside its title (the nav's
 // `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a breadcrumb back to the list and
 // the record's own card carries the page's h1. `real`: a page of real records inside a section that is partly demo (a course in
 // the catalogue) drops the section's demo label.
 export default function AdminShell({ current, title, lead, actions = null, detail = null, real = false, children }) {
+  const rootRef = useRef(null);
   const sideRef = useRef(null);
   const router = useRouter();
   const me = useAdminAccess();
@@ -42,13 +44,12 @@ export default function AdminShell({ current, title, lead, actions = null, detai
     document.body.classList.add("rt-adm-open");
     return () => document.body.classList.remove("rt-adm-open");
   }, []);
-  // the group holding the page you are on always opens, so its link is never hidden
-  const hereGroup = A.nav.find((g) => g.items.some((x) => x.key === current))?.group;
-  useEffect(() => {
-    if (hereGroup && folded.includes(hereGroup)) fold(hereGroup);
-  }, [hereGroup, folded]); // eslint-disable-line react-hooks/exhaustive-deps -- `fold` toggles; it runs once per folded group
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
-  const { closed } = useSideMenu(); // the sidebar folded to its icon rail, from 992px
+  const { closed, width: sideWidth } = useSideMenu(); // from 992px: folded to its icon rail, or open at this width
+  useSideShortcut();
+  const [tipProps, railTip] = useRailTip(closed);
+  const openRail = useRailOpen(); // a click on the folded rail's empty space opens the menu
+  const [nameTipProps, nameTip] = useNameTip(); // the top bar's name, when it is cut short
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
@@ -79,7 +80,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   };
 
   return (
-    <div className={`rt-home rt-adm rt-adm--platform${closed ? " is-sideclosed" : ""}`}>
+    <div className={`rt-home rt-adm rt-adm--platform${closed ? " is-sideclosed" : ""}`} style={sideWidthStyle(sideWidth)} ref={rootRef}>
       <a href="#rt-adm-main" className="rt-skip">Skip to main content</a>
       <header className="rt-adm__top">
         <div className="rt-adm__toprow">
@@ -93,7 +94,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
             <Link href={A.backToSite.href} className="rt-adm__site">{A.backToSite.label}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong {...nameTipProps}>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
             </div>
             <button type="button" className="rt-adm__out" onClick={signOut} disabled={leaving}>{A.signOut}</button>
           </div>
@@ -102,7 +103,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
 
       <div className="rt-adm__body">
         {drawer.menuOpen && <div className="rt-adm__scrim" onClick={drawer.closeMenu} aria-hidden="true"></div>}
-        <nav id="rt-adm-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Admin" ref={sideRef}>
+        <nav id="rt-adm-side" className={`rt-adm__side rt-pill-scroll${drawer.menuOpen ? " is-open" : ""}`} aria-label="Admin" ref={sideRef} onClick={openRail}>
           <DrawerHead drawer={drawer} />
           <div className="rt-adm__sidetools">
             <SideMenuButton controls="rt-adm-side" />
@@ -123,7 +124,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
                 <ul id={id} hidden={shut}>
                   {g.items.map((x) => (
                     <li key={x.key}>
-                      <Link href={x.href} className={`rt-adm__link${x.key === current ? " is-active" : ""}`} aria-current={x.key === current ? "page" : undefined} title={x.label}>
+                      <Link href={x.href} className={`rt-adm__link${x.key === current ? " is-active" : ""}`} aria-current={x.key === current ? "page" : undefined} {...(closed ? { "data-tip": x.label, ...tipProps } : {})}>
                         <NavIcon name={x.key} />
                         <span>{x.label}</span>
                         {x.badge && counts[x.badge] > 0 && <span className="rt-adm__count" aria-label={`${counts[x.badge]} waiting`}>{counts[x.badge]}</span>}
@@ -144,6 +145,9 @@ export default function AdminShell({ current, title, lead, actions = null, detai
           </div>
           <FilterScrollPill scrollRef={sideRef} />
         </nav>
+        <SideResizer rootRef={rootRef} sideRef={sideRef} controls="rt-adm-side" />
+        {railTip}
+        {nameTip}
 
         <main id="rt-adm-main" className="rt-adm__main" tabIndex={-1}>
           {detail ? (

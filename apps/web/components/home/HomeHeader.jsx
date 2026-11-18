@@ -94,13 +94,13 @@ export default function HomeHeader() {
 
                 <CartToggle
                   parentClassess={"relative"}
-                  allClasses={"d-flex items-center text-white"}
+                  allClasses={"rt-hicon text-white"}
                 />
 
                 <div className="d-none xl:d-block">
                   <button
                     onClick={() => setActiveMobileMenu(true)}
-                    className="text-white items-center"
+                    className="rt-hicon text-white"
                     aria-label="Open menu"
                     aria-expanded={activeMobileMenu}
                     data-el-toggle=".js-mobile-menu-toggle"
