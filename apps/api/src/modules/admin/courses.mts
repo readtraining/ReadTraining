@@ -170,17 +170,22 @@ async function changeView(db: typeof Db, detail: Awaited<ReturnType<typeof cours
   return { since: detail.pendingChanges!.since, fields: fields.map((k) => ({ key: k, now: (detail as Record<string, unknown>)[k] ?? null, proposed: proposed[k] })) }
 }
 
-// Who asked for a decision (so they don't decide on it themselves): for a new course, whoever created it and whoever last sent it;
-// for a change to a live course, everyone who worked on that change (since the course's last decided change).
+// Who asked for a decision (so they don't decide on it themselves): for a new course, whoever created it, whoever last sent it and
+// whoever changed it while it was waiting since then; for a change to a live course, everyone who worked on that change (since the
+// course's last decided change).
 async function requesters(db: typeof Db, course: Course): Promise<{ course: Set<string>; change: Set<string> }> {
   const [sent] = await db.execute<{ actor: string | null }>(sql`
     select actor_user_id actor from public.activity_log where action = 'course.submitted' and target_type = 'course' and target_id = ${String(course.id)} order by at desc limit 1`)
+  const inReview = await db.execute<{ actor: string }>(sql`
+    select distinct actor_user_id actor from public.activity_log
+    where action = 'course.edited_in_review' and target_type = 'course' and target_id = ${String(course.id)} and actor_user_id is not null
+      and at > coalesce((select max(at) from public.activity_log where action = 'course.submitted' and target_type = 'course' and target_id = ${String(course.id)}), 'epoch'::timestamptz)`)
   const editors = await db.execute<{ actor: string }>(sql`
     select distinct actor_user_id actor from public.activity_log
     where action = 'course.change_submitted' and target_type = 'course' and target_id = ${String(course.id)} and actor_user_id is not null
       and at > coalesce((select max(decided_at) from public.course_revisions r where r.course_id = ${course.id} and r.status <> 'pending'), 'epoch'::timestamptz)`)
   return {
-    course: new Set([course.createdBy, sent?.actor].filter((x): x is string => Boolean(x))),
+    course: new Set([course.createdBy, sent?.actor, ...inReview.map((e) => e.actor)].filter((x): x is string => Boolean(x))),
     change: new Set(editors.map((e) => e.actor)),
   }
 }
@@ -197,7 +202,7 @@ export const adminCoursesRouter = createTRPCRouter({
   counts: adminProcedure('admin.courses.view').query(async ({ ctx }) => {
     const [r] = await ctx.db.execute<{ waiting: number; overdue: number; changes: number; live: number; paused: number; draft: number; shared: number }>(sql`
       select (select count(*)::int from public.courses where status = 'pending') + (select count(*)::int from public.course_revisions where status = 'pending') waiting,
-             (select count(*)::int from public.courses where status = 'pending' and submitted_at < now() - interval '2 days')
+             (select count(*)::int from public.courses c where c.status = 'pending' and coalesce((select max(l.at) from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text), c.submitted_at) < now() - interval '2 days')
                + (select count(*)::int from public.course_revisions where status = 'pending' and submitted_at < now() - interval '2 days') overdue,
              count(*) filter (where status = 'changes' and kind = 'provider')::int changes, count(*) filter (where status = 'live')::int live,
              count(*) filter (where status = 'paused')::int paused, count(*) filter (where status = 'draft' and kind = 'shared')::int draft, count(*) filter (where kind = 'shared')::int shared
@@ -210,21 +215,26 @@ export const adminCoursesRouter = createTRPCRouter({
   queue: adminProcedure('admin.courses.view')
     .input(z.object({ tab: z.enum(['waiting', 'changes', 'decided']) }))
     .query(async ({ ctx, input }) => {
-      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; methods: string[]; closed_methods: string[]; parent: string | null; requester: string | null }
+      // `at`: the version the admin decides on (a course's sent time moves on when the provider changes it while it waits: `seen`);
+      // `sent`: when it was sent, which keeps its place in the queue (waiting, oldest first) while the provider improves it
+      type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; sent?: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; methods: string[]; closed_methods: string[]; parent: string | null; requester: string | null }
       const base = sql`(select name from public.organisations o where o.id = c.organisation_id) provider, (select status from public.organisations o where o.id = c.organisation_id) provider_status, c.method, c.methods, c.closed_methods, (select p.title from public.courses p where p.id = c.parent_id) parent`
       const rows =
         input.tab === 'waiting'
           ? await ctx.db.execute<Row>(sql`
               select * from (
-                select c.id course_id, c.title, 'new' as type, c.submitted_at at, null as note, null as outcome, ${base},
-                       case when c.created_by = ${ctx.user.id}::uuid or (select l.actor_user_id from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text order by l.at desc limit 1) = ${ctx.user.id}::uuid then ${ctx.user.id}::uuid end requester
+                select c.id course_id, c.title, 'new' as type, c.submitted_at at, coalesce((select max(l.at) from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text), c.submitted_at) sent, null as note, null as outcome, ${base},
+                       case when c.created_by = ${ctx.user.id}::uuid or (select l.actor_user_id from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text order by l.at desc limit 1) = ${ctx.user.id}::uuid
+                              or exists (select 1 from public.activity_log e where e.action = 'course.edited_in_review' and e.target_type = 'course' and e.target_id = c.id::text and e.actor_user_id = ${ctx.user.id}::uuid
+                                           and e.at > coalesce((select max(l.at) from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text), 'epoch'::timestamptz))
+                         then ${ctx.user.id}::uuid end requester
                 from public.courses c where c.status = 'pending'
                 union all
-                select c.id, c.title, 'change', r.submitted_at, null, null, ${base},
+                select c.id, c.title, 'change', r.submitted_at, r.submitted_at, null, null, ${base},
                        case when exists (select 1 from public.activity_log l where l.action = 'course.change_submitted' and l.target_type = 'course' and l.target_id = c.id::text and l.actor_user_id = ${ctx.user.id}::uuid
                          and l.at > coalesce((select max(x.decided_at) from public.course_revisions x where x.course_id = c.id and x.status <> 'pending'), 'epoch'::timestamptz)) then ${ctx.user.id}::uuid end
                 from public.course_revisions r join public.courses c on c.id = r.course_id where r.status = 'pending'
-              ) q order by at asc`)
+              ) q order by sent asc`)
           : input.tab === 'changes'
             ? await ctx.db.execute<Row>(sql`select c.id course_id, c.title, 'new' as type, c.decided_at at, c.status_note note, 'changes' as outcome, ${base} from public.courses c where c.status = 'changes' and c.kind = 'provider' order by c.decided_at desc nulls last`)
             : await ctx.db.execute<Row>(sql`
@@ -235,7 +245,7 @@ export const adminCoursesRouter = createTRPCRouter({
                 ) q order by at desc nulls last limit 100`)
       // own: the admin asked for it themselves; soleApprover: they may still decide it, with a reason (lib/soleApprover.mts)
       const sole = rows.some((r) => r.requester === ctx.user.id) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide'))
-      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, methods: r.methods, closedMethods: r.closed_methods, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
+      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), sent: iso(r.sent ?? r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, methods: r.methods, closedMethods: r.closed_methods, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
     }),
 
   // Every course, newest change first: shared pages and providers' courses, with search and filters.
@@ -358,7 +368,7 @@ export const adminCoursesRouter = createTRPCRouter({
       if (!rule.from.includes(course.status) || (isChange && !revision)) throw new TRPCError({ code: 'CONFLICT', message: 'This course has changed since you opened it. Reload the page to see it.' })
       const message = input.message?.trim() || null
       if (rule.message && !message) throw bad(rule.messageError!, 'message')
-      // a course only goes live complete (the provider can't change it while it waits, but check anyway)
+      // a course only goes live complete: it stays complete while it waits (provider.courses update), but its dates may have passed
       if (input.decision === 'approve') {
         const gaps = await missing(ctx.db, course)
         if (gaps.length) throw new TRPCError({ code: 'CONFLICT', message: `This course is missing ${gaps.join(', ')}. Ask the provider for changes.` })

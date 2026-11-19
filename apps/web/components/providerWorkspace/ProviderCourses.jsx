@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
@@ -16,7 +17,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
 import { useNewCourse } from "./NewCourse";
 import { CohortForm } from "./ProviderCohorts";
-import { COURSE_SAID, DeleteBlocked, DeleteCourseForm, PAUSE_NOTE, pausable } from "./CourseSettings";
+import { COURSE_SAID, DeleteBlocked, DeleteCourseForm, PAUSE_NOTE, canSend, pausable, useSendForApproval } from "./CourseSettings";
 import { Confirm } from "./settingsForm";
 
 const FILTERS = ["q", "format", "visibility", "category", "model", "status"];
@@ -39,11 +40,12 @@ export const useProviderCourses = () => {
 // model, and Clear filters once one is set; status as tabs with counts), all kept in the address. Our layout: one card holding the
 // status tabs, the filters and the courses as a compact table, last edited first and sortable by its headers. One course per row:
 // picture or "Upload course image", its ways of learning and subject; its status with a line only when there is something to do (a draft
-// ready to send, our team's note, edits in review); visibility; its next date. The row opens where its next step is (a draft or
-// one sent back: the editor; the rest: its Details page), and its ⋮ menu has the actions its role allows. Then Hurak's offer of a free
+// ready to send, our team's note, edits in review); visibility; its next date. The row opens where its work is (a course not live yet:
+// the editor; a live or paused one: its Details page), and its ⋮ menu has the actions its role allows. Then Hurak's offer of a free
 // sales and marketing consultation.
 export default function ProviderCourses() {
-  const { organisationId, can, status, staff } = useProviderAccess();
+  const access = useProviderAccess();
+  const { organisationId, can, status, staff } = access;
   const sorter = useSort(); // none chosen: the API's own order, last edited first
   const router = useRouter();
   const utils = api.useUtils();
@@ -62,6 +64,7 @@ export default function ProviderCourses() {
   const pause = api.provider.courses.setPaused.useMutation();
   const withdraw = api.provider.courses.withdrawReview.useMutation();
   const duplicate = api.provider.courses.duplicate.useMutation();
+  const sender = useSendForApproval((message, error) => setToast({ message, error }));
 
   useEffect(() => {
     const next = Object.fromEntries(FILTERS.map((k) => [k, getQuery(k) || ""]));
@@ -71,15 +74,27 @@ export default function ProviderCourses() {
     if (!pw.models[next.model]) next.model = "";
     if (!pw.courseStatuses[next.status]) next.status = "";
     setF(next);
+    // just sent for approval from the editor: say so once (the address loses ?sent, so a reload doesn't say it again)
+    if (getQuery("sent")) {
+      setToast({ message: COURSE_SAID.sent });
+      setQuery("sent", "");
+    }
   }, []);
 
   if (!can("provider.courses.view")) return <EmptyState title="Courses aren't part of your role" text="Ask your provider's owner or an admin if you need to see the courses." />;
   if (query.isError) return <ErrorState title="We couldn't load your courses." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!courses) return <CoursesSkeleton />;
   if (!courses.length) {
-    // not approved yet: say when courses can be added, and where the application is
-    if (waiting) return <EmptyState title="No courses yet" text={pw.notApproved.text} action={pw.notApproved.action} />;
-    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") && !staff ? { label: "New course", onClick: newCourse } : null} />;
+    // not approved yet: say when courses can be added, and where the application is (the message after deleting the last course
+    // still shows)
+    return (
+      <>
+        {waiting
+          ? <EmptyState title="No courses yet" text={pw.notApproved.text} action={pw.notApproved.action} />
+          : <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") && !staff ? { label: "New course", onClick: newCourse } : null} />}
+        <Toast toast={toast} onDone={() => setToast(null)} />
+      </>
+    );
   }
 
   const needle = f.q.trim().toLowerCase();
@@ -99,7 +114,7 @@ export default function ProviderCourses() {
   };
 
   const refresh = () => utils.provider.courses.list.invalidate({ organisationId });
-  const failed = (e) => setToast({ message: errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0] || "We couldn't do that. Please try again." });
+  const failed = (e) => setToast({ message: errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0] || "We couldn't do that. Please try again.", error: true });
   const setPaused = (c, paused) => pause.mutate({ organisationId, courseId: c.id, paused }, {
     onSuccess: () => { setPausing(null); refresh(); setToast({ message: paused ? COURSE_SAID.paused : COURSE_SAID.resumed }); },
     onError: (e) => { setPausing(null); refresh(); failed(e); },
@@ -107,7 +122,7 @@ export default function ProviderCourses() {
   // the copy is a new draft: its editor opens, saying it is a copy
   const copy = (c) => {
     if (duplicate.isPending) return;
-    setToast({ message: `Copying “${c.title}”…` });
+    setToast({ message: `Copying “${c.title}”…`, busy: true });
     duplicate.mutate({ organisationId, courseId: c.id }, {
       onSuccess: ({ id }) => { refresh(); router.push(`/provider/courses/${id}?copied=1`); },
       onError: failed,
@@ -120,6 +135,8 @@ export default function ProviderCourses() {
   const deleting = deletingId ? courses.find((c) => c.id === deletingId) : null;
   // each item only when it applies and the person's role allows it (the API checks again); Delete, red, last
   const actions = (c, href) => [
+    // a course ready to go to our team: sending it is the next step, so it comes first
+    ...(canSend(c, access) ? [{ label: sender.sendingId === c.id ? "Sending…" : c.status === "changes" ? "Send again for approval" : "Send for approval", onClick: () => sender.send(c) }] : []),
     // Details first, as Hurak's: the course's own page with its Learners, Venues, Cohorts, Packages and Orders tabs
     { label: "Details", href: `${href}/overview` },
     ...(can("provider.courses.editPage") ? [{ label: "Edit course", href }] : []),
@@ -142,9 +159,9 @@ export default function ProviderCourses() {
     if (c.status === "changes") return c.statusNote ? `“${c.statusNote.split("\n")[0]}”` : "";
     return c.status === "live" && c.pendingChange ? "Edits in review" : "";
   };
-  // a course with dates: its next one; one taught only self-paced has none; a live one with none says so
+  // a course with dates: its next one; one taught only self-paced has none (learners start any time); a live one with none says so
   const dates = (c) => {
-    if (!waysOf(c).some(isDatedMethod)) return <span className="rt-cx-muted">Self-paced</span>;
+    if (!waysOf(c).some(isDatedMethod)) return <span className="rt-cx-muted">Any time</span>;
     if (!c.nextDate) return <span className="rt-cx-muted">{c.status === "live" ? "No dates yet" : "—"}</span>;
     return dayLabel(c.nextDate);
   };
@@ -189,8 +206,9 @@ export default function ProviderCourses() {
             <tbody>
               {rows.map((c) => {
                 const href = `/provider/courses/${c.id}`;
-                // the row opens where the next step is: the editor for a course still being written or sent back, else its Details
-                const open = c.status === "draft" || c.status === "changes" ? href : `${href}/overview`;
+                // the row opens where its work is: the editor for a course not live yet (a draft, one sent back, one in review), else its
+                // Details (as the Dashboard's "With our team" does)
+                const open = c.status === "draft" || c.status === "changes" || c.status === "pending" ? href : `${href}/overview`;
                 const meta = [waysLabel(c), catOf(c)].filter(Boolean).join(" · ");
                 const step = nextStep(c);
                 return (
@@ -267,8 +285,9 @@ function CoursesSkeleton() {
 // next step (DeleteBlocked: after Withdraw from review it asks, as the list loads the course again)
 function DeleteSheet({ course, onClose, withdrawing, onWithdraw, onDeleted }) {
   const blocked = course?.deleteBlock === "in_use" || course?.deleteBlock === "paused_by_team";
+  const working = useIsMutating() > 0; // deleting or withdrawing: it stays open for the answer
   return (
-    <Sheet open={Boolean(course)} onClose={onClose} title={blocked ? "This course can't be deleted" : "Delete this course?"} closeLabel="Close" className="rt-pws-set__confirm" noClose>
+    <Sheet open={Boolean(course)} onClose={onClose} title={blocked ? "This course can't be deleted" : "Delete this course?"} closeLabel="Close" className="rt-pws-set__confirm" noClose busy={working}>
       {course && (course.deleteBlock ? (
         <div className="rt-q__form">
           <DeleteBlocked course={course} busy={withdrawing} withdrawing={withdrawing} onWithdraw={onWithdraw} />

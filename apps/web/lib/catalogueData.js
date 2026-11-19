@@ -25,6 +25,7 @@ export function toCatalogueCourse(l) {
     topic: l.topic || "",
     level: l.level || "",
     methods: l.methods,
+    primary: l.primary ?? null, // the main learning option, when its providers share one (the card lists it first, as the page does)
     venues: l.venues.map((v) => ({ city: v.city, postcode: v.postcode || "", lat: v.lat, lng: v.lng })),
     // every price it can be booked at (a date's, with its way of study and venue; a self-paced course's), for the search's "From"
     // on a method or town page (lib/catalogueFilters.js priceWhere)

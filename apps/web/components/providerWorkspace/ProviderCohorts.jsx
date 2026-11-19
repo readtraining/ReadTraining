@@ -11,7 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, CardChoice, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
@@ -623,12 +623,13 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
         setErrors({});
         // the form stays open, so the confirmation shows in it (the page's message is behind the form)
         setSavedNote(`Cohort saved${first ? ` (starting ${new Date(`${first}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Pick the dates for the next one.`);
-        onAnother?.(id);
+        onAnother?.(id, { method, startsOn: values.sessions[0]?.date });
         requestAnimationFrame(() => formRef.current?.firstElementChild?.scrollIntoView({ block: "start" }));
         return;
       }
       setStart(JSON.stringify(f)); // saved, so closing or leaving doesn't ask
-      onSaved?.(id);
+      // what was saved, so a page counting dates (the course editor) can count it at once, before it loads again
+      onSaved?.(id, { method, startsOn: values.sessions[0]?.date });
     } catch (error) {
       const { fields, general } = errorsFrom(error);
       const named = Object.fromEntries(Object.entries(fields).map(([k, m]) => [FIELD_OF[k] || k, m]));
@@ -660,14 +661,21 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
 
   return (
     <Sheet open={open} onClose={onClose} unsaved={unsaved} title={cohort ? "Edit cohort" : "Create cohort"} closeLabel="Close" className="rt-pws-coh__sheet">
-      {open && !ready && <Loading rows={2} />}
+      {/* its courses or venues didn't load: said, with Try again, instead of loading for ever */}
+      {open && !ready && (coursesQ.isError || venuesQ.isError
+        ? <ErrorState title="We couldn't load the form." text="Check your connection, then try again." onRetry={() => { coursesQ.refetch(); venuesQ.refetch(); }} />
+        : <Loading rows={2} />)}
       {ready && (
         <form className="rt-q__form rt-pws-coh__form" onSubmit={save} noValidate ref={formRef}>
           {savedNote && <p className="rt-acc__notice -ok" role="status">{savedNote}</p>}
           {askMode && (
-            <CardChoice name="rt-cf-mode" legend="Learning option" value={studyMode} error={errors.method}
-              onChange={(v) => { setStudyMode(v); setErrors((e) => ({ ...e, method: undefined })); if (course && !datedOf(course, { open: true }).includes(v)) setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
-              options={pw.formats.filter((x) => (course && suggestCourseId ? datedOf(course, { open: true }) : ["classroom", "live-online"]).includes(x.key)).map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
+            <fieldset className="rt-field rt-pws-ce__ways" aria-describedby={errors.method ? "rt-cf-mode-e" : undefined}>
+              <legend>Learning option</legend>
+              {errors.method && <p className="rt-q__err" id="rt-cf-mode-e"><span className="rt-sr">Error: </span>{errors.method}</p>}
+              <WayCards name="rt-cf-mode" value={studyMode} invalid={Boolean(errors.method)}
+                onChange={(v) => { setStudyMode(v); setErrors((e) => ({ ...e, method: undefined })); if (course && !datedOf(course, { open: true }).includes(v)) setF((x) => ({ ...blankFor(null), sessions: x.sessions })); }}
+                options={pw.formats.filter((x) => (course && suggestCourseId ? datedOf(course, { open: true }) : ["classroom", "live-online"]).includes(x.key)).map((x) => ({ value: x.key, label: methodName(x.key), text: x.text }))} />
+            </fieldset>
           )}
           {!cohort && !(suggestCourseId && course) ? (
             <div className="rt-field">
@@ -749,7 +757,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   {err("venueId")}
                   <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
                   {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
-                  {venues.length > 0 && (addingVenue ? venueForm : <button type="button" className="rt-cd__link rt-pws-coh__hintlink" onClick={() => setAddingVenue(true)}>+ Add a new venue</button>)}
+                  {venues.length > 0 && (addingVenue ? venueForm : <button type="button" className="rt-cd__link rt-pws-coh__hintlink" onClick={() => setAddingVenue(true)}>Add a new venue</button>)}
                 </div>
               )}
               {method === "live-online" && (
@@ -782,7 +790,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   <div className="rt-field">
                     <label htmlFor="rt-cf-price">Price per learner, including VAT (£)</label>
                     {err("price")}
-                    <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.trim() })} autoComplete="off" {...aria("price")} />
+                    <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.replace(/£|,/g, "").trim() })} autoComplete="off" {...aria("price")} />
                   </div>
                   <div className="rt-field">
                     <label htmlFor="rt-cf-wasPrice">“Was” price (optional, £)</label>

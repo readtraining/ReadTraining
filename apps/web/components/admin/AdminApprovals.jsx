@@ -150,7 +150,7 @@ export default function AdminApprovals() {
       {shown.length ? (
         <ul className="rt-adm-items">
           {shown.map((a) => {
-            const at = a.at ? new Date(a.at).getTime() : now;
+            const at = a.sent || a.at ? new Date(a.sent || a.at).getTime() : now; // waiting since it was sent (an edit keeps its place)
             const providerReady = a.providerStatus === "active";
             return (
               <li key={a.key} className={`rt-acc__card rt-adm-item${picked.includes(a.key) ? " is-picked" : ""}`}>
