@@ -13,6 +13,7 @@ import { Seats, dayRange } from "./ProviderCohorts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
+import { useProviderAccess } from "@/lib/providerAccess";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
 
@@ -53,6 +54,7 @@ export function CohortTitle({ cohortId, fallback }) {
 }
 
 export default function ProviderCohort({ cohortId }) {
+  const access = useProviderAccess();
   const data = useProvider();
   const [cancelling, setCancelling] = useState(false);
   const [record, setRecord] = useState(null);
@@ -84,7 +86,9 @@ export default function ProviderCohort({ cohortId }) {
   const clr = course?.settings.clr || { enabled: false, fields: [], custom: [] };
   const toCertify = active.filter((e) => e.result === "pass" && !e.certificate).length;
   const where = k.venue ? `${k.venue.name}, ${k.venue.street}, ${k.venue.city} ${k.venue.postcode}` : "Online";
-  const canCancel = !k.cancelled && k.status === "upcoming";
+  // each action only for a role that may take it (the shared permission table; a tutor their own dates' records)
+  const may = { dates: access.can("provider.cohorts.edit"), records: access.sees("provider.records.edit"), orders: access.can("provider.orders.create") };
+  const canCancel = may.dates && !k.cancelled && k.status === "upcoming";
   const tutors = data.team.filter((t) => t.status === "active");
   const orderOf = (e) => data.orders.find((o) => o.ref === e.orderRef);
   const planOf = (e) => pw.tiers.find((t) => t.key === bookingPlan(data, e))?.label || "";
@@ -159,7 +163,7 @@ export default function ProviderCohort({ cohortId }) {
         </dl>
         {!k.cancelled && (
           <div className="rt-pws-coh__heroactions">
-            {!k.disabled && k.left > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setBulk(true)}>Bulk enrolment</button>}
+            {may.orders && !k.disabled && k.left > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setBulk(true)}>Bulk enrolment</button>}
             {!k.disabled && k.left > 0 && <Link href={`/provider/orders/new?cohort=${k.id}`} className="button -sm -purple-1 text-white">Enrol student</Link>}
             {canCancel && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
           </div>
@@ -174,7 +178,7 @@ export default function ProviderCohort({ cohortId }) {
           <div className="rt-pws-coh__heroactions">
             {people.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setMail({ ids: picked.length ? picked : active.map((e) => e.id) })} disabled={!active.length}>{picked.length ? `Email ${picked.length} picked` : "Email students"}</button>}
             {people.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={download}>Download register</button>}
-            {!k.cancelled && people.length > 0 && k.last <= data.today && <button type="button" className="button -sm -purple-1 text-white" onClick={certify} disabled={!toCertify}>Issue certificates{toCertify ? ` (${toCertify})` : ""}</button>}
+            {may.records && !k.cancelled && people.length > 0 && k.last <= data.today && <button type="button" className="button -sm -purple-1 text-white" onClick={certify} disabled={!toCertify}>Issue certificates{toCertify ? ` (${toCertify})` : ""}</button>}
           </div>
         </div>
         {people.length ? (
@@ -244,9 +248,9 @@ export default function ProviderCohort({ cohortId }) {
                               </button>
                             )}
                             <RowMenu label={`Actions for ${name}`} items={[
-                              { label: "Edit Details", onClick: () => setDetails(e) },
-                              ...(st !== "cancelled" && !k.cancelled ? [{ label: "Reschedule", onClick: () => setMoving(e) }, { label: "Resit", onClick: () => setResit(e) }] : []),
-                              { label: "Notes", onClick: () => setNotes(e) },
+                              ...(may.records ? [{ label: "Edit Details", onClick: () => setDetails(e) }] : []),
+                              ...(may.records && st !== "cancelled" && !k.cancelled ? [{ label: "Reschedule", onClick: () => setMoving(e) }, { label: "Resit", onClick: () => setResit(e) }] : []),
+                              ...(may.records ? [{ label: "Notes", onClick: () => setNotes(e) }] : []),
                               { label: "Timeline", onClick: () => setTimeline(e) },
                             ]} />
                           </div>

@@ -5112,8 +5112,9 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-status.-critical .rt-pws-status__icon { color: var(--rt-adm-danger); }
 .rt-pws-status.-success .rt-pws-status__icon { color: var(--rt-adm-success); }
 .rt-pws-status__body { flex: 1 1 auto; min-width: 0; }
-/* an admin working in the workspace as ReadTraining staff (ProviderShell's StaffBanner): one slim line, whose workspace, End */
+/* an admin editing a provider's work from the admin (StaffEdit): one slim line, whose work, Finish */
 .rt-pws-staff { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; margin: 0 0 16px; padding: 4px 4px 4px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-acc__stack > .rt-pws-staff { margin: 0; } /* in the admin's editing area the stack spaces it */
 .rt-pws-staff span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-pws-staff__end { flex: none; min-height: 28px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-staff__end:hover { background: var(--rt-c-surface); } }

@@ -22,16 +22,17 @@ export class InviteError extends Error {}
  * Supabase's admin invite. Someone invited before who opened the link but didn't finish has a confirmed account, so Supabase
  * won't invite them again: they get a magic link instead, which works the same way here. Server only (service role key).
  */
-export async function makeInviteLink(email: string): Promise<{ userId: string; link: string }> {
+// `next`: the page the link opens once it has signed them in (the admin's welcome page, or a provider team's /provider/join).
+export async function makeInviteLink(email: string, next: string = WELCOME_PATH): Promise<{ userId: string; link: string }> {
   if (!supabase) throw new InviteError('SUPABASE_SERVICE_ROLE_KEY is not set, so invites can’t be made.')
-  const redirectTo = `${siteUrl}/auth/confirm?next=${encodeURIComponent(WELCOME_PATH)}`
-  let res = await supabase.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo, data: { admin_invite: true } } })
+  const redirectTo = `${siteUrl}/auth/confirm?next=${encodeURIComponent(next)}`
+  let res = await supabase.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo, data: next === WELCOME_PATH ? { admin_invite: true } : { team_invite: true } } })
   if (res.error && /already|registered|exists/i.test(res.error.message)) {
     res = await supabase.auth.admin.generateLink({ type: 'magiclink', email, options: { redirectTo } })
   }
   if (res.error || !res.data.user) throw new InviteError(res.error?.message ?? 'The invite link couldn’t be made.')
   const { hashed_token: tokenHash, verification_type: type } = res.data.properties
-  const link = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(WELCOME_PATH)}`
+  const link = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`
   return { userId: res.data.user.id, link }
 }
 

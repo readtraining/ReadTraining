@@ -15,6 +15,7 @@ import { MoveSheet, ResitSheet, bookingPlan, cohortChoices } from "./ProviderCoh
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
+import { useProviderAccess } from "@/lib/providerAccess";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
 
@@ -27,6 +28,7 @@ import TextArea from "@/components/forms/TextArea";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function ProviderOrder({ reference }) {
+  const access = useProviderAccess();
   const data = useProvider();
   const [toast, setToast] = useState(null);
   const [sheet, setSheet] = useState(null); // cancel | refund | evidence | confirm | invoice | upsell | addon | plan | approve | decline
@@ -50,7 +52,9 @@ export default function ProviderOrder({ reference }) {
   const m = o.money;
   const left = Math.max(0, o.total - o.refunded);
   const enrolled = data.enrolments.filter((e) => e.orderRef === o.ref && !e.resitOf);
-  const canRefund = ["paid", "partial"].includes(o.status) && left > 0;
+  // each action only for a role that may take it (the shared permission table): refunds, new orders and bookings, money
+  const may = { refund: access.can("provider.refunds.decide"), orders: access.can("provider.orders.create"), money: access.can("provider.finance.manage") };
+  const canRefund = may.refund && ["paid", "partial"].includes(o.status) && left > 0;
   const share = o.channel === "marketplace" ? 100 - pw.fee.commission : 100;
   const request = data.refunds.find((r) => r.orderRef === o.ref && r.status === "open");
   const say = (message) => setToast({ message });
@@ -140,13 +144,13 @@ export default function ProviderOrder({ reference }) {
       <div className="rt-pws-ord__actions">
         {o.status === "incomplete" && (
           <>
-            {o.payment === "link" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => resend(`Payment link sent again to ${o.customer.email}.`, "Payment link sent again")}>Resend payment link</button>}
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("cancel")}>Cancel order</button>
+            {may.orders && o.payment === "link" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => resend(`Payment link sent again to ${o.customer.email}.`, "Payment link sent again")}>Resend payment link</button>}
+            {may.refund && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("cancel")}>Cancel order</button>}
           </>
         )}
-        <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("confirm", { email: o.customer.email })}>Send confirmation mail</button>
+        {may.orders && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("confirm", { email: o.customer.email })}>Send confirmation mail</button>}
         {canRefund && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("refund", { amount: String(left), learner: "", type: "full", notes: "" })}>Initiate refund</button>}
-        {o.status === "dispute" && <button type="button" className="button -sm -purple-1 text-white" onClick={() => open("evidence")}>Send evidence</button>}
+        {may.money && o.status === "dispute" && <button type="button" className="button -sm -purple-1 text-white" onClick={() => open("evidence")}>Send evidence</button>}
       </div>
 
       {request && (
@@ -154,10 +158,12 @@ export default function ProviderOrder({ reference }) {
           <h2 className="rt-acc__h2" id="rt-pws-ord-req">Refund request</h2>
           <p className="rt-acc__note">{learnerName(data.byId.learner[request.learnerId])} asked for {formatPrice(request.amount)} back on {formatWhen(request.at)}. Reply within 3 working days.</p>
           <blockquote className="rt-pws-ord__reason">{request.reason}</blockquote>
-          <div className="rt-pws-ord__actions">
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("decline", { note: "" })}>Decline</button>
-            <button type="button" className="button -sm -purple-1 text-white" onClick={() => open("approve", { note: "" })}>Approve refund</button>
-          </div>
+          {may.refund && (
+            <div className="rt-pws-ord__actions">
+              <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("decline", { note: "" })}>Decline</button>
+              <button type="button" className="button -sm -purple-1 text-white" onClick={() => open("approve", { note: "" })}>Approve refund</button>
+            </div>
+          )}
         </section>
       )}
 
@@ -220,7 +226,7 @@ export default function ProviderOrder({ reference }) {
           ) : <p className="rt-acc__note">No invoice uploaded.</p>}
           <div className="rt-pws-coh__heroactions">
             <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => invoiceRef.current?.click()}>{o.invoice?.file ? "Replace invoice" : "Upload invoice"}</button>
-            {o.invoice?.file && !o.invoice.paidOn && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("invoice", { date: "" })}>Pay invoice detail</button>}
+            {may.money && o.invoice?.file && !o.invoice.paidOn && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => open("invoice", { date: "" })}>Pay invoice detail</button>}
           </div>
           <input name="invoice" ref={invoiceRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="rt-sr" tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; if (!/\.(pdf|jpe?g|png)$/i.test(f.name)) return say("The invoice must be a PDF, JPG or PNG."); uploadInvoice(o.ref, f.name); say("Invoice uploaded"); }} />
         </section>
@@ -245,7 +251,7 @@ export default function ProviderOrder({ reference }) {
                     <span className="rt-pws-ord__ref">Booking reference <b>{e.id.replace(/^E/, "B-")}</b></span>
                     {cancelled && <Pill tone="muted">Cancelled</Pill>}
                   </div>
-                  {!cancelled && o.status !== "cancelled" && (
+                  {may.orders && !cancelled && o.status !== "cancelled" && (
                     <RowMenu label={`Actions for ${name}'s booking`} items={[
                       ...(k ? [{ label: "Reschedule", onClick: () => setMoving(e) }, { label: "Resit", onClick: () => setResit(e) }] : []),
                       ...(higher ? [{ label: "Upsell", onClick: () => chooseUpsell(e) }] : []),

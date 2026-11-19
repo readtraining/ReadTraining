@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink, RowMenu } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { waysLabel } from "@/lib/courseModes";
@@ -39,7 +39,6 @@ export default function AdminProvider({ slug }) {
   const [said, setSaid] = useState("");
   const [warning, setWarning] = useState("");
   const [refreshing, setRefreshing] = useState(false); // a decision was saved: no buttons until the new status has loaded
-  const [staffOpen, setStaffOpen] = useState(false); // Open workspace (as ReadTraining staff): its reason pop-up
 
   if (record.isLoading) return <DetailSkeleton />;
   if (record.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
@@ -78,8 +77,9 @@ export default function AdminProvider({ slug }) {
           ))}
           {blockedNote && <p className="rt-acc__notice">{blockedNote}</p>}
           {soleNote && <p className="rt-acc__notice -warn">{soleNote}</p>}
-          {(p.status === "active" || p.status === "suspended") && me?.permissions?.includes("approve") && (
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setStaffOpen(true)} aria-haspopup="dialog">{d.staff.open}</button>
+          {(p.status === "active" || p.status === "suspended") && d.edit.items.some((x) => x.needs.some((s) => me?.permissions?.includes(s))) && (
+            <RowMenu label={`Edit ${p.name}`} trigger={<span aria-hidden="true">{d.edit.label}</span>} triggerClass="button -md -outline-purple-1 text-purple-1"
+              items={d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` }))} />
           )}
           {p.status === "active" && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
         </div>
@@ -173,7 +173,6 @@ export default function AdminProvider({ slug }) {
       <p className="rt-acc__notice">{d.later}</p>
 
       <DecisionSheet provider={p} decision={deciding} onClose={() => setDeciding(null)} onDone={decided} />
-      <StaffSheet provider={p} open={staffOpen} onClose={() => setStaffOpen(false)} />
     </div>
   );
 }
@@ -203,57 +202,6 @@ function CommissionCard({ provider: p, canChange, onSaved }) {
 }
 
 // The pop-up for one decision: what happens, a message when the provider needs one (required), then the button.
-// Open the provider's workspace as ReadTraining staff: the reason (shown to the provider in the summary email), then the
-// workspace opens on this provider (API admin.staff.start; the session and its rules: API lib/staffAccess.mts).
-function StaffSheet({ provider, open, onClose }) {
-  const start = api.admin.staff.start.useMutation();
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState("");
-  const [general, setGeneral] = useState("");
-  const ref = useRef(null);
-  const s = d.staff;
-  const close = () => {
-    if (start.isPending) return;
-    setReason("");
-    setError("");
-    setGeneral("");
-    onClose();
-  };
-  const submit = async (e) => {
-    e.preventDefault();
-    setGeneral("");
-    const why = reason.trim().length < 3 ? s.error : "";
-    setError(why);
-    if (why) return focusFirstError(ref.current);
-    try {
-      await start.mutateAsync({ organisationId: provider.id, reason: reason.trim() });
-      // a full page load, so the workspace is checked and opened on this provider
-      window.location.assign("/provider/courses");
-    } catch (err) {
-      const { fields, general: g } = errorsFrom(err);
-      if (fields.reason) {
-        setError(fields.reason);
-        focusFirstError(ref.current);
-      } else setGeneral(g);
-    }
-  };
-  return (
-    <Sheet open={open} onClose={close} title={s.title} closeLabel="Close">
-      <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
-        <p className="rt-acc__note"><strong>{provider.name}</strong></p>
-        <div className="rt-field">
-          <label htmlFor="rt-adm-staff">{s.label}</label>
-          <small className="rt-field__hint" id="rt-adm-staff-hint">{s.hint}</small>
-          {error && <p className="rt-q__err" id="rt-adm-staff-e"><span className="rt-sr">Error: </span>{error}</p>}
-          <TextArea id="rt-adm-staff" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-staff-hint${error ? " rt-adm-staff-e" : ""}`} />
-        </div>
-        {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
-        <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={start.isPending}>{s.button}</button>
-      </form>
-    </Sheet>
-  );
-}
-
 function DecisionSheet({ provider, decision, onClose, onDone }) {
   const decide = api.admin.providers.decide.useMutation();
   const [message, setMessage] = useState("");
