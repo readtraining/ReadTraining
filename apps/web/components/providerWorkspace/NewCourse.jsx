@@ -262,7 +262,7 @@ function NewCourseForm({ onCancel, onDirty }) {
       </div>
       {failed && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{failed}</p>}
       <div className="rt-pws-set__actions">
-        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{create.isSuccess ? "Opening the editor…" : create.isPending ? "Creating draft…" : "Create draft"}</button>
+        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{create.isSuccess ? "Opening the editor…" : create.isPending ? "Saving…" : "Create draft"}</button>
         <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onCancel} disabled={busy}>Cancel</button>
       </div>
     </form>
