@@ -26,7 +26,7 @@ import { EmptyState, ErrorState } from "@/components/states/States";
 // course settings (the gear) can change it later. The pop-up also does some of the work: the subject is suggested from the
 // title (subjectFor; "Use this" fills all three), and a title the provider already has is pointed out (a note, not a block).
 // The cursor starts in the title, Enter creates the draft, and the performance model (Bookings to start) is set in its editor
-// step. Create draft makes the draft and opens the editor.
+// step. Create course saves it as a draft and opens the editor.
 const NewCourseContext = createContext(() => {});
 export const NewCourseProvider = NewCourseContext.Provider;
 export const useNewCourse = () => useContext(NewCourseContext);
@@ -259,7 +259,7 @@ function NewCourseForm({ onCancel, onDirty }) {
       </div>
       {failed && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{failed}</p>}
       <div className="rt-pws-set__actions">
-        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}><KeepWidth label="Create draft" busy={busy} working={create.isSuccess ? "Opening the editor…" : "Saving…"} /></button>
+        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}><KeepWidth label="Create course" busy={busy} working={create.isSuccess ? "Opening the editor…" : "Saving…"} /></button>
         <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onCancel} disabled={busy}>Cancel</button>
       </div>
     </form>
