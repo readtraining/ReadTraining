@@ -11,6 +11,7 @@ import { useMe } from "@/lib/useMe";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { RowMenu } from "@/components/admin/adminParts";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
+import NavIcon from "@/components/admin/navIcons";
 import { useHeaderOffset } from "@/lib/useHeaderOffset";
 
 const SignOutIcon = () => (
@@ -43,7 +44,7 @@ export default function AccountNav({ area = "account", current }) {
   const others = switcher.entries.filter((e) => !e.current);
   // the same rows as the header's account menu: an icon for each kind of account, then its name
   const icon = (e) => (e.kind === "student" ? "icon-person" : e.kind === "provider" || e.key === "add-provider" ? "icon-online-learning-4" : "icon-friend");
-  const switchItems = [{ group: switcher.title }, ...others.map((e) => ({ key: e.key, icon: icon(e), label: e.label, onClick: () => switcher.go(e) }))];
+  const switchItems = [{ group: switcher.title }, ...others.map((e) => ({ key: e.key, ...(e.kind === "admin" ? { svg: <NavIcon name="dashboard" className="rt-menuicon" /> } : { icon: icon(e) }), label: e.label, onClick: () => switcher.go(e) }))];
   const who = (
     <>
       {photo ? <img className="rt-acc__avatar rt-acc__photoimg" src={photo} alt="" width="44" height="44" /> : <span className="rt-acc__avatar" aria-hidden="true">{initials}</span>}

@@ -4747,9 +4747,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__topside { display: flex; align-items: center; gap: 24px; }
 .rt-adm__site { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 500; color: rgba(255, 255, 255, 0.85) !important; text-decoration: none; }
 .rt-adm__site:hover { color: #fff !important; }
-.rt-adm__out { padding: 6px 14px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-surface); }
-.rt-adm__out:hover { border-color: var(--rt-c-surface); }
-.rt-adm__out:disabled { opacity: 0.6; }
 .rt-adm__me { display: flex; align-items: center; gap: 10px; }
 .rt-adm__me .rt-acc__avatar { width: 36px; height: 36px; font-size: var(--rt-text-xs); }
 .rt-adm__mewho { min-width: 0; max-width: 220px; } /* a long name stays on one line, cut with … (the top bar shows it whole on hover) */
@@ -6179,6 +6176,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-rowmenu__list :is(a, button) { display: flex; align-items: center; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; text-align: left; text-decoration: none; color: var(--rt-c-text) !important; cursor: pointer; }
 .rt-rowmenu__list :is(a, button):hover, .rt-rowmenu__list :is(a, button):focus-visible { outline: none; background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; }
 .rt-rowmenu__list :is(a, button) > i { flex: none; margin-right: 10px; color: var(--rt-c-muted); }
+/* an SVG icon in a menu row (the admin's own icon on "Admin panel"): the size and colour of the font icons beside it */
+.rt-menuicon { flex: none; width: 16px; height: 16px; color: var(--rt-c-muted); }
+.rt-rowmenu__list :is(a, button) > .rt-menuicon { margin-right: 10px; }
+.rt-hauth__menu a .rt-menuicon { color: var(--color-light-1); }
 .rt-rowmenu__list .-danger { color: var(--rt-c-error) !important; }
 .rt-rowmenu__list .-danger:hover, .rt-rowmenu__list .-danger:focus-visible { background: var(--rt-c-soft); color: var(--rt-c-error) !important; }
 
@@ -7326,7 +7327,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* the drawer has room for the name, which the top bar hides on a phone */
 .rt-adm__drawerfoot .rt-adm__mewho { display: block; }
 @media (min-width: 992px) { .rt-adm__drawerhead, .rt-adm__drawerfoot { display: none; } }
-@media (max-width: 991px) { .rt-adm__topside .rt-adm__out, .rt-adm__topside .rt-adm__site { display: none; } }
+@media (max-width: 991px) { .rt-adm__topside .rt-adm__site { display: none; } }
 /* numbered pages under a long list (adminParts Pager) */
 .rt-adm-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 4px 2px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-adm-pager__count { margin: 0; font-variant-numeric: tabular-nums; }

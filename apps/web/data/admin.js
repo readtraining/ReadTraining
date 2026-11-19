@@ -69,6 +69,7 @@ export const admin = {
       { key: "platform", label: "Platform settings", href: "/admin/platform", permission: "platform.settings" },
     ] },
   ],
+  providerWorkspace: "Provider workspace",
   backToSite: { label: "View site", href: "/" },
   // a page opened by its address without the switch it needs (AdminShell)
   noAccess: { title: "You don’t have access to this page", back: "Go to the dashboard" },
@@ -447,6 +448,8 @@ export const admin = {
         reinstate: { title: "Reinstate this provider?", text: "Everything works for them again, and their public profile is shown again. We email the owner.", button: "Reinstate provider" },
       },
       done: { approve: "Provider approved", changes: "Changes asked for", reject: "Provider not approved", suspend: "Provider suspended", reinstate: "Provider reinstated" },
+      fullApplication: "Open the full application",
+      open: "Open provider",
       notEmailed: "The decision is saved, but the email to the owner couldn't be sent. Contact them another way.",
       emailOutbox: "This copy of the site doesn't send emails: the email to the owner was saved to the test outbox.",
       courses: "Courses",
