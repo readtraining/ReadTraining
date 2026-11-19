@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useBooking } from "./BookingProvider";
+import { enquireHref, useBooking } from "./BookingProvider";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { Icon } from "./Icon";
 import CatalogueDropdown from "@/components/courses/CatalogueDropdown";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
-import { modeLabel } from "@/lib/courseModes";
+import { NO_DATES, modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { distanceLabel, nearestVenue } from "@/lib/catalogueFilters";
@@ -295,7 +295,8 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
     <>
       <div className="rt-dd__head">
         <div className="rt-dd__heading">
-          {steps > 1 && <p className="rt-dd__step">Step 1 of {steps}</p>}
+          {/* an option with no dates yet has no steps to take, only Enquire */}
+          {steps > 1 && all.length > 0 && <p className="rt-dd__step">Step 1 of {steps}</p>}
           <h2 id="rt-dd-title" className="rt-dd__title" tabIndex={-1} data-initial={isDesktop ? undefined : ""}>Choose a date</h2>
           <p className="rt-dd__sub">{modes ? course.title : `${course.title} · ${modeLabel(mode)}`}</p>
         </div>
@@ -310,44 +311,53 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
         </div>
       )}
 
-      <div className="rt-dd__filters">
-        <div className="rt-dd__controls">
-          {classroom && (
-            <label className="rt-field rt-dd__search">
-              <PinIcon />
-              <input name="near" type="search" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" data-initial={isDesktop ? "" : undefined} autoComplete="off" />
-            </label>
-          )}
-          {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}
-          <div className="rt-dd__sort">
-            <CatalogueDropdown label="Sort by" options={sortOptions.map(([v, l]) => ({ value: v, label: l }))} value={sortBy} onChange={setSort} clearable={false} />
-          </div>
+      {/* an option the course offers with no dates yet: it says so, with Enquire (nothing to filter or sort) */}
+      {all.length === 0 ? (
+        <div className="rt-dd__list">
+          <EmptyState inCard title={NO_DATES} text="Ask us about the next one." action={{ label: "Enquire", href: enquireHref() }} />
         </div>
-        <div className="rt-dd__meta">
-          <span aria-live="polite">{count}{placeNote && ` · ${placeNote}`}</span>
-          {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filter</button>}
-        </div>
-      </div>
-
-      <div className="rt-dd__list rt-pill-scroll" ref={listRef}>
-        {list.length === 0 ? (
-          <EmptyState inCard title="No venues match." text={located.isSuccess && !place ? `We couldn't find ${q} on the map. Try another town or postcode.` : "Try another town or postcode."} />
-        ) : classroom ? (
-          <div className="rt-dd__venues">
-            {venueList.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} open={openKey === v.key} onToggle={() => setOpenPick(openKey === v.key ? null : v.key)} more={more.includes(v.key)} onMore={() => toggle(v.key)} markSaver={markSaver} onBook={onBook} />)}
-            {venuesLeft > 0 && (
-              <button type="button" className="rt-dd__more rt-dd__more--venues" onClick={() => setVenuesShown((n) => n + VENUES_STEP)}>
-                Show more venues ({venuesLeft}) <Chevron />
-              </button>
+      ) : (
+        <>
+        <div className="rt-dd__filters">
+          <div className="rt-dd__controls">
+            {classroom && (
+              <label className="rt-field rt-dd__search">
+                <PinIcon />
+                <input name="near" type="search" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Town or postcode" aria-label="Town or postcode" data-initial={isDesktop ? "" : undefined} autoComplete="off" />
+              </label>
             )}
+            {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}
+            <div className="rt-dd__sort">
+              <CatalogueDropdown label="Sort by" options={sortOptions.map(([v, l]) => ({ value: v, label: l }))} value={sortBy} onChange={setSort} clearable={false} />
+            </div>
           </div>
-        ) : (
-          <ul className="rt-dd__slots rt-dd__slots--flat">
-            {list.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} onBook={onBook} markSaver={markSaver} />)}
-          </ul>
-        )}
-      </div>
-      <FilterScrollPill scrollRef={listRef} />
+          <div className="rt-dd__meta">
+            <span aria-live="polite">{count}{placeNote && ` · ${placeNote}`}</span>
+            {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filter</button>}
+          </div>
+        </div>
+
+        <div className="rt-dd__list rt-pill-scroll" ref={listRef}>
+          {list.length === 0 ? (
+            <EmptyState inCard title="No venues match." text={located.isSuccess && !place ? `We couldn't find ${q} on the map. Try another town or postcode.` : "Try another town or postcode."} />
+          ) : classroom ? (
+            <div className="rt-dd__venues">
+              {venueList.map((v) => <VenueCard key={v.key} v={v} current={current} onSelect={pick} open={openKey === v.key} onToggle={() => setOpenPick(openKey === v.key ? null : v.key)} more={more.includes(v.key)} onMore={() => toggle(v.key)} markSaver={markSaver} onBook={onBook} />)}
+              {venuesLeft > 0 && (
+                <button type="button" className="rt-dd__more rt-dd__more--venues" onClick={() => setVenuesShown((n) => n + VENUES_STEP)}>
+                  Show more venues ({venuesLeft}) <Chevron />
+                </button>
+              )}
+            </div>
+          ) : (
+            <ul className="rt-dd__slots rt-dd__slots--flat">
+              {list.map((s) => <DateRow key={s.id} s={s} selected={current === s.id} onSelect={pick} onBook={onBook} markSaver={markSaver} />)}
+            </ul>
+          )}
+        </div>
+        <FilterScrollPill scrollRef={listRef} />
+        </>
+      )}
     </>
   );
 }
@@ -394,8 +404,9 @@ export function DatesPicker({ open: datesOpen, onClose: closeDates, course, mode
 // books it and goes to the basket (as Hurak's).
 // When the course runs both, the pop-up's own tabs switch between their dates; the page follows only once a date is chosen.
 export default function DatesDialog() {
-  const { course, mode, session, selectSession, datesOpen, closeDates, book } = useBooking();
-  const dated = useMemo(() => ["classroom", "online"].filter((m) => course.sessions.some((s) => s.mode === m)), [course]);
+  const { course, modes, mode, session, selectSession, datesOpen, closeDates, book } = useBooking();
+  // the options taught on dates the page offers, with dates or not yet (that one says so, with Enquire)
+  const dated = useMemo(() => modes.filter((m) => m === "classroom" || m === "online"), [modes]);
   const [view, setView] = useState(mode);
   useEffect(() => {
     if (datesOpen) setView(mode); // every opening starts on the page's study method

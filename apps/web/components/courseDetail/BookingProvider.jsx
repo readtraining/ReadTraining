@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { useContextElement } from "@/context/Context";
 import Toast from "@/components/courses/Toast";
 import { toItem, trackEvent } from "@/lib/analytics";
-import { bookableModes, defaultMode as defaultModeOf, firstSession } from "@/lib/courseModes";
+import { defaultMode as defaultModeOf, firstSession, hasDates, offeredModes } from "@/lib/courseModes";
+import { contactHref } from "@/lib/forms";
 import { formatShortDate } from "@/lib/format";
 import { firstAidFor, lineFor } from "@/lib/basket";
 import { TEAM } from "@/lib/teamTraining";
@@ -17,6 +18,9 @@ const BookingContext = createContext(null);
 export const useBooking = () => useContext(BookingContext);
 export const IN_HOUSE_NOTE = TEAM.note;
 export const quoteHref = (course) => `${QUOTE_HREF}?course=${course.slug}`;
+// Enquire, for a learning option with no dates yet: the contact form about choosing a course (or, while it is off, our phone,
+// WhatsApp and email)
+export const enquireHref = () => contactHref("course");
 
 // Shared booking state for the whole detail page: delivery mode, location filter and the selected session. BookingCard,
 // DatesSection and MobileBuyBar all read this one source. It is mirrored to the URL (?mode=&session=) with
@@ -26,11 +30,13 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const pathname = usePathname();
   const { addCourseToCart, isAddedToCartCourses } = useContextElement();
 
-  // Only the options this course offers. "inhouse" has no dated sessions: it leads to a quote instead.
-  const modes = useMemo(() => [...bookableModes(course), ...(course.inHouse ? ["inhouse"] : [])], [course]);
+  // Every option this course offers, the ones with dates first (an option with none yet shows "No dates scheduled yet" and
+  // Enquire), as the search card lists them. "inhouse" has no dated sessions: it leads to a quote instead.
+  const modes = useMemo(() => [...offeredModes(course), ...(course.inHouse ? ["inhouse"] : [])], [course]);
   // The first session of a mode and the default mode follow the shared rules in lib/courses.js (cheapest, most popular).
   const firstOf = useCallback((mode) => firstSession(course, mode), [course]);
-  // a course with no dates yet has no dated mode: team training (if offered) is then the only option, or none at all (mode null)
+  // the page opens on an option with dates; a course with none yet opens on its first option (it says "No dates scheduled yet",
+  // with Enquire), or team training when that is all it has, or none at all (mode null)
   const defaultMode = useMemo(() => defaultModeOf(course) ?? modes[0] ?? null, [course, modes]);
 
   // Initial state comes from the URL; invalid values fall back to the first session of the default mode.
@@ -49,7 +55,11 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const notify = useCallback((t) => setToast(typeof t === "string" ? { message: t } : t), []);
 
   const isInHouse = mode === "inhouse";
-  const session = course.sessions.find((s) => s.id === sessionId) || (mode ? firstOf(mode) : null) || course.sessions[0] || null;
+  // the chosen option has no dates yet: nothing to book there, only Enquire
+  const undated = Boolean(mode) && !hasDates(course, mode);
+  // the date last chosen, kept while another option is looked at, so switching back restores it
+  const chosen = course.sessions.find((s) => s.id === sessionId);
+  const session = undated ? null : chosen || (mode ? firstOf(mode) : null) || course.sessions[0] || null;
   // what one place costs (sold in packages: the cheapest package's, and `fromPrice` says so), and the date's was-price
   const price = session ? session.price : null;
   const wasPrice = session && session.wasPrice > session.price ? session.wasPrice : null;
@@ -75,17 +85,17 @@ export default function BookingProvider({ course, initialMode, initialSession, c
       setFlash((f) => f + 1);
       setModeState(next);
       setCity("");
-      if (next === "inhouse") {
-        // keep the last chosen session so switching back restores it
+      if (next === "inhouse" || !hasDates(course, next)) {
+        // team training, or an option with no dates yet: keep the last chosen session so switching back restores it
         writeUrl(next, null);
         return;
       }
-      const target = session?.mode === next ? session : firstOf(next);
+      const target = chosen?.mode === next ? chosen : firstOf(next);
       if (!target) return;
       setSessionId(target.id);
       writeUrl(next, target.id);
     },
-    [modes, mode, session, firstOf, writeUrl],
+    [modes, mode, chosen, firstOf, writeUrl, course],
   );
 
   const selectSession = useCallback(
@@ -190,7 +200,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   const addToBasket = useCallback(() => book(), [book]);
   // Book now, wherever it is on the page (hero, card, mobile bar), as Hurak's: nothing is chosen for the learner. A course with
   // dates opens them (venue, date, then the package and first aid); a self-paced course has no date, so it goes on to its steps.
-  const bookNow = useCallback(() => (mode === "ondemand" ? book() : openDates()), [mode, book, openDates]);
+  const bookNow = useCallback(() => (undated ? undefined : mode === "ondemand" ? book() : openDates()), [undated, mode, book, openDates]);
   // What a study method offers, for the card, the mobile bar and Learning options: how many dates and venues, the towns, the
   // next date, and the lowest price (with that date's was-price); "From" when there is more than one price or packages.
   const summaryFor = useCallback(
@@ -239,7 +249,7 @@ export default function BookingProvider({ course, initialMode, initialSession, c
   }, [course]);
 
   const value = {
-    course, modes, mode, isInHouse, setMode, city, setCity, session, selectSession,
+    course, modes, mode, isInHouse, undated, setMode, city, setCity, session, selectSession,
     status, inBasket, addToBasket, book, notify, cardButtonRef, barOn, setBarOn, flash, defaultMode, datesOpen, openDates, closeDates,
     price, wasPrice, fromPrice, bookNow, summaryFor,
   };
