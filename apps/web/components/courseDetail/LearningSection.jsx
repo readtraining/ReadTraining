@@ -6,7 +6,7 @@ import { TEAM } from "@/lib/teamTraining";
 import { formatPrice } from "@/lib/format";
 import DatesDialog from "./DatesDialog";
 import { Check } from "./Icon";
-import { modeLabel } from "@/lib/courseModes";
+import { NO_DATES, hasDates, modeLabel } from "@/lib/courseModes";
 import { EmptyState } from "@/components/states/States";
 
 
@@ -26,7 +26,6 @@ export default function LearningSection() {
   const { course, modes, mode, setMode } = useBooking();
 
   const fromFor = (m) => Math.min(...course.sessions.filter((s) => s.mode === m).map((s) => s.price));
-  const noDates = course.sessions.length === 0;
   // "Most popular" means something only between study methods (classroom, live online, self-paced), not against team training
   const compare = modes.filter((m) => m !== "inhouse").length > 1;
 
@@ -42,7 +41,6 @@ export default function LearningSection() {
   return (
     <section className="rt-cd__sec rt-lo" id="learning-options" aria-labelledby="rt-cd-lo-h">
       <h2 id="rt-cd-lo-h">Learning options</h2>
-      {noDates && <p className="rt-cd__lead">No public dates are open yet. Your team can still train together: ask for a quote below.</p>}
 
       <fieldset className="rt-lc__fs">
         <legend className="rt-cd__sr">How do you want to learn?</legend>
@@ -60,7 +58,7 @@ export default function LearningSection() {
                 <h3 className="rt-lc__name" id={`rt-lc-${m}`}>{m === "inhouse" ? TEAM.cardTitle : modeLabel(m)}</h3>
                 <ul className="rt-lc__list">{list.map((b) => <li key={b}><Check /> <span>{b}</span></li>)}</ul>
                 <span className="rt-lc__price">
-                  {m === "inhouse" ? <span className="rt-lc__quote">{TEAM.quoteText}</span> : <><span>From</span> <strong>{formatPrice(fromFor(m))}</strong></>}
+                  {m === "inhouse" ? <span className="rt-lc__quote">{TEAM.quoteText}</span> : hasDates(course, m) ? <><span>From</span> <strong>{formatPrice(fromFor(m))}</strong></> : <span className="rt-lc__quote">{NO_DATES}</span>}
                 </span>
               </div>
             );

@@ -34,6 +34,7 @@ export type Listing = {
   topic: string | null
   level: string | null
   methods: string[]
+  primary: string | null
   venues: Venue[]
   prices: Price[]
   providers: number
@@ -126,6 +127,7 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
     }
     const first = ds[0]
     const methods = [...new Set(mine.flatMap(ways))]
+    const primaries = [...new Set(mine.map((o) => o.method).filter(Boolean))]
     const providers = new Set(mine.map((o) => o.organisation_id)).size
     out.push({
       id: p.id,
@@ -138,6 +140,8 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
       topic: p.topic,
       level: p.level,
       methods,
+      // the main learning option when its providers share one (the course page then lists it first, and so does the card)
+      primary: primaries.length === 1 ? primaries[0] : null,
       venues: [...venues.values()],
       prices: [...priceList.values()],
       providers,

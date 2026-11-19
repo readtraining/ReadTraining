@@ -18,7 +18,7 @@ import { videoEmbed } from "@/lib/catalogueData";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
-import { CohortForm } from "./ProviderCohorts";
+import { CohortForm, todayIso } from "./ProviderCohorts";
 import { COURSE_TONE, CardChoice, Choice, KeepWidth, Loading, Pill, WayCards, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
@@ -58,6 +58,7 @@ const SECTION_OF = {
   model: "mode", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
   features: "info", outcomes: "info", audience: "info", entryRequirements: "info",
   images: "landing", units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode", methods: "mode",
+  dates: "pricing",
 };
 const sectionOf = (key) => SECTION_OF[key] || (/^(passMark|examUnit|examDuration)\d+$/.test(key) ? "syllabus" : null);
 // course pictures follow the rule every picture upload does (lib/images.js): JPG, PNG, WebP or GIF up to 15 MB, big ones made
@@ -130,6 +131,9 @@ const retiredOnSale = (course) => (course.retiredMethods || []).filter((m) => !i
 const datesNeeded = (d, course) =>
   d.methods.filter((m) => isDatedMethod(m) && !(course.closedMethods || []).includes(m) && ((course.datesMissing || []).includes(m) || !waysOf(course).includes(m)));
 
+// what Prices & dates says while a way taught on dates has no date learners can book (Continue stops there, as Send would)
+const datesGap = (lacking) => `Create a ${lacking.map(methodName).join(" and a ")} cohort: the course needs a date learners can book${lacking.length > 1 ? " for each" : ""}.`;
+
 // whether each section is complete, from the draft (and the saved images and dates). The API counts a draft's required steps
 // left by the same rules for the Dashboard's to-do list (provider/courses.mts stepsLeft): keep the two the same.
 function sectionOk(d, course, key) {
@@ -193,6 +197,8 @@ function stepGaps(d, course, key) {
     e.price = "Enter the self-paced price per learner, or choose a price plan.";
     e.planId = "Choose a price plan, or choose Flat and enter a price.";
   }
+  // each way taught on dates needs a date learners can book before it can be sent, so Continue doesn't move past it
+  if (key === "pricing" && course.kind === "provider" && datesNeeded(d, course).length) e.dates = datesGap(datesNeeded(d, course));
   return e;
 }
 // the draft's field for each kind of catalogue entry the API names as retired ("Name (sub-category)": provider/courses.mts retired)
@@ -272,6 +278,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [seo, setSeo] = useState({ dirty: false, busy: false }); // the SEO step's own form, saved from the bar
   const seoSave = useRef(null); // saves the SEO form (Save and Send for approval save it with the rest)
   const [pressed, setPressed] = useState("");
+  // a picture uploading (or a picture change saving) on Course landing page: the editor waits for it, so nobody moves on before
+  // it is in, and an upload that fails says so on the step they are on
+  const [imagesBusy, setImagesBusy] = useState(false);
+  // the step on screen now, for a Save and continue that finishes after the provider has gone to another step themselves
+  const tabNow = useRef("");
   // "Load the latest version": the SEO step starts again from the course as it is now (it reads the course only when it opens)
   const [latest, setLatest] = useState({ n: 0, course: null }); // the bar's button that is working ("save", "continue", "send"): only it says so
   const [preview, setPreview] = useState(false);
@@ -282,7 +293,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const saved = useCallback((message) => { setToast({ message }); setSaid(message); }, []);
   const access = ep.access;
   // a provider our team hasn't approved yet can open its courses but not change them (the shared permission table)
-  const { status: providerStatus } = useProviderAccess();
+  const { status: providerStatus, can: providerCan } = useProviderAccess();
   const notApproved = !ep.admin && (providerStatus === "pending" || providerStatus === "changes_requested");
   const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS;
   const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: "/provider/courses" };
@@ -601,6 +612,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   };
   function changeTab(t, { scroll = false } = {}) {
     setTab(t);
+    tabNow.current = t;
+    // the bar under the form is shared by every step: a save still running shows on the new step as its buttons greyed out,
+    // not as "Saving…" on a button that wasn't pressed there
+    setPressed("");
     setErrors({});
     setQuery("tab", t === "landing" ? "" : t);
     if (!scroll) return;
@@ -616,9 +631,12 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     });
   }
   const goTo = async (x, { check = false } = {}) => {
+    tabNow.current = tab;
     if (FORM_SECTIONS.includes(tab) && dirty && access.page && !(await save())) return;
+    // they went to another step while it saved: they stay there
+    if (tabNow.current !== tab) return;
     const all = check && access.page ? stepGaps(draft, course, tab) : {};
-    const mayFix = (k) => access.full ? (k !== "price" && k !== "planId") || access.pricing : PAGE_FIELDS.includes(k) || k === "images";
+    const mayFix = (k) => k === "dates" ? providerCan("provider.cohorts.edit") : access.full ? (k !== "price" && k !== "planId") || access.pricing : PAGE_FIELDS.includes(k) || k === "images";
     const gaps = Object.fromEntries(Object.entries(all).filter(([k]) => mayFix(k)));
     gapRef.current = Object.keys(gaps);
     if (gapRef.current.length) return showErrors(gaps);
@@ -705,7 +723,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           <ol className="rt-pws-ce__steps">
             {ticks.map((x) => (
               <li key={x.key}>
-                <button type="button" className={`rt-pws-ce__step${tab === x.key ? " is-on" : ""}`} onClick={() => changeTab(x.key)} aria-current={tab === x.key ? "step" : undefined}>
+                <button type="button" className={`rt-pws-ce__step${tab === x.key ? " is-on" : ""}`} onClick={() => changeTab(x.key)} disabled={imagesBusy && tab !== x.key} aria-current={tab === x.key ? "step" : undefined}>
                   <span className={`rt-pws-course-tick${x.ok ? " is-ok" : ""}`} aria-hidden="true">{x.ok ? <i className="icon-check text-10"></i> : null}</span>
                   <span className="rt-pws-ce__steptext"><span>{x.label}{x.key === nextKey && <> <Pill tone="info">Next</Pill></>}</span><small className={`rt-pws-ce__stepstatus${!x.ok && !x.optional ? " -todo" : ""}`}><span className="rt-sr">: </span>{stepStatus(x)}</small></span>
                 </button>
@@ -717,7 +735,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
 
         <div className="rt-pws-ce__main" ref={formRef}>
           {errors.form && <p className="rt-q__err" id="rt-pws-ce-formerr" tabIndex={-1} role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
-          {tab === "landing" && <LandingSection {...sectionProps} shared={ep.admin} onSaved={saved} />}
+          {tab === "landing" && <LandingSection {...sectionProps} shared={ep.admin} onSaved={saved} onImagesBusy={setImagesBusy} />}
           {tab === "info" && <InfoSection {...sectionProps} />}
           {tab === "syllabus" && <SyllabusSection {...sectionProps} />}
           {tab === "faqs" && <FaqSection {...sectionProps} />}
@@ -734,12 +752,12 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
               that can only look, on a course past its building steps): no bar. */}
           {((building && (prev || next)) || access.page || send) && (
             <div className="rt-acc__card rt-pws-ce__bar">
-              {building && prev ? <button type="button" className="rt-cd__link rt-pws-ce__back" onClick={() => goTo(prev)} disabled={busy || saving}><i className="icon-arrow-left text-12" aria-hidden="true"></i><span className="rt-sr">Back to </span><span className="rt-pws-ce__backname">{prev.label}</span></button> : <span></span>}
+              {building && prev ? <button type="button" className="rt-cd__link rt-pws-ce__back" onClick={() => goTo(prev)} disabled={busy || saving || imagesBusy}><i className="icon-arrow-left text-12" aria-hidden="true"></i><span className="rt-sr">Back to </span><span className="rt-pws-ce__backname">{prev.label}</span></button> : <span></span>}
               <div className="rt-pws-ce__baractions">
                 {access.page && <span className={`rt-pws-course-unsaved${unsaved ? "" : " is-hidden"}`} aria-hidden={!unsaved || undefined}><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
-                {access.page && <button type="button" className={`button -md ${(building && next) || send ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={async () => { setPressed("save"); await saveAll(); setPressed(""); }} disabled={busy || saving || !unsaved} aria-busy={(pressed === "save" && saving) || undefined}><KeepWidth label="Save" busy={pressed === "save" && saving} working="Saving…" /></button>}
-                {building && next && <button type="button" className="button -md -purple-1 text-white" onClick={async () => { setPressed("continue"); await goTo(next, { check: true }); setPressed(""); }} disabled={busy || saving} aria-busy={(pressed === "continue" && saving) || undefined}><KeepWidth label={access.page ? "Save and continue" : "Continue"} busy={pressed === "continue" && saving} working="Saving…" /><span className="rt-sr">: {next.label}</span></button>}
-                {send && <button type="button" className={`button -md ${ready ? "-purple-1 text-white" : "-outline-purple-1 text-purple-1"}`} onClick={async () => { setPressed("send"); await submit(); setPressed(""); }} disabled={busy || saving} aria-haspopup={ready ? undefined : "dialog"} aria-describedby={submitError ? "rt-pws-ce-need" : undefined} aria-busy={(pressed === "send" && (busy || saving)) || undefined}><KeepWidth label={ep.admin ? "Publish" : "Send for approval"} busy={pressed === "send" && (busy || saving)} working={ep.admin ? "Publishing…" : "Sending…"} /></button>}
+                {access.page && <button type="button" className={`button -md ${(building && next) || send ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={async () => { setPressed("save"); await saveAll(); setPressed(""); }} disabled={busy || saving || imagesBusy || !unsaved} aria-busy={(pressed === "save" && saving) || undefined}><KeepWidth label="Save" busy={pressed === "save" && saving} working="Saving…" /></button>}
+                {building && next && <button type="button" className="button -md -purple-1 text-white" onClick={async () => { setPressed("continue"); await goTo(next, { check: true }); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-busy={(pressed === "continue" && saving) || undefined}><KeepWidth label={access.page ? "Save and continue" : "Continue"} busy={pressed === "continue" && saving} working="Saving…" /><span className="rt-sr">: {next.label}</span></button>}
+                {send && <button type="button" className={`button -md ${ready ? "-purple-1 text-white" : "-outline-purple-1 text-purple-1"}`} onClick={async () => { setPressed("send"); await submit(); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-haspopup={ready ? undefined : "dialog"} aria-describedby={submitError ? "rt-pws-ce-need" : undefined} aria-busy={(pressed === "send" && (busy || saving)) || undefined}><KeepWidth label={ep.admin ? "Publish" : "Send for approval"} busy={pressed === "send" && (busy || saving)} working={ep.admin ? "Publishing…" : "Sending…"} /></button>}
               </div>
             </div>
           )}
@@ -858,7 +876,7 @@ function LineList({ id, label, hint, items, onChange, max, most, placeholder, or
 
 // ---- Course landing page ---------------------------------------------------------------------------------------------------
 
-function LandingSection({ course, draft, setDraft, errors, access, shared = false, onSaved }) {
+function LandingSection({ course, draft, setDraft, errors, access, shared = false, onSaved, onImagesBusy }) {
   const set = useSet(setDraft);
   const subs = subcategoryOptions(draft.category);
   const topics = topicOptions(draft.category, draft.subcategory);
@@ -913,7 +931,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         </div>
       </section>
 
-      <ImagesCard course={course} disabled={page} onSaved={onSaved} required={errors.images} />
+      <ImagesCard course={course} disabled={page} onSaved={onSaved} required={errors.images} onBusy={onImagesBusy} />
 
       <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-video-h">
         <h3 className="rt-adm-h3" id="rt-pws-ce-video-h">Overview video (optional)</h3>
@@ -933,7 +951,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
 // the moment they are asked for. If the server refuses, the list goes back to how it was (unsaved ALT text kept) and says why. The course then loads again in the
 // background. An upload and an ALT text save show their own label while they run (Uploading…, Saving…); every button waits while
 // one change is saving, and Remove asks first.
-function ImagesCard({ course, disabled, onSaved, required }) {
+function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
   const ep = useEndpoints();
   const [list, setList] = useState(course.images);
   // what is running: null, "upload", "alt", "remove" or "cover"
@@ -964,6 +982,11 @@ function ImagesCard({ course, disabled, onSaved, required }) {
   }, [course.images]);
   const busy = Boolean(action);
   runningRef.current = busy;
+  // the editor's buttons and steps wait while a picture change runs (and stop waiting if the card closes)
+  useEffect(() => {
+    onBusy?.(busy);
+  }, [busy, onBusy]);
+  useEffect(() => () => onBusy?.(false), [onBusy]);
   const shown = list.filter((i) => !i.uploading);
   const changed = !same(shown.map((i) => [i.id, i.alt]), saved.map((i) => [i.id, i.alt]));
   useUnsavedChanges(changed && !disabled); // ALT text typed but not saved
@@ -975,13 +998,15 @@ function ImagesCard({ course, disabled, onSaved, required }) {
     if (!file) return;
     if (saved.length >= 10) return setError("A course can have up to 10 images. Remove one first.");
     setError("");
+    // it counts as uploading from the moment it is chosen (making a big picture smaller takes a moment too)
+    setAction("upload");
     let picture;
     try {
       picture = await prepareImage(file, "course");
     } catch (err) {
+      setAction(null);
       return setError(err.message);
     }
-    setAction("upload");
     // the chosen picture shows at once, from the file itself, until the saved one replaces it
     const temp = { id: `uploading-${Date.now()}`, url: URL.createObjectURL(picture.blob), alt: "", uploading: true };
     setList((x) => [...x, temp]);
@@ -1396,6 +1421,12 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
   const own = savedDated.length > 1 ? "venue or joining link, " : savedDated[0] === "classroom" ? "venue, " : "joining link, ";
   // how many dates it has, or which way still has none learners can book (sending it for approval needs one on each)
   const lacking = datesNeeded(draft, course);
+  // a date just created counts at once (its way has a date learners can book, so "Create a … cohort" goes), not only once the
+  // course has loaded again (that follows, and has the last word); one starting today or earlier isn't shown to learners
+  const counted = (saved) => {
+    if (!saved?.startsOn || saved.startsOn <= todayIso()) return;
+    ep.patch({ datesMissing: (course.datesMissing || []).filter((m) => m !== saved.method), bookableCohorts: (course.bookableCohorts || 0) + 1, cohortCount: (course.cohortCount || 0) + 1 });
+  };
   const n = course.bookableCohorts;
   // its ways on dates still taking bookings (a date can be added to one of them only)
   const openDated = waysOf(course, { open: true }).filter(isDatedMethod);
@@ -1436,9 +1467,10 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
             ) : (
               <>
                 <p className="rt-acc__note">Each date (a cohort) has its own {own}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live; online booking opens in a later update."}</p>
+                <FieldErr id="rt-pws-ce-dates" text={errors.dates && lacking.length ? datesGap(lacking) : ""} />
                 <div className="rt-pws-ce__dates">
                   <p className="rt-pws-ce__datecount">{dateLine}</p>
-                  {can("provider.cohorts.edit") && openDated.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Create cohort</button>}
+                  {can("provider.cohorts.edit") && openDated.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)} aria-describedby={errors.dates && lacking.length ? "rt-pws-ce-dates-e" : undefined}>Create cohort</button>}
                   {course.cohortCount > 0 && can("provider.cohorts.view") && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>}
                 </div>
               </>
@@ -1460,8 +1492,9 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
         {/* the main way's part first: Dates when the course is mainly taught on dates, else the self-paced price */}
         {isDatedMethod(draft.method) ? <>{datesPart}{selfPart}</> : <>{selfPart}{datesPart}</>}
       </section>
-      <CohortForm open={adding} onClose={() => { setAdding(false); ep.refresh(); }} suggestCourseId={course.id} onAnother={() => ep.refresh()} onSaved={() => {
+      <CohortForm open={adding} onClose={() => { setAdding(false); ep.refresh(); }} suggestCourseId={course.id} onAnother={(id, saved) => { counted(saved); ep.refresh(); }} onSaved={(id, saved) => {
         setAdding(false);
+        counted(saved);
         ep.refresh();
         onSaved("Cohort saved");
       }} />

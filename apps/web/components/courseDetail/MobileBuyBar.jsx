@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
+import { IN_HOUSE_NOTE, enquireHref, quoteHref, useBooking } from "./BookingProvider";
+import { NO_DATES, modeLabel } from "@/lib/courseModes";
 import { TEAM } from "@/lib/teamTraining";
 import { formatPrice, formatWeekdayDate } from "@/lib/format";
 
@@ -10,7 +11,7 @@ import { formatPrice, formatWeekdayDate } from "@/lib/format";
 // Team training follows the card: no price, and the button becomes "Get a team quote". A course with dates shows its lowest price and how
 // many dates there are, and Book now opens them, as the card's (nothing is chosen for the learner).
 export default function MobileBuyBar() {
-  const { course, session, mode, isInHouse, status, cardButtonRef, price, fromPrice, bookNow, summaryFor } = useBooking();
+  const { course, session, mode, isInHouse, undated, status, cardButtonRef, price, fromPrice, bookNow, summaryFor } = useBooking();
   const [visible, setVisible] = useState(false);
 
   // Visible once the card's button is fully above the top of the screen. A scroll check (rAF-throttled) is used instead of
@@ -37,12 +38,21 @@ export default function MobileBuyBar() {
   }, [cardButtonRef, isInHouse]);
 
   const label = status === "loading" ? "Booking" : status === "error" ? "Try again" : "Book now";
-  if (!mode || (!isInHouse && !session)) return null;
+  if (!mode || (!isInHouse && !undated && !session)) return null;
   const sum = !isInHouse && mode !== "ondemand" ? summaryFor(mode) : null;
 
   return (
     <div className={`rt-cd__bar${visible ? " is-visible" : ""}`} aria-hidden={!visible} inert={!visible}>
-      {isInHouse ? (
+      {undated ? (
+        // the chosen option has no dates yet: it says so, with Enquire
+        <>
+          <div className="rt-cd__bar-info">
+            <strong>{modeLabel(mode)}</strong>
+            <span>{NO_DATES}</span>
+          </div>
+          <Link href={enquireHref()} className="button -md -purple-1 text-white rt-bar__btn" tabIndex={visible ? 0 : -1}>Enquire</Link>
+        </>
+      ) : isInHouse ? (
         <>
           <div className="rt-cd__bar-info">
             <strong>{TEAM.barTitle}</strong>
