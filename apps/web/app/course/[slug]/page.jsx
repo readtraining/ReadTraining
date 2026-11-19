@@ -1,4 +1,4 @@
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import CourseDetail from "@/components/courseDetail/CourseDetail";
 import { loadCoursePage } from "@/lib/catalogueServer";
 import { courseDetailFor } from "@/lib/courseDetailServer";
@@ -8,7 +8,10 @@ import { loadTaxonomy } from "@/lib/taxonomyServer";
 
 // The course details page (/course/<slug>): a live course (API catalogue.course), with up to three more courses from its
 // category and its free mock test when it has one (lib/testPrep.js). An old numeric link (/course/1012) is sent on to its
-// address, keeping the query.
+// address, keeping the query. A provider's public course on a live shared page is one of that page's offerings: its address
+// sends visitors to the shared page (307, as the course can move), so a provider's own words show only where there is no
+// shared page. A private or unlisted one isn't on the shared page, so it keeps its own page (opened from its address only).
+const onSharedPage = (page) => page.kind === "provider" && page.parent && page.isPublic !== false && page.listed !== false;
 async function findCourse(slug) {
   const page = await loadCoursePage(slug);
   return page ? courseDetailFor(page) : null;
@@ -39,13 +42,14 @@ export default async function page(props) {
   await loadTaxonomy(); // catalogue names (categories, methods) on the server
   const { slug } = await props.params;
   const query = (await props.searchParams) || {};
+  const search = new URLSearchParams(Object.entries(query).flatMap(([k, v]) => [].concat(v).map((x) => [k, x]))).toString();
+  const keep = search ? `?${search}` : "";
+  const shown = await loadCoursePage(slug);
+  if (shown && onSharedPage(shown)) redirect(`${coursePath(shown.parent.slug)}${keep}`);
   const found = await findCourse(slug);
   if (!found) notFound();
   const { course, reviews } = found;
-  if (slug !== course.slug) {
-    const search = new URLSearchParams(Object.entries(query).flatMap(([k, v]) => [].concat(v).map((x) => [k, x]))).toString();
-    permanentRedirect(`${coursePath(course.slug)}${search ? `?${search}` : ""}`);
-  }
+  if (slug !== course.slug) permanentRedirect(`${coursePath(course.slug)}${keep}`);
   // the first page of its reviews (lib/courseDetailServer.js), or null when there are none
   return <CourseDetail course={course} query={query} path={coursePath(course.slug)} reviews={reviews} />;
 }
