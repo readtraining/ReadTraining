@@ -40,9 +40,9 @@ const P = {
   platform: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" /></>,
 };
 
-export default function NavIcon({ name }) {
+export default function NavIcon({ name, className = "rt-adm__icon" }) {
   return (
-    <svg className="rt-adm__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <svg className={className} viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {P[name] ?? <circle cx="12" cy="12" r="2" />}
     </svg>
   );

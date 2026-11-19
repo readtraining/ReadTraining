@@ -11,7 +11,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { waysLabel } from "@/lib/courseModes";
-import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty } from "./adminParts";
+import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty, RowMenu } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
@@ -21,7 +21,8 @@ const TABS = ["waiting", "changes", "decided"];
 const DAY = 86400000;
 
 // One inbox for what providers send for review (API admin.courses): new courses and changes to live courses, oldest first so
-// nothing waits silently, each with its deadline. Review opens the course; a new course can also be approved or sent back here,
+// nothing waits silently, each with its deadline. Each card's ⋮ menu: Review (the course), Preview, and its decisions: a new course
+// can be approved or sent back here,
 // a change approved or turned down. Sending back and turning down need a note, which the provider sees and is emailed (the site's
 // pop-up, the first error focused). Waiting new courses can be ticked and approved together. Tabs and the type filter are kept in
 // the address. Deciding needs the "approve" switch; the API also stops anyone deciding on what they sent themselves.
@@ -175,19 +176,16 @@ export default function AdminApprovals() {
                   {canDecide && tab === "waiting" && a.own && <p className="rt-adm-item__reason">{a.soleApprover ? copy.ownQueueSole : copy.ownBlocked}</p>}
                 </div>
                 <div className="rt-adm-item__actions">
-                  <Link href={`/admin/catalogue/${a.courseId}`} className="button -sm -outline-purple-1 text-purple-1">{copy.review}</Link>
-                  {canDecide && tab === "waiting" && a.type === "new" && !a.own && (
-                    <>
-                      {providerReady && <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => run([a], "approve")}>{copy.approve}</button>}
-                      <button type="button" className="rt-cd__link" disabled={busy} onClick={() => open(a, "changes")}>{copy.requestChanges}</button>
-                    </>
-                  )}
-                  {canDecide && tab === "waiting" && a.type === "change" && !a.own && (
-                    <>
-                      <button type="button" className="button -sm -purple-1 text-white" disabled={busy} onClick={() => run([a], "approveChange")}>{copy.approveChange}</button>
-                      <button type="button" className="rt-cd__link rt-adm-danger" disabled={busy} onClick={() => open(a, "rejectChange")}>{copy.rejectChange}</button>
-                    </>
-                  )}
+                  <RowMenu label={`Actions for ${a.title}`} items={[
+                    { label: copy.review, href: `/admin/catalogue/${a.courseId}` },
+                    { label: a.type === "change" ? "Preview the change" : "Preview", href: `/admin/catalogue/${a.courseId}/preview`, newTab: true },
+                    ...(canDecide && tab === "waiting" && a.type === "new" && !a.own
+                      ? [...(providerReady ? [{ label: copy.approve, onClick: () => !busy && run([a], "approve") }] : []), { label: copy.requestChanges, onClick: () => open(a, "changes") }]
+                      : []),
+                    ...(canDecide && tab === "waiting" && a.type === "change" && !a.own
+                      ? [{ label: copy.approveChange, onClick: () => !busy && run([a], "approveChange") }, { label: copy.rejectChange, danger: true, onClick: () => open(a, "rejectChange") }]
+                      : []),
+                  ]} />
                 </div>
               </li>
             );

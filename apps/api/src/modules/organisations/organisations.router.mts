@@ -261,16 +261,17 @@ export const organisationsRouter = createTRPCRouter({
 
   // Switch account: logs which identity the person moved to (the page they land on checks access itself).
   switchIdentity: protectedProcedure
-    .input(z.object({ to: z.enum(['student', 'provider', 'business']), organisationId: z.string().uuid().optional() }))
+    .input(z.object({ to: z.enum(['student', 'provider', 'business', 'admin']), organisationId: z.string().uuid().optional() }))
     .mutation(async ({ ctx, input }) => {
-      if (input.to !== 'student' && !ctx.actor.memberships.some((m) => m.type === input.to && m.organisationId === input.organisationId && m.status === 'active'))
+      if (input.to === 'admin' && !ctx.actor.admin?.active) throw new TRPCError({ code: 'FORBIDDEN' })
+      if (input.to !== 'student' && input.to !== 'admin' && !ctx.actor.memberships.some((m) => m.type === input.to && m.organisationId === input.organisationId && m.status === 'active'))
         throw new TRPCError({ code: 'FORBIDDEN' })
       await logActivity(ctx.db, {
         actorUserId: ctx.user.id,
         actorIdentity: input.to,
         organisationId: input.organisationId ?? null,
         action: 'identity.switched',
-        targetType: input.to === 'student' ? 'account' : 'organisation',
+        targetType: input.to === 'student' || input.to === 'admin' ? 'account' : 'organisation',
         targetId: input.organisationId ?? ctx.user.id,
         metadata: { to: input.to },
         ip: ctx.ip,

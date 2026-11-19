@@ -23,7 +23,15 @@ const roles = A.learners.detail.roles;
 const NEXT = { pending: ["approve", "changes", "reject"], changes_requested: ["approve", "reject"], active: ["suspend"], suspended: ["reinstate"], rejected: [] };
 const SWITCH = { approve: "approve", changes: "approve", reject: "approve", suspend: "suspend", reinstate: "suspend" };
 const PRIMARY = new Set(["approve", "reinstate"]);
-const DANGER = new Set(["reject", "suspend"]);
+export const DANGER = new Set(["reject", "suspend"]);
+
+// The decisions an admin can make on a provider now (this page and the Providers list's row menu): its status's next steps
+// that the admin's switches allow, without approval decisions on an account they opened themselves unless they are the only
+// approver (`ownRequest`, `soleApprover`).
+export function decisionsFor(p, me) {
+  const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));
+  return p.ownRequest && !p.soleApprover ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
+}
 
 // One provider (API admin.providers.get): its status and the decisions it allows (approve, ask for changes, don't approve,
 // suspend, reinstate; each confirmed in a pop-up, with a message where the provider needs one), why it has its status, its
@@ -44,8 +52,7 @@ export default function AdminProvider({ slug }) {
   if (record.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title={d.notFound} action={{ href: "/admin/providers", label: d.back }} />;
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const p = record.data;
-  const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));
-  const decisions = p.ownRequest && !p.soleApprover ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
+  const decisions = decisionsFor(p, me);
   // why an approver sees no decision here: they opened this provider account themselves (another admin decides it)
   const blockedNote = NEXT[p.status].length && !decisions.length && p.ownRequest && me?.permissions?.includes("approve") ? d.ownRequest : "";
   const soleNote = p.ownRequest && p.soleApprover && decisions.some((k) => SWITCH[k] === "approve") ? d.ownSole : "";
@@ -201,8 +208,9 @@ function CommissionCard({ provider: p, canChange, onSaved }) {
   );
 }
 
-// The pop-up for one decision: what happens, a message when the provider needs one (required), then the button.
-function DecisionSheet({ provider, decision, onClose, onDone }) {
+// The pop-up for one decision: what happens, a message when the provider needs one (required), then the button. From the
+// Providers list (`provider.owner` given), an application's decision also shows who applied, with its full application a link away.
+export function DecisionSheet({ provider, decision, onClose, onDone }) {
   const decide = api.admin.providers.decide.useMutation();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -247,6 +255,12 @@ function DecisionSheet({ provider, decision, onClose, onDone }) {
       {sheet && (
         <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
           <p className="rt-acc__note"><strong>{provider.name}</strong></p>
+          {provider.owner && SWITCH[decision] === "approve" && (
+            <p className="rt-acc__note">
+              {provider.owner.name} · {provider.owner.email} · signed up {formatWhen(Date.parse(provider.appliedAt))}<br />
+              <Link href={`/admin/providers/${provider.slug}`} className="rt-cd__link" target="_blank" rel="noopener noreferrer">{d.fullApplication}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>
+            </p>
+          )}
           <p className="rt-acc__note">{sheet.text}</p>
           {sheet.label && (
             <div className="rt-field">

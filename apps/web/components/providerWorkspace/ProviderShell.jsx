@@ -113,7 +113,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   useEffect(() => {
     if (meName || workspace?.name) actAs({ name: meName, email: meEmail, orgName: workspace?.name });
   }, [meName, meEmail, workspace?.name]);
-  const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
+  const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ key: e.key, label: e.label, onClick: () => switcher.go(e) }))] : [];
   const logOut = async () => {
     if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     await signOut();
@@ -135,7 +135,6 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-adm__tag">{pw.tag}</span>
           </Link>
           <div className="rt-adm__topside">
-            <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}>Student</Link>
             <Link href="/provider/notifications" className="rt-pws__bell" aria-label={counts.unread ? `Notifications, ${counts.unread} unread` : "Notifications"}>
               <i className="icon-notification text-18" aria-hidden="true"></i>
               {counts.unread > 0 && <span className="rt-pws__bellcount" aria-hidden="true">{counts.unread}</span>}

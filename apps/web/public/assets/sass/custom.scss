@@ -4745,11 +4745,6 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-adm__top :focus-visible { outline-color: #fff; }
 .rt-adm__tag { padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-size: var(--rt-text-xs); font-weight: 700; letter-spacing: 0.04em; color: var(--color-green-1); }
 .rt-adm__topside { display: flex; align-items: center; gap: 24px; }
-.rt-adm__site { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 500; color: rgba(255, 255, 255, 0.85) !important; text-decoration: none; }
-.rt-adm__site:hover { color: #fff !important; }
-.rt-adm__out { padding: 6px 14px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-surface); }
-.rt-adm__out:hover { border-color: var(--rt-c-surface); }
-.rt-adm__out:disabled { opacity: 0.6; }
 .rt-adm__me { display: flex; align-items: center; gap: 10px; }
 .rt-adm__me .rt-acc__avatar { width: 36px; height: 36px; font-size: var(--rt-text-xs); }
 .rt-adm__mewho { min-width: 0; max-width: 220px; } /* a long name stays on one line, cut with … (the top bar shows it whole on hover) */
@@ -4826,7 +4821,7 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-adm__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
 .rt-adm__h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 700; color: var(--color-dark-1); }
 .rt-adm__lead { max-width: 70ch; margin: 6px 0 0; font-size: var(--rt-text); line-height: 1.5; color: var(--color-light-1); }
-@media (max-width: 575px) { .rt-adm__toprow { padding: 0 16px; } .rt-adm__logo img { width: 120px; } .rt-adm__site, .rt-adm__mewho { display: none; } .rt-adm__h1 { font-size: 24px; } }
+@media (max-width: 575px) { .rt-adm__toprow { padding: 0 16px; } .rt-adm__logo img { width: 120px; } .rt-adm__mewho { display: none; } .rt-adm__h1 { font-size: 24px; } }
 /* page head: the title with its "Demo data" tag; a record's breadcrumb */
 .rt-adm__titlerow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .rt-demo-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--color-orange-6); border-radius: var(--rt-radius-pill); background: var(--color-orange-7); font-size: var(--rt-text-xs); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); cursor: help; }
@@ -5682,7 +5677,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws__group.is-folded.is-here > .rt-pws__grouphead { font-weight: 600; color: var(--rt-c-brand) !important; }
 .rt-pws__group.is-folded.is-here > .rt-pws__grouphead .rt-adm__icon { color: var(--rt-c-brand); }
 @media (hover: hover) and (pointer: fine) { .rt-pws__grouphead:hover { background: var(--color-light-4); } }
-.rt-pws__student { min-height: 44px; }
 .rt-pws__bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; color: rgba(255, 255, 255, 0.85) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-pws__bell:hover { background: rgba(255, 255, 255, 0.1); color: var(--rt-c-surface) !important; }
 .rt-pws__bellcount { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-purple-1); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; color: var(--rt-c-surface); }
@@ -5721,7 +5715,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (hover: hover) and (pointer: fine) { .rt-pws__back:hover { color: var(--rt-c-brand) !important; } .rt-pws__back:hover i { border-color: var(--rt-c-brand); transform: translateX(-2px); } }
 .rt-pws__back:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws__back, .rt-pws__back i { transition: none; } }
-@media (max-width: 991px) { .rt-pws .rt-adm__topside .rt-adm__site:first-child { display: none; } }
 /* loading skeleton */
 .rt-pws-skel__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
 .rt-pws-skel__block { display: block; height: 180px; border-radius: var(--rt-radius-card); background: linear-gradient(90deg, var(--rt-c-line) 0%, var(--rt-c-soft) 50%, var(--rt-c-line) 100%); background-size: 200% 100%; animation: rt-pws-shimmer 1.4s ease-in-out infinite; }
@@ -6179,6 +6172,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-rowmenu__list :is(a, button) { display: flex; align-items: center; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; text-align: left; text-decoration: none; color: var(--rt-c-text) !important; cursor: pointer; }
 .rt-rowmenu__list :is(a, button):hover, .rt-rowmenu__list :is(a, button):focus-visible { outline: none; background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; }
 .rt-rowmenu__list :is(a, button) > i { flex: none; margin-right: 10px; color: var(--rt-c-muted); }
+/* an SVG icon in a menu row (the admin's own icon on "Admin panel"): the size and colour of the font icons beside it */
+.rt-menuicon { flex: none; width: 16px; height: 16px; color: var(--rt-c-muted); }
+.rt-rowmenu__list :is(a, button) > .rt-menuicon { margin-right: 10px; }
+.rt-hauth__menu a .rt-menuicon { color: var(--color-light-1); }
 .rt-rowmenu__list .-danger { color: var(--rt-c-error) !important; }
 .rt-rowmenu__list .-danger:hover, .rt-rowmenu__list .-danger:focus-visible { background: var(--rt-c-soft); color: var(--rt-c-error) !important; }
 
@@ -7326,7 +7323,6 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* the drawer has room for the name, which the top bar hides on a phone */
 .rt-adm__drawerfoot .rt-adm__mewho { display: block; }
 @media (min-width: 992px) { .rt-adm__drawerhead, .rt-adm__drawerfoot { display: none; } }
-@media (max-width: 991px) { .rt-adm__topside .rt-adm__out, .rt-adm__topside .rt-adm__site { display: none; } }
 /* numbered pages under a long list (adminParts Pager) */
 .rt-adm-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 4px 2px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-adm-pager__count { margin: 0; font-variant-numeric: tabular-nums; }
@@ -7737,7 +7733,7 @@ html { scrollbar-gutter: stable; }
 @media (min-width: 576px) and (max-width: 1199px) { .rt-adm--platform .rt-acc__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 399px) { .rt-adm--platform .rt-acc__stats { grid-template-columns: minmax(0, 1fr); } }
 /* R8: below 1200px the top bar keeps the avatar only, so nothing wraps */
-@media (max-width: 1199px) { .rt-adm--platform .rt-adm__mewho, .rt-adm--platform .rt-adm__site { display: none; } }
+@media (max-width: 1199px) { .rt-adm--platform .rt-adm__mewho { display: none; } }
 @media (max-width: 575px) {
   /* R2: filter pills stay on one row that scrolls sideways */
   .rt-adm--platform .rt-acc__tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
