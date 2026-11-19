@@ -213,7 +213,9 @@ export const organisationsRouter = createTRPCRouter({
         .from(organisationMembers)
         .where(and(eq(organisationMembers.organisationId, org.id), eq(organisationMembers.userId, ctx.user.id)))
       const statusSeen = Boolean(member?.seenAt && (!org.statusChangedAt || new Date(member.seenAt) >= new Date(org.statusChangedAt)))
-      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, statusSeen, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
+      // an admin working here as ReadTraining staff (the workspace's slim staff line, and their buttons: prices with `pricing`)
+      const staff = chosen.staff ? { pricing: chosen.staff.pricing } : null
+      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, statusSeen, welcome, type: input.type, role: chosen.role, userId: ctx.user.id, staff }
     }),
 
   // The person has seen the account's status message (shown once on the provider dashboard): it won't show to them again until

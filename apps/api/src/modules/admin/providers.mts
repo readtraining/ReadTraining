@@ -61,7 +61,7 @@ const OWNER = sql`left join lateral (
 
 export const providersRouter = createTRPCRouter({
   // How many providers are in each tab (the tabs, the menu badge and the dashboard).
-  counts: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  counts: adminProcedure('admin.providers.view').query(async ({ ctx }) => {
     const [r] = await ctx.db.execute<{ applications: number; active: number; suspended: number; rejected: number; all: number }>(sql`
       select count(*) filter (where status in ('pending', 'changes_requested'))::int applications, count(*) filter (where status = 'active')::int active,
              count(*) filter (where status = 'suspended')::int suspended, count(*) filter (where status = 'rejected')::int rejected, count(*)::int "all"
@@ -70,7 +70,7 @@ export const providersRouter = createTRPCRouter({
   }),
 
   // Newest first, a page at a time; search by provider name, web address, phone, or the owner's name or email.
-  list: adminProcedure('admin.panel.open')
+  list: adminProcedure('admin.providers.view')
     .input(
       z.object({
         q: z.string().trim().max(200).optional(),
@@ -115,7 +115,7 @@ export const providersRouter = createTRPCRouter({
 
   // One provider: its details, why it has its status, its team and its courses (newest change first). Its activity comes from
   // admin.activity.list.
-  get: adminProcedure('admin.panel.open')
+  get: adminProcedure('admin.providers.read')
     .input(z.object({ slug: z.string().max(80) }))
     .query(async ({ ctx, input }) => {
       const [o] = await ctx.db.execute<{ id: string; name: string; slug: string; mobile: string | null; status: Status; status_note: string | null; status_changed_at: string | null; commission_bps: number | null; terms_accepted_at: string | null; terms_version: string | null; created_by: string | null; created_at: string }>(sql`

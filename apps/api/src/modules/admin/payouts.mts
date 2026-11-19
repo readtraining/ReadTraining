@@ -229,7 +229,7 @@ export const ledgerRouter = createTRPCRouter({
 })
 
 export const feesRouter = createTRPCRouter({
-  get: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  get: adminProcedure('admin.commission.view').query(async ({ ctx }) => {
     const f = await fees(ctx.db)
     return { cardPercent: f.cardBps / 100, bnplPercent: f.bnplBps / 100, payoutDay: f.payoutDay, changedAt: f.changedAt }
   }),

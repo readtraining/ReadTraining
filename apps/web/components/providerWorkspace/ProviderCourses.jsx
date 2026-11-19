@@ -43,7 +43,7 @@ export const useProviderCourses = () => {
 // one sent back: the editor; the rest: its Details page), and its ⋮ menu has the actions its role allows. Then Hurak's offer of a free
 // sales and marketing consultation.
 export default function ProviderCourses() {
-  const { organisationId, can, status } = useProviderAccess();
+  const { organisationId, can, status, staff } = useProviderAccess();
   const sorter = useSort(); // none chosen: the API's own order, last edited first
   const router = useRouter();
   const utils = api.useUtils();
@@ -79,7 +79,7 @@ export default function ProviderCourses() {
   if (!courses.length) {
     // not approved yet: say when courses can be added, and where the application is
     if (waiting) return <EmptyState title="No courses yet" text={pw.notApproved.text} action={pw.notApproved.action} />;
-    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", onClick: newCourse } : null} />;
+    return <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") && !staff ? { label: "New course", onClick: newCourse } : null} />;
   }
 
   const needle = f.q.trim().toLowerCase();
@@ -124,9 +124,11 @@ export default function ProviderCourses() {
     { label: "Details", href: `${href}/overview` },
     ...(can("provider.courses.editPage") ? [{ label: "Edit course", href }] : []),
     { label: "Preview", href: `${href}/preview` },
-    ...(can("provider.cohorts.edit") && waysOf(c, { open: true }).some(isDatedMethod) ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
-    ...(can("provider.courses.edit") && pausable(c) ? [{ label: c.status === "live" ? "Pause course" : "Put back live", onClick: () => (c.status === "live" ? setPausing(c) : setPaused(c, false)) }] : []),
-    ...(can("provider.courses.edit") ? [{ label: "Duplicate course", onClick: () => copy(c) }] : []),
+    // new dates set their prices, so they need the right to change prices too (ReadTraining staff without the pricing switch)
+    ...(can("provider.cohorts.edit") && can("provider.pricing.edit") && waysOf(c, { open: true }).some(isDatedMethod) ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
+    // pausing and copying a course stay the provider's own (not for ReadTraining staff working here)
+    ...(can("provider.courses.edit") && !staff && pausable(c) ? [{ label: c.status === "live" ? "Pause course" : "Put back live", onClick: () => (c.status === "live" ? setPausing(c) : setPaused(c, false)) }] : []),
+    ...(can("provider.courses.edit") && !staff ? [{ label: "Duplicate course", onClick: () => copy(c) }] : []),
     ...(can("provider.courses.delete") ? [{ label: "Delete course", danger: true, onClick: () => setDeletingId(c.id) }] : []),
   ];
 

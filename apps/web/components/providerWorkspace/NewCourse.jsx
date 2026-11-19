@@ -32,11 +32,11 @@ export const NewCourseProvider = NewCourseContext.Provider;
 export const useNewCourse = () => useContext(NewCourseContext);
 
 // a "New course" button (the Courses page's main action, the Dashboard's empty Courses card): opens the pop-up where the person is;
-// nothing for someone whose role can't create courses
+// nothing for someone whose role can't create courses, nor for ReadTraining staff working here (a new course is the provider's)
 export function NewCourseButton({ className = "button -sm -purple-1 text-white", children = "New course" }) {
   const open = useNewCourse();
-  const { can } = useProviderAccess();
-  if (!can("provider.courses.edit")) return null;
+  const { can, staff } = useProviderAccess();
+  if (!can("provider.courses.edit") || staff) return null;
   return <button type="button" className={className} onClick={open}>{children}</button>;
 }
 

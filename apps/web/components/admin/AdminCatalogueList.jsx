@@ -96,7 +96,6 @@ export default function AdminCatalogueList() {
   return (
     <div className="rt-acc__stack">
       <p className="rt-acc__note rt-adm-help">{copy.note} {copy.retireNote}</p>
-      {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
       <Said text={said} />
       {problem && <p className="rt-acc__notice -warn" role="alert">{problem}</p>}
 

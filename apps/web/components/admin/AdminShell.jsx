@@ -54,17 +54,22 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   actAsAdmin(me);
   const data = useAdmin();
   // the waiting provider applications, course approvals and the money badges are real; the other badges are still DEMO counts
-  const providers = api.admin.providers.counts.useQuery(undefined, { staleTime: 30000 });
-  const courses = api.admin.courses.counts.useQuery(undefined, { staleTime: 30000 });
+  // the switches this admin holds: a page or badge shows only with one its area needs (data/admin.js nav `permission`)
+  const may = (need) => !need || (Array.isArray(need) ? need : [need]).some((p) => me?.permissions?.includes(p));
+  const providers = api.admin.providers.counts.useQuery(undefined, { staleTime: 30000, retry: false, enabled: may(["approve", "suspend"]) });
+  const courses = api.admin.courses.counts.useQuery(undefined, { staleTime: 30000, retry: false, enabled: may(["approve", "catalogue"]) });
   // refunds to decide, open disputes and payouts to approve are real too (for admins who can see orders)
   const money = api.admin.orders.summary.useQuery(undefined, { staleTime: 30000, retry: false, enabled: Boolean(me?.permissions?.includes("orders.view")) });
   // account closure requests waiting (for admins who can close accounts)
   const closures = api.admin.closures.counts.useQuery(undefined, { staleTime: 30000, retry: false, enabled: Boolean(me?.permissions?.includes("suspend")) });
-  const counts = { ...(SHOW_DEMO ? data?.counts || {} : {}), applications: providers.data?.applications ?? 0, approvals: courses.data?.waiting ?? 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0, closures: closures.data?.open ?? 0 };
-  // pages behind an admin switch are listed only for admins who have it
-  const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => !x.permission || me?.permissions?.includes(x.permission)) })).filter((g) => g.items.length);
+  // applications and approvals waiting count only for an admin who decides them (the approve switch)
+  const decides = may("approve");
+  const counts = { ...(SHOW_DEMO ? data?.counts || {} : {}), applications: decides ? providers.data?.applications ?? 0 : 0, approvals: decides ? courses.data?.waiting ?? 0 : 0, refunds: money.data?.refunds ?? 0, disputes: money.data?.disputes ?? 0, payouts: money.data?.payoutsToApprove ?? 0, closures: closures.data?.open ?? 0 };
+  // pages behind an admin switch are listed only for admins who have it, and opening one by its address says so instead
+  const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => may(x.permission)) })).filter((g) => g.items.length);
   const items = nav.flatMap((g) => g.items);
   const page = items.find((x) => x.key === current);
+  const barred = !page && A.nav.some((g) => g.items.some((x) => x.key === current));
   const demo = SHOW_DEMO && page?.demo && !real ? A.demo[page.demo === true ? "all" : page.demo] : null;
   // on the live site a page made only of demo records shows an honest empty state instead (lib/demo.js)
   const demoOff = !SHOW_DEMO && page?.demo === true ? A.demoOff[current] : null;
@@ -94,7 +99,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
             <Link href={A.backToSite.href} className="rt-adm__site">{A.backToSite.label}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong {...nameTipProps}>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong {...nameTipProps}>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : me?.preset === "custom" && me.roles?.length ? me.roles.map((r) => A.presets[r]).join(" + ") : A.presets[me?.preset] ?? ""}</span></span>
             </div>
             <button type="button" className="rt-adm__out" onClick={signOut} disabled={leaving}>{A.signOut}</button>
           </div>
@@ -138,7 +143,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
           <div className="rt-adm__drawerfoot">
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : me?.preset === "custom" && me.roles?.length ? me.roles.map((r) => A.presets[r]).join(" + ") : A.presets[me?.preset] ?? ""}</span></span>
             </div>
             <Link href={A.backToSite.href} className="rt-adm__link">{A.backToSite.label}</Link>
             <button type="button" className="rt-adm__link" onClick={signOut} disabled={leaving}>{A.signOut}</button>
@@ -167,14 +172,14 @@ export default function AdminShell({ current, title, lead, actions = null, detai
                   <h1 className="rt-adm__h1">{title}</h1>
                   {demoTag}
                 </div>
-                {lead && <p className="rt-adm__lead">{lead}</p>}
+                {lead && !barred && <p className="rt-adm__lead">{lead}</p>}
               </div>
               {/* the page's main action, top right (adminParts HeaderAction puts it here) */}
               <div className="rt-adm__actions" id="rt-adm-actions">{actions}</div>
             </div>
           )}
           {/* the page key lets an empty state show this page's own icon */}
-          <AdminPage.Provider value={current}>{demoOff ? <Empty title={demoOff[0]} text={demoOff[1]} /> : children}</AdminPage.Provider>
+          <AdminPage.Provider value={current}>{barred ? <Empty kind="missing" title={A.noAccess.title} text="" action={{ href: "/admin", label: A.noAccess.back }} /> : demoOff ? <Empty title={demoOff[0]} text={demoOff[1]} /> : children}</AdminPage.Provider>
         </main>
       </div>
     </div>

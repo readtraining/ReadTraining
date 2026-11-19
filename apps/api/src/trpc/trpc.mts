@@ -5,7 +5,7 @@ import { ZodError, z } from 'zod'
 import { can, waitsForApproval } from '@readtraining/permissions'
 import type { Action, AdminAction, BusinessAction, ProviderAction } from '@readtraining/permissions'
 
-import { logDenied } from '../lib/activity.mjs'
+import { logDenied, staffScope } from '../lib/activity.mjs'
 import { friendlyError } from '../lib/dbErrors.mjs'
 import { isHuman } from '../lib/humanCheck.mjs'
 import { allowed, LIMITS, type LimitName } from '../lib/rateLimit.mjs'
@@ -106,6 +106,18 @@ export async function refuse(ctx: { db: TRPCContext['db']; ip: string | null; us
 }
 
 /**
+ * Refuses an admin working in a provider's workspace as ReadTraining staff (`ctx.staff`, set by orgProcedure) an action that
+ * stays the provider's own decision: sending a course for approval, pausing, withdrawing or deleting it, starting a new one.
+ * Logged as refused; the message says why.
+ */
+export async function notForStaff(ctx: { db: TRPCContext['db']; ip: string | null; user: { id: string }; staff?: unknown }, action: Action, organisationId: string, path: string, message = 'This stays the provider’s own decision, so ReadTraining staff can’t do it in their workspace.') {
+  if (!ctx.staff) return
+  await refuse(ctx, action, organisationId, path).catch(() => {
+    throw new TRPCError({ code: 'FORBIDDEN', message })
+  })
+}
+
+/**
  * A provider or business action on one organisation. The input must carry `organisationId`; the check uses the caller's
  * membership in that organisation. Rules that need more (own cohorts, team changes, amounts) call `can()` again in the
  * procedure with the full target.
@@ -124,7 +136,11 @@ export const orgProcedure = (action: ProviderAction | BusinessAction) =>
         throw why ?? error
       })
     }
-    return next()
+    // an admin working here as ReadTraining staff (an open staff_access session, lib/actor.mts): actions that stay the
+    // provider's own decision check `ctx.staff` and refuse (notForStaff)
+    const staff = ctx.actor.memberships.find((m) => m.organisationId === organisationId && m.status === 'active')?.staff ?? null
+    // everything this request logs is the admin's, marked with the staff session (lib/activity.mts)
+    return staff?.session ? staffScope.run({ session: staff.session }, () => next({ ctx: { staff } })) : next({ ctx: { staff } })
   })
 
 /** A platform admin action: an active admin row, the switch for it, and two-step sign-in for Full admins. */

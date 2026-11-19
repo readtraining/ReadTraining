@@ -22,7 +22,7 @@ export async function defaultCommission(db: typeof Db) {
 }
 
 export const commissionRouter = createTRPCRouter({
-  get: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  get: adminProcedure('admin.commission.view').query(async ({ ctx }) => {
     const d = await defaultCommission(ctx.db)
     const [o] = await ctx.db.execute<{ n: number }>(sql`select count(*)::int n from public.organisations where type = 'provider' and commission_bps is not null`)
     return { defaultBps: d.bps, changedAt: d.changedAt, ownRates: o.n }

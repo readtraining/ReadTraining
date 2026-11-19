@@ -126,7 +126,7 @@ function InfoForm({ profile, say }) {
       </fieldset>
       {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
       <div className="rt-pws-set__foot">
-        <p className="rt-acc__note">{locked ? "Your role can see these details but not change them." : "Changes show on your public profile and course pages as soon as you save."}</p>
+        {!locked && <p className="rt-acc__note">Changes show on your public profile and course pages as soon as you save.</p>}
         {!locked && <button type="submit" className="button -md -purple-1 text-white" disabled={update.isPending} aria-busy={update.isPending || undefined}>{update.isPending ? "Saving…" : "Save"}</button>}
       </div>
     </form>

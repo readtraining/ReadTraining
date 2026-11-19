@@ -18,7 +18,7 @@ export const useEndpoints = () => useContext(CourseEndpoints);
 
 export function useCourseEndpoints(scope, courseId) {
   const admin = scope === "admin";
-  const { organisationId, can, status } = useProviderAccess();
+  const { organisationId, can, status, staff } = useProviderAccess();
   const adminAccess = useAdminAccess();
   const utils = api.useUtils();
   const ready = Boolean(courseId);
@@ -62,6 +62,9 @@ export function useCourseEndpoints(scope, courseId) {
     access: admin ? { page: writer, full: writer, pricing: false } : { full: can("provider.courses.edit"), page: can("provider.courses.editPage"), pricing: can("provider.pricing.edit") },
     // a provider still waiting for our approval builds its courses but can't send them for approval yet
     waiting: !admin && status !== "active",
+    // ReadTraining staff working in the provider's workspace: their changes apply at once (a live course included) and stay
+    // waiting when the course is with our team; sending, pausing and withdrawing stay the provider's (the API refuses them)
+    staff: !admin && Boolean(staff),
     update: (patch) => (admin ? a.update : p.update).mutateAsync({ ...base, ...patch, seen: seen() }).then(keep),
     updating: p.update.isPending || a.update.isPending,
     submit: () => p.submit.mutateAsync({ ...base, seen: seen() }).then(keep),

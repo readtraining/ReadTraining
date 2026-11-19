@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Said, TableSkeleton, Tabs, formatWhen, Empty } from "./adminParts";
+import { Said, TableSkeleton, Tabs, formatWhen, Empty, PageLink } from "./adminParts";
 import { RefundDecision, useMoneyRefresh } from "./moneyParts";
 import { AdminStatus } from "./AdminStatus";
 
@@ -42,7 +41,7 @@ export function AdminRefunds() {
                   <span className="rt-adm-item__when">{c.by.replace("{name}", r.requestedBy || "an admin")} · {formatWhen(Date.parse(r.at))}</span>
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{formatPrice(r.amount)} <span className="rt-adm-muted">of {formatPrice(r.order.gross)}</span></p>
-                <p className="rt-acc__note"><Link href={`/admin/orders/${r.order.ref}`} className="rt-adm-strong">{r.order.ref}</Link> · {r.order.buyer} · {r.order.course} · {r.provider}</p>
+                <p className="rt-acc__note"><PageLink href={`/admin/orders/${r.order.ref}`} className="rt-adm-strong">{r.order.ref}</PageLink> · {r.order.buyer} · {r.order.course} · {r.provider}</p>
                 <p className="rt-adm-item__reason">{r.reason}</p>
                 {r.decidedBy && <p className="rt-acc__note">{c.decidedBy.replace("{status}", c.statuses[r.status]).replace("{name}", r.decidedBy)}{r.decisionNote ? `: ${r.decisionNote}` : ""}</p>}
               </div>
@@ -96,7 +95,7 @@ export function AdminDisputes() {
                   {x.status === "open" && <AdminStatus kind="due" status={x.evidenceDue < today ? "late" : "warn"}>{c.columns.due}: {formatDate(x.evidenceDue)}</AdminStatus>}
                 </div>
                 <p className="rt-adm-strong rt-adm-review__title">{formatPrice(x.amount)}</p>
-                <p className="rt-acc__note"><Link href={`/admin/orders/${x.order.ref}`} className="rt-adm-strong">{x.order.ref}</Link> · {x.order.buyer} · {x.order.course} · {x.provider}</p>
+                <p className="rt-acc__note"><PageLink href={`/admin/orders/${x.order.ref}`} className="rt-adm-strong">{x.order.ref}</PageLink> · {x.order.buyer} · {x.order.course} · {x.provider}</p>
                 <p className="rt-adm-item__reason">{x.reason}</p>
                 {x.status === "lost" && <p className="rt-acc__note">{c.lostNote}</p>}
               </div>

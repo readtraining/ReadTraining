@@ -8,6 +8,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import NavIcon from "./navIcons";
 import { admin as A } from "@/data/admin";
+import { useAdminAccess } from "@/lib/adminContext";
 
 // Shared bits of the admin pages, all from the site's design system: the account's status pills (.rt-pill .rt-acc__status), the
 // filter chips with counts (.rt-tr__filter), the stats strip, the account card (.rt-acc__card) and the business account's table
@@ -165,6 +166,23 @@ export function Empty({ kind = "empty", icon, text, ...rest }) {
   const page = React.useContext(AdminPage);
   const name = icon || (kind === "none" ? "search" : page);
   return <EmptyState {...rest} text={text ?? EMPTY_TEXT[kind]} icon={name ? <NavIcon name={name} /> : undefined} />;
+}
+
+// Whether this admin can open an admin page (the menu's page whose address starts the link, data/admin.js nav `permission`), and
+// a link to one that is plain text when they can't: a learner's name on an order, say, for Finance, who has no Learners page.
+const NAV_ITEMS = A.nav.flatMap((g) => g.items);
+export function useOpensPage() {
+  const me = useAdminAccess();
+  return (href) => {
+    const path = href.split(/[?#]/)[0];
+    const item = NAV_ITEMS.filter((x) => x.href !== "/admin" && (path === x.href || path.startsWith(`${x.href}/`))).sort((a, b) => b.href.length - a.href.length)[0];
+    const need = item?.permission;
+    return !need || (Array.isArray(need) ? need : [need]).some((p) => me?.permissions?.includes(p));
+  };
+}
+export function PageLink({ href, className, children, ...rest }) {
+  const opens = useOpensPage();
+  return opens(href) ? <Link href={href} className={className} {...rest}>{children}</Link> : <span className={className}>{children}</span>;
 }
 
 // A page's main action (Book for a customer, Create coupon, Invite an admin…), shown at the top right of the page header, in

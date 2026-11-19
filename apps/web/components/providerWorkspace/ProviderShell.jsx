@@ -34,6 +34,30 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // `current` marks the section; the page inside it is matched on the address. `demo` marks a page whose records are still made up
 // (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's. It is true (the
 // general note), "partly", or the page's own note (data/providerWorkspace.js pw.demo), which the tag then explains.
+// An admin working in this workspace as ReadTraining staff (Admin › Providers › Open workspace): one slim line saying whose
+// workspace it is, and End (API admin.staff.end, which emails the provider a summary of the changes), back to the provider's
+// admin page. What they may change shows by the buttons they get, as for any member.
+function StaffBanner() {
+  const w = useWorkspace();
+  const end = api.admin.staff.end.useMutation();
+  const [failed, setFailed] = useState(false);
+  const leave = async () => {
+    setFailed(false);
+    try {
+      const res = await end.mutateAsync();
+      window.location.assign(res.providerSlug ? `/admin/providers/${res.providerSlug}` : "/admin/providers");
+    } catch {
+      setFailed(true);
+    }
+  };
+  return (
+    <div className="rt-pws-staff" role="region" aria-label="ReadTraining staff">
+      <span><strong>{w?.name}</strong> · ReadTraining staff</span>
+      <button type="button" className="rt-pws-staff__end" onClick={leave} disabled={end.isPending}>{failed ? "Try again" : "End"}</button>
+    </div>
+  );
+}
+
 export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = false, children }) {
   const rootRef = useRef(null);
   const sideRef = useRef(null);
@@ -106,7 +130,8 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   useEffect(() => {
     if (meName || workspace?.name) actAs({ name: meName, email: meEmail, orgName: workspace?.name });
   }, [meName, meEmail, workspace?.name]);
-  const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
+  // switching to another account isn't part of a staff visit (End takes the admin back)
+  const switchItems = switcher.ready && !access.staff ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
   const logOut = async () => {
     if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     await signOut();
@@ -128,7 +153,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-adm__tag">{pw.tag}</span>
           </Link>
           <div className="rt-adm__topside">
-            <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}>Student</Link>
+            {!access.staff && <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}>Student</Link>}
             <Link href="/provider/notifications" className="rt-pws__bell" aria-label={counts.unread ? `Notifications, ${counts.unread} unread` : "Notifications"}>
               <i className="icon-notification text-18" aria-hidden="true"></i>
               {counts.unread > 0 && <span className="rt-pws__bellcount" aria-hidden="true">{counts.unread}</span>}
@@ -219,6 +244,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         {nameTip}
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
+          {access.staff && <StaffBanner />}
           <ProviderAccountStatus />
           {backTo && <Link href={backTo.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backTo.label}</Link>}
           <div className="rt-adm__head">
