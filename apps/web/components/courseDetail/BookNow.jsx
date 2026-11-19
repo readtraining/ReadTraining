@@ -8,8 +8,9 @@ import { useBooking } from "./BookingProvider";
 // goes on to its package and first aid steps, then the basket; team training (a quote) and a course with nothing to book yet take
 // the visitor to the Learning options section instead.
 export default function BookNow() {
-  const { mode, isInHouse, bookNow, status } = useBooking();
-  if (!mode || isInHouse) {
+  const { mode, isInHouse, undated, bookNow, status } = useBooking();
+  // team training, an option with no dates yet (Enquire is in Learning options) or nothing to book: to Learning options
+  if (!mode || isInHouse || undated) {
     return (
       <a href="#learning-options" className="button -md -purple-1 text-white rt-cd__booknow">
         Book now

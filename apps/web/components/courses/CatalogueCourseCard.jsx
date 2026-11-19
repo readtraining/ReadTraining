@@ -7,6 +7,7 @@ import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
 import { bookableModes, cheapestMode, firstSession } from "@/lib/courses";
+import { cardWays, offeredModes } from "@/lib/courseModes";
 import { MODE_METHOD } from "@/lib/courseModes";
 import { lineFor } from "@/lib/basket";
 import { BASKET_HREF } from "@/lib/routes";
@@ -96,7 +97,10 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
 
   // Meta row 1: short items only (Duration | Level | N providers). Meta row 2: delivery modes as plain text.
   const metaItems = [course.duration, levelName(course.level), course.providers > 0 ? `${course.providers} ${course.providers === 1 ? "provider" : "providers"}` : ""].filter(Boolean);
-  const delivery = course.methods?.length ? course.methods.map(methodName).join(", ") : "";
+  // in the course page's order (the ones with dates first); with some dated, one without any yet says so, as the page does
+  const ways = cardWays(course);
+  const someDated = ways.some((w) => w.dated);
+  const delivery = ways.map((w) => `${methodName(w.method)}${someDated && !w.dated ? " (no dates yet)" : ""}`).join(", ");
 
   const thumb = course.imageSrc ? (
     <Image width={440} height={276} src={course.imageSrc} alt={course.imageAlt || course.title} priority={index < 2} />
@@ -216,7 +220,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
         onClose={() => setDatesOpen(false)}
         course={dates?.detail}
         mode={dates?.mode}
-        modes={dates ? bookableModes(dates.detail) : undefined}
+        modes={dates ? offeredModes(dates.detail) : undefined}
         onMode={(m) => setDates((d) => ({ ...d, mode: m }))}
         selectedId={dates ? firstSession(dates.detail, dates.mode)?.id : undefined}
         onBook={bookDate}

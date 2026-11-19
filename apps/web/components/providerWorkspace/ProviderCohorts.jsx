@@ -619,12 +619,13 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
         setErrors({});
         // the form stays open, so the confirmation shows in it (the page's message is behind the form)
         setSavedNote(`Cohort saved${first ? ` (starting ${new Date(`${first}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Pick the dates for the next one.`);
-        onAnother?.(id);
+        onAnother?.(id, { method, startsOn: values.sessions[0]?.date });
         requestAnimationFrame(() => formRef.current?.firstElementChild?.scrollIntoView({ block: "start" }));
         return;
       }
       setStart(JSON.stringify(f)); // saved, so closing or leaving doesn't ask
-      onSaved?.(id);
+      // what was saved, so a page counting dates (the course editor) can count it at once, before it loads again
+      onSaved?.(id, { method, startsOn: values.sessions[0]?.date });
     } catch (error) {
       const { fields, general } = errorsFrom(error);
       const named = Object.fromEntries(Object.entries(fields).map(([k, m]) => [FIELD_OF[k] || k, m]));

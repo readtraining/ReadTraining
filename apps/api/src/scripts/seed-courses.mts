@@ -15,6 +15,7 @@
 //   pnpm live --filter @readtraining/api seed:courses --content       update the words of the courses already there
 //   pnpm live --filter @readtraining/api seed:courses --prices        update the prices of their dates
 //   pnpm live --filter @readtraining/api seed:courses --plans         give the sample providers their price plans (packages)
+//   pnpm live --filter @readtraining/api seed:courses --dates         fresh dates for the sample courses' ways whose dates have passed
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -37,7 +38,11 @@ const contentOnly = process.argv.includes('--content')
 const pricesOnly = process.argv.includes('--prices')
 // only give the sample providers already there their price plans (data/sample-price-plans.json) and put their courses on them
 const plansOnly = process.argv.includes('--plans')
-if (live && !review && !contentOnly && !pricesOnly && !plansOnly && !process.argv.includes('--remove')) {
+// only give the sample providers' courses already there new dates for a way whose dates have all passed (from OFFERS below)
+const datesOnly = process.argv.includes('--dates')
+// --prices and --dates only look up the sample providers and venues already there (nothing is added but their prices or dates)
+const lookupOnly = pricesOnly || datesOnly
+if (live && !review && !contentOnly && !pricesOnly && !plansOnly && !datesOnly && !process.argv.includes('--remove')) {
   console.error('seed:courses is for development and test databases only. For the client review on live, add --live-review.')
   process.exit(1)
 }
@@ -144,7 +149,7 @@ if (plansOnly) {
   if (counts.skipped.length) console.log(`Left out: ${counts.skipped.join('; ')}.`)
   process.exit(0)
 }
-if (provRows.length && !contentOnly && !pricesOnly) {
+if (provRows.length && !contentOnly && !lookupOnly) {
   console.log('The sample courses are already there. Run with --remove first to add them again (or --content to update their details).')
   process.exit(0)
 }
@@ -377,7 +382,7 @@ if (contentOnly) {
 // ---- providers and venues -------------------------------------------------------------------------------------------------
 const orgs: Record<string, string> = {}
 for (const p of PROVIDERS) {
-  if (pricesOnly) {
+  if (lookupOnly) {
     const [o] = await db.select({ id: organisations.id }).from(organisations).where(eq(organisations.slug, p.slug))
     if (o) orgs[p.slug] = o.id
     continue
@@ -390,7 +395,7 @@ for (const p of PROVIDERS) {
 }
 const [harbour, kestrel, apex] = PROVIDERS.map((p) => orgs[p.slug])
 const venue = async (org: string, name: string, street: string, city: string, postcode: string, lat: number, lng: number) =>
-  pricesOnly
+  lookupOnly
     ? (org ? (await db.select({ id: venues.id }).from(venues).where(and(eq(venues.organisationId, org), eq(venues.name, name))))[0]?.id : undefined)
     : (await db.insert(venues).values({ organisationId: org, name, street, city, postcode, lat, lng }).returning({ id: venues.id }))[0].id
 const V = {
@@ -403,7 +408,7 @@ const V = {
 }
 
 const sharedIds: Record<string, number> = {}
-for (const s of pricesOnly ? [] : SHARED) {
+for (const s of lookupOnly ? [] : SHARED) {
   const [kept] = await db.select({ id: courses.id }).from(courses).where(sql`${courses.slug} = ${s.slug} and ${courses.kind} = 'shared'`)
   if (kept) {
     // a page --remove kept (someone else's course sits on it): reuse it, and give it its picture back if the file is gone
@@ -437,7 +442,7 @@ const OFFERS: Offer[] = [
   { org: apex, title: 'Emergency First Aid at Work (live online)', slug: 'apex-emergency-first-aid-at-work-online', shared: 'emergency-first-aid-at-work', cat: 'first-aid', sub: 'workplace-first-aid', topic: 'emergency-first-aid-at-work', level: 'beginner', method: 'live-online', img: 6, dates: [{ start: 8, len: 1, price: 6900 }, { start: 22, len: 1, price: 6900 }] },
   { org: kestrel, title: 'CSCS Green Card course', slug: 'kestrel-cscs-green-card', shared: 'cscs-green-card', cat: 'construction', sub: 'cscs-cards', topic: 'labourer', level: 'beginner', method: 'classroom', img: 9, dates: [{ start: 6, len: 1, venue: V.bir, price: 9900 }, { start: 13, len: 1, venue: V.ldnK, price: 10900 }, { start: 34, len: 1, venue: V.bir, price: 9900 }] },
   { org: kestrel, title: 'IOSH Managing Safely', slug: 'kestrel-iosh-managing-safely', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', method: 'classroom', img: 3, dates: [{ start: 14, len: 4, venue: V.bir, price: 49500, was: 54500 }, { start: 49, len: 4, venue: V.ldnK, price: 52500 }] },
-  { org: apex, title: 'IOSH Managing Safely (live online)', slug: 'apex-iosh-managing-safely-online', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', method: 'live-online', img: 4, dates: [{ start: 9, len: 4, price: 44900 }] },
+  { org: apex, title: 'IOSH Managing Safely (live online)', slug: 'apex-iosh-managing-safely-online', shared: 'iosh-managing-safely', cat: 'health-and-safety', sub: 'iosh-and-nebosh', topic: 'iosh-managing-safely', level: 'intermediate', method: 'live-online', img: 4, dates: [{ start: 9, len: 4, price: 44900 }, { start: 37, len: 4, price: 44900 }] },
   { org: apex, title: 'Level 2 Food Hygiene and Safety (online)', slug: 'apex-level-2-food-hygiene', shared: 'level-2-food-hygiene', cat: 'hospitality', sub: 'food-safety', topic: 'level-2-food-hygiene', level: 'beginner', method: 'self-paced', img: 8, price: 1999 },
   { org: harbour, title: 'SIA Door Supervisor Top-Up', slug: 'harbour-sia-door-supervisor-top-up', shared: 'sia-door-supervisor-top-up', cat: 'security', sub: 'sia-top-up', topic: 'door-supervisor-top-up', level: 'beginner', method: 'classroom', img: 2, dates: [{ start: 9, len: 1, venue: V.man, price: 14900 }, { start: 30, len: 1, venue: V.liv, price: 13900 }] },
   { org: harbour, title: 'SIA CCTV Operator', slug: 'harbour-sia-cctv-operator', shared: 'sia-cctv-operator', cat: 'security', sub: 'sia-licence-training', topic: 'cctv-operator', level: 'beginner', method: 'classroom', img: 10, dates: [{ start: 16, len: 4, venue: V.man, price: 19900 }, { start: 44, len: 4, venue: V.liv, price: 19900 }] },
@@ -474,6 +479,34 @@ if (pricesOnly) {
   process.exit(0)
 }
 
+// a sample course's date (`d.start` weekdays from today), as OFFERS has it
+const addDate = async (courseId: number, o: (typeof OFFERS)[number], d: NonNullable<(typeof OFFERS)[number]['dates']>[number]) => {
+  const method = d.method ?? o.method
+  const sessions = run(weekday(d.start), d.len, method === 'live-online' ? '10:00' : '09:30', method === 'live-online' ? '16:00' : '16:30')
+  await db.insert(cohorts).values({ courseId, method, venueId: d.venue ?? null, joinUrl: method === 'live-online' ? 'https://zoom.us/j/0000000000' : null, sessions, startsOn: sessions[0].date, endsOn: sessions[sessions.length - 1].end, capacity: d.cap ?? 12, pricePence: d.price, wasPricePence: d.was ?? null })
+}
+
+// --dates: the sample providers' courses already there get their dates in OFFERS again, counted from today, for each way (classroom,
+// live online) that has no date still to come, so every sample way can be tried with dates. Ways with dates to come are left alone.
+//   pnpm --filter @readtraining/api seed:courses --dates
+if (datesOnly) {
+  let added = 0
+  let refreshed = 0
+  for (const o of OFFERS) {
+    if (!o.org || !o.dates?.length) continue
+    const [c] = await db.select({ id: courses.id }).from(courses).where(and(eq(courses.slug, o.slug), eq(courses.organisationId, o.org)))
+    if (!c) continue
+    const upcoming = await db.execute<{ method: string }>(sql`select distinct method from ${cohorts} where course_id = ${c.id} and cancelled_at is null and starts_on > (now() at time zone 'Europe/London')::date`)
+    const has = new Set(upcoming.map((r) => r.method))
+    const stale = o.dates.filter((d) => !has.has(d.method ?? o.method))
+    for (const d of stale) await addDate(c.id, o, d)
+    added += stale.length
+    if (stale.length) refreshed++
+  }
+  console.log(`Added ${added} dates to ${refreshed} sample provider courses whose dates had passed.`)
+  process.exit(0)
+}
+
 // the live review gets only the providers' live courses on the ten shared pages (no extra, waiting or draft examples)
 const ADD = review ? OFFERS.filter((o) => o.shared && (o.status ?? 'live') === 'live') : OFFERS
 for (const o of ADD) {
@@ -484,11 +517,7 @@ for (const o of ADD) {
     .returning({ id: courses.id })
   if (status !== 'draft') await writeContent(c.id, o.content ?? sharedContent(o.shared!))
   await picture(c.id, `${o.org}/courses/${c.id}`, o.img, o.title)
-  for (const d of o.dates ?? []) {
-    const method = d.method ?? o.method
-    const sessions = run(weekday(d.start), d.len, method === 'live-online' ? '10:00' : '09:30', method === 'live-online' ? '16:00' : '16:30')
-    await db.insert(cohorts).values({ courseId: c.id, method, venueId: d.venue ?? null, joinUrl: method === 'live-online' ? 'https://zoom.us/j/0000000000' : null, sessions, startsOn: sessions[0].date, endsOn: sessions[sessions.length - 1].end, capacity: d.cap ?? 12, pricePence: d.price, wasPricePence: d.was ?? null })
-  }
+  for (const d of o.dates ?? []) await addDate(c.id, o, d)
 }
 console.log(`Added ${PROVIDERS.length} sample providers, ${SHARED.length} shared course pages and ${ADD.length} providers' courses.`)
 process.exit(0)

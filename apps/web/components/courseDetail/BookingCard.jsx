@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { IN_HOUSE_NOTE, quoteHref, useBooking } from "./BookingProvider";
+import { IN_HOUSE_NOTE, enquireHref, quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
 import { toItem, trackEvent } from "@/lib/analytics";
 import { useWishlist } from "@/lib/wishlist";
 import { formatPrice, formatWeekdayDate, savePercent } from "@/lib/format";
 import { Check, Icon } from "./Icon";
-import { modeLabel } from "@/lib/courseModes";
+import { NO_DATES, hasDates, modeLabel } from "@/lib/courseModes";
 
 
 // The heart has no icon-font glyph, so it stays a line SVG (the same one as the listing card).
@@ -88,7 +88,7 @@ function NoDatesCard({ course }) {
 }
 
 export default function BookingCard() {
-  const { course, modes, mode, isInHouse, setMode, session, status, cardButtonRef, barOn, flash, price, wasPrice, fromPrice, bookNow, summaryFor } = useBooking();
+  const { course, modes, mode, isInHouse, undated, setMode, session, status, cardButtonRef, barOn, flash, price, wasPrice, fromPrice, bookNow, summaryFor } = useBooking();
   const [desktop, setDesktop] = useState(false);
   const [flashing, setFlashing] = useState(false);
 
@@ -115,7 +115,7 @@ export default function BookingCard() {
   const trust = trustItems(course);
   const onDemand = mode === "ondemand";
   // a dated study method: the summary of its dates (the card never shows one date as chosen)
-  const sum = !isInHouse && !onDemand ? summaryFor(mode) : null;
+  const sum = !isInHouse && !onDemand && !undated ? summaryFor(mode) : null;
   const shown = sum ? { price: sum.price, was: sum.wasPrice, from: sum.from } : { price, was: wasPrice, from: fromPrice };
   const save = isInHouse ? 0 : savePercent(shown.price, shown.was);
   const towns = sum ? (sum.towns.length > 3 ? `${sum.towns.slice(0, 3).join(", ")} +${sum.towns.length - 3} more` : sum.towns.join(", ")) : "";
@@ -146,6 +146,8 @@ export default function BookingCard() {
 
           {isInHouse ? (
             <p className="rt-bs__quote">{QUOTE_TEXT}</p>
+          ) : undated ? (
+            <p className="rt-bs__quote">{NO_DATES}</p>
           ) : (
             <div className="rt-bs__price">
               {/* the lowest price ("From" when dates or packages differ); Book now asks the rest */}
@@ -155,7 +157,7 @@ export default function BookingCard() {
             </div>
           )}
 
-          <ul className="rt-bs__info">
+          {!undated && <ul className="rt-bs__info">
             {isInHouse ? (
               <>
                 <li><Icon name="friend" /><span>{IN_HOUSE_NOTE}</span></li>
@@ -176,10 +178,12 @@ export default function BookingCard() {
                 <li><Icon name="coupon" /><span>Price includes VAT</span></li>
               </>
             )}
-          </ul>
+          </ul>}
 
           {isInHouse ? (
             <Link ref={cardButtonRef} href={quoteHref(course)} className="button -md -purple-1 text-white rt-btn-block">{TEAM.cta}</Link>
+          ) : undated ? (
+            <Link ref={cardButtonRef} href={enquireHref()} className="button -md -purple-1 text-white rt-btn-block">Enquire</Link>
           ) : (
             <button
               ref={cardButtonRef}
@@ -195,7 +199,7 @@ export default function BookingCard() {
             </button>
           )}
 
-          {trust.length > 0 && !isInHouse && (
+          {trust.length > 0 && !isInHouse && !undated && (
             <Fold hidden={compact} className="rt-bk__fold--trust">
               <ul className="rt-bs__trust">
                 {trust.map((t) => (
@@ -212,7 +216,7 @@ export default function BookingCard() {
             <span className="rt-bs__radio" aria-hidden="true" />
             <span className="rt-br__text">
               <span className="rt-br__name">{modeLabel(m)}</span>
-              <strong className="rt-br__from">{m === "inhouse" ? QUOTE_TEXT : `From ${formatPrice(fromFor(m))}`}</strong>
+              <strong className="rt-br__from">{m === "inhouse" ? QUOTE_TEXT : hasDates(course, m) ? `From ${formatPrice(fromFor(m))}` : NO_DATES}</strong>
             </span>
           </label>
         ))}
