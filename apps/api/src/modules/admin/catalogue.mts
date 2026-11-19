@@ -65,7 +65,7 @@ async function rows(db: typeof Db | Tx, k: Kind): Promise<Row[]> {
 
 export const catalogueAdminRouter = createTRPCRouter({
   // The whole list, retired entries included, in order.
-  list: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  list: adminProcedure('admin.catalogue.view').query(async ({ ctx }) => {
     const [cats, subs, tops, methods, levels] = await Promise.all(KINDS.map((k) => rows(ctx.db, k)))
     const strip = ({ parent, ...r }: Row) => r
     return {

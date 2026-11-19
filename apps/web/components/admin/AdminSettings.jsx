@@ -70,7 +70,6 @@ function FeesCard({ onSaved }) {
         <h2 className="rt-acc__h2">{F.title}</h2>
         <p className="rt-acc__note">{F.note}</p>
       </div>
-      {!canEdit && <p className="rt-acc__notice">{F.readOnly}</p>}
       <div className="rt-adm-fees__grid">
         {Object.keys(LIMITS).map((k) => (
           <div key={k} className="rt-field">
@@ -104,7 +103,7 @@ function CommissionCard({ onSaved }) {
       <p className="rt-acc__note">{ownRates ? c.own.replace("{n}", ownRates === 1 ? "1 provider" : `${ownRates} providers`) : c.none}{changedAt ? ` · ${c.changed.replace("{when}", formatWhen(Date.parse(changedAt)))}` : ""}</p>
       {me?.permissions?.includes("finance.settings") ? (
         <RateForm id="rt-adm-comdef" label={c.label} hint={c.hint} bps={defaultBps} saving={save.isPending} save={(bps) => save.mutateAsync({ bps })} onSaved={() => { onSaved(c.saved); utils.admin.commission.invalidate(); utils.admin.providers.invalidate(); }} />
-      ) : <p className="rt-acc__notice rt-adm-mt">{c.readOnly}</p>}
+      ) : null}
     </section>
   );
 }

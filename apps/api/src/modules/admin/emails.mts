@@ -28,14 +28,14 @@ function checked(key: string, words: Words) {
 }
 
 export const emailsRouter = createTRPCRouter({
-  list: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  list: adminProcedure('admin.emails.view').query(async ({ ctx }) => {
     const rows = await ctx.db.execute<{ key: string; updated_at: string }>(sql`select key, updated_at from ${siteContent} where key like 'email:%'`)
     const changed = new Map(rows.map((r) => [r.key.slice(6), new Date(r.updated_at).toISOString()]))
     return Object.entries(TEMPLATES).map(([key, t]) => ({ key, name: t.name, audience: t.audience, trigger: t.trigger, status: t.status, subject: t.words.subject, changedAt: changed.get(key) ?? null }))
   }),
 
   // One template: what it is, its built-in words, the saved words (if any) and the placeholders it may use.
-  get: adminProcedure('admin.panel.open')
+  get: adminProcedure('admin.emails.view')
     .input(keyInput)
     .query(async ({ ctx, input }) => {
       const t = editableTemplate(input.key)
@@ -45,7 +45,7 @@ export const emailsRouter = createTRPCRouter({
     }),
 
   // The email as it would arrive, with the template's sample details (Sam, Harbour Training Group…).
-  preview: adminProcedure('admin.panel.open')
+  preview: adminProcedure('admin.emails.view')
     .input(draft)
     .query(({ input }) => {
       const t = editableTemplate(input.key)

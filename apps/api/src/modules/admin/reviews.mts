@@ -69,7 +69,7 @@ const values = (d: Details) => ({ ...d, origin: d.origin || null, originUrl: d.o
 
 export const adminReviewsRouter = createTRPCRouter({
   // Every review, newest first, with the count in each status for the tabs, and how many are on the home page.
-  list: adminProcedure('admin.panel.open')
+  list: adminProcedure('admin.customerReviews.view')
     .input(z.object({ status: z.enum(['published', 'hidden', 'pending']).optional() }))
     .query(async ({ ctx, input }) => {
       const where = input.status ? sql`where status = ${input.status}` : sql``

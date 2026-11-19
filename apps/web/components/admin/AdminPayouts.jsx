@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { Choice } from "@/components/providerWorkspace/providerParts";
@@ -12,7 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { HeaderAction, Said, Stats, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty } from "./adminParts";
+import { HeaderAction, Said, Stats, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty, PageLink } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
 import { toPence, useMoneyRefresh } from "./moneyParts";
@@ -80,7 +79,7 @@ export function AdminPayouts() {
             <tbody>
               {sorter.apply(owed.data, OWED_SORT).map((r) => (
                 <tr key={r.providerId}>
-                  <td data-label={c.provider}><Link href={`/admin/providers/${r.slug}`} className="rt-adm-strong">{r.name}</Link>{r.status !== "active" && <small>{A.providers.statuses[r.status]}</small>}</td>
+                  <td data-label={c.provider}><PageLink href={`/admin/providers/${r.slug}`} className="rt-adm-strong">{r.name}</PageLink>{r.status !== "active" && <small>{A.providers.statuses[r.status]}</small>}</td>
                   <td data-label={c.balance} className="rt-adm-num-cell">{formatPrice(r.balance)}</td>
                   <td data-label={c.held} className="rt-adm-num-cell">{r.held ? <>{formatPrice(r.held)}<small>{[r.heldRefunds && P.heldRefunds.replace("{n}", formatPrice(r.heldRefunds)), r.heldDisputes && P.heldDisputes.replace("{n}", formatPrice(r.heldDisputes))].filter(Boolean).join(" · ")}</small></> : "–"}</td>
                   <td data-label={c.waiting} className="rt-adm-num-cell">{r.waiting ? formatPrice(r.waiting) : "–"}</td>

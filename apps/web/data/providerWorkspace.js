@@ -65,6 +65,7 @@ export const pw = {
       rejected: "Not approved",
       suspended: "Suspended",
       reinstated: "Active again",
+      staff: "Our team worked in your workspace",
     },
     team: "ReadTraining team",
   },

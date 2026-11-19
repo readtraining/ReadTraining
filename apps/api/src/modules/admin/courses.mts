@@ -187,7 +187,7 @@ async function requesters(db: typeof Db, course: Course): Promise<{ course: Set<
 
 export const adminCoursesRouter = createTRPCRouter({
   // How many are waiting (the menu badge and the dashboard), and how many courses there are in each state.
-  counts: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  counts: adminProcedure('admin.courses.view').query(async ({ ctx }) => {
     const [r] = await ctx.db.execute<{ waiting: number; overdue: number; changes: number; live: number; paused: number; draft: number; shared: number }>(sql`
       select (select count(*)::int from public.courses where status = 'pending') + (select count(*)::int from public.course_revisions where status = 'pending') waiting,
              (select count(*)::int from public.courses where status = 'pending' and submitted_at < now() - interval '2 days')
@@ -200,7 +200,7 @@ export const adminCoursesRouter = createTRPCRouter({
 
   // The approvals queue. Waiting: new courses and changes to live courses, oldest first so nothing waits silently. Changes asked:
   // courses sent back to their provider. Decided: the latest 100 decisions.
-  queue: adminProcedure('admin.panel.open')
+  queue: adminProcedure('admin.courses.view')
     .input(z.object({ tab: z.enum(['waiting', 'changes', 'decided']) }))
     .query(async ({ ctx, input }) => {
       type Row = { course_id: number; title: string; type: 'new' | 'change'; at: string; note: string | null; outcome: string | null; provider: string | null; provider_status: string | null; method: string | null; methods: string[]; closed_methods: string[]; parent: string | null; requester: string | null }
@@ -235,7 +235,7 @@ export const adminCoursesRouter = createTRPCRouter({
   // Every live course, for the admin's pickers: a staff booking (a provider's own course), a coupon's courses and the home page's
   // featured courses (`listed`: it has its own place in the public listings). `fromPence`: the lowest price of a bookable
   // upcoming date, or the self-paced price (of a learning option still taking bookings).
-  options: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  options: adminProcedure('admin.courses.pick').query(async ({ ctx }) => {
     const [rows, listed] = await Promise.all([
       ctx.db.execute<{ id: number; title: string; kind: 'shared' | 'provider'; provider_id: string | null; provider: string | null; parent: string | null; from_pence: number | null }>(sql`
         select c.id, c.title, c.kind, c.organisation_id provider_id, o.name provider, (select p.title from public.courses p where p.id = c.parent_id) parent,
@@ -248,7 +248,7 @@ export const adminCoursesRouter = createTRPCRouter({
     const ids = new Set(listed.map((l) => l.id))
     return rows.map((r) => ({ id: r.id, title: r.title, kind: r.kind, providerId: r.provider_id, provider: r.provider, parent: r.parent, fromPence: r.from_pence, listed: ids.has(r.id) }))
   }),
-  list: adminProcedure('admin.panel.open')
+  list: adminProcedure('admin.courses.view')
     .input(z.object({ kind: z.enum(['all', 'shared', 'provider']).default('all'), status: z.enum(['all', 'draft', 'pending', 'changes', 'live', 'paused']).default('all'), q: z.string().trim().max(80).optional() }))
     .query(async ({ ctx, input }) => {
       const where = [sql`true`]
@@ -274,7 +274,7 @@ export const adminCoursesRouter = createTRPCRouter({
   // A course as visitors will see it (Preview), whatever its status: a shared page with its live providers' dates; a provider's
   // course with its own dates and, when a change is waiting for approval, that change shown as if approved (as the provider's
   // own Preview shows it), so the admin can check it before deciding.
-  preview: adminProcedure('admin.panel.open')
+  preview: adminProcedure('admin.courses.view')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => {
       const course = await findCourse(ctx.db, input.courseId)
@@ -284,7 +284,7 @@ export const adminCoursesRouter = createTRPCRouter({
 
   // One course as the editor shows it, with its provider, a waiting change field by field, and (for a shared page) the
   // providers' courses listed on it.
-  get: adminProcedure('admin.panel.open')
+  get: adminProcedure('admin.courses.view')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => {
       const course = await findCourse(ctx.db, input.courseId)

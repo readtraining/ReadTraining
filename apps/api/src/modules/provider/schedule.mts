@@ -6,9 +6,12 @@ import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { formatPostcode, lookupDown, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
-import { createTRPCRouter, orgProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 import { isDated, ownCourse, ukToday as today } from './courses.mjs'
 import { usablePlan } from './plans.mjs'
+
+// a date's prices (adding dates sets them) need the right to change prices: ReadTraining staff without the pricing switch
+const PRICES_NEEDED = 'Adding dates or changing a date’s price needs access to prices. You can change the rest of these dates.'
 
 // A provider's venues and course dates (cohorts). Dates are part of the course's prices and timetable, so they change straight
 // away, without approval. A tutor sees only the cohorts they teach.
@@ -444,7 +447,9 @@ export const providerCohortsRouter = createTRPCRouter({
   // offers only one of them).
   create: orgProcedure('provider.cohorts.edit')
     .input(cohortFields.extend({ courseId: z.number().int().positive(), method: z.enum(['classroom', 'live-online']).optional() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      // new dates set their prices: only for someone who may change prices (ReadTraining staff without the pricing switch can't)
+      if (!can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path).catch(() => { throw new TRPCError({ code: 'FORBIDDEN', message: PRICES_NEEDED }) })
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const dated = course.methods.filter(isDated)
       const method = input.method ?? (dated.length === 1 ? dated[0] : null)
@@ -474,11 +479,15 @@ export const providerCohortsRouter = createTRPCRouter({
 
   update: orgProcedure('provider.cohorts.edit')
     .input(cohortFields.extend({ cohortId: z.string().uuid(), seen: z.string().datetime().optional() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
       // dates keep the way they are taught (an option turned off since keeps its finished and cancelled dates as they were)
       const values = await cohortValues(ctx.db, input.organisationId, cohort.method, input, cohort.venueId, cohort.planId)
+      // a different price, was-price or plan needs the right to change prices (ReadTraining staff without the pricing switch)
+      // (a date on a plan keeps the plan's price, which may have moved since: only choosing another plan counts there)
+      const repriced = (values.planId ?? null) !== (cohort.planId ?? null) || (!values.planId && (values.pricePence !== cohort.pricePence || (values.wasPricePence ?? null) !== (cohort.wasPricePence ?? null)))
+      if (repriced && !can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path).catch(() => { throw new TRPCError({ code: 'FORBIDDEN', message: PRICES_NEEDED }) })
       if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.', 'sessions')
       await ctx.db.transaction(async (tx) => {
         const now = await lockCohort(tx, cohort.id)

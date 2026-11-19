@@ -101,7 +101,7 @@ const shape = (r: Row) => ({
 
 export const couponsRouter = createTRPCRouter({
   // Every coupon, newest first, with its status now; search by code; the count in each status for the tabs.
-  list: adminProcedure('admin.panel.open')
+  list: adminProcedure('admin.coupons.view')
     .input(z.object({ q: z.string().trim().max(40).optional(), status: z.enum(['live', 'scheduled', 'ended', 'off']).optional() }))
     .query(async ({ ctx, input }) => {
       const status = sql`case when ${STATUS.off} then 'off' when ${STATUS.scheduled} then 'scheduled' when ${STATUS.ended} then 'ended' else 'live' end`

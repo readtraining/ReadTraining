@@ -203,7 +203,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const router = useRouter();
   // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
   const ep = useEndpoints();
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, staff } = useProviderAccess();
   const utils = api.useUtils();
   const update = api.provider.courses.update.useMutation();
   const pause = api.provider.courses.setPaused.useMutation();
@@ -212,6 +212,8 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const [askPause, setAskPause] = useState(false); // "Pause course" asks first
   const [error, setError] = useState("");
   const edit = can("provider.courses.edit");
+  // pausing or putting back live stays the provider's own decision (ReadTraining staff working here don't get it)
+  const pauses = edit && !staff && pausable(course);
   const dated = waysOf(course).some(isDatedMethod); // taught on dates: the gear links to them
   const [url, setUrl] = useState("");
   React.useEffect(() => setUrl(`${window.location.origin}/course/${course.slug}`), [course.slug]);
@@ -298,10 +300,10 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
               </div>
             </div>
           </section>
-          {((edit && pausable(course)) || dated) && (
+          {(pauses || dated) && (
             <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-avail">
               <h3 className="rt-pws-gear__h" id="rt-pws-gear-avail">Availability</h3>
-              {edit && pausable(course) && (
+              {pauses && (
                 <div className="rt-pws-gear__row">
                   <p className="rt-acc__note">{course.status === "live" ? PAUSE_NOTE : "This course is paused: it doesn't show on ReadTraining."}</p>
                   {/* pausing takes the course off the site, so it asks first (putting it back live doesn't) */}
