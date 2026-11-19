@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/trpc/react";
@@ -22,7 +23,7 @@ import TextArea from "@/components/forms/TextArea";
 const Err = ({ id, text }) => (text ? <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{text}</p> : null);
 
 // SEO settings: title (60), description (320) and keywords, with a search result preview.
-export function SeoPanel({ course, onSaved, formId, onState }) {
+export function SeoPanel({ course, onSaved, formId, onState, saveRef }) {
   const ep = useEndpoints();
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState(course.seoTitle || "");
@@ -36,6 +37,17 @@ export function SeoPanel({ course, onSaved, formId, onState }) {
   const dirty = title !== saved.title || desc !== saved.desc || Boolean(word.trim()) || JSON.stringify(keywords) !== JSON.stringify(saved.keywords);
   useUnsavedChanges(dirty);
   useEffect(() => { onState?.({ dirty, busy }); }, [dirty, busy]); // eslint-disable-line react-hooks/exhaustive-deps -- onState is the editor's setter
+  // the editor keeps this form open on its other steps: a newer copy of the course (saved in another tab, or by a colleague) shows
+  // here while nothing is typed; typed words stay, and saving them over the newer copy is refused (the editor's banner)
+  const savedKey = JSON.stringify([course.seoTitle || "", course.seoDescription || "", course.seoKeywords || []]);
+  useEffect(() => {
+    if (dirty) return;
+    const s = { title: course.seoTitle || "", desc: course.seoDescription || "", keywords: course.seoKeywords || [] };
+    setSaved(s);
+    setTitle(s.title);
+    setDesc(s.desc);
+    setKeywords(s.keywords);
+  }, [savedKey]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the saved words change
 
   const addWords = (text) => {
     const add = text.split(",").map((w) => w.trim().toLowerCase().slice(0, 40)).filter((w) => w && !keywords.includes(w));
@@ -44,23 +56,29 @@ export function SeoPanel({ course, onSaved, formId, onState }) {
   };
   // every field is optional: an empty title or description is saved as none (search engines then use the course's own title and
   // short description, as the preview shows)
-  const submit = (e) => {
-    e.preventDefault();
+  // saves, then says whether it worked (the editor's Send for approval saves this form first)
+  const save = () => {
     const all = word.trim() ? [...keywords, ...word.split(",").map((w) => w.trim().toLowerCase().slice(0, 40)).filter(Boolean)] : keywords;
     const seoKeywords = [...new Set(all)].slice(0, 20);
     setErrors({});
     setKeywords(seoKeywords);
     setWord("");
     setBusy(true);
-    ep.update({ seoTitle: title.trim() || null, seoDescription: desc.trim() || null, seoKeywords })
-      .then(() => { setSaved({ title: title.trim(), desc: desc.trim(), keywords: seoKeywords }); setTitle(title.trim()); setDesc(desc.trim()); ep.refresh(); onSaved("SEO settings saved"); })
+    return ep.update({ seoTitle: title.trim() || null, seoDescription: desc.trim() || null, seoKeywords })
+      .then(() => { setSaved({ title: title.trim(), desc: desc.trim(), keywords: seoKeywords }); setTitle(title.trim()); setDesc(desc.trim()); ep.refresh(); onSaved("SEO settings saved"); return true; })
       .catch((error) => {
-        if (ep.stale(error)) return; // changed somewhere else: the editor's banner says so
+        if (ep.stale(error)) return false; // changed somewhere else: the editor's banner says so
         const { fields, general } = errorsFrom(error);
         setErrors({ title: fields.seoTitle, desc: fields.seoDescription, form: general || fields.seoKeywords || Object.values(fields)[0] });
         requestAnimationFrame(() => focusFirstError(ref.current));
+        return false;
       })
       .finally(() => setBusy(false));
+  };
+  useEffect(() => { if (saveRef) saveRef.current = save; });
+  const submit = (e) => {
+    e.preventDefault();
+    save();
   };
   const locked = !ep.access.page;
 
@@ -69,13 +87,13 @@ export function SeoPanel({ course, onSaved, formId, onState }) {
       <div className="rt-field">
         <label htmlFor="rt-pws-cset-st">SEO title (optional)</label>
         <Err id="rt-pws-cset-st" text={errors.title} />
-        <input id="rt-pws-cset-st" type="text" maxLength={60} autoComplete="off" value={title} onChange={(e) => setTitle(e.target.value)} aria-invalid={errors.title ? true : undefined} aria-describedby={`${errors.title ? "rt-pws-cset-st-e " : ""}rt-pws-cset-st-c`} />
+        <input id="rt-pws-cset-st" type="text" maxLength={60} autoComplete="off" value={title} disabled={locked} onChange={(e) => setTitle(e.target.value)} aria-invalid={errors.title ? true : undefined} aria-describedby={`${errors.title ? "rt-pws-cset-st-e " : ""}rt-pws-cset-st-c`} />
         <small className="rt-field__hint rt-pws-cset__count" id="rt-pws-cset-st-c">{title.length} of 60 characters</small>
       </div>
       <div className="rt-field">
         <label htmlFor="rt-pws-cset-sd">SEO description (optional)</label>
         <Err id="rt-pws-cset-sd" text={errors.desc} />
-        <TextArea id="rt-pws-cset-sd" rows={4} maxLength={320} autoComplete="off" value={desc} onChange={(e) => setDesc(e.target.value)} aria-invalid={errors.desc ? true : undefined} aria-describedby={`${errors.desc ? "rt-pws-cset-sd-e " : ""}rt-pws-cset-sd-c`} />
+        <TextArea id="rt-pws-cset-sd" rows={4} maxLength={320} autoComplete="off" value={desc} disabled={locked} onChange={(e) => setDesc(e.target.value)} aria-invalid={errors.desc ? true : undefined} aria-describedby={`${errors.desc ? "rt-pws-cset-sd-e " : ""}rt-pws-cset-sd-c`} />
         <small className="rt-field__hint rt-pws-cset__count" id="rt-pws-cset-sd-c">{desc.length} of 320 characters</small>
       </div>
       <div className="rt-field">
@@ -84,16 +102,16 @@ export function SeoPanel({ course, onSaved, formId, onState }) {
         {keywords.length > 0 && (
           <ul className="rt-pws-cset__tags">
             {keywords.map((k) => (
-              <li key={k}><span>{k}</span><button type="button" onClick={() => setKeywords(keywords.filter((x) => x !== k))} aria-label={`Remove keyword ${k}`}><i className="icon-close text-10" aria-hidden="true"></i></button></li>
+              <li key={k}><span>{k}</span>{!locked && <button type="button" onClick={() => setKeywords(keywords.filter((x) => x !== k))} aria-label={`Remove keyword ${k}`}><i className="icon-close text-10" aria-hidden="true"></i></button>}</li>
             ))}
           </ul>
         )}
-        <input id="rt-pws-cset-kw" type="text" maxLength={200} autoComplete="off" value={word}
+        <input id="rt-pws-cset-kw" type="text" maxLength={200} autoComplete="off" value={word} disabled={locked}
           onChange={(e) => (e.target.value.includes(",") ? addWords(e.target.value) : setWord(e.target.value))}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addWords(word); } }}
           aria-describedby="rt-pws-cset-kw-h" />
       </div>
-      <div className="rt-pws-cset__serp" aria-label="Search result preview">
+      <div className="rt-pws-cset__serp" role="group" aria-label="Search result preview">
         <p className="rt-pws-cset__previewlabel">Search result preview</p>
         <span className="rt-pws-cset__serpurl">readtraining.co.uk › course › {course.slug}</span>
         <span className="rt-pws-cset__serptitle">{title.trim() || course.title}</span>
@@ -120,16 +138,46 @@ const teamReason = (note = "") => {
 // reason (statusNote) and goes back live only through them
 export const pausable = (course) => course.status === "live" || (course.status === "paused" && !course.statusNote);
 export const PAUSE_NOTE = "Pausing takes the course off ReadTraining. Its dates stay, and you can put it back live at any time.";
-export const COURSE_SAID = { paused: "The course is paused", resumed: "The course is live again", withdrawn: "Withdrawn from review. The course is a draft again" };
+// Whether a course can be sent for approval from a list (the course list's ⋮ menu, the Dashboard's to-do): a draft or one our team
+// sent back, every editor step done, the provider account approved, and a role that sends courses. The API checks it all again.
+export const canSend = (c, access) => (c.status === "draft" || c.status === "changes") && c.stepsLeft === 0 && access.status === "active" && access.can("provider.courses.edit") && !access.staff; // sending stays the provider's
+
+// Send a course for approval from a list: the same call as the editor's last step. One already sent (another tab, a double
+// click) counts as sent. `onDone(message, error)` says what happened; the lists load again either way.
+export function useSendForApproval(onDone) {
+  const { organisationId } = useProviderAccess();
+  const utils = api.useUtils();
+  const submit = api.provider.courses.submit.useMutation();
+  const send = (c) => {
+    if (submit.isPending) return;
+    // shown as sent at once (In review, out of the to-do list) while the lists load again
+    const sent = () => utils.provider.courses.list.setData({ organisationId }, (rows) => rows?.map((r) => (r.id === c.id ? { ...r, status: "pending", stepsLeft: null } : r)));
+    submit.mutate({ organisationId, courseId: c.id }, {
+      onSuccess: () => {
+        sent();
+        onDone(COURSE_SAID.sent);
+      },
+      onError: (e) => {
+        if (e?.data?.code === "CONFLICT" && /already waiting/i.test(e.message)) return onDone(COURSE_SAID.sent);
+        onDone(errorsFrom(e).general || "We couldn't send it. Check your connection, then try again.", true);
+      },
+      onSettled: () => utils.provider.courses.list.invalidate({ organisationId }),
+    });
+  };
+  return { send, sendingId: submit.isPending ? submit.variables?.courseId : null };
+}
+
+export const COURSE_SAID = { sent: "Sent for approval. We'll email the decision to the account owner.", paused: "The course is paused", resumed: "The course is live again", withdrawn: "Withdrawn from review. The course is a draft again" };
 
 // Why a course can't be deleted now (the API's deleteBlock), with the next step: waiting for review, Withdraw from review; paused
 // by our team, their reason and Contact us; booked or reviewed, Pause. Nothing when it can be deleted.
+// `onWithdraw`: the delete pop-up offers Withdraw from review as its next step; the gear has its own Review section for it
 export function DeleteBlocked({ course, busy, withdrawing, onWithdraw }) {
   if (course.deleteBlock === "in_review") {
     return (
       <>
-        <p className="rt-acc__note">This course is waiting for our team&apos;s review. Withdraw it from review to edit or delete it.</p>
-        <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={withdrawing || undefined} onClick={onWithdraw}>{withdrawing ? "Withdrawing…" : "Withdraw from review"}</button>
+        <p className="rt-acc__note">This course is waiting for our team&apos;s review. Withdraw it from review to delete it.</p>
+        {onWithdraw && <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={withdrawing || undefined} onClick={onWithdraw}>{withdrawing ? "Withdrawing…" : "Withdraw from review"}</button>}
       </>
     );
   }
@@ -157,6 +205,8 @@ export function DeleteCourseForm({ course, onKeep, onDeleted }) {
     setNameError("");
     remove.mutate({ organisationId, courseId: course.id, ...(wasLive ? { confirmTitle: typed } : {}) }, {
       onSuccess: () => {
+        // gone from the course list at once (the list the gear goes back to shows its saved copy while it loads again)
+        utils.provider.courses.list.setData({ organisationId }, (rows) => rows?.filter((r) => r.id !== course.id));
         utils.provider.courses.list.invalidate({ organisationId });
         onDeleted();
       },
@@ -273,9 +323,10 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
     onClose();
   };
   const busy = update.isPending || pause.isPending || withdraw.isPending;
+  const working = useIsMutating() > 0; // a change or the delete is on its way: the gear stays open for its answer
 
   return (
-    <Sheet open={open} onClose={close} title={confirm ? "Delete this course?" : "Course settings"} closeLabel="Close" noClose={confirm}>
+    <Sheet open={open} onClose={close} title={confirm ? "Delete this course?" : "Course settings"} closeLabel="Close" noClose={confirm} busy={working}>
       {confirm ? (
         <DeleteCourseForm course={course} onKeep={leaveConfirm} onDeleted={() => leaveWithoutAsking(() => router.push("/provider/courses"))} />
       ) : (
@@ -285,7 +336,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
           {/* who can find the course */}
           <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-vis">
             <h3 className="rt-pws-gear__h" id="rt-pws-gear-vis">Visibility</h3>
-            <Choice name="rt-pws-gear-enrol" legend="Visibility" quietLegend hint="Private courses don't show in search; you share the link or book learners yourself." value={isPublic ? "public" : "private"} onChange={choose} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
+            <Choice name="rt-pws-gear-enrol" legend="Visibility" quietLegend hint="Private courses don't show in search; you share the link or book learners yourself." value={isPublic ? "public" : "private"} disabled={!edit || update.isPending} onChange={choose} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} />
             {/* where learners find it: decided by its subject, so shown here, not chosen */}
             <p className="rt-acc__note">{course.parent ? <>Listed on the shared course page <b>{course.parent.title}</b>, beside other providers.</> : "Listed on its own page."}</p>
           </section>
@@ -317,22 +368,31 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
                   )}
                 </div>
               )}
-              {dated && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true"> →</span></Link>}
+              {dated && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true">{"\u00a0"}→</span></Link>}
+            </section>
+          )}
+          {course.status === "pending" && can("provider.courses.edit") && !staff && (
+            <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-rev">
+              <h3 className="rt-pws-gear__h" id="rt-pws-gear-rev">Review</h3>
+              <div className="rt-pws-gear__row">
+                <p className="rt-acc__note">Waiting for our team&apos;s review. Withdraw it to make it a draft again.</p>
+                <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled={busy} aria-busy={withdraw.isPending || undefined} onClick={doWithdraw}>{withdraw.isPending ? "Withdrawing…" : "Withdraw from review"}</button>
+              </div>
             </section>
           )}
           {can("provider.courses.delete") && (
             <section className="rt-pws-gear__danger" aria-labelledby="rt-pws-gear-del">
               <h3 className="rt-pws-gear__h -danger" id="rt-pws-gear-del">Delete course</h3>
-              {course.deleteBlock ? <DeleteBlocked course={course} busy={busy} withdrawing={withdraw.isPending} onWithdraw={doWithdraw} /> : (
+              {course.deleteBlock ? <DeleteBlocked course={course} /> : (
                 <div className="rt-pws-gear__row">
-                  <p className="rt-acc__note">Removes the course with its dates and pictures. This can&apos;t be undone.</p>
+                  <p className="rt-acc__note">Removes the course with its dates and images. This can&apos;t be undone.</p>
                   <button type="button" className="button -sm -outline-red-3 text-red-3" onClick={() => setConfirm(true)}>Delete course</button>
                 </div>
               )}
             </section>
           )}
           <div className="rt-pws-set__actions">
-            <button type="button" className="button -md -purple-1 text-white" onClick={close}>Done</button>
+            <button type="button" className={`button -md ${askPause ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={close}>Done</button>
           </div>
         </div>
       )}

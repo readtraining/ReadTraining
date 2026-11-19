@@ -47,13 +47,15 @@ export const isMoney = (v, { zero = false } = {}) => /^\d+(\.\d{1,2})?$/.test(St
 // danger: the action deletes, removes or throws something away, so its button is the red outline (the same as the gear's Delete course);
 // a reversible one (pause, archive) keeps the purple main button
 // While it is working (busy), it can't be closed (Cancel, Esc and the backdrop wait), so the result is never lost or half-seen.
-export function Confirm({ open, onClose, title, text, confirmLabel, onConfirm, blocked, busy = false, danger = false }) {
+// `blocked`: it can't be done (the button goes, Close stays); `error`: this try failed (a connection problem), so it can be tried again
+export function Confirm({ open, onClose, title, text, confirmLabel, onConfirm, blocked, error, busy = false, danger = false }) {
   const close = () => !busy && onClose();
   return (
     <Sheet open={open} onClose={close} title={title} closeLabel="Close" className="rt-pws-set__confirm" noClose>
       <div className="rt-pws-set__confirmbody">
         {text && <p className="rt-acc__note">{text}</p>}
         {blocked && <p className="rt-adm-item__block" role="alert">{blocked}</p>}
+        {!blocked && error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
         <div className="rt-pws-set__actions">
           {!blocked && <button type="button" className={`button -md ${danger ? "-outline-red-3 text-red-3" : "-purple-1 text-white"}`} onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>{confirmLabel}</button>}
           <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={close} disabled={busy}>{blocked ? "Close" : "Cancel"}</button>

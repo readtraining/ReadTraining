@@ -11,7 +11,7 @@ export function focusFirstError(root, tries = 6) {
       return;
     }
     const box = err.closest(".rt-field, fieldset, li, .rt-lic__consent, .rt-jobs__consent, .rt-ck__field") || err.parentElement;
-    const field = box.querySelector("input:not([type=hidden]):not([disabled]), select, textarea, button") || err;
+    const field = box.querySelector("input:not([type=hidden]):not([disabled]):not([tabindex='-1']):not([aria-hidden='true']), select, textarea, button:not([disabled])") || err;
     (field === err ? err : box).scrollIntoView({ block: "center", behavior: "smooth" });
     if (field !== err) field.focus({ preventScroll: true });
     else {
