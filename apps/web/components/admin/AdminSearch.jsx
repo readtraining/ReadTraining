@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { useAdminAccess } from "@/lib/adminContext";
 import { formatPrice } from "@/lib/format";
 import NavIcon from "./navIcons";
 
@@ -25,7 +24,6 @@ export default function AdminSearch({ pages }) {
   const opener = useRef(null);
   const router = useRouter();
   const id = useId();
-  const me = useAdminAccess();
 
   // Ctrl+K / ⌘K anywhere; "/" when not typing in a field
   useEffect(() => {
@@ -57,22 +55,24 @@ export default function AdminSearch({ pages }) {
   useFocusTrap(open, panel, () => setOpen(false));
 
   const look = term.length >= 2;
-  const learners = api.admin.students.list.useQuery({ q: term, limit: 5 }, { enabled: open && look, staleTime: 30000 });
-  const providers = api.admin.providers.list.useQuery({ q: term, limit: 5 }, { enabled: open && look, staleTime: 30000 });
-  // orders by reference, customer or course, and coupons by code, for admins who can see orders
-  const seesOrders = Boolean(me?.permissions?.includes("orders.view"));
+  // each kind of record only for an admin who can open its page (`pages`: the menu's pages they may open)
+  const opens = (key) => pages.some((p) => p.key === key);
+  const learners = api.admin.students.list.useQuery({ q: term, limit: 5 }, { enabled: open && look && opens("learners"), staleTime: 30000 });
+  const providers = api.admin.providers.list.useQuery({ q: term, limit: 5 }, { enabled: open && look && opens("providers"), staleTime: 30000 });
+  // orders by reference, customer or course, and coupons by code
+  const seesOrders = opens("orders");
   const orders = api.admin.orders.list.useQuery({ q: term, limit: 5 }, { enabled: open && look && seesOrders, staleTime: 30000 });
-  const coupons = api.admin.coupons.list.useQuery({ q: term }, { enabled: open && look, staleTime: 30000 });
+  const coupons = api.admin.coupons.list.useQuery({ q: term }, { enabled: open && look && opens("coupons"), staleTime: 30000 });
   // courses by title, address, number or provider (the catalogue's own search)
-  const courses = api.admin.courses.list.useQuery({ q: term }, { enabled: open && look, staleTime: 30000 });
+  const courses = api.admin.courses.list.useQuery({ q: term }, { enabled: open && look && opens("catalogue"), staleTime: 30000 });
   const needle = q.trim().toLowerCase();
   const results = [
     ...pages.filter((p) => !needle || p.label.toLowerCase().includes(needle)).slice(0, needle ? 6 : 8).map((p) => ({ group: copy.pages, key: `p-${p.key}`, label: p.label, href: p.href, icon: p.key })),
-    ...(look ? (courses.data ?? []).slice(0, 5).map((c) => ({ group: copy.courses, key: `k-${c.id}`, label: c.title, sub: [c.provider || A.catalogue.kind[c.kind], A.catalogue.statuses[c.status]].filter(Boolean).join(" · "), href: `/admin/catalogue/${c.id}`, icon: "catalogue" })) : []),
-    ...(look ? (providers.data?.providers ?? []).map((p) => ({ group: copy.providers, key: `o-${p.id}`, label: p.name, sub: p.owner?.email || A.providers.statuses[p.status], href: `/admin/providers/${p.slug}`, icon: "providers" })) : []),
-    ...(look ? (learners.data?.students ?? []).map((s) => ({ group: copy.learners, key: `l-${s.id}`, label: s.name, sub: s.email, href: `/admin/learners/${s.id}`, icon: "team" })) : []),
+    ...(look && opens("catalogue") ? (courses.data ?? []).slice(0, 5).map((c) => ({ group: copy.courses, key: `k-${c.id}`, label: c.title, sub: [c.provider || A.catalogue.kind[c.kind], A.catalogue.statuses[c.status]].filter(Boolean).join(" · "), href: `/admin/catalogue/${c.id}`, icon: "catalogue" })) : []),
+    ...(look && opens("providers") ? (providers.data?.providers ?? []).map((p) => ({ group: copy.providers, key: `o-${p.id}`, label: p.name, sub: p.owner?.email || A.providers.statuses[p.status], href: `/admin/providers/${p.slug}`, icon: "providers" })) : []),
+    ...(look && opens("learners") ? (learners.data?.students ?? []).map((s) => ({ group: copy.learners, key: `l-${s.id}`, label: s.name, sub: s.email, href: `/admin/learners/${s.id}`, icon: "team" })) : []),
     ...(look && seesOrders ? (orders.data?.orders ?? []).map((o) => ({ group: copy.orders, key: `r-${o.id}`, label: `${o.ref} · ${o.buyer.name}`, sub: `${o.course} · ${formatPrice(o.gross)}`, href: `/admin/orders/${o.ref}`, icon: "orders" })) : []),
-    ...(look ? (coupons.data?.coupons ?? []).slice(0, 5).map((c) => ({ group: copy.coupons, key: `c-${c.id}`, label: c.code, sub: A.coupons.statuses[c.status], href: `/admin/coupons?q=${encodeURIComponent(c.code)}`, icon: "coupons" })) : []),
+    ...(look && opens("coupons") ? (coupons.data?.coupons ?? []).slice(0, 5).map((c) => ({ group: copy.coupons, key: `c-${c.id}`, label: c.code, sub: A.coupons.statuses[c.status], href: `/admin/coupons?q=${encodeURIComponent(c.code)}`, icon: "coupons" })) : []),
   ];
   const busy = look && (learners.isFetching || providers.isFetching || orders.isFetching || coupons.isFetching || courses.isFetching);
   useEffect(() => setAt(0), [q, results.length]);

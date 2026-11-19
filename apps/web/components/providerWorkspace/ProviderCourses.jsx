@@ -45,7 +45,7 @@ export const useProviderCourses = () => {
 // sales and marketing consultation.
 export default function ProviderCourses() {
   const access = useProviderAccess();
-  const { organisationId, can, status } = access;
+  const { organisationId, can, status, staff } = access;
   const sorter = useSort(); // none chosen: the API's own order, last edited first
   const router = useRouter();
   const utils = api.useUtils();
@@ -91,7 +91,7 @@ export default function ProviderCourses() {
       <>
         {waiting
           ? <EmptyState title="No courses yet" text={pw.notApproved.text} action={pw.notApproved.action} />
-          : <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") ? { label: "New course", onClick: newCourse } : null} />}
+          : <EmptyState title="No courses yet" text="Create your first course: describe it, add its dates and send it to us for approval." action={can("provider.courses.edit") && !staff ? { label: "New course", onClick: newCourse } : null} />}
         <Toast toast={toast} onDone={() => setToast(null)} />
       </>
     );
@@ -141,9 +141,11 @@ export default function ProviderCourses() {
     { label: "Details", href: `${href}/overview` },
     ...(can("provider.courses.editPage") ? [{ label: "Edit course", href }] : []),
     { label: "Preview", href: `${href}/preview` },
-    ...(can("provider.cohorts.edit") && waysOf(c, { open: true }).some(isDatedMethod) ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
-    ...(can("provider.courses.edit") && pausable(c) ? [{ label: c.status === "live" ? "Pause course" : "Put back live", onClick: () => (c.status === "live" ? setPausing(c) : setPaused(c, false)) }] : []),
-    ...(can("provider.courses.edit") ? [{ label: "Duplicate course", onClick: () => copy(c) }] : []),
+    // new dates set their prices, so they need the right to change prices too (ReadTraining staff without the pricing switch)
+    ...(can("provider.cohorts.edit") && can("provider.pricing.edit") && waysOf(c, { open: true }).some(isDatedMethod) ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
+    // pausing and copying a course stay the provider's own (not for ReadTraining staff working here)
+    ...(can("provider.courses.edit") && !staff && pausable(c) ? [{ label: c.status === "live" ? "Pause course" : "Put back live", onClick: () => (c.status === "live" ? setPausing(c) : setPaused(c, false)) }] : []),
+    ...(can("provider.courses.edit") && !staff ? [{ label: "Duplicate course", onClick: () => copy(c) }] : []),
     ...(can("provider.courses.delete") ? [{ label: "Delete course", danger: true, onClick: () => setDeletingId(c.id) }] : []),
   ];
 

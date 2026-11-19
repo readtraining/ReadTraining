@@ -1,12 +1,14 @@
 import { z } from 'zod'
 
-import { sql } from '@readtraining/db'
+import { sql, type SQL } from '@readtraining/db'
+import { adminPermissions, type AdminPermission } from '@readtraining/permissions'
 
 import { orderBy, paging, total, window } from '../../lib/paging.mjs'
 import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 
 // The activity log viewer (Part B, B1): the append-only log recorded since Part A, newest first, searchable by who did it or
-// what it affected, by kind of action and by date. Every admin can read it; nobody can change it (the database refuses).
+// what it affected, by kind of action and by date. Every admin can read it, for the areas they work in (seenBy); nobody can
+// change it (the database refuses).
 // One page at a time (keyset on id), so it stays fast as the log grows.
 
 const KINDS = {
@@ -19,6 +21,24 @@ const KINDS = {
   // account or the automatic emails (all still on the Activity log page)
   work: sql`(l.action not like 'auth.%' and l.action not like 'email.%' and l.action not in ('admin.login', 'access.denied', 'identity.switched', 'provider.workspace.open', 'business.workspace.open'))`,
 } as const
+// Whose entries an admin sees: everyone's with the admin team switch (Full admins); otherwise their own, and those of the areas
+// their switches work in (each area by its kinds of action), so the log never shows a part of the panel they can't open.
+const actions = (...patterns: string[]) => sql`(${sql.join(patterns.map((p) => sql`l.action like ${p}`), sql` or `)})`
+const AREAS: [AdminPermission[], SQL][] = [
+  [['approve'], actions('provider.%', 'course.%', 'cohort.%', 'venue.%', 'plan.%', 'admin.provider_%', 'admin.course_%', 'admin.staff_access_%', 'admin.own_request_decided', 'email.application_received_sent', 'email.course_%', 'email.provider_decision_sent', 'email.approvers_told', 'email.staff_changes_sent')],
+  [['suspend'], actions('account.%', 'admin.account_%', 'admin.provider_suspended', 'admin.provider_reinstated', 'email.closure_%')],
+  [['catalogue'], actions('admin.catalogue_%', 'admin.shared_course_%', 'email.shared_page_paused_sent')],
+  [['content', 'platform.settings'], actions('admin.content_%', 'admin.review_%', 'admin.email_test_sent')],
+  [['coupons'], actions('admin.coupon_%')],
+  [['orders.view', 'orders.book', 'refunds', 'disputes', 'payouts', 'adjustments', 'finance.settings'], actions('admin.order_%', 'admin.refund_%', 'admin.dispute_%', 'admin.payout_%', 'admin.balance_adjusted', 'admin.provider_charged', 'admin.provider_commission_changed', 'admin.commission_default_changed', 'admin.fees_changed')],
+  [['export'], actions('admin.data_exported')],
+]
+function seenBy(userId: string, held: AdminPermission[]) {
+  if (held.includes('admins')) return null
+  const areas = AREAS.filter(([needs]) => needs.some((p) => held.includes(p))).map(([, where]) => where)
+  return sql`(l.actor_user_id = ${userId}::uuid${areas.length ? sql` or ${sql.join(areas, sql` or `)}` : sql``})`
+}
+
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
 type Row = {
@@ -52,6 +72,8 @@ export const activityRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const where = [sql`true`]
+      const mine = seenBy(ctx.user.id, adminPermissions(ctx.actor.admin))
+      if (mine) where.push(mine)
       if (input.kind) where.push(KINDS[input.kind])
       if (input.from) where.push(sql`l.at >= (${input.from}::date)::timestamp at time zone 'Europe/London'`)
       if (input.to) where.push(sql`l.at < (${input.to}::date + 1)::timestamp at time zone 'Europe/London'`)

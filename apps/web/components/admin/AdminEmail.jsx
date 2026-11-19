@@ -148,7 +148,6 @@ function Editor({ t, initial, canEdit, when, note, onRestart }) {
         </div>
         <p className="rt-acc__note">{when ? `${copy.changed} ${formatWhen(Date.parse(when.at))}${when.by ? ` by ${when.by}` : ""}` : copy.builtIn}</p>
       </section>
-      {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
 
       <div className="rt-adm-email">
         <form className="rt-acc__card rt-adm-email__form" onSubmit={submit} noValidate ref={formRef}>

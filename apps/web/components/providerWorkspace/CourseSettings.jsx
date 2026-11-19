@@ -140,7 +140,7 @@ export const pausable = (course) => course.status === "live" || (course.status =
 export const PAUSE_NOTE = "Pausing takes the course off ReadTraining. Its dates stay, and you can put it back live at any time.";
 // Whether a course can be sent for approval from a list (the course list's ⋮ menu, the Dashboard's to-do): a draft or one our team
 // sent back, every editor step done, the provider account approved, and a role that sends courses. The API checks it all again.
-export const canSend = (c, access) => (c.status === "draft" || c.status === "changes") && c.stepsLeft === 0 && access.status === "active" && access.can("provider.courses.edit");
+export const canSend = (c, access) => (c.status === "draft" || c.status === "changes") && c.stepsLeft === 0 && access.status === "active" && access.can("provider.courses.edit") && !access.staff; // sending stays the provider's
 
 // Send a course for approval from a list: the same call as the editor's last step. One already sent (another tab, a double
 // click) counts as sent. `onDone(message, error)` says what happened; the lists load again either way.
@@ -253,7 +253,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const router = useRouter();
   // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
   const ep = useEndpoints();
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, staff } = useProviderAccess();
   const utils = api.useUtils();
   const update = api.provider.courses.update.useMutation();
   const pause = api.provider.courses.setPaused.useMutation();
@@ -262,6 +262,8 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const [askPause, setAskPause] = useState(false); // "Pause course" asks first
   const [error, setError] = useState("");
   const edit = can("provider.courses.edit");
+  // pausing or putting back live stays the provider's own decision (ReadTraining staff working here don't get it)
+  const pauses = edit && !staff && pausable(course);
   const dated = waysOf(course).some(isDatedMethod); // taught on dates: the gear links to them
   const [url, setUrl] = useState("");
   React.useEffect(() => setUrl(`${window.location.origin}/course/${course.slug}`), [course.slug]);
@@ -349,10 +351,10 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
               </div>
             </div>
           </section>
-          {((edit && pausable(course)) || dated) && (
+          {(pauses || dated) && (
             <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-avail">
               <h3 className="rt-pws-gear__h" id="rt-pws-gear-avail">Availability</h3>
-              {edit && pausable(course) && (
+              {pauses && (
                 <div className="rt-pws-gear__row">
                   <p className="rt-acc__note">{course.status === "live" ? PAUSE_NOTE : "This course is paused: it doesn't show on ReadTraining."}</p>
                   {/* pausing takes the course off the site, so it asks first (putting it back live doesn't) */}
@@ -369,7 +371,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
               {dated && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true">{"\u00a0"}→</span></Link>}
             </section>
           )}
-          {course.status === "pending" && can("provider.courses.edit") && (
+          {course.status === "pending" && can("provider.courses.edit") && !staff && (
             <section className="rt-pws-gear__sec" aria-labelledby="rt-pws-gear-rev">
               <h3 className="rt-pws-gear__h" id="rt-pws-gear-rev">Review</h3>
               <div className="rt-pws-gear__row">

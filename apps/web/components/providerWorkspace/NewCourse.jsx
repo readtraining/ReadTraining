@@ -32,11 +32,11 @@ export const NewCourseProvider = NewCourseContext.Provider;
 export const useNewCourse = () => useContext(NewCourseContext);
 
 // a "New course" button (the Courses page's main action, the Dashboard's empty Courses card): opens the pop-up where the person is;
-// nothing for someone whose role can't create courses
+// nothing for someone whose role can't create courses, nor for ReadTraining staff working here (a new course is the provider's)
 export function NewCourseButton({ className = "button -sm -purple-1 text-white", children = "New course" }) {
   const open = useNewCourse();
-  const { can } = useProviderAccess();
-  if (!can("provider.courses.edit")) return null;
+  const { can, staff } = useProviderAccess();
+  if (!can("provider.courses.edit") || staff) return null;
   return <button type="button" className={className} onClick={open}>{children}</button>;
 }
 
@@ -259,7 +259,7 @@ function NewCourseForm({ onCancel, onDirty }) {
       </div>
       {failed && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{failed}</p>}
       <div className="rt-pws-set__actions">
-        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}><KeepWidth label="Create draft" busy={busy} working={create.isSuccess ? "Opening the editor…" : "Creating draft…"} /></button>
+        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}><KeepWidth label="Create draft" busy={busy} working={create.isSuccess ? "Opening the editor…" : "Saving…"} /></button>
         <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onCancel} disabled={busy}>Cancel</button>
       </div>
     </form>

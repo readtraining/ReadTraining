@@ -211,6 +211,22 @@ export const TEMPLATES: Record<string, Template> = {
     },
     sample: { ...PROVIDER, course: 'Emergency First Aid at Work', courseId: '1000', message: 'Please add the exam details: the pass mark and how long the assessment takes.' },
   },
+  'staff-changes': {
+    name: 'Changes made by our team',
+    audience: 'Provider',
+    trigger: 'When a ReadTraining admin finishes working in the provider’s workspace and changed something there (one email per visit).',
+    status: 'live',
+    placeholders: ['firstName', 'provider', 'reason', 'changes'],
+    link: (s) => `${s}/provider`,
+    footer: 'You are receiving this because you manage {provider} on ReadTraining.',
+    words: {
+      subject: 'Our team made changes to {provider} on ReadTraining',
+      heading: 'Our team made some changes',
+      body: 'Hi {firstName},\n\nA member of the ReadTraining team worked in your workspace and made these changes:\n\n{changes}\n\nWhy: {reason}\n\nYou can see everything in your workspace. If anything looks wrong, reply to this email and we’ll sort it out.',
+      button: 'Open your workspace',
+    },
+    sample: { ...PROVIDER, reason: 'Corrected the exam details at your request', changes: 'Updated the course “Emergency First Aid at Work”\nChanged the price plan “Standard packages”' },
+  },
   'course-change-approved': {
     name: 'Course change approved',
     audience: 'Provider',
@@ -706,6 +722,8 @@ export function renderEmail(key: string, words: Words, vars: Record<string, stri
   const html = blocks
     .map((b) => {
       if (b === '{message}') return vars.message ? quote(vars.message) : ''
+      // a list handed in as lines (the changes our team made, staff-changes)
+      if (b === '{changes}') return vars.changes ? `<ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.6;color:#4F547B;">${vars.changes.split('\n').filter(Boolean).map((l) => `<li>${escape(l)}</li>`).join('')}</ul>` : ''
       const lines = b.split('\n')
       if (lines.every((l) => l.trim().startsWith('- '))) {
         return `<ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.6;color:#4F547B;">${lines.map((l) => `<li>${escape(fill(l.trim().slice(2)))}</li>`).join('')}</ul>`
@@ -716,7 +734,7 @@ export function renderEmail(key: string, words: Words, vars: Record<string, stri
   const help = `${siteUrl}/contact-us`
   const footer = `${escape(fill(t.footer))}<br>Questions? Reply to this email or <a href="${help}" style="color:#6440FB;">contact us</a>.`
   const text = [
-    ...blocks.map((b) => (b === '{message}' ? vars.message ?? '' : fill(b))),
+    ...blocks.map((b) => (b === '{message}' ? vars.message ?? '' : b === '{changes}' ? (vars.changes ?? '').split('\n').filter(Boolean).map((l) => `- ${l}`).join('\n') : fill(b))),
     ...(href && words.button ? [`${fill(words.button)}: ${href}`] : []),
     `Questions? Reply to this email or contact us: ${help}`,
     'The ReadTraining team',

@@ -76,7 +76,6 @@ function SeoForm({ value }) {
     <form className="rt-acc__card" onSubmit={submit} noValidate ref={ref} aria-labelledby="rt-adm-seo-h">
       <h2 className="rt-acc__h2" id="rt-adm-seo-h">{c.title}</h2>
       <p className="rt-acc__note">{c.note}</p>
-      {!canEdit && <p className="rt-acc__notice rt-adm-mt">{c.readOnly}</p>}
       <div className="rt-adm-seo">
         <div>
           {Object.entries(c.fields).map(([k, f]) => {

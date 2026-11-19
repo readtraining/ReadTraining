@@ -13,7 +13,7 @@ const SERVICES = [
 ] as const
 
 export const platformRouter = createTRPCRouter({
-  services: adminProcedure('admin.panel.open').query(() =>
+  services: adminProcedure('admin.platform.view').query(() =>
     SERVICES.map((s) => {
       const missing = s.vars.filter((v) => !process.env[v]?.trim())
       return { ...s, vars: [...s.vars], connected: missing.length === 0, missing }

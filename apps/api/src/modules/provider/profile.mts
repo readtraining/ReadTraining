@@ -37,6 +37,8 @@ const REVIEW_EVENTS: Record<string, string> = {
   'admin.provider_rejected': 'rejected',
   'admin.provider_suspended': 'suspended',
   'admin.provider_reinstated': 'reinstated',
+  // ReadTraining staff opened the workspace to change something (Admin › Providers › Open workspace), with their reason
+  'admin.staff_access_started': 'staff',
 }
 const social = (host: RegExp, example: string) =>
   z
@@ -96,7 +98,7 @@ export const providerProfileRouter = createTRPCRouter({
           at: new Date(r.at).toISOString(),
           by: fromTeam ? null : `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || null,
           fromTeam,
-          message: fromTeam && !mayRead ? null : text(m.message) ?? text(m.reply),
+          message: fromTeam && !mayRead ? null : text(m.message) ?? text(m.reply) ?? text(m.reason),
           from: text(m.from),
           to: text(m.to),
         }

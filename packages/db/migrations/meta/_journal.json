@@ -274,6 +274,20 @@
       "when": 1794915114129,
       "tag": "0038_course_closed_methods",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1795070953520,
+      "tag": "0039_staff_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795079629130,
+      "tag": "0040_admin_roles",
+      "breakpoints": true
     }
   ]
 }

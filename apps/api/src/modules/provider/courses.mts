@@ -32,7 +32,7 @@ import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, copyMedia, mediaUploadUrl, m
 import { notify, notifyApprovers, ownerOf, personOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
 import { usablePlan } from './plans.mjs'
-import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, notForStaff, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's courses (Milestone 2): create one (under a shared course page or on its own), write its page, add images, send it
 // for approval (and withdraw it), pause it, duplicate it, delete it (deleteBlock). Every change is checked against the provider's
@@ -658,9 +658,10 @@ async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string |
 }
 // A change to a course waiting for review keeps it waiting, as the version our team decides on: its sent time moves on, so an
 // admin who opened the earlier version is refused and reloads (`seen` in admin.courses.decide), and whoever made the change counts
-// as asking for the decision (requesters in modules/admin/courses.mts).
-async function keepInReview(tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, course: { id: number; status: string }) {
-  if (course.status !== 'pending') return
+// as asking for the decision (requesters in modules/admin/courses.mts). ReadTraining staff fixing it are the reviewers: their change
+// leaves it as it was sent (logged as theirs, and the provider is told), so one of them may still approve it.
+async function keepInReview(tx: Writer, ctx: { user: { id: string }; ip: string | null; staff?: unknown }, organisationId: string, course: { id: number; status: string }) {
+  if (course.status !== 'pending' || ctx.staff) return
   await tx.update(courses).set({ submittedAt: new Date(), updatedAt: new Date() }).where(eq(courses.id, course.id))
   await log(tx, ctx, organisationId, 'course.edited_in_review', course.id)
 }
@@ -750,7 +751,8 @@ export const providerCoursesRouter = createTRPCRouter({
         skillSaver: settings.skillSaver,
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      await notForStaff(ctx, 'provider.courses.edit', input.organisationId, path)
       taughtAll([input.method])
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
       const parentId = await placeOn(ctx.db, { subcategoryId: resolved.subcategoryId ?? null, topicId: resolved.topicId ?? null })
@@ -773,7 +775,8 @@ export const providerCoursesRouter = createTRPCRouter({
   // removing a picture from one) never touches the other's files.
   duplicate: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      await notForStaff(ctx, 'provider.courses.edit', input.organisationId, path)
       const { organisationId } = input
       const source = await ownCourse(ctx.db, organisationId, input.courseId)
       const [pics] = await ctx.db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, source.id))
@@ -909,14 +912,26 @@ export const providerCoursesRouter = createTRPCRouter({
         // a course waiting for review stays complete: what it had when sent can't be taken away while our team looks at it
         const before = status === 'pending' ? await missing(tx, now, { dates: false }) : []
         await setLearningOptions(tx, now, direct, directSet, organisationId, isLive)
-        if (subjectChanged && !isLive) directSet.parentId = await placeOn(tx, subjectAfter)
+        // where it is listed follows its subject: a draft's at once; a live course's when the change is approved, or at once when
+        // ReadTraining staff change it (they are the approvers)
+        if (subjectChanged && (!isLive || ctx.staff)) directSet.parentId = await placeOn(tx, subjectAfter)
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
         // a change our team checks is the new version of a waiting course (search and privacy settings leave it as it was sent)
         if (keys.some((k) => !KEEPS_REVIEW.has(k))) await keepInReview(tx, ctx, organisationId, { id: courseId, status })
         let pendingChange = false
         let newChange = false
         if (Object.keys(reviewed).length) {
-          if (isLive) {
+          if (isLive && ctx.staff) {
+            // ReadTraining staff change a live course at once (they are the approvers): not over the provider's change waiting
+            // for approval (decide that first), and never leaving the course without something it needs to stay live
+            const [open] = await tx.select({ id: courseRevisions.id }).from(courseRevisions).where(and(eq(courseRevisions.courseId, courseId), eq(courseRevisions.status, 'pending')))
+            if (open) throw new TRPCError({ code: 'CONFLICT', message: 'The provider has a change to this course waiting for approval. Approve or turn it down first (Admin › Approvals), then make your change.' })
+            const before = await missing(tx, now)
+            await applyContent(tx, courseId, reviewed)
+            const [applied] = await tx.select().from(courses).where(eq(courses.id, courseId))
+            const lost = (await missing(tx, applied)).filter((gap) => !before.includes(gap))
+            if (lost.length) throw new TRPCError({ code: 'CONFLICT', message: `With this change the live course would be missing ${lost.join(', ')}. Add it, then save.` })
+          } else if (isLive) {
             const [open] = await tx.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, courseId), eq(courseRevisions.status, 'pending')))
             if (open) await tx.update(courseRevisions).set({ content: { ...(open.content as object), ...reviewed }, submittedBy: ctx.user.id, submittedAt: new Date() }).where(eq(courseRevisions.id, open.id))
             else await tx.insert(courseRevisions).values({ courseId, content: reviewed, submittedBy: ctx.user.id })
@@ -943,7 +958,8 @@ export const providerCoursesRouter = createTRPCRouter({
   // Withdraw a content change that is still waiting (the live course stays as it is).
   discardChange: orgProcedure('provider.courses.editPage')
     .input(z.object({ courseId: id, seen: seenVersion }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      await notForStaff(ctx, 'provider.courses.editPage', input.organisationId, path)
       await ownCourse(ctx.db, input.organisationId, input.courseId)
       return ctx.db.transaction(async (tx) => {
         await lockStatus(tx, input.courseId)
@@ -998,7 +1014,8 @@ export const providerCoursesRouter = createTRPCRouter({
   // sends: one still waiting for our approval can build its courses and dates, and sends them once it is approved.
   submit: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id, seen: seenVersion }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      await notForStaff(ctx, 'provider.courses.edit', input.organisationId, path)
       const org = ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)
       if (org?.organisationStatus !== 'active') throw new TRPCError({ code: 'FORBIDDEN', message: 'Your provider account is waiting for our team’s approval. You can send courses for approval once it is approved.' })
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
@@ -1028,7 +1045,8 @@ export const providerCoursesRouter = createTRPCRouter({
   // Pause a live course (it leaves the site, its dates stay) or put it back live.
   setPaused: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id, paused: z.boolean(), seen: seenVersion }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      await notForStaff(ctx, 'provider.courses.edit', input.organisationId, path)
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const from = input.paused ? 'live' : 'paused'
       return ctx.db.transaction(async (tx) => {
@@ -1087,7 +1105,8 @@ export const providerCoursesRouter = createTRPCRouter({
   // It leaves the admins' approvals list; a decision they then try is refused (modules/admin/courses.mts).
   withdrawReview: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id, seen: seenVersion }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      await notForStaff(ctx, 'provider.courses.edit', input.organisationId, path)
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       return ctx.db.transaction(async (tx) => {
         // under the row lock, so an admin deciding at the same moment either decides first (and this is refused) or is refused

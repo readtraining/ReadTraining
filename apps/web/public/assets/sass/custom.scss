@@ -5112,6 +5112,12 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-status.-critical .rt-pws-status__icon { color: var(--rt-adm-danger); }
 .rt-pws-status.-success .rt-pws-status__icon { color: var(--rt-adm-success); }
 .rt-pws-status__body { flex: 1 1 auto; min-width: 0; }
+/* an admin working in the workspace as ReadTraining staff (ProviderShell's StaffBanner): one slim line, whose workspace, End */
+.rt-pws-staff { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; margin: 0 0 16px; padding: 4px 4px 4px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-pws-staff span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-pws-staff__end { flex: none; min-height: 28px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-staff__end:hover { background: var(--rt-c-surface); } }
+.rt-pws-staff__end:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 1px; }
 .rt-pws-status__title { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; line-height: 1.4; color: var(--rt-c-text); }
 .rt-pws-status__text { margin: 2px 0 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); }
 .rt-dash > .rt-pws-status { margin: 0; }
@@ -5196,6 +5202,8 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-adm-learner__who { display: flex; align-items: center; gap: 16px; }
 .rt-adm-learner__photo { flex: 0 0 auto; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
 .rt-adm-team__count { margin: 0; }
+/* the switches' heading is a field label, the same as "Access" above it */
+.rt-adm-team__fieldset legend { float: none; width: auto; margin: 0 0 8px; font-size: var(--rt-text-sm); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
 .rt-adm-team__switches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
 @media (max-width: 575px) { .rt-adm-team__switches { grid-template-columns: minmax(0, 1fr); } }
 .rt-adm-fees__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 32px; width: 100%; }

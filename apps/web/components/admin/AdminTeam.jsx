@@ -3,7 +3,7 @@
 import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { CheckRow } from "@/components/courses/RadioRow";
-import { CardChoice } from "@/components/providerWorkspace/providerParts";
+import { FULL_ADMINS_NEED_TWO_STEP } from "@readtraining/permissions";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -15,6 +15,11 @@ import { AdminStatus } from "./AdminStatus";
 const copy = A.team;
 const PRESETS = ["full", "support", "finance", "custom"];
 const presetOptions = PRESETS.map((value) => ({ value, label: copy.presets[value].label, text: copy.presets[value].text }));
+// an admin's access in words: Full, Support, Finance, or the roles held together ("Support + Finance"), with single switches
+const accessLabel = (a) => (a.preset === "custom" && a.roles?.length ? a.roles.map((r) => copy.presets[r].label).join(" + ") : copy.presets[a.preset].label);
+// what the access form starts from: the ticked cards (full, support, finance, custom) and the single switches
+const picked = (a) => (a.preset === "custom" ? [...(a.roles ?? []), ...(a.extra?.length || !a.roles?.length ? ["custom"] : [])] : [a.preset]);
+const formFor = (a) => ({ mode: "change", userId: a.userId, name: a.name, email: a.email, picked: picked(a), permissions: a.preset === "custom" ? a.extra ?? [] : [], refundLimit: String(a.refundLimit) });
 
 const TEAM_SORT = { name: (a) => a.name, access: (a) => a.preset, limit: (a) => (a.preset === "full" ? Infinity : a.refundLimit), last: (a) => (a.lastSignInAt ? Date.parse(a.lastSignInAt) : null) };
 
@@ -28,7 +33,7 @@ export default function AdminTeam() {
   const utils = api.useUtils();
   const list = api.admin.team.list.useQuery();
   const resend = api.admin.team.resend.useMutation();
-  const [form, setForm] = useState(null); // { mode: "add" | "change", userId?, name?, email, preset, permissions, refundLimit }
+  const [form, setForm] = useState(null); // { mode: "add" | "change", userId?, name?, email, picked (ticked cards), permissions (single switches), refundLimit }
   const [confirm, setConfirm] = useState(null); // { kind: "remove" | "reset" | "super" | "cancel", admin }
   const [said, setSaid] = useState("");
   const sorter = useSort();
@@ -63,7 +68,7 @@ export default function AdminTeam() {
       <div className="rt-adm-toolbar">
         <p className="rt-acc__note rt-adm-team__count">{admins.length === 1 ? "1 admin" : `${admins.length} admins`}</p>
         {grantable.length ? (
-          <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setForm({ mode: "add", email: "", preset: firstPreset, permissions: [], refundLimit: "100" })}>{copy.add}</button></HeaderAction>
+          <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setForm({ mode: "add", email: "", picked: [firstPreset], permissions: [], refundLimit: "100" })}>{copy.add}</button></HeaderAction>
         ) : <p className="rt-acc__note">You can only give access you have yourself, so ask the super admin to invite people.</p>}
       </div>
       <Said text={said} />
@@ -78,9 +83,9 @@ export default function AdminTeam() {
                 return (
                   <tr key={a.userId}>
                     <td data-label={c.name}><span className="rt-adm-strong">{a.name}{mine ? " (you)" : ""}</span>{a.name !== a.email && <small>{a.email}</small>}</td>
-                    <td data-label={c.access}>{a.isSuper ? <span className="rt-adm-strong" title={copy.superNote}>{copy.superAdmin}</span> : copy.presets[a.preset].label}{a.isSuper && <small>{copy.presets.full.label}</small>}{a.preset === "custom" && <small>{a.permissions.length} of {switches.length} switches</small>}</td>
+                    <td data-label={c.access}>{a.isSuper ? <span className="rt-adm-strong" title={copy.superNote}>{copy.superAdmin}</span> : accessLabel(a)}{a.isSuper && <small>{copy.presets.full.label}</small>}{a.preset === "custom" && a.extra?.length > 0 && <small>{a.roles?.length ? `+ ${a.extra.length} more switches` : `${a.permissions.length} of ${switches.length} switches`}</small>}</td>
                     <td data-label={c.limit}>{a.preset === "full" ? <span className="rt-adm-muted">No limit</span> : a.permissions.includes("refunds") ? `£${a.refundLimit}` : <span className="rt-adm-muted">No refunds</span>}</td>
-                    <td data-label={c.twoStep}>{a.invite ? <span className="rt-adm-muted">–</span> : a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
+                    <td data-label={c.twoStep}>{a.invite ? <span className="rt-adm-muted">–</span> : a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" && FULL_ADMINS_NEED_TWO_STEP ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
                     <td data-label={c.last}>
                       {a.invite ? (
                         <>
@@ -97,10 +102,10 @@ export default function AdminTeam() {
                             { label: "See their activity", href: `/admin/activity?q=${a.userId}` },
                           ] : a.invite ? [
                             { label: copy.resend, onClick: () => resendTo(a) },
-                            { label: copy.changeTitle, onClick: () => setForm({ mode: "change", userId: a.userId, name: a.name, email: a.email, preset: a.preset, permissions: a.preset === "custom" ? a.permissions : [], refundLimit: String(a.refundLimit) }) },
+                            { label: copy.changeTitle, onClick: () => setForm(formFor(a)) },
                             { label: copy.cancel, danger: true, onClick: () => setConfirm({ kind: "cancel", admin: a }) },
                           ] : [
-                            { label: copy.changeTitle, onClick: () => setForm({ mode: "change", userId: a.userId, name: a.name, email: a.email, preset: a.preset, permissions: a.preset === "custom" ? a.permissions : [], refundLimit: String(a.refundLimit) }) },
+                            { label: copy.changeTitle, onClick: () => setForm(formFor(a)) },
                             { label: "See their activity", href: `/admin/activity?q=${a.userId}` },
                             ...(a.twoStep ? [{ label: "Reset two-step sign-in", onClick: () => setConfirm({ kind: "reset", admin: a }) }] : []),
                             ...(meSuper && a.preset === "full" ? [{ label: copy.handOver, onClick: () => setConfirm({ kind: "super", admin: a }) }] : []),
@@ -117,15 +122,16 @@ export default function AdminTeam() {
         </div>
       ) : <Empty title={copy.empty} text="Admins you invite show here." />}
 
-      <AccessSheet form={form} setForm={setForm} switches={switches.filter((s) => grantable.includes(s))} presets={presets} canGiveFull={!fullLocked} grantable={grantable} limited={grantable.length < switches.length} maxLimit={myRefundLimit ?? 100000} onDone={done} />
+      <AccessSheet form={form} setForm={setForm} switches={switches.filter((s) => grantable.includes(s))} presets={presets} canGiveFull={!fullLocked} grantable={grantable} maxLimit={myRefundLimit ?? 100000} onDone={done} />
       <ConfirmSheet confirm={confirm} onClose={() => setConfirm(null)} onDone={done} />
     </div>
   );
 }
 
-// Add an admin, or change one admin's access: preset cards; with Custom, the switches; the refund limit when they can refund
-// and aren't Full. Errors inline, focus on the first.
-function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable, limited, maxLimit, onDone }) {
+// Add an admin, or change one admin's access: tick cards (Full on its own, or Support, Finance and Single switches together,
+// one person holding them all); with Single switches, the switches; the refund limit when they can refund and aren't Full.
+// Errors inline, focus on the first.
+function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable, maxLimit, onDone }) {
   const add = api.admin.team.add.useMutation();
   const update = api.admin.team.update.useMutation();
   const [errors, setErrors] = useState({});
@@ -139,8 +145,16 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
   if (!form) return <Sheet open={false} onClose={close} title="" closeLabel="Close" />;
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-  const allowed = form.preset === "custom" ? form.permissions : presets[form.preset];
-  const needsLimit = form.preset !== "full" && allowed.includes("refunds");
+  const full = form.picked.includes("full");
+  const roles = form.picked.filter((p) => p === "support" || p === "finance");
+  const single = form.picked.includes("custom");
+  // ticking Full stands alone; ticking anything else takes Full off
+  const tick = (value) => {
+    const on = form.picked.includes(value);
+    set({ picked: value === "full" ? (on ? [] : ["full"]) : on ? form.picked.filter((p) => p !== value) : [...form.picked.filter((p) => p !== "full"), value] });
+  };
+  const allowed = full ? presets.full : [...new Set([...roles.flatMap((r) => presets[r]), ...(single ? form.permissions : [])])];
+  const needsLimit = !full && allowed.includes("refunds");
   const busy = add.isPending || update.isPending;
   const err = (k) => errors[k] && <p className="rt-q__err" id={`rt-adm-t-${k}-e`}><span className="rt-sr">Error: </span>{errors[k]}</p>;
 
@@ -148,12 +162,12 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
     e.preventDefault();
     const found = {};
     if (form.mode === "add" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) found.email = "Enter an email address in the correct format, like name@example.com.";
-    if (form.preset === "custom" && !form.permissions.length) found.permissions = "Choose at least one switch.";
+    if (!full && !roles.length && !(single && form.permissions.length)) found.permissions = single ? "Choose at least one switch." : "Choose the access they need.";
     if (needsLimit && (!/^\d+$/.test(form.refundLimit.trim()) || Number(form.refundLimit) > maxLimit)) found.refundLimit = `Enter a whole number of pounds from 0 to ${maxLimit}.`;
     setErrors(found);
     setGeneral("");
     if (Object.keys(found).length) return focusFirstError(ref.current);
-    const body = { preset: form.preset, permissions: form.preset === "custom" ? form.permissions : undefined, refundLimit: Number(form.refundLimit) || 0 };
+    const body = full ? { preset: "full", refundLimit: 0 } : { preset: "custom", roles, permissions: single ? form.permissions : [], refundLimit: Number(form.refundLimit) || 0 };
     try {
       const email = form.email.trim();
       if (form.mode === "add") {
@@ -190,12 +204,22 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
           </div>
         ) : <p className="rt-acc__note">{form.email}</p>}
 
-        <CardChoice name="rt-adm-t-preset" legend="Access" value={form.preset} onChange={(preset) => set({ preset })} options={presetOptions.filter((o) => (o.value === "full" ? canGiveFull : o.value === "custom" || presets[o.value].every((p) => grantable.includes(p))))} />
+        <fieldset className="rt-field rt-pws-optcards" aria-describedby={errors.permissions && !single ? "rt-adm-t-permissions-e" : undefined}>
+          <legend>Access</legend>
+          {!single && err("permissions")}
+          <div className="rt-pws-optcards__row">
+            {presetOptions.filter((o) => (o.value === "full" ? canGiveFull : o.value === "custom" || presets[o.value].every((p) => grantable.includes(p)))).map((o) => (
+              <label key={o.value} className={`rt-pws-optcard${form.picked.includes(o.value) ? " is-on" : ""}`}>
+                <input type="checkbox" className="rt-fp__check" name="rt-adm-t-access" value={o.value} checked={form.picked.includes(o.value)} onChange={() => tick(o.value)} />
+                <span><b>{o.label}</b><small>{o.text}</small></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
-        {form.preset === "custom" && (
-          <fieldset className="rt-field" aria-describedby={errors.permissions ? "rt-adm-t-permissions-e" : undefined}>
+        {single && (
+          <fieldset className="rt-field rt-adm-team__fieldset" aria-describedby={errors.permissions ? "rt-adm-t-permissions-e" : undefined}>
             <legend>Switches</legend>
-            {limited && <small className="rt-field__hint">Only the switches you have yourself. The super admin gives the rest, including managing the admin team.</small>}
             {err("permissions")}
             <div className="rt-adm-team__switches">
               {switches.map((s) => (
@@ -214,7 +238,6 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
           </div>
         )}
 
-        {form.mode === "add" && <p className="rt-acc__note">{copy.addNote}</p>}
         {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy}>{form.mode === "add" ? copy.send : "Save access"}</button>
       </form>

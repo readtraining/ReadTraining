@@ -13,7 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
 import { isDatedMethod, wayName, waysOf } from "@/lib/courseModes";
-import { Said, DetailSkeleton, formatWhen, Empty } from "./adminParts";
+import { Said, DetailSkeleton, formatWhen, Empty, PageLink } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import AdminCoursePrices from "./AdminCoursePrices";
@@ -137,7 +137,7 @@ export default function AdminCourse({ id }) {
           </div>
           <h1 className="rt-adm__h1 rt-adm-hero__name" id="rt-adm-course-h">{c.title}</h1>
           <p className="rt-acc__note">
-            {c.provider ? <>{d.provider}: <Link href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</Link>{!providerReady && ` (${ap.providerState[c.provider.status] || "account not active"})`}</> : "Written by our team"}
+            {c.provider ? <>{d.provider}: <PageLink href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</PageLink>{!providerReady && ` (${ap.providerState[c.provider.status] || "account not active"})`}</> : "Written by our team"}
             {c.parent && <> · {d.sharedPage}: <Link href={`/admin/catalogue/${c.parent.id}`}>{c.parent.title}</Link></>}
           </p>
           {c.parent && !c.parent.sameSubject && <p className="rt-acc__notice -warn">{d.otherSubject(c.parent.title)}</p>}

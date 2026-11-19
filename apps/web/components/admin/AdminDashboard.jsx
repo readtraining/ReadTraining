@@ -58,12 +58,21 @@ function RecentActivity() {
 // activity log's latest entries, then the sessions starting this week without joining instructions (the gap Hurak's learners
 // complain about, DEMO and tagged so) and the latest real orders. The numbers on top and the money queues are real (API
 // admin.orders.summary) for admins who can see orders.
+// the page each queue opens (its key otherwise names the page itself)
+const QUEUE_PAGE = { applications: "providers", credit: "businesses", debt: "businesses", candidates: "jobs" };
+
 export default function AdminDashboard() {
   const data = useAdmin();
   const me = useAdminAccess();
   const seesMoney = Boolean(me?.permissions?.includes("orders.view"));
-  const providers = api.admin.providers.counts.useQuery();
-  const courses = api.admin.courses.counts.useQuery();
+  // each queue, and the numbers behind it, only for an admin who can open its page (data/admin.js nav `permission`)
+  const may = (need) => !need || (Array.isArray(need) ? need : [need]).some((p) => me?.permissions?.includes(p));
+  const pageFor = (key) => A.nav.flatMap((g) => g.items).find((x) => x.key === (QUEUE_PAGE[key] ?? key));
+  // provider applications and course approvals are deciding work: only for an admin with the approve switch (Finance opens
+  // Providers for commission, not to decide applications)
+  const opens = (key) => (key === "applications" || key === "approvals" ? may("approve") : may(pageFor(key)?.permission));
+  const providers = api.admin.providers.counts.useQuery(undefined, { enabled: opens("applications"), retry: false });
+  const courses = api.admin.courses.counts.useQuery(undefined, { enabled: opens("approvals"), retry: false });
   const money = api.admin.orders.summary.useQuery(undefined, { enabled: seesMoney });
   const latestOrders = api.admin.orders.list.useQuery({ limit: 5 }, { enabled: seesMoney });
   if (!data) return <DetailSkeleton />;
@@ -92,15 +101,15 @@ export default function AdminDashboard() {
   ];
   // Queues lists only what has something waiting; a queue comes back as soon as it has work. Until every count has loaded it
   // shows placeholders, so a queue is never left out just because its number hadn't arrived
-  const waiting = queues.filter((q) => q.n > 0);
-  const queuesLoading = providers.isLoading || courses.isLoading || (seesMoney && money.isLoading);
+  const waiting = queues.filter((q) => q.n > 0 && opens(q.key));
+  const queuesLoading = (opens("applications") && providers.isLoading) || (opens("approvals") && courses.isLoading) || (seesMoney && money.isLoading);
   const queuesFailed = providers.error || courses.error || (seesMoney && money.error);
   // the same sessions as Sessions and venues > Next 7 days
   const soon = data.sessions.filter((s) => !s.cancelled && s.daysAway <= 7 && !s.joiningSent);
 
   return (
     <div className="rt-acc__stack">
-      <Stats items={stats} label="Today" />
+      {seesMoney && <Stats items={stats} label="Today" />}
 
       {/* one 2 × 2 grid in reading order: the cards in a row share their top and bottom edges. Sessions at risk (demo) and
           Latest orders (admins who see money) aren't always there, so the cards fill the grid in order and leave no hole */}
@@ -133,7 +142,7 @@ export default function AdminDashboard() {
           )}
         </section>
         <RecentActivity />
-        {SHOW_DEMO && (
+        {SHOW_DEMO && opens("sessions") && (
         <section className="rt-acc__card" aria-labelledby="rt-adm-risk-h">
           <div className="rt-acc__cardhead">
             <h2 className="rt-acc__h2" id="rt-adm-risk-h">{copy.atRisk}</h2>
