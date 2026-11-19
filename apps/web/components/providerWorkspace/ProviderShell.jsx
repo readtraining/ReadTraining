@@ -153,7 +153,6 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             <span className="rt-adm__tag">{pw.tag}</span>
           </Link>
           <div className="rt-adm__topside">
-            {!access.staff && <Link href="/account" className="rt-adm__site rt-pws__student" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}>Student</Link>}
             <Link href="/provider/notifications" className="rt-pws__bell" aria-label={counts.unread ? `Notifications, ${counts.unread} unread` : "Notifications"}>
               <i className="icon-notification text-18" aria-hidden="true"></i>
               {counts.unread > 0 && <span className="rt-pws__bellcount" aria-hidden="true">{counts.unread}</span>}
