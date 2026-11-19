@@ -281,6 +281,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
   };
   const pick = (item) => {
     setOpen(false);
+    btn.current?.focus(); // the item's pop-up (Delete, Pause…) returns focus here when it closes
     item.onClick?.();
   };
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { useMe } from "@/lib/useMe";
@@ -11,6 +11,8 @@ import { Seats, todayIso, useSchedule } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 import { NewCourseButton } from "./NewCourse";
+import { canSend, useSendForApproval } from "./CourseSettings";
+import Toast from "@/components/courses/Toast";
 
 // Our dashboard (Hurak has none; everything on it opens the page it comes from), from real records only: the provider's courses
 // and dates (API provider.courses.list / provider.cohorts.list, fetched again whenever the window regains focus). Top to bottom:
@@ -56,6 +58,8 @@ export default function ProviderDashboard() {
   // the team list is for roles that see every date; a tutor sees only the dates they teach, so those are theirs
   const tutorName = (id) => (schedule.may.team ? schedule.tutors.data?.find((t) => t.userId === id)?.name : id && "You");
 
+  const [toast, setToast] = useState(null);
+  const sender = useSendForApproval((message, error) => setToast({ message, error }));
   // the to-do list: real things to act on, most urgent first, only those this person's role can do
   const editsCourses = access.can("provider.courses.edit");
   const todo = loading || failed ? [] : [
@@ -69,8 +73,10 @@ export default function ProviderDashboard() {
     }),
     ...(editsCourses ? courses.filter((c) => c.status === "draft") : []).map((c) => {
       // every required editor step done: it only needs sending (once the provider account is approved)
-      const left = c.stepsLeft ? `${plural(c.stepsLeft, "step", "steps")} to finish` : access.status === "active" ? "ready to send for approval" : "ready to send once your account is approved";
-      return { key: `draft-${c.id}`, tone: "muted", href: `/provider/courses/${c.id}`, cta: "Continue", text: <><b>{c.title}</b> · {left}</>, label: `${c.title}: ${left}` };
+      const left = c.stepsLeft ? `${plural(c.stepsLeft, "step", "steps")} to finish` : "ready to send for approval";
+      // a ready one is sent from here; the rest open the editor
+      const send = canSend(c, access) && { onClick: () => sender.send(c), cta: sender.sendingId === c.id ? "Sending…" : "Send for approval" };
+      return { key: `draft-${c.id}`, tone: "muted", href: `/provider/courses/${c.id}`, cta: "Continue", ...send, text: <><b>{c.title}</b> · {left}</>, label: `${c.title}: ${left}` };
     }),
   ];
   const shownTodo = allTodo ? todo : todo.slice(0, TODO_SHOWN);
@@ -109,8 +115,11 @@ export default function ProviderDashboard() {
                   {shownTodo.map((t) => (
                     <li key={t.key}>
                       <span className={`rt-dash__dot${t.tone ? ` -${t.tone}` : ""}`} aria-hidden="true"></span>
-                      <span className="rt-dash__text">{t.text}</span>
-                      <Link href={t.href} className="rt-dash__go">{t.cta}<span className="rt-sr">: {t.label}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>
+                      {/* a row with its own button (Send for approval): its words open the course, the button only sends */}
+                      {t.onClick ? <Link href={t.href} className="rt-dash__text rt-dash__open">{t.text}</Link> : <span className="rt-dash__text">{t.text}</span>}
+                      {t.onClick
+                        ? <button type="button" className="rt-dash__go" onClick={t.onClick} disabled={Boolean(sender.sendingId)} aria-busy={sender.sendingId ? true : undefined}>{t.cta}<span className="rt-sr">: {t.label}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></button>
+                        : <Link href={t.href} className="rt-dash__go">{t.cta}<span className="rt-sr">: {t.label}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>}
                     </li>
                   ))}
                 </ul>
@@ -177,6 +186,7 @@ export default function ProviderDashboard() {
           )}
         </>
       )}
+      <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
 }

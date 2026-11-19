@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 // The strip on the editors' Preview (/provider/courses/<id>/preview, /admin/catalogue/<id>/preview): this is the course page as it
@@ -13,7 +15,7 @@ export default function PreviewBar({ back, status, missing = [] }) {
           <><b>Preview.</b> {status} Booking is turned off here.</>
         )}
       </p>
-      <Link href={back} className="rt-preview__back">Back to the editor</Link>
+      <Link href={back} className="rt-preview__back" onClick={(e) => { if (window.opener) { e.preventDefault(); window.close(); } }}>Back to the editor</Link>
     </div>
   );
 }

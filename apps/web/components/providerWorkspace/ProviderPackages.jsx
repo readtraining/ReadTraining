@@ -13,7 +13,7 @@ import { EmptyState, ErrorState } from "@/components/states/States";
 import { HeaderAction } from "@/components/admin/adminParts";
 
 const SHOW = [{ value: "", label: "In use" }, { value: "archive", label: "Archived" }, { value: "all", label: "All plans" }];
-const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date" : "dates"}` : "", u.courses ? `${u.courses} self-paced ${u.courses === 1 ? "course" : "courses"}` : ""].filter(Boolean).join(" and ") || "Not used yet";
+const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date" : "dates"}` : "", u.courses ? `${u.courses} self-paced ${u.courses === 1 ? "course" : "courses"}` : ""].filter(Boolean).join(" and ") || (u.ever ? "Used by past dates" : "Not used yet");
 
 // Price plans (Hurak's Tiered Plans), from the API (provider.plans): each plan's packages and prices, and how many dates and
 // courses use it. A plan is the provider's own pricing: saving it changes what learners see at once. A date chooses its plan in its own form ("Tiered" pricing); a self-paced course in its
@@ -51,7 +51,8 @@ export default function ProviderPackages() {
   const setParam = (k, setter) => (v) => { setter(v); setQuery(k, k === "q" ? v.trim() : v); };
   const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
   const create = () => setEditor({ open: true, plan: null });
-  const inUse = Boolean(removing && removing.used.dates + removing.used.courses);
+  // any date that has used it (past ones keep it) or a self-paced course on it: archived, not deleted (as the API decides)
+  const inUse = Boolean(removing && (removing.used.ever || removing.used.courses));
   const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={() => say("Plan saved")} />;
 
   if (!plans.length) {
@@ -103,7 +104,7 @@ export default function ProviderPackages() {
                       {edit && (
                         <RowMenu label={`Actions for ${p.name}`} items={[
                           { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
-                          { label: p.archived ? "Use again" : "Archive", onClick: () => archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} can be chosen again` : `${p.name} archived`); }, onError: fail }) },
+                          { label: p.archived ? "Use again" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} can be chosen again` : `${p.name} archived`); }, onError: fail }) },
                           { label: "Delete", onClick: () => setRemoving(p) },
                         ]} />
                       )}
@@ -128,7 +129,7 @@ export default function ProviderPackages() {
       {/* a plan in use only says why it can't go (no "will be deleted" above it) */}
       <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title={inUse ? "This plan can’t be deleted" : "Delete this plan?"} confirmLabel="Delete plan" busy={remove.isPending}
         text={removing && !inUse ? `${removing.name} and its packages will be deleted. This can’t be undone.` : ""}
-        blocked={inUse ? `${usedText(removing.used)} use this plan, so it can’t be deleted. Archive it instead.` : ""}
+        blocked={inUse ? `${removing.used.dates || removing.used.courses ? usedText(removing.used) : "Past dates"} use this plan, so it can’t be deleted. Archive it instead.` : ""}
         onConfirm={() => remove.mutate({ organisationId, planId: removing.id }, { onSuccess: () => { refresh(); say("Plan deleted"); setRemoving(null); }, onError: (er) => { fail(er); setRemoving(null); } })} />
       <Toast toast={toast} onDone={clearToast} />
     </div>
