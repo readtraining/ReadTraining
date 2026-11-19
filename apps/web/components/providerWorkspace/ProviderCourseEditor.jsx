@@ -89,13 +89,6 @@ const STATUS_NOTES = {
   live: "Your course is live. Edits to the course page are reviewed before they go live. Prices, dates and settings update straight away.",
   paused: "Your course is paused, so it isn't shown on ReadTraining. Put it back live from Course settings.",
 };
-// ReadTraining staff working in the provider's workspace: their changes apply at once (STAFF_NOTES), whatever the status says
-const STAFF_NOTES = {
-  pending: "This course is waiting for review. Changes you save keep it waiting.",
-  changes: "Our team asked the provider for changes.",
-  live: "This course is live. Changes you save show straight away.",
-  paused: "This course is paused, so it isn't shown on ReadTraining.",
-};
 const SHARED_NOTES = {
   draft: "This shared course page is a draft: nobody outside the team can see it, and providers can't list their courses on it yet. Publish it when it is complete.",
   live: "This shared course page is live. Changes you save show on it straight away. Providers can list their courses on it.",
@@ -685,14 +678,18 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
             <span>{ep.admin ? "Shared course page" : `${waysLabel(course)} · ${pw.models[course.model]?.label}`}</span>
           </p>
           {ep.admin && <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>}
-          {status !== "draft" && (ep.staff || status !== "pending") && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : ep.staff ? STAFF_NOTES : STATUS_NOTES)[status]}</p>}
-          {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
-          {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
-          {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
-          {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-acc__notice -warn"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
+          {/* the provider's own notes about where their course stands; ReadTraining staff editing it from the admin pages see the
+              status pill only (they know what saving does, and these speak to the provider) */}
+          {!ep.staff && <>
+            {status !== "draft" && status !== "pending" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
+            {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
+            {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
+            {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
+            {!ep.admin && course.status === "paused" && course.statusNote && <p className="rt-acc__notice -warn"><b>Paused by our team:</b> {course.statusNote} Contact us to put it back live.</p>}
+          </>}
           {isLive && retiredPlaces.length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {retiredPlaces.join(", ")}. {ep.admin ? "Choose another and save." : "Choose another and save: once our team has approved the change, the course can be live again."}</p>}
           {isLive && retiredOnSale(course).length > 0 && <p className="rt-acc__notice -warn"><b>No longer offered on ReadTraining:</b> {retiredOnSale(course).map(methodName).join(", ")}. Turn {retiredOnSale(course).length === 1 ? "it" : "them"} off in Learning options and save.</p>}
-          {!ep.admin && isLive && noDates && <p className="rt-acc__note">{NO_DATES_NOTE}</p>}
+          {!ep.admin && !ep.staff && isLive && noDates && <p className="rt-acc__note">{NO_DATES_NOTE}</p>}
         </div>
         <div className="rt-pws-ce__headactions">
           <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={openPreview}>Preview<span className="rt-sr"> (opens in a new tab)</span></button>

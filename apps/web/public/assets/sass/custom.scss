@@ -5679,7 +5679,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws__group.is-folded.is-here > .rt-pws__grouphead { font-weight: 600; color: var(--rt-c-brand) !important; }
 .rt-pws__group.is-folded.is-here > .rt-pws__grouphead .rt-adm__icon { color: var(--rt-c-brand); }
 @media (hover: hover) and (pointer: fine) { .rt-pws__grouphead:hover { background: var(--color-light-4); } }
-.rt-pws__student { min-height: 44px; }
 .rt-pws__bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; color: rgba(255, 255, 255, 0.85) !important; text-decoration: none; transition: background-color 150ms ease; }
 .rt-pws__bell:hover { background: rgba(255, 255, 255, 0.1); color: var(--rt-c-surface) !important; }
 .rt-pws__bellcount { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-purple-1); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; color: var(--rt-c-surface); }
@@ -5718,7 +5717,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (hover: hover) and (pointer: fine) { .rt-pws__back:hover { color: var(--rt-c-brand) !important; } .rt-pws__back:hover i { border-color: var(--rt-c-brand); transform: translateX(-2px); } }
 .rt-pws__back:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws__back, .rt-pws__back i { transition: none; } }
-@media (max-width: 991px) { .rt-pws .rt-adm__topside .rt-adm__site:first-child { display: none; } }
 /* loading skeleton */
 .rt-pws-skel__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
 .rt-pws-skel__block { display: block; height: 180px; border-radius: var(--rt-radius-card); background: linear-gradient(90deg, var(--rt-c-line) 0%, var(--rt-c-soft) 50%, var(--rt-c-line) 100%); background-size: 200% 100%; animation: rt-pws-shimmer 1.4s ease-in-out infinite; }
