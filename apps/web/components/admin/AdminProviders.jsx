@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
+import { useAdminAccess } from "@/lib/adminContext";
 import { api } from "@/lib/trpc/react";
 import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, PageLink } from "./adminParts";
 import { formatRate } from "./commissionParts";
@@ -16,6 +17,9 @@ const TABS = Object.keys(copy.tabs);
 // approved), a search by name, owner or phone, each with its commission (its own rate is marked), newest first and a page at
 // a time. Tab and search stay in the address; each name opens the provider.
 export default function AdminProviders() {
+  const me = useAdminAccess();
+  // the provider's record needs approve, suspend or finance settings; an admin with only the pricing switch opens its price plans
+  const readsRecord = ["approve", "suspend", "finance.settings"].some((x) => me?.permissions?.includes(x));
   const [tab, setTab] = useState("all");
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
@@ -63,7 +67,7 @@ export default function AdminProviders() {
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.id}>
-                    <td data-label={c.name}><Link href={`/admin/providers/${p.slug}`} className="rt-adm-strong">{p.name}</Link></td>
+                    <td data-label={c.name}><Link href={readsRecord ? `/admin/providers/${p.slug}` : `/admin/providers/${p.slug}/plans`} className="rt-adm-strong">{p.name}</Link></td>
                     <td data-label={c.owner}>{p.owner ? <><PageLink href={`/admin/learners/${p.owner.id}`} className="rt-adm-strong">{p.owner.name}</PageLink><small>{p.owner.email}</small></> : <span className="rt-adm-muted">–</span>}</td>
                     <td data-label={c.applied}>{formatWhen(Date.parse(p.appliedAt))}</td>
                     <td data-label={c.commission} className="rt-adm-num-cell">{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>

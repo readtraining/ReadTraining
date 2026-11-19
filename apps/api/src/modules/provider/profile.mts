@@ -73,7 +73,9 @@ export const providerProfileRouter = createTRPCRouter({
   // Every member can read where it stands (the status bar on every page points here); our team's note and messages are for the
   // owner and admins only (`private`), so a tutor or an assistant sees the status without them.
   review: orgProcedure('provider.workspace.open').query(async ({ ctx, input }) => {
-    const mayRead = PRIVATE_ROLES.includes(ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)?.role ?? '')
+    // ReadTraining staff editing from the admin aren't the provider's owner or admin: the admin's own pages show what they may see
+    const member = ctx.actor.memberships.find((m) => m.organisationId === input.organisationId)
+    const mayRead = !member?.staff && PRIVATE_ROLES.includes(member?.role ?? '')
     const [o] = await ctx.db.select({ name: organisations.name, status: organisations.status, statusNote: organisations.statusNote, statusChangedAt: organisations.statusChangedAt, createdAt: organisations.createdAt }).from(organisations).where(eq(organisations.id, input.organisationId))
     if (!o) throw new TRPCError({ code: 'NOT_FOUND' })
     const rows = await ctx.db.execute<{ action: string; at: string; metadata: Record<string, unknown> | null; actor_identity: string; first_name: string | null; last_name: string | null }>(sql`
@@ -98,7 +100,7 @@ export const providerProfileRouter = createTRPCRouter({
           at: new Date(r.at).toISOString(),
           by: fromTeam ? null : `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || null,
           fromTeam,
-          message: fromTeam && !mayRead ? null : text(m.message) ?? text(m.reply) ?? text(m.reason),
+          message: fromTeam && !mayRead ? null : text(m.message) ?? text(m.reply),
           from: text(m.from),
           to: text(m.to),
         }
@@ -127,7 +129,8 @@ export const providerProfileRouter = createTRPCRouter({
       const rename = input.name !== undefined && input.name !== o.name
       if (rename) {
         if (!can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId })) await refuse(ctx, 'provider.profile.rename', input.organisationId, path)
-        if (!UNDER_REVIEW.includes(o.status)) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is approved, so its name can only be changed by our team. Contact us to change it.' })
+        // once approved only our team renames it (ReadTraining staff editing from the admin); a name is still used once
+        if (!UNDER_REVIEW.includes(o.status) && !ctx.staff) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is approved, so its name can only be changed by our team. Contact us to change it.' })
       }
       return ctx.db.transaction(async (tx) => {
         if (rename) await refuseTakenProviderName(tx, input.name!, input.organisationId)

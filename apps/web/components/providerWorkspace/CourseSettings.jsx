@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useWorkspaceLinks } from "@/lib/workspaceContext";
 import { useEndpoints } from "@/lib/courseEditorApi";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -200,6 +201,7 @@ export function DeleteCourseForm({ course, onKeep, onDeleted }) {
 // in the API), the address to share, pausing a live course, and deleting it (DeleteBlocked says
 // when it can't be, and a course our team paused has no Put back live; DeleteCourseForm asks). Each choice saves at once.
 export function CourseGear({ course, open, onClose, onSaved, onStale }) {
+  const links = useWorkspaceLinks();
   const router = useRouter();
   // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
   const ep = useEndpoints();
@@ -277,7 +279,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   return (
     <Sheet open={open} onClose={close} title={confirm ? "Delete this course?" : "Course settings"} closeLabel="Close" noClose={confirm}>
       {confirm ? (
-        <DeleteCourseForm course={course} onKeep={leaveConfirm} onDeleted={() => leaveWithoutAsking(() => router.push("/provider/courses"))} />
+        <DeleteCourseForm course={course} onKeep={leaveConfirm} onDeleted={() => leaveWithoutAsking(() => router.push(links.courses()))} />
       ) : (
         <div className="rt-q__form rt-pws-gear" aria-busy={busy || undefined}>
           <p className="rt-acc__note">Changes are saved as you make them.</p>
@@ -317,7 +319,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
                   )}
                 </div>
               )}
-              {dated && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true"> →</span></Link>}
+              {dated && <Link href={links.dates(course.id)} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true"> →</span></Link>}
             </section>
           )}
           {can("provider.courses.delete") && (

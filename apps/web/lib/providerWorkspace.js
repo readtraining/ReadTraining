@@ -478,20 +478,6 @@ export const saveOrg = (patch) => updateProvider((s) => {
   Object.assign(s.org, patch);
 });
 
-export const inviteMember = (email, role) => updateProvider((s) => {
-  if (s.team.some((t) => t.email.toLowerCase() === email.toLowerCase())) return false;
-  s.team.push({ id: nextId("T", s.team), name: "", email, role, status: "pending" });
-  return true;
-});
-export const changeRole = (id, role) => updateProvider((s) => {
-  const t = s.team.find((x) => x.id === id);
-  if (t && !t.owner) t.role = role;
-});
-export const removeMember = (id) => updateProvider((s) => {
-  s.team = s.team.filter((t) => t.id !== id || t.owner);
-  s.cohorts.forEach((k) => k.tutorId === id && (k.tutorId = ""));
-});
-
 export const markRead = (id) => updateProvider((s) => {
   const n = s.notifications.find((x) => x.id === id);
   if (n) n.read = true;

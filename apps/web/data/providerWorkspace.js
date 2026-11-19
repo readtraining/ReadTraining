@@ -65,7 +65,7 @@ export const pw = {
       rejected: "Not approved",
       suspended: "Suspended",
       reinstated: "Active again",
-      staff: "Our team worked in your workspace",
+      staff: "Our team edited your courses or details",
     },
     team: "ReadTraining team",
   },
@@ -91,31 +91,31 @@ export const pw = {
   // Overview / Reviews / Leads tabs. Settings and team are in the account menu
   nav: [
     { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/provider" },
-    { key: "courses", label: "Courses", icon: "icon-book", items: [
+    { key: "courses", label: "Courses", icon: "icon-book", can: "provider.courses.view", items: [
       { label: "All courses", href: "/provider/courses" },
-      { label: "Price plans", href: "/provider/packages" },
+      { label: "Price plans", href: "/provider/packages", can: "provider.pricing.view" },
     ] },
-    { key: "cohorts", label: "Cohorts", icon: "icon-online-learning-4", items: [
+    { key: "cohorts", label: "Cohorts", icon: "icon-online-learning-4", can: "provider.cohorts.view", items: [
       { label: "Cohort list", href: "/provider/cohorts" },
       { label: "Calendar", href: "/provider/calendar" },
       { label: "Self-paced", href: "/provider/cohorts?mode=self-paced" },
     ] },
-    { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners" },
-    { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders" },
-    { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews" },
+    { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners", can: "provider.learners.view" },
+    { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders", can: "provider.orders.view" },
+    { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews", can: "provider.performance.view" },
     { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
     // the provider's own account: how it is set up, and the page learners see
-    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear" },
+    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear", can: "provider.settings.view" },
     // `can`: only for the roles that may open it (the shared permission table)
     { key: "team", label: "Team", href: "/provider/team", navIcon: "team", can: "provider.team.view" },
-    { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile" },
+    { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile", can: "provider.settings.view" },
   ],
   // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team; then Switch account (the
   // identities on this login, added by ProviderShell from the API) and log out
   accountMenu: [
     { label: "Account settings", href: "/account/settings" },
-    { label: "Refunds", href: "/provider/requests" },
-    { label: "Public profile", href: "/provider/profile" },
+    { label: "Refunds", href: "/provider/requests", need: "provider.refunds.decide" },
+    { label: "Public profile", href: "/provider/profile", need: "provider.settings.view" },
     { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
 
@@ -269,7 +269,7 @@ export const pw = {
   roles: [
     { key: "admin", label: "Admin", can: "Everything except removing the account owner" },
     { key: "tutor", label: "Tutor", can: "Their cohorts: students, learning records and results" },
-    { key: "editor", label: "Course editor", can: "Courses, course activities and FAQs" },
+    { key: "course_editor", label: "Course editor", can: "Courses, course activities and FAQs" },
     { key: "support", label: "Customer support", can: "Learners, orders and refund requests" },
     { key: "sales", label: "Sales executive", can: "Orders, new orders and leads" },
     { key: "accounts", label: "Accounts analyst", can: "Orders, earnings and VAT" },

@@ -16,3 +16,16 @@ export function WorkspaceProvider({ value, children }) {
 }
 
 export const useWorkspace = () => useContext(WorkspaceContext);
+
+// Where the provider's own screens link to. In the workspace these are its pages; an admin editing the provider from the admin
+// (components/admin/StaffEdit.jsx) gives the admin's pages instead (`links` on the context value), so a reused editor never
+// leads into the provider's workspace. `cohort` may be null: no page for one date (the row's own menu edits it).
+const WORKSPACE_LINKS = {
+  courses: () => "/provider/courses",
+  course: (id, tab) => `/provider/courses/${id}${tab ? `?tab=${tab}` : ""}`,
+  preview: (id) => `/provider/courses/${id}/preview`,
+  plans: () => "/provider/packages",
+  dates: (courseId) => `/provider/cohorts${courseId ? `?course=${courseId}` : ""}`,
+  cohort: (id) => `/provider/cohorts/${id}`,
+};
+export const useWorkspaceLinks = () => ({ ...WORKSPACE_LINKS, ...(useContext(WorkspaceContext)?.links ?? {}) });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
@@ -13,7 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
 import { isDatedMethod, wayName, waysOf } from "@/lib/courseModes";
-import { Said, DetailSkeleton, formatWhen, Empty, PageLink } from "./adminParts";
+import { Said, DetailSkeleton, formatWhen, Empty, PageLink, getQuery, setQuery } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import AdminCoursePrices from "./AdminCoursePrices";
@@ -29,7 +29,7 @@ const NOTE = new Set(["changes", "rejectChange", "pause"]);
 // with its status, provider and shared page. A change waiting on a live course shows field by field, live against proposed. The
 // decisions sit in the page head: approve or send back a new course, approve or turn down a change, pause a live course or put
 // back one the team paused (each note is shown to the provider and emailed). A refusal (and an email that couldn't be sent) stays
-// in a notice at the top until the next decision. Preview opens the course as visitors will see it, with a waiting change shown
+// in a notice at the top until the next decision. Preview (in the catalogue table's menu) opens the course as visitors will see it, with a waiting change shown
 // as if approved. A shared page lists the providers' courses on it and opens in the course editor to write it. Prices and packages
 // show what learners will pay (AdminCoursePrices), checked before approving: plans have no approval of their own.
 export default function AdminCourse({ id }) {
@@ -47,6 +47,13 @@ export default function AdminCourse({ id }) {
   const [problem, setProblem] = useState(""); // a refused decision, or an email that couldn't be sent: shown until the next one
   const formRef = useRef(null);
   const c = query.data;
+  // Pause course from the catalogue table's menu (?do=pause): the same pop-up as here, with its checks
+  useEffect(() => {
+    if (!c || getQuery("do") !== "pause") return;
+    setQuery("do", null);
+    if (c.kind !== "shared" && c.status === "live" && me?.permissions?.includes("approve") && (!c.ownCourse || c.soleApprover)) setAsking("pause");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c?.id]);
 
   if (!courseId || query.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" title="This course was not found." action={{ href: "/admin/catalogue", label: d.back }} />;
   if (query.isError) return <ErrorState title="We couldn't load this course." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
@@ -54,7 +61,9 @@ export default function AdminCourse({ id }) {
 
   const shared = c.kind === "shared";
   const canDecide = Boolean(me?.permissions?.includes("approve")) && !shared;
-  const canWrite = Boolean(me?.permissions?.includes("catalogue")) && shared;
+  // a shared page with the catalogue switch; a provider's course with the approve switch (its content) or the pricing switch
+  // (its prices), as ReadTraining staff (StaffEdit): the editor then offers only what their switches allow
+  const canWrite = shared ? Boolean(me?.permissions?.includes("catalogue")) : ["approve", "pricing"].some((x) => me?.permissions?.includes(x));
   const providerReady = c.provider?.status === "active";
   const refresh = () => {
     utils.admin.courses.get.invalidate({ courseId });
@@ -147,16 +156,18 @@ export default function AdminCourse({ id }) {
           {canDecide && ownPublished && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownPublishedSole : ap.ownPublished}</p>}
           {canDecide && c.status === "paused" && !c.statusNote && <p className="rt-acc__note">{ap.providerPaused}</p>}
         </div>
+        {/* only the decision waiting on this page (or Edit course when there is none); the rest is in the catalogue table's menu */}
         <div className="rt-adm-hero__actions">
-          {c.status === "live" && <Link href={`/course/${c.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{d.publicPage}</Link>}
-          {!shared && <Link href={`/admin/catalogue/${c.id}/preview`} className="button -md -outline-purple-1 text-purple-1" target="_blank" rel="noopener noreferrer">{c.pendingChanges ? d.previewChange : d.preview}</Link>}
-          {canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className={`button -md ${canDecide && ((c.status === "pending" && providerReady && allowedFor("approve")) || (c.pendingChanges && allowedFor("approveChange"))) ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`}>{d.edit}</Link>}
-          {canDecide && c.status === "live" && allowedFor("pause") && <button type="button" className="button -md -outline-red-3 text-red-3" disabled={busy} onClick={() => act("pause")}>{ap.pause}</button>}
-          {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>}
-          {canDecide && c.status === "pending" && allowedFor("changes") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
-          {canDecide && c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
-          {canDecide && c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
-          {canDecide && c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
+          {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") ? (
+            <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>
+          ) : canDecide && ((c.status === "pending" && (allowedFor("changes") || (providerReady && allowedFor("approve")))) || (c.pendingChanges && (allowedFor("rejectChange") || allowedFor("approveChange")))) ? (
+            <>
+              {c.status === "pending" && allowedFor("changes") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
+              {c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
+              {c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
+              {c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
+            </>
+          ) : canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -md -purple-1 text-white">{shared ? d.edit : "Edit course"}</Link>}
         </div>
       </section>
 

@@ -9,6 +9,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { CourseEndpoints, isStale, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
+import { useWorkspaceLinks } from "@/lib/workspaceContext";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { getSupabase } from "@/lib/supabase/client";
@@ -229,6 +230,7 @@ export function CourseTitle({ courseId, scope = "provider", fallback }) {
 }
 
 export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
+  const links = useWorkspaceLinks();
   const id = /^\d+$/.test(String(courseId)) ? Number(courseId) : 0;
   const ep = useCourseEndpoints(scope, id);
   const query = ep.query;
@@ -269,7 +271,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const { status: providerStatus } = useProviderAccess();
   const notApproved = !ep.admin && (providerStatus === "pending" || providerStatus === "changes_requested");
   const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS;
-  const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: "/provider/courses" };
+  const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: links.courses(course?.id) };
 
   useEffect(() => {
     const t = getQuery("tab");
@@ -507,7 +509,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   // Preview: the real course page for this course (/provider/courses/<id>/preview, or the shared page's under /admin), in a new tab.
   // It shows what is saved, so with unsaved changes it asks first. The tab is opened at the click (a tab opened after the save
   // finishes would be blocked as a pop-up) and pointed at the preview once the save is done.
-  const previewHref = ep.admin ? `/admin/catalogue/${course.id}/preview` : `/provider/courses/${course.id}/preview`;
+  const previewHref = ep.admin ? `/admin/catalogue/${course.id}/preview` : links.preview(course.id);
   const openPreview = () => {
     if (dirty) return setPreview(true);
     window.open(previewHref, "_blank");
@@ -1298,6 +1300,7 @@ function FaqSheet({ open, onClose, faq, onSave }) {
 // with the learning options (a live course turning self-paced on needs one); the dates follow the options as saved.
 // Prices include VAT and change straight away, even on a live course.
 function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
+  const links = useWorkspaceLinks();
   const set = useSet(setDraft);
   const locked = !access.pricing;
   const { organisationId, can } = useProviderAccess();
@@ -1347,7 +1350,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
             {tiered ? (
               <div className="rt-field">
                 <label htmlFor="rt-pws-ce-plan">Price plan</label>
-                <p className="rt-acc__note" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. <Link href="/provider/packages" className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link></p>
+                <p className="rt-acc__note" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. <Link href={links.plans()} className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link></p>
                 <FieldErr id="rt-pws-ce-plan" text={errors.planId} />
                 <FieldSelect id="rt-pws-ce-plan" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={draft.planId} disabled={locked} onChange={set("planId")}
                   options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}` }))}
@@ -1376,7 +1379,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
                 <div className="rt-pws-ce__dates">
                   <p className="rt-pws-ce__datecount">{course.upcomingCohorts ? `${course.upcomingCohorts} upcoming ${course.upcomingCohorts === 1 ? "date" : "dates"}` : course.cohortCount ? "No upcoming dates: learners only see a run before its first day" : "No upcoming dates yet"}</p>
                   {can("provider.cohorts.edit") && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)}>Create cohort</button>}
-                  {course.cohortCount > 0 && <Link href={`/provider/cohorts?course=${course.id}`} className="rt-cd__link">Manage this course&apos;s dates</Link>}
+                  {course.cohortCount > 0 && <Link href={links.dates(course.id)} className="rt-cd__link">Manage this course&apos;s dates</Link>}
                 </div>
               </>
             )}

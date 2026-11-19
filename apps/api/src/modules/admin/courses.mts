@@ -185,6 +185,13 @@ async function requesters(db: typeof Db, course: Course): Promise<{ course: Set<
   }
 }
 
+// A provider's draft isn't shown to our team (not listed, and its page is "not found"): it is their unfinished work until they
+// send it for approval.
+function notProviderDraft<T extends { kind: string; status: string }>(course: T): T {
+  if (course.kind === 'provider' && course.status === 'draft') throw new TRPCError({ code: 'NOT_FOUND' })
+  return course
+}
+
 export const adminCoursesRouter = createTRPCRouter({
   // How many are waiting (the menu badge and the dashboard), and how many courses there are in each state.
   counts: adminProcedure('admin.courses.view').query(async ({ ctx }) => {
@@ -193,7 +200,7 @@ export const adminCoursesRouter = createTRPCRouter({
              (select count(*)::int from public.courses where status = 'pending' and submitted_at < now() - interval '2 days')
                + (select count(*)::int from public.course_revisions where status = 'pending' and submitted_at < now() - interval '2 days') overdue,
              count(*) filter (where status = 'changes' and kind = 'provider')::int changes, count(*) filter (where status = 'live')::int live,
-             count(*) filter (where status = 'paused')::int paused, count(*) filter (where status = 'draft')::int draft, count(*) filter (where kind = 'shared')::int shared
+             count(*) filter (where status = 'paused')::int paused, count(*) filter (where status = 'draft' and kind = 'shared')::int draft, count(*) filter (where kind = 'shared')::int shared
       from public.courses`)
     return r
   }),
@@ -251,7 +258,9 @@ export const adminCoursesRouter = createTRPCRouter({
   list: adminProcedure('admin.courses.view')
     .input(z.object({ kind: z.enum(['all', 'shared', 'provider']).default('all'), status: z.enum(['all', 'draft', 'pending', 'changes', 'live', 'paused']).default('all'), q: z.string().trim().max(80).optional() }))
     .query(async ({ ctx, input }) => {
-      const where = [sql`true`]
+      // a provider's draft is their unfinished work: our team sees it once it is sent for approval (our own draft shared
+      // pages are listed)
+      const where = [sql`not (c.kind = 'provider' and c.status = 'draft')`]
       if (input.kind !== 'all') where.push(sql`c.kind = ${input.kind}`)
       if (input.status !== 'all') where.push(sql`c.status = ${input.status}`)
       if (input.q) {
@@ -277,7 +286,7 @@ export const adminCoursesRouter = createTRPCRouter({
   preview: adminProcedure('admin.courses.view')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => {
-      const course = await findCourse(ctx.db, input.courseId)
+      const course = notProviderDraft(await findCourse(ctx.db, input.courseId))
       const [rev] = course.kind === 'provider' ? await ctx.db.select({ content: courseRevisions.content }).from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending'))) : []
       return loadCoursePage(ctx.db, '', { id: course.id, pending: (rev?.content as Record<string, unknown> | undefined) ?? null })
     }),
@@ -287,7 +296,7 @@ export const adminCoursesRouter = createTRPCRouter({
   get: adminProcedure('admin.courses.view')
     .input(z.object({ courseId: id }))
     .query(async ({ ctx, input }) => {
-      const course = await findCourse(ctx.db, input.courseId)
+      const course = notProviderDraft(await findCourse(ctx.db, input.courseId))
       const detail = await courseDetail(ctx.db, course)
       const [provider] = course.organisationId
         ? await ctx.db.execute<{ id: string; name: string; slug: string; status: string }>(sql`select id, name, slug, status from public.organisations where id = ${course.organisationId}::uuid`)
@@ -297,7 +306,7 @@ export const adminCoursesRouter = createTRPCRouter({
           ? await ctx.db.execute<{ id: number; title: string; status: string; provider: string; upcoming: number }>(sql`
               select c.id, c.title, c.status, o.name provider,
                      (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming
-              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} order by o.name`)
+              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} and c.status <> 'draft' order by o.name`)
           : []
       const asked = await requesters(ctx.db, course)
       const ownCourse = asked.course.has(ctx.user.id)

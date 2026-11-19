@@ -5,6 +5,7 @@ import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useWorkspaceLinks } from "@/lib/workspaceContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
@@ -127,6 +128,7 @@ export function isMeetingLink(v) {
 // ---- the list --------------------------------------------------------------------------------------------------------------
 
 export default function ProviderCohorts() {
+  const links = useWorkspaceLinks();
   const { organisationId, can } = useProviderAccess();
   const [mode, setMode] = useState("all");
   const [course, setCourse] = useState("");
@@ -293,9 +295,9 @@ export default function ProviderCohorts() {
                   <tbody>
                     {onDemand.map((c) => (
                       <tr key={c.id}>
-                        <td data-label="Course"><Link href={`/provider/courses/${c.id}`} className="rt-adm-strong">{c.title}</Link></td>
+                        <td data-label="Course"><Link href={links.course(c.id)} className="rt-adm-strong">{c.title}</Link></td>
                         <td data-label="Course status"><Pill tone={c.status === "live" ? "ok" : c.status === "changes" ? "warn" : "muted"}>{pw.courseStatuses[c.status]}</Pill></td>
-                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: `/provider/courses/${c.id}` }, { label: "Price", href: `/provider/courses/${c.id}?tab=pricing` }]} /></td>
+                        <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: links.course(c.id) }, { label: "Price", href: links.course(c.id, "pricing") }]} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -342,7 +344,7 @@ export default function ProviderCohorts() {
                         <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
                         <td data-label="Actions" className="rt-pws-coh__end">
                           <RowMenu label={`Actions for ${name}`} items={[
-                            { label: "View", href: `/provider/cohorts/${k.id}` },
+                            ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),
                             ...(edit && !cancelled ? [
                               { label: "Edit", onClick: () => setEditing({ open: true, k }) },
                               { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
@@ -364,7 +366,7 @@ export default function ProviderCohorts() {
         </>
       )}
 
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }} onAnother={() => refresh()} />
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", ...(links.cohort(id) ? { href: links.cohort(id), label: "Open" } : {}) }); }} onAnother={() => refresh()} />
       <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); setToast({ message: "Cohort saved" }); }} />
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
       <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
@@ -377,6 +379,7 @@ export default function ProviderCohorts() {
 // and the dates, times and number of sessions. `forCourse` (one course's cohorts, on the course overview, whose title already
 // names the course): the link reads the dates instead, and the last line has only the times and sessions.
 export function CohortCell({ k, forCourse = false }) {
+  const links = useWorkspaceLinks();
   const s0 = k.sessions[0];
   const range = dayRange(k.startsOn, k.endsOn);
   const times = s0 ? `${forCourse ? "From" : " from"} ${s0.from} to ${s0.to}` : "";
@@ -385,7 +388,7 @@ export function CohortCell({ k, forCourse = false }) {
     <div className="rt-pws-coh__cohort">
       <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.startsOn)}</small><b>{k.startsOn.slice(8)}</b></span>
       <div>
-        <Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{forCourse ? range : k.courseTitle}</Link>
+        {links.cohort(k.id) ? <Link href={links.cohort(k.id)} className="rt-adm-strong">{forCourse ? range : k.courseTitle}</Link> : <span className="rt-adm-strong">{forCourse ? range : k.courseTitle}</span>}
         <small>{k.venue ? `${k.venue.name}, ${k.venue.city}` : ONLINE}</small>
         {(!forCourse || times || sessions) && <small>{forCourse ? "" : range}{times}{sessions}</small>}
       </div>
@@ -484,6 +487,7 @@ const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(isDated
 // `suggestCourseId`). New dates are for one of the course's dated learning options: `mode` (the list's Classroom / Live online tab)
 // picks the one the form starts on, a suggested course starts on its first, and one offering both asks which. Dates keep theirs.
 export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
+  const links = useWorkspaceLinks();
   const { organisationId } = useProviderAccess();
   const formRef = useRef(null);
   const [f, setF] = useState(null);
@@ -764,7 +768,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 <label htmlFor="rt-cf-planId">Price plan</label>
                 <p className="rt-acc__note" id="rt-cf-planId-h">
                   Learners choose a package when they book, and the date shows the cheapest package as its price.{" "}
-                  <Link href="/provider/packages" className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link>
+                  <Link href={links.plans()} className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link>
                 </p>
                 {err("planId")}
                 <FieldSelect id="rt-cf-planId" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => set({ planId: value })}

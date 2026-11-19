@@ -128,8 +128,8 @@ export const providersRouter = createTRPCRouter({
         where m.organisation_id = ${o.id}::uuid order by (m.role = 'owner') desc, m.created_at`)
       const courses = await ctx.db.execute<{ id: number; title: string; status: string; method: string | null; methods: string[]; closed_methods: string[]; pending_change: boolean }>(sql`
         select c.id, c.title, c.status, c.method, c.methods, c.closed_methods, exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change
-        from public.courses c where c.organisation_id = ${o.id}::uuid and c.kind = 'provider' order by c.updated_at desc limit 50`)
-      const [{ n: courseCount }] = await ctx.db.execute<{ n: number }>(sql`select count(*)::int n from public.courses where organisation_id = ${o.id}::uuid and kind = 'provider'`)
+        from public.courses c where c.organisation_id = ${o.id}::uuid and c.kind = 'provider' and c.status <> 'draft' order by c.updated_at desc limit 50`)
+      const [{ n: courseCount }] = await ctx.db.execute<{ n: number }>(sql`select count(*)::int n from public.courses where organisation_id = ${o.id}::uuid and kind = 'provider' and status <> 'draft'`)
       return {
         id: o.id,
         name: o.name,
@@ -149,7 +149,7 @@ export const providersRouter = createTRPCRouter({
         ownRequest: o.created_by === ctx.user.id,
         soleApprover: o.created_by === ctx.user.id && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide')),
         team: team.map((m) => ({ userId: m.user_id, name: nameOf(m.first_name, m.last_name, m.email), email: m.email, role: m.role, status: m.status, joinedAt: iso(m.created_at)! })),
-        // up to 50 of its courses (`courseCount`: all of them)
+        // up to 50 of its courses (`courseCount`: all of them), not its drafts (unfinished work, not sent to us yet)
         courses: courses.map((c) => ({ id: c.id, title: c.title, status: c.status, method: c.method, methods: c.methods, closedMethods: c.closed_methods, pendingChange: c.pending_change })),
         courseCount,
       }

@@ -137,6 +137,9 @@ export const organisationMembers = pgTable(
     jobTitle: text('job_title'),
     status: memberStatus('status').notNull().default('active'),
     invitedBy: uuid('invited_by').references(() => authUsers.id, { onDelete: 'set null' }),
+    // a provider's team invite (Team › Invite): when the latest invite email went out. The person joins at /provider/join
+    // (status becomes active); its link works for 24 hours, and Resend sends a new one
+    invitedAt: timestamp('invited_at', { withTimezone: true }),
     // when this person last saw the account's status message (a provider's "Your account is approved"…): a message that shows
     // once is gone after it, until the status changes again (organisations.status_changed_at is later)
     statusSeenAt: timestamp('status_seen_at', { withTimezone: true }),
