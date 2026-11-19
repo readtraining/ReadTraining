@@ -8,6 +8,7 @@ import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import { account } from "@/data/account";
 import { signOut, useAuthUser } from "@/lib/auth/authClient";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
+import NavIcon from "@/components/admin/navIcons";
 
 const initials = (p) => (p.firstName ? `${p.firstName[0]}${p.lastName?.[0] || ""}` : p.email[0]).toUpperCase();
 
@@ -109,7 +110,7 @@ export default function HeaderAuth({ mobile = false, pathname = "" }) {
                 {switcher.entries.filter((e) => !e.current).map((e) => (
                   <li key={e.key}>
                     <Link href={e.href} onClick={(ev) => { ev.preventDefault(); setOpen(false); switcher.go(e); }}>
-                      <i className={`${e.kind === "student" ? "icon-person" : e.kind === "provider" || e.key === "add-provider" ? "icon-online-learning-4" : "icon-friend"} text-14`} aria-hidden="true"></i>{e.label}
+                      {e.kind === "admin" ? <NavIcon name="dashboard" className="rt-menuicon" /> : <i className={`${e.kind === "student" ? "icon-person" : e.kind === "provider" || e.key === "add-provider" ? "icon-online-learning-4" : "icon-friend"} text-14`} aria-hidden="true"></i>}{e.label}
                     </Link>
                   </li>
                 ))}

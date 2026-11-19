@@ -88,13 +88,15 @@ export const providersRouter = createTRPCRouter({
       }
       const fallback = (await defaultCommission(ctx.db)).bps
       const sortBy = { applied: sql`o.created_at`, name: sql`lower(o.name)`, status: sql`o.status::text`, commission: sql`coalesce(o.commission_bps, ${fallback})` }[input.sort]
-      const rows = await ctx.db.execute<{ id: string; name: string; slug: string; status: Status; created_at: string; total: number; status_changed_at: string | null; commission_bps: number | null; owner_id: string | null; email: string | null; first_name: string | null; last_name: string | null; members: number }>(sql`
-        select o.id, o.name, o.slug, o.status, o.created_at, ${total} total, o.status_changed_at, o.commission_bps, ow.user_id owner_id, ow.email, ow.first_name, ow.last_name,
+      const rows = await ctx.db.execute<{ id: string; name: string; slug: string; status: Status; created_at: string; total: number; status_changed_at: string | null; commission_bps: number | null; created_by: string | null; owner_id: string | null; email: string | null; first_name: string | null; last_name: string | null; members: number }>(sql`
+        select o.id, o.name, o.slug, o.status, o.created_at, ${total} total, o.status_changed_at, o.commission_bps, o.created_by, ow.user_id owner_id, ow.email, ow.first_name, ow.last_name,
                (select count(*)::int from public.organisation_members m where m.organisation_id = o.id) members
         from public.organisations o ${OWNER}
         where ${sql.join(where, sql` and `)}
         order by ${orderBy(sortBy, input.dir, sql`o.id`)}
         ${window(input.page, input.limit)}`)
+      // the row menu's decisions follow the provider page's: not on an account the admin opened, unless they are the only one who can
+      const sole = rows.some((r) => r.created_by === ctx.user.id) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide'))
       return {
         total: rows[0]?.total ?? 0,
         defaultBps: fallback,
@@ -109,6 +111,8 @@ export const providersRouter = createTRPCRouter({
           members: r.members,
           commissionBps: r.commission_bps ?? fallback,
           ownCommission: r.commission_bps !== null,
+          ownRequest: r.created_by === ctx.user.id,
+          soleApprover: r.created_by === ctx.user.id && sole,
         })),
       }
     }),

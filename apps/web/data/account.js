@@ -24,6 +24,7 @@ export const account = {
   switchAccount: {
     title: "Switch account",
     current: "Current",
+    admin: { label: "Admin panel", sub: "ReadTraining team", href: "/admin" },
     student: { label: "Student account", sub: "My learning and bookings", href: "/account" },
     provider: { sub: "Provider account", href: "/provider" },
     business: { sub: "Business account", href: "/business" },

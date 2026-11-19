@@ -8,7 +8,7 @@ import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
 import NavIcon from "./navIcons";
-import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useNameTip, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "./workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "./workNav";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -17,7 +17,8 @@ import { actAsAdmin } from "@/lib/adminStore";
 import { AUTH_ROUTES } from "@/lib/routes";
 import { getSupabase } from "@/lib/supabase/client";
 import { SHOW_DEMO } from "@/lib/demo";
-import { AdminPage, Empty } from "./adminParts";
+import { AdminPage, Empty, RowMenu } from "./adminParts";
+import { useSwitchAccount } from "@/lib/useSwitchAccount";
 
 const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -49,7 +50,6 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   useSideShortcut();
   const [tipProps, railTip] = useRailTip(closed);
   const openRail = useRailOpen(); // a click on the folded rail's empty space opens the menu
-  const [nameTipProps, nameTip] = useNameTip(); // the top bar's name, when it is cut short
   // the demo records (notes, history, the staff list) carry the real admin's name
   actAsAdmin(me);
   const data = useAdmin();
@@ -74,6 +74,16 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   // on the live site a page made only of demo records shows an honest empty state instead (lib/demo.js)
   const demoOff = !SHOW_DEMO && page?.demo === true ? A.demoOff[current] : null;
   const demoTag = demo && <span className="rt-demo-tag" title={demo.note}>{demo.label}<span className="rt-sr">: {demo.note}</span></span>;
+  // The account menu (the avatar, as in the provider workspace): who is signed in and their access, View site, Switch account
+  // for an admin who also has a provider account (their own workspace with their own role, their student account), Sign out.
+  const switcher = useSwitchAccount({ kind: "admin" });
+  const provider = switcher.entries.find((e) => e.kind === "provider");
+  const access = me?.isSuper ? A.team.superAdmin : me?.preset === "custom" && me.roles?.length ? me.roles.map((r) => A.presets[r]).join(" + ") : A.presets[me?.preset] ?? "";
+  const accountItems = [
+    { label: A.backToSite.label, href: A.backToSite.href, newTab: true },
+    ...(provider ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current && e.kind !== "add").map((e) => ({ key: e.key, label: e.label, onClick: () => switcher.go(e) }))] : []),
+    { label: A.signOut, onClick: () => !leaving && signOut() },
+  ];
   const signOut = async () => {
     if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     setLeaving(true);
@@ -96,12 +106,11 @@ export default function AdminShell({ current, title, lead, actions = null, detai
           </Link>
           <AdminSearch pages={items} />
           <div className="rt-adm__topside">
-            <Link href={A.backToSite.href} className="rt-adm__site">{A.backToSite.label}<i className="icon-arrow-top-right text-12" aria-hidden="true"></i></Link>
-            <div className="rt-adm__me">
-              <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong {...nameTipProps}>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : me?.preset === "custom" && me.roles?.length ? me.roles.map((r) => A.presets[r]).join(" + ") : A.presets[me?.preset] ?? ""}</span></span>
-            </div>
-            <button type="button" className="rt-adm__out" onClick={signOut} disabled={leaving}>{A.signOut}</button>
+            {me?.name && (
+              <RowMenu label={`${initials(me.name)}, account menu for ${me.name}`} triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(me.name)}</span>}
+                head={<><strong title={me.name}>{me.name}</strong>{switcher.email && <span title={switcher.email}>{switcher.email}</span>}<small title={access}>Admin · {access}</small></>}
+                items={accountItems} />
+            )}
           </div>
         </div>
       </header>
@@ -143,8 +152,9 @@ export default function AdminShell({ current, title, lead, actions = null, detai
           <div className="rt-adm__drawerfoot">
             <div className="rt-adm__me">
               <span className="rt-acc__avatar" aria-hidden="true">{initials(me?.name)}</span>
-              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{me?.isSuper ? A.team.superAdmin : me?.preset === "custom" && me.roles?.length ? me.roles.map((r) => A.presets[r]).join(" + ") : A.presets[me?.preset] ?? ""}</span></span>
+              <span className="rt-adm__mewho"><strong>{me?.name}</strong><span>{access}</span></span>
             </div>
+            {provider && <Link href={provider.href} className="rt-adm__link" onClick={(e) => { e.preventDefault(); switcher.go(provider); }}>{A.providerWorkspace}</Link>}
             <Link href={A.backToSite.href} className="rt-adm__link">{A.backToSite.label}</Link>
             <button type="button" className="rt-adm__link" onClick={signOut} disabled={leaving}>{A.signOut}</button>
           </div>
@@ -152,7 +162,6 @@ export default function AdminShell({ current, title, lead, actions = null, detai
         </nav>
         <SideResizer rootRef={rootRef} sideRef={sideRef} controls="rt-adm-side" />
         {railTip}
-        {nameTip}
 
         <main id="rt-adm-main" className="rt-adm__main" tabIndex={-1}>
           {detail ? (

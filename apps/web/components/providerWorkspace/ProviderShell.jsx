@@ -113,7 +113,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   useEffect(() => {
     if (meName || workspace?.name) actAs({ name: meName, email: meEmail, orgName: workspace?.name });
   }, [meName, meEmail, workspace?.name]);
-  const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
+  const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ key: e.key, label: e.label, onClick: () => switcher.go(e) }))] : [];
   const logOut = async () => {
     if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     await signOut();
