@@ -20,12 +20,18 @@ export type Membership = {
   role: MemberRole
   status: 'invited' | 'active'
   organisationStatus: OrganisationStatus
+  // an admin working in this provider's workspace as ReadTraining staff (an open `staff_access` session, loaded by the API's
+  // actor): not a real member. `pricing`: they hold the admin `pricing` switch; `session`: the staff_access row. See
+  // STAFF_ACTIONS below.
+  staff?: { pricing: boolean; session?: string }
 }
 
 export type AdminAccess = {
   active: boolean
   preset: 'full' | 'support' | 'finance' | 'custom'
   permissions: string[]
+  // with the custom preset: whole roles held together (Support and Finance), on top of `permissions`
+  roles?: string[]
   refundLimitPence: number
   // has a verified authenticator (Supabase MFA): once set up, two-step sign-in is needed for every admin action
   twoStep?: boolean
@@ -112,8 +118,9 @@ const BUSINESS_RULES = {
 // Admin: one role, with switches. Each admin action needs one switch.
 
 export const ADMIN_PERMISSIONS = [
-  'approve', // providers and courses
+  'approve', // providers and courses; also opening a provider's workspace as staff to edit its courses, dates and profile
   'catalogue',
+  'pricing', // providers' prices and price plans (as staff in their workspace)
   'content',
   'orders.view',
   'orders.book', // book for a customer
@@ -127,25 +134,40 @@ export const ADMIN_PERMISSIONS = [
   'coupons',
   'reviews',
   'suspend',
-  'impersonate', // view the site as a user
   'export',
   'admins',
   'platform.settings',
 ] as const
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number]
 
-const SUPPORT_EXCLUDES: AdminPermission[] = ['refunds', 'payouts', 'adjustments', 'finance.settings', 'admins', 'platform.settings']
+// Support: no refund power (the brief), so no wallet credit either, and none of Finance's money work
+const SUPPORT_EXCLUDES: AdminPermission[] = ['refunds', 'wallet', 'payouts', 'adjustments', 'finance.settings', 'admins', 'platform.settings']
 export const ADMIN_PRESETS: Record<'full' | 'support' | 'finance', AdminPermission[]> = {
   full: [...ADMIN_PERMISSIONS],
   support: ADMIN_PERMISSIONS.filter((p) => !SUPPORT_EXCLUDES.includes(p)),
   finance: ['orders.view', 'refunds', 'wallet', 'disputes', 'payouts', 'adjustments', 'finance.settings', 'export'],
 }
 
+// A rule's `permission`: the one switch it needs, any of several (an area several jobs read: the providers list serves approvals,
+// payouts and staff bookings), or none (every admin). Reading an area needs one of the switches that works in it, so an admin
+// sees only the parts of the panel they can work on (the menu, data/admin.js, follows the same switches).
 const ADMIN_RULES = {
   'admin.panel.open': { permission: null },
-  'admin.activity.view': { permission: null }, // the activity log viewer: every admin, read only
-  'admin.students.view': { permission: null }, // the student list and records: every admin, read only
+  'admin.activity.view': { permission: null }, // the activity log viewer: every admin, each seeing their own areas' entries
+  'admin.students.view': { permission: ['suspend', 'orders.book', 'orders.view', 'export'] }, // learners' list and records
+  'admin.providers.view': { permission: ['approve', 'suspend', 'finance.settings', 'catalogue', 'orders.view', 'orders.book', 'payouts'] }, // the providers list and counts
+  'admin.providers.read': { permission: ['approve', 'suspend', 'finance.settings'] }, // one provider's record (its private details)
+  'admin.courses.view': { permission: ['approve', 'catalogue'] }, // courses, their approvals and counts
+  'admin.courses.pick': { permission: ['approve', 'catalogue', 'orders.book', 'coupons', 'content'] }, // the live-course pickers
+  'admin.catalogue.view': { permission: ['catalogue', 'approve', 'coupons'] }, // categories, methods, levels
+  'admin.coupons.view': { permission: 'coupons' },
+  'admin.commission.view': { permission: ['finance.settings', 'orders.view', 'export'] },
+  'admin.emails.view': { permission: 'content' },
+  'admin.content.view': { permission: ['content', 'platform.settings'] }, // site content and its history (the SEO words are a platform setting)
+  'admin.customerReviews.view': { permission: 'content' },
+  'admin.platform.view': { permission: 'platform.settings' },
   'admin.approvals.decide': { permission: 'approve', notOwnRequest: true },
+  'admin.providers.staff': { permission: 'approve' }, // open a provider's workspace as ReadTraining staff
   'admin.catalogue.edit': { permission: 'catalogue' },
   'admin.content.edit': { permission: 'content' },
   'admin.orders.view': { permission: 'orders.view' },
@@ -161,11 +183,10 @@ const ADMIN_RULES = {
   'admin.coupons.manage': { permission: 'coupons' },
   'admin.reviews.moderate': { permission: 'reviews' },
   'admin.accounts.suspend': { permission: 'suspend' },
-  'admin.impersonate': { permission: 'impersonate' },
   'admin.data.export': { permission: 'export' },
   'admin.admins.manage': { permission: 'admins' },
   'admin.platform.settings': { permission: 'platform.settings' },
-} satisfies Record<string, { permission: AdminPermission | null; limited?: boolean; notOwnRequest?: boolean }>
+} satisfies Record<string, { permission: AdminPermission | readonly AdminPermission[] | null; limited?: boolean; notOwnRequest?: boolean }>
 
 export type ProviderAction = keyof typeof PROVIDER_RULES
 export type BusinessAction = keyof typeof BUSINESS_RULES
@@ -176,14 +197,24 @@ export const PROVIDER_ACTIONS = Object.keys(PROVIDER_RULES) as ProviderAction[]
 export const BUSINESS_ACTIONS = Object.keys(BUSINESS_RULES) as BusinessAction[]
 export const ADMIN_ACTIONS = Object.keys(ADMIN_RULES) as AdminAction[]
 
-// Two-step sign-in is required for every Full admin (one who has none yet is sent to set up an authenticator first) and for any
-// admin who has set one up. A test copy may waive the Full rule for a client review (`twoStepWaived`); live never does.
-export const needsTwoStep = (admin: AdminAccess) => (admin.preset === 'full' && !admin.twoStepWaived) || admin.twoStep === true
+// Two-step sign-in for every Full admin (one who has none yet is sent to set up an authenticator first) is switched OFF while the
+// platform is being built and tested (the user's decision, 19 November 2026; the method, authenticator app or text message, is
+// still to be decided): set FULL_ADMINS_NEED_TWO_STEP back to true before launch. An admin who has set up an authenticator is
+// still asked for it (Admin › Team › Reset two-step removes it). A test copy may also waive the Full rule (`twoStepWaived`,
+// ADMIN_TWO_STEP_OPTIONAL); live never does.
+export const FULL_ADMINS_NEED_TWO_STEP = false
+export const needsTwoStep = (admin: AdminAccess) => (FULL_ADMINS_NEED_TWO_STEP && admin.preset === 'full' && !admin.twoStepWaived) || admin.twoStep === true
 
-// The switches an admin actually holds: a preset's list, or the stored list for "custom".
+// The roles one admin can hold together (Admin › Team: Support and Finance ticked for one person); Full is everything already
+export const ADMIN_ROLES = ['support', 'finance'] as const
+export type AdminRole = (typeof ADMIN_ROLES)[number]
+
+// The switches an admin actually holds: a preset's list, or for "custom" every switch of the roles they hold plus the switches
+// chosen one by one.
 export function adminPermissions(admin: AdminAccess | null): AdminPermission[] {
   if (!admin || !admin.active) return []
-  const list = admin.preset === 'custom' ? admin.permissions : ADMIN_PRESETS[admin.preset]
+  const roles = (admin.roles ?? []).filter((r): r is AdminRole => (ADMIN_ROLES as readonly string[]).includes(r))
+  const list = admin.preset === 'custom' ? [...new Set([...roles.flatMap((r) => ADMIN_PRESETS[r]), ...admin.permissions])] : ADMIN_PRESETS[admin.preset]
   return list.filter((p): p is AdminPermission => (ADMIN_PERMISSIONS as readonly string[]).includes(p))
 }
 
@@ -196,6 +227,12 @@ export function grantableAdminPermissions(admin: AdminAccess | null): AdminPermi
 }
 
 const isViewAction = (action: string) => action.endsWith('.view') || action.endsWith('.open')
+
+// What an admin may change in a provider's workspace as ReadTraining staff (besides seeing every page): the courses (their
+// words, pictures, listing, learning options, settings), dates, venues, the provider's profile, terms and FAQs, and prices and
+// price plans with the `pricing` switch. Never the provider's own decisions (sending, pausing or deleting a course, its account,
+// team, VAT, payout account) or money (orders, refunds, payouts: the admin's own pages do those).
+const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.courses.editPage', 'provider.cohorts.edit', 'provider.profile.edit', 'provider.terms.edit', 'provider.faqs.edit'])
 
 // Until our team approves a provider (its application pending, or changes asked), it can only look around and complete its
 // application: its profile and name, its terms, sending the account for review, or closing it. Courses, dates, venues, price
@@ -210,12 +247,13 @@ export function can(actor: Actor | null, action: Action, target: Target = {}): b
   if (!actor) return false
 
   if (action in ADMIN_RULES) {
-    const rule: { permission: AdminPermission | null; limited?: boolean; notOwnRequest?: boolean } = ADMIN_RULES[action as AdminAction]
+    const rule: { permission: AdminPermission | readonly AdminPermission[] | null; limited?: boolean; notOwnRequest?: boolean } = ADMIN_RULES[action as AdminAction]
     const admin = actor.admin
     if (!admin || !admin.active) return false
     // a Full admin, and any admin who has set up an authenticator, must have completed two-step sign-in
     if (needsTwoStep(admin) && actor.aal !== 'aal2') return false
-    if (rule.permission && !adminPermissions(admin).includes(rule.permission)) return false
+    const held = adminPermissions(admin)
+    if (rule.permission && !(Array.isArray(rule.permission) ? rule.permission : [rule.permission]).some((p) => held.includes(p))) return false
     // nobody approves their own request
     if (rule.notOwnRequest && target.createdBy && target.createdBy === actor.userId) return false
     // refunds and credit above the admin's limit need a Full admin. The request gate has no amount yet, so procedures for
@@ -232,6 +270,13 @@ export function can(actor: Actor | null, action: Action, target: Target = {}): b
   const membership = actor.memberships.find((m) => m.organisationId === target.organisationId && m.status === 'active')
   if (!membership || membership.type !== (isProvider ? 'provider' : 'business')) return false
   if (membership.organisationStatus === 'rejected') return false
+  // ReadTraining staff: every page, and the changes above, also on a suspended provider (fixing it is often why it is suspended)
+  if (membership.staff) {
+    if (waitsForApproval(action, membership.organisationStatus)) return false
+    if (isViewAction(action)) return true
+    if (action === 'provider.pricing.edit') return membership.staff.pricing
+    return STAFF_ACTIONS.has(action)
+  }
   // a suspended organisation can still be opened and read, but nothing can be changed
   if (membership.organisationStatus === 'suspended' && !isViewAction(action)) return false
   // not approved yet: only its application (above)
@@ -255,7 +300,8 @@ export function identitiesOf(actor: Actor | null) {
   return [
     { kind: 'student' as const },
     ...actor.memberships
-      .filter((m) => m.status === 'active' && m.organisationStatus !== 'rejected')
+      // a provider an admin is working in as staff isn't one of their identities (no Switch account to it)
+      .filter((m) => m.status === 'active' && m.organisationStatus !== 'rejected' && !m.staff)
       .map((m) => ({ kind: m.type, organisationId: m.organisationId, role: m.role })),
     ...(actor.admin?.active ? [{ kind: 'admin' as const }] : []),
   ]

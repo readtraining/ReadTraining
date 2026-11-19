@@ -107,7 +107,6 @@ export default function AdminCustomerReviews() {
           {canEdit && !blank && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={() => setSheet({})}>{copy.add}</button></HeaderAction>}
         </div>
       </div>
-      {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
 
       {list.error ? (
         <ErrorState onRetry={() => list.refetch()} />

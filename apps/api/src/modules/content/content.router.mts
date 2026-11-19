@@ -144,7 +144,7 @@ export const contentRouter = createTRPCRouter({
   }),
 
   // When each key was last changed and by whom (the admin's content page).
-  changes: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
+  changes: adminProcedure('admin.content.view').query(async ({ ctx }) => {
     const rows = await ctx.db.execute<{ key: string; updated_at: string; first_name: string | null; last_name: string | null; email: string | null }>(sql`
       select c.key, c.updated_at, p.first_name, p.last_name, u.email
       from ${siteContent} c left join auth.users u on u.id = c.updated_by left join public.profiles p on p.id = c.updated_by`)
@@ -152,7 +152,7 @@ export const contentRouter = createTRPCRouter({
   }),
 
   // One key's saved versions, newest first (who and when; the wording itself comes from `version`).
-  history: adminProcedure('admin.panel.open')
+  history: adminProcedure('admin.content.view')
     .input(z.object({ key: keyInput }))
     .query(async ({ ctx, input }) => {
       if (!schemaFor(input.key)) throw unknownKey()
@@ -164,7 +164,7 @@ export const contentRouter = createTRPCRouter({
     }),
 
   // The wording of one saved version (to look at, or bring back into the form).
-  version: adminProcedure('admin.panel.open')
+  version: adminProcedure('admin.content.view')
     .input(z.object({ key: keyInput, id: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       if (!schemaFor(input.key)) throw unknownKey()

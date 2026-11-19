@@ -21,6 +21,8 @@ import { feesRouter, ledgerRouter, payoutsRouter } from './payouts.mjs'
 import { platformRouter } from './platform.mjs'
 import { providersRouter } from './providers.mjs'
 import { adminReviewsRouter } from './reviews.mjs'
+import { sweepIdleStaff } from '../../lib/staffAccess.mjs'
+import { staffRouter } from './staff.mjs'
 import { studentsRouter } from './students.mjs'
 import { teamRouter } from './team.mjs'
 
@@ -35,6 +37,7 @@ export const adminRouter = createTRPCRouter({
   students: studentsRouter,
   closures: closuresRouter,
   providers: providersRouter,
+  staff: staffRouter,
   courses: adminCoursesRouter,
   commission: commissionRouter,
   catalogue: catalogueAdminRouter,
@@ -72,6 +75,8 @@ export const adminRouter = createTRPCRouter({
         await logDenied(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'student', attempted: 'admin.panel.open', targetType: 'page', targetId: input.path, ip: ctx.ip })
       throw new TRPCError({ code: 'FORBIDDEN', message: admin ? 'two_step' : undefined })
     }
+    // staff sessions left unused for two hours close here, and their summaries go to the providers (lib/staffAccess.mts)
+    await sweepIdleStaff(ctx)
     const [me] = await ctx.db.execute<{ first_name: string; last_name: string; email: string }>(sql`
       select p.first_name, p.last_name, u.email
       from auth.users u left join public.profiles p on p.id = u.id
@@ -81,6 +86,8 @@ export const adminRouter = createTRPCRouter({
       name: `${me?.first_name ?? ''} ${me?.last_name ?? ''}`.trim() || (me?.email ?? ''),
       email: me?.email ?? '',
       preset: admin!.preset,
+      // with the custom preset, the whole roles they hold together (Support and Finance): the panel names their access by them
+      roles: admin!.preset === 'custom' ? (admin!.roles ?? []) : [],
       permissions: adminPermissions(admin),
       twoStep: admin!.twoStep === true,
       isSuper: admin!.isSuper === true,

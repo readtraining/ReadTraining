@@ -55,7 +55,6 @@ export default function AdminReviews() {
           <Search value={q} onChange={(v) => { setQ(v); pages.restart(); }} label={copy.search} />
         </div>
       </div>
-      {!canEdit && <p className="rt-acc__notice">{copy.readOnly}</p>}
 
       {list.length ? (
         <ul className="rt-adm-items">

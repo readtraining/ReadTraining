@@ -63,12 +63,12 @@ export async function notify(db: typeof Db, key: string, to: Person | null, vars
 // neither blocked nor deleted (as lib/soleApprover.mts counts the other approvers). The person
 // whose request it is isn't told about their own (an admin who is also a provider's owner, say).
 async function adminsWith(db: typeof Db, permission: string, except: string | null): Promise<Person[]> {
-  const rows = await db.execute<{ user_id: string; email: string; first_name: string | null; preset: 'full' | 'support' | 'finance' | 'custom'; permissions: string[]; refund_limit_pence: number }>(sql`
-    select a.user_id, u.email, p.first_name, a.preset, a.permissions, a.refund_limit_pence
+  const rows = await db.execute<{ user_id: string; email: string; first_name: string | null; preset: 'full' | 'support' | 'finance' | 'custom'; permissions: string[]; roles: string[]; refund_limit_pence: number }>(sql`
+    select a.user_id, u.email, p.first_name, a.preset, a.permissions, a.roles, a.refund_limit_pence
     from public.admin_users a join auth.users u on u.id = a.user_id left join public.profiles p on p.id = a.user_id
     where a.active and not (a.invited_at is not null and a.accepted_at is null) and u.deleted_at is null and (u.banned_until is null or u.banned_until <= now()) and u.email is not null`)
   return rows
-    .filter((r) => r.user_id !== except && (adminPermissions({ active: true, preset: r.preset, permissions: r.permissions, refundLimitPence: r.refund_limit_pence }) as string[]).includes(permission))
+    .filter((r) => r.user_id !== except && (adminPermissions({ active: true, preset: r.preset, permissions: r.permissions, roles: r.roles, refundLimitPence: r.refund_limit_pence }) as string[]).includes(permission))
     .map((r) => ({ email: r.email, firstName: r.first_name ?? '' }))
 }
 

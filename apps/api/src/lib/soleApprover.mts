@@ -15,11 +15,11 @@ export async function soleApprover(db: typeof Db, actor: Actor, userId: string, 
   if (actor.admin?.preset !== 'full' || !can(actor, action)) return false
   // the other admins who could approve: active, invite accepted, and their login neither blocked nor deleted (as the admins
   // emailed about waiting approvals, lib/notify.mts)
-  const others = await db.execute<{ active: boolean; preset: AdminAccess['preset']; permissions: string[]; refund_limit_pence: number }>(sql`
-    select a.active, a.preset, a.permissions, a.refund_limit_pence from public.admin_users a join auth.users u on u.id = a.user_id
+  const others = await db.execute<{ active: boolean; preset: AdminAccess['preset']; permissions: string[]; roles: string[]; refund_limit_pence: number }>(sql`
+    select a.active, a.preset, a.permissions, a.roles, a.refund_limit_pence from public.admin_users a join auth.users u on u.id = a.user_id
     where a.user_id <> ${userId}::uuid and a.active and (a.invited_at is null or a.accepted_at is not null)
       and u.deleted_at is null and (u.banned_until is null or u.banned_until <= now())`)
-  return !others.some((a) => adminPermissions({ active: a.active, preset: a.preset, permissions: a.permissions, refundLimitPence: a.refund_limit_pence }).includes('approve'))
+  return !others.some((a) => adminPermissions({ active: a.active, preset: a.preset, permissions: a.permissions, roles: a.roles, refundLimitPence: a.refund_limit_pence }).includes('approve'))
 }
 
 // Why an admin can't decide on their own request: a Full admin who could a moment ago has lost the exception because another

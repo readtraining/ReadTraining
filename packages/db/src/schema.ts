@@ -162,6 +162,9 @@ export const adminUsers = pgTable(
   active: boolean('active').notNull().default(true),
   preset: adminPreset('preset').notNull().default('custom'),
   permissions: text('permissions').array().notNull().default(sql`'{}'::text[]`),
+  // with the custom preset: whole roles held together (Support and Finance, say), each giving its preset's switches, on top of
+  // the switches in `permissions` (packages/permissions adminPermissions)
+  roles: text('roles').array().notNull().default(sql`'{}'::text[]`),
   refundLimitPence: integer('refund_limit_pence').notNull().default(10000),
   // the super admin: the platform's owner, a Full admin nobody else can change or remove; at most one (index below)
   isSuper: boolean('is_super').notNull().default(false),
@@ -175,7 +178,43 @@ export const adminUsers = pgTable(
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   },
-  (t) => [index('admin_users_created_by_idx').on(t.createdBy), uniqueIndex('admin_users_one_super').on(t.isSuper).where(sql`${t.isSuper}`), apiOnly('admin_users')],
+  (t) => [
+    index('admin_users_created_by_idx').on(t.createdBy),
+    uniqueIndex('admin_users_one_super').on(t.isSuper).where(sql`${t.isSuper}`),
+    check('admin_users_roles', sql`${t.roles} <@ array['support', 'finance']::text[]`),
+    apiOnly('admin_users'),
+  ],
+).enableRLS()
+
+// An admin working in a provider's workspace as ReadTraining staff (Admin › Providers › Open workspace): who, which provider,
+// why, and when it started and ended. While one is open (not ended, and used in the last two hours) the API lets that admin
+// act as one of the provider's admins, within their own switches (packages/permissions, `staff`). One open at a time per admin.
+// `ended_how`: 'ended' (they pressed End), 'idle' (two hours unused), 'replaced' (they opened another provider). `told_at`:
+// when the provider's owner was emailed the summary of the changes made in it.
+export const staffAccess = pgTable(
+  'staff_access',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    organisationId: uuid('organisation_id')
+      .notNull()
+      .references(() => organisations.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).defaultNow().notNull(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    endedHow: text('ended_how'),
+    toldAt: timestamp('told_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('staff_access_admin_idx').on(t.adminUserId),
+    index('staff_access_organisation_idx').on(t.organisationId, t.startedAt.desc()),
+    uniqueIndex('staff_access_one_open').on(t.adminUserId).where(sql`${t.endedAt} is null`),
+    check('staff_access_reason', sql`length(btrim(${t.reason})) between 3 and 300`),
+    apiOnly('staff_access'),
+  ],
 ).enableRLS()
 
 // Platform-wide settings an admin changes (for example the default commission), one row per key. Read and written by the API

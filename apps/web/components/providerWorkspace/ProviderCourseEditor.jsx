@@ -87,6 +87,13 @@ const STATUS_NOTES = {
   live: "Your course is live. Edits to the course page are reviewed before they go live. Prices, dates and settings update straight away.",
   paused: "Your course is paused, so it isn't shown on ReadTraining. Put it back live from Course settings.",
 };
+// ReadTraining staff working in the provider's workspace: their changes apply at once (STAFF_NOTES), whatever the status says
+const STAFF_NOTES = {
+  pending: "This course is waiting for review. Changes you save keep it waiting.",
+  changes: "Our team asked the provider for changes.",
+  live: "This course is live. Changes you save show straight away.",
+  paused: "This course is paused, so it isn't shown on ReadTraining.",
+};
 const SHARED_NOTES = {
   draft: "This shared course page is a draft: nobody outside the team can see it, and providers can't list their courses on it yet. Publish it when it is complete.",
   live: "This shared course page is live. Changes you save show on it straight away. Providers can list their courses on it.",
@@ -333,7 +340,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   if (!course || !draft) return <Loading detail />;
 
   const status = sent ? (ep.admin ? "live" : "pending") : course.status;
-  const canSubmit = access.full && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
+  // sending for approval stays the provider's (ReadTraining staff working here see the status instead)
+  const canSubmit = access.full && !ep.staff && (ep.admin ? status !== "live" : status === "draft" || status === "changes");
   const isLive = course.status === "live" || course.status === "paused";
   // the catalogue places it is filed under that are retired (a retired learning option has its own notice)
   const retiredPlaces = (course.retired || []).filter((e) => !e.endsWith("(learning option)"));
@@ -411,7 +419,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       setDraft((current) => (current === draft ? clean : current));
       setBase(clean);
       refresh();
-      const message = r.pendingChange ? "Saved. Your changes go live once our team has checked them." : r.backToDraft ? "Saved. The course is back with you as a draft: send it for approval again when you're ready." : ep.admin && course.status === "live" ? "Saved. The page shows the changes now." : "Course saved.";
+      const message = ep.staff ? (course.status === "live" ? "Saved. Learners see the change now, and the provider will be told." : "Saved. The provider will be told.") : r.pendingChange ? "Saved. Your changes go live once our team has checked them." : r.backToDraft ? "Saved. The course is back with you as a draft: send it for approval again when you're ready." : ep.admin && course.status === "live" ? "Saved. The page shows the changes now." : "Course saved.";
       setSaid(message);
       setToast({ message });
       return true;
@@ -593,7 +601,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
             <span>{ep.admin ? "Shared course page" : `${pw.models[course.model]?.label} · ${waysLabel(course)}`}{lastSaved ? ` · Last saved ${lastSaved}` : ""}</span>
           </p>
           {ep.admin && <h2 className="rt-acc__h2 rt-adm-hero__name">{course.title}</h2>}
-          {status !== "draft" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
+          {status !== "draft" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : ep.staff ? STAFF_NOTES : STATUS_NOTES)[status]}</p>}
           {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
           {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
           {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
@@ -617,12 +625,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       )}
       {course.pendingChanges && (
         <section className="rt-acc__card rt-pws-ce__pending" aria-label="Changes waiting for approval">
-          <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {SAVED_AT.format(new Date(course.pendingChanges.since))}). You can keep editing: new changes join the same request.</p>
-          {access.page && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setWithdrawing(true)} aria-haspopup="dialog" disabled={ep.discarding}>{ep.discarding ? "Withdrawing…" : "Withdraw changes"}</button>}
+          {ep.staff ? <p className="rt-acc__note"><b>The provider has changes waiting for approval.</b> Approve or turn them down in Admin › Approvals before you change this course.</p> : <p className="rt-acc__note"><b>Your changes are waiting for approval.</b> Learners see the live version until our team has checked them (saved {SAVED_AT.format(new Date(course.pendingChanges.since))}). You can keep editing: new changes join the same request.</p>}
+          {access.page && !ep.staff && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setWithdrawing(true)} aria-haspopup="dialog" disabled={ep.discarding}>{ep.discarding ? "Withdrawing…" : "Withdraw changes"}</button>}
         </section>
       )}
-      {!access.page && <p className="rt-acc__notice">{ep.admin ? "You can see this page but not change it: that needs the catalogue switch." : notApproved ? pw.notApproved.text : "Your role can see this course but not change it."}</p>}
-      {!ep.admin && access.page && !access.full && <p className="rt-acc__notice">Your role can change the page wording and search settings. Ask an owner or admin to change the rest.</p>}
+      {!ep.admin && notApproved && <p className="rt-acc__notice">{pw.notApproved.text}</p>}
 
       <div className="rt-pws-ce">
         <nav className="rt-acc__card rt-pws-ce__nav rt-pill-scroll" aria-labelledby="rt-pws-ce-nav-h" tabIndex={-1} ref={navRef}>

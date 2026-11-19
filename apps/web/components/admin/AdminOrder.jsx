@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Said, SortTh, formatWhen, Empty } from "./adminParts";
+import { DetailSkeleton, Said, SortTh, formatWhen, Empty, PageLink } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { DisputeForm, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -82,10 +82,10 @@ export default function AdminOrder({ reference }) {
         <section className="rt-acc__card" aria-labelledby="rt-ord-who-h">
           <h2 className="rt-acc__h2" id="rt-ord-who-h">{d.course}</h2>
           <dl className="rt-adm-dl">
-            <div><dt>{d.course}</dt><dd>{o.course.found ? <Link href={`/admin/catalogue/${o.course.id}`} className="rt-adm-strong">{o.course.title}</Link> : o.course.title}{o.course.startsOn && <small className="rt-adm-dl__sub">{formatDate(o.course.startsOn)}</small>}</dd></div>
+            <div><dt>{d.course}</dt><dd>{o.course.found ? <PageLink href={`/admin/catalogue/${o.course.id}`} className="rt-adm-strong">{o.course.title}</PageLink> : o.course.title}{o.course.startsOn && <small className="rt-adm-dl__sub">{formatDate(o.course.startsOn)}</small>}</dd></div>
             <div><dt>Places</dt><dd>{d.places.replace("{n}", o.quantity).replace("{price}", formatPrice(o.unit))}</dd></div>
-            <div><dt>Provider</dt><dd><Link href={`/admin/providers/${o.provider.slug}`} className="rt-adm-strong">{o.provider.name}</Link></dd></div>
-            <div><dt>{d.buyer}</dt><dd>{o.buyer.accountId ? <Link href={`/admin/learners/${o.buyer.accountId}`} className="rt-adm-strong">{o.buyer.name}</Link> : o.buyer.name}<small className="rt-adm-dl__sub">{o.buyer.email}{o.buyer.company ? ` · ${o.buyer.company}` : ""}</small></dd></div>
+            <div><dt>Provider</dt><dd><PageLink href={`/admin/providers/${o.provider.slug}`} className="rt-adm-strong">{o.provider.name}</PageLink></dd></div>
+            <div><dt>{d.buyer}</dt><dd>{o.buyer.accountId ? <PageLink href={`/admin/learners/${o.buyer.accountId}`} className="rt-adm-strong">{o.buyer.name}</PageLink> : o.buyer.name}<small className="rt-adm-dl__sub">{o.buyer.email}{o.buyer.company ? ` · ${o.buyer.company}` : ""}</small></dd></div>
             {o.note && <div><dt>Note</dt><dd>{o.note}</dd></div>}
           </dl>
         </section>
@@ -120,7 +120,7 @@ export default function AdminOrder({ reference }) {
               </li>
             ))}
           </ul>
-          <Link href="/admin/disputes" className="fb-textlink rt-adm-mt">{A.disputes.title}<i className="icon-arrow-right text-12" aria-hidden="true"></i></Link>
+          <PageLink href="/admin/disputes" className="fb-textlink rt-adm-mt">{A.disputes.title}<i className="icon-arrow-right text-12" aria-hidden="true"></i></PageLink>
         </section>
       )}
 

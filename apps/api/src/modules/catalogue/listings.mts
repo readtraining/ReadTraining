@@ -333,23 +333,24 @@ export async function locate(q: string) {
 
 export type ProviderCourse = { slug: string; title: string; imageUrl: string | null; duration: string; category: string | null; methods: string[]; cities: string[]; fromPence: number | null; wasPence: number | null }
 
-// A provider's live, public and listed courses (its own pages: a course on a shared page links to the provider's page for it),
-// A to Z, each with its length, how it runs, its venue towns and its lowest upcoming price.
+// A provider's live, public and listed courses, A to Z, each with its length, how it runs, its venue towns and its lowest upcoming
+// price. A course on a live shared page is shown as that page (its address, name and cover: the provider's own words show only
+// where there is no shared page, and its address sends visitors there, app/course/[slug]); the towns and price stay its own.
 export async function loadProviderCourses(db: typeof Db, organisationId: string): Promise<ProviderCourse[]> {
   const { offers, dates } = await offeringsAndDates(db, sql`c.organisation_id = ${organisationId}::uuid and c.is_public and c.listed`)
   if (!offers.length) return []
-  const extra = await db.execute<{ id: number; category: string | null; cover: string | null }>(sql`
-    select c.id, (select slug from public.categories where id = c.category_id) category,
-           (select i.path from public.course_images i where i.course_id = c.id order by i.position limit 1) cover
-    from public.courses c where c.id in ${sql.raw(`(${offers.map((o) => Number(o.id)).filter(Number.isInteger).join(',')})`)}`)
-  return offers
+  const extra = await db.execute<{ id: number; category: string | null; page_slug: string | null; page_title: string | null; cover: string | null }>(sql`
+    select c.id, (select slug from public.categories where id = c.category_id) category, p.slug page_slug, p.title page_title,
+           (select i.path from public.course_images i where i.course_id = coalesce(p.id, c.id) order by i.position limit 1) cover
+    from public.courses c left join public.courses p on p.id = c.parent_id and p.kind = 'shared' and p.status = 'live' where c.id in ${sql.raw(`(${offers.map((o) => Number(o.id)).filter(Number.isInteger).join(',')})`)}`)
+  const cards = offers
     .map((o) => {
       const ds = dates.filter((d) => d.course_id === o.id)
       const prices = [...ds.map((d) => ({ p: d.price_pence, was: d.was_price_pence })), ...(selfPacedOn(o) ? [{ p: o.price_pence as number, was: null }] : [])].sort((a, b) => a.p - b.p)
       const x = extra.find((e) => e.id === o.id)
       return {
-        slug: o.slug,
-        title: o.title,
+        slug: x?.page_slug ?? o.slug,
+        title: x?.page_title ?? o.title,
         imageUrl: mediaUrl(x?.cover),
         duration: ds[0] ? lengthText(runLength(ds[0].sessions)) : o.methods.includes('self-paced') ? 'Self-paced' : '',
         category: x?.category ?? null,
@@ -359,7 +360,15 @@ export async function loadProviderCourses(db: typeof Db, organisationId: string)
         wasPence: prices[0]?.was ?? null,
       }
     })
-    .sort((a, b) => a.title.localeCompare(b.title))
+  // two of its courses on one shared page are one card: every way and town, the lower price
+  const bySlug = new Map<string, ProviderCourse>()
+  for (const c of cards) {
+    const had = bySlug.get(c.slug)
+    if (!had) { bySlug.set(c.slug, c); continue }
+    const cheaper = had.fromPence === null || (c.fromPence !== null && c.fromPence < had.fromPence) ? c : had
+    bySlug.set(c.slug, { ...had, methods: [...new Set([...had.methods, ...c.methods])], cities: [...new Set([...had.cities, ...c.cities])].sort(), fromPence: cheaper.fromPence, wasPence: cheaper.wasPence })
+  }
+  return [...bySlug.values()].sort((a, b) => a.title.localeCompare(b.title))
 }
 
 // Every active provider with at least one live course (public and listed) for the directory, A to Z: where it is, its headline
