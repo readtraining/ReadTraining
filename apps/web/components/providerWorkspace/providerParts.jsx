@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { NavIcon } from "@/components/header/navIcons";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { SHOW_DEMO } from "@/lib/demo";
 import { DetailSkeleton, TableSkeleton } from "@/components/admin/adminParts";
@@ -61,7 +62,35 @@ export function ToolSelect({ id, label, value, onChange, options }) {
 
 // Yes / No (or any two to four choices) as the catalogue's radio style.
 // `quietLegend`: the legend is read by screen readers only, where a heading just above already names the choice.
-export function Choice({ name, legend, value, onChange, options, error, hint, quietLegend = false }) {
+// The ways a course is taught, as cards with their icon (New course and the course editor's main learning option): `options`
+// are { value, label, text, disabled }; one is chosen. The fieldset, legend and any error are the caller's.
+const WAY_ICON = { classroom: "town", "live-online": "screen", "self-paced": "clock" };
+export function WayCards({ name, value, onChange, options, invalid = false }) {
+  return (
+    <div className="rt-pws-ways">
+      {options.map((o) => (
+        <label key={o.value} className={`rt-pws-way${value === o.value ? " is-on" : ""}${o.disabled ? " is-off" : ""}`}>
+          <input type="radio" name={name} value={o.value} checked={value === o.value} disabled={o.disabled} onChange={() => onChange(o.value)} aria-invalid={invalid || undefined} />
+          <span className="rt-pws-way__icon" aria-hidden="true"><NavIcon name={WAY_ICON[o.value]} size={20} /></span>
+          <b>{o.label}</b>
+          {o.text && <small>{o.text}</small>}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+// A button's label that says `working` while busy, the button keeping the width of the longer of the two (so the buttons beside
+// it don't move)
+export function KeepWidth({ label, busy, working }) {
+  return (
+    <span className="rt-keepw" data-w={label.length >= working.length ? label : working}>
+      <span>{busy ? working : label}</span>
+    </span>
+  );
+}
+
+export function Choice({ name, legend, value, onChange, options, error, hint, quietLegend = false, disabled = false }) {
   const errId = `${name}-e`;
   const hintId = `${name}-h`;
   return (
@@ -72,7 +101,7 @@ export function Choice({ name, legend, value, onChange, options, error, hint, qu
       <div className="rt-pws-choice__row">
         {options.map((o) => (
           <label key={o.value} className="rt-fp__opt rt-pws-choice__opt">
-            <input type="radio" className="rt-fp__radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} aria-invalid={error ? true : undefined} />
+            <input type="radio" className="rt-fp__radio" name={name} value={o.value} checked={value === o.value} disabled={disabled} onChange={() => onChange(o.value)} aria-invalid={error ? true : undefined} />
             <span>{o.label}</span>
           </label>
         ))}

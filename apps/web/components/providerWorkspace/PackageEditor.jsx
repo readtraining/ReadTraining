@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Sheet from "@/components/testPrep/runner/Sheet";
+import Sheet, { DISCARD_MESSAGE } from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { errorsFrom } from "@/lib/useMe";
@@ -88,6 +88,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
       if (!t.name.trim()) errs[`t${i}-name`] = "Name the package, like Basic.";
       else if (names.indexOf(names[i]) !== i) errs[`t${i}-name`] = "Give every package a different name.";
       if (!isMoney(t.price)) errs[`t${i}-price`] = "Enter a price, like 249 or 249.99.";
+      else if (Number(t.price) > 100000) errs[`t${i}-price`] = "Enter a price of £100,000 or less.";
       if (t.save.trim() && !isMoney(t.save)) errs[`t${i}-save`] = "Enter a saving, like 30, or leave it empty.";
       t.features.forEach((f, k) => {
         if (!f.title.trim()) errs[`t${i}-f${k}`] = "Write the feature, or remove it.";
@@ -106,6 +107,8 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
           onClose();
         },
         onError: (er) => {
+          // changed somewhere else: the list loads the latest, so opening the plan again edits that
+          if (er?.data?.code === "CONFLICT") utils.provider.plans.list.invalidate();
           const { general: g, fields } = errorsFrom(er);
           setGeneral(g || Object.values(fields)[0] || "We couldn’t save the plan. Please try again.");
           requestAnimationFrame(() => formRef.current?.querySelector(".rt-acc__notice")?.focus());
@@ -119,7 +122,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const used = plan ? [n(plan.used.dates, "upcoming date", "upcoming dates"), n(plan.used.courses, "self-paced course", "self-paced courses")].filter(Boolean).join(" and ") : "";
   const usedMany = plan ? plan.used.dates + plan.used.courses > 1 : false;
   return (
-    <Sheet open={open} onClose={onClose} title={plan ? "Edit price plan" : "Create price plan"} closeLabel="Close" className="rt-pws-pkg__sheet">
+    <Sheet open={open} onClose={onClose} title={plan ? "Edit price plan" : "Create price plan"} closeLabel="Close" className="rt-pws-pkg__sheet" unsaved={dirty} busy={save.isPending}>
       <form className="rt-q__form rt-pws-pkg" onSubmit={submit} noValidate ref={formRef}>
         {general && <p className="rt-acc__notice -warn" tabIndex={-1} role="alert">{general}</p>}
         <p className="rt-acc__note">
@@ -156,7 +159,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                 </Field>
                 <div className="rt-pws-pkg__money">
                   <Field id={`rt-plan-t${i}-price`} label="Price (£)" error={errors[`t${i}-price`]}>
-                    <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value }); clear(`t${i}-price`); }} />
+                    <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value.replace(/£|,/g, "") }); clear(`t${i}-price`); }} />
                   </Field>
                   <Field id={`rt-plan-t${i}-save`} label="Save (£)" error={errors[`t${i}-save`]}>
                     <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" placeholder="Optional" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
@@ -213,7 +216,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
 
         <div className="rt-pws-set__actions">
           <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : plan ? "Save plan" : "Create plan"}</button>
-          <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
+          <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => (!dirty || window.confirm(DISCARD_MESSAGE)) && onClose()} disabled={save.isPending}>Cancel</button>
         </div>
       </form>
     </Sheet>

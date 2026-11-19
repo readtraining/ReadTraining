@@ -266,6 +266,7 @@ export const admin = {
       "course.images_changed": "Changed a course's pictures",
       "course.submitted": "Sent a course for approval",
       "course.review_withdrawn": "Took a course back from approval",
+      "course.edited_in_review": "Changed a course waiting for approval",
       "course.change_submitted": "Sent changes to a published course for approval",
       "plan.created": "Created a price plan",
       "plan.updated": "Changed a price plan",

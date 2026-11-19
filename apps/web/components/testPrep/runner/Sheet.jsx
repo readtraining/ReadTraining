@@ -12,8 +12,10 @@ import FilterScrollPill from "@/components/courses/FilterScrollPill";
 // unsaved: its form has typed changes, so closing it (X, Esc or the backdrop) asks first; a save closes it as usual.
 // noClose: a short confirmation (delete, cancel, remove) shows no ×: its own Cancel button, Esc and the backdrop close it, as
 // Apple's and Material's confirmation dialogs do; forms and longer pop-ups keep the ×.
+// busy: its request is running (saving, deleting): ×, Esc and the backdrop don't close it until the answer comes, so what the
+// answer does (open the new course, reload a list) still happens.
 export const DISCARD_MESSAGE = "Close without saving? What you typed will be lost.";
-export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, unsaved = false, noClose = false, children }) {
+export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, unsaved = false, noClose = false, busy = false, children }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const panelRef = useRef(null);
@@ -25,8 +27,11 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
   onCloseRef.current = onClose;
   const unsavedRef = useRef(unsaved);
   unsavedRef.current = unsaved;
-  // the visitor closing it: with typed changes, only after they confirm
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
+  // the visitor closing it: not while it is working; with typed changes, only after they confirm
   const close = () => {
+    if (busyRef.current) return;
     if (unsavedRef.current && !window.confirm(DISCARD_MESSAGE)) return;
     onCloseRef.current();
   };

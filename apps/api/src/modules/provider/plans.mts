@@ -95,29 +95,32 @@ async function lockPlan(tx: Tx, organisationId: string, planId: string) {
   return p
 }
 
-// how many upcoming dates and courses use each plan (a plan in use is archived, not deleted; editing it moves their prices)
+// how many upcoming dates and courses use each plan (a plan in use is archived, not deleted; editing it moves their prices), and
+// how many dates have ever used it (`ever`: a past date keeps its plan, so a plan any date has used can't be deleted either)
 async function usage(db: Writer, planIds: string[]) {
-  if (!planIds.length) return new Map<string, { dates: number; courses: number }>()
-  const [dates, selfPaced] = await Promise.all([
+  if (!planIds.length) return new Map<string, { dates: number; courses: number; ever: number }>()
+  const [dates, selfPaced, all] = await Promise.all([
     db
       .select({ planId: cohorts.planId, n: sql<number>`count(*)::int` })
       .from(cohorts)
       .where(and(inArray(cohorts.planId, planIds), isNull(cohorts.cancelledAt), sql`${cohorts.endsOn} >= ${ukToday()}::date`))
       .groupBy(cohorts.planId),
     db.select({ planId: courses.planId, n: sql<number>`count(*)::int` }).from(courses).where(inArray(courses.planId, planIds)).groupBy(courses.planId),
+    db.select({ planId: cohorts.planId, n: sql<number>`count(*)::int` }).from(cohorts).where(inArray(cohorts.planId, planIds)).groupBy(cohorts.planId),
   ])
-  const out = new Map(planIds.map((id) => [id, { dates: 0, courses: 0 }]))
+  const out = new Map(planIds.map((id) => [id, { dates: 0, courses: 0, ever: 0 }]))
   for (const d of dates) if (d.planId) out.get(d.planId)!.dates = d.n
   for (const c of selfPaced) if (c.planId) out.get(c.planId)!.courses = c.n
+  for (const d of all) if (d.planId) out.get(d.planId)!.ever = d.n
   return out
 }
 
-const view = (p: typeof pricePlans.$inferSelect, used: { dates: number; courses: number } | undefined) => ({
+const view = (p: typeof pricePlans.$inferSelect, used: { dates: number; courses: number; ever: number } | undefined) => ({
   id: p.id,
   name: p.name,
   tiers: p.tiers as Tier[],
   archived: Boolean(p.archivedAt),
-  used: used ?? { dates: 0, courses: 0 },
+  used: used ?? { dates: 0, courses: 0, ever: 0 },
   version: p.updatedAt.toISOString(),
 })
 
@@ -192,7 +195,7 @@ export const providerPlansRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) =>
       ctx.db.transaction(async (tx) => {
         const p = await lockPlan(tx, input.organisationId, input.planId)
-        if (Boolean(p.archivedAt) === input.archived) throw new TRPCError({ code: 'CONFLICT', message: input.archived ? 'This plan is already archived.' : 'This plan is already in use.' })
+        if (Boolean(p.archivedAt) === input.archived) throw new TRPCError({ code: 'CONFLICT', message: input.archived ? 'This plan is already archived.' : 'This plan can already be chosen.' })
         await tx.update(pricePlans).set({ archivedAt: input.archived ? new Date() : null, updatedAt: new Date() }).where(eq(pricePlans.id, p.id))
         await log(tx, ctx, input.organisationId, input.archived ? 'plan.archived' : 'plan.restored', p.id)
         return { ok: true }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Sheet, { DISCARD_MESSAGE } from "@/components/testPrep/runner/Sheet";
@@ -11,12 +12,11 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { Loading } from "./providerParts";
+import { KeepWidth, Loading, WayCards } from "./providerParts";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { categoryName, categoryOptions, getTaxonomy, methodName, pagesForSubject, subcategoryName, subcategoryOptions, topicName, topicOptions } from "@/lib/taxonomy";
 import { LEARNING_OPTIONS } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
-import { NavIcon } from "@/components/header/navIcons";
 
 // New course: one pop-up on one screen, over whatever workspace page it was opened from (ProviderShell holds it). What the
 // course is (working title; category, sub-category and topic, the topic optional) and how it is taught (its primary learning
@@ -81,7 +81,6 @@ const sharedPageFor = (pages, topic) => (topic && pages.find((p) => p.topic === 
 // how each learning option reads on its card: one short line, so three fit side by side
 const WAY_TEXT = { classroom: "At a venue, on your dates", "live-online": "By video, on your dates", "self-paced": "Any time, at their own pace" };
 // and its icon from the site's own line icons (the header's set): a building, a screen, a clock
-const WAY_ICON = { classroom: "town", "live-online": "screen", "self-paced": "clock" };
 
 const BLANK = { title: "", method: "classroom", category: "", subcategory: "", topic: "", skillSaver: false };
 
@@ -100,8 +99,9 @@ export function NewCourseSheet({ open, onClose }) {
     if (dirty && !window.confirm(DISCARD_MESSAGE)) return;
     onClose();
   };
+  const creating = useIsMutating() > 0; // the draft is being created: it opens in the editor once it is
   return (
-    <Sheet open={open} onClose={onClose} title="New course" closeLabel="Close" unsaved={dirty} className="rt-pws-nc__sheet">
+    <Sheet open={open} onClose={onClose} title="New course" closeLabel="Close" unsaved={dirty} busy={creating} className="rt-pws-nc__sheet">
       <NewCourseForm key={round} onCancel={cancel} onDirty={setDirty} />
     </Sheet>
   );
@@ -187,6 +187,7 @@ function NewCourseForm({ onCancel, onDirty }) {
 
   // not approved yet: courses come after our team's approval (the API refuses them too); otherwise it's the person's role
   if (status === "pending" || status === "changes_requested") return <EmptyState title={pw.notApproved.title} text={pw.notApproved.text} action={pw.notApproved.action} />;
+  if (status === "suspended") return <EmptyState title={pw.accountStatus.suspended.title} text={pw.accountStatus.suspended.text} action={pw.accountStatus.suspended.action} />;
   if (!can("provider.courses.edit")) return <ErrorState title="You can't create courses." text="Ask the owner or an admin of your provider account to give you the Course editor role." />;
   // the categories come from the catalogue list; without it a course can't be filed
   if (!categoryOptions().length) return taxonomy?.loading ? <Loading rows={2} /> : <ErrorState title="We couldn't load the course categories." text="Check your connection, then try again." onRetry={taxonomy?.retry} />;
@@ -213,7 +214,11 @@ function NewCourseForm({ onCancel, onDirty }) {
           {suggestion && (
             <p className="rt-pws-nc__suggest">
               <span>Looks like <b>{[categoryName(suggestion.category), subcategoryName(suggestion.category, suggestion.subcategory), suggestion.topic && topicName(suggestion.category, suggestion.subcategory, suggestion.topic)].filter(Boolean).join(" › ")}</b></span>
-              <button type="button" className="rt-pws-set__textbtn" onClick={() => set({ category: suggestion.category, subcategory: suggestion.subcategory, topic: suggestion.topic })}>Use this</button>
+              <button type="button" className="rt-pws-set__textbtn" onClick={() => {
+                set({ category: suggestion.category, subcategory: suggestion.subcategory, topic: suggestion.topic });
+                // the button goes once the subject is filled in: the keyboard moves on to the topic (or the sub-category)
+                requestAnimationFrame(() => (document.getElementById(suggestion.topic ? "rt-pws-nc-topic" : "rt-pws-nc-subcategory") || document.getElementById("rt-pws-nc-category"))?.focus());
+              }}>Use this</button>
             </p>
           )}
         </div>
@@ -241,19 +246,11 @@ function NewCourseForm({ onCancel, onDirty }) {
         <fieldset className="rt-field rt-pws-nc__ways" aria-describedby="rt-pws-nc-ways-h">
           <legend>How will you teach it?</legend>
           <p className="rt-pws-nc__hint" id="rt-pws-nc-ways-h">Pick the main way. You can add more ways later in the course editor.</p>
-          <div className="rt-pws-nc__wayrow">
-            {LEARNING_OPTIONS.filter((m) => methodName(m)).map((m) => (
-              <label key={m} className={`rt-pws-nc__way${f.method === m ? " is-on" : ""}`}>
-                <input type="radio" name="rt-pws-nc-method" value={m} checked={f.method === m} onChange={() => set({ method: m })} />
-                <span className="rt-pws-nc__wayicon" aria-hidden="true"><NavIcon name={WAY_ICON[m]} size={20} /></span>
-                <b>{methodName(m)}</b>
-                <small>{WAY_TEXT[m]}</small>
-              </label>
-            ))}
-          </div>
+          <WayCards name="rt-pws-nc-method" value={f.method} onChange={(m) => set({ method: m })}
+            options={LEARNING_OPTIONS.filter((m) => methodName(m)).map((m) => ({ value: m, label: methodName(m), text: WAY_TEXT[m] }))} />
         </fieldset>
         <div className="rt-pws-nc__check">
-          <input id="rt-pws-nc-saver" name="skillSaver" type="checkbox" checked={f.skillSaver} onChange={(e) => set({ skillSaver: e.target.checked })} aria-describedby="rt-pws-nc-saver-h" />
+          <input id="rt-pws-nc-saver" name="skillSaver" type="checkbox" className="rt-fp__check" checked={f.skillSaver} onChange={(e) => set({ skillSaver: e.target.checked })} aria-describedby="rt-pws-nc-saver-h" />
           <div>
             <label htmlFor="rt-pws-nc-saver">Include in Skill Saver</label>
             <p id="rt-pws-nc-saver-h">Learners get money off their next course, and yours shows the badge. <Link href="/skill-saver" className="rt-cd__link" target="_blank" rel="noopener noreferrer">Learn more</Link></p>
@@ -262,7 +259,7 @@ function NewCourseForm({ onCancel, onDirty }) {
       </div>
       {failed && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{failed}</p>}
       <div className="rt-pws-set__actions">
-        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}>{create.isSuccess ? "Opening the editor…" : create.isPending ? "Saving…" : "Create draft"}</button>
+        <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={busy || undefined}><KeepWidth label="Create draft" busy={busy} working={create.isSuccess ? "Opening the editor…" : "Saving…"} /></button>
         <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onCancel} disabled={busy}>Cancel</button>
       </div>
     </form>
