@@ -18,6 +18,7 @@ import { useWorkspace } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { SHOW_DEMO } from "@/lib/demo";
 import { api } from "@/lib/trpc/react";
+import { EmptyState } from "@/components/states/States";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 import { NewCourseProvider, NewCourseSheet } from "./NewCourse";
 
@@ -34,29 +35,8 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // `current` marks the section; the page inside it is matched on the address. `demo` marks a page whose records are still made up
 // (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's. It is true (the
 // general note), "partly", or the page's own note (data/providerWorkspace.js pw.demo), which the tag then explains.
-// An admin working in this workspace as ReadTraining staff (Admin › Providers › Open workspace): one slim line saying whose
-// workspace it is, and End (API admin.staff.end, which emails the provider a summary of the changes), back to the provider's
-// admin page. What they may change shows by the buttons they get, as for any member.
-function StaffBanner() {
-  const w = useWorkspace();
-  const end = api.admin.staff.end.useMutation();
-  const [failed, setFailed] = useState(false);
-  const leave = async () => {
-    setFailed(false);
-    try {
-      const res = await end.mutateAsync();
-      window.location.assign(res.providerSlug ? `/admin/providers/${res.providerSlug}` : "/admin/providers");
-    } catch {
-      setFailed(true);
-    }
-  };
-  return (
-    <div className="rt-pws-staff" role="region" aria-label="ReadTraining staff">
-      <span><strong>{w?.name}</strong> · ReadTraining staff</span>
-      <button type="button" className="rt-pws-staff__end" onClick={leave} disabled={end.isPending}>{failed ? "Try again" : "End"}</button>
-    </div>
-  );
-}
+// the pages outside the menu and what opens them (the menu's pages carry their own `can`)
+const PAGE_NEEDS = { requests: "provider.refunds.decide" };
 
 export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = false, children }) {
   const rootRef = useRef(null);
@@ -72,7 +52,10 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const openRail = useRailOpen(); // a click on the folded rail's empty space opens the menu
   const [nameTipProps, nameTip] = useNameTip(); // the account card's name, when it is cut short
   const access = useProviderAccess();
-  const nav = pw.nav.filter((x) => !x.can || access.can(x.can));
+  // each role sees only its pages (`can` on each menu item and page, data/providerWorkspace.js), and a page opened by its address
+  // without the permission says so instead of showing it
+  const nav = pw.nav.filter((x) => access.sees(x.can)).map((x) => (x.items ? { ...x, items: x.items.filter((it) => access.sees(it.can)) } : x));
+  const barred = !access.sees(PAGE_NEEDS[current] ?? pw.nav.find((x) => x.key === current)?.can);
   const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
   const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);
@@ -130,8 +113,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   useEffect(() => {
     if (meName || workspace?.name) actAs({ name: meName, email: meEmail, orgName: workspace?.name });
   }, [meName, meEmail, workspace?.name]);
-  // switching to another account isn't part of a staff visit (End takes the admin back)
-  const switchItems = switcher.ready && !access.staff ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
+  const switchItems = switcher.ready ? [{ group: switcher.title }, ...switcher.entries.filter((e) => !e.current).map((e) => ({ label: e.label, onClick: () => switcher.go(e) }))] : [];
   const logOut = async () => {
     if (!confirmLeave()) return; // unsaved edits on the page: ask first, as a link would
     await signOut();
@@ -160,7 +142,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             {meName && (
               <RowMenu label={meName ? `${initials(meName)}, account menu for ${meName}` : "Account menu"} triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
                 head={<><strong title={meName}>{meName}</strong><span title={meEmail}>{meEmail}</span><small title={org || undefined}>{org ? `Provider · ${org}` : "Provider account"}</small></>}
-                items={[...pw.accountMenu.filter((x) => !x.need || access.can(x.need)).map(({ need, ...x }) => x), ...switchItems, { label: "Log out", onClick: logOut }]} />
+                items={[...pw.accountMenu.filter((x) => access.sees(x.need)).map(({ need, ...x }) => x), ...switchItems, { label: "Log out", onClick: logOut }]} />
             )}
           </div>
         </div>
@@ -243,7 +225,6 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
         {nameTip}
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
-          {access.staff && <StaffBanner />}
           <ProviderAccountStatus />
           {backTo && <Link href={backTo.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backTo.label}</Link>}
           <div className="rt-adm__head">
@@ -252,11 +233,11 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
                 <h1 className="rt-adm__h1">{title}</h1>
                 {demoTag}
               </div>
-              {lead && <p className="rt-adm__lead">{lead}</p>}
+              {lead && !barred && <p className="rt-adm__lead">{lead}</p>}
             </div>
-            <div className="rt-adm__actions" id="rt-adm-actions">{actions}</div>
+            <div className="rt-adm__actions" id="rt-adm-actions">{barred ? null : actions}</div>
           </div>
-          {children}
+          {barred ? <EmptyState title="You don't have access to this page" action={{ label: "Go to the dashboard", href: "/provider" }} /> : children}
         </main>
       </div>
     </div>

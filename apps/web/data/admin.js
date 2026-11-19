@@ -35,7 +35,7 @@ export const admin = {
       { key: "reports", label: "Reports", href: "/admin/reports", demo: true, permission: "export" },
     ] },
     { group: "Marketplace", items: [
-      { key: "providers", label: "Providers", href: "/admin/providers", badge: "applications", permission: ["approve", "suspend", "finance.settings"] },
+      { key: "providers", label: "Providers", href: "/admin/providers", badge: "applications", permission: ["approve", "suspend", "finance.settings", "pricing"] },
       { key: "catalogue", label: "Catalogue", href: "/admin/catalogue", demo: "partly", permission: ["approve", "catalogue"] },
       { key: "sessions", label: "Sessions and venues", href: "/admin/sessions", demo: true, permission: "approve" },
     ] },
@@ -434,15 +434,9 @@ export const admin = {
       back: "All providers",
       notFound: "This provider was not found.",
       publicProfile: "Public profile",
-      // working in the provider's workspace as ReadTraining staff (AdminProvider's StaffSheet; the banner is ProviderShell's)
-      staff: {
-        open: "Open workspace",
-        title: "Open their workspace",
-        label: "Reason",
-        hint: "The provider sees this.",
-        error: "Say why you are opening this workspace.",
-        button: "Open workspace",
-      },
+      // editing the provider's work from the admin (StaffEdit, by the admin's switches): the Edit menu's pages
+      // each page for the switches that work in it: content (approve), prices (pricing)
+      edit: { label: "Edit", items: [{ label: "Profile and venues", path: "profile", needs: ["approve"] }, { label: "Price plans", path: "plans", needs: ["pricing", "approve"] }, { label: "Dates", path: "dates", needs: ["approve"] }] },
       actions: { approve: "Approve", changes: "Ask for changes", reject: "Don't approve", suspend: "Suspend", reinstate: "Reinstate" },
       // the pop-up for each decision: what happens, and the message the provider sees (when one is needed)
       sheets: {

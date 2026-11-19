@@ -214,18 +214,18 @@ export const TEMPLATES: Record<string, Template> = {
   'staff-changes': {
     name: 'Changes made by our team',
     audience: 'Provider',
-    trigger: 'When a ReadTraining admin finishes working in the provider’s workspace and changed something there (one email per visit).',
+    trigger: 'When a ReadTraining admin finishes editing the provider’s courses, dates, prices or details from the admin (one email per visit).',
     status: 'live',
-    placeholders: ['firstName', 'provider', 'reason', 'changes'],
+    placeholders: ['firstName', 'provider', 'changes'],
     link: (s) => `${s}/provider`,
     footer: 'You are receiving this because you manage {provider} on ReadTraining.',
     words: {
       subject: 'Our team made changes to {provider} on ReadTraining',
       heading: 'Our team made some changes',
-      body: 'Hi {firstName},\n\nA member of the ReadTraining team worked in your workspace and made these changes:\n\n{changes}\n\nWhy: {reason}\n\nYou can see everything in your workspace. If anything looks wrong, reply to this email and we’ll sort it out.',
+      body: 'Hi {firstName},\n\nA member of the ReadTraining team made these changes to your courses and details:\n\n{changes}\n\nYou can see everything in your workspace. If anything looks wrong, reply to this email and we’ll sort it out.',
       button: 'Open your workspace',
     },
-    sample: { ...PROVIDER, reason: 'Corrected the exam details at your request', changes: 'Updated the course “Emergency First Aid at Work”\nChanged the price plan “Standard packages”' },
+    sample: { ...PROVIDER, changes: 'Updated the course “Emergency First Aid at Work”\nChanged the price plan “Standard packages”' },
   },
   'course-change-approved': {
     name: 'Course change approved',
@@ -437,6 +437,23 @@ export const TEMPLATES: Record<string, Template> = {
       button: 'View the statement',
     },
     sample: { ...PROVIDER, total: '£4,812.40', reference: 'PO-2026-11' },
+  },
+  'provider-team-invite': {
+    name: 'Provider team invite',
+    audience: 'Provider',
+    trigger: 'When a provider’s owner or admin invites someone to their team (Team › Invite, or Resend invite).',
+    status: 'live',
+    placeholders: ['firstName', 'invitedBy', 'provider', 'role', 'hours'],
+    // the personal, single-use link to join (made when the email is sent)
+    link: (s, v) => v.link || `${s}/provider/join`,
+    footer: 'You are receiving this because {invitedBy} invited you to {provider} on ReadTraining.',
+    words: {
+      subject: '{invitedBy} invited you to {provider} on ReadTraining',
+      heading: 'Join {provider} on ReadTraining',
+      body: 'Hi {firstName},\n\n{invitedBy} has invited you to join {provider} on ReadTraining as {role}.\n\nThe link works once and expires in {hours} hours. If it has expired, ask {invitedBy} to send you a new invite.\n\nIf you weren’t expecting this email, you can ignore it.',
+      button: 'Join {provider}',
+    },
+    sample: { firstName: '', invitedBy: 'Alex Morgan', provider: 'Harbour Training Group', role: 'Tutor', hours: '24' },
   },
   'admin-invite': {
     name: 'Admin invite',

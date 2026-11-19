@@ -178,7 +178,8 @@ export const organisationsRouter = createTRPCRouter({
   openWorkspace: protectedProcedure
     .input(z.object({ type: z.enum(['provider', 'business']), organisationId: z.string().uuid().optional(), path: z.string().max(300) }))
     .query(async ({ ctx, input }) => {
-      const mine = ctx.actor.memberships.filter((m) => m.type === input.type && m.status === 'active' && m.organisationStatus !== 'rejected')
+      // an admin editing a provider as ReadTraining staff does it from the admin's own pages, never in the provider's workspace
+      const mine = ctx.actor.memberships.filter((m) => m.type === input.type && m.status === 'active' && m.organisationStatus !== 'rejected' && !m.staff)
       const chosen = (input.organisationId && mine.find((m) => m.organisationId === input.organisationId)) || mine[0]
       const action = input.type === 'provider' ? 'provider.workspace.open' : 'business.workspace.open'
       if (!chosen || !can(ctx.actor, action, { organisationId: chosen.organisationId })) {
@@ -213,9 +214,7 @@ export const organisationsRouter = createTRPCRouter({
         .from(organisationMembers)
         .where(and(eq(organisationMembers.organisationId, org.id), eq(organisationMembers.userId, ctx.user.id)))
       const statusSeen = Boolean(member?.seenAt && (!org.statusChangedAt || new Date(member.seenAt) >= new Date(org.statusChangedAt)))
-      // an admin working here as ReadTraining staff (the workspace's slim staff line, and their buttons: prices with `pricing`)
-      const staff = chosen.staff ? { pricing: chosen.staff.pricing } : null
-      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, statusSeen, welcome, type: input.type, role: chosen.role, userId: ctx.user.id, staff }
+      return { ...org, statusNote, statusChangedAt: org.statusChangedAt ? new Date(org.statusChangedAt).toISOString() : null, statusSeen, welcome, type: input.type, role: chosen.role, userId: ctx.user.id }
     }),
 
   // The person has seen the account's status message (shown once on the provider dashboard): it won't show to them again until

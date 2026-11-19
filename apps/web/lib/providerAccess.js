@@ -8,7 +8,7 @@ import { useWorkspace } from "@/lib/workspaceContext";
 // action again.
 export function useProviderAccess() {
   const w = useWorkspace();
-  const actor = w ? { userId: w.userId || "", aal: "aal1", admin: null, memberships: [{ organisationId: w.id, type: "provider", role: w.role, status: "active", organisationStatus: w.status, ...(w.staff ? { staff: { pricing: Boolean(w.staff.pricing) } } : {}) }] } : null;
+  const actor = w ? { userId: w.userId || "", aal: "aal1", admin: null, memberships: [{ organisationId: w.id, type: "provider", role: w.role, status: "active", organisationStatus: w.status, ...(w.staff ? { staff: { pricing: Boolean(w.staff.pricing), content: w.staff.content !== false } } : {}) }] } : null;
   return {
     organisationId: w?.id || "",
     userId: w?.userId || "",
@@ -17,5 +17,7 @@ export function useProviderAccess() {
     // an admin working here as ReadTraining staff: { pricing }, or null
     staff: w?.staff || null,
     can: (action, target = {}) => Boolean(actor && can(actor, action, { organisationId: w.id, ...target })),
+    // whether a page or menu item is theirs: the permission, or its "own only" form (a tutor sees their own dates and learners)
+    sees: (action) => !action || Boolean(actor && (can(actor, action, { organisationId: w.id }) || can(actor, action, { organisationId: w.id, tutorUserId: w.userId }))),
   };
 }

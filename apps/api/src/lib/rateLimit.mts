@@ -15,6 +15,7 @@ export const LIMITS = {
   providerApply: { requests: 5, window: '1 h', message: 'Too many applications in a short time. Please wait and try again later.' },
   businessCreate: { requests: 5, window: '1 h', message: 'Too many business accounts in a short time. Please wait and try again later.' },
   adminInvite: { requests: 20, window: '1 h', message: 'Too many invites in a short time. Please wait and try again later.' },
+  teamInvite: { requests: 30, window: '1 h', message: 'Too many invites in a short time. Please wait and try again later.' },
   uploadHour: { requests: 30, window: '1 h', message: 'Too many uploads in a short time. Please wait a little and try again.' },
   uploadDay: { requests: 100, window: '1 d', message: 'You have reached today’s upload limit. Please try again tomorrow.' },
   closure: { requests: 5, window: '1 h', message: 'Too many requests in a short time. Please wait and try again later.' },

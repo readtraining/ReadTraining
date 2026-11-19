@@ -5,11 +5,14 @@ import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { pw } from "@/data/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { addQuestion, answerQuestion, changeRole, deleteQuestion, inviteMember, removeMember } from "@/lib/providerWorkspace";
-import { Pill, Tabs, ToolSelect, formatDay } from "./providerParts";
+import { addQuestion, answerQuestion, deleteQuestion } from "@/lib/providerWorkspace";
+import { useProviderAccess } from "@/lib/providerAccess";
+import { api } from "@/lib/trpc/react";
+import { errorsFrom } from "@/lib/useMe";
+import { Loading, Pill, RowMenu, Tabs, ToolSelect, formatDay } from "./providerParts";
 import { Confirm, Field, aria, isEmail, useParam } from "./settingsForm";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { EmptyState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
 import TextArea from "@/components/forms/TextArea";
 
 // Settings › QA (learners' questions about a course, answered here and shown on the course page, plus questions the provider
@@ -149,106 +152,138 @@ export function QaTab({ data, say }) {
 
 // ---- team ------------------------------------------------------------------------------------------------------------------
 
-export function TeamTab({ data, say }) {
+// Team (owners and admins): everyone with their role and whether they've joined; invite by email with a role (they get an email
+// with a link to /provider/join), change a role, send an invite again, remove someone or cancel their invite. The owner can't be
+// changed or removed and nobody changes their own role (the API checks the same rules, provider.team).
+export function TeamTab({ say }) {
+  const { organisationId, can } = useProviderAccess();
+  const utils = api.useUtils();
+  const manage = can("provider.team.manage");
+  const list = api.provider.team.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
+  const setRole = api.provider.team.setRole.useMutation();
+  const resend = api.provider.team.resend.useMutation();
+  const remove = api.provider.team.remove.useMutation();
   const [show, setShow] = useParam("show", "all");
-  const [adding, setAdding] = useState(false);
-  const [f, setF] = useState({ email: "", role: "" });
-  const [errors, setErrors] = useState({});
+  const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(null);
-  const formRef = useRef(null);
+  const refresh = () => utils.provider.team.list.invalidate({ organisationId });
+  const fail = (e) => say(errorsFrom(e).general || "That didn't work. Try again.");
 
-  const list = data.team.filter((t) => show === "all" || t.status === show).sort((a, b) => Number(Boolean(b.owner)) - Number(Boolean(a.owner)));
+  if (list.isError) return <ErrorState title="We couldn't load your team." text="Check your connection, then try again." onRetry={() => list.refetch()} />;
+  if (!list.data) return <Loading rows={3} />;
+  const { me, members } = list.data;
+  const shown = members.filter((m) => show === "all" || (show === "invited" ? m.status === "invited" : m.status === "active"));
   const tabs = [
-    { key: "all", label: "Everyone", count: data.team.length },
-    { key: "active", label: "Active", count: data.team.filter((t) => t.status === "active").length },
-    { key: "pending", label: "Invited", count: data.team.filter((t) => t.status === "pending").length },
+    { key: "all", label: "Everyone", count: members.length },
+    { key: "active", label: "Joined", count: members.filter((m) => m.status === "active").length },
+    { key: "invited", label: "Invited", count: members.filter((m) => m.status === "invited").length },
   ];
-  const cohortsOf = (id) => data.cohorts.filter((k) => k.tutorId === id && k.status === "upcoming").length;
-
-  const openAdd = () => {
-    setF({ email: "", role: "" });
-    setErrors({});
-    setAdding(true);
-  };
-  const submit = (e) => {
-    e.preventDefault();
-    const errs = {};
-    if (!isEmail(f.email)) errs.email = "Enter their work email address, like name@yourcompany.co.uk.";
-    if (!f.role) errs.role = "Choose what they can do.";
-    if (!Object.keys(errs).length && inviteMember(f.email.trim(), f.role) === false) errs.email = "This person is already in your team.";
-    setErrors(errs);
-    if (Object.keys(errs).length) return focusFirstError(formRef.current);
-    setAdding(false);
-    say(`Invite sent to ${f.email.trim()}`);
-  };
+  const who = (m) => m.name || m.email;
+  const changeRole = (m, role) =>
+    setRole.mutate({ organisationId, userId: m.userId, role }, { onSuccess: () => { refresh(); say(`${who(m)} is now ${ROLE[role]?.label}`); }, onError: fail });
+  const resendTo = (m) =>
+    resend.mutate({ organisationId, userId: m.userId }, { onSuccess: (r) => say(r.outbox ? `Invite saved to the test outbox for ${m.email}` : r.emailed ? `Invite sent again to ${m.email}` : `The email to ${m.email} couldn't be sent. Try again.`), onError: fail });
 
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
         <Tabs tabs={tabs} value={show} onChange={setShow} label="Show team members" />
-        <button type="button" className="button -md -purple-1 text-white" onClick={openAdd}>Add team member</button>
+        {manage && <button type="button" className="button -md -purple-1 text-white" onClick={() => setInviting(true)}>Invite</button>}
       </div>
-      <p className="rt-acc__note" aria-live="polite">{`${list.length} linked team ${list.length === 1 ? "member" : "members"} found.`}</p>
-      {list.length === 0 ? (
-        <EmptyState title={show === "pending" ? "No invites waiting." : "No one here yet."} />
+      {shown.length === 0 ? (
+        <EmptyState title={show === "invited" ? "No invites waiting." : "No one here yet."} />
       ) : (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><th scope="col">Member</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
+            <thead><tr><th scope="col">Member</th><th scope="col">Role</th><th scope="col">Status</th>{manage && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
             <tbody>
-              {list.map((t) => (
-                <tr key={t.id}>
-                  <td data-label="Member"><b>{t.name || t.email}</b>{t.name && <small>{t.email}</small>}{t.id === data.me.id && <small>That's you</small>}</td>
-                  <td data-label="Role">
-                    {t.owner ? (
-                      <span className="rt-adm-cellrow"><Pill tone="info">Account owner</Pill><span className="rt-adm-muted">{ROLE[t.role]?.label}</span></span>
-                    ) : (
-                      <div className="rt-field rt-adm-select -inline">
-                        <label htmlFor={`rt-team-role-${t.id}`} className="rt-sr">Role for {t.name || t.email}</label>
-                        <FieldSelect id={`rt-team-role-${t.id}`} label={`Role for ${t.name || t.email}`} value={t.role} onChange={(value) => { changeRole(t.id, value); say(`${t.name || t.email} is now ${ROLE[value].label}`); }} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} compact />
-                      </div>
+              {shown.map((m) => {
+                const owner = m.role === "owner";
+                const mine = m.userId === me;
+                return (
+                  <tr key={m.userId}>
+                    <td data-label="Member"><b>{who(m)}{mine ? " (you)" : ""}</b>{m.name && <small>{m.email}</small>}</td>
+                    <td data-label="Role">
+                      {owner || mine || !manage ? (
+                        owner ? <Pill tone="info">Account owner</Pill> : ROLE[m.role]?.label
+                      ) : (
+                        <div className="rt-field rt-adm-select -inline">
+                          <FieldSelect id={`rt-team-role-${m.userId}`} label={`Role for ${who(m)}`} value={m.role} onChange={(role) => role !== m.role && changeRole(m, role)} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} compact />
+                        </div>
+                      )}
+                    </td>
+                    <td data-label="Status">{m.status === "active" ? <Pill tone="ok">Joined</Pill> : m.expired ? <Pill tone="muted">Invite expired</Pill> : <Pill tone="warn">Invited</Pill>}</td>
+                    {manage && (
+                      <td data-label="Actions" className="-act">
+                        {!owner && !mine && (
+                          <RowMenu label={`Actions for ${who(m)}`} items={[
+                            ...(m.status === "invited" ? [{ label: "Resend invite", onClick: () => resendTo(m) }] : []),
+                            { label: m.status === "invited" ? "Cancel invite" : "Remove from team", danger: true, onClick: () => setRemoving(m) },
+                          ]} />
+                        )}
+                      </td>
                     )}
-                  </td>
-                  <td data-label="Status"><Pill tone={t.status === "active" ? "ok" : "warn"}>{t.status === "active" ? "Active" : "Invite sent"}</Pill></td>
-                  <td data-label="Actions">
-                    {!t.owner && (
-                      <div className="rt-adm-rowactions">
-                        {t.status === "pending" && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => say(`Invite sent again to ${t.email}`)}>Resend invite<span className="rt-sr"> to {t.email}</span></button>}
-                        <button type="button" className="rt-pws-set__textbtn rt-adm-danger" onClick={() => setRemoving(t)}>Remove<span className="rt-sr"> {t.name || t.email}</span></button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      <details className="rt-acc__card rt-pws-set__roles">
-        <summary>What each role can do</summary>
-        <dl className="rt-adm-dl">
-          {pw.roles.map((r) => <div key={r.key}><dt>{r.label}</dt><dd>{r.can}</dd></div>)}
-        </dl>
-        <p className="rt-acc__note">The account owner can do everything, including closing the account. Only ReadTraining support can change the owner.</p>
-      </details>
+      <InviteSheet open={inviting} onClose={() => setInviting(false)} onDone={(text) => { setInviting(false); refresh(); say(text); }} />
 
-      <Sheet open={adding} onClose={() => setAdding(false)} title="Add team member" closeLabel="Close" className="rt-pws-set__sheet">
-        <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
-          <p className="rt-acc__note">We email them an invite. They sign in with this email address to join your workspace.</p>
-          <Field id="rt-team-email" label="Email address" error={errors.email}>
-            <input {...aria("rt-team-email", errors.email)} type="email" autoComplete="email" spellCheck={false} value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value }))} />
-          </Field>
-          <Field id="rt-team-role" label="Role" error={errors.role} hint={f.role ? ROLE[f.role].can : "Choose a role to see what they can do."}>
-            <FieldSelect id="rt-team-role" label="Role" placeholder="Choose a role" value={f.role} onChange={(value) => setF((x) => ({ ...x, role: value }))} options={pw.roles.filter((r) => r.key !== "admin").map((r) => ({ value: r.key, label: r.label }))} invalid={Boolean(errors.role)} describedBy={aria("rt-team-role", errors.role, true)["aria-describedby"]} />
-          </Field>
-          <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Send invite</button>
-        </form>
-      </Sheet>
-
-      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title={removing ? `Remove ${removing.name || removing.email}?` : ""} confirmLabel="Remove from team"
-        text={removing ? `They will lose access to this workspace straight away.${cohortsOf(removing.id) ? ` They tutor ${cohortsOf(removing.id)} upcoming ${cohortsOf(removing.id) === 1 ? "cohort, which will show no tutor" : "cohorts, which will show no tutor"} until you choose another.` : ""}` : ""}
-        onConfirm={() => { removeMember(removing.id); say(`${removing.name || removing.email} removed`); setRemoving(null); }} />
+      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} busy={remove.isPending}
+        title={removing ? (removing.status === "invited" ? `Cancel the invite to ${who(removing)}?` : `Remove ${who(removing)}?`) : ""}
+        confirmLabel={removing?.status === "invited" ? "Cancel invite" : "Remove from team"}
+        text={removing ? (removing.status === "invited" ? "Their invite link stops working." : `They lose access straight away.${removing.tutoring ? ` They tutor ${removing.tutoring} upcoming ${removing.tutoring === 1 ? "date, which will have" : "dates, which will have"} no tutor.` : ""}`) : ""}
+        onConfirm={() => remove.mutate({ organisationId, userId: removing.userId }, { onSuccess: () => { const m = removing; setRemoving(null); refresh(); say(m.status === "invited" ? `Invite to ${m.email} cancelled` : `${who(m)} removed`); }, onError: (e) => { setRemoving(null); fail(e); } })} />
     </div>
+  );
+}
+
+// Invite someone: their email and a role (its description under it)
+function InviteSheet({ open, onClose, onDone }) {
+  const { organisationId } = useProviderAccess();
+  const invite = api.provider.team.invite.useMutation();
+  const [f, setF] = useState({ email: "", role: "" });
+  const [errors, setErrors] = useState({});
+  const formRef = useRef(null);
+  const close = () => {
+    if (invite.isPending) return;
+    setF({ email: "", role: "" });
+    setErrors({});
+    onClose();
+  };
+  const submit = async (e) => {
+    e.preventDefault();
+    const errs = {};
+    if (!isEmail(f.email)) errs.email = "Enter an email address in the correct format, like name@example.com.";
+    if (!f.role) errs.role = "Choose their role.";
+    setErrors(errs);
+    if (Object.keys(errs).length) return focusFirstError(formRef.current);
+    try {
+      const email = f.email.trim();
+      const r = await invite.mutateAsync({ organisationId, email, role: f.role });
+      setF({ email: "", role: "" });
+      onDone(r.outbox ? `Invite saved to the test outbox for ${email}` : r.emailed ? `Invite sent to ${email}` : `${email} is invited, but the email couldn't be sent. Use Resend invite.`);
+    } catch (err) {
+      const { fields, general } = errorsFrom(err);
+      setErrors({ ...fields, ...(general && !Object.keys(fields).length ? { email: general } : {}) });
+      focusFirstError(formRef.current);
+    }
+  };
+  return (
+    <Sheet open={open} onClose={close} title="Invite to your team" closeLabel="Close" className="rt-pws-set__sheet">
+      <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
+        <Field id="rt-team-email" label="Email address" error={errors.email}>
+          <input {...aria("rt-team-email", errors.email)} type="email" autoComplete="off" spellCheck={false} value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value }))} />
+        </Field>
+        <Field id="rt-team-role" label="Role" error={errors.role} hint={f.role ? ROLE[f.role].can : undefined}>
+          <FieldSelect id="rt-team-role" label="Role" placeholder="Choose a role" value={f.role} onChange={(value) => setF((x) => ({ ...x, role: value }))} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} invalid={Boolean(errors.role)} describedBy={aria("rt-team-role", errors.role, Boolean(f.role))["aria-describedby"]} />
+        </Field>
+        <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={invite.isPending}>{invite.isPending ? "Sending…" : "Send invite"}</button>
+      </form>
+    </Sheet>
   );
 }

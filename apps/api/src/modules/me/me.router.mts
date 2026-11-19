@@ -295,9 +295,11 @@ export const meRouter = createTRPCRouter({
   // fallback). The row is claimed first, so two sign-ins at the same moment can't send it twice; if sending fails the claim is
   // released and the next sign-in tries again.
   welcome: protectedProcedure.mutation(async ({ ctx }) => {
-    const [auth] = await ctx.db.execute<{ email: string; confirmed: boolean }>(sql`
-      select email, email_confirmed_at is not null as confirmed from auth.users where id = ${ctx.user.id}::uuid`)
+    const [auth] = await ctx.db.execute<{ email: string; confirmed: boolean; team_invite: boolean }>(sql`
+      select email, email_confirmed_at is not null as confirmed, coalesce(raw_user_meta_data->>'team_invite', '') = 'true' as team_invite from auth.users where id = ${ctx.user.id}::uuid`)
     if (!auth?.confirmed) return { sent: false }
+    // an account made by a provider's team invite got the invite email, not the learner welcome
+    if (auth.team_invite) return { sent: false }
     // a staff-only login made by an admin invite gets the invite, not the learner welcome
     const [staff] = await ctx.db.select({ adminOnly: adminUsers.adminOnly }).from(adminUsers).where(eq(adminUsers.userId, ctx.user.id))
     if (staff?.adminOnly) return { sent: false }
