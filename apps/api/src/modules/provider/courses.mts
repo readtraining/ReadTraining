@@ -150,7 +150,7 @@ export const settings = {
   seoTitle: text(60, 'search title'),
   seoDescription: text(320, 'search description'),
   seoKeywords: z.array(line(40, 'keyword').min(1)).max(20, 'Add up to 20 keywords.'),
-  pricePence: z.number().int().min(0).max(10000000, 'Enter a price of £100,000 or less.').nullable(),
+  pricePence: z.number().int().min(100, 'Enter a price of at least £1.').max(10000000, 'Enter a price of £100,000 or less.').nullable(),
   planId: z.string().uuid().nullable(), // the self-paced option sold in packages (its price is then the plan's cheapest package)
   skillSaver: z.boolean(),
   // Visibility (the gear's Public / Private, Hurak v2's "Publish on marketplace"): one choice for the provider. It sets both
@@ -163,7 +163,8 @@ export const settings = {
 const PAGE_ONLY = new Set(['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'videoUrl', 'seoTitle', 'seoDescription', 'seoKeywords'])
 const PRICING = new Set(['pricePence', 'skillSaver', 'planId'])
 // Settings our team doesn't check at approval (where it is listed follows its subject, placeOn): changing only these leaves a
-// course that is waiting for review where it is. Anything else (its wording, pictures, price, how it is taught) takes it back.
+// course that is waiting for review as it was sent. Anything else (its wording, pictures, price, how it is taught) is a new
+// version for our team to check (keepInReview).
 const KEEPS_REVIEW = new Set(['seoTitle', 'seoDescription', 'seoKeywords', 'isPublic'])
 // today's date in the UK: dates are UK days (the database's current_date is UTC, still yesterday for an hour after midnight in summer)
 export const ukToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
@@ -285,8 +286,22 @@ export async function applyContent(tx: Tx, courseId: number, c: Partial<Record<(
   await writeLists(tx, courseId, c as Parameters<typeof writeLists>[2])
 }
 
-// what's missing before a course can be sent for approval, or a shared page published (the editors show the same list)
-export async function missing(db: Writer, course: typeof courses.$inferSelect) {
+// The course's learning options taught on dates (taking bookings) that have no date learners can book: one not cancelled, taking
+// bookings and starting after today, as the catalogue lists them (catalogue/listings.mts). A course goes to our team, and live,
+// with something to book on every way it is taught on dates; once live, its dates may run out (the editor says so).
+export async function datesMissing(db: Writer, course: { id: number; kind: string; methods: string[]; closedMethods: string[] }) {
+  const open = course.kind === 'provider' ? course.methods.filter((m) => isDated(m) && !course.closedMethods.includes(m)) : []
+  if (!open.length) return []
+  const rows = await db.execute<{ method: string }>(sql`
+    select distinct method from public.cohorts
+    where course_id = ${course.id} and cancelled_at is null and bookable and starts_on > ${ukToday()}::date`)
+  const has = new Set(rows.map((r) => r.method))
+  return open.filter((m) => !has.has(m))
+}
+
+// what's missing before a course can be sent for approval, or a shared page published (the editors show the same list).
+// `dates: false` leaves the dates out (a course in review may be given a new way taught on dates, whose dates come after it).
+export async function missing(db: Writer, course: typeof courses.$inferSelect, { dates = true } = {}) {
   const [[img], [units]] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(courseImages).where(eq(courseImages.courseId, course.id)),
     db.select({ n: sql<number>`count(*)::int` }).from(courseUnits).where(eq(courseUnits.courseId, course.id)),
@@ -301,14 +316,16 @@ export async function missing(db: Writer, course: typeof courses.$inferSelect) {
   if (!units.n) gaps.push('the syllabus (at least one unit)')
   if (!img.n) gaps.push('at least one image')
   if (course.methods.includes('self-paced') && course.pricePence === null) gaps.push('a price for the self-paced option')
+  if (dates) for (const m of await datesMissing(db, course)) gaps.push(`a ${await methodLabel(db, m)} date learners can book`)
   return gaps
 }
 
 // How many of the course editor's required steps a provider course still has to finish (the editor's "3 of 5 required steps
 // complete"; the Dashboard's to-do list shows the rest on each draft). The steps and their rules are the editor's own
 // (ProviderCourseEditor.jsx SECTIONS without the optional ones, ticked by sectionOk from the draft as it is typed): keep the two
-// the same. They ask a little more than `missing`: a course taught on dates finishes its Price step with its first date.
-export type StepFacts = { title: boolean; summary: boolean; description: boolean; filed: boolean; level: boolean; images: boolean; outcomes: number; units: boolean; method: string | null; methods: string[]; priced: boolean; upcoming: number }
+// the same, and ask what `missing` does: the Price step is done with the self-paced price and a date learners can book on every
+// way it is taught on dates (`datesOk`, datesMissing).
+export type StepFacts = { title: boolean; summary: boolean; description: boolean; filed: boolean; level: boolean; images: boolean; outcomes: number; units: boolean; method: string | null; methods: string[]; priced: boolean; datesOk: boolean }
 export function stepsLeft(f: StepFacts) {
   const method = f.method || 'classroom' // the editor opens a course with no method on classroom
   const methods = f.methods.length ? f.methods : [method]
@@ -317,8 +334,8 @@ export function stepsLeft(f: StepFacts) {
     f.outcomes >= 4, // Course information
     f.units, // Syllabus and exam
     methods.includes(method), // Learning options
-    // Price: the self-paced option's own price or plan, and a date to be priced on when it is taught on dates
-    (!methods.includes('self-paced') || f.priced) && (!methods.some(isDated) || f.upcoming > 0),
+    // Price: the self-paced option's own price or plan, and a date learners can book on each way it is taught on dates
+    (!methods.includes('self-paced') || f.priced) && f.datesOk,
   ]
   return done.filter((ok) => !ok).length
 }
@@ -337,8 +354,10 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
       select (select slug from public.categories where id = ${course.categoryId}) category,
              (select slug from public.subcategories where id = ${course.subcategoryId}) subcategory,
              (select slug from public.topics where id = ${course.topicId}) topic`),
-    db.execute<{ upcoming: number; classroom: number; live_online: number; total: number }>(sql`
+    db.execute<{ upcoming: number; classroom: number; live_online: number; book_classroom: number; book_live_online: number; total: number }>(sql`
       select count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date)::int upcoming,
+             count(*) filter (where cancelled_at is null and bookable and starts_on > ${ukToday()}::date and method = 'classroom')::int book_classroom,
+             count(*) filter (where cancelled_at is null and bookable and starts_on > ${ukToday()}::date and method = 'live-online')::int book_live_online,
              count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date and method = 'classroom')::int classroom,
              count(*) filter (where cancelled_at is null and ends_on >= ${ukToday()}::date and method = 'live-online')::int live_online,
              count(*)::int total
@@ -368,10 +387,15 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     version: new Date(Math.max(course.updatedAt.getTime(), revision?.submittedAt?.getTime() ?? 0)).toISOString(),
     lastChange: last ?? null,
     upcomingCohorts: dates?.upcoming ?? 0,
+    // the dates learners can book now (as the catalogue lists them: taking bookings, before their first day, on a way still taking
+    // bookings): the editor's count of dates and its "no dates" note
+    bookableCohorts: (course.closedMethods.includes('classroom') ? 0 : dates?.book_classroom ?? 0) + (course.closedMethods.includes('live-online') ? 0 : dates?.book_live_online ?? 0),
     cohortCount: dates?.total ?? 0,
     // a dated learning option with upcoming dates can't be turned off until they are cancelled
     upcomingByMethod: { classroom: dates?.classroom ?? 0, 'live-online': dates?.live_online ?? 0 },
     missing: await missing(db, course),
+    // its ways taught on dates with no date learners can book (sending it for approval needs one on each)
+    datesMissing: await datesMissing(db, course),
     // "Name (category)" for each catalogue entry the course is filed under that is no longer offered (it can't go live under one)
     retired: await retiredEntries(db, course.id),
     // its learning options that are retired in Catalogue settings (one can be turned off, not on)
@@ -450,6 +474,7 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
     // a course that is (or has been) live keeps at least one image: it needed one to go live, and its card and page show it
     const status = row?.status ?? course.status
     if (!images.length && now.length && (status === 'live' || status === 'paused')) throw bad('A live course needs at least one image. Upload another before removing this one.')
+    if (!images.length && now.length && status === 'pending') throw bad('A course waiting for review needs at least one image. Upload another before removing this one.')
     const keep = new Set(images.map((i) => i.id))
     const gone = now.filter((i) => !keep.has(i.id))
     if (gone.length) await tx.delete(courseImages).where(inArray(courseImages.id, gone.map((i) => i.id)))
@@ -530,11 +555,9 @@ export async function deleteCourse(db: typeof Db, course: Course, onLog: OnLog, 
 const log = (tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, courseId: number, metadata: Record<string, unknown> = {}) =>
   logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId, action, targetType: 'course', targetId: String(courseId), metadata, ip: ctx.ip })
 
-// A provider's change to a course that is waiting for review takes it out of review (back to a draft, to be sent again), so our
-// team never approves a version they haven't seen. Returns whether it did.
 // The course's status as it stands now, with the row locked until the transaction ends. An admin deciding on the course locks
 // the same row (modules/admin/courses.mts), so a provider's edit and an admin's decision at the same moment take turns: the edit
-// either lands first (the course leaves review and the decision is refused) or after (it goes in as a change to the live course).
+// either lands first (the course's sent time moves on and the decision is refused) or after (it goes in as a change to the live course).
 // ---- versions: two tabs or two people editing the same course ----------------------------------------------------------------
 // A course's version is when it last changed: its own row, or the change to a live course waiting for approval, whichever is
 // later. The editor sends the version its draft was loaded from (`seen`); a save over a newer one is refused, so neither person's
@@ -626,20 +649,31 @@ async function methodLabel(db: Writer, slug: string) {
   return m?.name ?? slug
 }
 
+// The gear's "Withdraw from review": back to a draft, out of the admins' approvals list.
 async function leaveReview(tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, course: { id: number; status: string }) {
   if (course.status !== 'pending') return false
   await tx.update(courses).set({ status: 'draft', updatedAt: new Date() }).where(eq(courses.id, course.id))
   await log(tx, ctx, organisationId, 'course.review_withdrawn', course.id)
   return true
 }
+// A change to a course waiting for review keeps it waiting, as the version our team decides on: its sent time moves on, so an
+// admin who opened the earlier version is refused and reloads (`seen` in admin.courses.decide), and whoever made the change counts
+// as asking for the decision (requesters in modules/admin/courses.mts).
+async function keepInReview(tx: Writer, ctx: { user: { id: string }; ip: string | null }, organisationId: string, course: { id: number; status: string }) {
+  if (course.status !== 'pending') return
+  await tx.update(courses).set({ submittedAt: new Date(), updatedAt: new Date() }).where(eq(courses.id, course.id))
+  await log(tx, ctx, organisationId, 'course.edited_in_review', course.id)
+}
 
 export const providerCoursesRouter = createTRPCRouter({
   // Every course of this provider, last edited first, with what the course list shows: when it was last sent for approval
-  // (`submittedAt`); the first day of its next date (`nextDate`, YYYY-MM-DD, a date running now included); a draft's editor steps still to finish (`stepsLeft`, null on the others); and for its ⋮ menu, Pause or Put
+  // (`submittedAt`); the first day of its next date (`nextDate`, YYYY-MM-DD, a date running now included); a draft's (or a course sent back's) editor steps still to finish (`stepsLeft`, null on the others); and for its ⋮ menu, Pause or Put
   // back live, and Delete with deleteBlock's reason when it can't be deleted.
   list: orgProcedure('provider.courses.view').query(async ({ ctx, input }) => {
-    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; methods: string[]; closed_methods: string[]; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; next_on: string | null; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; outcomes: number; has_units: boolean; priced: boolean; used: boolean }>(sql`
-      select c.id, c.title, c.slug, c.status, c.status_note, c.published_at, c.method, c.methods, c.closed_methods, c.model, c.is_public, c.listed, c.updated_at, c.submitted_at,
+    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; methods: string[]; closed_methods: string[]; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; next_on: string | null; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; outcomes: number; has_units: boolean; priced: boolean; dates_ok: boolean; used: boolean }>(sql`
+      select c.id, c.title, c.slug, c.status, c.status_note, c.published_at, c.method, c.methods, c.closed_methods, c.model, c.is_public, c.listed, c.updated_at,
+             -- when it was last sent for approval (edits made while it waits move submitted_at, the version, but not this)
+             coalesce((select max(l.at) from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text), c.submitted_at) submitted_at,
              (select slug from public.categories where id = c.category_id) category,
              (select slug from public.subcategories where id = c.subcategory_id) subcategory,
              (select p.title from public.courses p where p.id = c.parent_id) parent,
@@ -650,6 +684,8 @@ export const providerCoursesRouter = createTRPCRouter({
              btrim(c.title) <> '' has_title, coalesce(btrim(c.summary), '') <> '' has_summary, coalesce(btrim(c.description), '') <> '' has_description,
              c.category_id is not null and c.subcategory_id is not null filed, c.level is not null has_level, cardinality(c.outcomes) outcomes,
              exists (select 1 from public.course_units u where u.course_id = c.id) has_units, c.price_pence is not null or c.plan_id is not null priced,
+             not exists (select 1 from unnest(c.methods) m where m in ('classroom', 'live-online') and m <> all(c.closed_methods)
+               and not exists (select 1 from public.cohorts k where k.course_id = c.id and k.method = m and k.cancelled_at is null and k.bookable and k.starts_on > ${ukToday()}::date)) dates_ok,
              exists (select 1 from public.orders o where o.provider_id = c.organisation_id and o.course_id = c.id) or exists (select 1 from public.reviews v where v.course_id = c.id) used
       from public.courses c
       where c.organisation_id = ${input.organisationId}::uuid and c.kind = 'provider'
@@ -658,8 +694,8 @@ export const providerCoursesRouter = createTRPCRouter({
       id: r.id, title: r.title, slug: r.slug, status: r.status, statusNote: r.status_note, publishedAt: r.published_at, method: r.method, methods: r.methods, closedMethods: r.closed_methods, model: r.model, category: r.category, subcategory: r.subcategory, isPublic: r.is_public, listed: r.listed,
       // ISO times: the database's own text form ("2026-11-14 11:46:40.1+00") isn't a date every browser reads
       updatedAt: new Date(r.updated_at).toISOString(), submittedAt: r.submitted_at ? new Date(r.submitted_at).toISOString() : null, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, nextDate: r.next_on, pendingChange: r.pending_change,
-      stepsLeft: r.status === 'draft'
-        ? stepsLeft({ title: r.has_title, summary: r.has_summary, description: r.has_description, filed: r.filed, level: r.has_level, images: Boolean(r.cover), outcomes: r.outcomes, units: r.has_units, method: r.method, methods: r.methods, priced: r.priced, upcoming: r.upcoming })
+      stepsLeft: r.status === 'draft' || r.status === 'changes'
+        ? stepsLeft({ title: r.has_title, summary: r.has_summary, description: r.has_description, filed: r.filed, level: r.has_level, images: Boolean(r.cover), outcomes: r.outcomes, units: r.has_units, method: r.method, methods: r.methods, priced: r.priced, datesOk: r.dates_ok })
         : null,
       deleteBlock: blockFor({ status: r.status, statusNote: r.status_note }, r.used),
     }))
@@ -870,11 +906,13 @@ export const providerCoursesRouter = createTRPCRouter({
         // saved over a newer version (another tab, or someone else): refused, nothing written
         await refuseIfChanged(tx, courseId, seen)
         const isLive = status === 'live' || status === 'paused'
+        // a course waiting for review stays complete: what it had when sent can't be taken away while our team looks at it
+        const before = status === 'pending' ? await missing(tx, now, { dates: false }) : []
         await setLearningOptions(tx, now, direct, directSet, organisationId, isLive)
         if (subjectChanged && !isLive) directSet.parentId = await placeOn(tx, subjectAfter)
         if (Object.keys(directSet).length) await tx.update(courses).set({ ...directSet, updatedAt: new Date() }).where(eq(courses.id, courseId))
-        // only a change our team checks takes a waiting course back to a draft (search and privacy settings leave it waiting)
-        const backToDraft = keys.some((k) => !KEEPS_REVIEW.has(k)) && (await leaveReview(tx, ctx, organisationId, { id: courseId, status }))
+        // a change our team checks is the new version of a waiting course (search and privacy settings leave it as it was sent)
+        if (keys.some((k) => !KEEPS_REVIEW.has(k))) await keepInReview(tx, ctx, organisationId, { id: courseId, status })
         let pendingChange = false
         let newChange = false
         if (Object.keys(reviewed).length) {
@@ -886,15 +924,20 @@ export const providerCoursesRouter = createTRPCRouter({
             newChange = !open
           } else await applyContent(tx, courseId, reviewed)
         }
+        if (status === 'pending') {
+          const [after] = await tx.select().from(courses).where(eq(courses.id, courseId))
+          const lost = (await missing(tx, after, { dates: false })).filter((gap) => !before.includes(gap))
+          if (lost.length) throw bad(`A course waiting for review needs ${lost.join(', ')}. Add it back, or withdraw the course from review in Course settings first.`)
+        }
         await log(tx, ctx, organisationId, pendingChange ? 'course.change_submitted' : 'course.updated', courseId, { fields: keys })
-        return { ok: true, pendingChange, backToDraft, newChange, version: await courseVersion(tx, courseId) }
+        return { ok: true, pendingChange, newChange, version: await courseVersion(tx, courseId) }
       })
       // a change to a live course: the admins who approve are told once, when it starts (later saves add to the same change)
       if (result.newChange) {
         const { provider } = await ownerOf(ctx.db, organisationId)
         await notifyApprovers(ctx.db, 'admin-course-change', { provider, course: course.title, courseId: String(courseId) }, { organisationId, targetType: 'course', targetId: String(courseId), action: 'email.approvers_told' }, ctx.user.id)
       }
-      return { ok: result.ok, pendingChange: result.pendingChange, backToDraft: result.backToDraft, version: result.version }
+      return { ok: result.ok, pendingChange: result.pendingChange, version: result.version }
     }),
 
   // Withdraw a content change that is still waiting (the live course stays as it is).
@@ -931,7 +974,7 @@ export const providerCoursesRouter = createTRPCRouter({
       const added = await addCourseImage(ctx.db, course, input.path, input.alt, async (tx) => {
         const status = await lockStatus(tx, course.id)
         await refuseIfChanged(tx, course.id, input.seen) // changed in another tab since the editor loaded it: nothing is added
-        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status })
+        await keepInReview(tx, ctx, input.organisationId, { id: course.id, status })
         await log(tx, ctx, input.organisationId, 'course.image_added', course.id)
       })
       return { ...added, version: await courseVersion(ctx.db, course.id) }
@@ -945,7 +988,7 @@ export const providerCoursesRouter = createTRPCRouter({
         const status = await lockStatus(tx, course.id)
         // changed in another tab since the editor loaded it (perhaps an image added there): nothing is changed or deleted
         await refuseIfChanged(tx, course.id, input.seen)
-        await leaveReview(tx, ctx, input.organisationId, { id: course.id, status })
+        await keepInReview(tx, ctx, input.organisationId, { id: course.id, status })
         await log(tx, ctx, input.organisationId, 'course.images_changed', course.id, m)
       })
       return { ...done, version: await courseVersion(ctx.db, course.id) }
@@ -1007,7 +1050,7 @@ export const providerCoursesRouter = createTRPCRouter({
   // one of the course's (`closed_methods`), its dates already booked still run and nothing is cancelled, but none of it is on sale
   // (the catalogue, the course page, new dates and staff bookings leave it out). Stopping the primary makes the first option still
   // taking bookings the primary; the last one taking bookings can't be stopped (that is pausing the course). It isn't reviewed
-  // (like the learning options and prices) and applies at once; like them, it takes a course waiting for review back to a draft.
+  // (like the learning options and prices) and applies at once; like them, it is a new version of a course waiting for review.
   setOptionOpen: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id, method: z.enum(['classroom', 'live-online', 'self-paced']), open: z.boolean(), seen: seenVersion }))
     .mutation(async ({ ctx, input }) => {
@@ -1034,13 +1077,13 @@ export const providerCoursesRouter = createTRPCRouter({
           if (now.method === input.method) set.method = open[0]
         }
         await tx.update(courses).set({ ...set, updatedAt: new Date() }).where(eq(courses.id, course.id))
-        const backToDraft = await leaveReview(tx, ctx, input.organisationId, now)
+        await keepInReview(tx, ctx, input.organisationId, now)
         await log(tx, ctx, input.organisationId, input.open ? 'course.option_reopened' : 'course.option_stopped', course.id, { method: input.method, ...(set.method ? { primary: set.method } : {}) })
-        return { ok: true, method: set.method ?? now.method, closedMethods: set.closedMethods!, backToDraft, version: await courseVersion(tx, course.id) }
+        return { ok: true, method: set.method ?? now.method, closedMethods: set.closedMethods!, version: await courseVersion(tx, course.id) }
       })
     }),
 
-  // Take a course that is waiting for our team's review back to a draft (the gear's "Withdraw from review"), to edit or delete it.
+  // Take a course that is waiting for our team's review back to a draft (the gear's "Withdraw from review"), to delete it or rework it as a draft.
   // It leaves the admins' approvals list; a decision they then try is refused (modules/admin/courses.mts).
   withdrawReview: orgProcedure('provider.courses.edit')
     .input(z.object({ courseId: id, seen: seenVersion }))
