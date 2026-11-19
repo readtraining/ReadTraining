@@ -21,9 +21,9 @@ export type Membership = {
   status: 'invited' | 'active'
   organisationStatus: OrganisationStatus
   // an admin working in this provider's workspace as ReadTraining staff (an open `staff_access` session, loaded by the API's
-  // actor): not a real member. `pricing`: they hold the admin `pricing` switch; `session`: the staff_access row. See
-  // STAFF_ACTIONS below.
-  staff?: { pricing: boolean; session?: string }
+  // actor): not a real member. `content`: they hold the admin `approve` switch (courses, dates, profile…); `pricing`: the
+  // `pricing` switch (prices and price plans); `session`: the staff_access row. See STAFF_ACTIONS below.
+  staff?: { pricing: boolean; content?: boolean; session?: string }
 }
 
 export type AdminAccess = {
@@ -155,7 +155,7 @@ const ADMIN_RULES = {
   'admin.panel.open': { permission: null },
   'admin.activity.view': { permission: null }, // the activity log viewer: every admin, each seeing their own areas' entries
   'admin.students.view': { permission: ['suspend', 'orders.book', 'orders.view', 'export'] }, // learners' list and records
-  'admin.providers.view': { permission: ['approve', 'suspend', 'finance.settings', 'catalogue', 'orders.view', 'orders.book', 'payouts'] }, // the providers list and counts
+  'admin.providers.view': { permission: ['approve', 'suspend', 'finance.settings', 'catalogue', 'orders.view', 'orders.book', 'payouts', 'pricing'] }, // the providers list and counts
   'admin.providers.read': { permission: ['approve', 'suspend', 'finance.settings'] }, // one provider's record (its private details)
   'admin.courses.view': { permission: ['approve', 'catalogue'] }, // courses, their approvals and counts
   'admin.courses.pick': { permission: ['approve', 'catalogue', 'orders.book', 'coupons', 'content'] }, // the live-course pickers
@@ -167,7 +167,7 @@ const ADMIN_RULES = {
   'admin.customerReviews.view': { permission: 'content' },
   'admin.platform.view': { permission: 'platform.settings' },
   'admin.approvals.decide': { permission: 'approve', notOwnRequest: true },
-  'admin.providers.staff': { permission: 'approve' }, // open a provider's workspace as ReadTraining staff
+  'admin.providers.staff': { permission: ['approve', 'pricing'] }, // edit a provider's work from the admin, as ReadTraining staff
   'admin.catalogue.edit': { permission: 'catalogue' },
   'admin.content.edit': { permission: 'content' },
   'admin.orders.view': { permission: 'orders.view' },
@@ -228,11 +228,14 @@ export function grantableAdminPermissions(admin: AdminAccess | null): AdminPermi
 
 const isViewAction = (action: string) => action.endsWith('.view') || action.endsWith('.open')
 
-// What an admin may change in a provider's workspace as ReadTraining staff (besides seeing every page): the courses (their
+// What an admin may change in a provider's work as ReadTraining staff (StaffEdit in the admin): the courses (their
 // words, pictures, listing, learning options, settings), dates, venues, the provider's profile, terms and FAQs, and prices and
 // price plans with the `pricing` switch. Never the provider's own decisions (sending, pausing or deleting a course, its account,
 // team, VAT, payout account) or money (orders, refunds, payouts: the admin's own pages do those).
-const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.courses.editPage', 'provider.cohorts.edit', 'provider.profile.edit', 'provider.terms.edit', 'provider.faqs.edit'])
+// What staff may read: only what those editors need (courses, dates and their tutors' names, price plans, profile, terms,
+// venues). Never the provider's team list, learners, orders, money, VAT, reviews, leads or performance.
+const STAFF_VIEWS = new Set<string>(['provider.workspace.open', 'provider.courses.view', 'provider.cohorts.view', 'provider.pricing.view', 'provider.settings.view'])
+const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.courses.editPage', 'provider.cohorts.edit', 'provider.profile.edit', 'provider.profile.rename', 'provider.terms.edit', 'provider.faqs.edit'])
 
 // Until our team approves a provider (its application pending, or changes asked), it can only look around and complete its
 // application: its profile and name, its terms, sending the account for review, or closing it. Courses, dates, venues, price
@@ -270,12 +273,13 @@ export function can(actor: Actor | null, action: Action, target: Target = {}): b
   const membership = actor.memberships.find((m) => m.organisationId === target.organisationId && m.status === 'active')
   if (!membership || membership.type !== (isProvider ? 'provider' : 'business')) return false
   if (membership.organisationStatus === 'rejected') return false
-  // ReadTraining staff: every page, and the changes above, also on a suspended provider (fixing it is often why it is suspended)
+  // ReadTraining staff: what the editors read, and the changes above, also on a suspended provider (fixing it is often why it
+  // is suspended)
   if (membership.staff) {
     if (waitsForApproval(action, membership.organisationStatus)) return false
-    if (isViewAction(action)) return true
+    if (isViewAction(action)) return STAFF_VIEWS.has(action)
     if (action === 'provider.pricing.edit') return membership.staff.pricing
-    return STAFF_ACTIONS.has(action)
+    return STAFF_ACTIONS.has(action) && membership.staff.content !== false
   }
   // a suspended organisation can still be opened and read, but nothing can be changed
   if (membership.organisationStatus === 'suspended' && !isViewAction(action)) return false

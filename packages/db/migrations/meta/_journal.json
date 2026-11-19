@@ -288,6 +288,13 @@
       "when": 1795079629130,
       "tag": "0040_admin_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795084458168,
+      "tag": "0041_team_invites",
+      "breakpoints": true
     }
   ]
 }

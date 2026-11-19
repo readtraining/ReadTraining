@@ -50,7 +50,7 @@ export function InfoTab({ say }) {
 const UNDER_REVIEW = ["pending", "changes_requested"];
 
 function InfoForm({ profile, say }) {
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, staff } = useProviderAccess();
   const router = useRouter();
   const workspace = useWorkspace();
   const utils = api.useUtils();
@@ -64,7 +64,8 @@ function InfoForm({ profile, say }) {
   const locked = !can("provider.profile.edit");
   useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
   const underReview = UNDER_REVIEW.includes(profile.status);
-  const canRename = underReview && can("provider.profile.rename");
+  // the owner or an admin while under review; ReadTraining staff (editing from the admin) at any time
+  const canRename = (underReview || Boolean(staff)) && can("provider.profile.rename");
 
   const submit = (e) => {
     e.preventDefault();

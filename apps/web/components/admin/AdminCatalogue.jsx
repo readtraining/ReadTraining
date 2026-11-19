@@ -12,7 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { waysLabel } from "@/lib/courseModes";
-import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction, RowMenu } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { ErrorState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
@@ -86,7 +86,7 @@ export default function AdminCatalogue() {
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table">
                 <thead>
-                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><th scope="col">{cols.status}</th><SortTh label={cols.providers} col="providers" sorter={sorter} numeric right /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric right /><SortTh label={cols.from} col="from" sorter={sorter} numeric right /></tr>
+                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><th scope="col">{cols.status}</th><SortTh label={cols.providers} col="providers" sorter={sorter} numeric right /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric right /><SortTh label={cols.from} col="from" sorter={sorter} numeric right /><th scope="col"><span className="rt-sr">Actions</span></th></tr>
                 </thead>
                 <tbody>
                   {sorter.apply(rows, COURSE_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((c) => (
@@ -102,6 +102,16 @@ export default function AdminCatalogue() {
                       <td data-label={cols.providers} className="rt-adm-num-cell">{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
                       <td data-label={cols.sessions} className="rt-adm-num-cell">{c.methods?.length === 1 && c.methods[0] === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
                       <td data-label={cols.from} className="rt-adm-num-cell">{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
+                      <td className="rt-biz__act">
+                        <RowMenu label={`Actions for ${c.title}`} items={[
+                          { label: c.pendingChange || c.status === "pending" ? "Review" : "Open", href: `/admin/catalogue/${c.id}` },
+                          (c.kind === "shared" ? me?.permissions?.includes("catalogue") : ["approve", "pricing"].some((x) => me?.permissions?.includes(x))) && { label: "Edit course", href: `/admin/catalogue/${c.id}/edit` },
+                          c.kind !== "shared" && { label: c.pendingChange ? copy.detail.previewChange : copy.detail.preview, href: `/admin/catalogue/${c.id}/preview`, newTab: true },
+                          c.status === "live" && { label: copy.detail.publicPage, href: `/course/${c.slug}`, newTab: true },
+                          // the course page's pop-up asks why (the provider is told), with its checks
+                          c.kind !== "shared" && c.status === "live" && me?.permissions?.includes("approve") && { label: "Pause course", href: `/admin/catalogue/${c.id}?do=pause`, danger: true },
+                        ].filter(Boolean)} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -8,7 +8,7 @@ import type { db as Db } from './db.mjs'
 import { notify, ownerOf } from './notify.mjs'
 
 // An admin working in a provider's workspace as ReadTraining staff (the `staff_access` table; the permission rules are
-// packages/permissions `staff`, the session is loaded with the admin in lib/actor.mts). Opening one needs a reason; it ends
+// packages/permissions `staff`, the session is loaded with the admin in lib/actor.mts). Opening one needs no form (its reason is recorded as edited from the admin); it ends
 // with End, after two hours unused, or when the admin opens another provider. When it ends, the provider's owner is emailed
 // one summary of what was changed in it (nothing is sent when nothing changed).
 
@@ -71,6 +71,7 @@ const DONE: Record<string, string> = {
   'venue.restored': 'Restored the venue',
   'venue.deleted': 'Deleted the venue',
   'provider.profile_updated': 'Updated your public profile',
+  'provider.renamed': 'Changed your provider name',
   'provider.logo_updated': 'Changed your logo',
   'provider.logo_removed': 'Removed your logo',
   'provider.terms_updated': 'Updated your booking terms or cancellation policy',
@@ -121,7 +122,7 @@ export async function sendStaffSummaries(ctx: Ctx, adminUserId: string | null = 
       const lines = await staffChanges(ctx.db, s.id)
       if (!lines.length) continue
       const { to, provider } = await ownerOf(ctx.db, s.organisation_id)
-      await notify(ctx.db, 'staff-changes', to, { firstName: to?.firstName ?? '', provider, reason: s.reason, changes: lines.join('\n') }, {
+      await notify(ctx.db, 'staff-changes', to, { firstName: to?.firstName ?? '', provider, changes: lines.join('\n') }, {
         organisationId: s.organisation_id,
         targetType: 'staff_access',
         targetId: s.id,

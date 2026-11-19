@@ -26,7 +26,7 @@ const PROTECTED = ["/account", "/business", "/provider"];
 const GUEST_ONLY = ["/login", "/signup"];
 // the workspaces, and the pages under them a student may open to get one
 const WORKSPACES = [
-  { prefix: "/provider", type: "provider", open: ["/provider/onboarding"] },
+  { prefix: "/provider", type: "provider", open: ["/provider/onboarding", "/provider/join"] },
   { prefix: "/business", type: "business", open: ["/business/create"] },
 ];
 const WORKSPACE_HEADER = "x-rt-workspace";

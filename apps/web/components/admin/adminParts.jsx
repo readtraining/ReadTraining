@@ -313,7 +313,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
           {items.map((item) => (
             <li key={item.key || item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>
               {item.group ? item.group : item.href
-                ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)}>{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</Link>
+                ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)} {...(item.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</Link>
                 : <button type="button" role="menuitem" className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => pick(item)}>{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</button>}
             </li>
           ))}

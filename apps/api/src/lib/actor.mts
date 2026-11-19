@@ -71,9 +71,9 @@ export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Acto
   // admins within their own switches (packages/permissions, `staff`), while they still may (switch, two-step sign-in)
   const staff = actor.admin && can(actor, 'admin.providers.staff') ? await openStaffAccess(db, user.id) : null
   if (staff) {
-    const pricing = adminPermissions(actor.admin).includes('pricing')
+    const held = adminPermissions(actor.admin)
     actor.memberships = [
-      { organisationId: staff.organisationId, type: 'provider', role: 'admin', status: 'active', organisationStatus: staff.organisationStatus, staff: { pricing, session: staff.id } },
+      { organisationId: staff.organisationId, type: 'provider', role: 'admin', status: 'active', organisationStatus: staff.organisationStatus, staff: { pricing: held.includes('pricing'), content: held.includes('approve'), session: staff.id } },
       ...actor.memberships.filter((m) => m.organisationId !== staff.organisationId),
     ]
   }
