@@ -246,8 +246,8 @@ export function DeleteCourseForm({ course, onKeep, onDeleted }) {
   );
 }
 
-// The gear on every editor page (Hurak's course settings): its visibility (Public, or Private: only people with its link can book
-// it; one choice, as Hurak v2's "Publish on marketplace"), where it is listed (read only: the subject decides, as on Hurak, placeOn
+// The gear on every editor page (course settings): its visibility (Public, or Private: only people with its link can book
+// it; one choice), where it is listed (read only: the subject decides, placeOn
 // in the API), the address to share, pausing a live course, and deleting it (DeleteBlocked says
 // when it can't be, and a course our team paused has no Put back live; DeleteCourseForm asks). Each choice saves at once.
 export function CourseGear({ course, open, onClose, onSaved, onStale }) {

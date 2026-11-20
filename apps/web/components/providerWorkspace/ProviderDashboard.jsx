@@ -14,7 +14,7 @@ import { NewCourseButton } from "./NewCourse";
 import { canSend, useSendForApproval } from "./CourseSettings";
 import Toast from "@/components/courses/Toast";
 
-// Our dashboard (Hurak has none; everything on it opens the page it comes from), from real records only: the provider's courses
+// Our dashboard (everything on it opens the page it comes from), from real records only: the provider's courses
 // and dates (API provider.courses.list / provider.cohorts.list, fetched again whenever the window regains focus). Top to bottom:
 // the account's status message; the greeting with how many things there are to do and the Create order / Create cohort buttons;
 // the to-do list (courses our team sent back, upcoming cohorts with no tutor, unfinished drafts with their editor steps left, most

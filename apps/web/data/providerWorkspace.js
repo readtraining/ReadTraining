@@ -69,7 +69,7 @@ export const pw = {
     team: "ReadTraining team",
   },
 
-  // the dashboard's "getting started" list until every step is done (Hurak's checklist, our design)
+  // the dashboard's "getting started" list until every step is done (checklist, our design)
   // a provider our team hasn't approved yet: it completes its application first (the API refuses the rest until then)
   notApproved: { title: "Your account is waiting for approval", text: "Until our team approves it, you can complete your profile and send your account for review. You can add courses, dates, venues and price plans once it is approved.", action: { label: "Your account review", href: "/provider/review" } },
 
@@ -85,7 +85,7 @@ export const pw = {
     },
   },
 
-  // the sidebar: our dashboard, then Hurak's sections in its order. Courses and Cohorts open to show their pages (the group heading
+  // the sidebar: our dashboard, then the sections in order. Courses and Cohorts open to show their pages (the group heading
   // is a button, not a link); Orders and Performance are plain links because their pages already offer Create order and the
   // Overview / Reviews / Leads tabs. Settings and team are in the account menu
   nav: [
@@ -110,7 +110,7 @@ export const pw = {
     { key: "team", label: "Team", href: "/provider/team", navIcon: "team", can: "provider.team.view" },
     { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile", can: "provider.settings.view" },
   ],
-  // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team; then Switch account (the
+  // the account menu under the avatar: settings, requests (refunds), public profile, team; then Switch account (the
   // identities on this login, added by ProviderShell from the API) and log out
   accountMenu: [
     { label: "Account settings", href: "/account/settings" },
@@ -159,7 +159,7 @@ export const pw = {
     help: { title: "Help", lead: "Guides, help articles and a person to talk to when you need one." },
   },
 
-  // How each delivery method is explained in the course wizard (Hurak's wording). `key` is the method's slug in the catalogue
+  // How each delivery method is explained in the course wizard . `key` is the method's slug in the catalogue
   // list; its name, and the categories, sub-categories, topics and levels, come from that list (lib/taxonomy.js), the same
   // one the public filters read, so a provider's course always lands in the right filters.
   formats: [
@@ -167,7 +167,7 @@ export const pw = {
     { key: "live-online", label: "Live online", icon: "icon-online-learning-2", text: "For live, tutor-led training by video, one to one or in groups.", more: "Run sessions by video on dates you choose. Learners get the joining link in their joining instructions before each session." },
     { key: "self-paced", label: "Self-paced", icon: "icon-time-management", text: "For recorded lessons and self-paced e-learning.", more: "Build the course from lessons (text, video, quizzes and downloads). Learners start straight after booking and work at their own pace." },
   ],
-  // The course editor's Learning options step (Hurak's): the primary way a course is taught, and the other ways switched on beside
+  // The course editor's Learning options step: the primary way a course is taught, and the other ways switched on beside
   // it. One set of words, pictures and syllabus covers them all.
   learningOptions: {
     title: "Learning options",
@@ -181,7 +181,7 @@ export const pw = {
     closedPrimary: "Not taking bookings. Take bookings again before making it the main way.",
     retired: "No longer offered on ReadTraining.",
     retiredOn: "No longer offered on ReadTraining. Turn it off, then save.",
-    // stopping new bookings for one way (Hurak's "Retire from future sales"): saved at once, undone with "Take bookings again"
+    // stopping new bookings for one way: saved at once, undone with "Take bookings again"
     bookings: {
       title: "Taking bookings",
       lead: "Stop new bookings for a way you no longer run. Nothing is cancelled: dates already booked still go ahead, and you can take bookings again at any time.",
@@ -206,14 +206,14 @@ export const pw = {
   // the Courses list on a status tab with none
   noCourses: { draft: "No drafts.", pending: "No courses in review.", changes: "No courses waiting for changes.", live: "No live courses yet.", paused: "No paused courses." },
 
-  // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
+  // performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
     enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
   },
   // a course's visibility (the gear's Public / Private)
   visibility: { public: "Public", private: "Private" },
-  // the colour a cohort shows in on the calendar (Hurak's cohort colour picker)
+  // the colour a cohort shows in on the calendar (cohort colour picker)
   cohortColours: [
     { key: "purple", label: "Purple" },
     { key: "blue", label: "Blue" },
@@ -226,7 +226,7 @@ export const pw = {
   channels: { marketplace: "ReadTraining", website: "Website", manual: "Manual" },
   // how an order was paid, as the orders list and order page show it
   paymentMethods: { card: "Card", link: "Payment link", offline: "Offline payment", free: "Free enrolment" },
-  // a learner's place on a cohort (Hurak's student status): booked, moved here from another date, or cancelled
+  // a learner's place on a cohort (student status): booked, moved here from another date, or cancelled
   studentStatuses: { enrolled: "Enrolled", rescheduled: "Rescheduled", cancelled: "Cancelled" },
   // the email templates a provider can send a learner from a cohort ("Select email template"), or write a new one; `body` is
   // paragraphs (joined with a blank line); {name} {course} {date} {where} {order} are filled in for each learner
@@ -242,7 +242,7 @@ export const pw = {
     offline: { label: "Offline payment", hint: "Bank transfer, invoice or cash. Mark the order paid when the money arrives." },
     free: { label: "Enrol for free", hint: "No payment. For staff, resits or goodwill." },
   },
-  // Hurak's course activity types, in its order
+  // course activity types, in order
   lessonTypes: {
     text: { label: "Text", icon: "icon-document" },
     download: { label: "Download / Resource", icon: "icon-cloud" },
@@ -288,7 +288,7 @@ export const pw = {
   ],
 
 
-  // Hurak's Performance date ranges
+  // Performance date ranges
   ranges: [
     { key: "7", label: "Last 7 days", days: 7 },
     { key: "30", label: "Last 30 days", days: 30 },
@@ -440,7 +440,7 @@ export function seedProvider(now = Date.now()) {
     },
   ];
 
-  // what Hurak's new-course wizard asks: sub-category and topic (slugs from the catalogue list), compliance or not, performance
+  // what the new-course wizard asks: sub-category and topic (slugs from the catalogue list), compliance or not, performance
   // model, Skill Saver
   const setup = {
     C1: ["workplace-first-aid", "emergency-first-aid-at-work", "compliance", true],
@@ -565,7 +565,7 @@ export function seedProvider(now = Date.now()) {
     { id: "N4", at: at(-6), text: "Order NF-24883 is in dispute. Send your evidence within 7 days.", href: "/provider/orders/NF-24883", read: false },
     { id: "N5", at: at(-9), text: "New order NF-24879 from Marek Nowak for SIA Door Supervisor", href: "/provider/orders/NF-24879", read: true },
   ];
-  // older ones, as Hurak's list keeps them: a note for each website or ReadTraining order and each review
+  // older ones, as the list keeps them: a note for each website or ReadTraining order and each review
   const titleOf = (id) => courses.find((c) => c.id === id)?.title || "a course";
   notifications.push(
     ...orders.filter((o) => o.channel !== "manual" && o.at < at(-10)).map((o, i) => ({ id: `N${20 + i}`, at: o.at, text: `New order ${o.ref} from ${o.customer.first} ${o.customer.last} for ${titleOf(o.lines[0].courseId)}`, href: `/provider/orders/${o.ref}`, read: true })),

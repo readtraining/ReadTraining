@@ -24,7 +24,7 @@ import { useNewCourse } from "./NewCourse";
 import TextArea from "@/components/forms/TextArea";
 import { Req } from "./settingsForm";
 
-// Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
+// Cohorts: every run of a course on set dates: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
 // Filtered by delivery, course, date, venue, tutor and when, with a search; 10 a page; filters are kept in the address. The
 // Self-paced tab lists the self-paced courses (they have no dates). CohortForm (named export) is the create and edit panel: dates
@@ -625,7 +625,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   };
   const setSlot = (i, patch) => setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
 
-  // "Save and create another" (Hurak's "Create another cohort"): the form stays open for the same course and settings
+  // "Save and create another": the form stays open for the same course and settings
   const save = async (e, another = false) => {
     e.preventDefault();
     setPressed(another ? "another" : "save");

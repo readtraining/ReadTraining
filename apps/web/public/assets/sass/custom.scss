@@ -399,7 +399,7 @@
   font-size: 16px;
 }
 
-/* ReadTraining: navbar search result rows (Hurak-style hover) */
+/* ReadTraining: navbar search result rows (hover) */
 .rt-search-row:hover {
   background-color: var(--color-light-4);
 }
@@ -415,7 +415,7 @@
   cursor: text; border-radius: 12px;
   transition: background-color 0.15s, box-shadow 0.15s;
 }
-/* tonal states (Airbnb pattern): hover = light tint, active = white card lifted with a soft shadow */
+/* tonal states: hover = light tint, active = white card lifted with a soft shadow */
 .rt-searchband__item:hover { background-color: var(--color-light-4); }
 .rt-searchband__item:focus-within {
   background-color: #fff;
@@ -529,7 +529,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Type scale (debugged from hurak.com at 1854px):
+   Type scale (debugged from the client's current site at 1854px):
    h1 52px/600/lh 1.06/ls -1.3px · h2 44px/600/lh 1.12/ls -1.1px
    lead 18px/lh 1.625 · body 16px/24px · eyebrow 11px/600/ls 0.05em uppercase
    --------------------------------------------------------------------------- */
@@ -1949,7 +1949,7 @@ main#rt-cd-main { overflow: clip; }
 
 
 
-/* ---------- Course detail: Hurak structure (hero side image, learning option cards, article, trust points, related) ---------- */
+/* ---------- Course detail: structure (hero side image, learning option cards, article, trust points, related) ---------- */
 
 .rt-cd__prose p, .rt-cd__sec > p { margin: 0 0 12px; font-size: 16px; line-height: 26px; color: var(--cd-text); }
 .rt-cd__sec .rt-cd__h3 { margin: 24px 0 8px; font-size: 20px; line-height: 28px; font-weight: 700; }
@@ -2030,7 +2030,7 @@ main#rt-cd-main { overflow: clip; }
 @media (min-width: 992px) { .rt-cd__grid { grid-template-columns: minmax(0, 1fr) 360px; } }
 
 /* ===================================================================================================
-   COURSE DETAIL: FINAL SPEC. Hero (content like Hurak, our design), features card, booking card (.rt-bk, two states),
+   COURSE DETAIL: FINAL SPEC. Hero (our design), features card, booking card (.rt-bk, two states),
    Learning options (.rt-lo, the only place to choose), section styles. Theme tokens only.
    =================================================================================================== */
 
@@ -2079,7 +2079,7 @@ main#rt-cd-main { overflow: clip; }
    =================================================================================================== */
 
 /* ===================================================================================================
-   COURSE DETAIL: UDEMY-STYLE HERO, STATS CARD AND BOOKING CARD (sizes and spacing as specified; our colours via tokens)
+   COURSE DETAIL: HERO, STATS CARD AND BOOKING CARD (sizes and spacing as specified; our colours via tokens)
    =================================================================================================== */
 
 /* ---------- Container and grid ---------- */
@@ -2136,7 +2136,7 @@ main#rt-cd-main { overflow: clip; }
 
 /* ---------- Course features box ---------- */
 
-/* ---------- Booking card (340px, square, Udemy shadow) ---------- */
+/* ---------- Booking card (340px, square, soft shadow) ---------- */
 .rt-cd__aside { grid-area: aside; align-self: start; position: sticky; top: calc(var(--header-offset, 0px) + 16px); z-index: 3; width: 360px; margin-top: 32px; padding-top: 0; transition: top 0.2s ease; }
 @media (min-width: 992px) {
   .rt-cd__aside { justify-self: end; }
@@ -2327,7 +2327,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* desktop: the panel fits a short list (no empty band under two dates) but keeps a steady minimum, so switching study method
    barely moves it; a long list scrolls (phones: full screen) */
 @media (min-width: 576px) { .rt-dd__panel:has(.rt-dd__list) { min-height: min(520px, 88dvh); max-height: min(680px, 88dvh); } }
-/* venues as plain rows with a line between them (as Hurak's): name, address, next course and price on the left, Show dates on the right */
+/* venues as plain rows with a line between them: name, address, next course and price on the left, Show dates on the right */
 .rt-dd__list:has(.rt-dd__venues) { background: var(--cd-surface); }
 .rt-dd__venues { display: flex; flex-direction: column; }
 .rt-dd__vcard { padding: 16px 0; border-bottom: 1px solid var(--cd-border); }
@@ -2410,7 +2410,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* Radio circles removed from the Learning options cards and the booking card (the real radio inputs stay for keyboard and screen readers) */
 .rt-lc__card .rt-bs__radio, .rt-bk .rt-bs__radio { display: none; }
 
-/* COURSE FEATURES v2: one row of rounded icon badges (Hurak style) */
+/* COURSE FEATURES v2: one row of rounded icon badges */
 .rt-cd__fcard { z-index: 1; box-sizing: border-box; background: var(--cd-surface); border: 1px solid var(--cd-border); position: static; margin-top: 32px; box-shadow: none; border-radius: 16px; padding: 20px 24px; }
 
 .rt-lc__full--cols { margin-top: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -2884,7 +2884,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 :root:has(.rt-tq-page) body { overflow-x: clip; } /* the template's overflow rules would stop the sticky bar and question grid */
 .rt-tq-page main { overflow: clip; }
 .rt-tq.rt-tps__body { padding: 24px 0 80px; }
-/* the test page, as on the reference (hurak.com): "Book a course" and "Leave a comment" above the test, on the right; the intro
+/* the test page, as on the reference: "Book a course" and "Leave a comment" above the test, on the right; the intro
    ("Before you start") centred in the page; under the test, "Ready to book your course?" (SubjectCourses) and the
    "Still looking for an answer?" box (the reviews empty-state panel) */
 /* TEST PAGE v2. While the test runs (TestRunner puts "rt-tq-running" on <body>): only the site menu, the band, the tools and the
@@ -4232,7 +4232,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* the page column is a grid: let the cards and the toolbar be narrower than their one-line content (long emails), so on phones
    the emails shorten with … instead of widening the page */
 .rt-biz__place, .rt-biz__bar { min-width: 0; }
-/* assign places, as Hurak's Courses page: course type and title search, how many courses match with Clear filter, and each
+/* assign places: course type and title search, how many courses match with Clear filter, and each
    course's type and places remaining as tags */
 .rt-biz__coursefilters { grid-template-columns: minmax(0, 240px) minmax(0, 1fr); }
 .rt-biz__coursefilters .rt-field { margin: 0; }
@@ -5673,7 +5673,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws .rt-adm__head { align-items: flex-start; }
 .rt-pws__org { display: flex; align-items: center; gap: 10px; margin: 4px 4px 0; padding: 10px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
 /* cohorts: List / Calendar switch */
-/* Hurak's top bar: New course, Student, the bell and the account menu */
+/* top bar: New course, Student, the bell and the account menu */
 .rt-pws__nav { display: grid; gap: 2px; margin: 16px 0 0; padding: 0; list-style: none; }
 .rt-pws__nav li { list-style: none; }
 /* sidebar groups (Courses, Cohorts): each folds on its own, as the admin's (components/admin/workNav.jsx) */
@@ -5791,7 +5791,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* provider workspace: courses list, new course, course editor (fork B1) */
 /* text-style buttons */
 .rt-pws-course-linkbtn { min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
-/* courses list (ours, with Hurak's fields): slim profile bar, then one card with status tabs, filters and a compact course table */
+/* courses list (ours, with fields): slim profile bar, then one card with status tabs, filters and a compact course table */
 /* the page head's right side: the profile card, then "New course" */
 .rt-cx { border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
 .rt-cx__top { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
@@ -5898,7 +5898,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cl-promo__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-surface); color: var(--rt-c-brand); }
 .rt-cl-promo__title { margin: 0 0 2px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
 .rt-cl-promo .rt-acc__note { margin: 0; }
-/* new course: Hurak's five-step wizard */
+/* new course: five-step wizard */
 /* the course editor's progress line (it began as the old New course page's step bar) */
 .rt-pws-wiz__bar { height: 6px; overflow: hidden; border-radius: 999px; background: var(--rt-c-line); }
 .rt-pws-wiz__bar span { display: block; width: var(--rt-wiz); height: 100%; border-radius: inherit; background: var(--rt-c-brand); transition: width 250ms cubic-bezier(0.23, 1, 0.32, 1); }
@@ -5951,7 +5951,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-keepw > span, .rt-keepw::after { grid-area: 1 / 1; }
 .rt-keepw::after { content: attr(data-w); visibility: hidden; height: 0; overflow: hidden; }
 .rt-pws-course-tick { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1.5px solid var(--color-border-strong); border-radius: 50%; }
-/* editor: Hurak's "Publish your course" list beside the section */
+/* editor: "Publish your course" list beside the section */
 .rt-pws-ce { display: grid; gap: var(--rt-gap); align-items: start; }
 @media (min-width: 1200px) { .rt-pws-ce { grid-template-columns: 280px minmax(0, 1fr); } .rt-pws-ce__nav { position: sticky; top: 88px; } }
 .rt-pws-ce > * { min-width: 0; }
@@ -6167,7 +6167,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__table th.rt-pws-coh__pick, .rt-pws-coh__table td.rt-pws-coh__pick { width: 44px; }
 .rt-pws-coh__table tr.is-picked td { background: var(--rt-c-brand-soft); }
 .rt-pws-coh__peoplehead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-/* Phase 1 (Hurak cohort operations). RowMenu: a row's "…" menu, in the site's dropdown panel look. */
+/* Phase 1 (cohort operations). RowMenu: a row's "…" menu, in the site's dropdown panel look. */
 .rt-rowmenu { position: relative; display: inline-flex; }
 /* a row whose ⋮ menu is open sits above the rows after it, so their own lifted buttons (kept above the whole-row link) never
    draw over the open menu */
@@ -6595,7 +6595,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (min-width: 992px) { .rt-perf-split { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .rt-perf-split__note { margin: 4px 0 16px; }
 @media (prefers-reduced-motion: reduce) { button.rt-perf-kpi { transition: none; } }
-/* requests (Hurak's refunds list) */
+/* requests (refunds list) */
 .rt-rq-sum { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-rq-sum b { color: var(--rt-c-text); }
 .rt-rq-table td { vertical-align: top; }
@@ -6615,7 +6615,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-rq-table td { flex-wrap: wrap; }
   .rt-rq-table td small, .rt-rq-table td .rt-rq-note { flex-basis: 100%; max-width: none; text-align: right; }
 }
-/* public profile and student profile (Hurak's): initials or logo, name, details, one action */
+/* public profile and student profile: initials or logo, name, details, one action */
 .rt-pws-prof { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; }
 .rt-pws-prof__logo { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 96px; height: 96px; overflow: hidden; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-app-h2); font-weight: 700; color: var(--rt-c-brand); }
 .rt-pws-prof__logo img { width: 100%; height: 100%; object-fit: cover; }
@@ -6627,7 +6627,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-prof__body { margin: 0 0 16px; white-space: pre-line; font-size: var(--rt-text-sm); line-height: 1.7; color: var(--rt-c-text); }
 .rt-pws-prof__body:last-child { margin-bottom: 0; }
 @media (max-width: 575px) { .rt-pws-prof > .button { width: 100%; justify-content: center; } }
-/* learners (ours, Hurak's fields): one filter bar, the table, the profile header and booking timeline */
+/* learners (ours, fields): one filter bar, the table, the profile header and booking timeline */
 .rt-lr-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -8px; }
 .rt-lr-count p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-lr-count b { color: var(--rt-c-text); }
@@ -6659,7 +6659,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-lr-booking__facts .-wide { grid-column: 1 / -1; }
 .rt-lr-booking__facts dt { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-lr-booking__facts dd { margin: 2px 0 0; font-size: var(--rt-text-sm); font-weight: 600; overflow-wrap: anywhere; color: var(--rt-c-text); }
-/* provider help (ours, Hurak's three ways to get help): search, provider guides, ways to reach us */
+/* provider help (ours, three ways to get help): search, provider guides, ways to reach us */
 .rt-hp-search { display: grid; gap: 14px; padding: 28px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: radial-gradient(90% 180% at 0% 0%, var(--rt-c-brand-soft) 0%, var(--rt-c-surface) 60%); }
 .rt-hp-search__title { margin: 0; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
 .rt-hp-search__box { position: relative; max-width: 640px; }
@@ -6700,7 +6700,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__zoom > div { flex: 1 1 280px; min-width: 0; }
 .rt-pws-set__zoommark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
 .rt-pws-set__zoomlist { display: grid; gap: 4px; margin: 6px 0 10px; padding-left: 18px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-/* orders list: Hurak's four search fields, then the channel and status filters */
+/* orders list: four search fields, then the channel and status filters */
 .rt-pws-ord__table td { vertical-align: middle; }
 .rt-pws-ord__table .rt-pws-money__num { white-space: nowrap; }
 .rt-pws-ord__flag { font-weight: 600; color: var(--rt-c-error) !important; }

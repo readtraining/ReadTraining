@@ -14,7 +14,7 @@ import { SHOW_DEMO } from "@/lib/demo";
 const KEY = SHOW_DEMO ? "rt-provider" : "rt-provider-live";
 export const PROVIDER_EVENT = "rt-provider-change";
 export const DAY = 86400000;
-const VERSION = 4; // 4: categories, sub-categories, topics and methods as catalogue slugs (3: refund booking reference; 2: Hurak setup fields)
+const VERSION = 4; // 4: categories, sub-categories, topics and methods as catalogue slugs (3: refund booking reference; 2: setup fields)
 
 // The workspace with none of the sample records: no courses, dates, venues, orders, learners or reviews, and a blank profile.
 // The provider's name and the signed-in person are filled in by actAs().
@@ -126,7 +126,7 @@ export function orderMoney(o) {
 
 // ---- derived view ----------------------------------------------------------------------------------------------------------
 
-// A cohort's status: worked out from its dates and certificates, unless the provider set one by hand (Hurak's "Cohort status").
+// A cohort's status: worked out from its dates and certificates, unless the provider set one by hand.
 export function cohortStatus(k, enrolments, today = todayIso()) {
   if (k.cancelled) return "cancelled";
   if (k.statusOverride) return k.statusOverride;
@@ -151,7 +151,7 @@ function derive(s) {
   const member = Object.fromEntries(s.team.map((t) => [t.id, t]));
   const pack = Object.fromEntries(s.packages.map((p) => [p.id, p]));
 
-  // places: everyone on the cohort except cancelled bookings; `places` breaks them down as Hurak's students tooltip does
+  // places: everyone on the cohort except cancelled bookings; `places` breaks them down as the students tooltip does
   const cohorts = s.cohorts.map((k) => {
     const mine = s.enrolments.filter((e) => e.cohortId === k.id);
     const places = { enrolled: 0, rescheduled: 0, cancelled: 0 };
@@ -230,7 +230,7 @@ export const issueCertificates = (cohortId) => updateProvider((s) => {
   return n;
 });
 
-// ---- cohort operations (as Hurak's cohort list and Manage cohort page) -------------------------------------------------------
+// ---- cohort operations (cohort list and Manage cohort page) -------------------------------------------------------
 
 // a dated entry on a booking's timeline; `who` is the signed-in team member
 const logOn = (s, e, text) => {
@@ -390,7 +390,7 @@ export const addOrderNote = (ref, text) => updateProvider((s) => {
   if (o) o.notes.unshift({ at: Date.now(), who: s.me.name, text });
 });
 
-// ---- order operations (as Hurak's order page) -----------------------------------------------------------------------------
+// ---- order operations (order page) -----------------------------------------------------------------------------
 
 // DEMO: the last four digits of the card an order was paid with (the payment partner gives these)
 export const cardEnding = (ref) => String(1000 + (Number(String(ref).replace(/\D/g, "")) * 7919) % 9000);

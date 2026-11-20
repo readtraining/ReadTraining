@@ -211,7 +211,7 @@ export const ledgerRouter = createTRPCRouter({
       }
     }),
 
-  // A correction on a provider's balance: an adjustment (either way, e.g. a goodwill credit or a fix) or a charge (Hurak's
+  // A correction on a provider's balance: an adjustment (either way, e.g. a goodwill credit or a fix) or a charge (a
   // retrospective commission when a provider was paid outside the platform). Always with a note.
   adjust: adminProcedure('admin.adjustments.create')
     .input(z.object({ providerId: z.string().uuid('Choose a provider.'), type: z.enum(['adjust', 'charge']), amountPence: z.number().int().refine((n) => n !== 0, 'Enter an amount.').refine((n) => Math.abs(n) <= 100_000_00, 'Enter a smaller amount.'), note: z.string().trim().min(3, 'Enter what this is for.').max(500) }))

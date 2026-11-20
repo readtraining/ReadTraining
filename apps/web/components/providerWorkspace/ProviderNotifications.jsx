@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/states/States";
 
 const PER_PAGE = 10;
 
-// Notifications, newest first, 10 a page (Hurak's: refund requests, reviews, orders): unread ones are marked; opening one marks it
+// Notifications, newest first, 10 a page (refund requests, reviews, orders): unread ones are marked; opening one marks it
 // read and goes to the page it is about, whose back link then returns here (?from=notifications). "Mark all as read" clears the
 // count on the bell.
 export default function ProviderNotifications() {

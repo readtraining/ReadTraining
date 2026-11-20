@@ -1,7 +1,7 @@
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { contactHref } from "@/lib/forms";
 // The Business account (/business): dashboard, learners, team training assignments, bookings, and billing and invoices. Built on
-// what Hurak's Business account offers (its "For Businesses" page: a training overview with learners, unassigned places,
+// what a Business account offers (its "For Businesses" page: a training overview with learners, unassigned places,
 // certificates and renewals due; places per course you assign now or hold; learner progress; certificates and expiry; billing on a
 // business credit account) and on what our /for-business page promises, with the same demo company and people as its screens.
 // The demo data is dummy until accounts exist (see lib/businessAccount.js); dates are days from today so the demo stays current.
@@ -51,17 +51,17 @@ export const businessAccount = {
       certificates: { label: "Valid certificates", hint: "Ready to print" },
       renewals: { label: "Need renewing", hint: (expired, soon) => [expired && `${expired} expired`, soon && `${soon} due in 90 days`].filter(Boolean).join(", ") || "Nothing due in 90 days" },
     },
-    // the courses to come, each with its places and Assign (Hurak's unassigned licences and courses, as one list)
+    // the courses to come, each with its places and Assign (unassigned licences and courses, as one list)
     upcoming: { title: "Upcoming training", all: "View all bookings", assign: "Assign places", manage: "Manage places", none: "No upcoming training. Book a course and its places show here." },
     renewals: { title: "Need renewing", cta: "Book renewal", none: "No certificates expire in the next 90 days." },
-    // as Hurak's dashboard: the latest results, and the latest certificates (issue and expiry dates, with Download)
+    // the dashboard: the latest results, and the latest certificates (issue and expiry dates, with Download)
     results: { title: "Recent results", rebook: "Rebook", none: "No results yet. They show here once your learners finish a course." },
     certificates: { title: "Recent certificates", columns: ["Learner", "Course", "Issue date", "Expiry date"], all: "View learners", print: "Print", none: "No valid certificates yet. They show here once your learners pass a course." },
     billing: { title: "Business credit", cta: "View billing" },
   },
 
-  // Team (/business/team): colleagues who can manage the account, as on Hurak's Business account ("Add member": name, email,
-  // role; Hurak has one role, Member). Learners are the people being trained; team members run the account.
+  // Team (/business/team): colleagues who can manage the account ("Add member": name, email,
+  // role; there is one role, Member). Learners are the people being trained; team members run the account.
   team: {
     title: "Team",
     lead: "Colleagues who can manage this Business account: book training, assign places and see invoices.",
@@ -100,7 +100,7 @@ export const businessAccount = {
     title: "Assign places",
     lead: "Give each place you bought to a learner now, or keep it until you know who needs it.",
     filters: { all: "All courses", open: "With places to assign" },
-    // as Hurak's Courses page: the course type, a title search, Clear filter and how many courses match
+    // its filters: the course type, a title search, Clear filter and how many courses match
     type: "Course type",
     allTypes: "All course types",
     search: "Course title",

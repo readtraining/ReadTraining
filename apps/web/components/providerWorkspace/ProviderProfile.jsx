@@ -8,7 +8,7 @@ import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
 import { useProviderCourses } from "./ProviderCourses";
 
-// Public profile (Hurak's, from the account menu): the provider as learners see it: logo, name, headline, about, social links,
+// Public profile (from the account menu): the provider as learners see it: logo, name, headline, about, social links,
 // and the policies (booking terms, cancellation policy). "Edit profile" opens the provider settings. From the API.
 export default function ProviderProfile() {
   const { organisationId, can } = useProviderAccess();

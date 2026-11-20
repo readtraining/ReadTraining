@@ -11,7 +11,7 @@ import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { Toggle } from "./providerParts";
 import { Field, Req, aria, isMoney } from "./settingsForm";
 
-// A price plan, as Hurak's "Create New Plan": the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus,
+// A price plan: the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus,
 // Pro, Elite to start with), and for each package its name, price per delegate, an optional "Save £" amount (shown as a was-price),
 // a tagline, "Most popular" (one package at most) and its features, each included (✓) or not (✗) with an optional description.
 // Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its cheapest package

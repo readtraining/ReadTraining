@@ -36,12 +36,12 @@ export const useProviderCourses = () => {
   return api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) && can("provider.courses.view") });
 };
 
-// Every course the provider runs, with Hurak's filters in one row (search, learning option, visibility, category and performance
+// Every course the provider runs, with filters in one row (search, learning option, visibility, category and performance
 // model, and Clear filters once one is set; status as tabs with counts), all kept in the address. Our layout: one card holding the
 // status tabs, the filters and the courses as a compact table, last edited first and sortable by its headers. One course per row:
 // picture or "Upload course image", its ways of learning and subject; its status with a line only when there is something to do (a draft
 // ready to send, our team's note, edits in review); visibility; its next date. The row opens where its work is (a course not live yet:
-// the editor; a live or paused one: its Details page), and its ⋮ menu has the actions its role allows. Then Hurak's offer of a free
+// the editor; a live or paused one: its Details page), and its ⋮ menu has the actions its role allows. Then the offer of a free
 // sales and marketing consultation.
 export default function ProviderCourses() {
   const access = useProviderAccess();
@@ -137,7 +137,7 @@ export default function ProviderCourses() {
   const actions = (c, href) => [
     // a course ready to go to our team: sending it is the next step, so it comes first
     ...(canSend(c, access) ? [{ label: sender.sendingId === c.id ? "Sending…" : c.status === "changes" ? "Send again for approval" : "Send for approval", onClick: () => sender.send(c) }] : []),
-    // Details first, as Hurak's: the course's own page with its Learners, Venues, Cohorts, Packages and Orders tabs
+    // Details first: the course's own page with its Learners, Venues, Cohorts, Packages and Orders tabs
     { label: "Details", href: `${href}/overview` },
     ...(can("provider.courses.editPage") ? [{ label: "Edit course", href }] : []),
     { label: "Preview", href: `${href}/preview` },

@@ -2,7 +2,7 @@ import { bookingOptions, footer } from "@/data/home";
 import { trustFigures } from "@/lib/siteContent";
 import { CATALOGUE_HREF } from "@/lib/routes";
 
-// About ReadTraining (/about-us). The section headings follow the client's current About page (hurak.com/about-us: "Get to
+// About ReadTraining (/about-us). The section headings follow the client's current About page ("Get to
 // know…", "Who we are", "What we do", "Why we do it", the mission statement). The copy written for this page lives here; numbers, accreditations, booking promises and
 // contact details are imported from data/home and the trust numbers from lib/siteContent.js, so the About and home pages always
 // say the same thing.

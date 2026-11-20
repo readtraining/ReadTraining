@@ -1,6 +1,6 @@
 import { CATALOGUE_HREF, CHECKOUT_HREF } from "@/lib/routes";
 import { TOPICS } from "@/data/courseTopics";
-// The course basket (/basket). The flow and the rules follow the client's current site (hurak.com: Select bundle >
+// The course basket (/basket). The flow and the rules follow the client's current site (Select bundle >
 // Review basket > Pay securely, the package chosen with a date sold in packages, the first-aid rule for security courses, the
 // delegates counter and the promo code). Our own wording and layout. Draft until confirmed: the first-aid add-on price and the
 // demo promo code (there is no backend for either yet).

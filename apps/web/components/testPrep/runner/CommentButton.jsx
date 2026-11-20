@@ -8,7 +8,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import FormGate from "@/components/forms/FormGate";
 import TextArea from "@/components/forms/TextArea";
 
-// "Leave a comment" (as on the reference, hurak.com): a button that opens the runner's pop-up (Sheet) with name, email (optional,
+// "Leave a comment" (as on the reference site): a button that opens the runner's pop-up (Sheet) with name, email (optional,
 // for a reply) and the comment. It checks the comment, sends through lib/comments.js (simulated until the endpoint exists) and
 // thanks the reader. The form reuses the reviews form's styles and the site's form fields (.rt-field).
 const MIN_TEXT = 10;

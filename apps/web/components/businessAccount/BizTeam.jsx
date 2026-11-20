@@ -13,9 +13,9 @@ const copy = biz.team;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const empty = { first: "", last: "", email: "" };
 
-// Team (/business/team), as Hurak's Business account: the colleagues who can manage the account. The signed-in person is the
+// Team (/business/team): the colleagues who can manage the account. The signed-in person is the
 // account owner (always first, can't be removed); members are added with first name, last name, work email and a role
-// (Member, Hurak's only role), show as "Invitation sent" until they accept, and can be sent the invitation again or removed.
+// (Member, the only role), show as "Invitation sent" until they accept, and can be sent the invitation again or removed.
 // The Learners page is for the people being trained.
 export default function BizTeam() {
   const person = useAuthUser();

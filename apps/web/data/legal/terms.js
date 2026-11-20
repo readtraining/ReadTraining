@@ -1,5 +1,5 @@
 // Terms and Conditions, written for ReadTraining in our own words, following the sections and meaning of the client's current
-// terms (hurak.com/terms). Read through lib/legal.js: each section is a title and its paragraphs (`blocks`, see DocBlocks).
+// terms. Read through lib/legal.js: each section is a title and its paragraphs (`blocks`, see DocBlocks).
 // Our longer draft with UK consumer-law detail: data/legal/drafts/terms.js. Values in [brackets] are to be confirmed.
 
 export const terms = {

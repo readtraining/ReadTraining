@@ -3,8 +3,8 @@
 // - "Apply for me": request > documents checked > secure payment link > paid > submitted to CSCS or the council > done.
 // - Security Jobs: application > checked > call > a role is offered and the candidate says yes for THAT role > only then shared
 //   with the employer > interview > start. Nothing is shared without a recorded yes per role.
-// - Business accounts: credit facility (default £5,000 on 30 days, as the business account page), invoices, aged debt. As on Hurak,
-//   businesses never apply for credit: our team offers it to eligible regular customers (the `eligibility` rule below).
+// - Business accounts: credit facility (default £5,000 on 30 days, as the business account page), invoices, aged debt. 
+//   Businesses never apply for credit: our team offers it to eligible regular customers (the `eligibility` rule below).
 // Prices to confirm with the client (CSCS £60, Personal Licence £140, HS&E test £41.99), as the site.
 
 export const adminWork = {
@@ -105,7 +105,7 @@ export const adminWork = {
     },
     defaultLimit: 5000,
     termsDays: 30,
-    // DEMO rule, for the client to confirm: who our team may offer credit to (a regular customer, as on Hurak)
+    // DEMO rule, for the client to confirm: who our team may offer credit to (a regular customer)
     eligibility: { months: 6, courses: 3, spend: 1000 },
   },
 };

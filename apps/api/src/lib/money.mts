@@ -1,4 +1,4 @@
-// The money maths (Part B, B4), as Hurak does it: the payment fee comes off the gross first, ReadTraining's commission is a
+// The money maths (Part B, B4): the payment fee comes off the gross first, ReadTraining's commission is a
 // share of what is left (the net), and the provider keeps the rest. Whole pence throughout; rounding is half up, and the
 // provider's part is always worked out last so the three parts add up to the gross exactly.
 // Rates are basis points: 300 = 3%, 3000 = 30%.

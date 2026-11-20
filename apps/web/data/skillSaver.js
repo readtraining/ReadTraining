@@ -1,7 +1,7 @@
 import { SKILL_SAVER_LEVELS } from "@/lib/skillSaver";
 
 // Provider Skill Saver (/provider-skill-saver). The programme's rules come from the client's current site: the learner levels
-// and thresholds (hurak.com/provider-loyalty-page and /skill-saver), levels kept for life and cancelled courses not counting
+// and thresholds (the client's current site), levels kept for life and cancelled courses not counting
 // (/skill-saver FAQs), and the discount being funded by the marketplace reducing its commission (provider terms, section 2).
 // The layout and wording are ours. Draft until confirmed: the expected averages and the learner behaviour figures (the client
 // gives them without a source) and the opt-out answer (the client's FAQ asks it but publishes no answer).

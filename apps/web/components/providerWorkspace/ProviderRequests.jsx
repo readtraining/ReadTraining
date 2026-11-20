@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/states/States";
 import TextArea from "@/components/forms/TextArea";
 import { Req } from "./settingsForm";
 
-// Requests (Hurak's, from the account menu): every learner's refund request in one place. Hurak's columns: refund number, booking
+// Requests (from the account menu): every learner's refund request in one place. columns: refund number, booking
 // reference, learner, course, refund type (full, or partial with the amount), the learner's reason, and two actions: view the order,
 // and change the refund status (Accepted / Rejected with a description). Waiting requests come first; a decided one shows the
 // decision. Accepting refunds the amount and frees the learner's place, as the order page's refund card does.
