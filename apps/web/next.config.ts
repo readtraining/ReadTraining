@@ -104,7 +104,7 @@ const nextConfig: NextConfig = {
       { source: '/account/profile', destination: '/account/settings', permanent: true },
       // certificates had a tab on the learners page; they have their own page now
       { source: '/admin/learners', has: [{ type: 'query', key: 'tab', value: 'certificates' }], destination: '/admin/certificates', permanent: true },
-      // learners have no notifications page (Hurak's has one): the nearest is the emails they get, in Account settings
+      // learners have no notifications page: the nearest is the emails they get, in Account settings
       { source: '/account/notifications', destination: '/account/settings#rt-pf-mkt-h', permanent: false },
       // the old provider workspace prototype
       { source: '/admin/provider', destination: '/provider', permanent: true },

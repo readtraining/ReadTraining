@@ -13,8 +13,8 @@ import { EmptyState, ErrorState } from "@/components/states/States";
 import { COHORT_TONE, Loading, Pill } from "./providerParts";
 import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
 
-// One run of a course (Hurak's Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
-// whether it takes bookings and its tutor, with Edit, Cancel and Delete. Learners appear under it once booking opens (a later
+// One run of a course (Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
+// whether it takes bookings and its tutor, with Edit, Move to another course, Cancel and Delete. Learners appear under it once booking opens (a later
 // milestone); until then the list is empty.
 
 const useCohort = (cohortId) => {

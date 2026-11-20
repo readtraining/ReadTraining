@@ -21,10 +21,10 @@ import { FaqsTab } from "./SettingsFaqs";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { Confirm } from "./settingsForm";
 
-// Provider settings (/provider/settings?tab=…): Hurak's provider information, company logo, terms, VAT, affiliate, emails, QA and
-// integrations, plus our venues. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below)
-// and the chosen tab. Information, logo, terms and venues use the API (SettingsProfile.jsx); VAT, emails, QA (SettingsPeople.jsx)
-// and integrations are still DEMO records, so they show the "coming soon" panel (NOT_SAVED). Every save shows a toast.
+// Provider settings (/provider/settings?tab=…): provider information (with the logo), terms, FAQs, VAT, affiliate, emails,
+// Q&A (learners' questions) and integrations. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below) and the
+// chosen tab, each tab for the roles that may open it. Information and logo, terms, FAQs, VAT and emails use the API; venues have their own page (/provider/venues); Q&A and
+// integrations are still DEMO records, so they show the "coming soon" panel (NOT_SAVED). Every save shows a toast.
 
 const TAB_TEXT = {
   info: "What learners see about you on your public profile and on every course page.",

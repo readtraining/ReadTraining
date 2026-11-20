@@ -2,8 +2,8 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 import { CERT_EXAMPLE } from "@/lib/certificates";
 import { contactHref } from "@/lib/forms";
 
-// Verify a certificate (/certificate-checker). The checker follows the client's current page (hurak.com/certificate-checker:
-// the certificate number and the holder's name, exactly as on the certificate); the result states, the "not found" reasons
+// Verify a certificate (/certificate-checker). The checker follows the client's current page
+// (the certificate number and the holder's name, exactly as on the certificate); the result states, the "not found" reasons
 // and the links to the official registers follow the awarding bodies' own checkers (IOSH, NEBOSH, Highfield, the SIA register).
 
 export const certificateChecker = {

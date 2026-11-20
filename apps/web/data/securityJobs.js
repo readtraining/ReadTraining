@@ -1,5 +1,5 @@
 // Security jobs (/security-jobs, the footer's For providers > Security Jobs): registering interest in full-time SIA security work
-// with employers in our partner network. The client's current page (hurak.com/security-jobs) gave the functions only: who can
+// with employers in our partner network. The client's current page gave the functions only: who can
 // apply, a quick eligibility check, what the roles offer, nationwide coverage, how it works, FAQs and the application. The page
 // is our own, in the For Providers / Skill Saver page language: the opportunity first (hero with example matches, the facts
 // strip, the roles), then what employers check, how it works, the consent promise, where the work can lead, and the application,

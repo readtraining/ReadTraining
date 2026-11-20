@@ -47,7 +47,7 @@ export function defaultMode(course) {
   return [...dated].sort((a, b) => cheapest(a) - cheapest(b))[0];
 }
 
-// A provider course's learning options (Hurak's): `methods` are the ways it is offered and `method` the primary one, and
+// A provider course's learning options: `methods` are the ways it is offered and `method` the primary one, and
 // `closedMethods` the ones whose new bookings the provider stopped (still offered, their booked dates still run, nothing of
 // them on sale; never the primary). The ways in the order they are always shown, then helpers for a course from the API (an older
 // record with only `method` still reads).

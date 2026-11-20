@@ -15,7 +15,7 @@ const copy = biz.dashboard;
 const Arrow = () => <i className="icon-arrow-right text-12" aria-hidden="true"></i>;
 
 // The Business account home (the main actions are in the page head): four numbers that link to their sections, each with a short
-// line; the credit account (what is due matters, so it comes next); the upcoming training with each course's places and Assign (Hurak's unassigned licences and courses as one list); the
+// line; the credit account (what is due matters, so it comes next); the upcoming training with each course's places and Assign (unassigned licences and courses as one list); the
 // certificates that need renewing beside the recent results (a failed one has Rebook); and the recent valid certificates with
 // Download.
 export default function BizDashboard() {

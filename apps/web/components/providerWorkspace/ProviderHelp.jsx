@@ -6,7 +6,7 @@ import { getHelpSearchIndex, getHelpTopic } from "@/lib/help";
 import { EmptyState } from "@/components/states/States";
 import { topBar } from "@/data/home";
 
-// Help: Hurak's three ways to get help (how-to guides, help and support, contact) in our layout: a search across every help
+// Help: three ways to get help (how-to guides, help and support, contact) in our layout: a search across every help
 // article, the provider guides as a list, and the three ways to get help beside it.
 const WAYS = [
   { icon: "icon-book", title: "How-to guides", text: "Step by step: listing a course, running cohorts, orders and earnings.", href: "/help-centre/training-providers", cta: "Open the guides" },
