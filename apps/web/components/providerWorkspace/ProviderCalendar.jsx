@@ -34,6 +34,19 @@ const rangeFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "shor
 const fmt = (iso) => rangeFmt.format(new Date(`${iso}T00:00:00Z`));
 const span = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
 const when = (b) => (b.start === b.end ? longDay(b.start) : `${longDay(b.start)} to ${longDay(b.end)}`);
+// the details card's date, short and on one line: "Sat 21 Nov 2026"; a range says the month and year once:
+// "Sat 21 – Sun 29 Nov 2026", "Mon 30 Nov – Wed 2 Dec 2026", "Thu 31 Dec 2026 – Sat 2 Jan 2027"
+const partsFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const parts = (iso) => Object.fromEntries(partsFmt.formatToParts(new Date(`${iso}T00:00:00Z`)).map((x) => [x.type, x.value]));
+const shortWhen = (b) => {
+  const a = parts(b.start);
+  const z = parts(b.end);
+  const end = `${z.weekday} ${z.day} ${z.month} ${z.year}`;
+  if (b.start === b.end) return end;
+  if (a.year !== z.year) return `${a.weekday} ${a.day} ${a.month} ${a.year} – ${end}`;
+  if (a.month !== z.month) return `${a.weekday} ${a.day} ${a.month} – ${end}`;
+  return `${a.weekday} ${a.day} – ${end}`;
+};
 
 // every session as one bar, from its first day to its last
 function sessionBars(cohorts) {
@@ -229,7 +242,7 @@ function EntryDetails({ entry, onClose }) {
   const facts = (
     <>
       <dl className="rt-pws-cal__facts">
-        <div><dt>Date</dt><dd>{when(b)}{b.cancelled ? " · Cancelled" : ""}</dd></div>
+        <div><dt>Date</dt><dd>{shortWhen(b)}{b.cancelled ? " · Cancelled" : ""}</dd></div>
         <div><dt>Time</dt><dd>{b.from} to {b.to}</dd></div>
         <div><dt>Places taken</dt><dd>{k.taken} of {k.capacity}</dd></div>
         <div><dt>Venue</dt><dd>{k.venue ? [k.venue.name, k.venue.city].filter(Boolean).join(", ") : "Live online"}</dd></div>
