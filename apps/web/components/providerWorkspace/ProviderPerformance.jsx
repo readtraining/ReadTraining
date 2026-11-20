@@ -12,6 +12,7 @@ import { AreaChart, BarList, Delta, Sparkline, money } from "./charts";
 import { downloadCsv } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
 import TextArea from "@/components/forms/TextArea";
+import { Req } from "./settingsForm";
 
 const VIEWS = [
   { key: "overview", label: "Overview" },
@@ -274,7 +275,7 @@ function ReviewCard({ r, course, onSaved }) {
       {showForm && (
         <form className="rt-adm-noteform rt-pws-perf__replyform" onSubmit={save} noValidate ref={formRef}>
           <div className="rt-field">
-            <label htmlFor={id}>{r.reply ? "Edit your reply" : "Reply publicly"}</label>
+            <label htmlFor={id}>{r.reply ? "Edit your reply" : "Reply publicly"}<Req /></label>
             {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
             <TextArea id={id} rows={3} maxLength={1000} autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-e` : undefined} />
           </div>

@@ -7,7 +7,7 @@ import { useAdmin } from "@/lib/admin";
 import { addCandidateNote, moveIntro, offerRole, recordConsent, setCandidateStatus } from "@/lib/adminWork";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, Req } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { AdminStatus } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
@@ -147,7 +147,7 @@ export default function AdminCandidate({ reference }) {
         {!closed && roleOptions.length > 0 && (
           <form className="rt-adm-inline" onSubmit={offer} noValidate ref={offerRef}>
             <div className="rt-field">
-              <label htmlFor="rt-adm-role">{d.offer}</label>
+              <label htmlFor="rt-adm-role">{d.offer}<Req /></label>
               {errors.role && <p className="rt-q__err" id="rt-adm-role-e"><span className="rt-sr">Error: </span>{errors.role}</p>}
               <FieldSelect id="rt-adm-role" label={d.offer} placeholder="Choose a role" value={role} onChange={setRole} options={roleOptions.map((r) => ({ value: r.id, label: `${r.title}, ${r.employerName} (${r.city})` }))} invalid={Boolean(errors.role)} describedBy={errors.role ? "rt-adm-role-e" : undefined} />
             </div>
@@ -177,7 +177,7 @@ export default function AdminCandidate({ reference }) {
         <form className="rt-q__form" onSubmit={saveConsent} noValidate ref={consentRef}>
           <p className="rt-acc__note">{copy.consentRule}</p>
           <div className="rt-field">
-            <label htmlFor="rt-adm-how">{d.consentHow}</label>
+            <label htmlFor="rt-adm-how">{d.consentHow}<Req /></label>
             {errors.how && <p className="rt-q__err" id="rt-adm-how-e"><span className="rt-sr">Error: </span>{errors.how}</p>}
             <FieldSelect id="rt-adm-how" label={d.consentHow} value={how} onChange={setHow} options={d.consentWays} invalid={Boolean(errors.how)} describedBy={errors.how ? "rt-adm-how-e" : undefined} />
           </div>

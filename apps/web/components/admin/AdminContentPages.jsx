@@ -7,6 +7,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { blocksToText, textToBlocks } from "@/lib/legalText";
 import { errorsFrom } from "@/lib/useMe";
 import { SaveRow, describedBy, field, newRowId, useSave, RowTools } from "./contentParts";
+import { Req } from "./adminParts";
 import DateField from "./DateField";
 import TextArea from "@/components/forms/TextArea";
 
@@ -80,8 +81,8 @@ export function FaqForm({ contentKey, set, value, canEdit }) {
               <RowTools what={c.itemTitle.replace("{n}", i + 1)} first={i === 0} last={i === items.length - 1} onUp={() => setItems((xs) => moved(xs, i, -1))} onDown={() => setItems((xs) => moved(xs, i, 1))} onRemove={items.length > 1 ? () => setItems((xs) => xs.filter((y) => y.id !== x.id)) : null} removeLabel={c.remove} />
             )}
           </div>
-          {field(`rt-adm-fqq-${x.id}`, c.question, "", errors[`q${i}`], <input id={`rt-adm-fqq-${x.id}`} type="text" maxLength={200} value={x.q} readOnly={!canEdit} onChange={(e) => edit(x.id, { q: e.target.value })} aria-invalid={errors[`q${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-fqq-${x.id}`, "", errors[`q${i}`])} />)}
-          {field(`rt-adm-fqa-${x.id}`, c.answer, "", errors[`a${i}`], <TextArea id={`rt-adm-fqa-${x.id}`} rows={4} maxLength={3000} value={x.a} readOnly={!canEdit} onChange={(e) => edit(x.id, { a: e.target.value })} aria-invalid={errors[`a${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-fqa-${x.id}`, "", errors[`a${i}`])} />)}
+          {field(`rt-adm-fqq-${x.id}`, <>{c.question}<Req /></>, "", errors[`q${i}`], <input id={`rt-adm-fqq-${x.id}`} type="text" maxLength={200} value={x.q} readOnly={!canEdit} onChange={(e) => edit(x.id, { q: e.target.value })} aria-invalid={errors[`q${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-fqq-${x.id}`, "", errors[`q${i}`])} />)}
+          {field(`rt-adm-fqa-${x.id}`, <>{c.answer}<Req /></>, "", errors[`a${i}`], <TextArea id={`rt-adm-fqa-${x.id}`} rows={4} maxLength={3000} value={x.a} readOnly={!canEdit} onChange={(e) => edit(x.id, { a: e.target.value })} aria-invalid={errors[`a${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-fqa-${x.id}`, "", errors[`a${i}`])} />)}
         </section>
       ))}
       {canEdit && (items.length < 30
@@ -158,13 +159,13 @@ export function LegalForm({ contentKey, doc, value, canEdit }) {
         <h2 className="rt-acc__h2" id="rt-adm-lg-h">{doc.title}</h2>
         {field("rt-adm-lg-lead", c.lead, "", errors.lead, <TextArea id="rt-adm-lg-lead" rows={2} maxLength={400} value={v.lead} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, lead: e.target.value }))} aria-invalid={errors.lead ? true : undefined} aria-describedby={describedBy("rt-adm-lg-lead", "", errors.lead)} />)}
         <div className="rt-adm-fees__grid">
-          {field("rt-adm-lg-updated", c.updated, doc.key === "page:provider-terms" ? c.updatedHintProvider : c.updatedHint, errors.updated, (
+          {field("rt-adm-lg-updated", <>{c.updated}<Req /></>, doc.key === "page:provider-terms" ? c.updatedHintProvider : c.updatedHint, errors.updated, (
             <div className="rt-adm-inline__row">
               <DateField id="rt-adm-lg-updated" value={v.updated} disabled={!canEdit} onChange={(d) => setV((x) => ({ ...x, updated: d }))} invalid={Boolean(errors.updated)} describedBy={describedBy("rt-adm-lg-updated", "x", errors.updated)} />
               {canEdit && v.updated !== today && <button type="button" className="rt-cd__link" onClick={() => setV((x) => ({ ...x, updated: today, effective: x.effective < today ? today : x.effective }))}>Today</button>}
             </div>
           ))}
-          {field("rt-adm-lg-effective", c.effective, "", errors.effective, <DateField id="rt-adm-lg-effective" value={v.effective} disabled={!canEdit} onChange={(d) => setV((x) => ({ ...x, effective: d }))} invalid={Boolean(errors.effective)} describedBy={describedBy("rt-adm-lg-effective", "", errors.effective)} />)}
+          {field("rt-adm-lg-effective", <>{c.effective}<Req /></>, "", errors.effective, <DateField id="rt-adm-lg-effective" value={v.effective} disabled={!canEdit} onChange={(d) => setV((x) => ({ ...x, effective: d }))} invalid={Boolean(errors.effective)} describedBy={describedBy("rt-adm-lg-effective", "", errors.effective)} />)}
         </div>
         <label className="rt-bk__check rt-adm-mt" htmlFor="rt-adm-lg-draft">
           <input id="rt-adm-lg-draft" type="checkbox" checked={v.draft} disabled={!canEdit} onChange={(e) => setV((x) => ({ ...x, draft: e.target.checked }))} aria-describedby="rt-adm-lg-draft-hint" />
@@ -182,8 +183,8 @@ export function LegalForm({ contentKey, doc, value, canEdit }) {
               <RowTools what={s.title || c.sectionTitle.replace("{n}", i + 1)} first={i === 0} last={i === sections.length - 1} onUp={() => setSections((xs) => moved(xs, i, -1))} onDown={() => setSections((xs) => moved(xs, i, 1))} onRemove={sections.length > 1 ? () => setSections((xs) => xs.filter((y) => y.rid !== s.rid)) : null} removeLabel={c.removeSection} />
             )}
           </div>
-          {field(`rt-adm-lst-${s.rid}`, c.heading, "", errors[`title${i}`], <input id={`rt-adm-lst-${s.rid}`} type="text" maxLength={120} value={s.title} readOnly={!canEdit} onChange={(e) => editSection(s.rid, { title: e.target.value })} aria-invalid={errors[`title${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-lst-${s.rid}`, "", errors[`title${i}`])} />)}
-          {field(`rt-adm-lsx-${s.rid}`, c.text, i === 0 ? c.textHint : "", errors[`text${i}`], <TextArea id={`rt-adm-lsx-${s.rid}`} className="rt-adm-content__legal" rows={6} value={s.text} readOnly={!canEdit} onChange={(e) => editSection(s.rid, { text: e.target.value })} aria-invalid={errors[`text${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-lsx-${s.rid}`, i === 0 ? "x" : "", errors[`text${i}`])} />)}
+          {field(`rt-adm-lst-${s.rid}`, <>{c.heading}<Req /></>, "", errors[`title${i}`], <input id={`rt-adm-lst-${s.rid}`} type="text" maxLength={120} value={s.title} readOnly={!canEdit} onChange={(e) => editSection(s.rid, { title: e.target.value })} aria-invalid={errors[`title${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-lst-${s.rid}`, "", errors[`title${i}`])} />)}
+          {field(`rt-adm-lsx-${s.rid}`, <>{c.text}<Req /></>, i === 0 ? c.textHint : "", errors[`text${i}`], <TextArea id={`rt-adm-lsx-${s.rid}`} className="rt-adm-content__legal" rows={6} value={s.text} readOnly={!canEdit} onChange={(e) => editSection(s.rid, { text: e.target.value })} aria-invalid={errors[`text${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-lsx-${s.rid}`, i === 0 ? "x" : "", errors[`text${i}`])} />)}
         </section>
       ))}
       {canEdit && (sections.length < 60

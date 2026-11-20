@@ -13,7 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
 import { isDatedMethod, wayName, waysOf } from "@/lib/courseModes";
-import { Said, DetailSkeleton, formatWhen, Empty, PageLink, getQuery, setQuery } from "./adminParts";
+import { Said, DetailSkeleton, formatWhen, Empty, PageLink, getQuery, setQuery, Req } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import AdminCoursePrices from "./AdminCoursePrices";
@@ -267,14 +267,14 @@ export default function AdminCourse({ id }) {
           <p className="rt-acc__note">{c.provider?.name}</p>
           {asking && needsNote(asking) && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-cnote">{ap.reasonLabel}</label>
+              <label htmlFor="rt-adm-cnote">{ap.reasonLabel}<Req /></label>
               {error && <p className="rt-q__err" id="rt-adm-cnote-e"><span className="rt-sr">Error: </span>{error}</p>}
               <TextArea id="rt-adm-cnote" rows={5} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cnote-e" : undefined} />
             </div>
           )}
           {asking && ownFor(asking) && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-cown">{A.own.label}</label>
+              <label htmlFor="rt-adm-cown">{A.own.label}<Req /></label>
               <small className="rt-field__hint" id="rt-adm-cown-hint">{A.own.hint}</small>
               {reasonError && <p className="rt-q__err" id="rt-adm-cown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
               <TextArea id="rt-adm-cown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-cown-hint${reasonError ? " rt-adm-cown-e" : ""}`} />

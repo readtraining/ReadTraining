@@ -72,6 +72,7 @@ const DONE: Record<string, string> = {
   'venue.deleted': 'Deleted the venue',
   'provider.profile_updated': 'Updated your public profile',
   'provider.renamed': 'Changed your provider name',
+  'provider.faqs_updated': 'Updated your FAQs',
   'provider.logo_updated': 'Changed your logo',
   'provider.logo_removed': 'Removed your logo',
   'provider.terms_updated': 'Updated your booking terms or cancellation policy',

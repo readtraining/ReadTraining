@@ -8,7 +8,7 @@ import { addRequestNote, advanceRequest, assignRequest, cancelRequest, nextLabel
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, Req } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { AdminStatus, AdminDue } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
@@ -192,7 +192,7 @@ export default function AdminRequest({ reference }) {
       <Sheet open={quoteOpen} onClose={() => setQuoteOpen(false)} title={nextLabel(r)} closeLabel="Close">
         <form className="rt-q__form" onSubmit={sendQuote} noValidate ref={quoteRef}>
           <div className="rt-field">
-            <label htmlFor="rt-adm-qamount">{d.quoteAmount}</label>
+            <label htmlFor="rt-adm-qamount">{d.quoteAmount}<Req /></label>
             {errors.amount && <p className="rt-q__err" id="rt-adm-qamount-e"><span className="rt-sr">Error: </span>{errors.amount}</p>}
             <input id="rt-adm-qamount" type="number" min="1" step="0.01" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-invalid={errors.amount ? true : undefined} aria-describedby={errors.amount ? "rt-adm-qamount-e" : undefined} />
           </div>
@@ -204,7 +204,7 @@ export default function AdminRequest({ reference }) {
         <form className="rt-q__form" onSubmit={doCancel} noValidate ref={cancelRef}>
           {r.kind === "licence" && <p className="rt-acc__note">{d.cancelRule}</p>}
           <div className="rt-field">
-            <label htmlFor="rt-adm-creason">{d.cancelReason}</label>
+            <label htmlFor="rt-adm-creason">{d.cancelReason}<Req /></label>
             {errors.reason && <p className="rt-q__err" id="rt-adm-creason-e"><span className="rt-sr">Error: </span>{errors.reason}</p>}
             <TextArea id="rt-adm-creason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-adm-creason-e" : undefined} />
           </div>

@@ -17,6 +17,7 @@ import { useTaxonomy } from "@/lib/taxonomyContext";
 import { categoryName, categoryOptions, getTaxonomy, methodName, pagesForSubject, subcategoryName, subcategoryOptions, topicName, topicOptions } from "@/lib/taxonomy";
 import { LEARNING_OPTIONS } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { Req } from "./settingsForm";
 
 // New course: one pop-up on one screen, over whatever workspace page it was opened from (ProviderShell holds it). What the
 // course is (working title; category, sub-category and topic, the topic optional) and how it is taught (its primary learning
@@ -198,7 +199,7 @@ function NewCourseForm({ onCancel, onDirty }) {
       <div className="rt-pws-nc__group">
         <div className="rt-field">
           <div className="rt-pws-nc__labelrow">
-            <label htmlFor="rt-pws-nc-title">Working title</label>
+            <label htmlFor="rt-pws-nc-title">Working title<Req /></label>
             <span className="rt-pws-nc__count" aria-hidden="true">{f.title.length}/80</span>
           </div>
           <Err k="title" />
@@ -224,18 +225,18 @@ function NewCourseForm({ onCancel, onDirty }) {
         </div>
         <div className="rt-pws-nc__row">
           <div className="rt-field">
-            <label htmlFor="rt-pws-nc-category">Category</label>
+            <label htmlFor="rt-pws-nc-category">Category<Req /></label>
             <Err k="category" />
             <FieldSelect id="rt-pws-nc-category" label="Category" placeholder="Choose a category" value={f.category} onChange={(v) => set({ category: v, subcategory: "", topic: "" })} options={categoryOptions()} invalid={Boolean(errors.category)} describedBy={errors.category ? "rt-pws-nc-category-e" : undefined} />
           </div>
           <div className="rt-field">
-            <label htmlFor="rt-pws-nc-subcategory">Sub-category</label>
+            <label htmlFor="rt-pws-nc-subcategory">Sub-category<Req /></label>
             <Err k="subcategory" />
             <FieldSelect id="rt-pws-nc-subcategory" label="Sub-category" placeholder={f.category ? "Choose a sub-category" : "Choose a category first"} value={f.subcategory} onChange={(v) => set({ subcategory: v, topic: "" })} options={subcategoryOptions(f.category)} disabled={!f.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-pws-nc-subcategory-e" : undefined} />
           </div>
         </div>
         <div className="rt-field">
-          <label htmlFor="rt-pws-nc-topic">Topic <span className="rt-pws-nc__opt">(optional)</span></label>
+          <label htmlFor="rt-pws-nc-topic">Topic</label>
           <FieldSelect id="rt-pws-nc-topic" label="Topic" placeholder={!f.subcategory ? "Choose a sub-category first" : topics.length ? "Choose a topic" : "No topics for this sub-category"} value={f.topic} onChange={(v) => set({ topic: v })} options={topics} disabled={!topics.length} />
           {page && <p className="rt-pws-nc__note" id="rt-pws-nc-page">Listed on the shared course page for {page.title}, beside other providers.</p>}
         </div>

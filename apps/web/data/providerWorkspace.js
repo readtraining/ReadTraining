@@ -37,14 +37,13 @@ export const pw = {
     stepsLabel: "Application progress",
     asked: { title: "What our team asked for", where: "Where to make the changes" },
     places: [
-      { label: "Provider name, headline and biography", href: "/provider/settings?tab=info" },
-      { label: "Logo", href: "/provider/settings?tab=logo" },
+      { label: "Provider name, logo, headline and biography", href: "/provider/settings?tab=info" },
       { label: "Cancellation policy and booking terms", href: "/provider/settings?tab=terms" },
-      { label: "Venues", href: "/provider/settings?tab=venues" },
+      { label: "Venues", href: "/provider/venues" },
     ],
     send: {
       title: "Send it back for review",
-      reply: "Anything to tell our team? (optional)",
+      reply: "Anything to tell our team?",
       hint: "For example, what you changed.",
       button: "I've made the changes: send for review",
       busy: "Sending…",
@@ -100,12 +99,13 @@ export const pw = {
       { label: "Calendar", href: "/provider/calendar" },
       { label: "Self-paced", href: "/provider/cohorts?mode=self-paced" },
     ] },
+    { key: "venues", label: "Venues", href: "/provider/venues", can: "provider.venues.view" },
     { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners", can: "provider.learners.view" },
     { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders", can: "provider.orders.view" },
     { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews", can: "provider.performance.view" },
     { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
     // the provider's own account: how it is set up, and the page learners see
-    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear", can: "provider.settings.view" },
+    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear", can: ["provider.settings.view", "provider.vat.view", "provider.emails.view"] },
     // `can`: only for the roles that may open it (the shared permission table)
     { key: "team", label: "Team", href: "/provider/team", navIcon: "team", can: "provider.team.view" },
     { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile", can: "provider.settings.view" },
@@ -150,7 +150,9 @@ export const pw = {
     newOrder: { title: "Create order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
     order: { title: "Order details" },
     notifications: { title: "Notifications", lead: "Updates on your courses, orders and reviews." },
-    settings: { title: "Settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
+    // no lead: the tab list beside it already names every part
+    settings: { title: "Settings" },
+    venues: { title: "Venues" },
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
     requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
     team: { title: "Team", lead: "People who can use this workspace, and what each of them can do." },
@@ -276,9 +278,8 @@ export const pw = {
 
   settingsTabs: [
     { key: "info", label: "Provider information" },
-    { key: "logo", label: "Company logo" },
     { key: "terms", label: "Cancellation and terms" },
-    { key: "venues", label: "Venues" },
+    { key: "faqs", label: "FAQs" },
     { key: "vat", label: "VAT" },
     { key: "affiliate", label: "Affiliate" },
     { key: "emails", label: "Emails" },
@@ -551,6 +552,7 @@ export function seedProvider(now = Date.now()) {
     r.bookingRef = e ? e.id.replace(/^E/, "B-") : `B-${90 + i}`;
   });
 
+
   const qa = [
     { id: "QA1", courseId: "C3", question: "Do I need a first aid certificate before I start?", answer: "No. Emergency First Aid at Work is part of this course.", from: "provider", at: at(-60) },
     { id: "QA2", courseId: "C1", question: "Is the course suitable if I have a bad knee?", answer: "", from: "learner", name: "Sophie T.", at: at(-2) },
@@ -580,8 +582,6 @@ export function seedProvider(now = Date.now()) {
       facebook: "", linkedin: "https://www.linkedin.com/company/northfield-safety-training", youtube: "",
       policy: "Cancel more than 10 working days before the course for a full refund. Between 5 and 10 working days, we refund 50%. Within 5 working days we can move you to another date for a £20 fee.",
       terms: "Bookings are confirmed when paid. Learners must bring photo ID. Certificates are issued once every assessment is passed. We may move a course to another date or venue if numbers are too low, and offer a full refund if the new date does not suit.",
-      vat: { registered: true, number: "GB 284 7193 62" },
-      emails: { refund: "accounts@northfieldsafety.co.uk", dispute: "accounts@northfieldsafety.co.uk", order: "bookings@northfieldsafety.co.uk" },
     },
     me: { id: "T1", name: "Joanne Fielding", email: "joanne@northfieldsafety.co.uk", role: "Account owner" },
     courses, cohorts, venues, faqs, packages, team, learners, orders, enrolments, reviews, leads, refunds, qa, notifications,

@@ -12,7 +12,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery, Empty, HeaderAction } from "./adminParts";
+import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery, Empty, HeaderAction, Req } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -205,9 +205,9 @@ function CouponForm({ coupon, onDone }) {
 
   return (
     <form className="rt-q__form rt-biz__sheetform rt-adm-couponform" onSubmit={submit} noValidate ref={ref}>
-      {field("rt-cp-code", f.code.label, f.code.hint, errors.code, input("code", { type: "text", autoCapitalize: "characters", spellCheck: false, className: "rt-adm-coupon-input" }))}
+      {field("rt-cp-code", <>{f.code.label}<Req /></>, f.code.hint, errors.code, input("code", { type: "text", autoCapitalize: "characters", spellCheck: false, className: "rt-adm-coupon-input" }))}
       <Choice name="rt-cp-kind" legend={f.kind.label} value={v.kind} onChange={(k) => setV((x) => ({ ...x, kind: k }))} options={[{ value: "percent", label: f.kind.percent }, { value: "amount", label: f.kind.amount }]} />
-      {field("rt-cp-value", f.value[v.kind], v.kind === "percent" ? f.value.percentHint : f.value.amountHint, errors.value, (
+      {field("rt-cp-value", <>{f.value[v.kind]}<Req /></>, v.kind === "percent" ? f.value.percentHint : f.value.amountHint, errors.value, (
         <input id="rt-cp-value" type="text" inputMode="decimal" className="rt-adm-num" value={v.value} onChange={set("value")} aria-invalid={errors.value ? true : undefined} aria-describedby={describedBy("rt-cp-value", true, errors.value)} />
       ))}
       <div className="rt-adm-couponform__two">
@@ -218,7 +218,7 @@ function CouponForm({ coupon, onDone }) {
       <Choice name="rt-cp-scope" legend={f.scope.label} value={v.scope} onChange={(k) => setV((x) => ({ ...x, scope: k }))} options={["all", "categories", "courses"].map((k) => ({ value: k, label: f.scope[k] }))} />
       {v.scope === "categories" && (
         <fieldset className="rt-field" aria-describedby={errors.categories ? "rt-cp-categories-e" : undefined}>
-          <legend>{f.categories.label}</legend>
+          <legend>{f.categories.label}<Req /></legend>
           {errors.categories && <p className="rt-q__err" id="rt-cp-categories-e"><span className="rt-sr">Error: </span>{errors.categories}</p>}
           <div className="rt-adm-couponform__checks" id="rt-cp-categories">
             {taxonomy.categories.filter((x) => x.active !== false).map((x) => (
@@ -229,7 +229,7 @@ function CouponForm({ coupon, onDone }) {
       )}
       {v.scope === "courses" && (
         <fieldset className="rt-field" aria-describedby={errors.courses ? "rt-cp-courses-e" : undefined}>
-          <legend>{f.courses.label}</legend>
+          <legend>{f.courses.label}<Req /></legend>
           <small className="rt-field__hint">{f.courses.hint} {v.courses.length > 0 && f.courses.picked.replace("{n}", v.courses.length)}</small>
           {errors.courses && <p className="rt-q__err" id="rt-cp-courses-e"><span className="rt-sr">Error: </span>{errors.courses}</p>}
           <input id="rt-cp-courses" type="search" placeholder={f.courses.search} aria-label={f.courses.search} value={find} onChange={(e) => setFind(e.target.value)} />

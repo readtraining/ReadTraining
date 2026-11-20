@@ -11,6 +11,7 @@ import { money } from "./charts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import TextArea from "@/components/forms/TextArea";
+import { Req } from "./settingsForm";
 
 // Requests (Hurak's, from the account menu): every learner's refund request in one place. Hurak's columns: refund number, booking
 // reference, learner, course, refund type (full, or partial with the amount), the learner's reason, and two actions: view the order,
@@ -114,12 +115,12 @@ export default function ProviderRequests() {
           <form className="rt-q__form" onSubmit={save} noValidate ref={formRef}>
             <p className="rt-acc__note">{learnerName(editing.learner)} asked for {editing.full ? "a full refund" : `a partial refund of ${money(editing.amount)}`} on {editing.course?.title}. Accepting returns {money(editing.amount)} to the customer and frees the learner&apos;s place.</p>
             <div className="rt-field">
-              <label htmlFor="rt-rq-status">Refund status</label>
+              <label htmlFor="rt-rq-status">Refund status<Req /></label>
               {errors.decision && <p className="rt-q__err" id="rt-rq-status-e"><span className="rt-sr">Error: </span>{errors.decision}</p>}
               <FieldSelect id="rt-rq-status" label="Refund status" placeholder="Choose a status" value={decision} onChange={setDecision} options={DECISIONS} invalid={Boolean(errors.decision)} describedBy={errors.decision ? "rt-rq-status-e" : undefined} />
             </div>
             <div className="rt-field">
-              <label htmlFor="rt-rq-note">Description{decision === "rejected" ? "" : " (optional)"}</label>
+              <label htmlFor="rt-rq-note">Description{decision === "rejected" ? <Req /> : null}</label>
               <p className="rt-field__hint">The learner sees this with your decision.</p>
               {errors.note && <p className="rt-q__err" id="rt-rq-note-e"><span className="rt-sr">Error: </span>{errors.note}</p>}
               <TextArea id="rt-rq-note" rows={4} maxLength={500} placeholder="Enter description here" value={note} onChange={(e) => setNote(e.target.value)} autoComplete="off" aria-invalid={errors.note ? true : undefined} aria-describedby={errors.note ? "rt-rq-note-e" : undefined} />

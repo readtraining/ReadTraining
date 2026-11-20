@@ -7,7 +7,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said } from "./adminParts";
+import { formatWhen, Said, Req } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 
 const copy = A.settings;
@@ -73,7 +73,7 @@ function FeesCard({ onSaved }) {
       <div className="rt-adm-fees__grid">
         {Object.keys(LIMITS).map((k) => (
           <div key={k} className="rt-field">
-            <label htmlFor={`rt-adm-${k}`}>{F[k].label}</label>
+            <label htmlFor={`rt-adm-${k}`}>{F[k].label}<Req /></label>
             <small className="rt-field__hint" id={`rt-adm-${k}-hint`}>{F[k].hint}</small>
             {err(k)}
             <input id={`rt-adm-${k}`} type="text" inputMode="decimal" value={v[k]} readOnly={!canEdit} onChange={(e) => setV((x) => ({ ...x, [k]: e.target.value }))} aria-invalid={errors[k] ? true : undefined} aria-describedby={`rt-adm-${k}-hint${errors[k] ? ` rt-adm-${k}-e` : ""}`} className="rt-adm-num" />
@@ -102,7 +102,7 @@ function CommissionCard({ onSaved }) {
       </div>
       <p className="rt-acc__note">{ownRates ? c.own.replace("{n}", ownRates === 1 ? "1 provider" : `${ownRates} providers`) : c.none}{changedAt ? ` · ${c.changed.replace("{when}", formatWhen(Date.parse(changedAt)))}` : ""}</p>
       {me?.permissions?.includes("finance.settings") ? (
-        <RateForm id="rt-adm-comdef" label={c.label} hint={c.hint} bps={defaultBps} saving={save.isPending} save={(bps) => save.mutateAsync({ bps })} onSaved={() => { onSaved(c.saved); utils.admin.commission.invalidate(); utils.admin.providers.invalidate(); }} />
+        <RateForm id="rt-adm-comdef" label={<>{c.label}<Req /></>} hint={c.hint} bps={defaultBps} saving={save.isPending} save={(bps) => save.mutateAsync({ bps })} onSaved={() => { onSaved(c.saved); utils.admin.commission.invalidate(); utils.admin.providers.invalidate(); }} />
       ) : null}
     </section>
   );

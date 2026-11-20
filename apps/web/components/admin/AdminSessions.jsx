@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { cancelSession, markJoiningSent, setSalesClosed, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu, Empty } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, Said, Pager, usePaging, TableSkeleton, RowMenu, Empty, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
 
@@ -149,7 +149,7 @@ export default function AdminSessions() {
             <p className="rt-acc__note"><strong>{cancelling.course}</strong><br />{formatDate(cancelling.date)} · {cancelling.provider} · {cancelling.city} · {cancelling.booked} booked</p>
             <p className="rt-adm-item__reason">{copy.cancelNote}</p>
             <div className="rt-field">
-              <label htmlFor="rt-adm-cancel">{copy.cancelReason}</label>
+              <label htmlFor="rt-adm-cancel">{copy.cancelReason}<Req /></label>
               {error && <p className="rt-q__err" id="rt-adm-cancel-e"><span className="rt-sr">Error: </span>{error}</p>}
               <TextArea id="rt-adm-cancel" rows={3} maxLength={600} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cancel-e" : undefined} />
             </div>

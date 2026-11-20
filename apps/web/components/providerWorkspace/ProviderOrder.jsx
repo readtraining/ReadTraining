@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/states/States";
 import { useProviderAccess } from "@/lib/providerAccess";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
+import { Req } from "./settingsForm";
 
 // Order details, as Hurak's: the order (amount, number, status, sales channel, payment method, purchase date, card), billing
 // details, the timeline with notes, the invoice (upload it, record when it was paid), the enrolled students (one card per
@@ -310,7 +311,7 @@ export default function ProviderOrder({ reference }) {
               <>
                 <p className="rt-acc__note">{sheet === "approve" ? `${formatPrice(request?.amount || 0)} goes back to the customer and the learner's place is freed.` : "The learner sees your reason."}</p>
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-rnote">{sheet === "approve" ? "Note to the learner (optional)" : "Reason"}</label>
+                  <label htmlFor="rt-pws-ord-rnote">{sheet === "approve" ? "Note to the learner" : <>Reason<Req /></>}</label>
                   <Err k="note" />
                   <TextArea id="rt-pws-ord-rnote" rows={3} maxLength={500} value={form.note || ""} onChange={field("note")} autoComplete="off" {...aria("note")} />
                 </div>
@@ -320,7 +321,7 @@ export default function ProviderOrder({ reference }) {
               <>
                 <p className="rt-acc__note">The order has not been paid. Cancelling frees the places and tells the customer.</p>
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-reason">Reason</label>
+                  <label htmlFor="rt-pws-ord-reason">Reason<Req /></label>
                   <Err k="reason" />
                   <TextArea id="rt-pws-ord-reason" rows={3} maxLength={500} value={form.reason || ""} onChange={field("reason")} autoComplete="off" {...aria("reason")} />
                 </div>
@@ -333,18 +334,18 @@ export default function ProviderOrder({ reference }) {
                 {form.type === "partial" && (
                   <>
                     <div className="rt-field">
-                      <label htmlFor="rt-pws-ord-learner">For one student (optional)</label>
+                      <label htmlFor="rt-pws-ord-learner">For one student</label>
                       <FieldSelect id="rt-pws-ord-learner" label="For one student" value={form.learner || ""} onChange={pickLearner} options={[{ value: "", label: "Not for one student (places stay booked)" }, ...enrolled.map((e) => ({ value: e.learnerId, label: `${learnerName(e.learner)}'s place on ${e.course?.title}` }))]} />
                     </div>
                     <div className="rt-field">
-                      <label htmlFor="rt-pws-ord-amount">Refund amount (£)</label>
+                      <label htmlFor="rt-pws-ord-amount">Refund amount (£)<Req /></label>
                       <Err k="amount" />
                       <input id="rt-pws-ord-amount" type="number" inputMode="decimal" min="0" step="0.01" value={form.amount || ""} onChange={field("amount")} autoComplete="off" {...aria("amount")} />
                     </div>
                   </>
                 )}
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-notes">Refund notes</label>
+                  <label htmlFor="rt-pws-ord-notes">Refund notes<Req /></label>
                   <Err k="notes" />
                   <TextArea id="rt-pws-ord-notes" rows={3} maxLength={500} value={form.notes || ""} onChange={field("notes")} autoComplete="off" {...aria("notes")} />
                 </div>
@@ -354,12 +355,12 @@ export default function ProviderOrder({ reference }) {
               <>
                 <p className="rt-acc__note">We send this to the card company with the booking details we hold.</p>
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-message">What happened</label>
+                  <label htmlFor="rt-pws-ord-message">What happened<Req /></label>
                   <Err k="message" />
                   <TextArea id="rt-pws-ord-message" rows={5} maxLength={2000} value={form.message || ""} onChange={field("message")} autoComplete="off" {...aria("message")} />
                 </div>
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-file">Attach a file (optional)</label>
+                  <label htmlFor="rt-pws-ord-file">Attach a file</label>
                   <p className="rt-acc__note" id="rt-pws-ord-file-h">The signed register, a certificate or emails. PDF, JPG or PNG.</p>
                   <input id="rt-pws-ord-file" type="file" accept=".pdf,.jpg,.jpeg,.png" aria-describedby="rt-pws-ord-file-h" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0]?.name || "" }))} />
                 </div>
@@ -367,7 +368,7 @@ export default function ProviderOrder({ reference }) {
             )}
             {sheet === "confirm" && (
               <div className="rt-field">
-                <label htmlFor="rt-pws-ord-email">Send to</label>
+                <label htmlFor="rt-pws-ord-email">Send to<Req /></label>
                 <p className="rt-field__hint">The customer's email. Change it to send the confirmation to someone else.</p>
                 <Err k="email" />
                 <input id="rt-pws-ord-email" type="email" value={form.email || ""} onChange={field("email")} autoComplete="off" spellCheck={false} {...aria("email")} />
@@ -375,7 +376,7 @@ export default function ProviderOrder({ reference }) {
             )}
             {sheet === "invoice" && (
               <div className="rt-field">
-                <label htmlFor="rt-pws-ord-date">Date the invoice was paid</label>
+                <label htmlFor="rt-pws-ord-date">Date the invoice was paid<Req /></label>
                 <Err k="date" />
                 <DateField id="rt-pws-ord-date" value={form.date || ""} onChange={(v) => field("date")({ target: { value: v } })} invalid={Boolean(errors.date)} describedBy={errors.date ? "rt-pws-ord-date-e" : undefined} />
               </div>
@@ -384,7 +385,7 @@ export default function ProviderOrder({ reference }) {
               <>
                 <p className="rt-acc__note">{learnerName(form.enrolment?.learner)} is on the {pw.tiers.find((t) => t.key === form.from)?.label} plan. We send the customer a payment link for the difference.</p>
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-plan">New plan</label>
+                  <label htmlFor="rt-pws-ord-plan">New plan<Req /></label>
                   <Err k="plan" />
                   <FieldSelect id="rt-pws-ord-plan" label="New plan" placeholder="Choose a plan" value={form.plan || ""} onChange={(v) => setForm((f) => ({ ...f, plan: v, difference: f.pack.tiers[v].price - f.pack.tiers[f.from].price }))} options={form.options || []} invalid={Boolean(errors.plan)} describedBy={errors.plan ? "rt-pws-ord-plan-e" : undefined} />
                 </div>
@@ -394,12 +395,12 @@ export default function ProviderOrder({ reference }) {
               <>
                 <p className="rt-acc__note">Add another course to {learnerName(form.enrolment?.learner)}'s booking. We send the customer a payment link for it.</p>
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-addon">Course</label>
+                  <label htmlFor="rt-pws-ord-addon">Course<Req /></label>
                   <Err k="courseId" />
                   <FieldSelect id="rt-pws-ord-addon" label="Course" placeholder="Choose a course" value={form.courseId || ""} onChange={(v) => setForm((f) => ({ ...f, courseId: v, price: String(data.byId.course[v]?.pricing.price ?? "") }))} options={data.courses.filter((c) => c.status === "approved" && c.id !== form.enrolment?.courseId).map((c) => ({ value: c.id, label: c.title }))} invalid={Boolean(errors.courseId)} describedBy={errors.courseId ? "rt-pws-ord-courseId-e" : undefined} />
                 </div>
                 <div className="rt-field">
-                  <label htmlFor="rt-pws-ord-price">Price (£)</label>
+                  <label htmlFor="rt-pws-ord-price">Price (£)<Req /></label>
                   <Err k="price" />
                   <input id="rt-pws-ord-price" type="number" inputMode="decimal" min="0" step="0.01" value={form.price ?? ""} onChange={field("price")} autoComplete="off" {...aria("price")} />
                 </div>

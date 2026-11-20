@@ -10,7 +10,7 @@ import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { hideReview, keepReview, showReview } from "@/lib/adminReviews";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging, Empty } from "./adminParts";
+import { Said, Search, TableSkeleton, Tabs, formatWhen, Pager, usePaging, Empty, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
 
@@ -119,7 +119,7 @@ function HideForm({ review, onDone }) {
       <p className="rt-adm-strong">{review.title}</p>
       <p className="rt-acc__note">{copy.hideText}</p>
       <div className="rt-field">
-        <label htmlFor="rt-adm-rv-reason">{copy.reason}</label>
+        <label htmlFor="rt-adm-rv-reason">{copy.reason}<Req /></label>
         <small className="rt-field__hint" id="rt-adm-rv-reason-hint">{copy.reasonHint}</small>
         {error && <p className="rt-q__err" id="rt-adm-rv-reason-e"><span className="rt-sr">Error: </span>{error}</p>}
         <TextArea id="rt-adm-rv-reason" rows={4} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-rv-reason-hint${error ? " rt-adm-rv-reason-e" : ""}`} />

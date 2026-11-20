@@ -4,6 +4,7 @@ import { asc, courseExams, courseFaqs, courseImages, courseUnits, eq, sql } from
 
 import type { db as Db } from '../../lib/db.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
+import { loadProviderFaqs } from '../provider/faqs.mjs'
 import { publicTiers } from '../provider/plans.mjs'
 import { formatPostcode, POSTCODE } from '../../lib/postcode.mjs'
 
@@ -224,6 +225,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     units: units.map((u) => ({ title: u.title, body: u.body ?? '' })),
     exams: exams.map((e) => ({ unit: e.unit, passMark: e.passMark ?? '', duration: e.duration ?? '' })),
     faqs: faqs.map((f) => ({ question: f.question, answer: f.answer })),
+    // the provider's own FAQs, on a provider course with its own page only (a shared page never names a provider)
+    providerFaqs: c.kind === 'provider' && !parent ? await loadProviderFaqs(db, c.organisation_id as string) : [],
     parent: parent ?? null,
     provider: provider
       ? { name: provider.name, slug: provider.slug, logoUrl: mediaUrl(provider.logo_path), headline: provider.headline ?? '', city: provider.city ?? '', bookingTerms: provider.booking_terms ?? '', cancellationPolicy: provider.cancellation_policy ?? '' }

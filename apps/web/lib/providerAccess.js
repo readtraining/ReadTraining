@@ -18,6 +18,7 @@ export function useProviderAccess() {
     staff: w?.staff || null,
     can: (action, target = {}) => Boolean(actor && can(actor, action, { organisationId: w.id, ...target })),
     // whether a page or menu item is theirs: the permission, or its "own only" form (a tutor sees their own dates and learners)
-    sees: (action) => !action || Boolean(actor && (can(actor, action, { organisationId: w.id }) || can(actor, action, { organisationId: w.id, tutorUserId: w.userId }))),
+    // one action, or any of several (a page more than one role opens for different parts, such as Settings)
+    sees: (action) => !action || [].concat(action).some((a) => Boolean(actor && (can(actor, a, { organisationId: w.id }) || can(actor, a, { organisationId: w.id, tutorUserId: w.userId })))),
   };
 }

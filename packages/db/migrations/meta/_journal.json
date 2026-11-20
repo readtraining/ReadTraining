@@ -295,6 +295,34 @@
       "when": 1795084458168,
       "tag": "0041_team_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795114371156,
+      "tag": "0042_provider_vat",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795152001811,
+      "tag": "0043_provider_faqs",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795160087640,
+      "tag": "0044_provider_notice_emails",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795170553398,
+      "tag": "0045_cohort_colour",
+      "breakpoints": true
     }
   ]
 }
