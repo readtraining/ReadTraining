@@ -43,6 +43,8 @@ export function useSwitchAccount(current) {
       // the switch is recorded in the activity log; a failed log never stops the switch
       await log.mutateAsync({ to: entry.kind, organisationId: entry.organisationId }).catch(() => {});
     }
+    // which provider or business account to open, for someone on several (proxy.js reads it)
+    if (entry.organisationId) document.cookie = `rt-${entry.kind}=${entry.organisationId}; path=/; max-age=31536000; samesite=lax`;
     leaveWithoutAsking(() => router.push(entry.href));
   };
   return { ready: Boolean(data), entries, go, title: c.title, currentLabel: c.current, email: data?.email ?? "" };

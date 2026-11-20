@@ -149,6 +149,7 @@ export default function ProviderCohorts() {
   const [editing, setEditing] = useState({ open: false, k: null });
   const [deleting, setDeleting] = useState(null);
   const [cancelOne, setCancelOne] = useState(null);
+  const [moveOne, setMoveOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
   // a row change shows at once (bookings on or off, the tutor), before the list loads again; gone again if the save fails
@@ -345,7 +346,7 @@ export default function ProviderCohorts() {
                             </div>
                           ) : (tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>)}
                         </td>
-                        <td data-label="Places"><Seats booked={0} max={k.capacity} /></td>
+                        <td data-label="Places"><Seats booked={k.taken ?? 0} max={k.capacity} /></td>
                         <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
                         <td data-label="Actions" className="rt-pws-coh__end">
                           <RowMenu label={`Actions for ${name}`} items={[
@@ -353,7 +354,7 @@ export default function ProviderCohorts() {
                             ...(edit && !cancelled ? [
                               { label: "Edit", onClick: () => setEditing({ open: true, k }) },
                               { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
-                              ...(k.endsOn >= today ? [{ label: "Cancel", onClick: () => setCancelOne(k) }] : []),
+                              ...(k.endsOn >= today ? [{ label: "Move to another course", onClick: () => setMoveOne(k) }, { label: "Cancel", onClick: () => setCancelOne(k) }] : []),
                             ] : []),
                             ...(edit ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
                           ]} />
@@ -373,6 +374,7 @@ export default function ProviderCohorts() {
 
       <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", ...(links.cohort(id) ? { href: links.cohort(id), label: "Open" } : {}) }); }} onAnother={() => refresh()} />
       <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); setToast({ message: "Cohort saved" }); }} />
+      <MoveSheet cohort={moveOne} onClose={() => setMoveOne(null)} onDone={async (title) => { setMoveOne(null); setToast({ message: `Moved to ${title}` }); await refresh(); }} />
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
       <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
@@ -451,6 +453,53 @@ export function CancelSheet({ cohort, onClose, onDone }) {
     </Sheet>
   );
 }
+
+// Move a cohort to another of the provider's courses that offers its way of learning and takes bookings for it (API
+// provider.cohorts.move: refused once anyone has booked it). `onDone(courseTitle)` after the move.
+export function MoveSheet({ cohort, onClose, onDone }) {
+  const { organisationId } = useProviderAccess();
+  const courses = api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(cohort) && Boolean(organisationId) });
+  const move = api.provider.cohorts.move.useMutation();
+  const [courseId, setCourseId] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (cohort) {
+      setCourseId("");
+      setError("");
+    }
+  }, [cohort]);
+  const eligible = (courses.data ?? []).filter((c) => c.id !== cohort?.courseId && c.methods.includes(cohort?.method) && !c.closedMethods.includes(cohort?.method));
+  const submit = (e) => {
+    e.preventDefault();
+    if (!courseId) {
+      setError("Choose a course.");
+      return document.getElementById("rt-coh-move-course")?.focus();
+    }
+    move.mutate({ organisationId, cohortId: cohort.id, courseId: Number(courseId) }, {
+      onSuccess: (r) => onDone(r.courseTitle),
+      onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]),
+    });
+  };
+  return (
+    <Sheet open={Boolean(cohort)} onClose={onClose} title="Move to another course" closeLabel="Close">
+      {cohort && (!courses.data ? <Loading rows={1} /> : eligible.length ? (
+        <form className="rt-q__form" onSubmit={submit} noValidate>
+          <p className="rt-acc__note">The dates, times, venue, tutor, places and price move with it.</p>
+          <div className="rt-field">
+            <label htmlFor="rt-coh-move-course">Course<Req /></label>
+            {error && <p className="rt-q__err" id="rt-coh-move-course-e"><span className="rt-sr">Error: </span>{error}</p>}
+            <FieldSelect id="rt-coh-move-course" label="Course" value={courseId} onChange={(v) => { setCourseId(v); setError(""); }} placeholder="Choose a course"
+              options={eligible.map((c) => ({ value: String(c.id), label: c.status === "live" ? c.title : `${c.title} (${COURSE_STATUS[c.status] ?? c.status})` }))} />
+          </div>
+          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={move.isPending} aria-busy={move.isPending || undefined}>{move.isPending ? "Moving…" : "Move cohort"}</button>
+        </form>
+      ) : (
+        <p className="rt-acc__note">None of your other courses is taught {cohort.method === "live-online" ? "live online" : "in the classroom"}.</p>
+      ))}
+    </Sheet>
+  );
+}
+const COURSE_STATUS = { draft: "Draft", changes: "Changes asked", pending: "Waiting for review", paused: "Paused" };
 
 export function DeleteSheet({ cohort, onClose, onDone }) {
   const { organisationId } = useProviderAccess();

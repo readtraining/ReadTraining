@@ -93,18 +93,21 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   const counts = {};
   // the real provider (from the server check in the layout) and the signed-in person; the pages' records are still DEMO data
   const workspace = useWorkspace();
-  // the status can change while the page is open (approved, changes asked for, not approved, suspended): check quietly every
-  // minute and when the tab is used again, and reload the page from the server when it changed or the workspace closed
+  // the status can change while the page is open (approved, changes asked for, not approved, suspended), and so can the person's
+  // role (the owner or an admin changed it in Team): check quietly every minute and when the tab is used again, and reload the
+  // page from the server when either changed or the workspace closed, so the menu, pages and buttons follow the new role
   const live = api.organisations.openWorkspace.useQuery(
     { type: "provider", organisationId: workspace?.id, path: path || "/provider" },
     { enabled: Boolean(workspace?.id), refetchInterval: 60_000, refetchOnWindowFocus: true, retry: false },
   );
   const closed = live.error?.data?.code === "FORBIDDEN";
-  const changed = live.data && live.data.status !== workspace?.status;
+  const changed = live.data && (live.data.status !== workspace?.status || live.data.role !== workspace?.role);
   useEffect(() => {
     if (closed || changed) router.refresh();
   }, [closed, changed, router]);
   const org = workspace?.name || "";
+  // the person's role on this provider (the Team page's names), shown under its name and in the account menu
+  const roleName = workspace?.role === "owner" ? "Owner" : pw.roles.find((r) => r.key === workspace?.role)?.label ?? "Team member";
   const { person, data: meData } = useMe();
   const meName = meData ? `${meData.profile.firstName} ${meData.profile.lastName}`.trim() : person?.name || "";
   const meEmail = meData?.email || person?.email || "";
@@ -141,7 +144,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             </Link>
             {meName && (
               <RowMenu label={meName ? `${initials(meName)}, account menu for ${meName}` : "Account menu"} triggerClass="rt-pws__avatar" trigger={<span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>}
-                head={<><strong title={meName}>{meName}</strong><span title={meEmail}>{meEmail}</span><small title={org || undefined}>{org ? `Provider · ${org}` : "Provider account"}</small></>}
+                head={<><strong title={meName}>{meName}</strong><span title={meEmail}>{meEmail}</span><small title={org || undefined}>{org ? `${roleName} · ${org}` : "Provider account"}</small></>}
                 items={[...pw.accountMenu.filter((x) => access.sees(x.need)).map(({ need, ...x }) => x), ...switchItems, { label: "Log out", onClick: logOut }]} />
             )}
           </div>
@@ -158,7 +161,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
           </div>
           <div className="rt-pws__org">
             <span className="rt-pws__orgmark" aria-hidden="true">{org ? initials(org) : ""}</span>
-            <span className="rt-pws__orgname"><strong {...nameTipProps}>{org || " "}</strong><span>Training provider</span></span>
+            <span className="rt-pws__orgname"><strong {...nameTipProps}>{org || " "}</strong><span>{roleName}</span></span>
           </div>
           <ul className="rt-pws__nav">
             {nav.map((x) => {
@@ -212,7 +215,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
             {meName && (
               <div className="rt-adm__me">
                 <span className="rt-acc__avatar" aria-hidden="true">{initials(meName)}</span>
-                <span className="rt-adm__mewho"><strong>{meName}</strong><span>{org ? `${org} · Provider account` : "Provider account"}</span></span>
+                <span className="rt-adm__mewho"><strong>{meName}</strong><span>{org ? `${roleName} · ${org}` : "Provider account"}</span></span>
               </div>
             )}
             <Link href="/account" className="rt-adm__link" onClick={(e) => { if (student) { e.preventDefault(); switcher.go(student); } }}>Student account</Link>

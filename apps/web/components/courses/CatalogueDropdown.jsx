@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import FilterScrollPill from "./FilterScrollPill";
 
 // Single-select dropdown used for the three filters and the sort control.
@@ -62,6 +62,17 @@ export default function CatalogueDropdown({
   }, [open]);
 
   useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  // In a pop-up (a dialog) on a computer, the list opens inside the pop-up, under its field (in the page flow, so the pop-up's
+  // edge never cuts it off): as wide as the field, a few options at a time with the rest scrolling, and the pop-up scrolls to show
+  // it. On phones it is the bottom sheet as everywhere.
+  const [inDialog, setInDialog] = useState(false);
+  useLayoutEffect(() => {
+    setInDialog(Boolean(rootRef.current?.closest('[role="dialog"]')) && !window.matchMedia("(max-width: 767px)").matches);
+  }, []);
+  useEffect(() => {
+    if (open && inDialog) rootRef.current?.querySelector(".rt-cat-dd__panel")?.scrollIntoView({ block: "nearest" });
+  }, [open, inDialog]);
 
   // which way the list opens: to the right of the trigger when it fits on the screen, otherwise leftwards. Worked out on load,
   // on resize and on opening, and kept while closed, so the list never jumps sideways as it fades out.
@@ -135,7 +146,7 @@ export default function CatalogueDropdown({
       <div className="rt-cat-dd__backdrop" onClick={close}></div>
       {/* Always mounted so it can ease in and out; hidden panels are visibility:hidden (not focusable). */}
       {(
-        <div className="rt-cat-dd__panel" id={`${uid}-panel`} aria-hidden={!open}>
+        <div className={`rt-cat-dd__panel${inDialog ? " -inline" : ""}`} id={`${uid}-panel`} aria-hidden={!open}>
           <div className="rt-cat-dd__head">
             <strong>{label}</strong>
             <button type="button" onClick={close} aria-label="Close">

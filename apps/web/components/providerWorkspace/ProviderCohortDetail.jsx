@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { COHORT_TONE, Loading, Pill } from "./providerParts";
-import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
+import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
 
 // One run of a course (Hurak's Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
 // whether it takes bookings and its tutor, with Edit, Cancel and Delete. Learners appear under it once booking opens (a later
@@ -37,6 +37,7 @@ export default function ProviderCohortDetail({ cohortId }) {
   const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [toast, setToast] = useState(null);
   // bookings on or off shows at once, before the cohort loads again; gone again if the save fails
   const [bookableNow, setBookableNow] = useState(null);
@@ -105,6 +106,7 @@ export default function ProviderCohortDetail({ cohortId }) {
         {edit && (
           <div className="rt-pws-coh__heroactions">
             {!cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>}
+            {!cancelled && k.endsOn >= new Date().toISOString().slice(0, 10) && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setMoving(true)}>Move to another course</button>}
             {/* the destructive actions together, apart from Edit */}
             <div className="rt-pws-danger-group">
               {!cancelled && k.endsOn >= new Date().toISOString().slice(0, 10) && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
@@ -121,6 +123,7 @@ export default function ProviderCohortDetail({ cohortId }) {
 
       <CohortForm open={editing} onClose={() => setEditing(false)} cohort={k} onSaved={() => { setEditing(false); refresh(); setToast({ message: "Cohort saved" }); }} />
       <CancelSheet cohort={cancelling ? k : null} onClose={() => setCancelling(false)} onDone={() => { setCancelling(false); refresh(); setToast({ message: "Cohort cancelled" }); }} />
+      <MoveSheet cohort={moving ? k : null} onClose={() => setMoving(false)} onDone={(title) => { setMoving(false); refresh(); utils.provider.courses.list.invalidate(); setToast({ message: `Moved to ${title}` }); }} />
       <DeleteSheet cohort={deleting ? k : null} onClose={() => setDeleting(false)} onDone={() => { utils.provider.cohorts.list.invalidate(); router.push("/provider/cohorts"); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
