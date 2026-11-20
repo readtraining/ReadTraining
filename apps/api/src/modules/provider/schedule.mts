@@ -260,7 +260,7 @@ type Session = z.infer<typeof session>
 // A session runs from its start day and time to its end day and time, as `overlapping` reads it. Checked inside the transaction,
 // after the course row is locked, so two people adding the same dates at the same moment can't both get through.
 const UK_DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
-async function refuseClash(tx: Tx, courseId: number, venueId: string | null, sessions: Session[], exceptId: string | null = null) {
+async function refuseClash(tx: Tx, courseId: number, venueId: string | null, sessions: Session[], exceptId: string | null = null, moving = false) {
   if (!venueId) return
   await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, courseId)).for('update')
   const others = await tx
@@ -274,7 +274,9 @@ async function refuseClash(tx: Tx, courseId: number, venueId: string | null, ses
       if (sessions.some((s) => start(s) < end(o) && start(o) < end(s))) {
         const [v] = await tx.select({ name: venues.name }).from(venues).where(eq(venues.id, venueId))
         const when = `${UK_DAY.format(new Date(`${o.date}T00:00:00Z`))}${o.end !== o.date ? ` to ${UK_DAY.format(new Date(`${o.end}T00:00:00Z`))}` : ''}, ${o.from} to ${o.to}`
-        const message = `You already have dates for this course at ${v?.name ?? 'this venue'} on ${when}. Change the dates or times, or edit those dates instead.`
+        const message = moving
+          ? `That course already has a cohort at ${v?.name ?? 'this venue'} on ${when}.`
+          : `You already have dates for this course at ${v?.name ?? 'this venue'} on ${when}. Change the dates or times, or edit those dates instead.`
         throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sessions' }) })
       }
 }
@@ -337,7 +339,7 @@ async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId:
 
 async function ownCohort(db: Parameters<typeof ownCourse>[0], organisationId: string, cohortId: string) {
   const [row] = await db
-    .select({ cohort: cohorts, course: { id: courses.id } })
+    .select({ cohort: cohorts, course: { id: courses.id, title: courses.title } })
     .from(cohorts)
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
     .where(and(eq(cohorts.id, cohortId), eq(courses.organisationId, organisationId)))
@@ -512,6 +514,39 @@ export const providerCohortsRouter = createTRPCRouter({
         await tx.update(cohorts).set({ tutorUserId: input.tutorUserId, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id, fields: ['tutor'] })
         return { ok: true }
+      })
+    }),
+
+  // Move dates to another of the provider's own courses (dates added under the wrong course): one that offers the same way of
+  // learning and is taking bookings for it. Everything else stays (dates, times, venue, link, tutor, places, price, colour).
+  // Refused once anyone has booked them (paid or part-refunded orders on the course and start day: what they bought is this
+  // course), once cancelled or finished, and when the other course already has dates at that venue at the same time. Both
+  // courses' rows are locked (the lower id first, so two moves can't wait on each other; a staff booking locks the same row).
+  move: orgProcedure('provider.cohorts.edit')
+    .input(z.object({ cohortId: z.string().uuid(), courseId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
+      if (input.courseId === course.id) throw bad('Choose a different course.', 'courseId')
+      const target = await ownCourse(ctx.db, input.organisationId, input.courseId)
+      return ctx.db.transaction(async (tx) => {
+        for (const id of [course.id, target.id].sort((a, b) => a - b)) await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, id)).for('update')
+        if (!(await lockCohort(tx, cohort.id))) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        const [k] = await tx.select().from(cohorts).where(eq(cohorts.id, cohort.id))
+        if (k.courseId !== course.id) throw new TRPCError({ code: 'CONFLICT', message: 'This cohort has just been moved. Reload the page.' })
+        if (k.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'This cohort is cancelled.' })
+        if (k.endsOn < today()) throw new TRPCError({ code: 'CONFLICT', message: 'This cohort has already finished.' })
+        const [t] = await tx.select({ methods: courses.methods, closedMethods: courses.closedMethods }).from(courses).where(eq(courses.id, target.id))
+        const way = k.method === 'live-online' ? 'live online' : 'in the classroom'
+        if (!t.methods.includes(k.method)) throw bad(`That course isn’t taught ${way}.`, 'courseId')
+        if (t.closedMethods.includes(k.method)) throw bad(`That course isn’t taking bookings ${way}.`, 'courseId')
+        const [booked] = await tx.execute<{ n: number }>(sql`
+          select count(*)::int n from public.orders
+          where course_id = ${course.id} and starts_on = ${k.startsOn}::date and status in ('paid', 'part_refunded')`)
+        if (booked.n) throw new TRPCError({ code: 'CONFLICT', message: 'Learners have booked this cohort, so it can’t be moved.' })
+        await refuseClash(tx, target.id, k.venueId, k.sessions, k.id, true)
+        await tx.update(cohorts).set({ courseId: target.id, updatedAt: new Date() }).where(eq(cohorts.id, k.id))
+        await log(tx, ctx, input.organisationId, 'cohort.moved', 'cohort', k.id, { courseId: course.id, toCourseId: target.id, from: course.title, to: target.title, startsOn: k.startsOn })
+        return { ok: true, courseTitle: target.title }
       })
     }),
 

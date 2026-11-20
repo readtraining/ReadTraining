@@ -181,7 +181,8 @@ export const organisationsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       // an admin editing a provider as ReadTraining staff does it from the admin's own pages, never in the provider's workspace
       const mine = ctx.actor.memberships.filter((m) => m.type === input.type && m.status === 'active' && m.organisationStatus !== 'rejected' && !m.staff)
-      const chosen = (input.organisationId && mine.find((m) => m.organisationId === input.organisationId)) || mine[0]
+      // the one chosen in Switch account; otherwise the one they own, otherwise their first
+      const chosen = (input.organisationId && mine.find((m) => m.organisationId === input.organisationId)) || mine.find((m) => m.role === 'owner') || mine[0]
       const action = input.type === 'provider' ? 'provider.workspace.open' : 'business.workspace.open'
       if (!chosen || !can(ctx.actor, action, { organisationId: chosen.organisationId })) {
         await logDenied(ctx.db, {

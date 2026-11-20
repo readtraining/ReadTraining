@@ -1142,6 +1142,12 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
    empty space to scroll into below the form */
 .rt-dd .rt-cat-dd:not(.is-open) .rt-cat-dd__panel { display: none; }
 .rt-cat-dd__panel::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
+/* in a pop-up on a computer the list opens inside it, under its field and in the flow (so the pop-up never cuts it off), as wide as
+   the field, about six options at a time with the rest scrolling (CatalogueDropdown `-inline`) */
+.rt-cat-dd__panel.-inline { position: static; width: 100%; min-width: 0; max-width: none; margin-top: 6px; transform: none; transition: none; }
+.rt-cat-dd:not(.is-open) .rt-cat-dd__panel.-inline { display: none; }
+.rt-cat-dd__panel.-inline::before { display: none; }
+.rt-cat-dd__panel.-inline .rt-cat-dd__list { max-height: 252px; }
 .rt-cat-dd--sort .rt-cat-dd__panel { left: auto; right: 0; min-width: 220px; }
 .rt-cat-dd__search { display: flex; align-items: center; gap: 8px; height: 40px; margin: 0 0 6px; padding: 0 12px; border: 1px solid var(--color-light-5); border-radius: var(--cat-radius-sm); }
 .rt-cat-dd__search:focus-within { border-color: var(--color-dark-1); }

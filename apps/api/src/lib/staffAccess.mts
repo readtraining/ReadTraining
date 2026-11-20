@@ -58,6 +58,7 @@ const DONE: Record<string, string> = {
   'cohort.updated': 'Changed a date of',
   'cohort.cancelled': 'Cancelled a date of',
   'cohort.deleted': 'Removed a date of',
+  'cohort.moved': 'Moved a date to another course from',
   'cohort.bookings_off': 'Stopped bookings on a date of',
   'cohort.bookings_on': 'Reopened bookings on a date of',
   'plan.created': 'Added the price plan',
