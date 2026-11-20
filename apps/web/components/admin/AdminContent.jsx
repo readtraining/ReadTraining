@@ -14,7 +14,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { builtInLegal, getLegalList, legalContentKey } from "@/lib/legal";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Tabs, formatWhen, getQuery, setQuery, TableSkeleton } from "./adminParts";
+import { Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Req } from "./adminParts";
 import { FaqForm, LegalForm } from "./AdminContentPages";
 import { History, SaveRow, describedBy, field, useSave } from "./contentParts";
 
@@ -294,7 +294,7 @@ function FeaturedForm({ value, canEdit }) {
             <h2 className="rt-acc__h2" id={`rt-adm-fg-${i}`}>{g.name.trim() || `Tab ${i + 1}`}</h2>
             {canEdit && groups.length > 1 && <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setGroups((gs) => gs.filter((_, j) => j !== i))}>{c.removeTab}<span className="rt-sr">: {g.name}</span></button>}
           </div>
-          {field(`rt-adm-fn-${i}`, c.tabName, "", errors[`name${i}`], (
+          {field(`rt-adm-fn-${i}`, <>{c.tabName}<Req /></>, "", errors[`name${i}`], (
             <input id={`rt-adm-fn-${i}`} type="text" maxLength={40} value={g.name} readOnly={!canEdit} onChange={(e) => edit(i, { name: e.target.value })} aria-invalid={errors[`name${i}`] ? true : undefined} aria-describedby={describedBy(`rt-adm-fn-${i}`, "", errors[`name${i}`])} />
           ))}
           {errors[`courses${i}`] && <p className="rt-q__err" id={`rt-adm-fc-${i}-e`}><span className="rt-sr">Error: </span>{errors[`courses${i}`]}</p>}

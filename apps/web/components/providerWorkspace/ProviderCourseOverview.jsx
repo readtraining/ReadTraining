@@ -216,7 +216,7 @@ function CohortsTab({ course }) {
 
 // ---- Venues ---------------------------------------------------------------------------------------------------------------
 
-// The venues this course's dates use, with how many upcoming cohorts each has; managed in Settings › Venues.
+// The venues this course's dates use, with how many upcoming cohorts each has; managed on the Venues page.
 function VenuesTab({ course }) {
   const { organisationId, can } = useProviderAccess();
   const ways = waysOf(course);
@@ -253,7 +253,7 @@ function VenuesTab({ course }) {
           </tbody>
         </table>
       </div>
-      {can("provider.settings.view") && <p className="rt-acc__note">Add, change or archive venues in <Link href="/provider/settings?tab=venues" className="rt-cd__link">Settings › Venues</Link>.</p>}
+      {can("provider.venues.view") && <p className="rt-acc__note">Add, change or archive venues in <Link href="/provider/venues" className="rt-cd__link">Venues</Link>.</p>}
     </div>
   );
 }

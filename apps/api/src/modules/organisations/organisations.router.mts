@@ -13,6 +13,7 @@ import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
 import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
+import { loadProviderFaqs } from '../provider/faqs.mjs'
 import { PRIVATE_ROLES } from '../provider/profile.mjs'
 
 // One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
@@ -299,6 +300,7 @@ export const organisationsRouter = createTRPCRouter({
       bookingTerms: org.bookingTerms ?? '',
       cancellationPolicy: org.cancellationPolicy ?? '',
       courses: await loadProviderCourses(ctx.db, org.id),
+      faqs: await loadProviderFaqs(ctx.db, org.id),
     }
   }),
 

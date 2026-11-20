@@ -9,7 +9,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { SITE_URL } from "@/lib/seo";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { TableSkeleton } from "./adminParts";
+import { TableSkeleton, Req } from "./adminParts";
 import { SaveRow, describedBy, field, useSave } from "./contentParts";
 import { AdminStatus } from "./AdminStatus";
 import { useSavedSnapshot } from "@/lib/unsavedChanges";
@@ -84,7 +84,7 @@ function SeoForm({ value }) {
             const props = { id, value: v[k], readOnly: !canEdit, onChange: (e) => setV((x) => ({ ...x, [k]: e.target.value })), "aria-invalid": errors[k] ? true : undefined, "aria-describedby": describedBy(id, f.hint, errors[k]) };
             return (
               <div key={k} className="rt-adm-seo__field">
-                {field(id, f.label, f.hint, errors[k], k === "homeTitle" ? <input type="text" {...props} /> : <TextArea rows={3} {...props} />)}
+                {field(id, <>{f.label}<Req /></>, f.hint, errors[k], k === "homeTitle" ? <input type="text" {...props} /> : <TextArea rows={3} {...props} />)}
                 <small className={`rt-adm-seo__count${n > LIMITS[k][1] ? " -over" : ""}`} aria-hidden="true">{c.counter.replace("{n}", n).replace("{max}", LIMITS[k][1])}</small>
               </div>
             );

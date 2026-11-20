@@ -93,6 +93,16 @@ export default async function ProviderPage(props) {
               <EmptyState title={providerPages.newProvider.courses.title} text={fillName(providerPages.newProvider.courses.text, p.name)} action={providerPages.newProvider.courses.action} />
             </div>
           )}
+          {p.faqs?.length > 0 && (
+            <FaqSection
+              compact
+              eyebrow={d.faqs.eyebrow}
+              title={fillName(d.faqs.title, p.name)}
+              text={fillName(d.faqs.text, p.name)}
+              items={p.faqs.map((f) => ({ q: f.question, a: f.answer, plain: true }))}
+              idPrefix="prov-faq"
+            />
+          )}
           <FaqSection
             compact
             eyebrow={d.policies.eyebrow}

@@ -10,6 +10,7 @@ import { getHumanCheck } from "@/lib/humanCheck";
 import { getSupabase } from "@/lib/supabase/client";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
+import { Req } from "./settingsForm";
 
 // Where a provider's team invite link lands (/provider/join). The link has signed the person in (app/auth/confirm); someone the
 // invite made an account for adds their name and chooses a password, then they join (API provider.invites). Saving a password
@@ -132,10 +133,10 @@ export default function ProviderJoin() {
         {notice && <AuthNotice>{notice}</AuthNotice>}
         {me.needsPassword && (
           <>
-            <AuthField id="rt-join-first" label="First name" icon={<UserIcon />} error={errors.firstName} name="firstName" type="text" autoComplete="given-name" value={values.firstName} onChange={set} disabled={busy} maxLength={50} />
-            <AuthField id="rt-join-last" label="Last name" icon={<UserIcon />} error={errors.lastName} name="lastName" type="text" autoComplete="family-name" value={values.lastName} onChange={set} disabled={busy} maxLength={50} />
-            <AuthField id="rt-join-new" label="Password" hint="At least 8 characters, with a letter and a number." icon={<LockIcon />} error={errors.password} name="password" type={shown ? "text" : "password"} autoComplete="new-password" value={values.password} onChange={set} disabled={busy} trailing={<PasswordToggle shown={shown} onToggle={() => setShown((s) => !s)} disabled={busy} />} />
-            <AuthField id="rt-join-repeat" label="Confirm password" icon={<LockIcon />} error={errors.confirmPassword} name="confirmPassword" type={shown ? "text" : "password"} autoComplete="new-password" value={values.confirmPassword} onChange={set} disabled={busy} />
+            <AuthField id="rt-join-first" label={<>First name<Req /></>} icon={<UserIcon />} error={errors.firstName} name="firstName" type="text" autoComplete="given-name" value={values.firstName} onChange={set} disabled={busy} maxLength={50} />
+            <AuthField id="rt-join-last" label={<>Last name<Req /></>} icon={<UserIcon />} error={errors.lastName} name="lastName" type="text" autoComplete="family-name" value={values.lastName} onChange={set} disabled={busy} maxLength={50} />
+            <AuthField id="rt-join-new" label={<>Password<Req /></>} hint="At least 8 characters, with a letter and a number." icon={<LockIcon />} error={errors.password} name="password" type={shown ? "text" : "password"} autoComplete="new-password" value={values.password} onChange={set} disabled={busy} trailing={<PasswordToggle shown={shown} onToggle={() => setShown((s) => !s)} disabled={busy} />} />
+            <AuthField id="rt-join-repeat" label={<>Confirm password<Req /></>} icon={<LockIcon />} error={errors.confirmPassword} name="confirmPassword" type={shown ? "text" : "password"} autoComplete="new-password" value={values.confirmPassword} onChange={set} disabled={busy} />
           </>
         )}
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy}>{busy ? "Joining…" : "Join"}</button>

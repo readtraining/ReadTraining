@@ -10,10 +10,12 @@ import { setQuery } from "./providerParts";
 // value kept in the address (?key=).
 
 // <Field id label error hint count>…input with {...aria(id, error, hint)}…</Field>
-export function Field({ id, label, error, hint, count, children, className = "" }) {
+// `required`: a red * after the label (read out as "required"); fields without it are optional and say nothing
+export const Req = () => <><span className="rt-req" aria-hidden="true"> *</span><span className="rt-sr"> (required)</span></>;
+export function Field({ id, label, error, hint, count, children, className = "", required = false }) {
   return (
     <div className={`rt-field${className ? ` ${className}` : ""}`}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label}{required && <Req />}</label>
       {hint && <p className="rt-field__hint" id={`${id}-h`}>{hint}</p>}
       {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
       {children}

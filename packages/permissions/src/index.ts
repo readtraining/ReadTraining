@@ -78,6 +78,7 @@ const PROVIDER_RULES = {
   'provider.pricing.edit': { roles: ['owner', 'admin', 'course_editor'] },
   'provider.cohorts.view': { roles: ['owner', 'admin', 'support', 'sales', 'assistant'], own: true },
   'provider.cohorts.edit': { roles: ['owner', 'admin'] },
+  'provider.venues.view': { roles: ['owner', 'admin', 'support', 'sales', 'assistant'] }, // the Venues page
   'provider.records.view': { roles: ['owner', 'admin', 'support', 'assistant'], own: true }, // register, results, learning records
   'provider.records.edit': { roles: ['owner', 'admin'], own: true },
   'provider.learners.view': { roles: ['owner', 'admin', 'support', 'sales', 'accounts', 'assistant'], own: true },
@@ -96,8 +97,10 @@ const PROVIDER_RULES = {
   'provider.terms.edit': { roles: ['owner', 'admin'] },
   'provider.faqs.edit': { roles: ['owner', 'admin', 'course_editor', 'marketing'] },
   'provider.qa.answer': { roles: ['owner', 'admin', 'course_editor', 'support'] },
-  'provider.vat.view': { roles: ['owner', 'accounts'] },
-  'provider.vat.edit': { roles: ['owner'] },
+  'provider.vat.view': { roles: ['owner', 'admin', 'accounts'] },
+  'provider.vat.edit': { roles: ['owner', 'admin', 'accounts'] },
+  'provider.emails.view': { roles: ['owner', 'admin', 'accounts'] }, // where order, refund and dispute notices go
+  'provider.emails.edit': { roles: ['owner', 'admin', 'accounts'] },
   'provider.payoutAccount.manage': { roles: ['owner'] }, // Stripe / bank details
   'provider.team.view': { roles: ['owner', 'admin'] },
   'provider.team.manage': { roles: ['owner', 'admin'] },
@@ -234,7 +237,7 @@ const isViewAction = (action: string) => action.endsWith('.view') || action.ends
 // team, VAT, payout account) or money (orders, refunds, payouts: the admin's own pages do those).
 // What staff may read: only what those editors need (courses, dates and their tutors' names, price plans, profile, terms,
 // venues). Never the provider's team list, learners, orders, money, VAT, reviews, leads or performance.
-const STAFF_VIEWS = new Set<string>(['provider.workspace.open', 'provider.courses.view', 'provider.cohorts.view', 'provider.pricing.view', 'provider.settings.view'])
+const STAFF_VIEWS = new Set<string>(['provider.workspace.open', 'provider.courses.view', 'provider.cohorts.view', 'provider.venues.view', 'provider.pricing.view', 'provider.settings.view'])
 const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.courses.editPage', 'provider.cohorts.edit', 'provider.profile.edit', 'provider.profile.rename', 'provider.terms.edit', 'provider.faqs.edit'])
 
 // Until our team approves a provider (its application pending, or changes asked), it can only look around and complete its

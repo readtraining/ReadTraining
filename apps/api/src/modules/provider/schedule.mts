@@ -117,13 +117,14 @@ async function recheckVenues(db: Parameters<typeof ownCourse>[0], organisationId
 
 export const providerVenuesRouter = createTRPCRouter({
   // `located`: on the map (its town checked); `problem`: why a venue not on the map can't be placed, when that is known
-  list: orgProcedure('provider.cohorts.view').query(async ({ ctx, input }) => {
+  // `courses`: the linked courses, those with dates (not cancelled) at the venue
+  list: orgProcedure('provider.venues.view').query(async ({ ctx, input }) => {
     const problems = await recheckVenues(ctx.db, input.organisationId).catch(() => new Map<string, string>())
-    // `used`: dates that have ever used the venue (any, past or cancelled): such a venue can be archived but not deleted
-    const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number; used: number }>(sql`
+    const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number; courses: { id: number; title: string }[] }>(sql`
       select v.id, v.name, v.street, v.city, v.postcode, v.active, v.lat is not null located,
              (select count(*)::int from public.cohorts k where k.venue_id = v.id and k.cancelled_at is null and k.ends_on >= ${today()}::date) upcoming,
-             (select count(*)::int from public.cohorts k where k.venue_id = v.id) used
+             coalesce((select json_agg(json_build_object('id', c.id, 'title', c.title) order by c.title)
+                       from public.courses c where exists (select 1 from public.cohorts k where k.venue_id = v.id and k.course_id = c.id and k.cancelled_at is null)), '[]') courses
       from public.venues v where v.organisation_id = ${input.organisationId}::uuid order by v.active desc, v.name`)
     return rows.map((r) => ({ ...r, problem: r.located ? null : (problems.get(r.id) ?? null) }))
   }),
@@ -199,22 +200,6 @@ export const providerVenuesRouter = createTRPCRouter({
         return { ok: true }
       })
     }),
-
-  // Delete a venue no date has ever used.
-  remove: orgProcedure('provider.cohorts.edit')
-    .input(z.object({ venueId: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      const v = await ownVenue(ctx.db, input.organisationId, input.venueId)
-      return ctx.db.transaction(async (tx) => {
-        // under the lock, a date being added to this venue at the same moment waits (or is counted here)
-        if (!(await lockVenue(tx, v.id))) throw new TRPCError({ code: 'CONFLICT', message: VENUE_GONE })
-        const [n] = await tx.select({ n: sql<number>`count(*)::int` }).from(cohorts).where(eq(cohorts.venueId, v.id))
-        if (n.n) throw new TRPCError({ code: 'CONFLICT', message: 'Dates use this venue, so it can’t be deleted. Archive it instead.' })
-        await tx.delete(venues).where(eq(venues.id, v.id))
-        await log(tx, ctx, input.organisationId, 'venue.deleted', 'venue', v.id, { name: v.name })
-        return { ok: true }
-      })
-    }),
 })
 
 // ---- cohorts ------------------------------------------------------------------------------------------------------------
@@ -263,6 +248,8 @@ const cohortFields = z.object({
   details: z.string().trim().max(500, 'Keep the details to 500 characters or fewer.').nullable().optional(),
   tutorUserId: z.string().uuid().nullable().optional(),
   bookable: z.boolean().optional(),
+  // its colour on the provider's calendar; none = by type
+  colour: z.enum(['purple', 'blue', 'green', 'orange', 'red']).nullable().optional(),
 })
 
 type CohortInput = z.infer<typeof cohortFields>
@@ -344,6 +331,7 @@ async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId:
     details: input.details || null,
     tutorUserId: input.tutorUserId ?? null,
     bookable: input.bookable ?? true,
+    colour: input.colour ?? null,
   }
 }
 
@@ -368,10 +356,16 @@ export const providerCohortsRouter = createTRPCRouter({
       if (!all && !own) throw new TRPCError({ code: 'FORBIDDEN' })
       if (input.courseId) await ownCourse(ctx.db, input.organisationId, input.courseId)
       const rows = await ctx.db
-        .select({ cohort: cohorts, courseTitle: courses.title, optionClosed: sql<boolean>`${cohorts.method} = any(${courses.closedMethods})`, venueName: venues.name, venueCity: venues.city })
+        .select({
+          cohort: cohorts, courseTitle: courses.title, optionClosed: sql<boolean>`${cohorts.method} = any(${courses.closedMethods})`, venueName: venues.name, venueCity: venues.city,
+          tutorFirst: profiles.firstName, tutorLast: profiles.lastName,
+          // places taken: the places booked on its course and start day (orders paid or part refunded)
+          taken: sql<number>`(select coalesce(sum(o.quantity), 0)::int from public.orders o where o.course_id = ${cohorts.courseId} and o.starts_on = ${cohorts.startsOn} and o.status in ('paid', 'part_refunded'))`,
+        })
         .from(cohorts)
         .innerJoin(courses, eq(courses.id, cohorts.courseId))
         .leftJoin(venues, eq(venues.id, cohorts.venueId))
+        .leftJoin(profiles, eq(profiles.id, cohorts.tutorUserId))
         .where(
           and(
             eq(courses.organisationId, input.organisationId),
@@ -383,7 +377,10 @@ export const providerCohortsRouter = createTRPCRouter({
         .orderBy(input.when === 'past' ? sql`${cohorts.startsOn} desc` : asc(cohorts.startsOn))
         .limit(1000)
       // optionClosed: its learning option isn't taking new bookings on the course (courses.closed_methods), so nobody can book it
-      return rows.map((r) => ({ ...r.cohort, courseTitle: r.courseTitle, optionClosed: r.optionClosed, venue: r.venueName ? { name: r.venueName, city: r.venueCity } : null }))
+      return rows.map((r) => ({
+        ...r.cohort, courseTitle: r.courseTitle, optionClosed: r.optionClosed, venue: r.venueName ? { name: r.venueName, city: r.venueCity } : null,
+        tutorName: r.cohort.tutorUserId ? `${r.tutorFirst ?? ''} ${r.tutorLast ?? ''}`.trim() || 'Team member' : null, taken: r.taken,
+      }))
     }),
 
   // One date with its course, venue and tutor. A tutor can open only the dates they teach.

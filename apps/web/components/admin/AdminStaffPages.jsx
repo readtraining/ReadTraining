@@ -6,14 +6,15 @@ import { ErrorState } from "@/components/states/States";
 import ProviderCourseEditor from "@/components/providerWorkspace/ProviderCourseEditor";
 import ProviderCohorts from "@/components/providerWorkspace/ProviderCohorts";
 import ProviderPackages from "@/components/providerWorkspace/ProviderPackages";
-import { InfoTab, LogoTab, TermsTab, VenuesTab } from "@/components/providerWorkspace/SettingsProfile";
+import { InfoTab, TermsTab, VenuesTab } from "@/components/providerWorkspace/SettingsProfile";
+import { FaqsTab } from "@/components/providerWorkspace/SettingsFaqs";
 import { api } from "@/lib/trpc/react";
 import { DetailSkeleton, Empty, Tabs, getQuery, setQuery } from "./adminParts";
 import StaffEdit from "./StaffEdit";
 
 // The admin's edit pages for a provider's work (StaffEdit hosts the provider's own editors inside the admin):
 // a course (/admin/catalogue/<id>/edit; a shared page keeps the admin's own editor), and the provider's price plans, dates, and
-// profile, logo, terms and venues (/admin/providers/<slug>/plans | dates | profile).
+// profile and logo, terms, FAQs and venues (/admin/providers/<slug>/plans | dates | profile).
 
 export function AdminCourseEdit({ courseId }) {
   const course = api.admin.courses.get.useQuery({ courseId: Number(courseId) }, { retry: (n, e) => e?.data?.code !== "NOT_FOUND" && n < 2 });
@@ -46,8 +47,8 @@ export function AdminProviderDates({ slug }) {
 
 const TABS = [
   { key: "info", label: "Profile", Panel: InfoTab },
-  { key: "logo", label: "Logo", Panel: LogoTab },
   { key: "terms", label: "Cancellation and terms", Panel: TermsTab },
+  { key: "faqs", label: "FAQs", Panel: FaqsTab },
   { key: "venues", label: "Venues", Panel: VenuesTab },
 ];
 export function AdminProviderProfile({ slug }) {

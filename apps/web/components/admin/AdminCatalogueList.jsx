@@ -10,7 +10,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, Said, TableSkeleton } from "./adminParts";
+import { RowMenu, Said, TableSkeleton, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 
@@ -218,7 +218,7 @@ function NameSheet({ sheet, onClose, onDone }) {
         <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
           {sheet.where && <p className="rt-acc__note">In <strong>{sheet.where}</strong></p>}
           <div className="rt-field">
-            <label htmlFor="rt-adm-cat-name">{copy.name}</label>
+            <label htmlFor="rt-adm-cat-name">{copy.name}<Req /></label>
             <small className="rt-field__hint" id="rt-adm-cat-name-hint">{copy.addressHint}</small>
             {error && <p className="rt-q__err" id="rt-adm-cat-name-e"><span className="rt-sr">Error: </span>{error}</p>}
             <input id="rt-adm-cat-name" type="text" maxLength={60} autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-cat-name-hint${error ? " rt-adm-cat-name-e" : ""}`} />

@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink, RowMenu } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink, RowMenu, Req } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { waysLabel } from "@/lib/courseModes";
@@ -200,7 +200,7 @@ function CommissionCard({ provider: p, canChange, onSaved }) {
       <p className="rt-acc__note">{(own ? d.hasOwn : d.usesDefault).replace("{rate}", def)}</p>
       {canChange ? (
         <>
-          <RateForm id="rt-adm-pcom" label={d.commissionLabel} hint={d.commissionHint.replace("{rate}", def)} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
+          <RateForm id="rt-adm-pcom" label={<>{d.commissionLabel}<Req /></>} hint={d.commissionHint.replace("{rate}", def)} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
           {own && <button type="button" className="rt-cd__link rt-adm-mt" onClick={async () => { await save.mutateAsync({ organisationId: p.id, bps: null }); onSaved(d.commissionSaved); }} disabled={save.isPending}>{d.useDefault}</button>}
         </>
       ) : null}
@@ -264,7 +264,7 @@ export function DecisionSheet({ provider, decision, onClose, onDone }) {
           <p className="rt-acc__note">{sheet.text}</p>
           {sheet.label && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-pmsg">{sheet.label}</label>
+              <label htmlFor="rt-adm-pmsg">{sheet.label}<Req /></label>
               <small className="rt-field__hint" id="rt-adm-pmsg-hint">{sheet.hint}</small>
               {error && <p className="rt-q__err" id="rt-adm-pmsg-e"><span className="rt-sr">Error: </span>{error}</p>}
               <TextArea id="rt-adm-pmsg" rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-pmsg-hint${error ? " rt-adm-pmsg-e" : ""}`} />
@@ -272,7 +272,7 @@ export function DecisionSheet({ provider, decision, onClose, onDone }) {
           )}
           {own && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-pown">{A.own.label}</label>
+              <label htmlFor="rt-adm-pown">{A.own.label}<Req /></label>
               <small className="rt-field__hint" id="rt-adm-pown-hint">{A.own.hint}</small>
               {reasonError && <p className="rt-q__err" id="rt-adm-pown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
               <TextArea id="rt-adm-pown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-pown-hint${reasonError ? " rt-adm-pown-e" : ""}`} />
