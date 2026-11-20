@@ -4,14 +4,13 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { admin as A } from "@/data/admin";
-import { ago } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { refreshCourses } from "@/app/admin/actions";
 import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { waysLabel } from "@/lib/courseModes";
-import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty, RowMenu, Req } from "./adminParts";
+import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty, RowMenu, Req, formatWhen } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
@@ -21,15 +20,19 @@ const TABS = ["waiting", "changes", "decided"];
 const DAY = 86400000;
 
 // One inbox for what providers send for review (API admin.courses): new courses and changes to live courses, oldest first so
-// nothing waits silently, each with its deadline. Each card's ⋮ menu: Review (the course), Preview, and its decisions: a new course
+// nothing waits silently, each with its deadline and the date it was sent; oldest first (or newest first, kept across the tabs). Each card's ⋮ menu: Review (the course), Preview, and its decisions: a new course
 // can be approved or sent back here,
 // a change approved or turned down. Sending back and turning down need a note, which the provider sees and is emailed (the site's
 // pop-up, the first error focused). Waiting new courses can be ticked and approved together. Tabs and the type filter are kept in
 // the address. Deciding needs the "approve" switch; the API also stops anyone deciding on what they sent themselves.
+const ORDERS = { oldest: "Oldest first", newest: "Newest first" };
+
 export default function AdminApprovals() {
   const me = useAdminAccess();
   const [tab, setTab] = useState("waiting");
   const [type, setType] = useState("all");
+  // the order, kept across the tabs and in the address: oldest first by default (a queue, decided in the order it was sent)
+  const [order, setOrder] = useState("oldest");
   const [picked, setPicked] = useState([]);
   const [asking, setAsking] = useState(null); // { item, decision }
   const [reason, setReason] = useState("");
@@ -49,13 +52,16 @@ export default function AdminApprovals() {
     if (TABS.includes(t)) setTab(t);
     const ty = getQuery("type");
     if (ty && copy.types[ty]) setType(ty);
+    if (getQuery("order") === "newest") setOrder("newest");
   }, []);
   if (query.isError) return <ErrorState title="We couldn't load the approvals." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!query.data) return <TableSkeleton />;
 
   const now = Date.now();
+  // when each was sent (waiting: an edit keeps its place) or decided
+  const when = (a) => (a.sent || a.at ? new Date(a.sent || a.at).getTime() : now);
   const items = query.data.map((a) => ({ ...a, key: `${a.type}-${a.courseId}-${a.at}` }));
-  const shown = items.filter((a) => type === "all" || a.type === type);
+  const shown = items.filter((a) => type === "all" || a.type === type).sort((x, y) => (order === "newest" ? when(y) - when(x) : when(x) - when(y)));
   const pickable = tab === "waiting" ? shown.filter((a) => a.type === "new" && a.providerStatus === "active" && !a.own) : [];
   const allPicked = pickable.length > 0 && pickable.every((a) => picked.includes(a.key));
   const refresh = () => {
@@ -74,6 +80,10 @@ export default function AdminApprovals() {
     setType(t);
     setPicked([]);
     setQuery("type", t === "all" ? "" : t);
+  };
+  const chooseOrder = (o) => {
+    setOrder(o);
+    setQuery("order", o === "oldest" ? "" : o);
   };
   const toggle = (key) => setPicked((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
   const run = async (list, decision, message) => {
@@ -133,25 +143,36 @@ export default function AdminApprovals() {
             <button key={t.key} type="button" className={type === t.key ? "is-on" : undefined} aria-pressed={type === t.key} onClick={() => chooseType(t.key)}>{t.label}</button>
           ))}
         </div>
-        {canDecide && pickable.length > 0 && (
-          <div className="rt-adm-bulk">
+      </div>
+      {/* the list's own bar, right above the cards: select all in line with the cards' boxes; the order of the courses and
+          Approve selected on the right, in line with their ⋯ menus */}
+      {shown.length > 0 && (
+        <div className="rt-adm-pickbar">
+          {canDecide && pickable.length > 0 && (
             <label className="rt-bk__check" htmlFor="rt-adm-all">
               <input id="rt-adm-all" type="checkbox" checked={allPicked} onChange={() => setPicked(allPicked ? [] : pickable.map((a) => a.key))} />
               <span>Select all new courses</span>
             </label>
-            <button type="button" className="button -sm -purple-1 text-white" disabled={!picked.length || busy} onClick={() => run(pickable.filter((a) => picked.includes(a.key)), "approve")}>
-              {picked.length ? `Approve selected (${picked.length})` : "Approve selected"}
-            </button>
+          )}
+          <div className="rt-adm-pickbar__end">
+            {/* "Sort by" with the sort icon, opening the two orders (the current one ticked), as YouTube's and Google's lists do */}
+            <RowMenu label={`Sort by, ${ORDERS[order].toLowerCase()}`} triggerClass="rt-adm-sortbtn" trigger={<><i className="icon-list-sort text-16" aria-hidden="true"></i><span aria-hidden="true">Sort by</span></>}
+              items={Object.entries(ORDERS).map(([value, text]) => ({ key: value, label: text, svg: <i className={`icon-check text-12 rt-adm-sortbtn__tick${order === value ? "" : " -off"}`} aria-hidden="true"></i>, onClick: () => chooseOrder(value) }))} />
+            {canDecide && pickable.length > 0 && (
+              <button type="button" className="button -sm -purple-1 text-white" disabled={!picked.length || busy} onClick={() => run(pickable.filter((a) => picked.includes(a.key)), "approve")}>
+                {picked.length ? `Approve selected (${picked.length})` : "Approve selected"}
+              </button>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <Said text={said} />
       {unsent && <p className="rt-acc__notice -warn" role="alert">{unsent}</p>}
 
       {shown.length ? (
         <ul className="rt-adm-items">
           {shown.map((a) => {
-            const at = a.sent || a.at ? new Date(a.sent || a.at).getTime() : now; // waiting since it was sent (an edit keeps its place)
+            const at = when(a);
             const providerReady = a.providerStatus === "active";
             return (
               <li key={a.key} className={`rt-acc__card rt-adm-item${picked.includes(a.key) ? " is-picked" : ""}`}>
@@ -166,7 +187,7 @@ export default function AdminApprovals() {
                     <AdminTag>{copy.types[a.type]}</AdminTag>
                     {tab === "decided" && a.outcome && <AdminStatus kind="decision" status={a.outcome}>{copy.outcomes[a.outcome]}</AdminStatus>}
                     {tab === "waiting" && a.own && <AdminTag>{copy.ownQueue}</AdminTag>}
-                    <span className="rt-adm-item__when">{tab === "waiting" ? "Sent" : "Decided"} {ago(at, now).replace(/^Just/, "just")}</span>
+                    <span className="rt-adm-item__when">{tab === "waiting" ? "Sent" : "Decided"} {formatWhen(at)}</span>
                     {tab === "waiting" && <AdminDue due={at + copy.dueDays * DAY} now={now} />}
                   </div>
                   <h3 className="rt-acc__h3"><Link href={`/admin/catalogue/${a.courseId}`} className="rt-adm-strong">{a.title}</Link></h3>
