@@ -4886,8 +4886,17 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-adm-seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--color-light-5); border-radius: 12px; background: #fff; }
 .rt-adm-seg button { padding: 6px 12px; border: 0; border-radius: 8px; background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--color-light-1); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
 .rt-adm-seg button.is-on { background: var(--color-purple-3); color: var(--color-purple-1); }
-.rt-adm-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
-.rt-adm-bulk .rt-bk__check { font-weight: 500; }
+/* Approvals: Sort by (the sort icon and its two orders, the current one ticked), and the selection bar above the cards, its box in line with
+   theirs (the card's padding and border) and its button in line with their ⋯ menus */
+.rt-adm-sortbtn { display: inline-flex; flex: none; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); cursor: pointer; transition: border-color 160ms ease; }
+.rt-adm-sortbtn:hover, .rt-rowmenu.is-open .rt-adm-sortbtn { border-color: var(--rt-c-text); }
+.rt-adm-sortbtn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-adm-sortbtn__tick { width: 12px; color: var(--rt-c-brand); }
+.rt-adm-sortbtn__tick.-off { visibility: hidden; }
+.rt-adm-pickbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0 25px; }
+.rt-adm-pickbar .rt-bk__check { font-weight: 500; }
+.rt-adm-pickbar__end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+@media (max-width: 575px) { .rt-adm-pickbar { padding: 0 17px; } }
 /* item cards (approvals, changes) */
 .rt-adm-items { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .rt-adm-item { display: flex; align-items: flex-start; gap: 16px; list-style: none; transition: border-color 150ms ease; }
@@ -6176,7 +6185,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-rowmenu__btn:hover, .rt-rowmenu.is-open .rt-rowmenu__btn { border-color: var(--rt-c-text); }
 .rt-rowmenu__btn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-rowmenu__list { position: absolute; z-index: 40; top: calc(100% + 6px); right: 0; min-width: 190px; margin: 0; padding: 6px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); box-shadow: var(--rt-shadow-dialog); list-style: none; }
-.rt-rowmenu__list.-side { top: 0; right: calc(100% + 8px); } /* in a table row: beside its button, top in line (RowMenu slides it up near the screen's bottom) */
+.rt-rowmenu__list.-side { top: 0; right: calc(100% + 8px); } /* a ⋯ menu: beside its button, top in line (RowMenu slides it up near the screen's bottom) */
 .rt-rowmenu__list li { list-style: none; }
 .rt-rowmenu__list :is(a, button) { display: flex; align-items: center; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; text-align: left; text-decoration: none; color: var(--rt-c-text) !important; cursor: pointer; }
 .rt-rowmenu__list :is(a, button):hover, .rt-rowmenu__list :is(a, button):focus-visible { outline: none; background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; }

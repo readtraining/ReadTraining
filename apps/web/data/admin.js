@@ -381,7 +381,6 @@ export const admin = {
   // course approvals (real, API admin.courses): new courses and changes to published (live or paused) courses
   approvals: {
     title: "Approvals",
-    lead: "New courses and changes to published courses that providers sent for review, oldest first. Open one to check it, then approve it or say what to change.",
     tabs: { waiting: "Waiting", changes: "Changes asked", decided: "Decided" },
     types: { new: "New course", change: "Change to a published course" },
     outcomes: { approved: "Approved", changes: "Changes asked", rejected: "Not approved" },

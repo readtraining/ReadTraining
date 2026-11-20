@@ -251,9 +251,9 @@ export function Search({ value, onChange, label }) {
 // the ones after them (`title`: the button's hover name, for an icon-only trigger). An item's `icon` (an icon class) goes before its label. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
 export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null, title }) {
   const [open, setOpen] = React.useState(false);
-  // where the list opens. In a table row (or a list row's actions, .rt-adm-list__side): beside its button, its top in line with the button's, sliding up just enough to stay on
-  // screen near the bottom (`shift`), so it always stays next to its own row (the way desktop and Figma menus open). Elsewhere (the
-  // top bar's menus) and where the row has no room on its left: below the button.
+  // where the list opens. A ⋯ button (a table row, a card or a list, everywhere alike): beside it, its top in line with the
+  // button's, sliding up just enough to stay on screen near the bottom, so it always stays next to its own row (the way desktop
+  // and Figma menus open). A named button (the avatar, an "Edit" menu), or a ⋯ with no room on its left: below the button.
   const [place, setPlace] = React.useState({ side: false, shift: 0 });
   const wrap = React.useRef(null);
   const btn = React.useRef(null);
@@ -265,7 +265,9 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
     const b = btn.current.getBoundingClientRect();
     const w = list.current.offsetWidth;
     const h = list.current.offsetHeight;
-    const side = Boolean(btn.current.closest("td, .rt-adm-list__side")) && b.left - w - 8 >= 8;
+    // a ⋯ button (in a table row, a card or a list) opens its menu beside it, the same everywhere; a named button (the avatar,
+    // an "Edit" menu) drops its menu below it
+    const side = !trigger && b.left - w - 8 >= 8;
     if (!side) return setPlace({ side: false, shift: 0 });
     const barBottom = Math.max(document.querySelector(".rt-adm__top")?.getBoundingClientRect().bottom ?? 0, 0);
     const over = b.top + h - (window.innerHeight - 12); // how far it would run past the bottom of the screen
