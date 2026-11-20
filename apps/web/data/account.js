@@ -29,6 +29,8 @@ export const account = {
     provider: { sub: "Provider account", href: "/provider" },
     business: { sub: "Business account", href: "/business" },
     becomeProvider: { label: "Become a provider", sub: "List and run your courses", href: "/provider/onboarding" },
+    // invited to a provider's team and not joined yet (useSwitchAccount): instead of Become a provider
+    joinProvider: { label: (provider) => `Join ${provider}`, sub: "Accept your invitation", href: "/provider/join" },
     createBusiness: { label: "Create a business account", sub: "Buy and manage team training", href: "/business/create" },
   },
   noAccess: {

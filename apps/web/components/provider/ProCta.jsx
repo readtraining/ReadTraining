@@ -17,7 +17,7 @@ export default function ProCta() {
         <div className="bz-cta3">
           <div className="bz-cta3__text">
             <h2 className="bz-cta3__title">{c.title}</h2>
-            <p className={`bz-cta3__lede${wait ? ` ${wait}` : ""}`} aria-hidden={wait ? true : undefined}>{step ? provider.account.bandText : c.text}</p>
+            <p className={`bz-cta3__lede${wait ? ` ${wait}` : ""}`} aria-hidden={wait ? true : undefined}>{step ? step.text ?? provider.account.bandText : c.text}</p>
           </div>
           <div className="bz-cta3__actions">
             <Link href={primary.href} className={`button -md -green-1 text-dark-1${wait ? ` ${wait}` : ""}`} aria-hidden={wait ? true : undefined} tabIndex={wait ? -1 : undefined}>{primary.label} <i className="icon-arrow-right text-13 ml-10"></i></Link>

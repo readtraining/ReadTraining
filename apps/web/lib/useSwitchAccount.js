@@ -33,7 +33,11 @@ export function useSwitchAccount(current) {
           : { key: i.organisationId, kind: i.kind, organisationId: i.organisationId, mark: initialsOf(i.name), label: i.name, sub: c[i.kind].sub, href: c[i.kind].href, current: isCurrent(i) },
       ),
   ];
-  if (data && !ids.some((i) => i.kind === "provider")) entries.push({ key: "add-provider", kind: "add", mark: "+", label: c.becomeProvider.label, sub: c.becomeProvider.sub, href: c.becomeProvider.href });
+  // no provider account: join the team that invited them (not joined yet), or become one
+  const invite = data?.invites?.[0];
+  if (data && !ids.some((i) => i.kind === "provider")) entries.push(invite
+    ? { key: "add-provider", kind: "add", mark: initialsOf(invite.provider), label: c.joinProvider.label(invite.provider), sub: c.joinProvider.sub, href: c.joinProvider.href }
+    : { key: "add-provider", kind: "add", mark: "+", label: c.becomeProvider.label, sub: c.becomeProvider.sub, href: c.becomeProvider.href });
   if (data && !ids.some((i) => i.kind === "business")) entries.push({ key: "add-business", kind: "add", mark: "+", label: c.createBusiness.label, sub: c.createBusiness.sub, href: c.createBusiness.href });
 
   const go = async (entry) => {

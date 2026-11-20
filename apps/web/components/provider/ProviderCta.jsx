@@ -15,7 +15,9 @@ export function useProviderStep() {
   // only while someone is signed in: after signing out on this page (no reload) the last account stays in memory, and must not
   // keep showing "Manage your courses" to a signed-out visitor
   const mine = person ? data?.identities?.find((i) => i.kind === "provider") : null;
-  return { known: person === null || isFetched, step: mine ? provider.account[mine.status] ?? null : null };
+  // invited to a provider's team, not joined yet and no provider of their own: accept the invitation
+  const invited = person && !mine && data?.invites?.length > 0;
+  return { known: person === null || isFetched, step: mine ? provider.account[mine.status] ?? null : invited ? provider.account.invited : null };
 }
 
 /** The hero's main button (`link` is "Become a provider"). */
