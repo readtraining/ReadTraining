@@ -28,6 +28,12 @@ export const providerPages = {
     badge: "Approved on ReadTraining",
     about: { eyebrow: "About us", title: "About {name}", detailsLabel: "Provider details" },
     courses: { eyebrow: "Our courses", title: "Courses you can book", text: "Courses run by {name}, each shown at its lowest available price." },
+    // the provider's own FAQs (Settings › FAQs), as it typed them; left out when it has none
+    faqs: {
+      eyebrow: "FAQs",
+      title: "Questions about {name}",
+      text: "Answers from {name} about booking and training with them.",
+    },
     policies: {
       eyebrow: "Terms and policies",
       title: "Terms and policies",

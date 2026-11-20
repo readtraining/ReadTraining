@@ -25,7 +25,7 @@ const emptyProvider = (now) => {
   return {
     ...s,
     version: VERSION,
-    org: { ...Object.fromEntries(Object.keys(s.org).map((k) => [k, ""])), vat: { registered: false, number: "" }, emails: { refund: "", dispute: "", order: "" } },
+    org: { ...Object.fromEntries(Object.keys(s.org).map((k) => [k, ""])) },
     me,
     team: own ? [{ ...own, name: "", email: "" }] : [],
     courses: [], cohorts: [], venues: [], faqs: [], packages: [], learners: [], orders: [], enrolments: [], reviews: [], leads: [], refunds: [], qa: [], notifications: [],
@@ -461,6 +461,7 @@ export const setLeadStatus = (id, status) => updateProvider((s) => {
   const l = s.leads.find((x) => x.id === id);
   if (l) l.status = status;
 });
+
 export const answerQuestion = (id, answer) => updateProvider((s) => {
   const q = s.qa.find((x) => x.id === id);
   if (q) q.answer = answer;

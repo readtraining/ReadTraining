@@ -22,6 +22,7 @@ import { VenueForm } from "./SettingsProfile";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { useNewCourse } from "./NewCourse";
 import TextArea from "@/components/forms/TextArea";
+import { Req } from "./settingsForm";
 
 // Cohorts: every run of a course on set dates, as Hurak's cohort list: the cohort (date, course, venue, dates and times), its status,
 // its tutor (assigned here), places, whether it takes bookings, and a row menu (View, Edit, bookings on or off, Cancel, Delete).
@@ -90,12 +91,16 @@ const DEFAULT_SLOT = { from: "09:30", to: "16:30" };
 // which they can't open, needs it); roles without dates or courses get an empty list. `may` says which ones the role sees.
 // `courseId`: only that course's dates (the course overview).
 const NONE = { data: [], isError: false, refetch: () => {} };
+// a date's colour on the calendar: its own, or by type (classroom purple, live online blue)
+export const defaultColour = (method) => (method === "live-online" ? "blue" : "purple");
+export const colourOf = (k) => k.colour || defaultColour(k.method);
+
 export function useSchedule(when = "upcoming", courseId = null) {
   const access = useProviderAccess();
   const { organisationId } = access;
   const may = {
     dates: access.can("provider.cohorts.view") || access.can("provider.cohorts.view", { tutorUserId: access.userId }),
-    venues: access.can("provider.cohorts.view"),
+    venues: access.can("provider.venues.view"),
     team: access.can("provider.cohorts.view"),
     courses: access.can("provider.courses.view"),
   };
@@ -433,7 +438,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
         <form className="rt-q__form" onSubmit={submit} noValidate>
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Nobody can book it after this, and it can&apos;t be undone.</p>
           <div className="rt-field">
-            <label htmlFor="rt-coh-cancel-why">Reason</label>
+            <label htmlFor="rt-coh-cancel-why">Reason<Req /></label>
             {error && <p className="rt-q__err" id="rt-coh-cancel-why-e"><span className="rt-sr">Error: </span>{error}</p>}
             <TextArea id="rt-coh-cancel-why" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-coh-cancel-why-e" : undefined} autoComplete="off" />
           </div>
@@ -513,14 +518,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const courses = coursesQ.data || [];
   const courseOf = (id) => courses.find((c) => String(c.id) === String(id));
 
-  // pricing: "flat" (the date's own price) or "tiered" (a price plan's packages, Hurak's Tiered)
-  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "12", details: "" });
+  // pricing: "flat" (the date's own price) or "tiered" (a price plan's packages, Tiered)
+  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "12", details: "", colour: "" });
 
   // fill the form each time the panel opens (once the courses are in)
   useEffect(() => {
     if (!open || !coursesQ.data) return;
     if (cohort) {
-      const filled = { courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", pricing: cohort.planId ? "tiered" : "flat", planId: cohort.planId || "", price: cohort.planId ? "" : money(cohort.pricePence), wasPrice: cohort.planId ? "" : money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "" };
+      const filled = { courseId: String(cohort.courseId), sessions: cohort.sessions.map((s) => ({ ...s })), tutorUserId: cohort.tutorUserId || "", venueId: cohort.venueId || "", joinUrl: cohort.joinUrl || "", pricing: cohort.planId ? "tiered" : "flat", planId: cohort.planId || "", price: cohort.planId ? "" : money(cohort.pricePence), wasPrice: cohort.planId ? "" : money(cohort.wasPricePence), capacity: String(cohort.capacity), details: cohort.details || "", colour: cohort.colour || "" };
       setF(filled);
       setStart(JSON.stringify(filled));
       setView(monthStart(cohort.startsOn || todayIso()));
@@ -552,7 +557,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     await venuesQ.refetch();
     set({ venueId: r.id });
     setAddingVenue(false);
-    setVenueAdded(r.located ? "Venue added and chosen for these dates." : r.unchecked ? "Venue added and chosen. We couldn't check its town just now; we'll try again." : "Venue added and chosen. We couldn't find its postcode on the map, so check it in Settings › Venues.");
+    setVenueAdded(r.located ? "Venue added and chosen for these dates." : r.unchecked ? "Venue added and chosen. We couldn't check its town just now; we'll try again." : "Venue added and chosen. We couldn't find its postcode on the map, so check it in Venues.");
     setErrors((e) => ({ ...e, venueId: undefined }));
   };
   const venueForm = <VenueForm inline idPrefix="rt-cf-v" onSaved={venueSaved} onCancel={() => setAddingVenue(false)} />;
@@ -608,6 +613,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       ...(tiered ? { planId: f.planId } : { planId: null, pricePence: Math.round(Number(f.price) * 100), wasPricePence: f.wasPrice ? Math.round(Number(f.wasPrice) * 100) : null }),
       details: f.details.trim() || null,
       tutorUserId: f.tutorUserId || null,
+      colour: f.colour || null,
       bookable: cohort ? cohort.bookable : true,
     };
     try {
@@ -679,7 +685,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           )}
           {!cohort && !(suggestCourseId && course) ? (
             <div className="rt-field">
-              <label htmlFor="rt-cf-courseId">Course</label>
+              <label htmlFor="rt-cf-courseId">Course<Req /></label>
               {err("courseId")}
               <FieldSelect id="rt-cf-courseId" label="Course" value={f.courseId} onChange={(value) => setF((x) => ({ ...blankFor(courseOf(value)), sessions: x.sessions }))} options={datedCourses.map((c) => ({ value: String(c.id), label: c.title }))} placeholder={datedCourses.length ? "Choose a course" : `No ${methodName(studyMode).toLowerCase()} courses yet`} invalid={Boolean(errors.courseId)} describedBy={aria("courseId")["aria-describedby"]} />
             </div>
@@ -696,7 +702,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
 
           <div className="rt-pws-coh__dates">
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
-              <h3 className="rt-pws-coh__h3" id="rt-cf-slots-h">Selected dates</h3>
+              <h3 className="rt-pws-coh__h3" id="rt-cf-slots-h">Selected dates<Req /></h3>
               <p className="rt-acc__note">Pick days on the calendar. Times are copied from the latest date.</p>
               {err("sessions")}
               {ordered.length === 0 ? (
@@ -712,7 +718,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                       {err(`d${i}`)}
                       <div className="rt-pws-coh__slotgrid">
                         <div className="rt-field">
-                          <label htmlFor={`rt-cf-s${i}`}>Starts</label>
+                          <label htmlFor={`rt-cf-s${i}`}>Starts<Req /></label>
                           <DateField id={`rt-cf-s${i}`} value={s.date} min={cohort ? undefined : today} onChange={(v) => setSlot(i, { date: v, end: !s.end || s.end < v ? v : s.end })} invalid={Boolean(errors[`d${i}`])} describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
                         </div>
                         <div className="rt-field">
@@ -753,7 +759,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               )}
               {method === "classroom" && (
                 <div className="rt-field">
-                  <label htmlFor="rt-cf-venueId">Venue</label>
+                  <label htmlFor="rt-cf-venueId">Venue<Req /></label>
                   {err("venueId")}
                   <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
                   {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
@@ -762,7 +768,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               )}
               {method === "live-online" && (
                 <div className="rt-field">
-                  <label htmlFor="rt-cf-joinUrl">Joining link</label>
+                  <label htmlFor="rt-cf-joinUrl">Joining link<Req /></label>
                   <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Google Meet meeting learners join, like https://zoom.us/j/1234567890. Once online booking opens, learners get it before the first session.</p>
                   {err("joinUrl")}
                   <input id="rt-cf-joinUrl" type="url" inputMode="url" value={f.joinUrl} onChange={(e) => set({ joinUrl: e.target.value })} autoComplete="url" aria-invalid={errors.joinUrl ? true : undefined} aria-describedby={`rt-cf-joinUrl-h${errors.joinUrl ? " rt-cf-joinUrl-e" : ""}`} />
@@ -773,7 +779,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
             {f.pricing === "tiered" && (
               <div className="rt-field">
-                <label htmlFor="rt-cf-planId">Price plan</label>
+                <label htmlFor="rt-cf-planId">Price plan<Req /></label>
                 <p className="rt-acc__note" id="rt-cf-planId-h">
                   Learners choose a package when they book, and the date shows the cheapest package as its price.{" "}
                   <Link href={links.plans()} className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link>
@@ -788,29 +794,43 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               {f.pricing === "flat" && (
                 <>
                   <div className="rt-field">
-                    <label htmlFor="rt-cf-price">Price per learner, including VAT (£)</label>
+                    <label htmlFor="rt-cf-price">Price per learner, including VAT (£)<Req /></label>
                     {err("price")}
                     <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.replace(/£|,/g, "").trim() })} autoComplete="off" {...aria("price")} />
                   </div>
                   <div className="rt-field">
-                    <label htmlFor="rt-cf-wasPrice">“Was” price (optional, £)</label>
+                    <label htmlFor="rt-cf-wasPrice">“Was” price (£)</label>
                     {err("wasPrice")}
                     <input id="rt-cf-wasPrice" type="text" inputMode="decimal" value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
                   </div>
                 </>
               )}
               <div className="rt-field">
-                <label htmlFor="rt-cf-capacity">Number of places</label>
+                <label htmlFor="rt-cf-capacity">Number of places<Req /></label>
                 {err("capacity")}
                 <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} autoComplete="off" {...aria("capacity")} />
               </div>
             </div>
             <div className="rt-field">
-              <label htmlFor="rt-cf-details">Cohort structure (optional)</label>
+              <label htmlFor="rt-cf-details">Cohort structure</label>
               <p className="rt-field__hint" id="rt-cf-details-h">For example weekends, day release or certain days. Learners see it under the dates.</p>
               {err("details")}
               <TextArea id="rt-cf-details" rows={3} maxLength={500} value={f.details} onChange={(e) => set({ details: e.target.value })} aria-invalid={errors.details ? true : undefined} aria-describedby={`rt-cf-details-h${errors.details ? " rt-cf-details-e" : ""}`} autoComplete="off" />
             </div>
+            <fieldset className="rt-pws-coh__colours">
+              <legend>Calendar colour</legend>
+              <div className="rt-pws-coh__swatches">
+                {pw.cohortColours.map((c) => {
+                  const on = (f.colour || defaultColour(method)) === c.key;
+                  return (
+                    <label key={c.key} className={`rt-pws-coh__swatch -c-${c.key}${on ? " is-on" : ""}`}>
+                      <input type="radio" name="rt-cf-colour" className="rt-sr" value={c.key} checked={on} onChange={() => set({ colour: c.key })} />
+                      <span aria-hidden="true"></span><span className="rt-sr">{c.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
           </section>
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
           <div className="rt-pws-coh__formfoot">

@@ -9,6 +9,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { Choice, Loading, Toggle, getQuery, shortDay } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
+import { Req } from "./settingsForm";
 
 // A manual order, one page: 1 the customer (find one we already know by email or name, or add a new one), 2 the courses and the
 // learners on each (same as the customer, someone already booked with you, or someone new), 3 how it is paid. A summary stays
@@ -24,7 +25,7 @@ const CUSTOMER_FIELDS = [
   { key: "last", label: "Last name", auto: "family-name", required: true },
   { key: "email", label: "Email", auto: "email", type: "email", required: true },
   { key: "phone", label: "Phone", auto: "tel", type: "tel", required: true, hint: "For example 07700 900123" },
-  { key: "company", label: "Company (optional)", auto: "organization" },
+  { key: "company", label: "Company", auto: "organization" },
   { key: "address", label: "Address line", auto: "address-line1", required: true, wide: true },
   { key: "city", label: "Town or city", auto: "address-level2", required: true },
   { key: "postcode", label: "Postcode", auto: "postal-code", required: true },
@@ -35,21 +36,21 @@ const key = () => `k${(uid += 1)}`;
 const newPerson = (same = false) => ({ key: key(), mode: same ? "same" : "new", id: "", find: "", first: "", last: "", email: "", phone: "" });
 const newLine = () => ({ key: key(), courseId: "", cohortId: "", plan: "", price: "", priceTouched: false, people: [newPerson(true)] });
 
-// one text field in the design system's shape: label, hint, the error above the input
-function Field({ id, label, hint, error, wide = false, ...input }) {
+// one text field in the design system's shape: label (with a red * when `required`), hint, the error above the input
+function Field({ id, label, hint, error, wide = false, required = false, ...input }) {
   return (
     <div className={`rt-field${wide ? " rt-pws-ord__wide" : ""}`}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label}{required && <Req />}</label>
       {hint && <p className="rt-acc__note" id={`${id}-h`}>{hint}</p>}
       {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
       <input id={id} aria-invalid={error ? true : undefined} aria-describedby={[hint && `${id}-h`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} {...input} />
     </div>
   );
 }
-function Select({ id, label, error, hint, value, onChange, options, placeholder }) {
+function Select({ id, label, error, hint, value, onChange, options, placeholder, required = false }) {
   return (
     <div className="rt-field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label}{required && <Req />}</label>
       {hint && <p className="rt-acc__note" id={`${id}-h`}>{hint}</p>}
       {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
       <FieldSelect id={id} label={label} placeholder={placeholder} value={value} onChange={onChange} options={options} invalid={Boolean(error)} describedBy={[hint && `${id}-h`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} />
@@ -332,7 +333,7 @@ export default function ProviderNewOrder() {
             <>
               <div className="rt-pws-ord__grid">
                 {CUSTOMER_FIELDS.map((f) => (
-                  <Field key={f.key} id={`c-${f.key}`} label={f.label} hint={f.hint} type={f.type || "text"} autoComplete={f.auto} value={cust[f.key]} onChange={(e) => setCust((c) => ({ ...c, [f.key]: e.target.value }))} error={err(`c-${f.key}`)} wide={f.wide} />
+                  <Field key={f.key} required={Boolean(f.required)} id={`c-${f.key}`} label={f.label} hint={f.hint} type={f.type || "text"} autoComplete={f.auto} value={cust[f.key]} onChange={(e) => setCust((c) => ({ ...c, [f.key]: e.target.value }))} error={err(`c-${f.key}`)} wide={f.wide} />
                 ))}
               </div>
               <button type="button" className="rt-pws-ord__change rt-adm-mt" onClick={() => { setCustMode("find"); setCust(emptyCustomer); }}>Change customer</button>
@@ -363,15 +364,15 @@ export default function ProviderNewOrder() {
                     </div>
                   </div>
                   <div className="rt-pws-ord__grid">
-                    <Select id={`${p}-course`} label="Course" error={err(`${p}-course`)} value={l.courseId} onChange={(value) => setLine(l.key, { courseId: value, cohortId: "", plan: "", priceTouched: false })} hint={fmt ? methodName(fmt.key) : undefined} placeholder="Choose a course" options={courses.map((x) => ({ value: x.id, label: x.title }))} />
+                    <Select required id={`${p}-course`} label="Course" error={err(`${p}-course`)} value={l.courseId} onChange={(value) => setLine(l.key, { courseId: value, cohortId: "", plan: "", priceTouched: false })} hint={fmt ? methodName(fmt.key) : undefined} placeholder="Choose a course" options={courses.map((x) => ({ value: x.id, label: x.title }))} />
                     {c && !isOnline(c) && (
-                      <Select id={`${p}-cohort`} label="Dates" error={err(`${p}-cohort`)} value={l.cohortId} onChange={(value) => setLine(l.key, { cohortId: value })} placeholder={ks.length ? "Choose the dates" : "No dates with places left"} options={ks.map((k) => ({ value: k.id, label: `${shortDay(k.first)}${k.last !== k.first ? ` to ${shortDay(k.last)}` : ""} · ${k.venue ? k.venue.city : "Online"} · ${k.left} left` }))} />
+                      <Select required id={`${p}-cohort`} label="Dates" error={err(`${p}-cohort`)} value={l.cohortId} onChange={(value) => setLine(l.key, { cohortId: value })} placeholder={ks.length ? "Choose the dates" : "No dates with places left"} options={ks.map((k) => ({ value: k.id, label: `${shortDay(k.first)}${k.last !== k.first ? ` to ${shortDay(k.last)}` : ""} · ${k.venue ? k.venue.city : "Online"} · ${k.left} left` }))} />
                     )}
                     {pack && (
-                      <Select id={`${p}-plan`} label="Plan" error={err(`${p}-plan`)} value={l.plan} onChange={(value) => setLine(l.key, { plan: value })} placeholder="Choose a plan" options={pw.tiers.map((t) => ({ value: t.key, label: `${t.label}: ${formatPrice(pack.tiers[t.key].price)}` }))} />
+                      <Select required id={`${p}-plan`} label="Plan" error={err(`${p}-plan`)} value={l.plan} onChange={(value) => setLine(l.key, { plan: value })} placeholder="Choose a plan" options={pw.tiers.map((t) => ({ value: t.key, label: `${t.label}: ${formatPrice(pack.tiers[t.key].price)}` }))} />
                     )}
                     {c && payment !== "free" && (
-                      <Field id={`${p}-price`} label="Price per place (£)" hint={l.priceTouched ? `List price ${formatPrice(Number(listPrice(l)) || 0)}.` : "Filled in from the course. Change it for a discount."} type="number" inputMode="decimal" min="0" step="0.01" autoComplete="off" value={l.price} onChange={(e) => setLine(l.key, { price: e.target.value, priceTouched: true })} error={err(`${p}-price`)} />
+                      <Field required id={`${p}-price`} label="Price per place (£)" hint={l.priceTouched ? `List price ${formatPrice(Number(listPrice(l)) || 0)}.` : "Filled in from the course. Change it for a discount."} type="number" inputMode="decimal" min="0" step="0.01" autoComplete="off" value={l.price} onChange={(e) => setLine(l.key, { price: e.target.value, priceTouched: true })} error={err(`${p}-price`)} />
                     )}
                   </div>
 
@@ -420,10 +421,10 @@ export default function ProviderNewOrder() {
                                 ))}
                                 {x.mode === "new" && (
                                   <div className="rt-pws-ord__grid">
-                                    <Field id={`${q}-first`} label="First name" autoComplete="off" value={x.first} onChange={(e) => setPerson(l.key, x.key, { first: e.target.value })} error={err(`${q}-first`)} />
-                                    <Field id={`${q}-last`} label="Last name" autoComplete="off" value={x.last} onChange={(e) => setPerson(l.key, x.key, { last: e.target.value })} error={err(`${q}-last`)} />
-                                    <Field id={`${q}-email`} label="Email" type="email" autoComplete="off" value={x.email} onChange={(e) => setPerson(l.key, x.key, { email: e.target.value })} error={err(`${q}-email`)} />
-                                    <Field id={`${q}-phone`} label="Phone (optional)" type="tel" autoComplete="off" value={x.phone} onChange={(e) => setPerson(l.key, x.key, { phone: e.target.value })} error={err(`${q}-phone`)} />
+                                    <Field required id={`${q}-first`} label="First name" autoComplete="off" value={x.first} onChange={(e) => setPerson(l.key, x.key, { first: e.target.value })} error={err(`${q}-first`)} />
+                                    <Field required id={`${q}-last`} label="Last name" autoComplete="off" value={x.last} onChange={(e) => setPerson(l.key, x.key, { last: e.target.value })} error={err(`${q}-last`)} />
+                                    <Field required id={`${q}-email`} label="Email" type="email" autoComplete="off" value={x.email} onChange={(e) => setPerson(l.key, x.key, { email: e.target.value })} error={err(`${q}-email`)} />
+                                    <Field id={`${q}-phone`} label="Phone" type="tel" autoComplete="off" value={x.phone} onChange={(e) => setPerson(l.key, x.key, { phone: e.target.value })} error={err(`${q}-phone`)} />
                                   </div>
                                 )}
                               </>

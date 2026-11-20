@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '../../trpc/trpc.mjs'
 import { providerCoursesRouter } from './courses.mjs'
+import { providerFaqsRouter } from './faqs.mjs'
 import { providerPlansRouter } from './plans.mjs'
 import { providerProfileRouter } from './profile.mjs'
 import { providerCohortsRouter, providerVenuesRouter } from './schedule.mjs'
@@ -12,6 +13,7 @@ export const providerRouter = createTRPCRouter({
   venues: providerVenuesRouter,
   plans: providerPlansRouter,
   profile: providerProfileRouter,
+  faqs: providerFaqsRouter,
   team: providerTeamRouter,
   // the invited person's side (/provider/join): signed in, not a member yet
   invites: teamInviteRouter,

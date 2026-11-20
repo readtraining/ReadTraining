@@ -105,6 +105,15 @@ export const organisations = pgTable(
     socials: jsonb('socials').$type<{ facebook?: string; linkedin?: string; youtube?: string }>().notNull().default({}),
     bookingTerms: text('booking_terms'),
     cancellationPolicy: text('cancellation_policy'),
+    // VAT (Settings › VAT, provider.profile.saveVat): registered or not, and the number when registered (GB then 9 digits, saved
+    // without spaces); not registered means no number
+    vatRegistered: boolean('vat_registered').notNull().default(false),
+    vatNumber: text('vat_number'),
+    // where the provider's order, refund and dispute notices go (Settings › Emails, provider.profile.saveEmails); none set means
+    // the account owner's email. Saved now; the notices themselves come with booking and payments.
+    orderEmail: text('order_email'),
+    refundEmail: text('refund_email'),
+    disputeEmail: text('dispute_email'),
     createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -113,6 +122,8 @@ export const organisations = pgTable(
     uniqueIndex('organisations_slug_key').on(t.slug),
     index('organisations_created_by_idx').on(t.createdBy),
     check('organisations_commission_range', sql`${t.commissionBps} between 0 and 6000`),
+    check('organisations_notice_emails', sql`${t.orderEmail} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' and ${t.refundEmail} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' and ${t.disputeEmail} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'`),
+    check('organisations_vat', sql`(${t.vatRegistered} and ${t.vatNumber} ~ '^GB[0-9]{9}$') or (not ${t.vatRegistered} and ${t.vatNumber} is null)`),
     // only the organisation's active owner and admins read the row (its mobile, commission, terms and our status note are private
     // business details); other team members, like a tutor or an assistant, and anyone only invited, get what they need through the API
     pgPolicy('organisations: read where owner or admin', {
@@ -517,6 +528,23 @@ export const courseExams = pgTable(
   (t) => [index('course_exams_course_idx').on(t.courseId, t.position), apiOnly('course_exams')],
 ).enableRLS()
 
+// A provider's own FAQs (Settings › FAQs, provider.faqs): about booking and training with that provider in general, in order.
+// They show on the provider's public profile and on its courses that have their own page, never on a shared course page (which
+// never names a provider).
+export const providerFaqs = pgTable(
+  'provider_faqs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organisationId: uuid('organisation_id')
+      .notNull()
+      .references(() => organisations.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    question: text('question').notNull(),
+    answer: text('answer').notNull(),
+  },
+  (t) => [index('provider_faqs_org_idx').on(t.organisationId, t.position), apiOnly('provider_faqs')],
+).enableRLS()
+
 // A course's own FAQs, written for that course only (never shared between courses).
 export const courseFaqs = pgTable(
   'course_faqs',
@@ -622,6 +650,7 @@ export const cohorts = pgTable(
     // package (the "From" price), kept in step by the API. Null = "Flat": the date's own price.
     planId: uuid('plan_id').references(() => pricePlans.id, { onDelete: 'restrict' }),
     details: text('details'), // the cohort's structure, shown to learners under the dates
+    colour: text('colour'), // its colour on the provider's calendar; null = by type (classroom purple, live online blue)
     tutorUserId: uuid('tutor_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
     bookable: boolean('bookable').notNull().default(true), // the provider can stop new bookings without cancelling
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -639,6 +668,7 @@ export const cohorts = pgTable(
     index('cohorts_created_by_idx').on(t.createdBy),
     index('cohorts_plan_idx').on(t.planId),
     check('cohorts_method_dated', sql`${t.method} in ('classroom', 'live-online')`),
+    check('cohorts_colour', sql`${t.colour} in ('purple', 'blue', 'green', 'orange', 'red')`),
     check('cohorts_classroom_venue', sql`${t.method} <> 'classroom' or ${t.venueId} is not null`),
     check('cohorts_dates_order', sql`${t.endsOn} >= ${t.startsOn}`),
     check('cohorts_capacity_range', sql`${t.capacity} between 1 and 200`),

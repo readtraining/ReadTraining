@@ -10,7 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Said, SortTh, formatWhen, Empty, PageLink } from "./adminParts";
+import { DetailSkeleton, Said, SortTh, formatWhen, Empty, PageLink, Req } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { DisputeForm, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -193,7 +193,7 @@ function CancelForm({ order, onDone }) {
     <form className="rt-q__form rt-biz__sheetform" ref={ref} noValidate onSubmit={submit}>
       <p className="rt-acc__note">{d.cancelText} {A.recordOnly}</p>
       <p className="rt-adm-strong">{order.ref} · {formatPrice(order.left)} left</p>
-      {field("rt-cn-reason", d.cancelReason, null, error, <TextArea id="rt-cn-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={describedBy("rt-cn-reason", null, error)} />)}
+      {field("rt-cn-reason", <>{d.cancelReason}<Req /></>, null, error, <TextArea id="rt-cn-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={describedBy("rt-cn-reason", null, error)} />)}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={cancel.isPending}>{d.cancel}</button>
     </form>
   );

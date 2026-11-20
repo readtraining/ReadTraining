@@ -233,7 +233,8 @@ export function toCourseDetail(page, related = []) {
     requirements: entry.length ? { title: `Entry requirements for the ${page.title}`, paragraphs: entry, list: [] } : null,
     modules: page.units.map((u) => ({ title: u.title, duration: "", topics: lines(u.body) })),
     exams: page.exams.length ? { title: "How will I be assessed?", intro: [], rows: page.exams, outro: [] } : undefined,
-    faqs: page.faqs,
+    // the course's own FAQs, then (a provider course with its own page) the provider's general ones, without repeating a question
+    faqs: [...page.faqs, ...(page.providerFaqs ?? []).filter((f) => !page.faqs.some((x) => x.question.trim().toLowerCase() === f.question.trim().toLowerCase()))],
     sessions,
     upcoming: dated.length,
     popularMode,

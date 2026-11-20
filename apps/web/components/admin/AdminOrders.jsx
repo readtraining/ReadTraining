@@ -13,7 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty, HeaderAction } from "./adminParts";
+import { Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty, HeaderAction, Req } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { toPence, useMoneyRefresh } from "./moneyParts";
 import DateField from "./DateField";
@@ -151,20 +151,20 @@ function BookForm() {
   return (
     <form className="rt-q__form rt-biz__sheetform rt-adm-couponform" onSubmit={submit} noValidate ref={ref}>
       <p className="rt-acc__note">{b.note}</p>
-      {field("rt-bk-buyerName", b.buyerName, null, errors.buyerName, input("buyerName", { type: "text", autoComplete: "off" }))}
-      {field("rt-bk-buyerEmail", b.buyerEmail, b.buyerEmailHint, errors.buyerEmail, input("buyerEmail", { type: "email", autoComplete: "off", hint: b.buyerEmailHint }))}
+      {field("rt-bk-buyerName", <>{b.buyerName}<Req /></>, null, errors.buyerName, input("buyerName", { type: "text", autoComplete: "off" }))}
+      {field("rt-bk-buyerEmail", <>{b.buyerEmail}<Req /></>, b.buyerEmailHint, errors.buyerEmail, input("buyerEmail", { type: "email", autoComplete: "off", hint: b.buyerEmailHint }))}
       {field("rt-bk-buyerCompany", b.buyerCompany, null, errors.buyerCompany, input("buyerCompany", { type: "text" }))}
-      {field("rt-bk-providerId", b.provider, b.providerHint, errors.providerId, (
+      {field("rt-bk-providerId", <>{b.provider}<Req /></>, b.providerHint, errors.providerId, (
         <FieldSelect id="rt-bk-providerId" label={b.provider} value={v.providerId} onChange={(id) => setV((x) => ({ ...x, providerId: id, courseId: x.providerId === id ? x.courseId : "" }))} options={(providers.data?.providers ?? []).map((p) => ({ value: p.id, label: p.name }))} invalid={Boolean(errors.providerId)} describedBy={describedBy("rt-bk-providerId", b.providerHint, errors.providerId)} />
       ))}
-      {field("rt-bk-courseId", b.course, v.providerId ? (courses.length ? null : b.noCourses) : b.courseFirst, errors.courseId, (
+      {field("rt-bk-courseId", <>{b.course}<Req /></>, v.providerId ? (courses.length ? null : b.noCourses) : b.courseFirst, errors.courseId, (
         <FieldSelect id="rt-bk-courseId" label={b.course} value={v.courseId} onChange={pickCourse} options={courses.map((x) => ({ value: String(x.id), label: x.title }))} disabled={!courses.length} invalid={Boolean(errors.courseId)} describedBy={describedBy("rt-bk-courseId", v.providerId ? (courses.length ? null : b.noCourses) : b.courseFirst, errors.courseId)} />
       ))}
       {field("rt-bk-startsOn", b.startsOn, null, errors.startsOn, <DateField id="rt-bk-startsOn" clearable value={v.startsOn} onChange={(d) => setV((x) => ({ ...x, startsOn: d }))} />)}
       <Choice name="rt-bk-method" legend={b.method} value={v.method} onChange={(m) => setV((x) => ({ ...x, method: m, unit: m === "free" ? "0" : x.unit === "0" ? "" : x.unit }))} options={["invoice", "payment_link", ...(canFree ? ["free"] : [])].map((m) => ({ value: m, label: b.methods[m] }))} />
       <div className="rt-adm-couponform__two">
-        {field("rt-bk-quantity", b.quantity, null, errors.quantity, input("quantity", { type: "text", inputMode: "numeric", className: "rt-adm-num" }))}
-        {field("rt-bk-unit", b.unit, null, errors.unitPence, <input id="rt-bk-unit" type="text" inputMode="decimal" className="rt-adm-num" value={free ? "0.00" : v.unit} readOnly={free} onChange={set("unit")} aria-invalid={errors.unitPence ? true : undefined} aria-describedby={describedBy("rt-bk-unit", null, errors.unitPence)} />)}
+        {field("rt-bk-quantity", <>{b.quantity}<Req /></>, null, errors.quantity, input("quantity", { type: "text", inputMode: "numeric", className: "rt-adm-num" }))}
+        {field("rt-bk-unit", <>{b.unit}{!free && <Req />}</>, null, errors.unitPence, <input id="rt-bk-unit" type="text" inputMode="decimal" className="rt-adm-num" value={free ? "0.00" : v.unit} readOnly={free} onChange={set("unit")} aria-invalid={errors.unitPence ? true : undefined} aria-describedby={describedBy("rt-bk-unit", null, errors.unitPence)} />)}
       </div>
       <p className="rt-adm-book__total"><span>{b.total}</span> <strong>{qty && (unit || free) ? formatPrice(((unit || 0) * qty) / 100) : "–"}</strong></p>
       {field("rt-bk-note", b.note, null, errors.note, <TextArea id="rt-bk-note" rows={2} maxLength={500} value={v.note} onChange={set("note")} />)}

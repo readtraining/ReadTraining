@@ -9,7 +9,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { DetailSkeleton, Said, formatWhen, Empty } from "./adminParts";
+import { DetailSkeleton, Said, formatWhen, Empty, Req } from "./adminParts";
 import { History, describedBy, field, useSave } from "./contentParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
@@ -155,7 +155,7 @@ function Editor({ t, initial, canEdit, when, note, onRestart }) {
             const id = `rt-adm-em-${k}`;
             const f = copy.fields[k];
             const props = { id, value: w[k], onChange: set(k), readOnly: !canEdit, "aria-invalid": errors[k] ? true : undefined, "aria-describedby": describedBy(id, f.hint, errors[k]) };
-            return <React.Fragment key={k}>{field(id, f.label, f.hint, errors[k], k === "body" ? <TextArea {...props} rows={12} ref={bodyRef} /> : <input type="text" {...props} />)}</React.Fragment>;
+            return <React.Fragment key={k}>{field(id, <>{f.label}<Req /></>, f.hint, errors[k], k === "body" ? <TextArea {...props} rows={12} ref={bodyRef} /> : <input type="text" {...props} />)}</React.Fragment>;
           })}
           {t.placeholders.length > 0 && (
             <div className="rt-adm-email__ph">
