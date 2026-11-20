@@ -9,6 +9,7 @@ import { adminPermissions, identitiesOf } from '@readtraining/permissions'
 import { logActivity } from '../../lib/activity.mjs'
 import { renderEmail, wordsFor } from '../../emails/templates.mjs'
 import { closureBlockers } from '../../lib/closureBlockers.mjs'
+import { inviteExpired } from '../../lib/adminInvite.mjs'
 import { checkCurrentPassword } from '../../lib/credentials.mjs'
 import { sendEmail } from '../../lib/email.mjs'
 import { notify, notifyAdmins, personOf } from '../../lib/notify.mjs'
@@ -82,6 +83,14 @@ export const meRouter = createTRPCRouter({
       ? await ctx.db.select({ id: organisations.id, name: organisations.name, slug: organisations.slug }).from(organisations).where(inArray(organisations.id, ids))
       : []
     const byId = new Map(orgs.map((o) => [o.id, o]))
+    // a provider's team invitations waiting for this login (not joined yet, so not one of their identities): the menus and the
+    // For providers page offer "Accept your invitation" (/provider/join) instead of signing up as a new provider. An expired one
+    // is included: the join page says so and how to get a new one.
+    const invited = await ctx.db.execute<{ organisation_id: string; name: string; invited_at: string | null }>(sql`
+      select m.organisation_id, o.name, m.invited_at
+      from public.organisation_members m join public.organisations o on o.id = m.organisation_id
+      where m.user_id = ${ctx.user.id}::uuid and m.status = 'invited' and o.status in ('active', 'suspended')
+      order by m.invited_at desc nulls last`)
     return {
       id: ctx.user.id,
       email: auth?.email ?? ctx.user.email,
@@ -106,7 +115,10 @@ export const meRouter = createTRPCRouter({
         postcode: profile.postcode,
         marketingOptIn: profile.marketingOptIn,
       },
-      identities: identitiesOf(ctx.actor).map((i) => ('organisationId' in i ? { ...i, name: byId.get(i.organisationId)?.name ?? '', slug: byId.get(i.organisationId)?.slug ?? '' } : i)),
+      // each provider or business account with its name, address and status (pending, changes_requested, active, suspended: the
+      // For providers page offers the next step for it instead of signing up again)
+      identities: identitiesOf(ctx.actor).map((i) => ('organisationId' in i ? { ...i, name: byId.get(i.organisationId)?.name ?? '', slug: byId.get(i.organisationId)?.slug ?? '', status: ctx.actor.memberships.find((m) => m.organisationId === i.organisationId && !m.staff)?.organisationStatus ?? null } : i)),
+      invites: invited.map((r) => ({ organisationId: r.organisation_id, provider: r.name, expired: Boolean(r.invited_at) && inviteExpired(r.invited_at!) })),
       admin: ctx.actor.admin ? { preset: ctx.actor.admin.preset, permissions: adminPermissions(ctx.actor.admin), twoStep: ctx.user.aal === 'aal2' } : null,
     }
   }),
