@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { providerSignup } from "@/data/providerSignup";
 import { api } from "@/lib/trpc/react";
@@ -38,6 +39,8 @@ export default function ProviderOnboarding() {
   const [busy, setBusy] = useState(false);
   const formRef = useRef(null);
   const existing = me.data?.identities.find((i) => i.kind === "provider");
+  // a team invitation waiting (not joined yet): offered first, so they don't make a second provider by mistake
+  const invite = me.data?.invites?.[0];
   // typed in and not sent yet: leaving asks first (the mobile filled in from the profile doesn't count)
   useUnsavedChanges(Boolean(v.name.trim() || v.acceptTerms || (v.mobile.trim() && v.mobile.trim() !== (me.data?.profile.phone ?? ""))));
 
@@ -93,6 +96,12 @@ export default function ProviderOnboarding() {
 
   return (
     <form className="rt-acc__card rt-acc__form rt-po__card" onSubmit={submit} noValidate ref={formRef} aria-labelledby="rt-po-h">
+      {invite && (
+        <div className="rt-acc__notice" role="status">
+          <p>{o.invited.text(invite.provider)}</p>
+          <Link href={o.invited.href} className="button -sm -purple-1 text-white">{o.invited.action}</Link>
+        </div>
+      )}
       <h2 className="rt-po__h2" id="rt-po-h">{o.formTitle}</h2>
       <p className="rt-acc__note">{o.formLead}</p>
       {field("name", o.name, o.nameHint, { type: "text", autoComplete: "organization", maxLength: 120 })}

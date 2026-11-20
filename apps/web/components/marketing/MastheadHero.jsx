@@ -3,8 +3,9 @@ import HeroParallax from "./HeroParallax";
 import { CtaLink, Eyebrow } from "./parts";
 
 /* Hero shared by /for-business and /for-providers: copy left, dashboard screenshot right
-   (home-4 masthead with background shape, two floating cards and cursor parallax). */
-export default function MastheadHero({ hero: h, id }) {
+   (home-4 masthead with background shape, two floating cards and cursor parallax). `primary` replaces the main button (the For
+   providers page's, which follows who is signed in). */
+export default function MastheadHero({ hero: h, id, primary }) {
   const [f1, f2] = h.floats;
   return (
     <section id={id} className="masthead -type-3 bg-light-6 bz-masthead">
@@ -17,7 +18,7 @@ export default function MastheadHero({ hero: h, id }) {
               <h1 className="fb-hero__title">{h.title}</h1>
               <p className="fb-hero__text">{h.text}</p>
               <div className="fb-actions">
-                <CtaLink link={h.primary} />
+                {primary ?? <CtaLink link={h.primary} />}
                 <CtaLink link={h.secondary} variant="outline" />
               </div>
               <div className="bz-hero2__note mt-15">{h.points.join(" · ")}</div>
