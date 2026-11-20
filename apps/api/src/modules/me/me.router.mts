@@ -106,7 +106,9 @@ export const meRouter = createTRPCRouter({
         postcode: profile.postcode,
         marketingOptIn: profile.marketingOptIn,
       },
-      identities: identitiesOf(ctx.actor).map((i) => ('organisationId' in i ? { ...i, name: byId.get(i.organisationId)?.name ?? '', slug: byId.get(i.organisationId)?.slug ?? '' } : i)),
+      // each provider or business account with its name, address and status (pending, changes_requested, active, suspended: the
+      // For providers page offers the next step for it instead of signing up again)
+      identities: identitiesOf(ctx.actor).map((i) => ('organisationId' in i ? { ...i, name: byId.get(i.organisationId)?.name ?? '', slug: byId.get(i.organisationId)?.slug ?? '', status: ctx.actor.memberships.find((m) => m.organisationId === i.organisationId && !m.staff)?.organisationStatus ?? null } : i)),
       admin: ctx.actor.admin ? { preset: ctx.actor.admin.preset, permissions: adminPermissions(ctx.actor.admin), twoStep: ctx.user.aal === 'aal2' } : null,
     }
   }),

@@ -168,6 +168,17 @@ export const provider = {
       { q: "What do providers need to manage after onboarding?", a: "Review bookings when order notifications arrive, disable fully booked or cancelled dates, and keep upcoming course dates up to date." },
     ],
   },
+  // the main button for someone who already has a provider account (components/provider/ProviderCta.jsx), by their account's
+  // status: their application while our team reviews it, "Manage your courses" (their workspace) once approved, for every role
+  // on the team (a suspended account shows why there); a rejected application stays "Become a provider", to apply again.
+  // `bandText` replaces the closing band's sign-up sentence.
+  account: {
+    pending: { label: "View your application", href: "/provider/review" },
+    changes_requested: { label: "Update your application", href: "/provider/review" },
+    active: { label: "Manage your courses", href: "/provider" },
+    suspended: { label: "Manage your courses", href: "/provider" },
+    bandText: "Carry on setting up the courses, cohorts and learners you manage.",
+  },
   cta: {
     title: "Put your training operation and marketplace reach in one place.",
     text: "Create your provider account to start setting up the courses, cohorts and learners you manage.",
