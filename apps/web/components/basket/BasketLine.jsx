@@ -11,7 +11,7 @@ import { RowMenu } from "@/components/admin/adminParts";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
 
 // One course on one date. Top: the picture, the title, when and where it runs, the package chosen when the date is sold in
-// packages. On the right the delegates counter, the line's price and two icon buttons under it: Edit (a pencil, as Hurak's: a
+// packages. On the right the delegates counter, the line's price and two icon buttons under it: Edit (a pencil: a
 // small menu of what this line can change: the date, `onDates`; the package, `onPackage`; the first aid add-on; or straight to
 // the dates when that is all it can change) and Remove (a bin; Undo follows on the page). Under it, on a course whose SIA licence needs first aid: the answer given when booking,
 // or the question itself (.rt-bk__req) while it has none (removing the add-on asks it again: the learner then says they hold a

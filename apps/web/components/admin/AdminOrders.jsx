@@ -25,7 +25,7 @@ const TABS = Object.keys(copy.tabs);
 
 // Orders and bookings (Part B, B4): every real order (API admin.orders.list), newest first, by status with counts, searchable,
 // a page at a time. With the "book for a customer" switch an admin books by invoice or payment link (or free, with that
-// switch), as Hurak's staff do for phone sales; the order opens straight away.
+// switch), as staff do for phone sales; the order opens straight away.
 export default function AdminOrders() {
   const me = useAdminAccess();
   const canBook = me?.permissions?.includes("orders.book");

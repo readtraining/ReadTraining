@@ -1,5 +1,5 @@
 // Test prep SUBJECT pages (/test-prep/<slug>): one entry per subject, keyed by the hub slug (data/testPrep.js).
-// PLACEHOLDER CONTENT: text, headings and test lists are taken from the reference site (Hurak) with the brand changed to
+// PLACEHOLDER CONTENT: text, headings and test lists are taken from the reference site with the brand changed to
 // ReadTraining. Replace with our own content later; the page template reads only this file.
 //
 // exam      the subject's exam numbers, the single source for every number shown: { questions, passMark (%), minutes }.

@@ -5,7 +5,7 @@
 // for approval and one draft. Images are the template's sample pictures. Never part of the migrations. On the live project it
 // runs only with --live-review (the client's review of Milestone 2, decided 27 October 2026): then it adds just the ten popular
 // shared course pages and their providers' courses, no extra, waiting or draft examples. Remove them before a public launch.
-// The shared course pages are ReadTraining's own pages (as Hurak's are Hurak's), with real words (SIA Door Supervisor has the
+// The shared course pages are ReadTraining's own pages, with real words (SIA Door Supervisor has the
 // client's), so --remove never deletes them: it takes out only the sample providers, their courses, dates, venues and pictures.
 // A shared page with no live provider course is hidden from the site, and shows again when a real provider lists a course on it.
 //

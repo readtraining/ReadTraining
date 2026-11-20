@@ -6,7 +6,7 @@ import { and, asc, cohorts, courses, eq, inArray, isNull, pricePlans, sql } from
 import { logActivity } from '../../lib/activity.mjs'
 import { createTRPCRouter, limit, orgProcedure } from '../../trpc/trpc.mjs'
 
-// A provider's price plans (Hurak's "Tiered Plans"): 2 to 4 packages a learner chooses between, each with its own full price per
+// A provider's price plans: 2 to 4 packages a learner chooses between, each with its own full price per
 // delegate, a "Save £" amount, a tagline, "Most popular" on one, and features that are included (✓) or not (✗). A plan is reused:
 // a classroom or live online date chooses one (cohorts.plan_id, the date's "Tiered" pricing), and a self-paced course can
 // (courses.plan_id). A plan is the provider's own pricing: what they save is what learners see, at once, with no review by our

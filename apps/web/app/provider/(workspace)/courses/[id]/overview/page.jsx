@@ -5,7 +5,7 @@ import { CourseTitle } from "@/components/providerWorkspace/ProviderCourseEditor
 import { pw } from "@/data/providerWorkspace";
 import { pageMetadata } from "@/lib/seo";
 
-// Provider workspace: one course's overview (Hurak's course Details: components/providerWorkspace/ProviderCourseOverview), with its
+// Provider workspace: one course's overview (course Details: components/providerWorkspace/ProviderCourseOverview), with its
 // learners, venues, cohorts, packages and orders. Gated as the editor is: the layout lets in members of a provider only, and the
 // API answers only for this provider's own course. Private, so kept out of search.
 const p = pw.pages.courseOverview;

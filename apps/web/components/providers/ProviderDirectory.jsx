@@ -8,7 +8,7 @@ import { PROVIDERS_HREF, PROVIDERS_PAGE_SIZE } from "@/lib/providers";
 import { EmptyState } from "@/components/states/States";
 
 // The address of one view of the directory: the search (`q`), and the page (`page`, from 2) or every provider at once
-// (`show=all`, as Hurak's "Show all"), so any view can be shared, refreshed or come back to with Back.
+// (`show=all`, "Show all"), so any view can be shared, refreshed or come back to with Back.
 const viewHref = ({ q = "", page = 1, all = false }) => {
   const p = new URLSearchParams();
   if (q) p.set("q", q);

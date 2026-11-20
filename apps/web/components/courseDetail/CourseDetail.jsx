@@ -31,7 +31,7 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 // an exam unit's name as it is matched to a guide's questions (data/courseGuides.js): case, spaces and punctuation aside
 const unitKey = (name) => String(name).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-// Same sections, in the same order, as the live Hurak course page, in our own design:
+// The course page's sections, in our own design:
 // features > learning options > training providers > overview > what you will learn > course content > requirements > exams >
 // who it's for > trust points > the provider's terms > FAQs > more courses > need help > footer. The booking card is sticky on
 // the right. `course`: a live course (lib/catalogueData.js toCourseDetail); a section it has nothing for is left out, and

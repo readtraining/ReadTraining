@@ -12,7 +12,7 @@ const copy = pw.checklist;
 // who can do each step (the shared permission table), so a step's link shows only to someone who can follow it
 const NEEDS = { approved: "provider.review.send", profile: "provider.profile.edit", policy: "provider.terms.edit", course: "provider.courses.edit", date: "provider.cohorts.edit" };
 
-// Getting set up to sell (Hurak's provider checklist, in our design): approval, the public profile, the cancellation policy, a
+// Getting set up to sell (provider checklist, in our design): approval, the public profile, the cancellation policy, a
 // first course and a first date, each worked out from the real records, with how many are done. Shown on the dashboard to the
 // people who set the account up (and on the Account review page while waiting), until every step is done. `heading` picks the
 // heading level for where it sits. `compact` (the dashboard): the progress and only the next step to do, with every step a click

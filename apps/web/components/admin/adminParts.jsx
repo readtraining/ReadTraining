@@ -244,7 +244,7 @@ export function Search({ value, onChange, label }) {
   );
 }
 
-// A row's "…" menu (Hurak's row actions: View / Move / Edit / Trash, Edit Details / Reschedule / Resit / Notes / Timeline).
+// A row's "…" menu (row actions: View / Move / Edit / Trash, Edit Details / Reschedule / Resit / Notes / Timeline).
 // `items`: [{ label, onClick } | { label, href }], `danger` for a destructive item. A real menu: arrow keys move between items,
 // Esc closes it and puts focus back on the button, a click outside closes it. Looks like the site's dropdown panel.
 // The provider's account menu uses it too: `trigger` replaces the dots, `head` goes above the items, and { group } items label

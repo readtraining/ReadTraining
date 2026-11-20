@@ -76,7 +76,7 @@ export function getCoursePage(slug, courses) {
   };
 }
 
-// ---- town pages (/courses/<page>/<town>, as hurak.com/courses/first-aid/nottingham) ------------------------------------------
+// ---- town pages (/courses/<page>/<town>, as on the client's current site) ------------------------------------------
 // The towns where a page's courses have a classroom venue. Live online and self-paced pages have no towns. A town is written as
 // the menus write it (API catalogue.nav townName: as typed, with capitals when typed all in lower case) and is one town however it
 // was typed: its address drops apostrophes and joins the words with "-" ("King's Lynn", "kings lynn": /kings-lynn, as ukPlace

@@ -3,12 +3,12 @@ import { contactHref } from "@/lib/forms";
 // The customer account (/account): dashboard, bookings (history, details, cancellation request), saved courses and profile.
 // Structured as the large booking sites do it and as Baymard's account research recommends: a short menu of a few clear pages,
 // the next booking first, and every booking task (details, receipt, change of date, cancellation) one step from the booking.
-// Hurak's own account sits behind its log-in ("Access your courses, bookings, and dashboard"); the wording here is ours.
+// A learner's account sits behind its log-in ("Access your courses, bookings, and dashboard"); the wording here is ours.
 // The demo profile and bookings are dummy data until accounts exist (see lib/account.js); bookings made at checkout are real ones.
 
 export const account = {
   title: "My account",
-  // the client's account menu (hurak.com: My learning, Payment methods, User wallet, Purchase history, Account setting), plus our
+  // the client's account menu (My learning, Payment methods, User wallet, Purchase history, Account setting), plus our
   // dashboard and saved courses
   nav: [
     { key: "dashboard", label: "Dashboard", href: "/account", icon: "icon-bar-chart-2" },
@@ -20,7 +20,7 @@ export const account = {
     { key: "settings", label: "Account settings", href: "/account/settings", icon: "icon-setting" },
   ],
   signOut: "Sign out",
-  // Switch account (Hurak's): the identities on this login, the current one marked, and how to add the ones missing
+  // Switch account: the identities on this login, the current one marked, and how to add the ones missing
   switchAccount: {
     title: "Switch account",
     current: "Current",

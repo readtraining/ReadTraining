@@ -2,7 +2,7 @@ import { AUTH_ROUTES, CATALOGUE_HREF } from "@/lib/routes";
 import { SKILL_SAVER_LEVELS } from "@/lib/skillSaver";
 
 // Skill Saver Programme for learners (/skill-saver, the footer's For providers > Skill Saver Programme). Functions from the
-// client's current page (hurak.com/skill-saver): three levels (sign in; 3 completed courses in 1 year; 5 in 2 years), the
+// client's current page: three levels (sign in; 3 completed courses in 1 year; 5 in 2 years), the
 // discount applied automatically on courses with the Skill Saver badge, levels kept for life, cancelled courses not counting.
 // The layout and wording are ours; the levels' numbers come from lib/skillSaver.js (shared with /provider-skill-saver).
 // Not copied: the client's hero line "free lifetime access to Level 3 rewards", which contradicts its own level rules.

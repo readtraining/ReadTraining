@@ -16,7 +16,7 @@ import { newPassword, personName } from '../../lib/rules.mjs'
 import { AVATARS, requestEmailChange, setFirstPasswordAsUser, signedPhotoUrl, siteUrl, supabase, updatePasswordAsUser } from '../../lib/supabase.mjs'
 import { createTRPCRouter, limit, protectedProcedure } from '../../trpc/trpc.mjs'
 
-// Account settings, in Hurak's four parts: basic information, address, email (needs the current password) and password
+// Account settings, in four parts: basic information, address, email (needs the current password) and password
 // (current, new, repeat). Every change is checked here, saved, and written to the activity log.
 
 const PHOTO_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as const

@@ -9,7 +9,7 @@ import { formatOrderDay } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
 
 const PER_PAGE = 10;
-// Learners: Hurak's searches (first name, last name, email, phone), as one search box in the workspace's filter bar (as on Courses;
+// Learners: searches (first name, last name, email, phone), as one search box in the workspace's filter bar (as on Courses;
 // kept in the address), and its columns (name, email, contact number, View), 10 a page, with each learner's initials, town, bookings
 // and last booking.
 export default function ProviderLearners() {

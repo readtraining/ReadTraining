@@ -55,8 +55,8 @@ function RecentActivity() {
 
 // The admin dashboard: the four numbers that say how today is going (the account dashboard's stats strip), the queues with their
 // counts and how many are overdue (provider applications are real, API admin.providers.counts; the rest is DEMO) beside the real
-// activity log's latest entries, then the sessions starting this week without joining instructions (the gap Hurak's learners
-// complain about, DEMO and tagged so) and the latest real orders. The numbers on top and the money queues are real (API
+// activity log's latest entries, then the sessions starting this week without joining instructions (what learners
+// complain about most, DEMO and tagged so) and the latest real orders. The numbers on top and the money queues are real (API
 // admin.orders.summary) for admins who can see orders.
 // the page each queue opens (its key otherwise names the page itself)
 const QUEUE_PAGE = { applications: "providers", credit: "businesses", debt: "businesses", candidates: "jobs" };

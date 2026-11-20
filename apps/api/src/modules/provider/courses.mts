@@ -153,7 +153,7 @@ export const settings = {
   pricePence: z.number().int().min(100, 'Enter a price of at least £1.').max(10000000, 'Enter a price of £100,000 or less.').nullable(),
   planId: z.string().uuid().nullable(), // the self-paced option sold in packages (its price is then the plan's cheapest package)
   skillSaver: z.boolean(),
-  // Visibility (the gear's Public / Private, Hurak v2's "Publish on marketplace"): one choice for the provider. It sets both
+  // Visibility (the gear's Public / Private, "Publish on marketplace"): one choice for the provider. It sets both
   // stored values, `is_public` and `listed`, which the catalogue always reads together (a private course still opens from its link).
   isPublic: z.boolean(),
   model: z.enum(['bookings', 'enquiries']),
@@ -231,7 +231,7 @@ export const sameSubject = (page: Subject, course: Subject) =>
   page.subcategoryId !== null && page.subcategoryId === course.subcategoryId && (!page.topicId || !course.topicId || page.topicId === course.topicId)
 
 
-// Where a provider course is listed (Hurak's rule: the provider never chooses; the subject decides): on the live shared course
+// Where a provider course is listed (the provider never chooses; the subject decides): on the live shared course
 // page for its topic, or on its sub-category's only shared page when it has no topic match; otherwise on a page of its own
 // (null). Used when a course is created, when a draft's subject changes, and when a change to a live course's subject is
 // approved (admin.courses), so the placement always follows the subject. The New course pop-up shows the same choice
@@ -487,7 +487,7 @@ export async function setCourseImages(db: typeof Db, course: Course, images: { i
   return { ok: true }
 }
 
-// ---- deleting a provider's course (Hurak's and Udemy's rule) -------------------------------------------------------------------
+// ---- deleting a provider's course -------------------------------------------------------------------
 // A draft, or a course our team asked to change, can be deleted. One waiting for our team's review can't: the provider withdraws
 // it from review first (withdrawReview), so an admin is never deciding on a course that is being deleted. A course that has been
 // live (live or paused) can be deleted only while nobody has booked or reviewed it, and the provider types its name to confirm.
@@ -1064,7 +1064,7 @@ export const providerCoursesRouter = createTRPCRouter({
       })
     }),
 
-  // Stop new bookings for one learning option, or take bookings for it again (Hurak's "Retire from future sales"): the option stays
+  // Stop new bookings for one learning option, or take bookings for it again: the option stays
   // one of the course's (`closed_methods`), its dates already booked still run and nothing is cancelled, but none of it is on sale
   // (the catalogue, the course page, new dates and staff bookings leave it out). Stopping the primary makes the first option still
   // taking bookings the primary; the last one taking bookings can't be stopped (that is pausing the course). It isn't reviewed

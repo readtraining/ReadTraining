@@ -6,7 +6,7 @@ import { formatDateRange, formatPrice } from "@/lib/format";
 import { Icon } from "./Icon";
 import PopShell from "./PopShell";
 
-// The steps between a date's Book now and the basket, as Hurak's: "Choose your package" when the date is sold in packages (a
+// The steps between a date's Book now and the basket: "Choose your package" when the date is sold in packages (a
 // provider's price plan, or the client's own on a course page), then, on a course the SIA licence needs first aid for, the first
 // aid requirement (I already have a certificate, or add Emergency First Aid at Work), unless the package chosen includes it.
 

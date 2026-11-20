@@ -121,7 +121,7 @@ function buildBusinesses(saved, now) {
     const owed = unpaid.reduce((n, i) => n + i.amount, 0);
     const limit = s.limit ?? b.limit;
     const credit = s.credit || b.credit;
-    // as on Hurak, credit is offered by us to regular customers; these checks say who qualifies (rule: data/adminWork.js)
+    // credit is offered by us to regular customers; these checks say who qualifies (rule: data/adminWork.js)
     const months = Math.floor(b.sinceDays / 30.4);
     const rule = B.eligibility;
     const checks = [

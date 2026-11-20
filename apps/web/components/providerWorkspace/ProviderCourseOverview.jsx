@@ -13,8 +13,8 @@ import { EmptyState, ErrorState } from "@/components/states/States";
 import { COHORT_TONE, COURSE_TONE, Loading, Pill, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { COHORT_STATUSES, CohortCell, CohortForm, Seats, WHEN, cohortState, todayIso, useSchedule } from "./ProviderCohorts";
 
-// One course's overview (Hurak's course Details): a head card with the cover picture, status, learning options and performance model,
-// the shared course page it is listed on, Edit course and Preview; then Hurak's tabs, in Hurak's order: Learners, Venues, Cohorts,
+// One course's overview (course Details): a head card with the cover picture, status, learning options and performance model,
+// the shared course page it is listed on, Edit course and Preview; then its tabs, in this order: Learners, Venues, Cohorts,
 // Packages and Orders, opening on Cohorts (the chosen tab is kept in ?tab=). Venues, cohorts and packages are real (API
 // provider.venues.forCourse, provider.cohorts.list with the course, provider.plans.forCourse). Booking arrives in a later
 // milestone, so Learners and Orders say there are none yet (never the workspace's demo records). Each tab shows only to a role that

@@ -1,5 +1,5 @@
 // The blog (/blog, /blog/[slug]). Read only through lib/blog.js, which will call a CMS or the API when one exists.
-// Topics follow the client's current blog (hurak.com/blog: SIA, first aid, construction, health and safety, hospitality); the
+// Topics follow the client's current blog (SIA, first aid, construction, health and safety, hospitality); the
 // articles are our own, checked against the official sources each one lists. A block is a paragraph or { type: "ul" | "table" },
 // as on the legal pages (components/doc/DocBlocks). `topic` is the catalogue topic of the course the article is about (null when
 // it has none) and `related` the topics of courses that go with it (data/courseTopics.js TOPICS), for the courses under it.
