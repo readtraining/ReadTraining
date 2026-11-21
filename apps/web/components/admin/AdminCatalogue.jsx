@@ -167,7 +167,7 @@ function NewSharedPage({ open, onClose }) {
         <div className="rt-field">
           <label htmlFor="rt-adm-ns-title">Course name<Req /></label>
           <Err k="title" />
-          <input id="rt-adm-ns-title" value={f.title} maxLength={80} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="For example: SIA Door Supervisor" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={errors.title ? "rt-adm-ns-title-e" : undefined} />
+          <input id="rt-adm-ns-title" value={f.title} maxLength={60} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="For example: SIA Door Supervisor" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={errors.title ? "rt-adm-ns-title-e" : undefined} />
         </div>
         <div className="rt-field">
           <label htmlFor="rt-adm-ns-category">Category<Req /></label>

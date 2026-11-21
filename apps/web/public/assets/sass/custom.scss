@@ -5135,6 +5135,7 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-status__title { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; line-height: 1.4; color: var(--rt-c-text); }
 .rt-pws-status__text { margin: 2px 0 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); }
 .rt-dash > .rt-pws-status { margin: 0; }
+.rt-pws-status > .button { flex: none; } /* the payout banner's button (Coming soon until Milestone 4) */
 .rt-pws-status__link { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; color: var(--rt-c-text) !important; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-status__link:hover { text-decoration-thickness: 2px; } }
 .rt-pws-status__close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: transparent; color: var(--rt-c-muted); cursor: pointer; }.rt-pws-status__close:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 0; }
@@ -5144,6 +5145,7 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
   .rt-pws-status:has(.rt-pws-status__close) { padding-right: 52px; }
   .rt-pws-status__body { flex-basis: calc(100% - 46px); }
   .rt-pws-status__close { position: absolute; top: 4px; right: 4px; margin: 0; }
+  .rt-pws-status > .button { margin-left: 46px; } /* the payout banner's button, under its words */
 }
 
 /* Account review (/provider/review, ProviderReview): the status and progress, our team's message, where each change is made,
@@ -5954,7 +5956,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-unsaved.is-hidden { visibility: hidden; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button:disabled { opacity: 0.6; cursor: not-allowed; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button.-outline-purple-1:disabled:hover { background-color: transparent; border-color: var(--color-purple-1); color: var(--color-purple-1) !important; }
-:is(.rt-pws, body.rt-pws-open .rt-dd) .button.-purple-1:disabled:hover { background-color: var(--color-purple-1); border-color: var(--color-purple-1); color: #fff !important; } /* keeps its place, so the bar's buttons don't move when it shows */
+:is(.rt-pws, body.rt-pws-open .rt-dd) .button.-purple-1:disabled:hover { background-color: var(--color-purple-1) !important; border-color: var(--color-purple-1); color: #fff !important; } /* keeps its place, so the bar's buttons don't move when it shows */
 /* a button label that keeps the width of its longest wording ("Save" / "Saving…"): both share one grid cell, the longer unseen */
 .rt-keepw { display: inline-grid; justify-items: center; }
 .rt-keepw > span, .rt-keepw::after { grid-area: 1 / 1; }
@@ -6301,14 +6303,30 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__form { padding-bottom: 8px; }
 .rt-pws-coh__for { margin: 0; }
 .rt-pws-coh__h3 { margin: 0 0 4px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
+/* the dates: the calendar, and beside it the dates picked in a framed list as tall as the calendar (on a computer it scrolls inside
+   itself with the site's scroll pill, FilterScrollPill, and a scroll past its end goes on to the pop-up); on a phone they stack */
 .rt-pws-coh__dates { display: grid; gap: var(--rt-gap); }
-@media (min-width: 992px) { .rt-pws-coh__dates { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; } }
+.rt-pws-coh__pickcol { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.rt-pws-coh__slotpanel { display: flex; flex-direction: column; }
 .rt-pws-coh__slots .rt-acc__note { margin: 0 0 12px; }
-.rt-pws-coh__noslot { margin: 0; padding: 20px 16px; border: 1px dashed var(--rt-c-line); border-radius: var(--rt-radius-control); font-size: var(--rt-text-sm); text-align: center; color: var(--rt-c-muted); }
-.rt-pws-coh__slotlist { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.rt-pws-coh__slot { padding: 12px 16px 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); list-style: none; }
-.rt-pws-coh__slothead { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-.rt-pws-coh__slotgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rt-pws-coh__slotscroll { position: relative; display: flex; flex-direction: column; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
+@media (min-width: 992px) {
+  .rt-pws-coh__dates { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  .rt-pws-coh__slots { position: relative; min-height: 0; }
+  .rt-pws-coh__slotpanel { position: absolute; inset: 0; }
+  .rt-pws-coh__slotscroll { flex: 1 1 auto; min-height: 0; }
+  .rt-pws-coh__slotlist { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+}
+.rt-pws-coh__noslot { margin: auto; padding: 32px 16px; font-size: var(--rt-text-sm); text-align: center; color: var(--rt-c-muted); }
+.rt-pws-coh__slotlist { margin: 0; padding: 0; list-style: none; }
+/* one row a date: its days and Remove, then its times */
+.rt-pws-coh__slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "day remove" "note note" "err err" "times times"; align-items: center; column-gap: 12px; padding: 8px 18px 14px 16px; list-style: none; }
+.rt-pws-coh__slot + .rt-pws-coh__slot { border-top: 1px solid var(--rt-c-line); }
+.rt-pws-coh__slotday { grid-area: day; margin: 0; font-size: var(--rt-text-sm); font-weight: 700; color: var(--rt-c-text); }
+.rt-pws-coh__slotnote { grid-area: note; margin: 0 0 8px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-coh__slot > .rt-q__err { grid-area: err; margin: 0 0 8px; }
+.rt-pws-coh__slot > .rt-pws-coh__remove { grid-area: remove; margin-right: -8px; }
+.rt-pws-coh__slottimes { grid-area: times; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; color: var(--rt-c-muted); }
 .rt-pws-coh__picker { padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
 .rt-pws-coh__pickhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .rt-pws-coh__pickhint { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; text-align: center; color: var(--rt-c-text); }
@@ -6320,12 +6338,18 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__month abbr { text-decoration: none; }
 .rt-pws-coh__month td { padding: 2px; text-align: center; }
 .rt-pws-coh__day { width: 100%; max-width: 44px; aspect-ratio: 1; min-height: 36px; border: 1px solid transparent; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
-@media (hover: hover) and (pointer: fine) { .rt-pws-coh__day:not(:disabled):hover { background: var(--rt-c-brand-soft); } }
+@media (hover: hover) and (pointer: fine) { .rt-pws-coh__day:not(:disabled):not(.is-on):hover { background: var(--rt-c-brand-soft); } }
 .rt-pws-coh__day.is-today { border-color: var(--rt-c-brand); font-weight: 700; }
 .rt-pws-coh__day.is-on { background: var(--rt-c-brand); color: var(--rt-c-surface); font-weight: 700; }
+/* a range: its first and last days filled (is-on), the days between banded; while choosing its last day, the day under the
+   mouse or the keyboard is outlined (is-reach) and the days up to it banded */
+.rt-pws-coh__day.is-mid { background: var(--rt-c-brand-soft); color: var(--rt-c-text); }
+.rt-pws-coh__day.is-reach { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); font-weight: 700; }
 .rt-pws-coh__day:disabled { color: var(--rt-c-line); cursor: not-allowed; }
 .rt-pws-coh__settings { display: grid; gap: 16px; padding-top: 20px; border-top: 1px solid var(--rt-c-line); }
 .rt-pws-coh__setgrid { display: grid; gap: 16px; align-items: end; }
+/* Tutor beside Venue: tops level, as Venue has its Add a new venue link (or the venue form) under its box */
+.rt-pws-coh__setgrid.-top { align-items: start; }
 @media (min-width: 768px) { .rt-pws-coh__setgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-pws-coh__hintlink { align-self: flex-start; font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; text-underline-offset: 3px; }
 /* the site's text links: underlined on hover only */
@@ -6633,6 +6657,17 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-prof__headline { margin: 0 0 6px; font-size: var(--rt-text); font-weight: 500; color: var(--rt-c-text); }
 .rt-pws-prof__social { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 4px 0 0; padding: 0; list-style: none; }
 .rt-pws-prof__social li { list-style: none; }
+/* a biography's bulleted list (FormattedText), here and on the public profile */
+.rt-pws-prof__list { padding-left: 20px; list-style: disc; }
+.rt-pws-prof__list li { list-style: disc; }
+.rt-pabout__list { margin-top: 0; padding-left: 22px; list-style: disc; }
+.rt-pabout__list li { list-style: disc; }
+.rt-pabout__social { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+/* the biography box's Bold and Bullet list buttons, above it */
+.rt-pws-set__fmt { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.rt-pws-set__fmtbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.rt-pws-set__fmtbtn:disabled { opacity: 0.6; cursor: not-allowed; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-set__fmtbtn:not(:disabled):hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); } }
 .rt-pws-prof__body { margin: 0 0 16px; white-space: pre-line; font-size: var(--rt-text-sm); line-height: 1.7; color: var(--rt-c-text); }
 .rt-pws-prof__body:last-child { margin-bottom: 0; }
 @media (max-width: 575px) { .rt-pws-prof > .button { width: 100%; justify-content: center; } }

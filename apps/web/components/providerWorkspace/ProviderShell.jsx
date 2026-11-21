@@ -26,19 +26,20 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 
 // The provider workspace's layout, with navigation in our design (DESIGN-SYSTEM.md, "Provider workspace follows the same
 // shell pattern"). The dark band, the same on every page: the logo and "Provider" tag, then Student (a plain text link to the learner
-// side), the bell with unread notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
+// side), the bell with unread notifications and the avatar's account menu (account settings, refund requests, public profile, switch account, log out). The sidebar:
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
 // sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups and, below 992px, the menu drawer. From
 // 992px the button at its top (or Ctrl+B) folds it to a rail of icons, one per item (a group's goes to its first page, each with
 // its name as a tooltip), and its right edge resizes it (dragged in far enough, it folds). Then the page head (title, intro,
 // actions) and the page.
-// `current` marks the section; the page inside it is matched on the address. `demo` marks a page whose records are still made up
+// `current` marks the section; the page inside it is matched on the address; `need`, a page's own permission when it isn't its
+// section's (Price plans, in Courses, needs the prices one). `demo` marks a page whose records are still made up
 // (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's. It is true (the
 // general note), "partly", or the page's own note (data/providerWorkspace.js pw.demo), which the tag then explains.
 // the pages outside the menu and what opens them (the menu's pages carry their own `can`)
-const PAGE_NEEDS = { requests: "provider.refunds.decide" };
+const PAGE_NEEDS = { requests: "provider.refunds.decide", profile: "provider.settings.view" };
 
-export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = false, children }) {
+export default function ProviderShell({ current, need = null, title, lead, actions = null, back = null, demo = false, children }) {
   const rootRef = useRef(null);
   const sideRef = useRef(null);
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function ProviderShell({ current, title, lead, actions = null, ba
   // each role sees only its pages (`can` on each menu item and page, data/providerWorkspace.js), and a page opened by its address
   // without the permission says so instead of showing it
   const nav = pw.nav.filter((x) => access.sees(x.can)).map((x) => (x.items ? { ...x, items: x.items.filter((it) => access.sees(it.can)) } : x));
-  const barred = !access.sees(PAGE_NEEDS[current] ?? pw.nav.find((x) => x.key === current)?.can);
+  const barred = !access.sees(need ?? PAGE_NEEDS[current] ?? pw.nav.find((x) => x.key === current)?.can);
   const demoText = !SHOW_DEMO || !demo ? null : demo === true ? pw.demo.all : demo === "partly" ? pw.demo.partly : { label: pw.demo.all.label, note: demo };
   const demoTag = demoText && <span className="rt-demo-tag" title={demoText.note}>{demoText.label}<span className="rt-sr">: {demoText.note}</span></span>;
   useEffect(() => setSearch(window.location.search), [path]);

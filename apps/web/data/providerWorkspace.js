@@ -82,12 +82,17 @@ export const pw = {
       policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
       course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses?newcourse=1" } },
       date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Create cohort", href: "/provider/cohorts?new=1" } },
+      payouts: { title: "Set up payouts", text: "Connect your payout account to get paid." },
     },
   },
 
+  // payouts (Milestone 4, Stripe): the dashboard's banner and the checklist's last step stay until the payout account is
+  // connected. Until then `connect` is null, so their button says "Coming soon"; Milestone 4 puts the connect address there.
+  payouts: { banner: "Connect your payout account to get paid", connect: null, soon: "Coming soon", label: "Set up payouts" },
+
   // the sidebar: our dashboard, then the sections in order. Courses and Cohorts open to show their pages (the group heading
   // is a button, not a link); Orders and Performance are plain links because their pages already offer Create order and the
-  // Overview / Reviews / Leads tabs. Settings and team are in the account menu
+  // Overview / Reviews / Leads tabs. Team, Settings and Help come last; Public profile is in the account menu
   nav: [
     { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/provider" },
     { key: "courses", label: "Courses", icon: "icon-book", can: "provider.courses.view", items: [
@@ -103,20 +108,17 @@ export const pw = {
     { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners", can: "provider.learners.view" },
     { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders", can: "provider.orders.view" },
     { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews", can: "provider.performance.view" },
-    { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
-    // the provider's own account: how it is set up, and the page learners see
-    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear", can: ["provider.settings.view", "provider.vat.view", "provider.emails.view"] },
-    // `can`: only for the roles that may open it (the shared permission table)
+    // the provider's team and own account, then help, last
     { key: "team", label: "Team", href: "/provider/team", navIcon: "team", can: "provider.team.view" },
-    { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile", can: "provider.settings.view" },
+    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear", can: ["provider.settings.view", "provider.vat.view", "provider.emails.view"] },
+    { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
   ],
-  // the account menu under the avatar: settings, requests (refunds), public profile, team; then Switch account (the
+  // the account menu under the avatar: account settings, refund requests, public profile; then Switch account (the
   // identities on this login, added by ProviderShell from the API) and log out
   accountMenu: [
     { label: "Account settings", href: "/account/settings" },
-    { label: "Refunds", href: "/provider/requests", need: "provider.refunds.decide" },
+    { label: "Refund requests", href: "/provider/requests", need: "provider.refunds.decide" },
     { label: "Public profile", href: "/provider/profile", need: "provider.settings.view" },
-    { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
 
   // the tag beside a demo page's title (ProviderShell `demo`): on the development and test copies only, where the made-up records
@@ -154,7 +156,7 @@ export const pw = {
     settings: { title: "Settings" },
     venues: { title: "Venues" },
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
-    requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
+    requests: { title: "Refund requests", lead: "Get all your learners' refund requests in one place." },
     team: { title: "Team", lead: "People who can use this workspace, and what each of them can do." },
     help: { title: "Help", lead: "Guides, help articles and a person to talk to when you need one." },
   },
@@ -209,7 +211,7 @@ export const pw = {
   // performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
-    enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
+    enquiries: { label: "Enquiries", short: "Pay per lead", soon: "Coming later", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
   },
   // a course's visibility (the gear's Public / Private)
   visibility: { public: "Public", private: "Private" },

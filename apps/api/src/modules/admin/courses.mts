@@ -30,6 +30,7 @@ import {
   notFound,
   placeOn,
   refuseIfChanged,
+  refuseLongTitle,
   resolveCatalogue,
   REVIEWED,
   seenVersion,
@@ -444,6 +445,7 @@ export const adminCoursesRouter = createTRPCRouter({
   createShared: adminProcedure('admin.catalogue.edit')
     .input(z.object({ title: content.title, category: content.category, subcategory: content.subcategory, topic: content.topic }))
     .mutation(async ({ ctx, input }) => {
+      refuseLongTitle(input.title)
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null })
       const slug = await courseSlug(ctx.db, input.title)
       return ctx.db.transaction(async (tx) => {
@@ -472,6 +474,7 @@ export const adminCoursesRouter = createTRPCRouter({
       const course = await sharedPage(ctx.db, input.courseId)
       const { courseId, seoTitle, seoDescription, seoKeywords, listed, seen, ...rest } = input
       void courseId
+      refuseLongTitle(rest.title, course.title)
       if (rest.subcategory !== undefined && rest.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
       if (rest.category !== undefined && rest.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
       if (rest.topic !== undefined && rest.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')

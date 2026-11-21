@@ -45,6 +45,8 @@ export default function AdminCourse({ id }) {
   const [reasonError, setReasonError] = useState("");
   const [said, setSaid] = useState("");
   const [problem, setProblem] = useState(""); // a refused decision, or an email that couldn't be sent: shown until the next one
+  // after a decision, until the course has loaded again: the buttons stay locked, so the old status never shows with live buttons
+  const [settling, setSettling] = useState(false);
   const formRef = useRef(null);
   const c = query.data;
   // Pause course from the catalogue table's menu (?do=pause): the same pop-up as here, with its checks
@@ -65,11 +67,12 @@ export default function AdminCourse({ id }) {
   // (its prices), as ReadTraining staff (StaffEdit): the editor then offers only what their switches allow
   const canWrite = shared ? Boolean(me?.permissions?.includes("catalogue")) : ["approve", "pricing"].some((x) => me?.permissions?.includes(x));
   const providerReady = c.provider?.status === "active";
-  const refresh = () => {
-    utils.admin.courses.get.invalidate({ courseId });
+  // this course is waited for (the page shows its new status before it unlocks); the lists catch up behind it
+  const refresh = async () => {
     utils.admin.courses.queue.invalidate();
     utils.admin.courses.counts.invalidate();
     utils.admin.courses.list.invalidate();
+    await utils.admin.courses.get.invalidate({ courseId }).catch(() => {});
   };
   // a decision on the admin's own course (or its change): only as the sole approver, with a reason (API lib/soleApprover.mts)
   const ownFor = (decision) => (decision === "approveChange" || decision === "rejectChange" ? c.ownChange : c.ownCourse);
@@ -82,8 +85,10 @@ export default function AdminCourse({ id }) {
       const sent = decision === "approveChange" || decision === "rejectChange" ? c.change?.since : decision === "approve" || decision === "changes" ? c.submittedAt : null;
       const seen = sent ? new Date(sent).toISOString() : undefined;
       const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen });
-      refresh();
+      setSettling(true);
       refreshCourses().catch(() => {});
+      await refresh();
+      setSettling(false);
       const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the current version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
       setSaid(`${text}.${r.outbox ? ` ${ap.emailOutbox}` : r.emailed ? ` ${ap.emailed}` : ""}`);
       if (!r.outbox && !r.emailed) setProblem(ap.notEmailed);
@@ -119,7 +124,7 @@ export default function AdminCourse({ id }) {
     if (failed) (ownFor(asking) && !needsNote(asking) ? setReasonError : setError)(failed);
     else setAsking(null);
   };
-  const busy = decide.isPending;
+  const busy = decide.isPending || settling;
   const sheetTitle = { approve: ap.approve, changes: ap.requestChanges, approveChange: ap.approveChange, rejectChange: ap.rejectChange, pause: ap.pause, resume: ap.resume }[asking] || "";
   // the "you sent this yourself" notice: while their own course, or their own change, waits for a decision; and on their own
   // published course, which they pause or put back live only as the sole approver

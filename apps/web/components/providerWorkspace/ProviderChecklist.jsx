@@ -10,10 +10,10 @@ import { waysOf } from "@/lib/courseModes";
 
 const copy = pw.checklist;
 // who can do each step (the shared permission table), so a step's link shows only to someone who can follow it
-const NEEDS = { approved: "provider.review.send", profile: "provider.profile.edit", policy: "provider.terms.edit", course: "provider.courses.edit", date: "provider.cohorts.edit" };
+const NEEDS = { approved: "provider.review.send", profile: "provider.profile.edit", policy: "provider.terms.edit", course: "provider.courses.edit", date: "provider.cohorts.edit", payouts: "provider.payoutAccount.manage" };
 
 // Getting set up to sell (provider checklist, in our design): approval, the public profile, the cancellation policy, a
-// first course and a first date, each worked out from the real records, with how many are done. Shown on the dashboard to the
+// first course, a first date and, last, payouts (not connected until Milestone 4, so the list stays until then), each worked out from the real records, with how many are done. Shown on the dashboard to the
 // people who set the account up (and on the Account review page while waiting), until every step is done. `heading` picks the
 // heading level for where it sits. `compact` (the dashboard): the progress and only the next step to do, with every step a click
 // away (Show all steps), so a new provider still sees the rest of the dashboard on the first screen.
@@ -40,6 +40,7 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
     policy: Boolean(p.cancellationPolicy),
     course: list.length > 0,
     date: (dates.data || []).length > 0 || list.some((c) => waysOf(c).includes("self-paced")),
+    payouts: false, // no payout account can be connected before Milestone 4
   };
   const keys = Object.keys(copy.steps);
   const count = keys.filter((k) => done[k]).length;
@@ -51,8 +52,8 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
     // a step's words can depend on the account's status; a step already done reads as it does once approved
     return typeof step.text === "string" ? step.text : step.text[done[k] && k !== "approved" ? "active" : status] || "";
   };
-  // approval has an action only when our team is waiting on the provider
-  const actionOf = (k) => (k === "approved" ? (status === "changes_requested" ? copy.steps[k].action : null) : copy.steps[k].action);
+  // approval has an action only when our team is waiting on the provider; payouts has the connect address once it exists
+  const actionOf = (k) => (k === "approved" ? (status === "changes_requested" ? copy.steps[k].action : null) : k === "payouts" ? (pw.payouts.connect ? { label: pw.payouts.label, href: pw.payouts.connect } : "soon") : copy.steps[k].action);
   const next = keys.find((k) => !done[k]);
   const listShown = !compact || open;
 
@@ -69,7 +70,7 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
         <div className="rt-pws-check__next">
           <p><span className="rt-pws-check__nextlabel">Next:</span> {copy.steps[next].title}<span className="rt-pws-check__nexttext"> · {textOf(next)}</span></p>
           <div className="rt-pws-check__nextactions">
-            {actionOf(next) && can(NEEDS[next]) && <Link href={actionOf(next).href} className="rt-dash__go">{actionOf(next).label}<span className="rt-sr">: {copy.steps[next].title}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>}
+            {can(NEEDS[next]) && <StepAction k={next} action={actionOf(next)} />}
             <button type="button" className="rt-pws-check__toggle" aria-expanded={open} aria-controls="rt-pws-check-list" onClick={() => setOpen((x) => !x)}>{open ? "Hide steps" : "Show all steps"}</button>
           </div>
         </div>
@@ -86,11 +87,18 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
                 <S className="rt-pws-check__title">{step.title}<span className="rt-sr">{done[k] ? ": done" : ": to do"}</span></S>
                 <p>{text}</p>
               </div>
-              {!done[k] && action && can(NEEDS[k]) && <Link href={action.href} className="rt-dash__go">{action.label}<span className="rt-sr">: {step.title}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>}
+              {!done[k] && can(NEEDS[k]) && <StepAction k={k} action={action} />}
             </li>
           );
         })}
       </ol>}
     </section>
   );
+}
+
+// a step's button: its page, or "Coming soon" (payouts, until Milestone 4)
+function StepAction({ k, action }) {
+  if (!action) return null;
+  if (action === "soon") return <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled>{pw.payouts.soon}<span className="rt-sr">: {copy.steps[k].title}</span></button>;
+  return <Link href={action.href} className="rt-dash__go">{action.label}<span className="rt-sr">: {copy.steps[k].title}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>;
 }
