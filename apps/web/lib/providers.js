@@ -49,12 +49,16 @@ export function toProviderPage(r) {
     href: providerHref(r.slug),
     initials: providerInitials(r.name),
     about: r.bio || r.headline,
+    // its social media accounts, in this order, only those saved as https addresses
+    socials: SOCIALS.map(([key, label]) => ({ label, url: r.socials?.[key] })).filter((s) => /^https:\/\//.test(s.url || "")),
     courses,
     subjects: unique(courses.map((c) => c.subject).filter(Boolean)),
     modes: unique(courses.flatMap((c) => c.modes)),
     cities: unique(courses.flatMap((c) => c.cities)).sort(),
   };
 }
+
+const SOCIALS = [["facebook", "Facebook"], ["linkedin", "LinkedIn"], ["youtube", "YouTube"]];
 
 // "Security, First Aid and Health & Safety"
 export const joinList = (items) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0] || "");

@@ -160,6 +160,7 @@ export const settings = {
   method: slugRef, // the primary learning option, one of `methods`
   methods: z.array(slugRef).min(1, 'Choose at least one learning option.').max(3),
 }
+const ENQUIRIES_LATER = 'Enquiries (pay per lead) is coming later. Choose Bookings for now.'
 const PAGE_ONLY = new Set(['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'videoUrl', 'seoTitle', 'seoDescription', 'seoKeywords'])
 const PRICING = new Set(['pricePence', 'skillSaver', 'planId'])
 // Settings our team doesn't check at approval (where it is listed follows its subject, placeOn): changing only these leaves a
@@ -170,6 +171,13 @@ const KEEPS_REVIEW = new Set(['seoTitle', 'seoDescription', 'seoKeywords', 'isPu
 export const ukToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
 
 export const bad = (message: string, field?: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: field ? Object.assign(new Error(message), { field }) : undefined })
+
+// A course title is up to 60 characters (about what search results show of it). A longer one saved before this limit (up to 80,
+// `content.title`) stays as it is: only a new or changed title has to fit, so no course is stuck on a save.
+export const TITLE_MAX = 60
+export function refuseLongTitle(title: unknown, current: string | null = null) {
+  if (typeof title === 'string' && title.length > TITLE_MAX && title !== current) throw bad(`Enter a title of ${TITLE_MAX} characters or fewer.`, 'title')
+}
 export const notFound = () => new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
 
 /** The course, when it is this provider's own; NOT_FOUND otherwise (another provider's id is never revealed). */
@@ -753,6 +761,8 @@ export const providerCoursesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input, path }) => {
       await notForStaff(ctx, 'provider.courses.edit', input.organisationId, path)
+      refuseLongTitle(input.title)
+      if (input.model === 'enquiries') throw bad(ENQUIRIES_LATER, 'model')
       taughtAll([input.method])
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
       const parentId = await placeOn(ctx.db, { subcategoryId: resolved.subcategoryId ?? null, topicId: resolved.topicId ?? null })
@@ -882,6 +892,7 @@ export const providerCoursesRouter = createTRPCRouter({
       const course = await ownCourse(ctx.db, organisationId, courseId)
       // the category, sub-category and topic change together (the editor always sends all three), so a course is never filed
       // under one category with another's sub-category
+      refuseLongTitle(fields.title, course.title)
       if (fields.subcategory !== undefined && fields.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
       if (fields.category !== undefined && fields.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
       if (fields.topic !== undefined && fields.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')
@@ -898,6 +909,8 @@ export const providerCoursesRouter = createTRPCRouter({
       const directSet: Partial<typeof courses.$inferInsert> = {}
       for (const k of ['seoTitle', 'seoDescription'] as const) if (direct[k] !== undefined) directSet[k] = (direct[k] as string | null) || null
       if (direct.seoKeywords !== undefined) directSet.seoKeywords = [...new Set((direct.seoKeywords as string[]).map((w) => w.toLowerCase()))]
+      // Enquiries (pay per lead) isn't offered yet: a course already on it keeps it, nothing new moves to it
+      if (direct.model === 'enquiries' && course.model !== 'enquiries') throw bad(ENQUIRIES_LATER, 'model')
       for (const k of ['skillSaver', 'isPublic', 'model'] as const) if (direct[k] !== undefined) (directSet as Record<string, unknown>)[k] = direct[k]
       if (direct.isPublic !== undefined) directSet.listed = direct.isPublic as boolean // public or private sets both (see `settings`)
       // where it is listed follows its subject (placeOn): a draft's at once, below; a live course's when the change is approved

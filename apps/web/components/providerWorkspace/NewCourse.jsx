@@ -163,7 +163,7 @@ function NewCourseForm({ onCancel, onDirty }) {
     ev.preventDefault();
     const e = {};
     const t = f.title.trim();
-    // the title as the API checks it (3 to 80 characters)
+    // the title as the API checks it (3 to 60 characters)
     if (!t) e.title = "Enter a working title. You can change it later.";
     else if (t.length < 3) e.title = "Enter a title of at least 3 characters.";
     if (!f.category) e.category = "Choose a category.";
@@ -199,10 +199,10 @@ function NewCourseForm({ onCancel, onDirty }) {
         <div className="rt-field">
           <div className="rt-pws-nc__labelrow">
             <label htmlFor="rt-pws-nc-title">Working title<Req /></label>
-            <span className="rt-pws-nc__count" aria-hidden="true">{f.title.length}/80</span>
+            <span className="rt-pws-nc__count" aria-hidden="true">{f.title.length}/60</span>
           </div>
           <Err k="title" />
-          <input id="rt-pws-nc-title" value={f.title} maxLength={80} onChange={(e) => set({ title: e.target.value })} placeholder="For example: Emergency First Aid at Work" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={[errors.title && "rt-pws-nc-title-e", twin && "rt-pws-nc-twin"].filter(Boolean).join(" ") || undefined} />
+          <input id="rt-pws-nc-title" value={f.title} maxLength={60} onChange={(e) => set({ title: e.target.value })} placeholder="For example: Emergency First Aid at Work" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={[errors.title && "rt-pws-nc-title-e", twin && "rt-pws-nc-twin"].filter(Boolean).join(" ") || undefined} />
           {twin && (
             <p className="rt-pws-nc__note" id="rt-pws-nc-twin">
               You already have “{twin.title}” ({pw.courseStatuses[twin.status] || twin.status}). <Link href={`/provider/courses/${twin.id}/overview`} className="rt-cd__link">Open it</Link>, or carry on to make another.

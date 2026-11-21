@@ -10,6 +10,7 @@ import { COURSE_TONE, Pill } from "./providerParts";
 import { Seats, todayIso, useSchedule } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 import ProviderAccountStatus from "./ProviderAccountStatus";
+import NavIcon from "@/components/admin/navIcons";
 import { NewCourseButton } from "./NewCourse";
 import { canSend, useSendForApproval } from "./CourseSettings";
 import Toast from "@/components/courses/Toast";
@@ -92,6 +93,7 @@ export default function ProviderDashboard() {
   return (
     <div className="rt-acc__stack rt-dash" aria-busy={loading || undefined}>
       <ProviderAccountStatus place="dashboard" />
+      {access.can("provider.payoutAccount.manage") && <PayoutBanner />}
       <section className="rt-dash__hello" aria-labelledby="rt-dash-hi">
         <div>
           <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}{firstName ? `, ${firstName}` : ""}</h2>
@@ -188,5 +190,20 @@ export default function ProviderDashboard() {
       )}
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
+  );
+}
+
+// "Connect your payout account to get paid": to the person who connects it (the owner), on every visit until it is connected
+// (Milestone 4, Stripe). Until then there is nothing to connect, so its button says "Coming soon" (pw.payouts.connect is null).
+function PayoutBanner() {
+  const c = pw.payouts;
+  return (
+    <section className="rt-pws-status" aria-labelledby="rt-pws-payout-h">
+      <span className="rt-pws-status__icon"><NavIcon name="payouts" className="" /></span>
+      <div className="rt-pws-status__body"><h2 className="rt-pws-status__title" id="rt-pws-payout-h">{c.banner}</h2></div>
+      {c.connect
+        ? <Link href={c.connect} className="button -sm -purple-1 text-white">{c.label}</Link>
+        : <button type="button" className="button -sm -outline-purple-1 text-purple-1" disabled>{c.soon}<span className="rt-sr">: {c.label}</span></button>}
+    </section>
   );
 }
