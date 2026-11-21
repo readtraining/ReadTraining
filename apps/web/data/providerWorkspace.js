@@ -82,8 +82,13 @@ export const pw = {
       policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
       course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses?newcourse=1" } },
       date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Create cohort", href: "/provider/cohorts?new=1" } },
+      payouts: { title: "Set up payouts", text: "Connect your payout account to get paid." },
     },
   },
+
+  // payouts (Milestone 4, Stripe): the dashboard's banner and the checklist's last step stay until the payout account is
+  // connected. Until then `connect` is null, so their button says "Coming soon"; Milestone 4 puts the connect address there.
+  payouts: { banner: "Connect your payout account to get paid", connect: null, soon: "Coming soon", label: "Set up payouts" },
 
   // the sidebar: our dashboard, then the sections in order. Courses and Cohorts open to show their pages (the group heading
   // is a button, not a link); Orders and Performance are plain links because their pages already offer Create order and the
