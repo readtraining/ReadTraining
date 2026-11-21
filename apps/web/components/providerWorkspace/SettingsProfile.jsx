@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
@@ -105,14 +105,24 @@ function InfoForm({ profile, say }) {
       const out = lines.map((l) => (all ? l.replace(/^- /, "") : /^- /.test(l) || !l.trim() ? l : `- ${l}`)).join(NL);
       const shown = out === "" ? "- " : out; // an empty line starts a bullet
       next = `${v.slice(0, start)}${shown}${v.slice(end)}`;
-      from = start + (out === "" ? 2 : 0);
-      to = start + shown.length;
+      from = start + shown.length; // the cursor at the end of those lines, ready to type
+      to = from;
     }
     if (next.length > 5000) return; // the box's limit
     setF((x) => ({ ...x, bio: next }));
     setErrors((x) => ({ ...x, bio: "" }));
-    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(from, to); });
+    selectAfter.current = [from, to];
   };
+  // the cursor (or the placeholder "bold text", selected) is put back in the same update as the new text, before the next key
+  // is handled, so fast typing after a click always lands in the right place
+  const selectAfter = useRef(null);
+  useLayoutEffect(() => {
+    const at = selectAfter.current;
+    if (!at || !bioRef.current) return;
+    selectAfter.current = null;
+    bioRef.current.focus();
+    bioRef.current.setSelectionRange(at[0], at[1]);
+  });
   const locked = !can("provider.profile.edit");
   useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
   const underReview = UNDER_REVIEW.includes(profile.status);
@@ -162,9 +172,10 @@ function InfoForm({ profile, say }) {
         <input {...aria("rt-set-headline", errors.headline)} type="text" maxLength={120} autoComplete="off" value={f.headline} onChange={set("headline")} disabled={locked} />
       </Field>
       <Field required id="rt-set-bio" label="Biography" hint="Who you are, where you train and what makes your courses good. Bold words and bullet points show formatted on your public profile." error={errors.bio} count={<Counter value={f.bio} max={5000} />}>
+        {/* a click on a button never takes the cursor out of the box (onMouseDown), so the next key types there, not on the button */}
         <div className="rt-pws-set__fmt" role="toolbar" aria-label="Format the biography" aria-controls="rt-set-bio">
-          <button type="button" className="rt-pws-set__fmtbtn" onClick={() => formatBio("bold")} disabled={locked}><b aria-hidden="true">B</b> Bold</button>
-          <button type="button" className="rt-pws-set__fmtbtn" onClick={() => formatBio("list")} disabled={locked}><i className="icon-list text-12" aria-hidden="true"></i> Bullet list</button>
+          <button type="button" className="rt-pws-set__fmtbtn" onMouseDown={(e) => e.preventDefault()} onClick={() => formatBio("bold")} disabled={locked}><b aria-hidden="true">B</b> Bold</button>
+          <button type="button" className="rt-pws-set__fmtbtn" onMouseDown={(e) => e.preventDefault()} onClick={() => formatBio("list")} disabled={locked}><i className="icon-list text-12" aria-hidden="true"></i> Bullet list</button>
         </div>
         <TextArea {...aria("rt-set-bio", errors.bio, true)} ref={bioRef} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
       </Field>
