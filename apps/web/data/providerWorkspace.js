@@ -211,7 +211,7 @@ export const pw = {
   // performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
-    enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
+    enquiries: { label: "Enquiries", short: "Pay per lead", soon: "Coming later", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
   },
   // a course's visibility (the gear's Public / Private)
   visibility: { public: "Public", private: "Private" },

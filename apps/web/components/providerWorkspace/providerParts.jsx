@@ -4,7 +4,7 @@ import React from "react";
 import { NavIcon } from "@/components/header/navIcons";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { SHOW_DEMO } from "@/lib/demo";
-import { DetailSkeleton, TableSkeleton } from "@/components/admin/adminParts";
+import { DetailSkeleton, Pill, TableSkeleton } from "@/components/admin/adminParts";
 
 // Shared bits of the provider workspace. The pills, tabs, search, address helpers and date-time format are the admin's
 // (components/admin/adminParts.jsx), so both work layouts look and behave the same. Added here: the status tones, the loading
@@ -111,7 +111,7 @@ export function Choice({ name, legend, value, onChange, options, error, hint, qu
 }
 
 // Two or three larger choices, each a card with a line of explanation (and optional points), for questions that need it
-// (course type, performance model, learning option).
+// (course type, performance model, learning option). An option not offered yet carries a `tag` ("Coming later") and is disabled.
 export function CardChoice({ name, legend, value, onChange, options, error, hideLegend = false }) {
   const errId = `${name}-e`;
   return (
@@ -123,7 +123,7 @@ export function CardChoice({ name, legend, value, onChange, options, error, hide
           <label key={o.value} className={`rt-pws-optcard${value === o.value ? " is-on" : ""}${o.disabled ? " is-off" : ""}`}>
             <input type="radio" className="rt-fp__radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} disabled={o.disabled} aria-invalid={error ? true : undefined} />
             <span>
-              <b>{o.label}</b>
+              <b>{o.label}{o.tag && <> <Pill tone="muted">{o.tag}</Pill></>}</b>
               {o.text && <small>{o.text}</small>}
               {o.points && <ul>{o.points.map((p) => <li key={p}><i className="icon-check text-10" aria-hidden="true"></i>{p}</li>)}</ul>}
             </span>

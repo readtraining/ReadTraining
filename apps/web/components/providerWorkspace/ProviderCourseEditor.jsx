@@ -49,7 +49,7 @@ const pricingLabel = (methods) => {
 // a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
 const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "mode", "pricing"];
-const LIMITS = { title: 80, summary: 300, feature: 70, outcome: 160 };
+const LIMITS = { title: 60, summary: 300, feature: 70, outcome: 160 }; // a title saved longer before the 60 limit stays until changed (the API's refuseLongTitle)
 // how many of each list a course can have (the API's limits, provider/courses.mts `content`)
 const MOST = { features: 12, outcomes: 20, units: 40, exams: 20, faqs: 30 };
 const MAX_PRICE = 100000; // pounds (the API's pricePence limit)
@@ -232,7 +232,9 @@ function alreadySaved(patch, fresh, access) {
 // One course in the editor: the "Publish your course" list on the left (one item per section, ticked when complete, kept in
 // ?tab=), the section on the right. The sections' fields are one draft saved with "Save"; images and SEO save themselves. The
 // header shows the status and performance model, with Preview and the gear (course settings). The bar under the form saves and
-// moves on; on the last step its "Send for approval" sends a draft, then goes back to the course list. Leaving with unsaved changes asks first. Course data comes from the API.
+// moves on; on the last step its "Send for approval" sends a draft, then goes back to the course list. Once every required step is
+// complete, "Send for approval" also shows in the steps list on every other step, so a fix on an earlier step can be sent from
+// there. Leaving with unsaved changes asks first. Course data comes from the API.
 // scope "admin": the same editor for a shared course page in the admin (lib/courseEditorApi.js): no pricing or learning options,
 // changes go live on Save, and the page is published from here instead of sent for approval.
 // The page title (ProviderShell's h1): the course's name once it has loaded.
@@ -256,6 +258,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [said, setSaid] = useState("");
   const [showNeed, setShowNeed] = useState(false); // "Almost ready to send" is open: Send for approval was pressed with something missing
   const [submitError, setSubmitError] = useState("");
+  const [sendAt, setSendAt] = useState("bar"); // which Send for approval was pressed (the steps list's or the bar's), for its message
   // sent (or published) just now: the button gives way at once, without waiting for the course to load again
   const [sent, setSent] = useState(false);
   // a save was refused because the course changed somewhere else since this draft was loaded
@@ -410,6 +413,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const building = course.status === "draft" || course.status === "changes";
   // every step but the last moves on with Continue; the last step's main button is Send for approval (Publish, for a shared page)
   const send = canSubmit && (building ? !next : true);
+  // and once every required step is complete, from the steps list on the other steps too (never when something is missing: the
+  // list already marks what is left, and the last step's button lists it)
+  const sendFromList = canSubmit && building && Boolean(next) && ready;
+  const errorAt = sendAt === "list" && sendFromList ? "list" : "bar";
   const unsaved = dirty || seo.dirty;
   const saving = ep.updating || seo.busy;
   const refresh = ep.refresh;
@@ -437,6 +444,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const save = async () => {
     const e = {};
     if (!draft.title.trim() || draft.title.trim().length < 3) e.title = "Enter a title of at least 3 characters.";
+    else if (draft.title.trim().length > LIMITS.title && draft.title.trim() !== course.title) e.title = `Enter a title of ${LIMITS.title} characters or fewer.`;
     if (draft.price !== "" && !PRICE_RE.test(draft.price)) e.price = "Enter the price in pounds, like 95 or 95.50.";
     else if (draft.price !== "" && Number(draft.price) > MAX_PRICE) e.price = "Enter a price of £100,000 or less.";
     else if (draft.price !== "" && Number(draft.price) < 1) e.price = "Enter a price of at least £1.";
@@ -665,6 +673,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     }
   };
   const busy = ep.updating || ep.submitting;
+  // a send the server refused: said under the Send for approval that was pressed
+  const needError = <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>;
   const sectionProps = { course, draft, setDraft, errors, access };
 
   return (
@@ -719,6 +729,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
             <p>{done === steps.length ? "Every required step is complete" : `${done} of ${steps.length} required steps complete`}</p>
             <div className="rt-pws-wiz__bar" aria-hidden="true"><span style={{ "--rt-wiz": `${(done / steps.length) * 100}%` }}></span></div>
           </div>
+          {sendFromList && <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={async () => { setSendAt("list"); setPressed("send"); await submit(); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-describedby={submitError && errorAt === "list" ? "rt-pws-ce-need" : undefined} aria-busy={(pressed === "send" && (busy || saving)) || undefined}><KeepWidth label={ep.admin ? "Publish" : "Send for approval"} busy={pressed === "send" && (busy || saving)} working={ep.admin ? "Publishing…" : "Sending…"} /></button>}
+          {submitError && errorAt === "list" && needError}
           <ol className="rt-pws-ce__steps">
             {ticks.map((x) => (
               <li key={x.key}>
@@ -756,11 +768,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
                 {access.page && <span className={`rt-pws-course-unsaved${unsaved ? "" : " is-hidden"}`} aria-hidden={!unsaved || undefined}><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
                 {access.page && <button type="button" className={`button -md ${(building && next) || send ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={async () => { setPressed("save"); await saveAll(); setPressed(""); }} disabled={busy || saving || imagesBusy || !unsaved} aria-busy={(pressed === "save" && saving) || undefined}><KeepWidth label="Save" busy={pressed === "save" && saving} working="Saving…" /></button>}
                 {building && next && <button type="button" className="button -md -purple-1 text-white" onClick={async () => { setPressed("continue"); await goTo(next, { check: true }); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-busy={(pressed === "continue" && saving) || undefined}><KeepWidth label={access.page ? "Save and continue" : "Continue"} busy={pressed === "continue" && saving} working="Saving…" /><span className="rt-sr">: {next.label}</span></button>}
-                {send && <button type="button" className={`button -md ${ready ? "-purple-1 text-white" : "-outline-purple-1 text-purple-1"}`} onClick={async () => { setPressed("send"); await submit(); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-haspopup={ready ? undefined : "dialog"} aria-describedby={submitError ? "rt-pws-ce-need" : undefined} aria-busy={(pressed === "send" && (busy || saving)) || undefined}><KeepWidth label={ep.admin ? "Publish" : "Send for approval"} busy={pressed === "send" && (busy || saving)} working={ep.admin ? "Publishing…" : "Sending…"} /></button>}
+                {send && <button type="button" className={`button -md ${ready ? "-purple-1 text-white" : "-outline-purple-1 text-purple-1"}`} onClick={async () => { setSendAt("bar"); setPressed("send"); await submit(); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-haspopup={ready ? undefined : "dialog"} aria-describedby={submitError && errorAt === "bar" ? "rt-pws-ce-need" : undefined} aria-busy={(pressed === "send" && (busy || saving)) || undefined}><KeepWidth label={ep.admin ? "Publish" : "Send for approval"} busy={pressed === "send" && (busy || saving)} working={ep.admin ? "Publishing…" : "Sending…"} /></button>}
               </div>
             </div>
           )}
-          {submitError && <p className="rt-q__err rt-pws-ce__need" id="rt-pws-ce-need" tabIndex={-1} ref={needRef} role="alert"><span className="rt-sr">Error: </span>{submitError}</p>}
+          {submitError && errorAt === "bar" && needError}
         </div>
       </div>
 
@@ -1594,7 +1606,7 @@ function ModeSection({ course, draft, setDraft, access, errors, onBookings, book
           })}
         </fieldset>
         <CardChoice name="rt-pws-ce-model" legend="How do learners reach you?" value={draft.model} onChange={(v) => access.full && set("model")(v)}
-          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, disabled: !access.full && value !== draft.model }))} error={errors.model} />
+          options={Object.entries(pw.models).map(([value, m]) => ({ value, label: m.label, text: m.text, tag: m.soon, disabled: (Boolean(m.soon) && value !== course.model) || (!access.full && value !== draft.model) }))} error={errors.model} />
         {draft.methods.includes("self-paced") && <p className="rt-acc__note">{lo.selfPacedNote}</p>}
         {needsPrice && <p className="rt-acc__notice -warn">{lo.liveSelfPaced}</p>}
       </form>
