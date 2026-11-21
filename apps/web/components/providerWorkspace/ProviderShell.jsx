@@ -26,7 +26,7 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 
 // The provider workspace's layout, with navigation in our design (DESIGN-SYSTEM.md, "Provider workspace follows the same
 // shell pattern"). The dark band, the same on every page: the logo and "Provider" tag, then Student (a plain text link to the learner
-// side), the bell with unread notifications and the avatar's account menu (account settings, public profile, team, switch account, log out). The sidebar:
+// side), the bell with unread notifications and the avatar's account menu (account settings, refund requests, public profile, switch account, log out). The sidebar:
 // Dashboard, then Courses and Cohorts as groups that fold their pages, Learners, Orders, Performance and Help; the same
 // sidebar parts as the admin (components/admin/workNav.jsx): its icons, folding groups and, below 992px, the menu drawer. From
 // 992px the button at its top (or Ctrl+B) folds it to a rail of icons, one per item (a group's goes to its first page, each with
@@ -36,7 +36,7 @@ const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join
 // (orders, learners and the rest, lib/providerWorkspace.js): a "Demo data" tag beside the title, as the admin's. It is true (the
 // general note), "partly", or the page's own note (data/providerWorkspace.js pw.demo), which the tag then explains.
 // the pages outside the menu and what opens them (the menu's pages carry their own `can`)
-const PAGE_NEEDS = { requests: "provider.refunds.decide" };
+const PAGE_NEEDS = { requests: "provider.refunds.decide", profile: "provider.settings.view" };
 
 export default function ProviderShell({ current, title, lead, actions = null, back = null, demo = false, children }) {
   const rootRef = useRef(null);
