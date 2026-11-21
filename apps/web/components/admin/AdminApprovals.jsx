@@ -64,11 +64,12 @@ export default function AdminApprovals() {
   const shown = items.filter((a) => type === "all" || a.type === type).sort((x, y) => (order === "newest" ? when(y) - when(x) : when(x) - when(y)));
   const pickable = tab === "waiting" ? shown.filter((a) => a.type === "new" && a.providerStatus === "active" && !a.own) : [];
   const allPicked = pickable.length > 0 && pickable.every((a) => picked.includes(a.key));
-  const refresh = () => {
-    utils.admin.courses.queue.invalidate();
+  // the queue on screen is waited for, so a decided card never stays with its buttons live; the rest catch up behind it
+  const refresh = async () => {
     utils.admin.courses.counts.invalidate();
     utils.admin.courses.get.invalidate();
     utils.admin.courses.list.invalidate();
+    await utils.admin.courses.queue.invalidate().catch(() => {});
   };
 
   const choose = (t) => {
@@ -106,10 +107,10 @@ export default function AdminApprovals() {
         failed.push(`${it.title}: ${general || Object.values(fields)[0] || "That didn’t work. Reload the page and try again."}`);
       }
     }
+    if (done) refreshCourses().catch(() => {});
+    await refresh();
     setBusy(false);
     setPicked([]);
-    refresh();
-    if (done) refreshCourses().catch(() => {});
     const verb = { approve: "Approved", approveChange: "Change approved on", changes: "Asked for changes on", rejectChange: "Change turned down on" }[decision];
     setSaid([done ? (list.length === 1 ? `${verb}: ${list[0].title}` : `${verb} ${done} courses`) : "", done && outbox ? copy.emailOutbox.replace(/\.$/, "") : "", ...failed].filter(Boolean).join(". "));
     if (notEmailed.length) setUnsent(copy.notEmailedFor(notEmailed.join(", ")));

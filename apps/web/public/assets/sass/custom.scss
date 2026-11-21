@@ -5956,7 +5956,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-unsaved.is-hidden { visibility: hidden; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button:disabled { opacity: 0.6; cursor: not-allowed; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button.-outline-purple-1:disabled:hover { background-color: transparent; border-color: var(--color-purple-1); color: var(--color-purple-1) !important; }
-:is(.rt-pws, body.rt-pws-open .rt-dd) .button.-purple-1:disabled:hover { background-color: var(--color-purple-1); border-color: var(--color-purple-1); color: #fff !important; } /* keeps its place, so the bar's buttons don't move when it shows */
+:is(.rt-pws, body.rt-pws-open .rt-dd) .button.-purple-1:disabled:hover { background-color: var(--color-purple-1) !important; border-color: var(--color-purple-1); color: #fff !important; } /* keeps its place, so the bar's buttons don't move when it shows */
 /* a button label that keeps the width of its longest wording ("Save" / "Saving…"): both share one grid cell, the longer unseen */
 .rt-keepw { display: inline-grid; justify-items: center; }
 .rt-keepw > span, .rt-keepw::after { grid-area: 1 / 1; }
