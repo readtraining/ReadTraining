@@ -33,6 +33,8 @@ export const providerSignup = {
     loading: "Loading…",
     formTitle: "Your provider details",
     formLead: "You use the same login for your learner and provider accounts, and can switch between them at any time.",
+    // a provider's team invited this person and they haven't joined: offered before the form, which stays for their own provider
+    invited: { text: (provider) => `${provider} has invited you to its team. Accept the invitation to work on its courses, rather than creating a provider of your own.`, action: "Accept your invitation", href: "/provider/join" },
     name: "Company or instructor name",
     nameHint: "The name learners see on your courses and your public profile.",
     mobile: "Mobile number",

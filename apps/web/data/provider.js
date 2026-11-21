@@ -168,6 +168,19 @@ export const provider = {
       { q: "What do providers need to manage after onboarding?", a: "Review bookings when order notifications arrive, disable fully booked or cancelled dates, and keep upcoming course dates up to date." },
     ],
   },
+  // the main button for someone who already has a provider account (components/provider/ProviderCta.jsx), by their account's
+  // status: their application while our team reviews it, "Manage your courses" (their workspace) once approved, for every role
+  // on the team (a suspended account shows why there); a rejected application stays "Become a provider", to apply again.
+  // `bandText` replaces the closing band's sign-up sentence. Someone a provider's team invited who hasn't joined yet (no provider
+  // account of their own) gets `invited`: accepting it (/provider/join, which also explains an expired one) instead of signing up.
+  account: {
+    invited: { label: "Accept your invitation", href: "/provider/join", text: "A provider's team has invited you: accept to start working on its courses, cohorts and learners." },
+    pending: { label: "View your application", href: "/provider/review" },
+    changes_requested: { label: "Update your application", href: "/provider/review" },
+    active: { label: "Manage your courses", href: "/provider" },
+    suspended: { label: "Manage your courses", href: "/provider" },
+    bandText: "Carry on setting up the courses, cohorts and learners you manage.",
+  },
   cta: {
     title: "Put your training operation and marketplace reach in one place.",
     text: "Create your provider account to start setting up the courses, cohorts and learners you manage.",
