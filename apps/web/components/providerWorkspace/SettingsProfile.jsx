@@ -37,6 +37,8 @@ function WithProfile({ children }) {
 
 // ---- provider information --------------------------------------------------------------------------------------------------
 
+const NL = "\n"; // a line break in the biography box
+
 const SOCIAL = [
   { key: "facebook", label: "Facebook", hosts: ["facebook.com"], example: "https://www.facebook.com/yourpage" },
   { key: "linkedin", label: "LinkedIn", hosts: ["linkedin.com"], example: "https://www.linkedin.com/company/yourcompany" },
@@ -73,6 +75,44 @@ function InfoForm({ profile, say }) {
   const formRef = useRef(null);
   // typing in a field clears its error
   const set = (k) => (e) => { setF((x) => ({ ...x, [k]: e.target.value })); setErrors((x) => ({ ...x, [k]: "" })); };
+  // the biography's Bold and Bullet list buttons: they add the marks the public profile shows as bold words and a bulleted list
+  // (lib/richText.js) around what is selected, then put the selection back
+  const bioRef = useRef(null);
+  const formatBio = (kind) => {
+    const el = bioRef.current;
+    if (!el) return;
+    const v = f.bio;
+    const a = el.selectionStart;
+    const b = el.selectionEnd;
+    let next;
+    let from;
+    let to;
+    if (kind === "bold") {
+      const words = v.slice(a, b);
+      const inner = words.trim() || "bold text";
+      const lead = words.trim() ? words.length - words.trimStart().length : 0; // spaces picked up with a double-clicked word stay outside
+      const trail = words.trim() ? words.length - words.trimEnd().length : 0;
+      next = `${v.slice(0, a + lead)}**${inner}**${v.slice(b - trail)}`;
+      from = a + lead + 2;
+      to = from + inner.length;
+    } else {
+      // the whole lines the selection touches: each becomes a bullet, or, when all already are, back to plain lines
+      const start = v.lastIndexOf(NL, a - 1) + 1;
+      const stop = v.indexOf(NL, b);
+      const end = stop < 0 ? v.length : stop;
+      const lines = v.slice(start, end).split(NL);
+      const all = lines.every((l) => /^- /.test(l));
+      const out = lines.map((l) => (all ? l.replace(/^- /, "") : /^- /.test(l) || !l.trim() ? l : `- ${l}`)).join(NL);
+      const shown = out === "" ? "- " : out; // an empty line starts a bullet
+      next = `${v.slice(0, start)}${shown}${v.slice(end)}`;
+      from = start + (out === "" ? 2 : 0);
+      to = start + shown.length;
+    }
+    if (next.length > 5000) return; // the box's limit
+    setF((x) => ({ ...x, bio: next }));
+    setErrors((x) => ({ ...x, bio: "" }));
+    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(from, to); });
+  };
   const locked = !can("provider.profile.edit");
   useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
   const underReview = UNDER_REVIEW.includes(profile.status);
@@ -121,8 +161,12 @@ function InfoForm({ profile, say }) {
       <Field required id="rt-set-headline" label="Headline" error={errors.headline} count={<Counter value={f.headline} max={120} />}>
         <input {...aria("rt-set-headline", errors.headline)} type="text" maxLength={120} autoComplete="off" value={f.headline} onChange={set("headline")} disabled={locked} />
       </Field>
-      <Field required id="rt-set-bio" label="Biography" hint="Who you are, where you train and what makes your courses good." error={errors.bio} count={<Counter value={f.bio} max={5000} />}>
-        <TextArea {...aria("rt-set-bio", errors.bio, true)} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
+      <Field required id="rt-set-bio" label="Biography" hint="Who you are, where you train and what makes your courses good. Bold words and bullet points show formatted on your public profile." error={errors.bio} count={<Counter value={f.bio} max={5000} />}>
+        <div className="rt-pws-set__fmt" role="toolbar" aria-label="Format the biography" aria-controls="rt-set-bio">
+          <button type="button" className="rt-pws-set__fmtbtn" onClick={() => formatBio("bold")} disabled={locked}><b aria-hidden="true">B</b> Bold</button>
+          <button type="button" className="rt-pws-set__fmtbtn" onClick={() => formatBio("list")} disabled={locked}><i className="icon-list text-12" aria-hidden="true"></i> Bullet list</button>
+        </div>
+        <TextArea {...aria("rt-set-bio", errors.bio, true)} ref={bioRef} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
       </Field>
       <Field id="rt-set-city" label="Town or city" hint="Where you are based, shown on your public profile." error={errors.city}>
         <input {...aria("rt-set-city", errors.city, true)} type="text" maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} disabled={locked} className="rt-pws-set__short" />

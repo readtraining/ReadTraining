@@ -26,7 +26,7 @@ export const providerPages = {
   detail: {
     eyebrow: "Approved provider",
     badge: "Approved on ReadTraining",
-    about: { eyebrow: "About us", title: "About {name}", detailsLabel: "Provider details" },
+    about: { eyebrow: "About us", title: "About {name}", detailsLabel: "Provider details", followLabel: "Follow" },
     courses: { eyebrow: "Our courses", title: "Courses you can book", text: "Courses run by {name}, each shown at its lowest available price." },
     // the provider's own FAQs (Settings › FAQs), as it typed them; left out when it has none
     faqs: {

@@ -6,6 +6,7 @@ import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
+import FormattedText from "@/components/forms/FormattedText";
 import { useProviderCourses } from "./ProviderCourses";
 
 // Public profile (from the account menu): the provider as learners see it: logo, name, headline, about, social links,
@@ -44,7 +45,7 @@ export default function ProviderProfile() {
       </section>
       <section className="rt-acc__card" aria-labelledby="rt-pws-prof-about">
         <h2 className="rt-acc__h2" id="rt-pws-prof-about">About</h2>
-        <p className="rt-pws-prof__body">{o.bio || "No biography yet."}</p>
+        {o.bio ? <FormattedText text={o.bio} pClass="rt-pws-prof__body" ulClass="rt-pws-prof__body rt-pws-prof__list" /> : <p className="rt-pws-prof__body">No biography yet.</p>}
       </section>
       <section className="rt-acc__card" aria-labelledby="rt-pws-prof-pol">
         <h2 className="rt-acc__h2" id="rt-pws-prof-pol">Policies</h2>
