@@ -535,13 +535,19 @@ export const providerCohortsRouter = createTRPCRouter({
       })
     }),
 
-  // Delete dates nobody can have booked yet (bookings arrive in a later milestone; until then any date can be deleted).
+  // Delete dates nobody has booked, for good. Dates learners have booked (an order paid or part refunded on its course and start
+  // day, as Move and the places taken count them) can't be deleted, so their bookings keep the date they were for: they are
+  // cancelled instead. Checked under the dates' lock, so a booking made at the same moment either counts here or waits.
   remove: orgProcedure('provider.cohorts.edit')
     .input(z.object({ cohortId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       return ctx.db.transaction(async (tx) => {
         await lockDate(tx, course.id, cohort.id)
+        const [booked] = await tx.execute<{ n: number }>(sql`
+          select count(*)::int n from public.orders
+          where course_id = ${course.id} and starts_on = ${cohort.startsOn}::date and status in ('paid', 'part_refunded')`)
+        if (booked.n) throw new TRPCError({ code: 'CONFLICT', message: 'Learners have booked this cohort, so it can’t be deleted. Cancel it instead.' })
         await tx.delete(cohorts).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.deleted', 'cohort', cohort.id, { courseId: course.id, startsOn: cohort.startsOn })
         return { ok: true }

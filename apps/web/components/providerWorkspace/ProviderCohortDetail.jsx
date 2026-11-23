@@ -149,7 +149,7 @@ export default function ProviderCohortDetail({ cohortId }) {
       <CohortForm open={editing} onClose={() => setEditing(false)} cohort={k} onSaved={() => { setEditing(false); refresh(); setToast({ message: "Cohort saved" }); }} />
       <CancelSheet cohort={cancelling ? k : null} onClose={() => setCancelling(false)} onDone={() => { setCancelling(false); refresh(); setToast({ message: "Cohort cancelled" }); }} />
       <MoveSheet cohort={moving ? k : null} onClose={() => setMoving(false)} onDone={(title) => { setMoving(false); refresh(); utils.provider.courses.list.invalidate(); setToast({ message: `Moved to ${title}` }); }} />
-      <DeleteSheet cohort={deleting ? k : null} onClose={() => setDeleting(false)} onDone={() => { utils.provider.cohorts.list.invalidate(); router.push("/provider/cohorts"); }} />
+      <DeleteSheet cohort={deleting ? k : null} onClose={() => setDeleting(false)} onCancelInstead={() => { setDeleting(false); setCancelling(true); }} onDone={() => { utils.provider.cohorts.list.invalidate(); router.push("/provider/cohorts"); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );

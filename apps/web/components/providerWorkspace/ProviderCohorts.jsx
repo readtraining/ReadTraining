@@ -399,7 +399,7 @@ export default function ProviderCohorts() {
       <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); setToast({ message: "Cohort saved" }); }} />
       <MoveSheet cohort={moveOne} onClose={() => setMoveOne(null)} onDone={async (title) => { setMoveOne(null); setToast({ message: `Moved to ${title}` }); await refresh(); }} />
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
-      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
+      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onCancelInstead={(k) => { setDeleting(null); setCancelOne(k); }} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
@@ -458,10 +458,10 @@ export function CancelSheet({ cohort, onClose, onDone }) {
     cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]) });
   };
   return (
-    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose>
+    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose busy={cancel.isPending}>
       {cohort && (
         <form className="rt-q__form" onSubmit={submit} noValidate>
-          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Nobody can book it after this, and it can&apos;t be undone.</p>
+          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Learners can&apos;t book it after this, and it can&apos;t be undone.</p>
           <div className="rt-field">
             <label htmlFor="rt-coh-cancel-why">Reason<Req /></label>
             {error && <p className="rt-q__err" id="rt-coh-cancel-why-e"><span className="rt-sr">Error: </span>{error}</p>}
@@ -469,7 +469,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
           </div>
           <div className="rt-pws-set__actions">
             <button type="submit" className="button -md -outline-red-3 text-red-3" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Go back</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep cohort</button>
           </div>
         </form>
       )}
@@ -507,7 +507,7 @@ export function MoveSheet({ cohort, onClose, onDone }) {
     <Sheet open={Boolean(cohort)} onClose={onClose} title="Move to another course" closeLabel="Close">
       {cohort && (!courses.data ? <Loading rows={1} /> : eligible.length ? (
         <form className="rt-q__form" onSubmit={submit} noValidate>
-          <p className="rt-acc__note">The dates, times, venue, tutor, places and price move with it.</p>
+          <p className="rt-acc__note">This cohort will be removed from {cohort.courseTitle} and added to the course you choose. The dates, times, venue, tutor, places and price move with it.</p>
           <div className="rt-field">
             <label htmlFor="rt-coh-move-course">Course<Req /></label>
             {error && <p className="rt-q__err" id="rt-coh-move-course-e"><span className="rt-sr">Error: </span>{error}</p>}
@@ -524,22 +524,36 @@ export function MoveSheet({ cohort, onClose, onDone }) {
 }
 const COURSE_STATUS = { draft: "Draft", changes: "Changes asked", pending: "Waiting for review", paused: "Paused" };
 
-export function DeleteSheet({ cohort, onClose, onDone }) {
+// Delete a cohort nobody has booked, permanently. One learners have booked can't be deleted (the API refuses it too,
+// provider.cohorts.remove), so their bookings keep their date: the pop-up says so and, while it can still be cancelled, offers
+// that instead (onCancelInstead).
+export function DeleteSheet({ cohort, onClose, onDone, onCancelInstead }) {
   const { organisationId } = useProviderAccess();
   const remove = api.provider.cohorts.remove.useMutation();
   const [error, setError] = useState("");
+  const booked = (cohort?.taken ?? 0) > 0;
+  const canCancel = Boolean(cohort) && !cohort.cancelledAt && cohort.endsOn >= todayIso();
+  const close = () => { setError(""); onClose(); };
   return (
-    <Sheet open={Boolean(cohort)} onClose={() => { setError(""); onClose(); }} title="Delete this cohort?" closeLabel="Close" noClose>
-      {cohort && (
+    <Sheet open={Boolean(cohort)} onClose={close} title={booked ? "This cohort can’t be deleted" : "Delete this cohort?"} closeLabel="Close" noClose busy={remove.isPending}>
+      {cohort && (booked ? (
         <div className="rt-q__form">
-          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, is removed for good.</p>
-          {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+          <p className="rt-acc__note">Learners have booked {cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, so it can&apos;t be deleted: their bookings need it.{canCancel ? " Cancel it instead: nobody else can book it, and it stays on record." : " It stays on record."}</p>
           <div className="rt-pws-set__actions">
-            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
+            {canCancel && onCancelInstead && <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => { setError(""); onCancelInstead(cohort); }}>Cancel cohort</button>}
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={close}>Keep cohort</button>
           </div>
         </div>
-      )}
+      ) : (
+        <div className="rt-q__form">
+          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, will be deleted permanently. This can&apos;t be undone.</p>
+          {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+          <div className="rt-pws-set__actions">
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={close}>Cancel</button>
+          </div>
+        </div>
+      ))}
     </Sheet>
   );
 }
