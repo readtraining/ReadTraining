@@ -438,7 +438,7 @@ export function VenuesTab({ say }) {
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : r.unchecked ? "Venue saved. We couldn't check its town just now; we'll try again." : "Venue saved, but we couldn't find its postcode on the map"); }} />
-      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
+      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.${archiving.upcoming ? " Any of its upcoming dates still taking bookings need their bookings turned off, or to be cancelled, first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
     </div>
   );
 }
@@ -463,6 +463,7 @@ export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = f
   const [errors, setErrors] = useState({});
   const [start] = useState(f);
   const dirty = JSON.stringify(f) !== JSON.stringify(start);
+  const moved = Boolean(venue?.upcoming) && ["street", "city", "postcode"].some((k) => f[k].trim() !== start[k].trim());
   useUnsavedChanges(dirty); // typed into but not saved (the form closes once saved)
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]); // tells its pop-up, so closing it asks first
   const ref = useRef(null);
@@ -479,7 +480,7 @@ export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = f
     setErrors(err);
     if (Object.keys(err).length) return focusFirstError(ref.current);
     save.mutate(
-      { organisationId, ...(venue ? { venueId: venue.id } : {}), name: f.name.trim(), street: f.street.trim(), city: f.city.trim(), postcode: f.postcode.trim() },
+      { organisationId, ...(venue ? { venueId: venue.id, seen: venue.version } : {}), name: f.name.trim(), street: f.street.trim(), city: f.city.trim(), postcode: f.postcode.trim() },
       { onSuccess: (r) => onSaved(r, !venue), onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general }); } },
     );
   };
@@ -498,10 +499,14 @@ export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = f
         <Field required id={id("c")} label="Town or city" error={errors.city}>
           <input {...aria(id("c"), errors.city)} maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} />
         </Field>
-        <Field required id={id("p")} label="Postcode" hint="Used to place the venue on the map, so learners can search by distance." error={errors.postcode}>
+        <Field required id={id("p")} label="Postcode" error={errors.postcode}>
           <input {...aria(id("p"), errors.postcode, true)} maxLength={8} autoComplete="postal-code" value={f.postcode} onChange={set("postcode")} />
         </Field>
       </div>
+      {/* under the row, so the town and postcode labels and boxes line up side by side */}
+      <p className="rt-field__hint rt-pws-venueform__hint" id={`${id("p")}-h`}>The postcode puts the venue on the map, so learners can search by distance.</p>
+      {/* a venue's address is its dates' address: a change shows on the dates still to run there */}
+      {moved && <p className="rt-acc__note">The new address shows on its {venue.upcoming === 1 ? "upcoming date" : `${venue.upcoming} upcoming dates`} too.</p>}
       {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
       <div className={onCancel ? "rt-pws-venueform__actions" : undefined}>
         <button type={inline ? "button" : "submit"} onClick={inline ? submit : undefined} className={`button -md -purple-1 text-white${onCancel ? "" : " rt-btn-block"}`} disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save venue"}</button>

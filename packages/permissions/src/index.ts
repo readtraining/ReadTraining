@@ -76,9 +76,10 @@ const PROVIDER_RULES = {
   'provider.courses.delete': { roles: ['owner', 'admin'] },
   'provider.pricing.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'accounts', 'assistant'] },
   'provider.pricing.edit': { roles: ['owner', 'admin', 'course_editor'] },
-  'provider.cohorts.view': { roles: ['owner', 'admin', 'support', 'sales', 'assistant'], own: true },
-  'provider.cohorts.edit': { roles: ['owner', 'admin'] },
-  'provider.venues.view': { roles: ['owner', 'admin', 'support', 'sales', 'assistant'] }, // the Venues page
+  // course editors add a course's dates (and the venues they need): a course can't be sent for approval without them
+  'provider.cohorts.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'assistant'], own: true },
+  'provider.cohorts.edit': { roles: ['owner', 'admin', 'course_editor'] },
+  'provider.venues.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'assistant'] }, // the Venues page
   'provider.records.view': { roles: ['owner', 'admin', 'support', 'assistant'], own: true }, // register, results, learning records
   'provider.records.edit': { roles: ['owner', 'admin'], own: true },
   'provider.learners.view': { roles: ['owner', 'admin', 'support', 'sales', 'accounts', 'assistant'], own: true },
@@ -198,6 +199,8 @@ export type AdminAction = keyof typeof ADMIN_RULES
 export type Action = ProviderAction | BusinessAction | AdminAction
 
 export const PROVIDER_ACTIONS = Object.keys(PROVIDER_RULES) as ProviderAction[]
+/** Who can teach a provider's dates: someone who can see them (all of them, or a tutor their own). Accounts and marketing can't. */
+export const canTutor = (role: string) => role === 'tutor' || (PROVIDER_RULES['provider.cohorts.view'].roles as readonly string[]).includes(role)
 export const BUSINESS_ACTIONS = Object.keys(BUSINESS_RULES) as BusinessAction[]
 export const ADMIN_ACTIONS = Object.keys(ADMIN_RULES) as AdminAction[]
 

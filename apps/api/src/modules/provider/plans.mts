@@ -27,14 +27,18 @@ const feature = z.object({
   description: line(200, 'feature description').optional().nullable(),
   included: z.boolean(),
 })
-const tier = z.object({
-  name: line(30, 'package name').min(1, 'Name every package.'),
-  pricePence: z.number().int().min(1, 'Enter a price for every package.').max(MAX_PENCE, 'Enter a price of £100,000 or less.'),
-  savePence: z.number().int().min(0).max(MAX_PENCE).optional().nullable(), // "Save £": shown as a was-price of price + save
-  tagline: line(80, 'tagline').optional().nullable(),
-  popular: z.boolean().optional(),
-  features: z.array(feature).max(12, 'Add up to 12 features to a package.'),
-})
+// a price is at least £1, as everywhere else (a date's own price, a self-paced course's)
+const tier = z
+  .object({
+    name: line(30, 'package name').min(1, 'Name every package.'),
+    pricePence: z.number().int().min(100, 'Enter a price of at least £1 for every package.').max(MAX_PENCE, 'Enter a price of £100,000 or less.'),
+    savePence: z.number().int().min(0).max(MAX_PENCE).optional().nullable(), // "Save £": shown as a was-price of price + save
+    tagline: line(80, 'tagline').optional().nullable(),
+    popular: z.boolean().optional(),
+    features: z.array(feature).max(12, 'Add up to 12 features to a package.'),
+  })
+  // a saving bigger than the price itself would claim a was-price over double what learners pay: not a believable reference price
+  .refine((t) => !t.savePence || t.savePence <= t.pricePence, { message: 'A package can’t save more than its own price.', path: ['savePence'] })
 export const tiersInput = z
   .array(tier)
   .min(2, 'A plan has at least 2 packages.')
@@ -71,8 +75,16 @@ export async function syncPlanPrices(tx: Writer, planId: string) {
   const tiers = p?.tiers as Tier[] | undefined
   if (!tiers?.length) return
   const from = cheapest(tiers)
-  await tx.update(cohorts).set({ ...from, updatedAt: new Date() }).where(eq(cohorts.planId, planId))
-  await tx.update(courses).set({ pricePence: from.pricePence, updatedAt: new Date() }).where(eq(courses.planId, planId))
+  // only dates still to come: a finished or cancelled date keeps the price it ran at
+  await tx.update(cohorts).set({ ...from, updatedAt: new Date() }).where(and(eq(cohorts.planId, planId), isNull(cohorts.cancelledAt), sql`${cohorts.endsOn} >= ${ukToday()}::date`))
+  // a course's own version (its editor's "changed somewhere else" check) is about its words, so only its price moves
+  await tx.update(courses).set({ pricePence: from.pricePence }).where(eq(courses.planId, planId))
+}
+
+// the packages as saved: the database keeps an object's keys in its own order, so they are compared key by key, sorted
+const sameTiers = (a: unknown, b: unknown) => {
+  const plain = (v: unknown): unknown => (Array.isArray(v) ? v.map(plain) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([, x]) => x != null && x !== '').sort(([x], [y]) => x.localeCompare(y)).map(([k, x]) => [k, plain(x)])) : v)
+  return JSON.stringify(plain(a)) === JSON.stringify(plain(b))
 }
 
 /** A plan of this provider's, for a date or course to use: refused when it is someone else's, or archived (unless kept). */
@@ -181,7 +193,7 @@ export const providerPlansRouter = createTRPCRouter({
         }
         const p = await lockPlan(tx, input.organisationId, input.planId)
         if (input.seen && p.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: PLAN_CHANGED })
-        const changed = JSON.stringify(input.tiers) !== JSON.stringify(p.tiers)
+        const changed = !sameTiers(input.tiers, p.tiers)
         const [saved] = await tx.update(pricePlans).set({ name: input.name, tiers: input.tiers, updatedAt: new Date() }).where(eq(pricePlans.id, p.id)).returning()
         if (changed) await syncPlanPrices(tx, p.id)
         await log(tx, ctx, input.organisationId, 'plan.updated', p.id, { name: input.name, ...(changed ? { packagesChanged: true } : {}) })

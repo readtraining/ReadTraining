@@ -7,7 +7,7 @@ import { useMe } from "@/lib/useMe";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { ErrorState } from "@/components/states/States";
 import { COURSE_TONE, Pill } from "./providerParts";
-import { Seats, todayIso, useSchedule } from "./ProviderCohorts";
+import { Seats, offSale, todayIso, useSchedule } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 import NavIcon from "@/components/admin/navIcons";
@@ -101,7 +101,7 @@ export default function ProviderDashboard() {
         </div>
         <div className="rt-dash__quick">
           {access.can("provider.orders.create") && <Link href="/provider/orders/new" className="button -sm -outline-purple-1 text-purple-1">Create order</Link>}
-          {access.can("provider.cohorts.edit") && <Link href="/provider/cohorts?new=1" className="button -sm -purple-1 text-white">Create cohort</Link>}
+          {access.can("provider.cohorts.edit") && access.can("provider.pricing.edit") && <Link href="/provider/cohorts?new=1" className="button -sm -purple-1 text-white">Create cohort</Link>}
         </div>
       </section>
 
@@ -176,14 +176,14 @@ export default function ProviderDashboard() {
                     <li key={k.id}>
                       <span className={`rt-dash__date -c-${k.method === "live-online" ? "blue" : "purple"}`} aria-hidden="true"><small>{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${k.startsOn}T00:00:00Z`))}</small><b>{Number(k.startsOn.slice(8))}</b></span>
                       <span className="rt-dash__cmeta">
-                        <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
+                        <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
                         <small><span className="rt-dash__soon">Starts {soon(daysFrom(today, k.startsOn))}</span> · {k.venue ? k.venue.name : "Online"}{tutorName(k.tutorUserId) ? ` · ${tutorName(k.tutorUserId)}` : ""}</small>
                       </span>
-                      <Seats booked={0} max={k.capacity} />
+                      <Seats booked={k.taken ?? 0} max={k.capacity} />
                     </li>
                   ))}
                 </ul>
-              ) : <p className="rt-acc__note">No cohorts coming up.{access.can("provider.cohorts.edit") && <> <Link href="/provider/cohorts?new=1">Create one</Link>.</>}</p>}
+              ) : <p className="rt-acc__note">No cohorts coming up.{access.can("provider.cohorts.edit") && access.can("provider.pricing.edit") && <> <Link href="/provider/cohorts?new=1">Create one</Link>.</>}</p>}
             </section>
           )}
         </>

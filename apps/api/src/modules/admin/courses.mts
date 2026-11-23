@@ -390,6 +390,11 @@ export const adminCoursesRouter = createTRPCRouter({
         if (!rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
         if (onWaiting && notSeen(input.seen, locked.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
         if (input.decision === 'resume' && !locked.statusNote) throw new TRPCError({ code: 'CONFLICT', message: PROVIDER_PAUSED })
+        // again under the lock: a date cancelled or turned off at the same moment (each locks this row first) is seen here
+        if (input.decision === 'approve') {
+          const gaps = await missing(tx, locked)
+          if (gaps.length) throw new TRPCError({ code: 'CONFLICT', message: `This course is missing ${gaps.join(', ')}. Ask the provider for changes.` })
+        }
         if (isChange) {
           const [rev] = await tx.select({ status: courseRevisions.status, submittedAt: courseRevisions.submittedAt }).from(courseRevisions).where(eq(courseRevisions.id, revision.id))
           if (rev?.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })

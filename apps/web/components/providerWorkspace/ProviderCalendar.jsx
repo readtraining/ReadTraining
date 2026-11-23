@@ -5,7 +5,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import Link from "next/link";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { Loading, Tabs, getQuery, setQuery } from "./providerParts";
-import { addDays, colourOf, longDay, monthLabel, todayIso, useSchedule, weekday } from "./ProviderCohorts";
+import { addDays, colourOf, longDay, monthLabel, offSale, todayIso, useSchedule, weekday } from "./ProviderCohorts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
 // The calendar: every session of every cohort by month, week or day (view and date kept in the address, ?view= and ?date=); the
@@ -61,7 +61,8 @@ function barsByDay(bars) {
   bars.forEach((b) => {
     for (let d = b.start; d <= b.end; d = addDays(d, 1)) (map[d] ||= []).push(b);
   });
-  Object.values(map).forEach((l) => l.sort((a, b) => a.from.localeCompare(b.from) || a.title.localeCompare(b.title)));
+  // cancelled sessions last, so the ones that run come first in a busy day
+  Object.values(map).forEach((l) => l.sort((a, b) => a.cancelled - b.cancelled || a.from.localeCompare(b.from) || a.title.localeCompare(b.title)));
   return map;
 }
 const tone = (b) => `-c-${b.colour}${b.cancelled ? " -cancelled" : b.end < todayIso() ? " -past" : ""}`;
@@ -73,7 +74,7 @@ const OpenEntry = createContext(() => {});
 export default function ProviderCalendar() {
   const { can } = useProviderAccess();
   const [entry, setEntry] = useState(null); // { bar, el }
-  const { cohorts } = useSchedule("all");
+  const { cohorts } = useSchedule("all", null, { near: true });
   const [view, setView] = useState("month");
   const [date, setDate] = useState(() => todayIso());
 
@@ -96,13 +97,15 @@ export default function ProviderCalendar() {
 
   if (cohorts.isError) return <ErrorState title="We couldn't load your dates." text="Check your connection, then try again." onRetry={() => cohorts.refetch()} />;
   if (!cohorts.data) return <Loading rows={1} />;
-  if (!cohorts.data.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={can("provider.cohorts.edit") ? { label: "Create cohort", href: "/provider/cohorts?new=1" } : null} />;
+  if (!cohorts.data.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={can("provider.cohorts.edit") && can("provider.pricing.edit") ? { label: "Create cohort", href: "/provider/cohorts?new=1" } : null} />;
 
   const bars = sessionBars(cohorts.data);
   const byDay = barsByDay(bars);
   const today = todayIso();
   const weekStart = addDays(date, -weekday(date));
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // whether the month, week or day on screen already has today in it
+  const showsToday = { month: date.slice(0, 7) === today.slice(0, 7), week: weekStart <= today && today <= addDays(weekStart, 6), day: date === today }[view];
   const step = { month: (n) => shiftMonth(date, n), week: (n) => addDays(date, 7 * n), day: (n) => addDays(date, n) }[view];
   const title = {
     month: monthLabel(date),
@@ -116,9 +119,10 @@ export default function ProviderCalendar() {
       <div className="rt-acc__stack">
         <div className="rt-adm-toolbar rt-pws-cal__bar">
           <div className="rt-pws-cal__nav-group">
+            {/* back to today, first (as calendars put it); inactive while today is already shown */}
+            <button type="button" className="rt-pws-cal__nav -text" onClick={() => go(today)} disabled={showsToday}>Today</button>
             <button type="button" className="rt-pws-cal__nav" onClick={() => go(step(-1))} aria-label={`Previous ${unit}`}><i className="icon-chevron-left text-12" aria-hidden="true"></i></button>
             <button type="button" className="rt-pws-cal__nav" onClick={() => go(step(1))} aria-label={`Next ${unit}`}><i className="icon-chevron-right text-12" aria-hidden="true"></i></button>
-            <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => go(todayIso())}>Today</button>
             <h2 className="rt-pws-cal__title" aria-live="polite">{title}</h2>
           </div>
           <Tabs tabs={VIEWS} value={view} onChange={pickView} label="Calendar view" />
@@ -186,15 +190,17 @@ function WeekRow({ days, today, bars, lanes, onDay, month, tall = false }) {
       const e = b.end > hi ? hi : b.end;
       return { b, col: span(lo, s), len: span(s, e) + 1, before: b.start < lo, after: b.end > hi };
     })
-    .sort((x, y) => x.col - y.col || y.len - x.len || x.b.from.localeCompare(y.b.from) || x.b.title.localeCompare(y.b.title));
-  const ends = []; // per row: the last day column it is taken up to
+    // cancelled sessions take the lowest rows (behind "+N more" on a full day), the ones that run the top
+    .sort((x, y) => x.b.cancelled - y.b.cancelled || x.col - y.col || y.len - x.len || x.b.from.localeCompare(y.b.from) || x.b.title.localeCompare(y.b.title));
+  // each session takes the first row that is free on every one of its days (whatever order they come in)
+  const taken = []; // per row: the day columns it holds
   segs.forEach((g) => {
-    let r = ends.findIndex((last) => last < g.col);
-    if (r === -1) r = ends.push(-1) - 1;
-    ends[r] = g.col + g.len - 1;
+    let r = taken.findIndex((cols) => !cols.some((c) => c >= g.col && c < g.col + g.len));
+    if (r === -1) r = taken.push([]) - 1;
+    for (let c = g.col; c < g.col + g.len; c++) taken[r].push(c);
     g.row = r;
   });
-  const shownRows = Math.min(ends.length, lanes);
+  const shownRows = Math.min(taken.length, lanes);
   const hidden = days.map((_, i) => segs.filter((g) => g.row >= lanes && g.col <= i && g.col + g.len - 1 >= i).length);
   const anyHidden = hidden.some(Boolean);
   const rows = `${tall ? "0px" : "36px"}${shownRows ? ` repeat(${shownRows}, 26px)` : ""}${anyHidden ? " 24px" : ""} 1fr`;
@@ -242,7 +248,7 @@ function EntryDetails({ entry, onClose }) {
   const facts = (
     <>
       <dl className="rt-pws-cal__facts">
-        <div><dt>Date</dt><dd>{shortWhen(b)}{b.cancelled ? " · Cancelled" : ""}</dd></div>
+        <div><dt>Date</dt><dd>{shortWhen(b)}{b.cancelled ? " · Cancelled" : offSale(k) ? ` · ${offSale(k)}` : ""}</dd></div>
         <div><dt>Time</dt><dd>{b.from} to {b.to}</dd></div>
         <div><dt>Places taken</dt><dd>{k.taken} of {k.capacity}</dd></div>
         <div><dt>Venue</dt><dd>{k.venue ? [k.venue.name, k.venue.city].filter(Boolean).join(", ") : "Live online"}</dd></div>

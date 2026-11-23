@@ -270,7 +270,7 @@ export const pw = {
   roles: [
     { key: "admin", label: "Admin", can: "Everything except removing the account owner" },
     { key: "tutor", label: "Tutor", can: "Their cohorts: students, learning records and results" },
-    { key: "course_editor", label: "Course editor", can: "Courses, course activities and FAQs" },
+    { key: "course_editor", label: "Course editor", can: "Courses, their dates and venues, and FAQs" },
     { key: "support", label: "Customer support", can: "Learners, orders and refund requests" },
     { key: "sales", label: "Sales executive", can: "Orders, new orders and leads" },
     { key: "accounts", label: "Accounts analyst", can: "Orders, earnings and VAT" },

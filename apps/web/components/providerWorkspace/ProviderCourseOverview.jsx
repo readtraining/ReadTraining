@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/format";
 import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { COHORT_TONE, COURSE_TONE, Loading, Pill, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
-import { COHORT_STATUSES, CohortCell, CohortForm, Seats, WHEN, cohortState, todayIso, useSchedule } from "./ProviderCohorts";
+import { COHORT_STATUSES, CohortCell, CohortForm, Seats, WHEN, askWhen, cohortState, inWhen, todayIso, useSchedule } from "./ProviderCohorts";
 
 // One course's overview (course Details): a head card with the cover picture, status, learning options and performance model,
 // the shared course page it is listed on, Edit course and Preview; then its tabs, in this order: Learners, Venues, Cohorts,
@@ -122,7 +122,7 @@ function CohortsTab({ course }) {
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const s = useSchedule(when, course.id);
+  const s = useSchedule(askWhen(when), course.id);
   const utils = api.useUtils();
   useEffect(() => {
     const w = getQuery("when");
@@ -137,7 +137,7 @@ function CohortsTab({ course }) {
 
   // new cohorts only for a dated option still taking bookings
   const selling = waysOf(course, { open: true }).filter(isDatedMethod);
-  const edit = can("provider.cohorts.edit") && selling.length > 0;
+  const edit = can("provider.cohorts.edit") && can("provider.pricing.edit") && selling.length > 0;
   const refresh = () =>
     Promise.all([
       utils.provider.cohorts.list.invalidate(),
@@ -165,11 +165,11 @@ function CohortsTab({ course }) {
   const today = todayIso();
   const tutors = s.tutors.data || [];
   // a tutor sees only the dates they teach (no team list), so a tutor on them is the tutor themselves
-  const tutorName = (uid) => tutors.find((t) => t.userId === uid)?.name ?? (!s.may.team && uid ? "You" : undefined);
-  const list = s.cohorts.data.map((k) => ({ ...k, status: cohortState(k, today) }));
+  const tutorName = (uid, k) => tutors.find((t) => t.userId === uid)?.name ?? (!s.may.team && uid ? "You" : uid ? k?.tutorName : undefined);
+  const list = s.cohorts.data.filter((k) => inWhen(k, when)).map((k) => ({ ...k, status: cohortState(k, today) }));
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const at = Math.min(page, pages);
-  const empty = { upcoming: ["No upcoming cohorts", "A cohort is one run of this course on set dates. Add one so learners can book it once the course is live."], past: ["No past cohorts", "Cohorts of this course that have finished show here."], all: ["No cohorts yet", "A cohort is one run of this course on set dates."] }[when];
+  const empty = { upcoming: ["No upcoming cohorts", "A cohort is one run of this course on set dates. Add one so learners can book it once the course is live."], past: ["No past cohorts", "Cohorts of this course that have finished show here."], cancelled: ["No cancelled cohorts", "Cohorts of this course that were cancelled show here."], all: ["No cohorts yet", "A cohort is one run of this course on set dates."] }[when];
 
   return (
     <div className="rt-acc__stack">
@@ -197,7 +197,7 @@ function CohortsTab({ course }) {
                       {!k.cancelledAt && (k.optionClosed ? <Pill tone="warn">Bookings stopped</Pill> : !k.bookable && <Pill tone="warn">Bookings off</Pill>)}
                     </span>
                   </td>
-                  <td data-label="Tutor">{tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>}</td>
+                  <td data-label="Tutor">{tutorName(k.tutorUserId, k) || <span className="rt-adm-muted">Not assigned</span>}</td>
                   <td data-label="Places"><Seats booked={0} max={k.capacity} /></td>
                   <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
                 </tr>
