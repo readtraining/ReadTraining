@@ -9,7 +9,7 @@ import { api } from "@/lib/trpc/react";
 import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, PageLink, RowMenu, Said } from "./adminParts";
 import { formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
-import { DANGER, DecisionSheet, decisionsFor } from "./AdminProvider";
+import { DANGER, DecisionSheet, DeleteProviderSheet, canDelete, decisionsFor } from "./AdminProvider";
 
 const copy = A.providers;
 const TABS = Object.keys(copy.tabs);
@@ -30,6 +30,7 @@ export default function AdminProviders() {
   const paging = usePaging({ key: "applied", dir: -1 });
   const utils = api.useUtils();
   const [deciding, setDeciding] = useState(null); // { provider, decision }
+  const [deleting, setDeleting] = useState(null); // the provider being deleted
   const [said, setSaid] = useState("");
   const [warning, setWarning] = useState("");
   const d = copy.detail;
@@ -43,6 +44,7 @@ export default function AdminProviders() {
     { label: d.open, href: readsRecord ? `/admin/providers/${p.slug}` : `/admin/providers/${p.slug}/plans` },
     ...(p.status === "active" || p.status === "suspended" ? d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` })) : []),
     ...decisionsFor(p, me).map((k) => ({ label: d.actions[k], danger: DANGER.has(k), onClick: () => setDeciding({ provider: p, decision: k }) })),
+    ...(canDelete(p, me) ? [{ label: d.remove.action, icon: "icon-bin", danger: true, onClick: () => setDeleting(p) }] : []),
   ];
 
   useEffect(() => {
@@ -105,6 +107,7 @@ export default function AdminProviders() {
         <Empty kind={filtered ? "none" : "empty"} title={filtered ? copy.none : copy.empty} text={filtered ? undefined : "Training providers who apply show here."} action={filtered ? { label: copy.clear, onClick: () => { setQ(""); setSearch(""); setTab("all"); paging.restart(); } } : undefined} />
       )}
       <DecisionSheet provider={deciding?.provider ?? { name: "" }} decision={deciding?.decision ?? null} onClose={() => setDeciding(null)} onDone={decided} />
+      <DeleteProviderSheet provider={deleting} onClose={() => setDeleting(null)} onDone={async ({ name }) => { setWarning(""); setSaid(d.remove.done(name)); await utils.admin.providers.invalidate().catch(() => {}); }} />
     </div>
   );
 }

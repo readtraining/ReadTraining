@@ -171,6 +171,7 @@ const ADMIN_RULES = {
   'admin.platform.view': { permission: 'platform.settings' },
   'admin.approvals.decide': { permission: 'approve', notOwnRequest: true },
   'admin.providers.staff': { permission: ['approve', 'pricing'] }, // edit a provider's work from the admin, as ReadTraining staff
+  'admin.providers.remove': { permission: 'approve' }, // delete a provider that wasn't approved (rejected) and holds no records
   'admin.catalogue.edit': { permission: 'catalogue' },
   'admin.content.edit': { permission: 'content' },
   'admin.orders.view': { permission: 'orders.view' },
