@@ -94,7 +94,7 @@ export const courseFinder = {
     {
       label: "Renew my SIA licence", text: "Find the correct refresher training.", icon: "icon-time-management",
       panelTitle: "Which qualification do you need to renew?", panelText: "Select your current licence type to find the relevant refresher course.",
-      // providers name renewal training "Refresher" or "Top-Up" (the catalogue's SIA top-up topics); a course's length is on its
+      // providers name renewal training "Refresher" (the catalogue's SIA refresher topics), some still "Top-Up", so both are searched; a course's length is on its
       // own page, as providers' differ
       routes: [
         { title: "Door Supervisor", text: "Updated search procedures, terror threat awareness, vulnerability, spiking prevention and physical intervention.", ...course(["Door Supervisor Refresher", "Door Supervisor Top-Up"], "/course/sia-top-up-refresher-training-door-supervisor") },

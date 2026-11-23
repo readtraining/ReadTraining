@@ -575,6 +575,23 @@ export const courseImages = pgTable(
   (t) => [index('course_images_course_idx').on(t.courseId, t.position), apiOnly('course_images')],
 ).enableRLS()
 
+// A shared course page's guide: the sections ReadTraining writes for it beyond a course's own fields (the course at a glance,
+// packages, the steps, costs, locations, a closing call to action…), one checked document per page (its shape and rules:
+// apps/api/src/lib/courseGuide.mts). Staff edit it in the shared page editor's Course guide step, with no approval; the page and
+// the provider courses on it show it. A page without one shows only its own fields.
+export const courseGuides = pgTable(
+  'course_guides',
+  {
+    courseId: integer('course_id')
+      .primaryKey()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    content: jsonb('content').notNull(),
+    updatedAt: updatedAt(),
+    updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('course_guides_updated_by_idx').on(t.updatedBy), apiOnly('course_guides')],
+).enableRLS()
+
 // A provider's venues. lat/lng come from the postcode when the venue is saved, so search can sort by real distance.
 export const venues = pgTable(
   'venues',

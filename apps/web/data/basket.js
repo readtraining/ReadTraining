@@ -29,10 +29,10 @@ export const basket = {
 
   // security licence courses need a first aid qualification: the learner confirms they have one or adds the course
   // asked after the date and package (components/courseDetail/PackageChooser.jsx), on the classroom courses whose SIA licence or
-  // renewal needs Emergency First Aid at Work: Door Supervisor, Security Officer and their top-ups (not CCTV, which doesn't, nor
+  // renewal needs Emergency First Aid at Work: Door Supervisor, Security Officer and their refreshers (not CCTV, which doesn't, nor
   // Close Protection, which needs a higher first aid qualification than this add-on)
   firstAid: {
-    picks: [TOPICS.doorSupervisor, TOPICS.securityOfficer, TOPICS.doorTopUp, TOPICS.securityTopUp],
+    picks: [TOPICS.doorSupervisor, TOPICS.securityOfficer, TOPICS.doorRefresher, TOPICS.securityRefresher],
     badge: "Required for your SIA licence",
     title: "First aid qualification required",
     text: "To get your SIA licence you must hold an Emergency First Aid at Work qualification (or higher).",
