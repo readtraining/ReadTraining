@@ -1456,7 +1456,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
             {tiered ? (
               <div className="rt-field">
                 <label htmlFor="rt-pws-ce-plan">Price plan<Req /></label>
-                <p className="rt-acc__note" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. {!locked && <Link href={links.plans()} className="rt-cd__link">{plans.length || plansQ.isLoading ? "Manage price plans" : "Create a price plan first"}</Link>}</p>
+                <p className="rt-field__hint" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. {!locked && <Link href={links.plans()} className="rt-cd__link">{plans.length || plansQ.isLoading ? "Manage price plans" : "Create a price plan first"}</Link>}</p>
                 <FieldErr id="rt-pws-ce-plan" text={errors.planId} />
                 <FieldSelect id="rt-pws-ce-plan" label="Price plan" placeholder={planHint} value={draft.planId} disabled={locked} onChange={set("planId")}
                   options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}` }))}
@@ -1482,7 +1482,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
                 <FieldErr id="rt-pws-ce-dates" text={errors.dates && lacking.length ? datesGap(lacking) : ""} />
                 <div className="rt-pws-ce__dates">
                   <p className="rt-pws-ce__datecount">{dateLine}</p>
-                  {can("provider.cohorts.edit") && openDated.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)} aria-describedby={errors.dates && lacking.length ? "rt-pws-ce-dates-e" : undefined}>Create cohort</button>}
+                  {can("provider.cohorts.edit") && can("provider.pricing.edit") && openDated.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)} aria-describedby={errors.dates && lacking.length ? "rt-pws-ce-dates-e" : undefined}>Create cohort</button>}
                   {course.cohortCount > 0 && can("provider.cohorts.view") && <Link href={links.dates(course.id)} className="rt-cd__link">Manage this course&apos;s dates</Link>}
                 </div>
               </>

@@ -180,7 +180,7 @@ export function TeamTab({ say }) {
   ];
   const who = (m) => m.name || m.email;
   const changeRole = (m, role) =>
-    setRole.mutate({ organisationId, userId: m.userId, role }, { onSuccess: () => { refresh(); say(`${who(m)} is now ${ROLE[role]?.label}`); }, onError: fail });
+    setRole.mutate({ organisationId, userId: m.userId, role }, { onSuccess: (r) => { refresh(); say(`${who(m)} is now ${ROLE[role]?.label}${r.untutored ? `. ${r.untutored === 1 ? "The date they tutored now has" : `The ${r.untutored} dates they tutored now have`} no tutor` : ""}`); }, onError: fail });
   const resendTo = (m) =>
     resend.mutate({ organisationId, userId: m.userId }, { onSuccess: (r) => say(r.outbox ? `Invite saved to the test outbox for ${m.email}` : r.emailed ? `Invite sent again to ${m.email}` : `The email to ${m.email} couldn't be sent. Try again.`), onError: fail });
 
