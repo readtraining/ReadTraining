@@ -9,6 +9,7 @@ import CataloguePagination from "@/components/courses/CataloguePagination";
 import { Loading, ORDER_TONE, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { formatOrderDay } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
+import { useProviderAccess } from "@/lib/providerAccess";
 
 const PER_PAGE = 10;
 const CHANNELS = [{ value: "", label: "All sales channels" }, ...Object.entries(pw.channels).map(([value, label]) => ({ value, label }))];
@@ -18,6 +19,7 @@ const STATUSES = [{ value: "", label: "All statuses" }, ...Object.entries(pw.ord
 // filter bar as on Courses), filter by sales channel and status (all kept in the address), newest first, 10 a page. Columns: order no, customer name and email, sales channel, who booked it, status, amount,
 // payment method, date, and the actions (view the order, its first cohort). "Create order" adds one by hand.
 export default function ProviderOrders() {
+  const { can } = useProviderAccess();
   const data = useProvider();
   const [q, setQ] = useState("");
   const [channel, setChannel] = useState("");
@@ -34,7 +36,7 @@ export default function ProviderOrders() {
   if (!data) return <Loading rows={2} />;
 
   if (!data.orders.length) {
-    return <EmptyState title="No orders yet" text="Bookings from ReadTraining, your website and the orders you add yourself appear here." action={{ href: "/provider/orders/new", label: "Create order" }} />;
+    return <EmptyState title="No orders yet" text="Bookings from ReadTraining, your website and the orders you add yourself appear here." action={can("provider.orders.create") ? { href: "/provider/orders/new", label: "Create order" } : null} />;
   }
 
   // every word typed must be found in the order number, the customer's name or email

@@ -25,9 +25,8 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
   const on = { enabled: Boolean(organisationId) && shown };
   const profile = api.provider.profile.get.useQuery({ organisationId }, on);
   const courses = api.provider.courses.list.useQuery({ organisationId }, { enabled: on.enabled && can("provider.courses.view") });
-  const dates = api.provider.cohorts.list.useQuery({ organisationId, when: "all" }, { enabled: on.enabled && can("provider.cohorts.view") });
   if (!shown) return null;
-  if (!profile.data || courses.isLoading || dates.isLoading) {
+  if (!profile.data || courses.isLoading) {
     return profile.isError ? null : <span className="rt-pws-skel__block -check" aria-hidden="true"></span>;
   }
 
@@ -39,7 +38,8 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
     profile: Boolean(p.headline && p.bio && p.logoUrl),
     policy: Boolean(p.cancellationPolicy),
     course: list.length > 0,
-    date: (dates.data || []).length > 0 || list.some((c) => waysOf(c).includes("self-paced")),
+    // a date still to run (not cancelled, not finished), read from the courses list so every role that sees the list counts it alike
+    date: list.some((c) => c.upcomingCohorts > 0 || waysOf(c).includes("self-paced")),
     payouts: false, // no payout account can be connected before Milestone 4
   };
   const keys = Object.keys(copy.steps);

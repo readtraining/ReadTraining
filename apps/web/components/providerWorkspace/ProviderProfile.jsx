@@ -12,7 +12,7 @@ import { useProviderCourses } from "./ProviderCourses";
 // Public profile (from the account menu): the provider as learners see it: logo, name, headline, about, social links,
 // and the policies (booking terms, cancellation policy). "Edit profile" opens the provider settings. From the API.
 export default function ProviderProfile() {
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, status } = useProviderAccess();
   // asked for only by a role that may see it (the API would refuse, and log, the rest); the course count likewise
   const allowed = can("provider.settings.view");
   const query = api.provider.profile.get.useQuery({ organisationId }, { enabled: Boolean(organisationId) && allowed });
@@ -41,7 +41,11 @@ export default function ProviderProfile() {
             </ul>
           )}
         </div>
-        {can("provider.profile.edit") && <Link href="/provider/settings" className="button -sm -outline-purple-1 text-purple-1">Edit profile</Link>}
+        <div className="rt-pws-prof__actions">
+          {can("provider.profile.edit") && <Link href="/provider/settings" className="button -sm -outline-purple-1 text-purple-1">Edit profile</Link>}
+          {/* the real page learners open, once the account is approved (before that it isn't on the site) */}
+          {status === "active" && <a href={`/providers/${o.slug}`} target="_blank" rel="noopener noreferrer" className="button -sm -outline-purple-1 text-purple-1">View on ReadTraining</a>}
+        </div>
       </section>
       <section className="rt-acc__card" aria-labelledby="rt-pws-prof-about">
         <h2 className="rt-acc__h2" id="rt-pws-prof-about">About</h2>
