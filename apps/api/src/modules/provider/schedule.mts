@@ -282,6 +282,8 @@ const cohortFields = z.object({
   bookable: z.boolean().optional(),
   // its colour on the provider's calendar; none = by type
   colour: z.enum(['purple', 'blue', 'green', 'orange', 'red']).nullable().optional(),
+  // the provider has been told another of their courses is at the venue at the same time, and saves anyway (another room)
+  sharedVenue: z.boolean().optional(),
 })
 
 type CohortInput = z.infer<typeof cohortFields>
@@ -324,6 +326,25 @@ async function refuseClash(tx: Tx, courseId: number, venueId: string | null, ses
       ? `That course already has a cohort ${where} on ${whenOf(o)}.`
       : `You already have dates for this course ${where} on ${whenOf(o)}. Change the dates or times, or edit those dates instead.`
     throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sessions' }) })
+  }
+}
+
+// Another of the provider's courses at the same venue at an overlapping time: allowed (a centre with several rooms), but asked first,
+// so a one-room venue isn't double-booked by mistake. Without `sharedVenue` (the provider's "Save anyway") the save stops with the
+// question, on the form's `sharedVenue`; the form shows it as a warning, not an error. Venues have no rooms, so this is a question,
+// never a refusal (the same course twice there is refused: refuseClash).
+async function askSharedVenue(tx: Tx, courseId: number, venueId: string, sessions: Session[], exceptId: string | null = null) {
+  const others = await tx
+    .select({ sessions: cohorts.sessions, title: courses.title })
+    .from(cohorts)
+    .innerJoin(courses, eq(courses.id, cohorts.courseId))
+    .where(and(eq(cohorts.venueId, venueId), ne(cohorts.courseId, courseId), isNull(cohorts.cancelledAt), gte(cohorts.endsOn, sessions[0].date), lte(cohorts.startsOn, lastDay(sessions)), exceptId ? ne(cohorts.id, exceptId) : undefined))
+  for (const other of others) {
+    const o = overlapIn(sessions, other.sessions)
+    if (!o) continue
+    const [v] = await tx.select({ name: venues.name }).from(venues).where(eq(venues.id, venueId))
+    const message = `${other.title} is already at ${v?.name ?? 'this venue'} on ${whenOf(o)}. If the venue has another room, save anyway.`
+    throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sharedVenue' }) })
   }
 }
 
@@ -535,13 +556,17 @@ export const providerCohortsRouter = createTRPCRouter({
       })
     }),
 
-  // Delete dates nobody can have booked yet (bookings arrive in a later milestone; until then any date can be deleted).
+  // Delete dates added by mistake: only ones nobody has booked (any order on the course and start day, even refunded: it is a record
+  // of what they bought) and that haven't finished (a finished date is the record of a course that ran). Others are cancelled instead.
   remove: orgProcedure('provider.cohorts.edit')
     .input(z.object({ cohortId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       return ctx.db.transaction(async (tx) => {
-        await lockDate(tx, course.id, cohort.id)
+        const { date: now } = await lockDate(tx, course.id, cohort.id)
+        if (now.endsOn < today()) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have run, so they are kept as a record and can’t be deleted.' })
+        const [booked] = await tx.execute<{ n: number }>(sql`select count(*)::int n from public.orders where course_id = ${course.id} and starts_on = ${cohort.startsOn}::date`)
+        if (booked.n) throw new TRPCError({ code: 'CONFLICT', message: `Learners have booked these dates, so they can’t be deleted.${now.cancelledAt ? '' : ' Cancel them instead.'}` })
         await tx.delete(cohorts).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.deleted', 'cohort', cohort.id, { courseId: course.id, startsOn: cohort.startsOn })
         return { ok: true }
@@ -580,6 +605,7 @@ export const providerCohortsRouter = createTRPCRouter({
         if (values.venueId) await refuseArchivedNow(tx, values.venueId)
         await refuseClash(tx, course.id, values.venueId, values.sessions)
         if (values.tutorUserId) await refuseTutorClash(tx, input.organisationId, values.tutorUserId, values.sessions)
+        if (values.venueId && !input.sharedVenue) await askSharedVenue(tx, course.id, values.venueId, values.sessions)
         const [c] = await tx.insert(cohorts).values({ ...values, courseId: course.id, createdBy: ctx.user.id }).returning({ id: cohorts.id })
         await log(tx, ctx, input.organisationId, 'cohort.created', 'cohort', c.id, { courseId: course.id, startsOn: values.startsOn })
         return { id: c.id }
@@ -615,6 +641,8 @@ export const providerCohortsRouter = createTRPCRouter({
         // the tutor's other dates: checked when the tutor or the times change, for dates still to run
         const retimed = !sameSessions(values.sessions, now.sessions as Session[])
         if (values.tutorUserId && values.endsOn >= today() && (retimed || values.tutorUserId !== cohort.tutorUserId)) await refuseTutorClash(tx, input.organisationId, values.tutorUserId, values.sessions, cohort.id)
+        // asked again only when the venue or the times change (an unrelated edit isn't stopped by a question already answered)
+        if (values.venueId && !input.sharedVenue && values.endsOn >= today() && (retimed || values.venueId !== cohort.venueId)) await askSharedVenue(tx, course.id, values.venueId, values.sessions, cohort.id)
         await tx.update(cohorts).set({ ...values, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id })
       })

@@ -32,10 +32,12 @@ export const Counter = ({ value, max }) => <span className="rt-field__hint rt-pw
 
 export const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
 // a https address on one of `hosts` (any host when none are given)
-export function isUrlOn(v, hosts = []) {
+// (`page`: a page on the site, not just its home: the social links, as the API checks them in provider/profile.mts onSite)
+export function isUrlOn(v, hosts = [], { page = false } = {}) {
   try {
     const u = new URL(v.trim());
-    if (u.protocol !== "https:") return false;
+    if (u.protocol !== "https:" || u.username || u.password) return false;
+    if (page && u.pathname.length <= 1) return false;
     return !hosts.length || hosts.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`));
   } catch {
     return false;

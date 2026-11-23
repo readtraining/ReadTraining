@@ -86,7 +86,7 @@ export function passMarkProblem(text) {
 const STATUS_NOTES = {
   draft: "Your course is a draft. Only your team can see it.",
   changes: "Our team has asked for changes. Make them, then send your course for review again.",
-  live: "Your course is live. Edits to the course page are reviewed before they go live. Prices, dates and settings update straight away.",
+  live: "Your course is live. Changes to its wording are reviewed before they go live. Pictures, prices, dates and settings update straight away.",
   paused: "Your course is paused, so it isn't shown on ReadTraining. Put it back live from Course settings.",
 };
 const SHARED_NOTES = {
@@ -691,7 +691,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {/* the provider's own notes about where their course stands; ReadTraining staff editing it from the admin pages see the
               status pill only (they know what saving does, and these speak to the provider) */}
           {!ep.staff && <>
-            {status !== "draft" && status !== "pending" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
+            {/* a course our team paused has its own note below (their reason, Contact us), never "put it back live yourself" */}
+            {status !== "draft" && status !== "pending" && !(!ep.admin && status === "paused" && course.statusNote) && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
             {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
             {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
             {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}

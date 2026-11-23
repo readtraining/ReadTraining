@@ -248,7 +248,9 @@ const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.course
 // Until our team approves a provider (its application pending, or changes asked), it can only look around and complete its
 // application: its profile and name, its terms, sending the account for review, or closing it. Courses, dates, venues, price
 // plans and everything else wait for the approval (the team decided no drafts before it, 12 November 2026).
-const BEFORE_APPROVAL = new Set<string>(['provider.profile.edit', 'provider.profile.rename', 'provider.terms.edit', 'provider.review.send', 'provider.account.close'])
+// the account's own set-up, done while our team reviews it: profile, name, terms, FAQs, VAT and where notices go (none of it is
+// public or sold until the account is approved)
+const BEFORE_APPROVAL = new Set<string>(['provider.profile.edit', 'provider.profile.rename', 'provider.terms.edit', 'provider.faqs.edit', 'provider.vat.edit', 'provider.emails.edit', 'provider.review.send', 'provider.account.close'])
 export const waitsForApproval = (action: string, organisationStatus: OrganisationStatus) =>
   action.startsWith('provider.') && (organisationStatus === 'pending' || organisationStatus === 'changes_requested') && !isViewAction(action) && !BEFORE_APPROVAL.has(action)
 

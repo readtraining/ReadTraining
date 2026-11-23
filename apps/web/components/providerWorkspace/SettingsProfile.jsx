@@ -136,7 +136,7 @@ function InfoForm({ profile, say }) {
     if (!f.headline.trim()) errs.headline = "Enter a headline, like “First aid and fire training across West Yorkshire”.";
     if (!f.bio.trim()) errs.bio = "Write a short biography: who you are and where you train.";
     SOCIAL.forEach((x) => {
-      if (f[x.key].trim() && !isUrlOn(f[x.key], x.hosts)) errs[x.key] = `Enter the full address of your ${x.label} page, like ${x.example}`;
+      if (f[x.key].trim() && !isUrlOn(f[x.key], x.hosts, { page: true })) errs[x.key] = `Enter the full address of your ${x.label} page, like ${x.example}`;
     });
     setErrors(errs);
     if (Object.keys(errs).length) return focusFirstError(formRef.current);
@@ -154,7 +154,8 @@ function InfoForm({ profile, say }) {
           }
           say("Provider information saved");
         },
-        onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general }); },
+        // (a social link the server refuses comes back under "socials": said above Save, never silently)
+        onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general || fields.socials || "" }); },
       },
     );
   };
@@ -349,7 +350,7 @@ function TermsForms({ profile, say }) {
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      <Field required id="rt-set-policy" label="Cancellation policy" hint="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain." error={errors.policy} count={<Counter value={policy} max={10000} />}>
+      <Field required id="rt-set-policy" label="Cancellation policy" hint="When learners can cancel or change dates, and what they get back. Learners see it on your course pages, so keep it short and plain." error={errors.policy} count={<Counter value={policy} max={10000} />}>
         <TextArea {...aria("rt-set-policy", errors.policy, true)} rows={9} maxLength={10000} autoComplete="off" value={policy} onChange={(e) => { setPolicy(e.target.value); if (errors.policy) setErrors({}); }} disabled={locked} />
       </Field>
       <Field id="rt-set-terms" label="Booking terms" hint="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms." error={errors.terms} count={<Counter value={terms} max={20000} />}>
