@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
@@ -28,6 +29,10 @@ export const DANGER = new Set(["reject", "suspend"]);
 // The decisions an admin can make on a provider now (this page and the Providers list's row menu): its status's next steps
 // that the admin's switches allow, without approval decisions on an account they opened themselves unless they are the only
 // approver (`ownRequest`, `soleApprover`).
+// Whether the admin can delete this provider: only one that wasn't approved (rejected), with the approve switch; the API also
+// refuses one holding records (orders, payouts, reviews...).
+export const canDelete = (p, me) => p.status === "rejected" && Boolean(me?.permissions?.includes("approve"));
+
 export function decisionsFor(p, me) {
   const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));
   return p.ownRequest && !p.soleApprover ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
@@ -41,6 +46,8 @@ export function decisionsFor(p, me) {
 export default function AdminProvider({ slug }) {
   const me = useAdminAccess();
   const utils = api.useUtils();
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
   const record = api.admin.providers.get.useQuery({ slug }, { retry: (n, e) => e?.data?.code !== "NOT_FOUND" && n < 2 });
   const activity = api.admin.activity.list.useQuery({ q: record.data?.id ?? "", limit: 8 }, { enabled: Boolean(record.data?.id) });
   const [deciding, setDeciding] = useState(null);
@@ -87,6 +94,9 @@ export default function AdminProvider({ slug }) {
           {(p.status === "active" || p.status === "suspended") && d.edit.items.some((x) => x.needs.some((s) => me?.permissions?.includes(s))) && (
             <RowMenu label={`Edit ${p.name}`} trigger={<span aria-hidden="true">{d.edit.label}</span>} triggerClass="button -md -outline-purple-1 text-purple-1"
               items={d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` }))} />
+          )}
+          {canDelete(p, me) && (
+            <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => setDeleting(true)}><i className="icon-bin rt-adm-mr" aria-hidden="true"></i>{d.remove.action}</button>
           )}
           {p.status === "active" && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
         </div>
@@ -180,7 +190,62 @@ export default function AdminProvider({ slug }) {
       <p className="rt-acc__notice">{d.later}</p>
 
       <DecisionSheet provider={p} decision={deciding} onClose={() => setDeciding(null)} onDone={decided} />
+      <DeleteProviderSheet provider={deleting ? p : null} onClose={() => setDeleting(false)} onDone={() => { utils.admin.providers.invalidate().catch(() => {}); router.replace("/admin/providers?tab=rejected"); }} />
     </div>
+  );
+}
+
+// Delete a provider that wasn't approved: what goes, its name typed to confirm, then the button. The API checks it again and
+// refuses one with records to keep (said here as the form's error).
+export function DeleteProviderSheet({ provider, onClose, onDone }) {
+  const remove = api.admin.providers.remove.useMutation();
+  const utils = api.useUtils();
+  const r = d.remove;
+  const [typed, setTyped] = useState("");
+  const [error, setError] = useState("");
+  const [general, setGeneral] = useState("");
+  const ref = useRef(null);
+  const close = () => {
+    setTyped("");
+    setError("");
+    setGeneral("");
+    onClose();
+  };
+  const submit = async (e) => {
+    e.preventDefault();
+    setGeneral("");
+    const wrong = !typed.trim() ? r.empty : typed.trim().toLowerCase() !== provider.name.trim().toLowerCase() ? r.wrong : "";
+    setError(wrong);
+    if (wrong) return focusFirstError(ref.current);
+    try {
+      const res = await remove.mutateAsync({ organisationId: provider.id, confirmName: typed.trim() });
+      utils.admin.activity.list.invalidate();
+      close();
+      onDone(res);
+    } catch (err) {
+      const { fields, general: g } = errorsFrom(err);
+      if (fields.confirmName) {
+        setError(fields.confirmName);
+        focusFirstError(ref.current);
+      } else setGeneral(g);
+    }
+  };
+  return (
+    <Sheet open={Boolean(provider)} onClose={close} title={r.title} closeLabel="Close">
+      {provider && (
+        <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
+          <p className="rt-acc__note"><strong>{provider.name}</strong></p>
+          <p className="rt-acc__note">{r.text}</p>
+          <div className="rt-field">
+            <label htmlFor="rt-adm-pdel">{r.label}<Req /></label>
+            {error && <p className="rt-q__err" id="rt-adm-pdel-e"><span className="rt-sr">Error: </span>{error}</p>}
+            <input id="rt-adm-pdel" type="text" autoComplete="off" spellCheck={false} maxLength={200} value={typed} onChange={(e) => { setTyped(e.target.value); if (error) setError(""); }} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-pdel-e" : undefined} />
+          </div>
+          {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
+          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={remove.isPending}>{r.button}</button>
+        </form>
+      )}
+    </Sheet>
   );
 }
 
