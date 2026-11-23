@@ -1,5 +1,5 @@
 import { coursePath } from "@/lib/routes";
-import { courseGuides } from "@/data/courseGuides";
+import { guideOf } from "@/lib/courseGuide";
 
 // The real catalogue (API catalogue.listings / catalogue.course) in the shapes the public pages read: the listing card and the
 // filters (toCatalogueCourse), and the course page (toCourseDetail). Prices arrive in pence and include VAT; the pages work in
@@ -137,12 +137,14 @@ const toPackages = (tiers) =>
     ? tiers.map((t) => ({ key: t.name.trim().toLowerCase(), name: t.name, price: pounds(t.pricePence), wasPrice: pounds(t.wasPence), tagline: t.tagline || "", popular: Boolean(t.popular), features: t.features || [] }))
     : null;
 
-// The client's own packages for a course (a course guide's, data/courseGuides.js: SIA Door Supervisor) on one of its dates of one
-// price, in the same shape: each package is the date's price plus its `add`; only the course alone keeps the date's was-price.
+// The packages of a course's guide (lib/courseGuide.js: the shared page's Course guide) on one of its dates of one price, in the
+// same shape: each package is the date's price plus its `add`; only the course alone keeps the date's was-price. Only the packages
+// with a price are offered (not one whose price isn't set yet), and only when there are two to choose from.
 // `firstAid`: the package includes first aid (the basket then doesn't ask about it).
 const cents = (n) => Math.round(n * 100) / 100;
+const priced = (guide) => (guide?.packages?.items || []).filter((p) => p.add != null);
 const guidePackages = (guide, d) =>
-  guide.packages.items.map((p) => ({ key: p.key, name: p.name, price: cents(d.price + (p.add || 0)), wasPrice: p.add ? null : d.wasPrice, tagline: p.text || "", popular: Boolean(p.badge), features: p.points.map((t) => ({ title: t, description: null, included: true })), firstAid: Boolean(p.firstAid) }));
+  priced(guide).map((p) => ({ key: p.key, name: p.name, price: cents(d.price + (p.add || 0)), wasPrice: p.add ? null : d.wasPrice, tagline: p.text || "", popular: Boolean(p.badge), features: p.points.map((t) => ({ title: t, description: null, included: true })), firstAid: Boolean(p.firstAid) }));
 
 // a learning option's booking mode on the course page
 const MODE_OF = { classroom: "classroom", "live-online": "online", "self-paced": "ondemand" };
@@ -189,9 +191,9 @@ export function toCourseDetail(page, related = []) {
       });
     }
   }
-  // the client's packages on a course with them (a date on a price plan keeps the plan's)
-  const guide = courseGuides.find((g) => g.packages && matchesPick({ subject: page.category || "", sub: page.subcategory || "", topic: page.topic || "" }, g.pick));
-  if (guide) for (const s of sessions) if (!s.packages) s.packages = guidePackages(guide, s);
+  // the guide's packages on a course with them (a date on a price plan keeps the plan's)
+  const guide = guideOf(page);
+  if (priced(guide).length >= 2) for (const s of sessions) if (!s.packages) s.packages = guidePackages(guide, s);
   sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.price - b.price));
 
   const dated = sessions.filter((s) => s.mode !== "ondemand");
@@ -228,6 +230,7 @@ export function toCourseDetail(page, related = []) {
     features: page.features,
     learningOutcomes: page.outcomes,
     audience,
+    audienceText: page.audience || "", // with any paragraphs around the list (CourseGuide.jsx AudienceSection)
     showAudience: audience.length > 0,
     // left blank, the provider hasn't said (not "none"), so the page leaves the section out
     requirements: entry.length ? { title: `Entry requirements for the ${page.title}`, paragraphs: entry, list: [] } : null,
@@ -257,6 +260,7 @@ export function toCourseDetail(page, related = []) {
     mockTest: null, // its free mock test, set on the server (lib/testPrep.js mockTestFor)
     trust: { noBookingFee: true, approvedProviders: true },
     related: related.map(toCatalogueCourse),
+    guide, // the shared page's extra sections (components/courseDetail/CourseGuide.jsx), or null
   };
 }
 

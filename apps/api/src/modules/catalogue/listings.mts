@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { asc, courseExams, courseFaqs, courseImages, courseUnits, eq, sql } from '@readtraining/db'
 
 import type { db as Db } from '../../lib/db.mjs'
+import { loadGuide } from '../../lib/courseGuide.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
 import { loadProviderFaqs } from '../provider/faqs.mjs'
 import { publicTiers } from '../provider/plans.mjs'
@@ -195,6 +196,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
   const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`, Boolean(preview) && c.kind === 'provider')
   if (!preview && c.kind === 'shared' && !offers.length) return null
   const [parent] = c.parent_id ? await db.execute<{ slug: string; title: string }>(sql`select slug, title from public.courses where id = ${c.parent_id} and status = 'live'`) : []
+  // the shared page's guide (lib/courseGuide.mts): its own, or, for a provider course on a live shared page, that page's
+  const guide = c.kind === 'shared' ? await loadGuide(db, c.id) : parent && c.parent_id ? await loadGuide(db, c.parent_id) : null
   const [provider] = c.kind === 'provider'
     ? await db.execute<{ name: string; slug: string; logo_path: string | null; headline: string | null; city: string | null; booking_terms: string | null; cancellation_policy: string | null }>(sql`
         select name, slug, logo_path, headline, city, booking_terms, cancellation_policy from public.organisations where id = ${c.organisation_id}::uuid`)
@@ -228,6 +231,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     // the provider's own FAQs, on a provider course with its own page only (a shared page never names a provider)
     providerFaqs: c.kind === 'provider' && !parent ? await loadProviderFaqs(db, c.organisation_id as string) : [],
     parent: parent ?? null,
+    guide,
     provider: provider
       ? { name: provider.name, slug: provider.slug, logoUrl: mediaUrl(provider.logo_path), headline: provider.headline ?? '', city: provider.city ?? '', bookingTerms: provider.booking_terms ?? '', cancellationPolicy: provider.cancellation_policy ?? '' }
       : null,
