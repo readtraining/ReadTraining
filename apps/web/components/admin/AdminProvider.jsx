@@ -96,7 +96,7 @@ export default function AdminProvider({ slug }) {
               items={d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` }))} />
           )}
           {canDelete(p, me) && (
-            <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => setDeleting(true)}><i className="icon-bin rt-adm-mr" aria-hidden="true"></i>{d.remove.action}</button>
+            <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => setDeleting(true)}>{d.remove.action}</button>
           )}
           {p.status === "active" && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
         </div>
@@ -195,55 +195,37 @@ export default function AdminProvider({ slug }) {
   );
 }
 
-// Delete a provider that wasn't approved: what goes, its name typed to confirm, then the button. The API checks it again and
-// refuses one with records to keep (said here as the form's error).
+// Delete a provider that wasn't approved: what goes, then the button. The API checks it again and refuses one with records to
+// keep (said here).
 export function DeleteProviderSheet({ provider, onClose, onDone }) {
   const remove = api.admin.providers.remove.useMutation();
   const utils = api.useUtils();
   const r = d.remove;
-  const [typed, setTyped] = useState("");
-  const [error, setError] = useState("");
   const [general, setGeneral] = useState("");
-  const ref = useRef(null);
   const close = () => {
-    setTyped("");
-    setError("");
     setGeneral("");
     onClose();
   };
-  const submit = async (e) => {
-    e.preventDefault();
+  const submit = async () => {
     setGeneral("");
-    const wrong = !typed.trim() ? r.empty : typed.trim().toLowerCase() !== provider.name.trim().toLowerCase() ? r.wrong : "";
-    setError(wrong);
-    if (wrong) return focusFirstError(ref.current);
     try {
-      const res = await remove.mutateAsync({ organisationId: provider.id, confirmName: typed.trim() });
+      const res = await remove.mutateAsync({ organisationId: provider.id });
       utils.admin.activity.list.invalidate();
       close();
       onDone(res);
     } catch (err) {
-      const { fields, general: g } = errorsFrom(err);
-      if (fields.confirmName) {
-        setError(fields.confirmName);
-        focusFirstError(ref.current);
-      } else setGeneral(g);
+      setGeneral(errorsFrom(err).general);
     }
   };
   return (
     <Sheet open={Boolean(provider)} onClose={close} title={r.title} closeLabel="Close">
       {provider && (
-        <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
+        <div className="rt-q__form rt-biz__sheetform">
           <p className="rt-acc__note"><strong>{provider.name}</strong></p>
           <p className="rt-acc__note">{r.text}</p>
-          <div className="rt-field">
-            <label htmlFor="rt-adm-pdel">{r.label}<Req /></label>
-            {error && <p className="rt-q__err" id="rt-adm-pdel-e"><span className="rt-sr">Error: </span>{error}</p>}
-            <input id="rt-adm-pdel" type="text" autoComplete="off" spellCheck={false} maxLength={200} value={typed} onChange={(e) => { setTyped(e.target.value); if (error) setError(""); }} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-pdel-e" : undefined} />
-          </div>
           {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
-          <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={remove.isPending}>{r.button}</button>
-        </form>
+          <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={remove.isPending}>{r.button}</button>
+        </div>
       )}
     </Sheet>
   );
