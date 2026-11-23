@@ -21,7 +21,41 @@ const VIEWS = [
   { key: "day", label: "Day" },
 ];
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const MONTH_LANES = 3; // sessions shown on a month day before "+N more"
+const MONTH_LANES = 3; // sessions shown on a month day at most (fewer when the window is too short for three), then "+N more"
+// A week row's parts, in px (the grid template WeekRow builds): the date line, one session bar (22px) with the gap above it, the
+// "+N more" line and the row's bottom space. The month and week views fit the window: their rows share the height from the top of
+// the rows to the window's bottom, so the page doesn't scroll, and each day shows as many sessions as fit (the rest "+N more").
+// A month row too short for one session and "+N more" (a laptop showing six weeks) shows each day's date with "N sessions" beside
+// it instead (it opens the day); it never goes below that line (COMPACT_ROW).
+const ROW = { date: 39, bar: 25, more: 23, foot: 6, tallTop: 9 };
+const minRow = (tall) => (tall ? ROW.tallTop : ROW.date) + ROW.bar + ROW.more + ROW.foot;
+const COMPACT_ROW = 42;
+// how many sessions a row of height `h` shows when `needed` rows of them overlap: all of them when they fit (and are no more than
+// `cap`), otherwise as many as fit beside the "+N more" line, at least one and at most `cap`
+const lanesFor = (h, needed, tall, cap = Infinity) => {
+  const room = h - (tall ? ROW.tallTop : ROW.date) - ROW.foot;
+  if (needed <= cap && needed * ROW.bar <= room) return needed;
+  return Math.max(1, Math.min(cap, Math.floor((room - ROW.more) / ROW.bar)));
+};
+// the height each of `count` rows gets so the grid ends at the bottom of the window (null on phones, where the views are lists),
+// measured from the rows' top less the page's bottom space, again when the window changes size
+function useRowHeight(ref, count, tall) {
+  const [height, setHeight] = useState(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = ref.current;
+      if (!el || window.matchMedia("(max-width: 767px)").matches) return setHeight(null);
+      const main = el.closest(".rt-adm__main");
+      const bottom = (main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0) + 2; // the page's bottom space and the card's border
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      setHeight(Math.max(tall ? minRow(true) : COMPACT_ROW, Math.floor((window.innerHeight - top - bottom) / count)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [ref, count, tall]);
+  return height;
+}
 const isIso = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || "") && !Number.isNaN(Date.parse(s));
 const monthStart = (iso) => `${iso.slice(0, 7)}-01`;
 const shiftMonth = (iso, n) => {
@@ -129,17 +163,7 @@ export default function ProviderCalendar() {
         </div>
 
         {view === "month" && <MonthView date={date} today={today} bars={bars} byDay={byDay} onDay={openDay} />}
-        {view === "week" && (
-          <>
-            <div className="rt-acc__card rt-pws-cal__grid">
-              <Weekdays days={weekDays} today={today} />
-              <WeekRow days={weekDays} today={today} bars={bars} lanes={Infinity} onDay={openDay} tall />
-            </div>
-            <div className="rt-pws-cal__phone">
-              <DayList days={weekDays} today={today} byDay={byDay} emptyText="No sessions this week." />
-            </div>
-          </>
-        )}
+        {view === "week" && <WeekView days={weekDays} today={today} bars={bars} byDay={byDay} onDay={openDay} />}
         {view === "day" && <DayList days={[date]} today={today} byDay={byDay} showEmpty />}
         <EntryDetails entry={entry} onClose={() => setEntry(null)} />
       </div>
@@ -156,18 +180,38 @@ function Weekdays({ days, today }) {
   );
 }
 
+function WeekView({ days, today, bars, byDay, onDay }) {
+  const rowsRef = useRef(null);
+  const height = useRowHeight(rowsRef, 1, true);
+  return (
+    <>
+      <div className="rt-acc__card rt-pws-cal__grid">
+        <Weekdays days={days} today={today} />
+        <div ref={rowsRef}>
+          <WeekRow days={days} today={today} bars={bars} lanes={Infinity} height={height} onDay={onDay} tall />
+        </div>
+      </div>
+      <div className="rt-pws-cal__phone">
+        <DayList days={days} today={today} byDay={byDay} emptyText="No sessions this week." />
+      </div>
+    </>
+  );
+}
+
 function MonthView({ date, today, bars, byDay, onDay }) {
   const first = monthStart(date);
   const last = monthEnd(date);
   const weeks = [];
   for (let d = addDays(first, -weekday(first)); d <= last; d = addDays(d, 7)) weeks.push(Array.from({ length: 7 }, (_, i) => addDays(d, i)));
   const busy = Object.keys(byDay).filter((d) => d >= first && d <= last).sort();
+  const rowsRef = useRef(null);
+  const height = useRowHeight(rowsRef, weeks.length, false);
   return (
     <>
       <div className="rt-acc__card rt-pws-cal__grid">
         <div className="rt-pws-cal__wdays" aria-hidden="true">{WEEKDAYS.map((d) => <span key={d}>{d.slice(0, 3)}</span>)}</div>
-        <div role="group" aria-label={`${monthLabel(date)} sessions`}>
-          {weeks.map((w) => <WeekRow key={w[0]} days={w} today={today} bars={bars} lanes={MONTH_LANES} onDay={onDay} month={[first, last]} />)}
+        <div role="group" aria-label={`${monthLabel(date)} sessions`} ref={rowsRef}>
+          {weeks.map((w) => <WeekRow key={w[0]} days={w} today={today} bars={bars} lanes={MONTH_LANES} height={height} onDay={onDay} month={[first, last]} />)}
         </div>
       </div>
       <div className="rt-pws-cal__phone">
@@ -179,8 +223,9 @@ function MonthView({ date, today, bars, byDay, onDay }) {
 
 // One week as a grid: the days (their number opens the day), and each session overlapping it as a bar across its days, stacked
 // in rows (a session takes the first row free on all its days). Up to `lanes` rows show; the sessions past them are counted on
-// each day they cover as "+N more".
-function WeekRow({ days, today, bars, lanes, onDay, month, tall = false }) {
+// each day they cover as "+N more". `height`: the row's height when the view fits the window (useRowHeight); then the rows shown
+// are as many as fit in it (lanesFor) instead of `lanes`.
+function WeekRow({ days, today, bars, lanes: fixedLanes, onDay, month, height = null, tall = false }) {
   const open = useContext(OpenEntry);
   const [lo, hi] = [days[0], days[6]];
   const segs = bars
@@ -200,25 +245,31 @@ function WeekRow({ days, today, bars, lanes, onDay, month, tall = false }) {
     for (let c = g.col; c < g.col + g.len; c++) taken[r].push(c);
     g.row = r;
   });
+  // too short for a session bar: each day says how many sessions it has instead
+  const compact = Boolean(height) && !tall && height < minRow(false);
+  const lanes = compact ? 0 : height ? lanesFor(height, taken.length, tall, tall ? Infinity : MONTH_LANES) : fixedLanes;
   const shownRows = Math.min(taken.length, lanes);
-  const hidden = days.map((_, i) => segs.filter((g) => g.row >= lanes && g.col <= i && g.col + g.len - 1 >= i).length);
+  const hidden = compact ? days.map(() => 0) : days.map((_, i) => segs.filter((g) => g.row >= lanes && g.col <= i && g.col + g.len - 1 >= i).length);
   const anyHidden = hidden.some(Boolean);
-  const rows = `${tall ? "0px" : "36px"}${shownRows ? ` repeat(${shownRows}, 26px)` : ""}${anyHidden ? " 24px" : ""} 1fr`;
+  const rows = `${tall ? "0px" : "36px"}${shownRows ? ` repeat(${shownRows}, 22px)` : ""}${anyHidden ? " 20px" : ""} 1fr`;
   return (
-    <div className={`rt-pws-cal__wk${tall ? " -tall" : ""}`} style={{ gridTemplateRows: rows }}>
+    <div className={`rt-pws-cal__wk${tall ? " -tall" : ""}`} style={{ gridTemplateRows: rows, ...(height ? { height, minHeight: 0 } : null) }}>
       {days.map((d, i) => {
         const out = month && (d < month[0] || d > month[1]);
         const count = (segs.filter((g) => g.col <= i && g.col + g.len - 1 >= i)).length;
         return (
-          <div key={d} className={`rt-pws-cal__day${out ? " -out" : ""}${d === today ? " is-today" : ""}`} style={{ gridColumn: i + 1 }}>
+          <div key={d} className={`rt-pws-cal__day${out ? " -out" : ""}${d === today ? " is-today" : ""}${compact ? " -compact" : ""}`} style={{ gridColumn: i + 1 }}>
             {!tall && (
               <button type="button" className="rt-pws-cal__daynum" onClick={() => onDay(d)} aria-label={`${longDay(d)}${d === today ? ", today" : ""}, ${count ? `${count} ${count === 1 ? "session" : "sessions"}` : "no sessions"}. Open the day`}>{Number(d.slice(8))}</button>
+            )}
+            {compact && count > 0 && (
+              <button type="button" className="rt-pws-cal__count" onClick={() => onDay(d)} tabIndex={-1} aria-hidden="true">{count} {count === 1 ? "session" : "sessions"}</button>
             )}
             {tall && d === today && <span className="rt-sr">Today</span>}
           </div>
         );
       })}
-      {segs.filter((g) => g.row < lanes).map((g) => (
+      {!compact && segs.filter((g) => g.row < lanes).map((g) => (
         <button key={`${g.b.key}-${lo}`} type="button" aria-haspopup="dialog" onClick={(e) => open(g.b, e.currentTarget, e.clientX || null)} title={describe(g.b)}
           className={`rt-pws-cal__seg ${tone(g.b)}${g.before ? " -before" : ""}${g.after ? " -after" : ""}`}
           style={{ gridColumn: `${g.col + 1} / span ${g.len}`, gridRow: g.row + 2 }}>

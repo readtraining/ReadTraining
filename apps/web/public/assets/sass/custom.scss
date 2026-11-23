@@ -6391,6 +6391,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .-c-red { --rt-coh: var(--color-red-1); }
 /* month and week: each week a grid of 7 days; a session is one bar across its days (split where the week ends), stacked in rows */
 .rt-pws-cal__grid { padding: 0; overflow: hidden; }
+/* the month and week views fit the window (ProviderCalendar useRowHeight), so the page keeps only a small space under them */
+@media (min-width: 768px) { .rt-pws .rt-adm__main:has(.rt-pws-cal__grid) { padding-bottom: 24px; } }
 .rt-pws-cal__phone { display: none; }
 .rt-pws-cal__wdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--rt-c-line); }
 .rt-pws-cal__wdays > span { padding: 10px 8px; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
@@ -6402,6 +6404,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal__day { grid-row: 1 / -1; padding: 4px 6px; border-right: 1px solid var(--rt-c-line); }
 .rt-pws-cal__day:nth-child(7) { border-right: 0; }
 .rt-pws-cal__day.-out { background: var(--rt-c-soft); }
+/* a month row too short for session bars: the date with "N sessions" beside it (it opens the day, as the date does) */
+.rt-pws-cal__day.-compact { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 2px 6px; }
+.rt-pws-cal__count { min-width: 0; max-width: 100%; padding: 2px 8px; border: 0; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font: inherit; font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; color: var(--rt-c-brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-cal__count:hover { text-decoration: underline; } }
 .rt-pws-cal__day.-out .rt-pws-cal__daynum { color: var(--rt-c-muted); }
 .rt-pws-cal__day.is-today .rt-pws-cal__daynum { background: var(--rt-c-brand); color: var(--rt-c-surface); }
 .rt-pws-cal__seg { position: relative; z-index: 1; display: flex; align-items: center; min-width: 0; margin: 0 4px; padding: 0 8px; border: 0; border-left: 3px solid var(--rt-coh, var(--rt-c-brand)); border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 16%, var(--rt-c-surface)); font: inherit; font-size: var(--rt-text-xs); line-height: 1.2; text-align: left; color: var(--rt-c-text); cursor: pointer; }
