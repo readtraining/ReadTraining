@@ -37,14 +37,13 @@ export const pw = {
     stepsLabel: "Application progress",
     asked: { title: "What our team asked for", where: "Where to make the changes" },
     places: [
-      { label: "Provider name, headline and biography", href: "/provider/settings?tab=info" },
-      { label: "Logo", href: "/provider/settings?tab=logo" },
+      { label: "Provider name, logo, headline and biography", href: "/provider/settings?tab=info" },
       { label: "Cancellation policy and booking terms", href: "/provider/settings?tab=terms" },
-      { label: "Venues", href: "/provider/settings?tab=venues" },
+      { label: "Venues", href: "/provider/venues" },
     ],
     send: {
       title: "Send it back for review",
-      reply: "Anything to tell our team? (optional)",
+      reply: "Anything to tell our team?",
       hint: "For example, what you changed.",
       button: "I've made the changes: send for review",
       busy: "Sending…",
@@ -70,7 +69,7 @@ export const pw = {
     team: "ReadTraining team",
   },
 
-  // the dashboard's "getting started" list until every step is done (Hurak's checklist, our design)
+  // the dashboard's "getting started" list until every step is done (checklist, our design)
   // a provider our team hasn't approved yet: it completes its application first (the API refuses the rest until then)
   notApproved: { title: "Your account is waiting for approval", text: "Until our team approves it, you can complete your profile and send your account for review. You can add courses, dates, venues and price plans once it is approved.", action: { label: "Your account review", href: "/provider/review" } },
 
@@ -83,12 +82,17 @@ export const pw = {
       policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
       course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses?newcourse=1" } },
       date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Create cohort", href: "/provider/cohorts?new=1" } },
+      payouts: { title: "Set up payouts", text: "Connect your payout account to get paid." },
     },
   },
 
-  // the sidebar: our dashboard, then Hurak's sections in its order. Courses and Cohorts open to show their pages (the group heading
+  // payouts (Milestone 4, Stripe): the dashboard's banner and the checklist's last step stay until the payout account is
+  // connected. Until then `connect` is null, so their button says "Coming soon"; Milestone 4 puts the connect address there.
+  payouts: { banner: "Connect your payout account to get paid", connect: null, soon: "Coming soon", label: "Set up payouts" },
+
+  // the sidebar: our dashboard, then the sections in order. Courses and Cohorts open to show their pages (the group heading
   // is a button, not a link); Orders and Performance are plain links because their pages already offer Create order and the
-  // Overview / Reviews / Leads tabs. Settings and team are in the account menu
+  // Overview / Reviews / Leads tabs. Team, Settings and Help come last; Public profile is in the account menu
   nav: [
     { key: "dashboard", label: "Dashboard", icon: "icon-bar-chart", href: "/provider" },
     { key: "courses", label: "Courses", icon: "icon-book", can: "provider.courses.view", items: [
@@ -100,23 +104,21 @@ export const pw = {
       { label: "Calendar", href: "/provider/calendar" },
       { label: "Self-paced", href: "/provider/cohorts?mode=self-paced" },
     ] },
+    { key: "venues", label: "Venues", href: "/provider/venues", can: "provider.venues.view" },
     { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners", can: "provider.learners.view" },
     { key: "orders", label: "Orders", icon: "icon-basket", href: "/provider/orders", can: "provider.orders.view" },
     { key: "performance", label: "Performance", icon: "icon-bar-chart-2", href: "/provider/performance", badge: "reviews", can: "provider.performance.view" },
-    { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
-    // the provider's own account: how it is set up, and the page learners see
-    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear", can: "provider.settings.view" },
-    // `can`: only for the roles that may open it (the shared permission table)
+    // the provider's team and own account, then help, last
     { key: "team", label: "Team", href: "/provider/team", navIcon: "team", can: "provider.team.view" },
-    { key: "profile", label: "Public profile", href: "/provider/profile", navIcon: "profile", can: "provider.settings.view" },
+    { key: "settings", label: "Settings", href: "/provider/settings", navIcon: "gear", can: ["provider.settings.view", "provider.vat.view", "provider.emails.view"] },
+    { key: "help", label: "Help", icon: "icon-message", href: "/provider/help" },
   ],
-  // the account menu under the avatar (Hurak's): settings, requests (refunds), public profile, team; then Switch account (the
+  // the account menu under the avatar: account settings, refund requests, public profile; then Switch account (the
   // identities on this login, added by ProviderShell from the API) and log out
   accountMenu: [
     { label: "Account settings", href: "/account/settings" },
-    { label: "Refunds", href: "/provider/requests", need: "provider.refunds.decide" },
+    { label: "Refund requests", href: "/provider/requests", need: "provider.refunds.decide" },
     { label: "Public profile", href: "/provider/profile", need: "provider.settings.view" },
-    { label: "Team", href: "/provider/team", need: "provider.team.view" },
   ],
 
   // the tag beside a demo page's title (ProviderShell `demo`): on the development and test copies only, where the made-up records
@@ -150,14 +152,16 @@ export const pw = {
     newOrder: { title: "Create order", lead: "Book a customer onto a course yourself: by phone, for a company or for free." },
     order: { title: "Order details" },
     notifications: { title: "Notifications", lead: "Updates on your courses, orders and reviews." },
-    settings: { title: "Settings", lead: "Your provider information, logo, terms, venues, VAT, affiliate link, emails, learners' questions and integrations." },
+    // no lead: the tab list beside it already names every part
+    settings: { title: "Settings" },
+    venues: { title: "Venues" },
     profile: { title: "Public profile", lead: "What learners see about you on ReadTraining." },
-    requests: { title: "Refunds", lead: "Get all your learners' refund requests in one place." },
+    requests: { title: "Refund requests", lead: "Get all your learners' refund requests in one place." },
     team: { title: "Team", lead: "People who can use this workspace, and what each of them can do." },
     help: { title: "Help", lead: "Guides, help articles and a person to talk to when you need one." },
   },
 
-  // How each delivery method is explained in the course wizard (Hurak's wording). `key` is the method's slug in the catalogue
+  // How each delivery method is explained in the course wizard . `key` is the method's slug in the catalogue
   // list; its name, and the categories, sub-categories, topics and levels, come from that list (lib/taxonomy.js), the same
   // one the public filters read, so a provider's course always lands in the right filters.
   formats: [
@@ -165,7 +169,7 @@ export const pw = {
     { key: "live-online", label: "Live online", icon: "icon-online-learning-2", text: "For live, tutor-led training by video, one to one or in groups.", more: "Run sessions by video on dates you choose. Learners get the joining link in their joining instructions before each session." },
     { key: "self-paced", label: "Self-paced", icon: "icon-time-management", text: "For recorded lessons and self-paced e-learning.", more: "Build the course from lessons (text, video, quizzes and downloads). Learners start straight after booking and work at their own pace." },
   ],
-  // The course editor's Learning options step (Hurak's): the primary way a course is taught, and the other ways switched on beside
+  // The course editor's Learning options step: the primary way a course is taught, and the other ways switched on beside
   // it. One set of words, pictures and syllabus covers them all.
   learningOptions: {
     title: "Learning options",
@@ -179,7 +183,7 @@ export const pw = {
     closedPrimary: "Not taking bookings. Take bookings again before making it the main way.",
     retired: "No longer offered on ReadTraining.",
     retiredOn: "No longer offered on ReadTraining. Turn it off, then save.",
-    // stopping new bookings for one way (Hurak's "Retire from future sales"): saved at once, undone with "Take bookings again"
+    // stopping new bookings for one way: saved at once, undone with "Take bookings again"
     bookings: {
       title: "Taking bookings",
       lead: "Stop new bookings for a way you no longer run. Nothing is cancelled: dates already booked still go ahead, and you can take bookings again at any time.",
@@ -204,14 +208,14 @@ export const pw = {
   // the Courses list on a status tab with none
   noCourses: { draft: "No drafts.", pending: "No courses in review.", changes: "No courses waiting for changes.", live: "No live courses yet.", paused: "No paused courses." },
 
-  // Hurak's performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
+  // performance models: learners book and pay on ReadTraining (revenue share), or send an enquiry (pay per lead)
   models: {
     bookings: { label: "Bookings", short: "Revenue share", text: "Learners book and pay directly on ReadTraining.", points: ["Bookings go straight to your inbox", "Free training management system", "Add learners you booked elsewhere for free"] },
-    enquiries: { label: "Enquiries", short: "Pay per lead", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
+    enquiries: { label: "Enquiries", short: "Pay per lead", soon: "Coming later", text: "Learners send an enquiry and you get their contact details.", points: ["Leads go straight to your inbox", "Free training management system", "Suits higher value courses and providers with a sales team"] },
   },
   // a course's visibility (the gear's Public / Private)
   visibility: { public: "Public", private: "Private" },
-  // the colour a cohort shows in on the calendar (Hurak's cohort colour picker)
+  // the colour a cohort shows in on the calendar (cohort colour picker)
   cohortColours: [
     { key: "purple", label: "Purple" },
     { key: "blue", label: "Blue" },
@@ -224,7 +228,7 @@ export const pw = {
   channels: { marketplace: "ReadTraining", website: "Website", manual: "Manual" },
   // how an order was paid, as the orders list and order page show it
   paymentMethods: { card: "Card", link: "Payment link", offline: "Offline payment", free: "Free enrolment" },
-  // a learner's place on a cohort (Hurak's student status): booked, moved here from another date, or cancelled
+  // a learner's place on a cohort (student status): booked, moved here from another date, or cancelled
   studentStatuses: { enrolled: "Enrolled", rescheduled: "Rescheduled", cancelled: "Cancelled" },
   // the email templates a provider can send a learner from a cohort ("Select email template"), or write a new one; `body` is
   // paragraphs (joined with a blank line); {name} {course} {date} {where} {order} are filled in for each learner
@@ -240,7 +244,7 @@ export const pw = {
     offline: { label: "Offline payment", hint: "Bank transfer, invoice or cash. Mark the order paid when the money arrives." },
     free: { label: "Enrol for free", hint: "No payment. For staff, resits or goodwill." },
   },
-  // Hurak's course activity types, in its order
+  // course activity types, in order
   lessonTypes: {
     text: { label: "Text", icon: "icon-document" },
     download: { label: "Download / Resource", icon: "icon-cloud" },
@@ -266,7 +270,7 @@ export const pw = {
   roles: [
     { key: "admin", label: "Admin", can: "Everything except removing the account owner" },
     { key: "tutor", label: "Tutor", can: "Their cohorts: students, learning records and results" },
-    { key: "course_editor", label: "Course editor", can: "Courses, course activities and FAQs" },
+    { key: "course_editor", label: "Course editor", can: "Courses, their dates and venues, and FAQs" },
     { key: "support", label: "Customer support", can: "Learners, orders and refund requests" },
     { key: "sales", label: "Sales executive", can: "Orders, new orders and leads" },
     { key: "accounts", label: "Accounts analyst", can: "Orders, earnings and VAT" },
@@ -276,9 +280,8 @@ export const pw = {
 
   settingsTabs: [
     { key: "info", label: "Provider information" },
-    { key: "logo", label: "Company logo" },
     { key: "terms", label: "Cancellation and terms" },
-    { key: "venues", label: "Venues" },
+    { key: "faqs", label: "FAQs" },
     { key: "vat", label: "VAT" },
     { key: "affiliate", label: "Affiliate" },
     { key: "emails", label: "Emails" },
@@ -287,7 +290,7 @@ export const pw = {
   ],
 
 
-  // Hurak's Performance date ranges
+  // Performance date ranges
   ranges: [
     { key: "7", label: "Last 7 days", days: 7 },
     { key: "30", label: "Last 30 days", days: 30 },
@@ -439,7 +442,7 @@ export function seedProvider(now = Date.now()) {
     },
   ];
 
-  // what Hurak's new-course wizard asks: sub-category and topic (slugs from the catalogue list), compliance or not, performance
+  // what the new-course wizard asks: sub-category and topic (slugs from the catalogue list), compliance or not, performance
   // model, Skill Saver
   const setup = {
     C1: ["workplace-first-aid", "emergency-first-aid-at-work", "compliance", true],
@@ -551,6 +554,7 @@ export function seedProvider(now = Date.now()) {
     r.bookingRef = e ? e.id.replace(/^E/, "B-") : `B-${90 + i}`;
   });
 
+
   const qa = [
     { id: "QA1", courseId: "C3", question: "Do I need a first aid certificate before I start?", answer: "No. Emergency First Aid at Work is part of this course.", from: "provider", at: at(-60) },
     { id: "QA2", courseId: "C1", question: "Is the course suitable if I have a bad knee?", answer: "", from: "learner", name: "Sophie T.", at: at(-2) },
@@ -563,7 +567,7 @@ export function seedProvider(now = Date.now()) {
     { id: "N4", at: at(-6), text: "Order NF-24883 is in dispute. Send your evidence within 7 days.", href: "/provider/orders/NF-24883", read: false },
     { id: "N5", at: at(-9), text: "New order NF-24879 from Marek Nowak for SIA Door Supervisor", href: "/provider/orders/NF-24879", read: true },
   ];
-  // older ones, as Hurak's list keeps them: a note for each website or ReadTraining order and each review
+  // older ones, as the list keeps them: a note for each website or ReadTraining order and each review
   const titleOf = (id) => courses.find((c) => c.id === id)?.title || "a course";
   notifications.push(
     ...orders.filter((o) => o.channel !== "manual" && o.at < at(-10)).map((o, i) => ({ id: `N${20 + i}`, at: o.at, text: `New order ${o.ref} from ${o.customer.first} ${o.customer.last} for ${titleOf(o.lines[0].courseId)}`, href: `/provider/orders/${o.ref}`, read: true })),
@@ -580,8 +584,6 @@ export function seedProvider(now = Date.now()) {
       facebook: "", linkedin: "https://www.linkedin.com/company/northfield-safety-training", youtube: "",
       policy: "Cancel more than 10 working days before the course for a full refund. Between 5 and 10 working days, we refund 50%. Within 5 working days we can move you to another date for a £20 fee.",
       terms: "Bookings are confirmed when paid. Learners must bring photo ID. Certificates are issued once every assessment is passed. We may move a course to another date or venue if numbers are too low, and offer a full refund if the new date does not suit.",
-      vat: { registered: true, number: "GB 284 7193 62" },
-      emails: { refund: "accounts@northfieldsafety.co.uk", dispute: "accounts@northfieldsafety.co.uk", order: "bookings@northfieldsafety.co.uk" },
     },
     me: { id: "T1", name: "Joanne Fielding", email: "joanne@northfieldsafety.co.uk", role: "Account owner" },
     courses, cohorts, venues, faqs, packages, team, learners, orders, enrolments, reviews, leads, refunds, qa, notifications,

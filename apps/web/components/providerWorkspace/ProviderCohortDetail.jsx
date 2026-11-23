@@ -10,11 +10,12 @@ import { errorsFrom } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { COHORT_TONE, Loading, Pill } from "./providerParts";
-import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, Seats, cohortState, dayRange, longDay, timeRange } from "./ProviderCohorts";
+import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, longDay, offSale, timeRange, todayIso, tutorOptions } from "./ProviderCohorts";
 
-// One run of a course (Hurak's Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
-// whether it takes bookings and its tutor, with Edit, Cancel and Delete. Learners appear under it once booking opens (a later
+// One run of a course (Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
+// whether it takes bookings and its tutor, with Edit, Move to another course, Cancel and Delete. Learners appear under it once booking opens (a later
 // milestone); until then the list is empty.
 
 const useCohort = (cohortId) => {
@@ -34,9 +35,13 @@ export default function ProviderCohortDetail({ cohortId }) {
   const query = useCohort(cohortId);
   const utils = api.useUtils();
   const bookable = api.provider.cohorts.setBookable.useMutation();
+  const assignTutor = api.provider.cohorts.setTutor.useMutation();
+  // the team members who can teach (the tutor menu): for those who see every date
+  const tutorsQ = api.provider.cohorts.tutors.useQuery({ organisationId }, { enabled: Boolean(organisationId) && can("provider.cohorts.view"), retry: false });
   const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [toast, setToast] = useState(null);
   // bookings on or off shows at once, before the cohort loads again; gone again if the save fails
   const [bookableNow, setBookableNow] = useState(null);
@@ -66,12 +71,24 @@ export default function ProviderCohortDetail({ cohortId }) {
     });
   };
 
+  // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
+  const setTutor = (v) =>
+    assignTutor.mutate({ organisationId, cohortId, tutorUserId: v || null }, {
+      onSuccess: async () => { await refresh(); setToast({ message: v ? "Tutor assigned" : "Tutor removed" }); },
+      onError: (e) => setToast({ message: errorsFrom(e).general || "We couldn't change the tutor. Please try again." }),
+    });
+  const tutors = tutorsQ.data || [];
+  const today = todayIso();
+
   return (
     <div className="rt-acc__stack">
       <section className="rt-acc__card" aria-labelledby="rt-coh-det-h">
         <div className="rt-acc__cardhead rt-adm-cardhead">
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
-          <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
+          <span className="rt-pws-coh__pills">
+            <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
+            {!cancelled && offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}
+          </span>
         </div>
         {/* its learning option isn't taking bookings on the course: these dates can't be booked until it takes them again */}
         {!cancelled && k.optionClosed && (
@@ -81,18 +98,27 @@ export default function ProviderCohortDetail({ cohortId }) {
           <div><dt>Course</dt><dd><Link href={`/provider/courses/${k.courseId}`} className="rt-adm-strong">{k.courseTitle}</Link><small>{methodName(k.method)}</small></dd></div>
           <div><dt>Dates</dt><dd>{dayRange(k.startsOn, k.endsOn)}{k.sessions.length > 1 && <small>{k.sessions.length} sessions</small>}</dd></div>
           <div><dt>{k.method === "classroom" ? "Venue" : "Joining link"}</dt><dd>{k.method === "classroom" ? where : k.joinUrl ? <a href={k.joinUrl} target="_blank" rel="noopener noreferrer" className="rt-pws-ce__url">{k.joinUrl}</a> : <span className="rt-adm-muted">Not added yet</span>}</dd></div>
-          <div><dt>Places</dt><dd><Seats booked={0} max={k.capacity} /></dd></div>
-          <div><dt>Price</dt><dd>{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small>was {formatPrice(k.wasPricePence / 100)}</small> : null}<small>Including VAT</small></dd></div>
+          <div><dt>Places</dt><dd><Seats booked={k.taken ?? 0} max={k.capacity} /></dd></div>
+          <div><dt>Price</dt><dd>{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small>was {formatPrice(k.wasPricePence / 100)}</small> : null}<small>Including VAT</small></dd></div>
           <div>
             <dt>Bookings</dt>
             <dd className="rt-pws-coh__inline">
               {!cancelled && k.optionClosed
                 ? <Pill tone="warn">Stopped</Pill>
                 : <Pill tone={k.bookable && !cancelled ? "ok" : "muted"}>{k.bookable && !cancelled ? "On" : "Off"}</Pill>}
-              {edit && !cancelled && !k.optionClosed && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
+              {edit && !cancelled && !k.optionClosed && k.endsOn >= today && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={toggle} disabled={bookable.isPending} aria-busy={bookable.isPending || undefined}>{bookable.isPending ? "Saving…" : k.bookable ? "Turn bookings off" : "Turn bookings on"}</button>}
             </dd>
           </div>
-          <div><dt>Tutor</dt><dd>{k.tutorName || <span className="rt-adm-muted">Not assigned</span>}</dd></div>
+          <div>
+            <dt>Tutor</dt>
+            <dd>
+              {edit && !cancelled && tutors.length ? (
+                <div className="rt-field rt-adm-select -inline">
+                  <FieldSelect id="rt-coh-det-tutor" label="Tutor" value={k.tutorUserId || ""} onChange={setTutor} options={tutorOptions(tutors, k)} disabled={assignTutor.isPending} compact />
+                </div>
+              ) : (k.tutorName || <span className="rt-adm-muted">Not assigned</span>)}
+            </dd>
+          </div>
           {k.details && <div><dt>Cohort structure</dt><dd>{k.details}</dd></div>}
         </dl>
         <h3 className="rt-pws-coh__h3">Sessions</h3>
@@ -105,9 +131,10 @@ export default function ProviderCohortDetail({ cohortId }) {
         {edit && (
           <div className="rt-pws-coh__heroactions">
             {!cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>}
+            {!cancelled && k.endsOn >= today && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setMoving(true)}>Move to another course</button>}
             {/* the destructive actions together, apart from Edit */}
             <div className="rt-pws-danger-group">
-              {!cancelled && k.endsOn >= new Date().toISOString().slice(0, 10) && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
+              {!cancelled && k.endsOn >= today && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
               <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setDeleting(true)}>Delete cohort</button>
             </div>
           </div>
@@ -121,6 +148,7 @@ export default function ProviderCohortDetail({ cohortId }) {
 
       <CohortForm open={editing} onClose={() => setEditing(false)} cohort={k} onSaved={() => { setEditing(false); refresh(); setToast({ message: "Cohort saved" }); }} />
       <CancelSheet cohort={cancelling ? k : null} onClose={() => setCancelling(false)} onDone={() => { setCancelling(false); refresh(); setToast({ message: "Cohort cancelled" }); }} />
+      <MoveSheet cohort={moving ? k : null} onClose={() => setMoving(false)} onDone={(title) => { setMoving(false); refresh(); utils.provider.courses.list.invalidate(); setToast({ message: `Moved to ${title}` }); }} />
       <DeleteSheet cohort={deleting ? k : null} onClose={() => setDeleting(false)} onDone={() => { utils.provider.cohorts.list.invalidate(); router.push("/provider/cohorts"); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>

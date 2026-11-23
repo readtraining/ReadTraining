@@ -22,7 +22,7 @@ const realCourses = loadCatalogue;
 const townPage = async (slug, town, courses) =>
   getCourseTownPage(slug, town, courses, isCourseTown(slug, town, courses) || !mayBeTownPage(slug, town) ? undefined : await ukPlace(town));
 
-// A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds), as Hurak's course finder pages: the same
+// A course page in one town (/courses/<page>/<town>, e.g. /courses/first-aid/leeds): the same
 // catalogue with the town as its location (courses with a venue there, closest first; the visitor can change the town), the
 // other towns, the page's FAQs. Reads: lib/coursePages.js (getCourseTownPage). Rendered for each request, as its course page.
 

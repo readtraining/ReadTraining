@@ -46,10 +46,10 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
     }
   };
 
-  // ---- Add to basket (Hurak's list says the same): a course always goes in with a date. The button opens the date pop-up on the study method of the
+  // ---- Add to basket (list says the same): a course always goes in with a date. The button opens the date pop-up on the study method of the
   // card's "From" price (its cheapest date where the visitor is looking, `priceMethod`), every date there has its own "Book now",
   // and booking goes straight to the basket. A course that runs only on demand has no date to choose and goes straight in.
-  // States: idle > loading (fetching the dates, or booking), with a "Try again" error state. As Hurak's, the button stays "Add to
+  // States: idle > loading (fetching the dates, or booking), with a "Try again" error state. The button stays "Add to
   // basket" when the course is already in the basket: the visitor can book it again on another date, place or provider.
   const [status, setStatus] = useState("idle");
   const [dates, setDates] = useState(null); // { detail, mode } while the pop-up is in use

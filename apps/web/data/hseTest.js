@@ -1,6 +1,6 @@
 // The CITB Health, Safety and Environment (HS&E) test, often called "the CSCS test": the test page
 // (/tests/citb-health-safety-and-environment-test), the test centre directory (/cscs-test-centres) and a centre's page
-// (/tests-locations/cscs-citb-tests-<town>). The client's current pages (hurak.com, same URLs) gave the functions only: the test
+// (/tests-locations/cscs-citb-tests-<town>). The client's current pages (same URLs) gave the functions only: the test
 // explained and booked through us with a revision book, a directory of centres, and a page per centre. Layout and wording are
 // ours. Facts are the ones our CSCS card guide uses (data/licences.js, checked against CITB and CSCS on 12 October 2026):
 // 50 questions in 45 minutes, 90% to pass, £23.50 to CITB, and a pass must be from the last 2 years to apply for a card.

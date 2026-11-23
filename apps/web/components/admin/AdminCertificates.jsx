@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { certState, issueCertificate, reinstateCertificate, revokeCertificate, useAdmin } from "@/lib/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
-import { Search, Said, TableSkeleton, Empty, HeaderAction, RowMenu } from "./adminParts";
+import { Search, Said, TableSkeleton, Empty, HeaderAction, RowMenu, Req } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
@@ -112,7 +112,7 @@ export default function AdminCertificates() {
           <form className="rt-q__form rt-biz__sheetform" onSubmit={sendRevoke} noValidate ref={formRef}>
             <p className="rt-acc__note"><strong>{revoking.number}</strong> · {revoking.holder} · {revoking.course}</p>
             <div className="rt-field">
-              <label htmlFor="rt-adm-reason">{copy.revokeReason}</label>
+              <label htmlFor="rt-adm-reason">{copy.revokeReason}<Req /></label>
               {err("reason")}
               <TextArea id="rt-adm-reason" rows={3} maxLength={600} value={form.reason || ""} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={errors.reason ? "rt-adm-reason-e" : undefined} />
             </div>
@@ -124,17 +124,17 @@ export default function AdminCertificates() {
       <Sheet open={issuing} onClose={() => setIssuing(false)} title={copy.issue} closeLabel="Close">
         <form className="rt-q__form rt-biz__sheetform" onSubmit={sendIssue} noValidate ref={formRef}>
           <div className="rt-field">
-            <label htmlFor="rt-adm-holder">Holder's full name</label>
+            <label htmlFor="rt-adm-holder">Holder's full name<Req /></label>
             {err("holder")}
             <input id="rt-adm-holder" type="text" autoComplete="off" value={form.holder} onChange={(e) => setForm((f) => ({ ...f, holder: e.target.value }))} aria-invalid={errors.holder ? true : undefined} aria-describedby={errors.holder ? "rt-adm-holder-e" : undefined} />
           </div>
           <div className="rt-field">
-            <label htmlFor="rt-adm-courseId">Course</label>
+            <label htmlFor="rt-adm-courseId">Course<Req /></label>
             {err("courseId")}
             <FieldSelect id="rt-adm-courseId" label="Course" value={form.courseId} onChange={(value) => setForm((f) => ({ ...f, courseId: value }))} options={catalogue.map((c) => ({ value: c.id, label: c.title }))} invalid={Boolean(errors.courseId)} describedBy={errors.courseId ? "rt-adm-courseId-e" : undefined} />
           </div>
           <div className="rt-field">
-            <label htmlFor="rt-adm-issued">Issue date</label>
+            <label htmlFor="rt-adm-issued">Issue date<Req /></label>
             {err("issued")}
             <DateField id="rt-adm-issued" max={today()} value={form.issued} onChange={(v) => setForm((f) => ({ ...f, issued: v }))} invalid={Boolean(errors.issued)} describedBy={errors.issued ? "rt-adm-issued-e" : undefined} />
           </div>

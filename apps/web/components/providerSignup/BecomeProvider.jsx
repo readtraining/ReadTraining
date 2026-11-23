@@ -9,6 +9,7 @@ import { BECOME_PROVIDER_HASH, PROVIDER_ONBOARDING_HREF, providerSignup } from "
 import { AUTH_ROUTES, EMAIL_PATTERN, registerAccount, useAuthUser } from "@/lib/auth/authClient";
 import { PASSWORD_ERROR, weakPassword } from "@/lib/auth/useSignUpForm";
 import { focusFirstError } from "@/lib/focusFirstError";
+import { useProviderStep } from "@/components/provider/ProviderCta";
 import { trackEvent } from "@/lib/analytics";
 
 const c = providerSignup.popup;
@@ -30,9 +31,18 @@ function validate(v) {
 // (the same login learners use), then continues to provider onboarding. Any link to #become-provider opens it, so the page's
 // shared hero and call-to-action buttons need no change, and /for-providers#become-provider opens it on arrival (Skill Saver's
 // "Join"). Signed in already, it offers to continue with that account; the email link after sign-up lands on the onboarding.
+// Someone who already has a provider account never gets it: the page's buttons show their next step instead (ProviderCta), and
+// arriving with the address waits until that is known, then leaves the pop-up closed.
 export default function BecomeProvider() {
   const router = useRouter();
   const person = useAuthUser();
+  // whether we know yet if they have a provider account (signed out, or their account has loaded or failed to), and if so their
+  // next step instead of signing up
+  const { known, step } = useProviderStep();
+  // a click before that (a moment on a fresh page load) does nothing, so a provider never gets the sign-up pop-up; the button
+  // then shows their own next step
+  const knownRef = useRef(known);
+  knownRef.current = known;
   const [open, setOpen] = useState(false);
   const [v, setV] = useState(EMPTY);
   const [errors, setErrors] = useState({});
@@ -47,18 +57,26 @@ export default function BecomeProvider() {
       const a = e.target.closest?.(`a[href="${BECOME_PROVIDER_HASH}"]`);
       if (!a) return;
       e.preventDefault();
+      if (!knownRef.current) return;
       setOpen(true);
       trackEvent("provider_signup_open", {});
     };
-    const onHash = () => window.location.hash === BECOME_PROVIDER_HASH && setOpen(true);
     document.addEventListener("click", onClick);
-    window.addEventListener("hashchange", onHash);
-    onHash(); // arriving with /for-providers#become-provider (Skill Saver's "Join")
-    return () => {
-      document.removeEventListener("click", onClick);
-      window.removeEventListener("hashchange", onHash);
-    };
+    return () => document.removeEventListener("click", onClick);
   }, []);
+  // the address asks for the pop-up (/for-providers#become-provider, Skill Saver's "Join"): on arrival and when it changes, once
+  // we know who this is; an existing provider's address is tidied instead (their buttons lead on)
+  useEffect(() => {
+    if (!known) return;
+    const onHash = () => {
+      if (window.location.hash !== BECOME_PROVIDER_HASH) return;
+      if (step) history.replaceState(null, "", window.location.pathname + window.location.search);
+      else setOpen(true);
+    };
+    onHash();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [known, step]);
   useEffect(() => {
     if (status === "sent") sentRef.current?.focus();
   }, [status]);

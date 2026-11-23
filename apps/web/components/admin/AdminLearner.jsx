@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
+import { ADMIN_TWO_STEP } from "@readtraining/permissions";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton, Empty, actionLabel } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, Req } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { CloseAccountSheet } from "./AdminClosures";
 import TextArea from "@/components/forms/TextArea";
@@ -114,7 +115,7 @@ export default function AdminLearner({ id }) {
             <div><dt>{sf.confirmed}</dt><dd>{when(l.confirmedAt)}</dd></div>
             <div><dt>{sf.last}</dt><dd>{when(l.lastSignInAt)}</dd></div>
             <div><dt>{sf.methods}</dt><dd>{given(l.signInMethods.map((m) => d.methods[m] ?? m).join(", "))}</dd></div>
-            <div><dt>{sf.twoStep}</dt><dd>{l.twoStep ? "On" : "Off"}</dd></div>
+            {ADMIN_TWO_STEP && <div><dt>{sf.twoStep}</dt><dd>{l.twoStep ? "On" : "Off"}</dd></div>}
           </dl>
         </section>
       </div>
@@ -233,7 +234,7 @@ function BlockSheet({ learner, kind, onClose, onDone }) {
           <p className="rt-acc__note">{blocking ? d.blockNote : d.unblockNote}</p>
           {blocking && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-block-reason">{d.blockReason}</label>
+              <label htmlFor="rt-adm-block-reason">{d.blockReason}<Req /></label>
               <small className="rt-field__hint" id="rt-adm-block-reason-hint">{d.blockReasonHint}</small>
               {error && <p className="rt-q__err" id="rt-adm-block-reason-e"><span className="rt-sr">Error: </span>{error}</p>}
               <TextArea id="rt-adm-block-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-block-reason-hint${error ? " rt-adm-block-reason-e" : ""}`} />

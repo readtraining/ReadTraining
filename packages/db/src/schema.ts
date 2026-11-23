@@ -31,7 +31,7 @@ const me = sql`(select auth.uid())`
 
 export const organisationType = pgEnum('organisation_type', ['business', 'provider'])
 export const organisationStatus = pgEnum('organisation_status', ['pending', 'changes_requested', 'active', 'suspended', 'rejected'])
-// Provider roles follow Hurak (owner … assistant); business roles are owner and member. A trigger checks the role fits the type.
+// Provider roles (owner … assistant); business roles are owner and member. A trigger checks the role fits the type.
 export const memberRole = pgEnum('member_role', [
   'owner',
   'admin',
@@ -105,6 +105,15 @@ export const organisations = pgTable(
     socials: jsonb('socials').$type<{ facebook?: string; linkedin?: string; youtube?: string }>().notNull().default({}),
     bookingTerms: text('booking_terms'),
     cancellationPolicy: text('cancellation_policy'),
+    // VAT (Settings › VAT, provider.profile.saveVat): registered or not, and the number when registered (GB then 9 digits, saved
+    // without spaces); not registered means no number
+    vatRegistered: boolean('vat_registered').notNull().default(false),
+    vatNumber: text('vat_number'),
+    // where the provider's order, refund and dispute notices go (Settings › Emails, provider.profile.saveEmails); none set means
+    // the account owner's email. Saved now; the notices themselves come with booking and payments.
+    orderEmail: text('order_email'),
+    refundEmail: text('refund_email'),
+    disputeEmail: text('dispute_email'),
     createdBy: uuid('created_by').references(() => authUsers.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -113,6 +122,8 @@ export const organisations = pgTable(
     uniqueIndex('organisations_slug_key').on(t.slug),
     index('organisations_created_by_idx').on(t.createdBy),
     check('organisations_commission_range', sql`${t.commissionBps} between 0 and 6000`),
+    check('organisations_notice_emails', sql`${t.orderEmail} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' and ${t.refundEmail} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' and ${t.disputeEmail} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'`),
+    check('organisations_vat', sql`(${t.vatRegistered} and ${t.vatNumber} ~ '^GB[0-9]{9}$') or (not ${t.vatRegistered} and ${t.vatNumber} is null)`),
     // only the organisation's active owner and admins read the row (its mobile, commission, terms and our status note are private
     // business details); other team members, like a tutor or an assistant, and anyone only invited, get what they need through the API
     pgPolicy('organisations: read where owner or admin', {
@@ -366,7 +377,7 @@ export const courseLevels = pgTable(
 ).enableRLS()
 
 // ---- courses (Milestone 2) ------------------------------------------------------------------------------------------------
-// One table for every course, in two kinds (the shared-listing model, as on Hurak):
+// One table for every course, in two kinds (the shared-listing model):
 // - shared: a public course page written by ReadTraining staff (for example "SIA Door Supervisor"). No provider of its own;
 //   providers' courses join it, and the page lists them with their dates and the number of providers.
 // - provider: a provider's own course, with their content, price and terms. Under a shared page (parent_id) or on its own
@@ -399,12 +410,12 @@ export const courses = pgTable(
     subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'restrict' }),
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'restrict' }),
     level: text('level').references(() => courseLevels.slug, { onDelete: 'restrict' }),
-    // a provider course's learning options (Hurak's): `methods` are the ways it is offered and `method` the primary one, shown
+    // a provider course's learning options: `methods` are the ways it is offered and `method` the primary one, shown
     // first. Classroom and live-online have dates (cohorts); self-paced is "start any time" at price_pence. A shared page has
     // neither.
     method: text('method').references(() => deliveryMethods.slug, { onDelete: 'restrict' }),
     methods: text('methods').array().notNull().default(sql`'{}'::text[]`),
-    // the learning options not taking new bookings (Hurak's "Retire from future sales"): they stay in `methods`, their dates already
+    // the learning options not taking new bookings: they stay in `methods`, their dates already
     // booked still run, and none of them is on sale (a date is on sale only while its own `bookable` is on and its method isn't
     // here). Never the primary, and at least one option stays open.
     closedMethods: text('closed_methods').array().notNull().default(sql`'{}'::text[]`),
@@ -414,7 +425,7 @@ export const courses = pgTable(
     isPublic: boolean('is_public').notNull().default(true),
     listed: boolean('listed').notNull().default(true),
     pricePence: integer('price_pence'), // the self-paced option's price, including VAT; classroom and live-online prices are on each cohort
-    // the self-paced option sold in packages (Hurak's "Tiered"): its price plan, whose cheapest package is price_pence; null = one
+    // the self-paced option sold in packages: its price plan, whose cheapest package is price_pence; null = one
     // flat price. Classroom and live-online dates choose their own plan (cohorts.plan_id).
     planId: uuid('plan_id').references((): AnyPgColumn => pricePlans.id, { onDelete: 'restrict' }),
     videoUrl: text('video_url'),
@@ -517,6 +528,23 @@ export const courseExams = pgTable(
   (t) => [index('course_exams_course_idx').on(t.courseId, t.position), apiOnly('course_exams')],
 ).enableRLS()
 
+// A provider's own FAQs (Settings › FAQs, provider.faqs): about booking and training with that provider in general, in order.
+// They show on the provider's public profile and on its courses that have their own page, never on a shared course page (which
+// never names a provider).
+export const providerFaqs = pgTable(
+  'provider_faqs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organisationId: uuid('organisation_id')
+      .notNull()
+      .references(() => organisations.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    question: text('question').notNull(),
+    answer: text('answer').notNull(),
+  },
+  (t) => [index('provider_faqs_org_idx').on(t.organisationId, t.position), apiOnly('provider_faqs')],
+).enableRLS()
+
 // A course's own FAQs, written for that course only (never shared between courses).
 export const courseFaqs = pgTable(
   'course_faqs',
@@ -585,7 +613,7 @@ export const venues = pgTable(
   (t) => [index('venues_organisation_idx').on(t.organisationId), index('venues_city_idx').on(t.city), apiOnly('venues')],
 ).enableRLS()
 
-// A provider's price plan (Hurak's "Tiered Plans"): 2 to 4 packages a learner chooses between (Basic, Plus, Pro, Elite by default),
+// A provider's price plan: 2 to 4 packages a learner chooses between (Basic, Plus, Pro, Elite by default),
 // each with its own full price per delegate. One plan can be used by many dates and courses. It is the provider's own pricing:
 // what they save is what learners see, with no review by our team (the course itself is reviewed). Each package in `tiers`:
 // { name, pricePence, savePence, tagline, popular, features: [{ title, description, included }] }, checked by the API
@@ -635,10 +663,11 @@ export const cohorts = pgTable(
     capacity: integer('capacity').notNull(),
     pricePence: integer('price_pence').notNull(),
     wasPricePence: integer('was_price_pence'),
-    // "Tiered" pricing (Hurak's): the price plan whose packages the learner chooses between; price_pence is then its cheapest
+    // "Tiered" pricing: the price plan whose packages the learner chooses between; price_pence is then its cheapest
     // package (the "From" price), kept in step by the API. Null = "Flat": the date's own price.
     planId: uuid('plan_id').references(() => pricePlans.id, { onDelete: 'restrict' }),
     details: text('details'), // the cohort's structure, shown to learners under the dates
+    colour: text('colour'), // its colour on the provider's calendar; null = by type (classroom purple, live online blue)
     tutorUserId: uuid('tutor_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
     bookable: boolean('bookable').notNull().default(true), // the provider can stop new bookings without cancelling
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -656,6 +685,7 @@ export const cohorts = pgTable(
     index('cohorts_created_by_idx').on(t.createdBy),
     index('cohorts_plan_idx').on(t.planId),
     check('cohorts_method_dated', sql`${t.method} in ('classroom', 'live-online')`),
+    check('cohorts_colour', sql`${t.colour} in ('purple', 'blue', 'green', 'orange', 'red')`),
     check('cohorts_classroom_venue', sql`${t.method} <> 'classroom' or ${t.venueId} is not null`),
     check('cohorts_dates_order', sql`${t.endsOn} >= ${t.startsOn}`),
     check('cohorts_capacity_range', sql`${t.capacity} between 1 and 200`),
@@ -770,7 +800,7 @@ export const orderStatus = pgEnum('order_status', ['paid', 'part_refunded', 'ref
 export const refundStatus = pgEnum('refund_status', ['requested', 'approved', 'declined'])
 export const disputeStatus = pgEnum('dispute_status', ['open', 'won', 'lost'])
 export const payoutStatus = pgEnum('payout_status', ['draft', 'approved', 'held', 'sent'])
-// Hurak's seven transaction types
+// seven transaction types
 export const ledgerType = pgEnum('ledger_type', ['purchase', 'refund', 'cancel', 'dispute', 'charge', 'adjust', 'payout'])
 
 export const orders = pgTable(

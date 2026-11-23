@@ -1,4 +1,4 @@
-// Licences and cards (/licences and /licences/<slug>, the menu's "Licences & Cards"). The client's current pages (hurak.com/licences/*)
+// Licences and cards (/licences and /licences/<slug>, the menu's "Licences & Cards"). The client's current pages
 // gave the functions only: a guide per licence (eligibility, how to apply, documents, cost, validity, renewal, jobs, FAQs), the
 // training to book, and a paid "we apply for you" service for CSCS cards (£60) and the Personal Licence (£140). Their facts were
 // out of date or wrong in places, so every fact here comes from the official source named on the page and was checked on

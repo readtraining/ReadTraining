@@ -12,6 +12,7 @@ import { AreaChart, BarList, Delta, Sparkline, money } from "./charts";
 import { downloadCsv } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
 import TextArea from "@/components/forms/TextArea";
+import { Req } from "./settingsForm";
 
 const VIEWS = [
   { key: "overview", label: "Overview" },
@@ -23,7 +24,7 @@ const RATING_OPTIONS = [{ value: "", label: "All ratings" }, ...[5, 4, 3, 2, 1].
 const LEAD_STATUSES = { new: "New", replied: "Replied", closed: "Closed" };
 const LEAD_TONE = { new: "warn", replied: "info", closed: "muted" };
 
-// Performance: Hurak's three tabs (Overview, Reviews, Leads) and date ranges, in our design. Overview: the three KPI cards
+// Performance: three tabs (Overview, Reviews, Leads) and date ranges, in our design. Overview: the three KPI cards
 // (total revenue, leads, enrolments, each with this month's figure) switch one interactive chart; each card also shows the change
 // on the previous period and a sparkline, and the chart draws the previous period dashed. Below it, revenue by course and by sales
 // channel. The tab, range and filters are kept in the address.
@@ -60,7 +61,7 @@ export default function ProviderPerformance() {
   );
 }
 
-// Hurak's four date ranges as one segmented control (a radio group: arrow keys move between them)
+// four date ranges as one segmented control (a radio group: arrow keys move between them)
 // the date range: the standard Tabs, as every other switch
 function RangeTabs({ value, onChange }) {
   return <Tabs tabs={pw.ranges.map((r) => ({ key: r.key, label: r.label }))} value={value} onChange={onChange} label="Date range" />;
@@ -274,7 +275,7 @@ function ReviewCard({ r, course, onSaved }) {
       {showForm && (
         <form className="rt-adm-noteform rt-pws-perf__replyform" onSubmit={save} noValidate ref={formRef}>
           <div className="rt-field">
-            <label htmlFor={id}>{r.reply ? "Edit your reply" : "Reply publicly"}</label>
+            <label htmlFor={id}>{r.reply ? "Edit your reply" : "Reply publicly"}<Req /></label>
             {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
             <TextArea id={id} rows={3} maxLength={1000} autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-e` : undefined} />
           </div>

@@ -16,6 +16,7 @@ import { getPublicProvider } from "@/lib/publicProvider";
 import { abs, breadcrumbLd, jsonLd, pageMetadata } from "@/lib/seo";
 import { loadTaxonomy } from "@/lib/taxonomyServer";
 import { EmptyState } from "@/components/states/States";
+import { plainText } from "@/lib/richText";
 
 // A provider (/providers/<slug>), in the marketing-page language of /about-us: centred dark hero with the provider's key facts on
 // its edge > about (with the details card) > its courses as cards (lavender) > its booking terms and the shared policies > need
@@ -67,7 +68,7 @@ export default async function ProviderPage(props) {
     { icon: "icon-global-search", value: p.cities.length, label: p.cities.length === 1 ? "Venue city" : "Venue cities" },
   ];
   const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training providers", href: PROVIDERS_HREF }, { label: p.name }];
-  const orgLd = { "@context": "https://schema.org", "@type": "EducationalOrganization", name: p.name, url: abs(p.href), description: p.about || lead, areaServed: "GB", ...(p.city ? { address: { "@type": "PostalAddress", addressLocality: p.city, addressCountry: "GB" } } : {}), ...(p.logoUrl ? { logo: p.logoUrl } : {}) };
+  const orgLd = { "@context": "https://schema.org", "@type": "EducationalOrganization", name: p.name, url: abs(p.href), description: plainText(p.about) || lead, areaServed: "GB", ...(p.socials.length ? { sameAs: p.socials.map((s) => s.url) } : {}), ...(p.city ? { address: { "@type": "PostalAddress", addressLocality: p.city, addressCountry: "GB" } } : {}), ...(p.logoUrl ? { logo: p.logoUrl } : {}) };
   // the provider's own booking terms first (as it typed them: plain text, never links), then the policies every provider follows
   const terms = [
     p.cancellationPolicy && { q: "Cancellation policy", a: p.cancellationPolicy, plain: true },
@@ -92,6 +93,16 @@ export default async function ProviderPage(props) {
             <div className="container rt-prov-new">
               <EmptyState title={providerPages.newProvider.courses.title} text={fillName(providerPages.newProvider.courses.text, p.name)} action={providerPages.newProvider.courses.action} />
             </div>
+          )}
+          {p.faqs?.length > 0 && (
+            <FaqSection
+              compact
+              eyebrow={d.faqs.eyebrow}
+              title={fillName(d.faqs.title, p.name)}
+              text={fillName(d.faqs.text, p.name)}
+              items={p.faqs.map((f) => ({ q: f.question, a: f.answer, plain: true }))}
+              idPrefix="prov-faq"
+            />
           )}
           <FaqSection
             compact

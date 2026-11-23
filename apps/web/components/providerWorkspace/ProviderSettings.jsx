@@ -1,8 +1,8 @@
 "use client";
 
-import React, { Suspense, useCallback, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Toast from "@/components/courses/Toast";
 import { pw } from "@/data/providerWorkspace";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -10,25 +10,26 @@ import { saveOrg, useProvider } from "@/lib/providerWorkspace";
 import { Choice, Loading, DemoTag } from "./providerParts";
 import { useWorkspace } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { EmptyState } from "@/components/states/States";
+import { EmptyState, ErrorState } from "@/components/states/States";
+import { api } from "@/lib/trpc/react";
+import { errorsFrom } from "@/lib/useMe";
 import FormGate from "@/components/forms/FormGate";
 import { Field, aria, isEmail } from "./settingsForm";
-import { InfoTab, LogoTab, TermsTab, VenuesTab } from "./SettingsProfile";
+import { InfoTab, TermsTab } from "./SettingsProfile";
 import { QaTab } from "./SettingsPeople";
+import { FaqsTab } from "./SettingsFaqs";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { Confirm } from "./settingsForm";
 
-// Provider settings (/provider/settings?tab=…): Hurak's provider information, company logo, terms, VAT, affiliate, emails, QA and
-// integrations, plus our venues. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below)
-// and the chosen tab. Information, logo, terms and venues use the API (SettingsProfile.jsx); VAT, emails, QA (SettingsPeople.jsx)
-// and integrations are still DEMO records, so they show the "coming soon" panel (NOT_SAVED). Every save shows a toast.
+// Provider settings (/provider/settings?tab=…): provider information (with the logo), terms, FAQs, VAT, affiliate, emails,
+// Q&A (learners' questions) and integrations. A second-level menu (a card list beside the tab from 992px, a chip row that scrolls sideways below) and the
+// chosen tab, each tab for the roles that may open it. Information and logo, terms, FAQs, VAT and emails use the API; venues have their own page (/provider/venues); Q&A and
+// integrations are still DEMO records, so they show the "coming soon" panel (NOT_SAVED). Every save shows a toast.
 
-const TABS = pw.settingsTabs;
 const TAB_TEXT = {
   info: "What learners see about you on your public profile and on every course page.",
-  logo: "Shown on your public profile, course pages and certificates.",
   terms: "Your cancellation policy and booking terms. Learners see them before they pay.",
-  venues: "The places you run classroom courses. Each classroom date picks one.",
+  faqs: "Questions learners ask about booking and training with you, with your answers.",
   vat: "If you are VAT registered, your number shows on learners' receipts.",
   affiliate: "Share this link. Bookings made through it count as yours.",
   emails: "Where we send refund requests, card disputes and new orders.",
@@ -37,14 +38,15 @@ const TAB_TEXT = {
 };
 // a tab that works only in part (DemoTag beside the tab's heading); the tabs that don't save yet show "coming soon" (NOT_SAVED)
 const DEMO_TABS = { affiliate: "This link works, but bookings made through it aren't counted yet: that comes with booking." };
-const PANELS = { info: InfoTab, logo: LogoTab, terms: TermsTab, venues: VenuesTab, vat: VatTab, affiliate: AffiliateTab, emails: EmailsTab, qa: QaTab, integrations: IntegrationsTab };
+const PANELS = { info: InfoTab, terms: TermsTab, faqs: FaqsTab, vat: VatTab, affiliate: AffiliateTab, emails: EmailsTab, qa: QaTab, integrations: IntegrationsTab };
 const hrefFor = (key) => `/provider/settings?tab=${key}`;
 // the tabs that would only save in this browser: behind the "coming soon" switch (lib/forms.js) until they save through the API
-const NOT_SAVED = new Set(["vat", "emails", "qa", "integrations"]);
+const NOT_SAVED = new Set(["qa", "integrations"]);
 
 export default function ProviderSettings() {
   const { can } = useProviderAccess();
-  if (!can("provider.settings.view")) return <EmptyState title="Settings aren't part of your role" text="Ask your provider's owner or an admin if something here needs changing." />;
+  // the accounts role opens Settings for the VAT and Emails tabs only
+  if (!can("provider.settings.view") && !can("provider.vat.view") && !can("provider.emails.view")) return <EmptyState title="Settings aren't part of your role" text="Ask your provider's owner or an admin if something here needs changing." />;
   return (
     <Suspense fallback={<Loading rows={2} />}>
       <Settings />
@@ -52,14 +54,22 @@ export default function ProviderSettings() {
   );
 }
 
+// the tabs this role opens: VAT for owner, admins and accounts; the rest with the settings switch
+const tabNeeds = (key) => ({ vat: "provider.vat.view", emails: "provider.emails.view" })[key] ?? "provider.settings.view";
+
 function Settings() {
+  const { can } = useProviderAccess();
+  const TABS = pw.settingsTabs.filter((t) => can(tabNeeds(t.key)));
   const data = useProvider();
   const sp = useSearchParams();
   const [toast, setToast] = useState(null);
   const say = useCallback((message, extra = {}) => setToast({ message, ...extra }), []);
   const clear = useCallback(() => setToast(null), []);
+  const router = useRouter();
   const asked = sp.get("tab");
-  const tab = TABS.some((t) => t.key === asked) ? asked : "info";
+  // Venues moved to their own page: an old Settings › Venues link opens it
+  useEffect(() => { if (asked === "venues") router.replace("/provider/venues"); }, [asked, router]);
+  const tab = TABS.some((t) => t.key === asked) ? asked : TABS[0].key;
   const label = TABS.find((t) => t.key === tab).label;
   const Panel = PANELS[tab];
 
@@ -103,35 +113,55 @@ function Settings() {
 
 // ---- VAT -------------------------------------------------------------------------------------------------------------------
 
-const tidyVat = (v) => v.replace(/\s+/g, "").toUpperCase();
-function VatTab({ data, say }) {
-  const [reg, setReg] = useState(data.org.vat.registered ? "yes" : "no");
-  const [num, setNum] = useState(data.org.vat.number || "");
+// registered or not, and the number when registered (API provider.profile.vat / saveVat: GB then 9 numbers, saved without spaces)
+function VatTab({ say }) {
+  const { organisationId } = useProviderAccess();
+  const utils = api.useUtils();
+  const saved = api.provider.profile.vat.useQuery({ organisationId });
+  const save = api.provider.profile.saveVat.useMutation();
+  const [reg, setReg] = useState(null);
+  const [num, setNum] = useState("");
   const [error, setError] = useState("");
-  useUnsavedChanges((reg === "yes") !== Boolean(data.org.vat.registered) || (reg === "yes" && tidyVat(num) !== tidyVat(data.org.vat.number || "")));
   const formRef = useRef(null);
-  const submit = (e) => {
+  useEffect(() => {
+    if (!saved.data || reg !== null) return;
+    setReg(saved.data.registered ? "yes" : "no");
+    setNum(saved.data.number);
+  }, [saved.data, reg]);
+  const tidy = num.replace(/\s+/g, "").toUpperCase();
+  useUnsavedChanges(Boolean(saved.data) && reg !== null && ((reg === "yes") !== saved.data.registered || (reg === "yes" && tidy !== saved.data.number)));
+  if (saved.isError) return <ErrorState inCard onRetry={() => saved.refetch()} />;
+  if (!saved.data || reg === null) return <Loading rows={2} />;
+  const submit = async (e) => {
     e.preventDefault();
-    if (reg === "yes" && !/^GB\d{9}$/.test(tidyVat(num))) {
+    if (reg === "yes" && !/^GB\d{9}$/.test(tidy)) {
       setError("Enter your VAT number: GB then 9 numbers, like GB 123 4567 89.");
       return focusFirstError(formRef.current);
     }
     setError("");
-    const n = tidyVat(num);
-    saveOrg({ vat: reg === "yes" ? { registered: true, number: `${n.slice(0, 2)} ${n.slice(2, 5)} ${n.slice(5, 9)} ${n.slice(9)}` } : { registered: false, number: "" } });
-    say("VAT details saved");
+    try {
+      const r = await save.mutateAsync({ organisationId, registered: reg === "yes", number: reg === "yes" ? tidy : undefined });
+      utils.provider.profile.vat.setData({ organisationId }, r);
+      setNum(r.number);
+      say("Saved");
+    } catch (err) {
+      const { fields, general } = errorsFrom(err);
+      setError(fields.number || general || "We couldn't save it. Check your connection, then try again.");
+      focusFirstError(formRef.current);
+    }
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      <Choice name="rt-set-vatreg" legend="Are you VAT registered?" value={reg} onChange={setReg} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
+      <Choice name="rt-set-vatreg" legend="Are you VAT registered?" value={reg} onChange={(v) => { setReg(v); setError(""); }} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
       {reg === "yes" && (
-        <Field id="rt-set-vat" label="VAT number" error={error} hint="GB then 9 numbers.">
-          <input {...aria("rt-set-vat", error, true)} type="text" autoComplete="off" spellCheck={false} maxLength={16} value={num} onChange={(e) => setNum(e.target.value)} className="rt-pws-set__short" />
+        <Field required id="rt-set-vat" label="VAT number" error={error} hint="GB then 9 numbers.">
+          <input {...aria("rt-set-vat", error, true)} type="text" autoComplete="off" spellCheck={false} maxLength={16} value={num} onChange={(e) => { setNum(e.target.value); setError(""); }} className="rt-pws-set__short" />
         </Field>
       )}
+      {reg === "no" && error && <p className="rt-q__err" role="alert">{error}</p>}
       <div className="rt-pws-set__foot">
         <p className="rt-acc__note">The prices you set are the prices learners pay. If you are registered, they include VAT.</p>
-        <button type="submit" className="button -md -purple-1 text-white">Save VAT details</button>
+        <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save"}</button>
       </div>
     </form>
   );
@@ -140,37 +170,59 @@ function VatTab({ data, say }) {
 // ---- emails ----------------------------------------------------------------------------------------------------------------
 
 const EMAILS = [
-  { key: "refund", label: "Refund email", hint: "We email this address when a learner asks for their money back." },
-  { key: "dispute", label: "Dispute email", hint: "Disputes need your evidence within 7 days, so use an inbox someone checks daily." },
-  { key: "order", label: "Order notification", hint: "A copy of every booking, with the learners' details." },
+  { key: "refund", label: "Refund email", hint: "The email address where you want to get course refund requests." },
+  { key: "dispute", label: "Dispute email", hint: "The email address where you want to get card disputes." },
+  { key: "order", label: "Order email", hint: "The email address where you want to get new course orders." },
 ];
-function EmailsTab({ data, say }) {
-  const [f, setF] = useState({ ...data.org.emails });
+// where order, refund and dispute notices go (API provider.profile.emails / saveEmails); all three required
+function EmailsTab({ say }) {
+  const { organisationId, can } = useProviderAccess();
+  const utils = api.useUtils();
+  const saved = api.provider.profile.emails.useQuery({ organisationId });
+  const save = api.provider.profile.saveEmails.useMutation();
+  const locked = !can("provider.emails.edit");
+  const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
-  useUnsavedChanges(EMAILS.some((m) => (f[m.key] || "").trim() !== (data.org.emails[m.key] || "")));
   const formRef = useRef(null);
-  const submit = (e) => {
+  useEffect(() => {
+    if (saved.data && f === null) setF({ order: saved.data.order, refund: saved.data.refund, dispute: saved.data.dispute });
+  }, [saved.data, f]);
+  useUnsavedChanges(!locked && Boolean(saved.data && f) && EMAILS.some((m) => f[m.key].trim().toLowerCase() !== saved.data[m.key]));
+  if (saved.isError) return <ErrorState inCard onRetry={() => saved.refetch()} />;
+  if (!saved.data || !f) return <Loading rows={2} />;
+  const submit = async (e) => {
     e.preventDefault();
     const errs = {};
     EMAILS.forEach((m) => {
-      if (!isEmail(f[m.key] || "")) errs[m.key] = "Enter an email address, like bookings@yourcompany.co.uk.";
+      if (!f[m.key].trim()) errs[m.key] = "Enter an email address.";
+      else if (!isEmail(f[m.key].trim())) errs[m.key] = "Enter an email address, like bookings@yourcompany.co.uk.";
     });
     setErrors(errs);
     if (Object.keys(errs).length) return focusFirstError(formRef.current);
-    saveOrg({ emails: Object.fromEntries(EMAILS.map((m) => [m.key, f[m.key].trim()])) });
-    say("Email addresses saved");
+    try {
+      const r = await save.mutateAsync({ organisationId, order: f.order.trim(), refund: f.refund.trim(), dispute: f.dispute.trim() });
+      utils.provider.profile.emails.setData({ organisationId }, r);
+      setF(r);
+      say("Saved");
+    } catch (err) {
+      const { fields, general } = errorsFrom(err);
+      setErrors(Object.keys(fields).length ? fields : { order: general || "We couldn't save them. Check your connection, then try again." });
+      focusFirstError(formRef.current);
+    }
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
       {EMAILS.map((m) => (
-        <Field key={m.key} id={`rt-set-em-${m.key}`} label={m.label} hint={m.hint} error={errors[m.key]}>
-          <input {...aria(`rt-set-em-${m.key}`, errors[m.key], true)} type="email" autoComplete="email" spellCheck={false} value={f[m.key] || ""} onChange={(e) => setF((x) => ({ ...x, [m.key]: e.target.value }))} />
+        <Field required key={m.key} id={`rt-set-em-${m.key}`} label={m.label} hint={m.hint} error={errors[m.key]}>
+          <input {...aria(`rt-set-em-${m.key}`, errors[m.key], true)} type="email" autoComplete="off" spellCheck={false} maxLength={254} className="rt-pws-set__mid" value={f[m.key]} disabled={locked} onChange={(e) => { setF((x) => ({ ...x, [m.key]: e.target.value })); setErrors((x) => ({ ...x, [m.key]: "" })); }} />
         </Field>
       ))}
-      <div className="rt-pws-set__foot">
-        <span></span>
-        <button type="submit" className="button -md -purple-1 text-white">Save email addresses</button>
-      </div>
+      {!locked && (
+        <div className="rt-pws-set__foot">
+          <span></span>
+          <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save"}</button>
+        </div>
+      )}
     </form>
   );
 }

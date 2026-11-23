@@ -13,9 +13,10 @@ import { notify, notifyApprovers, personOf } from '../../lib/notify.mjs'
 import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { loadProviderCourses, loadProviderDirectory } from '../catalogue/listings.mjs'
 import { providerTermsVersion } from '../content/content.router.mjs'
+import { loadProviderFaqs } from '../provider/faqs.mjs'
 import { PRIVATE_ROLES } from '../provider/profile.mjs'
 
-// One login, several identities (Hurak's model): every account is a student; a provider and a business are organisations the
+// One login, several identities: every account is a student; a provider and a business are organisations the
 // person belongs to. These procedures add an identity, open a workspace (the server-side check behind every /provider and
 // /business page), log a switch between identities, and read a provider's public profile.
 
@@ -120,7 +121,7 @@ export const organisationsRouter = createTRPCRouter({
       return org
     }),
 
-  // Create a business account (Hurak's "Create a Business Account"): company name, your role, phone. Ready straight away.
+  // Create a business account: company name, your role, phone. Ready straight away.
   createBusiness: protectedProcedure
     .input(z.object({ companyName: orgName('company name'), jobTitle: z.string().trim().min(2, 'Enter your role, like Operations Manager.').max(80, 'Your role must be 80 characters or fewer.'), phone }))
     .mutation(async ({ ctx, input }) => {
@@ -180,7 +181,8 @@ export const organisationsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       // an admin editing a provider as ReadTraining staff does it from the admin's own pages, never in the provider's workspace
       const mine = ctx.actor.memberships.filter((m) => m.type === input.type && m.status === 'active' && m.organisationStatus !== 'rejected' && !m.staff)
-      const chosen = (input.organisationId && mine.find((m) => m.organisationId === input.organisationId)) || mine[0]
+      // the one chosen in Switch account; otherwise the one they own, otherwise their first
+      const chosen = (input.organisationId && mine.find((m) => m.organisationId === input.organisationId)) || mine.find((m) => m.role === 'owner') || mine[0]
       const action = input.type === 'provider' ? 'provider.workspace.open' : 'business.workspace.open'
       if (!chosen || !can(ctx.actor, action, { organisationId: chosen.organisationId })) {
         await logDenied(ctx.db, {
@@ -299,6 +301,7 @@ export const organisationsRouter = createTRPCRouter({
       bookingTerms: org.bookingTerms ?? '',
       cancellationPolicy: org.cancellationPolicy ?? '',
       courses: await loadProviderCourses(ctx.db, org.id),
+      faqs: await loadProviderFaqs(ctx.db, org.id),
     }
   }),
 

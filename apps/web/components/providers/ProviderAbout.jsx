@@ -3,12 +3,12 @@ import Image from "next/image";
 import ProviderLogo from "./ProviderLogo";
 import NameList from "./NameList";
 import { IconCheck } from "@/components/marketing/parts";
-import { paragraphs } from "@/lib/paragraphs";
+import FormattedText from "@/components/forms/FormattedText";
 
-// "About {provider}": the about text (as the provider typed it: its paragraphs and line breaks; left out when it has none) and the
-// approved badge on the left; on the right the provider's mark and a details list
-// (where it is based, how it delivers, what it teaches, the cities it runs venues in), all worked out from its courses, in the
-// framed card (.fb-frame, as About's story) under a cover photo.
+// "About {provider}": the about text (as the provider typed it: its paragraphs, line breaks, bold words and bulleted lists; left
+// out when it has none) and the approved badge on the left; on the right the provider's mark and a details list
+// (where it is based, how it delivers, what it teaches, the cities it runs venues in, all worked out from its courses, and its
+// social media accounts, opening in a new tab), in the framed card (.fb-frame, as About's story) under a cover photo.
 export default function ProviderAbout({ provider: p, copy }) {
   const rows = [
     p.city && { label: "Based in", value: [p.city] },
@@ -23,11 +23,7 @@ export default function ProviderAbout({ provider: p, copy }) {
           <div>
             <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{copy.eyebrow}</div>
             <h2 className="fb-title" id="rt-prov-about-h">{copy.title}</h2>
-            {paragraphs(p.about).map((lines, i) => (
-              <p key={i} className="fb-lede rt-pabout__text">
-                {lines.map((line, j) => <React.Fragment key={j}>{j > 0 && <br />}{line}</React.Fragment>)}
-              </p>
-            ))}
+            <FormattedText text={p.about} pClass="fb-lede rt-pabout__text" ulClass="fb-lede rt-pabout__text rt-pabout__list" />
             <p className="rt-pabout__badge"><span className="fb-chip -ok"><IconCheck />{copy.badge}</span></p>
           </div>
           <div className="fb-frame">
@@ -44,6 +40,16 @@ export default function ProviderAbout({ provider: p, copy }) {
                 {rows.map((r) => (
                   <div key={r.label}><dt>{r.label}</dt><dd><NameList items={r.value} /></dd></div>
                 ))}
+                {/* the provider's own links (checked as Facebook, LinkedIn or YouTube addresses when saved): marked as theirs for
+                    search engines (ugc, nofollow) */}
+                {p.socials.length > 0 && (
+                  <div>
+                    <dt>{copy.followLabel}</dt>
+                    <dd className="rt-pabout__social">
+                      {p.socials.map((s) => <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer nofollow ugc" className="rt-cd__link">{s.label}<span className="rt-sr"> (opens in a new tab)</span></a>)}
+                    </dd>
+                  </div>
+                )}
               </dl>
             </div>
           </div>

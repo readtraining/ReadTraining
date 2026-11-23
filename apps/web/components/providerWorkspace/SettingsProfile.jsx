@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
-import { useWorkspace } from "@/lib/workspaceContext";
+import Link from "next/link";
+import { useWorkspace, useWorkspaceLinks } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
-import { Pill } from "./providerParts";
+import { Pill, RowMenu, Search } from "./providerParts";
 import { Confirm, Counter, Field, aria, isUrlOn } from "./settingsForm";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
@@ -36,14 +37,26 @@ function WithProfile({ children }) {
 
 // ---- provider information --------------------------------------------------------------------------------------------------
 
+const NL = "\n"; // a line break in the biography box
+
 const SOCIAL = [
   { key: "facebook", label: "Facebook", hosts: ["facebook.com"], example: "https://www.facebook.com/yourpage" },
   { key: "linkedin", label: "LinkedIn", hosts: ["linkedin.com"], example: "https://www.linkedin.com/company/yourcompany" },
   { key: "youtube", label: "YouTube", hosts: ["youtube.com"], example: "https://www.youtube.com/@yourchannel" },
 ];
 
+// Provider information: the logo (saved as soon as it is chosen) above the name, headline, biography, town and social links
 export function InfoTab({ say }) {
-  return <WithProfile>{(p) => <InfoForm profile={p} say={say} />}</WithProfile>;
+  return (
+    <WithProfile>
+      {(p) => (
+        <div className="rt-acc__stack">
+          <LogoForm profile={p} say={say} />
+          <InfoForm profile={p} say={say} />
+        </div>
+      )}
+    </WithProfile>
+  );
 }
 
 // the provider's name can change while its application is being reviewed (owner and admin); after approval it goes through us
@@ -60,7 +73,56 @@ function InfoForm({ profile, say }) {
   // what is saved (updated on a save, without waiting for the profile to load again): leaving with changes asks first
   const [savedF, setSavedF] = useState(f);
   const formRef = useRef(null);
-  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+  // typing in a field clears its error
+  const set = (k) => (e) => { setF((x) => ({ ...x, [k]: e.target.value })); setErrors((x) => ({ ...x, [k]: "" })); };
+  // the biography's Bold and Bullet list buttons: they add the marks the public profile shows as bold words and a bulleted list
+  // (lib/richText.js) around what is selected, then put the selection back
+  const bioRef = useRef(null);
+  const formatBio = (kind) => {
+    const el = bioRef.current;
+    if (!el) return;
+    const v = f.bio;
+    const a = el.selectionStart;
+    const b = el.selectionEnd;
+    let next;
+    let from;
+    let to;
+    if (kind === "bold") {
+      const words = v.slice(a, b);
+      const inner = words.trim() || "bold text";
+      const lead = words.trim() ? words.length - words.trimStart().length : 0; // spaces picked up with a double-clicked word stay outside
+      const trail = words.trim() ? words.length - words.trimEnd().length : 0;
+      next = `${v.slice(0, a + lead)}**${inner}**${v.slice(b - trail)}`;
+      from = a + lead + 2;
+      to = from + inner.length;
+    } else {
+      // the whole lines the selection touches: each becomes a bullet, or, when all already are, back to plain lines
+      const start = v.lastIndexOf(NL, a - 1) + 1;
+      const stop = v.indexOf(NL, b);
+      const end = stop < 0 ? v.length : stop;
+      const lines = v.slice(start, end).split(NL);
+      const all = lines.every((l) => /^- /.test(l));
+      const out = lines.map((l) => (all ? l.replace(/^- /, "") : /^- /.test(l) || !l.trim() ? l : `- ${l}`)).join(NL);
+      const shown = out === "" ? "- " : out; // an empty line starts a bullet
+      next = `${v.slice(0, start)}${shown}${v.slice(end)}`;
+      from = start + shown.length; // the cursor at the end of those lines, ready to type
+      to = from;
+    }
+    if (next.length > 5000) return; // the box's limit
+    setF((x) => ({ ...x, bio: next }));
+    setErrors((x) => ({ ...x, bio: "" }));
+    selectAfter.current = [from, to];
+  };
+  // the cursor (or the placeholder "bold text", selected) is put back in the same update as the new text, before the next key
+  // is handled, so fast typing after a click always lands in the right place
+  const selectAfter = useRef(null);
+  useLayoutEffect(() => {
+    const at = selectAfter.current;
+    if (!at || !bioRef.current) return;
+    selectAfter.current = null;
+    bioRef.current.focus();
+    bioRef.current.setSelectionRange(at[0], at[1]);
+  });
   const locked = !can("provider.profile.edit");
   useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
   const underReview = UNDER_REVIEW.includes(profile.status);
@@ -100,23 +162,28 @@ function InfoForm({ profile, say }) {
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
       {canRename ? (
-        <Field id="rt-set-name" label="Company or instructor name" hint="Learners see this name. You can change it until your account is approved." error={errors.name} count={<Counter value={f.name} max={100} />}>
+        <Field required id="rt-set-name" label="Company or instructor name" hint="Learners see this name. You can change it until your account is approved." error={errors.name} count={<Counter value={f.name} max={100} />}>
           <input {...aria("rt-set-name", errors.name, true)} type="text" maxLength={100} autoComplete="organization" value={f.name} onChange={set("name")} />
         </Field>
       ) : (
         <p className="rt-acc__note">Provider name: <b>{profile.name}</b>. {underReview ? "The account owner or an admin can change it until your account is approved." : "To change it, contact us: it was checked when your account was approved."}</p>
       )}
-      <Field id="rt-set-headline" label="Headline" error={errors.headline} count={<Counter value={f.headline} max={120} />}>
+      <Field required id="rt-set-headline" label="Headline" error={errors.headline} count={<Counter value={f.headline} max={120} />}>
         <input {...aria("rt-set-headline", errors.headline)} type="text" maxLength={120} autoComplete="off" value={f.headline} onChange={set("headline")} disabled={locked} />
       </Field>
-      <Field id="rt-set-bio" label="Biography" hint="Who you are, where you train and what makes your courses good." error={errors.bio} count={<Counter value={f.bio} max={5000} />}>
-        <TextArea {...aria("rt-set-bio", errors.bio, true)} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
+      <Field required id="rt-set-bio" label="Biography" hint="Who you are, where you train and what makes your courses good. Bold words and bullet points show formatted on your public profile." error={errors.bio} count={<Counter value={f.bio} max={5000} />}>
+        {/* a click on a button never takes the cursor out of the box (onMouseDown), so the next key types there, not on the button */}
+        <div className="rt-pws-set__fmt" role="toolbar" aria-label="Format the biography" aria-controls="rt-set-bio">
+          <button type="button" className="rt-pws-set__fmtbtn" onMouseDown={(e) => e.preventDefault()} onClick={() => formatBio("bold")} disabled={locked}><b aria-hidden="true">B</b> Bold</button>
+          <button type="button" className="rt-pws-set__fmtbtn" onMouseDown={(e) => e.preventDefault()} onClick={() => formatBio("list")} disabled={locked}><i className="icon-list text-12" aria-hidden="true"></i> Bullet list</button>
+        </div>
+        <TextArea {...aria("rt-set-bio", errors.bio, true)} ref={bioRef} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
       </Field>
-      <Field id="rt-set-city" label="Town or city (optional)" hint="Where you are based, shown on your public profile." error={errors.city}>
+      <Field id="rt-set-city" label="Town or city" hint="Where you are based, shown on your public profile." error={errors.city}>
         <input {...aria("rt-set-city", errors.city, true)} type="text" maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} disabled={locked} className="rt-pws-set__short" />
       </Field>
       <fieldset className="rt-pws-set__group">
-        <legend>Social media (optional)</legend>
+        <legend>Social media</legend>
         <div className="rt-pws-set__grid">
           {SOCIAL.map((x) => (
             <Field key={x.key} id={`rt-set-${x.key}`} label={x.label} error={errors[x.key]}>
@@ -137,10 +204,6 @@ function InfoForm({ profile, say }) {
 // ---- company logo ----------------------------------------------------------------------------------------------------------
 
 // the rule every picture upload follows (lib/images.js): PNG, JPG or WebP up to 15 MB, made smaller for you, at least 200 × 200
-
-export function LogoTab({ say }) {
-  return <WithProfile>{(p) => <LogoForm profile={p} say={say} />}</WithProfile>;
-}
 
 function LogoForm({ profile, say }) {
   const { organisationId, can } = useProviderAccess();
@@ -214,6 +277,9 @@ function LogoForm({ profile, say }) {
 
   return (
     <div className="rt-acc__card rt-q__form rt-pws-set__form" aria-busy={busy || undefined}>
+      <div className="rt-field">
+        <label htmlFor="rt-set-logo">Logo</label>
+      </div>
       {error && <p className="rt-q__err" id="rt-set-logo-e" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
       <div className="rt-pws-set__logo">
         <span className="rt-pws-set__logobox">
@@ -283,10 +349,10 @@ function TermsForms({ profile, say }) {
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      <Field id="rt-set-policy" label="Cancellation policy" hint="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain." error={errors.policy} count={<Counter value={policy} max={10000} />}>
+      <Field required id="rt-set-policy" label="Cancellation policy" hint="When learners can cancel or change dates, and what they get back. Learners see this before they pay, so keep it short and plain." error={errors.policy} count={<Counter value={policy} max={10000} />}>
         <TextArea {...aria("rt-set-policy", errors.policy, true)} rows={9} maxLength={10000} autoComplete="off" value={policy} onChange={(e) => { setPolicy(e.target.value); if (errors.policy) setErrors({}); }} disabled={locked} />
       </Field>
-      <Field id="rt-set-terms" label="Booking terms (optional)" hint="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms." error={errors.terms} count={<Counter value={terms} max={20000} />}>
+      <Field id="rt-set-terms" label="Booking terms" hint="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms." error={errors.terms} count={<Counter value={terms} max={20000} />}>
         <TextArea {...aria("rt-set-terms", errors.terms, true)} rows={9} maxLength={20000} autoComplete="off" value={terms} onChange={(e) => { setTerms(e.target.value); if (errors.terms) setErrors({}); }} disabled={locked} />
       </Field>
       {!locked && (
@@ -304,48 +370,65 @@ function TermsForms({ profile, say }) {
 const POSTCODE = /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/;
 
 // The places classroom dates are held. Each date picks one; archived venues stay on their past dates but can't be picked again.
+// a venue matches a search on its title, address, town or postcode (a postcode with or without its space)
+const venueMatches = (v, q) => {
+  const t = q.trim().toLowerCase();
+  if (!t) return true;
+  const hay = [v.name, v.street, v.city].join(" ").toLowerCase();
+  const pc = (v.postcode || "").toLowerCase();
+  return hay.includes(t) || pc.includes(t) || pc.replace(/\s+/g, "").includes(t.replace(/\s+/g, ""));
+};
+
+// The Venues page (/provider/venues; also the admin's provider Profile and venues page): search, each venue with its
+// linked courses (those with dates there), add, edit, archive or restore (a venue is never deleted).
 export function VenuesTab({ say }) {
   const { organisationId, can } = useProviderAccess();
+  const links = useWorkspaceLinks();
+  const [q, setQ] = useState("");
   const utils = api.useUtils();
   const query = api.provider.venues.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const setActive = api.provider.venues.setActive.useMutation();
-  const remove = api.provider.venues.remove.useMutation();
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = new, a venue = edit it
-  const [removing, setRemoving] = useState(null);
   const [archiving, setArchiving] = useState(null);
   const toggleActive = (v) =>
     setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, {
       onSuccess: () => { setArchiving(null); refresh(); say(v.active ? "Venue archived" : "Venue restored"); },
       onError: (e) => { setArchiving(null); say(firstError(e)); },
     });
-  const [blocked, setBlocked] = useState("");
   const edit = can("provider.cohorts.edit");
   const refresh = () => utils.provider.venues.list.invalidate({ organisationId });
 
   if (query.isError) return <ErrorState title="We couldn't load your venues." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!query.data) return <Loading rows={2} />;
   const venues = query.data;
+  const shown = venues.filter((v) => venueMatches(v, q));
 
   return (
     <div className="rt-acc__stack">
-      {edit && <div><button type="button" className="button -md -purple-1 text-white" onClick={() => setEditing(null)}>Add venue</button></div>}
-      {venues.length ? (
+      <div className="rt-adm-toolbar">
+        {venues.length > 0 && <Search value={q} onChange={setQ} label="Search venues" />}
+        {edit && <div className="rt-adm-toolbar__end"><button type="button" className="button -md -purple-1 text-white" onClick={() => setEditing(null)}>Add venue</button></div>}
+      </div>
+      {venues.length && !shown.length ? (
+        <EmptyState title="No venues match your search." action={{ label: "Clear search", onClick: () => setQ("") }} />
+      ) : venues.length ? (
         <div className="rt-acc__card">
           <ul className="rt-adm-list">
-            {venues.map((v) => (
+            {shown.map((v) => (
               <li key={v.id}>
                 <div>
                   <b>{v.name}</b>{!v.active && <> <Pill tone="muted">Archived</Pill></>}
                   <small>{[v.street, v.city, v.postcode].filter(Boolean).join(", ")}</small>
                   <small>{v.upcoming ? `${v.upcoming} upcoming ${v.upcoming === 1 ? "date" : "dates"}` : "No upcoming dates"}{v.located ? "" : v.problem ? ` · ${v.problem} Edit the venue to put it right.` : " · We couldn't check this town yet; we'll try again."}</small>
+                  {v.courses.length > 0 && <small>Courses: {v.courses.map((c, n) => <React.Fragment key={c.id}>{n > 0 && ", "}<Link href={links.course(c.id)} className="rt-cd__link">{c.title}</Link></React.Fragment>)}</small>}
                 </div>
                 {edit && (
                   <div className="rt-adm-list__side">
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => setEditing(v)}>Edit<span className="rt-sr"> {v.name}</span></button>
-                    {/* archiving takes the venue out of new dates, so it asks first; restoring doesn't */}
-                    <button type="button" className="fb-textlink rt-pws-course-linkbtn" disabled={setActive.isPending} aria-busy={(setActive.isPending && setActive.variables?.venueId === v.id) || undefined} onClick={() => (v.active ? setArchiving(v) : toggleActive(v))}>{setActive.isPending && setActive.variables?.venueId === v.id ? (v.active ? "Archiving…" : "Restoring…") : v.active ? "Archive" : "Restore"}<span className="rt-sr"> {v.name}</span></button>
-                    {/* a venue a date has used can't be deleted (its dates keep it): only archived, so Delete isn't offered */}
-                    {!v.used && <button type="button" className="fb-textlink rt-pws-course-linkbtn rt-adm-danger" onClick={() => { setBlocked(""); setRemoving(v); }}>Delete<span className="rt-sr"> {v.name}</span></button>}
+                    {/* archiving takes the venue out of new dates, so it asks first; restoring doesn't (a venue is never deleted) */}
+                    <RowMenu label={`Actions for ${v.name}`} items={[
+                      { label: "Edit", onClick: () => setEditing(v) },
+                      { label: v.active ? "Archive" : "Restore", onClick: () => (setActive.isPending ? null : v.active ? setArchiving(v) : toggleActive(v)) },
+                    ]} />
                   </div>
                 )}
               </li>
@@ -355,9 +438,7 @@ export function VenuesTab({ say }) {
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : r.unchecked ? "Venue saved. We couldn't check its town just now; we'll try again." : "Venue saved, but we couldn't find its postcode on the map"); }} />
-      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
-      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title="Delete this venue?" text={removing ? `${removing.name} is removed for good.` : ""} confirmLabel={remove.isPending ? "Deleting…" : "Delete venue"} blocked={blocked} busy={remove.isPending}
-        onConfirm={() => remove.mutate({ organisationId, venueId: removing.id }, { onSuccess: () => { setRemoving(null); refresh(); say("Venue deleted"); }, onError: (e) => setBlocked(firstError(e)) })} />
+      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.${archiving.upcoming ? " Any of its upcoming dates still taking bookings need their bookings turned off, or to be cancelled, first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
     </div>
   );
 }
@@ -382,10 +463,12 @@ export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = f
   const [errors, setErrors] = useState({});
   const [start] = useState(f);
   const dirty = JSON.stringify(f) !== JSON.stringify(start);
+  const moved = Boolean(venue?.upcoming) && ["street", "city", "postcode"].some((k) => f[k].trim() !== start[k].trim());
   useUnsavedChanges(dirty); // typed into but not saved (the form closes once saved)
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]); // tells its pop-up, so closing it asks first
   const ref = useRef(null);
-  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+  // typing in a field clears its error
+  const set = (k) => (e) => { setF((x) => ({ ...x, [k]: e.target.value })); setErrors((x) => ({ ...x, [k]: "" })); };
   const submit = (e) => {
     e?.preventDefault();
     const err = {};
@@ -397,7 +480,7 @@ export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = f
     setErrors(err);
     if (Object.keys(err).length) return focusFirstError(ref.current);
     save.mutate(
-      { organisationId, ...(venue ? { venueId: venue.id } : {}), name: f.name.trim(), street: f.street.trim(), city: f.city.trim(), postcode: f.postcode.trim() },
+      { organisationId, ...(venue ? { venueId: venue.id, seen: venue.version } : {}), name: f.name.trim(), street: f.street.trim(), city: f.city.trim(), postcode: f.postcode.trim() },
       { onSuccess: (r) => onSaved(r, !venue), onError: (er) => { const { fields, general } = errorsFrom(er); setErrors({ ...fields, form: general }); } },
     );
   };
@@ -406,20 +489,24 @@ export function VenueForm({ venue = null, onSaved, onCancel, onDirty, inline = f
   const id = (k) => `${idPrefix}${k}`;
   const body = (
     <>
-      <Field id={id("n")} label="Venue name" error={errors.name}>
+      <Field required id={id("n")} label="Venue name" error={errors.name}>
         <input {...aria(id("n"), errors.name)} maxLength={100} autoComplete="organization" placeholder="For example: Northfield Training Centre" value={f.name} onChange={set("name")} />
       </Field>
-      <Field id={id("s")} label="Street address" error={errors.street}>
+      <Field required id={id("s")} label="Street address" error={errors.street}>
         <input {...aria(id("s"), errors.street)} maxLength={160} autoComplete="street-address" value={f.street} onChange={set("street")} />
       </Field>
       <div className="rt-pws-course-grid2">
-        <Field id={id("c")} label="Town or city" error={errors.city}>
+        <Field required id={id("c")} label="Town or city" error={errors.city}>
           <input {...aria(id("c"), errors.city)} maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} />
         </Field>
-        <Field id={id("p")} label="Postcode" hint="Used to place the venue on the map, so learners can search by distance." error={errors.postcode}>
+        <Field required id={id("p")} label="Postcode" error={errors.postcode}>
           <input {...aria(id("p"), errors.postcode, true)} maxLength={8} autoComplete="postal-code" value={f.postcode} onChange={set("postcode")} />
         </Field>
       </div>
+      {/* under the row, so the town and postcode labels and boxes line up side by side */}
+      <p className="rt-field__hint rt-pws-venueform__hint" id={`${id("p")}-h`}>The postcode puts the venue on the map, so learners can search by distance.</p>
+      {/* a venue's address is its dates' address: a change shows on the dates still to run there */}
+      {moved && <p className="rt-acc__note">The new address shows on its {venue.upcoming === 1 ? "upcoming date" : `${venue.upcoming} upcoming dates`} too.</p>}
       {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
       <div className={onCancel ? "rt-pws-venueform__actions" : undefined}>
         <button type={inline ? "button" : "submit"} onClick={inline ? submit : undefined} className={`button -md -purple-1 text-white${onCancel ? "" : " rt-btn-block"}`} disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save venue"}</button>

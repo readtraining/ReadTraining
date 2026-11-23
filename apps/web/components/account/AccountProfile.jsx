@@ -29,7 +29,7 @@ const latestBirthday = () => {
   return `${now.getUTCFullYear() - MIN_AGE}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
 };
 
-// Account settings in Hurak's four parts, each saved on its own: basic information (photo, name, date of birth, phone, the
+// Account settings in four parts, each saved on its own: basic information (photo, name, date of birth, phone, the
 // "Verified" badge), address, email (needs the current password) and password (current, new, repeat). Then the marketing
 // emails choice (consent can be withdrawn as easily as it was given) and how to close the account. Everything is read from
 // and saved through the API (me.*), which checks it again and writes the activity log.

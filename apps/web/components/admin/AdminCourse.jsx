@@ -13,7 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
 import { isDatedMethod, wayName, waysOf } from "@/lib/courseModes";
-import { Said, DetailSkeleton, formatWhen, Empty, PageLink, getQuery, setQuery } from "./adminParts";
+import { Said, DetailSkeleton, formatWhen, Empty, PageLink, getQuery, setQuery, Req } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import AdminCoursePrices from "./AdminCoursePrices";
@@ -45,6 +45,8 @@ export default function AdminCourse({ id }) {
   const [reasonError, setReasonError] = useState("");
   const [said, setSaid] = useState("");
   const [problem, setProblem] = useState(""); // a refused decision, or an email that couldn't be sent: shown until the next one
+  // after a decision, until the course has loaded again: the buttons stay locked, so the old status never shows with live buttons
+  const [settling, setSettling] = useState(false);
   const formRef = useRef(null);
   const c = query.data;
   // Pause course from the catalogue table's menu (?do=pause): the same pop-up as here, with its checks
@@ -65,11 +67,12 @@ export default function AdminCourse({ id }) {
   // (its prices), as ReadTraining staff (StaffEdit): the editor then offers only what their switches allow
   const canWrite = shared ? Boolean(me?.permissions?.includes("catalogue")) : ["approve", "pricing"].some((x) => me?.permissions?.includes(x));
   const providerReady = c.provider?.status === "active";
-  const refresh = () => {
-    utils.admin.courses.get.invalidate({ courseId });
+  // this course is waited for (the page shows its new status before it unlocks); the lists catch up behind it
+  const refresh = async () => {
     utils.admin.courses.queue.invalidate();
     utils.admin.courses.counts.invalidate();
     utils.admin.courses.list.invalidate();
+    await utils.admin.courses.get.invalidate({ courseId }).catch(() => {});
   };
   // a decision on the admin's own course (or its change): only as the sole approver, with a reason (API lib/soleApprover.mts)
   const ownFor = (decision) => (decision === "approveChange" || decision === "rejectChange" ? c.ownChange : c.ownCourse);
@@ -82,8 +85,10 @@ export default function AdminCourse({ id }) {
       const sent = decision === "approveChange" || decision === "rejectChange" ? c.change?.since : decision === "approve" || decision === "changes" ? c.submittedAt : null;
       const seen = sent ? new Date(sent).toISOString() : undefined;
       const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen });
-      refresh();
+      setSettling(true);
       refreshCourses().catch(() => {});
+      await refresh();
+      setSettling(false);
       const text = { approve: "Approved: the course is live", changes: "Sent back to the provider with your note", approveChange: "Change approved: it is now the current version", rejectChange: "Change turned down", pause: "Course paused", resume: "Course back live" }[decision];
       setSaid(`${text}.${r.outbox ? ` ${ap.emailOutbox}` : r.emailed ? ` ${ap.emailed}` : ""}`);
       if (!r.outbox && !r.emailed) setProblem(ap.notEmailed);
@@ -119,7 +124,7 @@ export default function AdminCourse({ id }) {
     if (failed) (ownFor(asking) && !needsNote(asking) ? setReasonError : setError)(failed);
     else setAsking(null);
   };
-  const busy = decide.isPending;
+  const busy = decide.isPending || settling;
   const sheetTitle = { approve: ap.approve, changes: ap.requestChanges, approveChange: ap.approveChange, rejectChange: ap.rejectChange, pause: ap.pause, resume: ap.resume }[asking] || "";
   // the "you sent this yourself" notice: while their own course, or their own change, waits for a decision; and on their own
   // published course, which they pause or put back live only as the sole approver
@@ -267,14 +272,14 @@ export default function AdminCourse({ id }) {
           <p className="rt-acc__note">{c.provider?.name}</p>
           {asking && needsNote(asking) && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-cnote">{ap.reasonLabel}</label>
+              <label htmlFor="rt-adm-cnote">{ap.reasonLabel}<Req /></label>
               {error && <p className="rt-q__err" id="rt-adm-cnote-e"><span className="rt-sr">Error: </span>{error}</p>}
               <TextArea id="rt-adm-cnote" rows={5} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "rt-adm-cnote-e" : undefined} />
             </div>
           )}
           {asking && ownFor(asking) && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-cown">{A.own.label}</label>
+              <label htmlFor="rt-adm-cown">{A.own.label}<Req /></label>
               <small className="rt-field__hint" id="rt-adm-cown-hint">{A.own.hint}</small>
               {reasonError && <p className="rt-q__err" id="rt-adm-cown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
               <TextArea id="rt-adm-cown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-cown-hint${reasonError ? " rt-adm-cown-e" : ""}`} />

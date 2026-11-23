@@ -1,4 +1,4 @@
-// Becoming a provider, as the client's site (hurak.com) does it: "Become a provider" on the provider page opens a pop-up that
+// Becoming a provider, as the client's site does it: "Become a provider" on the provider page opens a pop-up that
 // creates a normal account (first name, last name, email, password, agreeing to the provider terms; the same login as learners,
 // with a "log in" link for people who already have one); then provider onboarding asks for the provider details and opens the
 // workspace. The client's onboarding screen is behind sign-in, so its fields are the brief's: company or instructor name,
@@ -33,6 +33,8 @@ export const providerSignup = {
     loading: "Loading…",
     formTitle: "Your provider details",
     formLead: "You use the same login for your learner and provider accounts, and can switch between them at any time.",
+    // a provider's team invited this person and they haven't joined: offered before the form, which stays for their own provider
+    invited: { text: (provider) => `${provider} has invited you to its team. Accept the invitation to work on its courses, rather than creating a provider of your own.`, action: "Accept your invitation", href: "/provider/join" },
     name: "Company or instructor name",
     nameHint: "The name learners see on your courses and your public profile.",
     mobile: "Mobile number",

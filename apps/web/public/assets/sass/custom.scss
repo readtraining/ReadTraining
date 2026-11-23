@@ -399,7 +399,7 @@
   font-size: 16px;
 }
 
-/* ReadTraining: navbar search result rows (Hurak-style hover) */
+/* ReadTraining: navbar search result rows (hover) */
 .rt-search-row:hover {
   background-color: var(--color-light-4);
 }
@@ -415,7 +415,7 @@
   cursor: text; border-radius: 12px;
   transition: background-color 0.15s, box-shadow 0.15s;
 }
-/* tonal states (Airbnb pattern): hover = light tint, active = white card lifted with a soft shadow */
+/* tonal states: hover = light tint, active = white card lifted with a soft shadow */
 .rt-searchband__item:hover { background-color: var(--color-light-4); }
 .rt-searchband__item:focus-within {
   background-color: #fff;
@@ -529,7 +529,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Type scale (debugged from hurak.com at 1854px):
+   Type scale (debugged from the client's current site at 1854px):
    h1 52px/600/lh 1.06/ls -1.3px · h2 44px/600/lh 1.12/ls -1.1px
    lead 18px/lh 1.625 · body 16px/24px · eyebrow 11px/600/ls 0.05em uppercase
    --------------------------------------------------------------------------- */
@@ -981,6 +981,9 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
 .bz-cta3 { display: flex; justify-content: space-between; align-items: center; gap: 32px; padding: 28px 32px; border-radius: 18px; background: var(--color-dark-1); color: #fff; }
 .rt-home .bz-cta3__title { font-size: 30px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: #fff; }
 .bz-cta3__lede { margin-top: 8px; font-size: 16px; line-height: 1.6; color: rgba(255, 255, 255, 0.72); max-width: 90ch; }
+/* For providers: a button (and the band's sentence) that depends on the signed-in person's provider account keeps its place
+   unseen until that is known (components/provider/ProviderCta.jsx), so nothing jumps and no wrong words show */
+.rt-cta-wait { visibility: hidden; }
 .bz-cta3__actions { display: flex; flex-wrap: wrap; gap: 12px; flex: 0 0 auto; }
 @media (max-width: 991px) { .bz-cta3 { flex-direction: column; align-items: flex-start; padding: 32px 24px; } }
 
@@ -1142,6 +1145,12 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
    empty space to scroll into below the form */
 .rt-dd .rt-cat-dd:not(.is-open) .rt-cat-dd__panel { display: none; }
 .rt-cat-dd__panel::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
+/* in a pop-up on a computer the list opens inside it, under its field and in the flow (so the pop-up never cuts it off), as wide as
+   the field, about six options at a time with the rest scrolling (CatalogueDropdown `-inline`) */
+.rt-cat-dd__panel.-inline { position: static; width: 100%; min-width: 0; max-width: none; margin-top: 6px; transform: none; transition: none; }
+.rt-cat-dd:not(.is-open) .rt-cat-dd__panel.-inline { display: none; }
+.rt-cat-dd__panel.-inline::before { display: none; }
+.rt-cat-dd__panel.-inline .rt-cat-dd__list { max-height: 252px; }
 .rt-cat-dd--sort .rt-cat-dd__panel { left: auto; right: 0; min-width: 220px; }
 .rt-cat-dd__search { display: flex; align-items: center; gap: 8px; height: 40px; margin: 0 0 6px; padding: 0 12px; border: 1px solid var(--color-light-5); border-radius: var(--cat-radius-sm); }
 .rt-cat-dd__search:focus-within { border-color: var(--color-dark-1); }
@@ -1940,7 +1949,7 @@ main#rt-cd-main { overflow: clip; }
 
 
 
-/* ---------- Course detail: Hurak structure (hero side image, learning option cards, article, trust points, related) ---------- */
+/* ---------- Course detail: structure (hero side image, learning option cards, article, trust points, related) ---------- */
 
 .rt-cd__prose p, .rt-cd__sec > p { margin: 0 0 12px; font-size: 16px; line-height: 26px; color: var(--cd-text); }
 .rt-cd__sec .rt-cd__h3 { margin: 24px 0 8px; font-size: 20px; line-height: 28px; font-weight: 700; }
@@ -2021,7 +2030,7 @@ main#rt-cd-main { overflow: clip; }
 @media (min-width: 992px) { .rt-cd__grid { grid-template-columns: minmax(0, 1fr) 360px; } }
 
 /* ===================================================================================================
-   COURSE DETAIL: FINAL SPEC. Hero (content like Hurak, our design), features card, booking card (.rt-bk, two states),
+   COURSE DETAIL: FINAL SPEC. Hero (our design), features card, booking card (.rt-bk, two states),
    Learning options (.rt-lo, the only place to choose), section styles. Theme tokens only.
    =================================================================================================== */
 
@@ -2070,7 +2079,7 @@ main#rt-cd-main { overflow: clip; }
    =================================================================================================== */
 
 /* ===================================================================================================
-   COURSE DETAIL: UDEMY-STYLE HERO, STATS CARD AND BOOKING CARD (sizes and spacing as specified; our colours via tokens)
+   COURSE DETAIL: HERO, STATS CARD AND BOOKING CARD (sizes and spacing as specified; our colours via tokens)
    =================================================================================================== */
 
 /* ---------- Container and grid ---------- */
@@ -2127,7 +2136,7 @@ main#rt-cd-main { overflow: clip; }
 
 /* ---------- Course features box ---------- */
 
-/* ---------- Booking card (340px, square, Udemy shadow) ---------- */
+/* ---------- Booking card (340px, square, soft shadow) ---------- */
 .rt-cd__aside { grid-area: aside; align-self: start; position: sticky; top: calc(var(--header-offset, 0px) + 16px); z-index: 3; width: 360px; margin-top: 32px; padding-top: 0; transition: top 0.2s ease; }
 @media (min-width: 992px) {
   .rt-cd__aside { justify-self: end; }
@@ -2318,7 +2327,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* desktop: the panel fits a short list (no empty band under two dates) but keeps a steady minimum, so switching study method
    barely moves it; a long list scrolls (phones: full screen) */
 @media (min-width: 576px) { .rt-dd__panel:has(.rt-dd__list) { min-height: min(520px, 88dvh); max-height: min(680px, 88dvh); } }
-/* venues as plain rows with a line between them (as Hurak's): name, address, next course and price on the left, Show dates on the right */
+/* venues as plain rows with a line between them: name, address, next course and price on the left, Show dates on the right */
 .rt-dd__list:has(.rt-dd__venues) { background: var(--cd-surface); }
 .rt-dd__venues { display: flex; flex-direction: column; }
 .rt-dd__vcard { padding: 16px 0; border-bottom: 1px solid var(--cd-border); }
@@ -2401,7 +2410,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 /* Radio circles removed from the Learning options cards and the booking card (the real radio inputs stay for keyboard and screen readers) */
 .rt-lc__card .rt-bs__radio, .rt-bk .rt-bs__radio { display: none; }
 
-/* COURSE FEATURES v2: one row of rounded icon badges (Hurak style) */
+/* COURSE FEATURES v2: one row of rounded icon badges */
 .rt-cd__fcard { z-index: 1; box-sizing: border-box; background: var(--cd-surface); border: 1px solid var(--cd-border); position: static; margin-top: 32px; box-shadow: none; border-radius: 16px; padding: 20px 24px; }
 
 .rt-lc__full--cols { margin-top: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -2875,7 +2884,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 :root:has(.rt-tq-page) body { overflow-x: clip; } /* the template's overflow rules would stop the sticky bar and question grid */
 .rt-tq-page main { overflow: clip; }
 .rt-tq.rt-tps__body { padding: 24px 0 80px; }
-/* the test page, as on the reference (hurak.com): "Book a course" and "Leave a comment" above the test, on the right; the intro
+/* the test page, as on the reference: "Book a course" and "Leave a comment" above the test, on the right; the intro
    ("Before you start") centred in the page; under the test, "Ready to book your course?" (SubjectCourses) and the
    "Still looking for an answer?" box (the reviews empty-state panel) */
 /* TEST PAGE v2. While the test runs (TestRunner puts "rt-tq-running" on <body>): only the site menu, the band, the tools and the
@@ -4223,7 +4232,7 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 /* the page column is a grid: let the cards and the toolbar be narrower than their one-line content (long emails), so on phones
    the emails shorten with … instead of widening the page */
 .rt-biz__place, .rt-biz__bar { min-width: 0; }
-/* assign places, as Hurak's Courses page: course type and title search, how many courses match with Clear filter, and each
+/* assign places: course type and title search, how many courses match with Clear filter, and each
    course's type and places remaining as tags */
 .rt-biz__coursefilters { grid-template-columns: minmax(0, 240px) minmax(0, 1fr); }
 .rt-biz__coursefilters .rt-field { margin: 0; }
@@ -4877,8 +4886,17 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-adm-seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--color-light-5); border-radius: 12px; background: #fff; }
 .rt-adm-seg button { padding: 6px 12px; border: 0; border-radius: 8px; background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--color-light-1); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
 .rt-adm-seg button.is-on { background: var(--color-purple-3); color: var(--color-purple-1); }
-.rt-adm-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
-.rt-adm-bulk .rt-bk__check { font-weight: 500; }
+/* Approvals: Sort by (the sort icon and its two orders, the current one ticked), and the selection bar above the cards, its box in line with
+   theirs (the card's padding and border) and its button in line with their ⋯ menus */
+.rt-adm-sortbtn { display: inline-flex; flex: none; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); cursor: pointer; transition: border-color 160ms ease; }
+.rt-adm-sortbtn:hover, .rt-rowmenu.is-open .rt-adm-sortbtn { border-color: var(--rt-c-text); }
+.rt-adm-sortbtn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-adm-sortbtn__tick { width: 12px; color: var(--rt-c-brand); }
+.rt-adm-sortbtn__tick.-off { visibility: hidden; }
+.rt-adm-pickbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0 25px; }
+.rt-adm-pickbar .rt-bk__check { font-weight: 500; }
+.rt-adm-pickbar__end { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+@media (max-width: 575px) { .rt-adm-pickbar { padding: 0 17px; } }
 /* item cards (approvals, changes) */
 .rt-adm-items { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .rt-adm-item { display: flex; align-items: flex-start; gap: 16px; list-style: none; transition: border-color 150ms ease; }
@@ -5117,6 +5135,7 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-status__title { margin: 0; font-size: var(--rt-text-sm); font-weight: 700; line-height: 1.4; color: var(--rt-c-text); }
 .rt-pws-status__text { margin: 2px 0 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); }
 .rt-dash > .rt-pws-status { margin: 0; }
+.rt-pws-status > .button { flex: none; } /* the payout banner's button (Coming soon until Milestone 4) */
 .rt-pws-status__link { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; color: var(--rt-c-text) !important; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-status__link:hover { text-decoration-thickness: 2px; } }
 .rt-pws-status__close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: transparent; color: var(--rt-c-muted); cursor: pointer; }.rt-pws-status__close:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 0; }
@@ -5126,6 +5145,7 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
   .rt-pws-status:has(.rt-pws-status__close) { padding-right: 52px; }
   .rt-pws-status__body { flex-basis: calc(100% - 46px); }
   .rt-pws-status__close { position: absolute; top: 4px; right: 4px; margin: 0; }
+  .rt-pws-status > .button { margin-left: 46px; } /* the payout banner's button, under its words */
 }
 
 /* Account review (/provider/review, ProviderReview): the status and progress, our team's message, where each change is made,
@@ -5664,7 +5684,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws .rt-adm__head { align-items: flex-start; }
 .rt-pws__org { display: flex; align-items: center; gap: 10px; margin: 4px 4px 0; padding: 10px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); }
 /* cohorts: List / Calendar switch */
-/* Hurak's top bar: New course, Student, the bell and the account menu */
+/* top bar: New course, Student, the bell and the account menu */
 .rt-pws__nav { display: grid; gap: 2px; margin: 16px 0 0; padding: 0; list-style: none; }
 .rt-pws__nav li { list-style: none; }
 /* sidebar groups (Courses, Cohorts): each folds on its own, as the admin's (components/admin/workNav.jsx) */
@@ -5782,7 +5802,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* provider workspace: courses list, new course, course editor (fork B1) */
 /* text-style buttons */
 .rt-pws-course-linkbtn { min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
-/* courses list (ours, with Hurak's fields): slim profile bar, then one card with status tabs, filters and a compact course table */
+/* courses list (ours, with fields): slim profile bar, then one card with status tabs, filters and a compact course table */
 /* the page head's right side: the profile card, then "New course" */
 .rt-cx { border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
 .rt-cx__top { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--rt-c-line); }
@@ -5889,7 +5909,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cl-promo__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--rt-c-surface); color: var(--rt-c-brand); }
 .rt-cl-promo__title { margin: 0 0 2px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
 .rt-cl-promo .rt-acc__note { margin: 0; }
-/* new course: Hurak's five-step wizard */
+/* new course: five-step wizard */
 /* the course editor's progress line (it began as the old New course page's step bar) */
 .rt-pws-wiz__bar { height: 6px; overflow: hidden; border-radius: 999px; background: var(--rt-c-line); }
 .rt-pws-wiz__bar span { display: block; width: var(--rt-wiz); height: 100%; border-radius: inherit; background: var(--rt-c-brand); transition: width 250ms cubic-bezier(0.23, 1, 0.32, 1); }
@@ -5936,13 +5956,13 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-course-unsaved.is-hidden { visibility: hidden; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button:disabled { opacity: 0.6; cursor: not-allowed; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button.-outline-purple-1:disabled:hover { background-color: transparent; border-color: var(--color-purple-1); color: var(--color-purple-1) !important; }
-:is(.rt-pws, body.rt-pws-open .rt-dd) .button.-purple-1:disabled:hover { background-color: var(--color-purple-1); border-color: var(--color-purple-1); color: #fff !important; } /* keeps its place, so the bar's buttons don't move when it shows */
+:is(.rt-pws, body.rt-pws-open .rt-dd) .button.-purple-1:disabled:hover { background-color: var(--color-purple-1) !important; border-color: var(--color-purple-1); color: #fff !important; } /* keeps its place, so the bar's buttons don't move when it shows */
 /* a button label that keeps the width of its longest wording ("Save" / "Saving…"): both share one grid cell, the longer unseen */
 .rt-keepw { display: inline-grid; justify-items: center; }
 .rt-keepw > span, .rt-keepw::after { grid-area: 1 / 1; }
 .rt-keepw::after { content: attr(data-w); visibility: hidden; height: 0; overflow: hidden; }
 .rt-pws-course-tick { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1.5px solid var(--color-border-strong); border-radius: 50%; }
-/* editor: Hurak's "Publish your course" list beside the section */
+/* editor: "Publish your course" list beside the section */
 .rt-pws-ce { display: grid; gap: var(--rt-gap); align-items: start; }
 @media (min-width: 1200px) { .rt-pws-ce { grid-template-columns: 280px minmax(0, 1fr); } .rt-pws-ce__nav { position: sticky; top: 88px; } }
 .rt-pws-ce > * { min-width: 0; }
@@ -6158,7 +6178,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__table th.rt-pws-coh__pick, .rt-pws-coh__table td.rt-pws-coh__pick { width: 44px; }
 .rt-pws-coh__table tr.is-picked td { background: var(--rt-c-brand-soft); }
 .rt-pws-coh__peoplehead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-/* Phase 1 (Hurak cohort operations). RowMenu: a row's "…" menu, in the site's dropdown panel look. */
+/* Phase 1 (cohort operations). RowMenu: a row's "…" menu, in the site's dropdown panel look. */
 .rt-rowmenu { position: relative; display: inline-flex; }
 /* a row whose ⋮ menu is open sits above the rows after it, so their own lifted buttons (kept above the whole-row link) never
    draw over the open menu */
@@ -6167,7 +6187,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-rowmenu__btn:hover, .rt-rowmenu.is-open .rt-rowmenu__btn { border-color: var(--rt-c-text); }
 .rt-rowmenu__btn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-rowmenu__list { position: absolute; z-index: 40; top: calc(100% + 6px); right: 0; min-width: 190px; margin: 0; padding: 6px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); box-shadow: var(--rt-shadow-dialog); list-style: none; }
-.rt-rowmenu__list.-side { top: 0; right: calc(100% + 8px); } /* in a table row: beside its button, top in line (RowMenu slides it up near the screen's bottom) */
+.rt-rowmenu__list.-side { top: 0; right: calc(100% + 8px); } /* a ⋯ menu: beside its button, top in line (RowMenu slides it up near the screen's bottom) */
 .rt-rowmenu__list li { list-style: none; }
 .rt-rowmenu__list :is(a, button) { display: flex; align-items: center; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; text-align: left; text-decoration: none; color: var(--rt-c-text) !important; cursor: pointer; }
 .rt-rowmenu__list :is(a, button):hover, .rt-rowmenu__list :is(a, button):focus-visible { outline: none; background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; }
@@ -6283,14 +6303,30 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__form { padding-bottom: 8px; }
 .rt-pws-coh__for { margin: 0; }
 .rt-pws-coh__h3 { margin: 0 0 4px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
+/* the dates: the calendar, and beside it the dates picked in a framed list as tall as the calendar (on a computer it scrolls inside
+   itself with the site's scroll pill, FilterScrollPill, and a scroll past its end goes on to the pop-up); on a phone they stack */
 .rt-pws-coh__dates { display: grid; gap: var(--rt-gap); }
-@media (min-width: 992px) { .rt-pws-coh__dates { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; } }
+.rt-pws-coh__pickcol { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.rt-pws-coh__slotpanel { display: flex; flex-direction: column; }
 .rt-pws-coh__slots .rt-acc__note { margin: 0 0 12px; }
-.rt-pws-coh__noslot { margin: 0; padding: 20px 16px; border: 1px dashed var(--rt-c-line); border-radius: var(--rt-radius-control); font-size: var(--rt-text-sm); text-align: center; color: var(--rt-c-muted); }
-.rt-pws-coh__slotlist { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.rt-pws-coh__slot { padding: 12px 16px 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); list-style: none; }
-.rt-pws-coh__slothead { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-.rt-pws-coh__slotgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rt-pws-coh__slotscroll { position: relative; display: flex; flex-direction: column; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
+@media (min-width: 992px) {
+  .rt-pws-coh__dates { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  .rt-pws-coh__slots { position: relative; min-height: 0; }
+  .rt-pws-coh__slotpanel { position: absolute; inset: 0; }
+  .rt-pws-coh__slotscroll { flex: 1 1 auto; min-height: 0; }
+  .rt-pws-coh__slotlist { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+}
+.rt-pws-coh__noslot { margin: auto; padding: 32px 16px; font-size: var(--rt-text-sm); text-align: center; color: var(--rt-c-muted); }
+.rt-pws-coh__slotlist { margin: 0; padding: 0; list-style: none; }
+/* one row a date: its days and Remove, then its times */
+.rt-pws-coh__slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "day remove" "note note" "err err" "times times"; align-items: center; column-gap: 12px; padding: 8px 18px 14px 16px; list-style: none; }
+.rt-pws-coh__slot + .rt-pws-coh__slot { border-top: 1px solid var(--rt-c-line); }
+.rt-pws-coh__slotday { grid-area: day; margin: 0; font-size: var(--rt-text-sm); font-weight: 700; color: var(--rt-c-text); }
+.rt-pws-coh__slotnote { grid-area: note; margin: 0 0 8px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-coh__slot > .rt-q__err { grid-area: err; margin: 0 0 8px; }
+.rt-pws-coh__slot > .rt-pws-coh__remove { grid-area: remove; margin-right: -8px; }
+.rt-pws-coh__slottimes { grid-area: times; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; color: var(--rt-c-muted); }
 .rt-pws-coh__picker { padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
 .rt-pws-coh__pickhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .rt-pws-coh__pickhint { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; text-align: center; color: var(--rt-c-text); }
@@ -6302,12 +6338,18 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__month abbr { text-decoration: none; }
 .rt-pws-coh__month td { padding: 2px; text-align: center; }
 .rt-pws-coh__day { width: 100%; max-width: 44px; aspect-ratio: 1; min-height: 36px; border: 1px solid transparent; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
-@media (hover: hover) and (pointer: fine) { .rt-pws-coh__day:not(:disabled):hover { background: var(--rt-c-brand-soft); } }
+@media (hover: hover) and (pointer: fine) { .rt-pws-coh__day:not(:disabled):not(.is-on):hover { background: var(--rt-c-brand-soft); } }
 .rt-pws-coh__day.is-today { border-color: var(--rt-c-brand); font-weight: 700; }
 .rt-pws-coh__day.is-on { background: var(--rt-c-brand); color: var(--rt-c-surface); font-weight: 700; }
+/* a range: its first and last days filled (is-on), the days between banded; while choosing its last day, the day under the
+   mouse or the keyboard is outlined (is-reach) and the days up to it banded */
+.rt-pws-coh__day.is-mid { background: var(--rt-c-brand-soft); color: var(--rt-c-text); }
+.rt-pws-coh__day.is-reach { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); font-weight: 700; }
 .rt-pws-coh__day:disabled { color: var(--rt-c-line); cursor: not-allowed; }
 .rt-pws-coh__settings { display: grid; gap: 16px; padding-top: 20px; border-top: 1px solid var(--rt-c-line); }
 .rt-pws-coh__setgrid { display: grid; gap: 16px; align-items: end; }
+/* Tutor beside Venue: tops level, as Venue has its Add a new venue link (or the venue form) under its box */
+.rt-pws-coh__setgrid.-top { align-items: start; }
 @media (min-width: 768px) { .rt-pws-coh__setgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-pws-coh__hintlink { align-self: flex-start; font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; text-underline-offset: 3px; }
 /* the site's text links: underlined on hover only */
@@ -6317,6 +6359,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__added { margin: 0; color: var(--rt-c-success); font-weight: 600; }
 .rt-pws-venueform { padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); }
 .rt-pws-venueform__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* the postcode hint under the town and postcode row: close to its boxes, not a form gap away */
+.rt-pws-venueform__hint { margin-top: -14px; }
 .rt-pws-coh__colours { min-width: 0; margin: 0; padding: 0; border: 0; }
 .rt-pws-coh__colours legend { float: none; width: auto; margin: 0 0 4px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-coh__swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -6332,49 +6376,65 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal__bar { align-items: center; }
 .rt-pws-cal__nav-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rt-pws-cal__nav { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease; }
+/* "Today": the arrows' box, as wide as its word (faded like them while today is on screen) */
+.rt-pws-cal__nav.-text { width: auto; padding: 0 16px; font-size: var(--rt-text-sm); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__nav:not(:disabled):hover { border-color: var(--rt-c-brand); color: var(--rt-c-brand); } }
 .rt-pws-cal__nav:disabled { opacity: 0.4; cursor: not-allowed; }
 .rt-pws-cal__title { margin: 0 0 0 8px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-cal__monthcard { padding: 0; overflow: hidden; }
-.rt-pws-cal__month { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.rt-pws-cal__month th { padding: 10px 8px; border-bottom: 1px solid var(--rt-c-line); font-size: var(--rt-text-xs); font-weight: 600; text-align: left; color: var(--rt-c-muted); }
-.rt-pws-cal__month abbr { text-decoration: none; }
-.rt-pws-cal__cell { height: 120px; padding: 4px 6px 6px; border-right: 1px solid var(--rt-c-line); border-bottom: 1px solid var(--rt-c-line); vertical-align: top; }
-.rt-pws-cal__cell:last-child { border-right: 0; }
-.rt-pws-cal__month tr:last-child .rt-pws-cal__cell { border-bottom: 0; }
-.rt-pws-cal__cell.-out { background: var(--rt-c-soft); }
 .rt-pws-cal__daynum { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 6px; border: 0; border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__daynum:hover { background: var(--rt-c-brand-soft); } }
-.rt-pws-cal__cell.is-today .rt-pws-cal__daynum { background: var(--rt-c-brand); color: var(--rt-c-surface); }
-.rt-pws-cal__chips { display: grid; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; }
-.rt-pws-cal__chips li { min-width: 0; list-style: none; }
-.rt-pws-cal__chip { display: block; overflow: hidden; padding: 3px 6px; border-left: 3px solid var(--rt-coh, var(--rt-c-brand)); border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 14%, var(--rt-c-surface)); font-size: var(--rt-text-xs); line-height: 1.35; text-decoration: none; color: var(--rt-c-text) !important; }
-/* cohort colours (Hurak's cohort colour), from the template palette; past cohorts are grey on the calendar */
+/* cohort colours (cohort colour), from the template palette; past cohorts are grey on the calendar */
 .-c-purple { --rt-coh: var(--color-purple-1); }
 .-c-blue { --rt-coh: var(--color-blue-1); }
 .-c-green { --rt-coh: var(--color-success); }
 .-c-orange { --rt-coh: var(--color-orange-1); }
 .-c-red { --rt-coh: var(--color-red-1); }
-.rt-pws-cal__chip.-past { --rt-coh: var(--rt-c-muted); }
-.rt-pws-cal__chip > span[aria-hidden] { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rt-pws-cal__chipwhere { color: var(--rt-c-muted); }
-@media (hover: hover) and (pointer: fine) { .rt-pws-cal__chip:hover { text-decoration: underline; } }
-.rt-pws-cal__chip.-cancelled { border-left-color: var(--rt-c-line); background: var(--rt-c-soft); color: var(--rt-c-muted) !important; }
-.rt-pws-cal__chip.-cancelled > span[aria-hidden]:first-child { text-decoration: line-through; }
-.rt-pws-cal__more { margin-top: 2px; padding: 2px 4px; min-height: 24px; border: 0; background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
-.rt-pws-cal__phonemonth { display: none; }
+/* month and week: each week a grid of 7 days; a session is one bar across its days (split where the week ends), stacked in rows */
+.rt-pws-cal__grid { padding: 0; overflow: hidden; }
+/* the month and week views fit the window (ProviderCalendar useRowHeight), so the page keeps only a small space under them */
+@media (min-width: 768px) { .rt-pws .rt-adm__main:has(.rt-pws-cal__grid) { padding-bottom: 24px; } }
+.rt-pws-cal__phone { display: none; }
+.rt-pws-cal__wdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--rt-c-line); }
+.rt-pws-cal__wdays > span { padding: 10px 8px; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
+.rt-pws-cal__wdays b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-pws-cal__wdays .is-today b { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand); color: var(--rt-c-surface); }
+.rt-pws-cal__wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 3px; min-height: 120px; padding-bottom: 6px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-pws-cal__wk:last-child { border-bottom: 0; }
+.rt-pws-cal__wk.-tall { min-height: 420px; padding-top: 6px; }
+.rt-pws-cal__day { grid-row: 1 / -1; padding: 4px 6px; border-right: 1px solid var(--rt-c-line); }
+.rt-pws-cal__day:nth-child(7) { border-right: 0; }
+.rt-pws-cal__day.-out { background: var(--rt-c-soft); }
+/* a month row too short for session bars: the date with "N sessions" beside it (it opens the day, as the date does) */
+.rt-pws-cal__day.-compact { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 2px 6px; }
+.rt-pws-cal__count { min-width: 0; max-width: 100%; padding: 2px 8px; border: 0; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font: inherit; font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; color: var(--rt-c-brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-cal__count:hover { text-decoration: underline; } }
+.rt-pws-cal__day.-out .rt-pws-cal__daynum { color: var(--rt-c-muted); }
+.rt-pws-cal__day.is-today .rt-pws-cal__daynum { background: var(--rt-c-brand); color: var(--rt-c-surface); }
+.rt-pws-cal__seg { position: relative; z-index: 1; display: flex; align-items: center; min-width: 0; margin: 0 4px; padding: 0 8px; border: 0; border-left: 3px solid var(--rt-coh, var(--rt-c-brand)); border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 16%, var(--rt-c-surface)); font: inherit; font-size: var(--rt-text-xs); line-height: 1.2; text-align: left; color: var(--rt-c-text); cursor: pointer; }
+.rt-pws-cal__seg > span[aria-hidden] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-pws-cal__seg.-before { margin-left: 0; border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.rt-pws-cal__seg.-after { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.rt-pws-cal__seg.-past { --rt-coh: var(--rt-c-muted); }
+.rt-pws-cal__seg.-cancelled { border-left-color: var(--rt-c-line); background: var(--rt-c-soft); color: var(--rt-c-muted); }
+.rt-pws-cal__seg.-cancelled > span[aria-hidden] { text-decoration: line-through; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-cal__seg:hover > span[aria-hidden] { text-decoration: underline; } }
+.rt-pws-cal__seg:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 1px; }
+/* a session's details beside it (a computer) */
+.rt-pws-cal__pop { position: fixed; z-index: 1050; display: grid; gap: 14px; width: 320px; max-width: calc(100vw - 24px); padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16); }
+.rt-pws-cal__pop:focus { outline: none; }
+.rt-pws-cal__pophead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rt-pws-cal__pophead h3 { margin: 0; font-size: var(--rt-text); font-weight: 700; line-height: 1.35; color: var(--rt-c-text); }
+.rt-pws-cal__popclose { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-muted); cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-cal__popclose:hover { background: var(--rt-c-soft); color: var(--rt-c-text); } }
+/* the day list: a session's name opens its details */
+.rt-pws-cal__rowbtn { padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-cal__rowbtn:hover { text-decoration: underline; } }
+.rt-pws-cal__more { position: relative; z-index: 1; justify-self: start; margin: 0 4px; padding: 0 4px; min-height: 24px; border: 0; background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
 @media (max-width: 767px) {
-  .rt-pws-cal__monthcard { display: none; }
-  .rt-pws-cal__phonemonth { display: block; }
+  .rt-pws-cal__grid { display: none; }
+  .rt-pws-cal__phone { display: block; }
   .rt-pws-cal__title { flex-basis: 100%; margin: 4px 0 0; }
 }
-.rt-pws-cal__week { display: grid; gap: 12px; }
-@media (min-width: 1200px) { .rt-pws-cal__week { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; } .rt-pws-cal__wday { padding: 12px; } }
-.rt-pws-cal__wday.is-today { border-color: var(--rt-c-brand); }
-.rt-pws-cal__wdayh { margin: 0 0 8px; font-size: var(--rt-text-sm); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-cal__wdayh span { font-weight: 500; color: var(--rt-c-muted); }
-@media (min-width: 1200px) { .rt-pws-cal__wday .rt-pws-cal__chip > span[aria-hidden] { white-space: normal; } }
-.rt-pws-cal__none { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-pws-cal__listh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; font-size: var(--rt-text); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-cal__today { padding: 2px 8px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); }
 .rt-pws-cal__rows { margin: 0; padding: 0; list-style: none; }
@@ -6578,7 +6638,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (min-width: 992px) { .rt-perf-split { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .rt-perf-split__note { margin: 4px 0 16px; }
 @media (prefers-reduced-motion: reduce) { button.rt-perf-kpi { transition: none; } }
-/* requests (Hurak's refunds list) */
+/* requests (refunds list) */
 .rt-rq-sum { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-rq-sum b { color: var(--rt-c-text); }
 .rt-rq-table td { vertical-align: top; }
@@ -6598,7 +6658,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-rq-table td { flex-wrap: wrap; }
   .rt-rq-table td small, .rt-rq-table td .rt-rq-note { flex-basis: 100%; max-width: none; text-align: right; }
 }
-/* public profile and student profile (Hurak's): initials or logo, name, details, one action */
+/* public profile and student profile: initials or logo, name, details, one action */
 .rt-pws-prof { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; }
 .rt-pws-prof__logo { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 96px; height: 96px; overflow: hidden; border-radius: 50%; background: var(--rt-c-brand-soft); font-size: var(--rt-app-h2); font-weight: 700; color: var(--rt-c-brand); }
 .rt-pws-prof__logo img { width: 100%; height: 100%; object-fit: cover; }
@@ -6607,10 +6667,21 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-prof__headline { margin: 0 0 6px; font-size: var(--rt-text); font-weight: 500; color: var(--rt-c-text); }
 .rt-pws-prof__social { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 4px 0 0; padding: 0; list-style: none; }
 .rt-pws-prof__social li { list-style: none; }
+/* a biography's bulleted list (FormattedText), here and on the public profile */
+.rt-pws-prof__list { padding-left: 20px; list-style: disc; }
+.rt-pws-prof__list li { list-style: disc; }
+.rt-pabout__list { margin-top: 0; padding-left: 22px; list-style: disc; }
+.rt-pabout__list li { list-style: disc; }
+.rt-pabout__social { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+/* the biography box's Bold and Bullet list buttons, above it */
+.rt-pws-set__fmt { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.rt-pws-set__fmtbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.rt-pws-set__fmtbtn:disabled { opacity: 0.6; cursor: not-allowed; }
+@media (hover: hover) and (pointer: fine) { .rt-pws-set__fmtbtn:not(:disabled):hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); } }
 .rt-pws-prof__body { margin: 0 0 16px; white-space: pre-line; font-size: var(--rt-text-sm); line-height: 1.7; color: var(--rt-c-text); }
 .rt-pws-prof__body:last-child { margin-bottom: 0; }
 @media (max-width: 575px) { .rt-pws-prof > .button { width: 100%; justify-content: center; } }
-/* learners (ours, Hurak's fields): one filter bar, the table, the profile header and booking timeline */
+/* learners (ours, fields): one filter bar, the table, the profile header and booking timeline */
 .rt-lr-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -8px; }
 .rt-lr-count p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-lr-count b { color: var(--rt-c-text); }
@@ -6642,7 +6713,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-lr-booking__facts .-wide { grid-column: 1 / -1; }
 .rt-lr-booking__facts dt { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-lr-booking__facts dd { margin: 2px 0 0; font-size: var(--rt-text-sm); font-weight: 600; overflow-wrap: anywhere; color: var(--rt-c-text); }
-/* provider help (ours, Hurak's three ways to get help): search, provider guides, ways to reach us */
+/* provider help (ours, three ways to get help): search, provider guides, ways to reach us */
 .rt-hp-search { display: grid; gap: 14px; padding: 28px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: radial-gradient(90% 180% at 0% 0%, var(--rt-c-brand-soft) 0%, var(--rt-c-surface) 60%); }
 .rt-hp-search__title { margin: 0; font-size: var(--rt-app-h2); font-weight: 700; letter-spacing: -0.02em; color: var(--rt-c-text); }
 .rt-hp-search__box { position: relative; max-width: 640px; }
@@ -6683,7 +6754,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__zoom > div { flex: 1 1 280px; min-width: 0; }
 .rt-pws-set__zoommark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
 .rt-pws-set__zoomlist { display: grid; gap: 4px; margin: 6px 0 10px; padding-left: 18px; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
-/* orders list: Hurak's four search fields, then the channel and status filters */
+/* orders list: four search fields, then the channel and status filters */
 .rt-pws-ord__table td { vertical-align: middle; }
 .rt-pws-ord__table .rt-pws-money__num { white-space: nowrap; }
 .rt-pws-ord__flag { font-weight: 600; color: var(--rt-c-error) !important; }
@@ -6745,6 +6816,11 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-set__group { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; }
 .rt-pws-set__group legend { float: none; width: auto; margin-bottom: 8px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-set__short { max-width: 260px; }
+.rt-pws-set__mid { max-width: 480px; } /* an email address field */
+/* a required field's * after its label (settingsForm.jsx Req) */
+.rt-req { color: var(--color-red-3); }
+/* a settings field's one-line hint sits close to its label and box (the inherited line height made each hint a tall row) */
+.rt-pws-set__form .rt-field > .rt-field__hint { margin-top: -2px; line-height: 1.5; }
 .rt-pws-set__count { align-self: flex-end; font-variant-numeric: tabular-nums; }
 .rt-pws-set__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 /* New course pop-up (NewCourse.jsx): two groups divided by a line, what the course is (title; category and sub-category side by
@@ -6760,7 +6836,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (min-width: 576px) { .rt-pws-nc__row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rt-pws-nc__labelrow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .rt-pws-nc__labelrow > label { margin: 0; }
-.rt-pws-nc__count, .rt-pws-nc__opt { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); font-variant-numeric: tabular-nums; }
+.rt-pws-nc__count { font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); font-variant-numeric: tabular-nums; }
 /* every question in the pop-up reads in the fields' label style (12px, semibold), whether it labels a field or a group of
    choices; "How will you teach it?" is the site's compact radio row (Choice), one line on a laptop, stacked on phones */
 .rt-pws-nc legend { margin-bottom: 4px; font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; color: var(--rt-c-text); }
@@ -6949,7 +7025,11 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   /* an open ⋮ menu stays over the rows below it (their own menus and links are on that same level) */
 }
 /* tap targets of 24px or more (WCAG 2.2): calendar chips, and on phones (rows stacked into cards, not one link) each row's record link */
-.rt-pws .rt-pws-cal__chip { min-height: 24px; }
+/* the entry's details in its pop-up: label and value per line */
+.rt-pws-cal__facts { display: grid; gap: 10px; margin: 0; }
+.rt-pws-cal__facts > div { display: flex; justify-content: space-between; gap: 16px; font-size: var(--rt-text-sm); }
+.rt-pws-cal__facts dt { font-weight: 500; color: var(--rt-c-muted); }
+.rt-pws-cal__facts dd { margin: 0; text-align: right; color: var(--rt-c-text); }
 @media (max-width: 575px) { .rt-pws .rt-adm-table a.rt-adm-strong { display: inline-block; padding-block: 3px; } }
 /* sub-headings inside cards are the card-title size, 20px at the heading weight (decision D1, 14 Nov 2026) */
 .rt-pws .rt-adm-h3 { font-size: var(--rt-app-h3); }

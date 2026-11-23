@@ -10,6 +10,9 @@ import NavIcon from "./navIcons";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 
+// a red * after a required field's label (read out as "required"); optional fields say nothing
+export { Req } from "@/components/providerWorkspace/settingsForm";
+
 // Shared bits of the admin pages, all from the site's design system: the account's status pills (.rt-pill .rt-acc__status), the
 // filter chips with counts (.rt-tr__filter), the stats strip, the account card (.rt-acc__card) and the business account's table
 // (.rt-biz__table). The account, business, admin and provider pages all use these.
@@ -241,16 +244,16 @@ export function Search({ value, onChange, label }) {
   );
 }
 
-// A row's "…" menu (Hurak's row actions: View / Move / Edit / Trash, Edit Details / Reschedule / Resit / Notes / Timeline).
+// A row's "…" menu (row actions: View / Move / Edit / Trash, Edit Details / Reschedule / Resit / Notes / Timeline).
 // `items`: [{ label, onClick } | { label, href }], `danger` for a destructive item. A real menu: arrow keys move between items,
 // Esc closes it and puts focus back on the button, a click outside closes it. Looks like the site's dropdown panel.
 // The provider's account menu uses it too: `trigger` replaces the dots, `head` goes above the items, and { group } items label
 // the ones after them (`title`: the button's hover name, for an icon-only trigger). An item's `icon` (an icon class) goes before its label. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
 export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null, title }) {
   const [open, setOpen] = React.useState(false);
-  // where the list opens. In a table row: beside its button, its top in line with the button's, sliding up just enough to stay on
-  // screen near the bottom (`shift`), so it always stays next to its own row (the way desktop and Figma menus open). Elsewhere (the
-  // top bar's menus) and where the row has no room on its left: below the button.
+  // where the list opens. A ⋯ button (a table row, a card or a list, everywhere alike): beside it, its top in line with the
+  // button's, sliding up just enough to stay on screen near the bottom, so it always stays next to its own row (the way desktop
+  // and Figma menus open). A named button (the avatar, an "Edit" menu), or a ⋯ with no room on its left: below the button.
   const [place, setPlace] = React.useState({ side: false, shift: 0 });
   const wrap = React.useRef(null);
   const btn = React.useRef(null);
@@ -262,7 +265,9 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
     const b = btn.current.getBoundingClientRect();
     const w = list.current.offsetWidth;
     const h = list.current.offsetHeight;
-    const side = Boolean(btn.current.closest("td")) && b.left - w - 8 >= 8;
+    // a ⋯ button (in a table row, a card or a list) opens its menu beside it, the same everywhere; a named button (the avatar,
+    // an "Edit" menu) drops its menu below it
+    const side = !trigger && b.left - w - 8 >= 8;
     if (!side) return setPlace({ side: false, shift: 0 });
     const barBottom = Math.max(document.querySelector(".rt-adm__top")?.getBoundingClientRect().bottom ?? 0, 0);
     const over = b.top + h - (window.innerHeight - 12); // how far it would run past the bottom of the screen

@@ -12,7 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { waysLabel } from "@/lib/courseModes";
-import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction, RowMenu } from "./adminParts";
+import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction, RowMenu, Req } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { ErrorState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
@@ -165,22 +165,22 @@ function NewSharedPage({ open, onClose }) {
       <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
         <p className="rt-acc__note">{copy.newSharedNote}</p>
         <div className="rt-field">
-          <label htmlFor="rt-adm-ns-title">Course name</label>
+          <label htmlFor="rt-adm-ns-title">Course name<Req /></label>
           <Err k="title" />
-          <input id="rt-adm-ns-title" value={f.title} maxLength={80} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="For example: SIA Door Supervisor" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={errors.title ? "rt-adm-ns-title-e" : undefined} />
+          <input id="rt-adm-ns-title" value={f.title} maxLength={60} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="For example: SIA Door Supervisor" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={errors.title ? "rt-adm-ns-title-e" : undefined} />
         </div>
         <div className="rt-field">
-          <label htmlFor="rt-adm-ns-category">Category</label>
+          <label htmlFor="rt-adm-ns-category">Category<Req /></label>
           <Err k="category" />
           <FieldSelect id="rt-adm-ns-category" label="Category" placeholder="Choose a category" value={f.category} onChange={(v) => setF({ ...f, category: v, subcategory: "", topic: "" })} options={categoryOptions()} invalid={Boolean(errors.category)} describedBy={errors.category ? "rt-adm-ns-category-e" : undefined} />
         </div>
         <div className="rt-field">
-          <label htmlFor="rt-adm-ns-subcategory">Sub-category</label>
+          <label htmlFor="rt-adm-ns-subcategory">Sub-category<Req /></label>
           <Err k="subcategory" />
           <FieldSelect id="rt-adm-ns-subcategory" label="Sub-category" placeholder={f.category ? "Choose a sub-category" : "Choose a category first"} value={f.subcategory} onChange={(v) => setF({ ...f, subcategory: v, topic: "" })} options={subs} disabled={!f.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-adm-ns-subcategory-e" : undefined} />
         </div>
         <div className="rt-field">
-          <label htmlFor="rt-adm-ns-topic">Topic (optional)</label>
+          <label htmlFor="rt-adm-ns-topic">Topic</label>
           <FieldSelect id="rt-adm-ns-topic" label="Topic" placeholder={topics.length ? "Choose a topic" : "No topics for this sub-category"} value={f.topic} onChange={(v) => setF({ ...f, topic: v })} options={topics} disabled={!topics.length} />
         </div>
         {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}

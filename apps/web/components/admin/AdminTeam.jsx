@@ -3,13 +3,13 @@
 import React, { useRef, useState } from "react";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { CheckRow } from "@/components/courses/RadioRow";
-import { FULL_ADMINS_NEED_TWO_STEP } from "@readtraining/permissions";
+import { ADMIN_TWO_STEP } from "@readtraining/permissions";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh, Empty, HeaderAction } from "./adminParts";
+import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh, Empty, HeaderAction, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = A.team;
@@ -76,7 +76,7 @@ export default function AdminTeam() {
       {admins.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
-            <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.access} col="access" sorter={sorter} /><SortTh label={c.limit} col="limit" sorter={sorter} numeric /><th scope="col">{c.twoStep}</th><SortTh label={c.last} col="last" sorter={sorter} numeric /><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
+            <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.access} col="access" sorter={sorter} /><SortTh label={c.limit} col="limit" sorter={sorter} numeric />{ADMIN_TWO_STEP && <th scope="col">{c.twoStep}</th>}<SortTh label={c.last} col="last" sorter={sorter} numeric /><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
             <tbody>
               {sorter.apply(admins, TEAM_SORT).map((a) => {
                 const mine = a.userId === me;
@@ -85,7 +85,7 @@ export default function AdminTeam() {
                     <td data-label={c.name}><span className="rt-adm-strong">{a.name}{mine ? " (you)" : ""}</span>{a.name !== a.email && <small>{a.email}</small>}</td>
                     <td data-label={c.access}>{a.isSuper ? <span className="rt-adm-strong" title={copy.superNote}>{copy.superAdmin}</span> : accessLabel(a)}{a.isSuper && <small>{copy.presets.full.label}</small>}{a.preset === "custom" && a.extra?.length > 0 && <small>{a.roles?.length ? `+ ${a.extra.length} more switches` : `${a.permissions.length} of ${switches.length} switches`}</small>}</td>
                     <td data-label={c.limit}>{a.preset === "full" ? <span className="rt-adm-muted">No limit</span> : a.permissions.includes("refunds") ? `£${a.refundLimit}` : <span className="rt-adm-muted">No refunds</span>}</td>
-                    <td data-label={c.twoStep}>{a.invite ? <span className="rt-adm-muted">–</span> : a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" && FULL_ADMINS_NEED_TWO_STEP ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>
+                    {ADMIN_TWO_STEP && <td data-label={c.twoStep}>{a.invite ? <span className="rt-adm-muted">–</span> : a.twoStep ? <AdminStatus kind="twoStep" status="on">On</AdminStatus> : a.preset === "full" ? <AdminStatus kind="twoStep" status="next">At next sign-in</AdminStatus> : <AdminStatus kind="twoStep" status="off">Off</AdminStatus>}</td>}
                     <td data-label={c.last}>
                       {a.invite ? (
                         <>
@@ -107,7 +107,7 @@ export default function AdminTeam() {
                           ] : [
                             { label: copy.changeTitle, onClick: () => setForm(formFor(a)) },
                             { label: "See their activity", href: `/admin/activity?q=${a.userId}` },
-                            ...(a.twoStep ? [{ label: "Reset two-step sign-in", onClick: () => setConfirm({ kind: "reset", admin: a }) }] : []),
+                            ...(ADMIN_TWO_STEP && a.twoStep ? [{ label: "Reset two-step sign-in", onClick: () => setConfirm({ kind: "reset", admin: a }) }] : []),
                             ...(meSuper && a.preset === "full" ? [{ label: copy.handOver, onClick: () => setConfirm({ kind: "super", admin: a }) }] : []),
                             { label: "Remove from the admin team", danger: true, onClick: () => setConfirm({ kind: "remove", admin: a }) },
                           ]}
@@ -198,14 +198,14 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
       <form className="rt-q__form rt-biz__sheetform" onSubmit={submit} noValidate ref={ref}>
         {form.mode === "add" ? (
           <div className="rt-field">
-            <label htmlFor="rt-adm-t-email">{copy.emailLabel}</label>
+            <label htmlFor="rt-adm-t-email">{copy.emailLabel}<Req /></label>
             {err("email")}
             <input id="rt-adm-t-email" type="email" inputMode="email" spellCheck={false} autoComplete="off" value={form.email} onChange={(e) => set({ email: e.target.value })} aria-invalid={errors.email ? true : undefined} aria-describedby={errors.email ? "rt-adm-t-email-e" : undefined} />
           </div>
         ) : <p className="rt-acc__note">{form.email}</p>}
 
         <fieldset className="rt-field rt-pws-optcards" aria-describedby={errors.permissions && !single ? "rt-adm-t-permissions-e" : undefined}>
-          <legend>Access</legend>
+          <legend>Access<Req /></legend>
           {!single && err("permissions")}
           <div className="rt-pws-optcards__row">
             {presetOptions.filter((o) => (o.value === "full" ? canGiveFull : o.value === "custom" || presets[o.value].every((p) => grantable.includes(p)))).map((o) => (
@@ -219,7 +219,7 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
 
         {single && (
           <fieldset className="rt-field rt-adm-team__fieldset" aria-describedby={errors.permissions ? "rt-adm-t-permissions-e" : undefined}>
-            <legend>Switches</legend>
+            <legend>Switches<Req /></legend>
             {err("permissions")}
             <div className="rt-adm-team__switches">
               {switches.map((s) => (
@@ -231,7 +231,7 @@ function AccessSheet({ form, setForm, switches, presets, canGiveFull, grantable,
 
         {needsLimit && (
           <div className="rt-field">
-            <label htmlFor="rt-adm-t-limit">Refund and credit limit (£)</label>
+            <label htmlFor="rt-adm-t-limit">Refund and credit limit (£)<Req /></label>
             <small className="rt-field__hint" id="rt-adm-t-limit-hint">Above this, a Full or Finance admin decides.{maxLimit < 100000 && ` Up to £${maxLimit}, your own limit.`}</small>
             {err("refundLimit")}
             <input id="rt-adm-t-limit" type="text" inputMode="numeric" className="rt-adm-num" value={form.refundLimit} onChange={(e) => set({ refundLimit: e.target.value })} aria-invalid={errors.refundLimit ? true : undefined} aria-describedby={`rt-adm-t-limit-hint${errors.refundLimit ? " rt-adm-t-refundLimit-e" : ""}`} />

@@ -31,6 +31,7 @@ import {
   notFound,
   placeOn,
   refuseIfChanged,
+  refuseLongTitle,
   resolveCatalogue,
   REVIEWED,
   seenVersion,
@@ -44,7 +45,7 @@ import {
 
 type Course = typeof courses.$inferSelect
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0]
-// Where the course is listed follows its subject (Hurak's rule, placeOn): when a course or a change to it is approved, it goes on
+// Where the course is listed follows its subject (placeOn): when a course or a change to it is approved, it goes on
 // the shared course page for its subject (or a page of its own when there is none).
 async function placeBySubject(tx: Tx, courseId: number) {
   const [c] = await tx.select({ kind: courses.kind, parentId: courses.parentId, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, courseId))
@@ -392,6 +393,11 @@ export const adminCoursesRouter = createTRPCRouter({
         if (!rule.from.includes(locked.status)) throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
         if (onWaiting && notSeen(input.seen, locked.submittedAt)) throw new TRPCError({ code: 'CONFLICT', message: CHANGED_SINCE })
         if (input.decision === 'resume' && !locked.statusNote) throw new TRPCError({ code: 'CONFLICT', message: PROVIDER_PAUSED })
+        // again under the lock: a date cancelled or turned off at the same moment (each locks this row first) is seen here
+        if (input.decision === 'approve') {
+          const gaps = await missing(tx, locked)
+          if (gaps.length) throw new TRPCError({ code: 'CONFLICT', message: `This course is missing ${gaps.join(', ')}. Ask the provider for changes.` })
+        }
         if (isChange) {
           const [rev] = await tx.select({ status: courseRevisions.status, submittedAt: courseRevisions.submittedAt }).from(courseRevisions).where(eq(courseRevisions.id, revision.id))
           if (rev?.status !== 'pending') throw new TRPCError({ code: 'CONFLICT', message: DECIDED_OR_CHANGED })
@@ -447,6 +453,7 @@ export const adminCoursesRouter = createTRPCRouter({
   createShared: adminProcedure('admin.catalogue.edit')
     .input(z.object({ title: content.title, category: content.category, subcategory: content.subcategory, topic: content.topic }))
     .mutation(async ({ ctx, input }) => {
+      refuseLongTitle(input.title)
       const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null })
       const slug = await courseSlug(ctx.db, input.title)
       return ctx.db.transaction(async (tx) => {
@@ -475,6 +482,7 @@ export const adminCoursesRouter = createTRPCRouter({
       const course = await sharedPage(ctx.db, input.courseId)
       const { courseId, seoTitle, seoDescription, seoKeywords, listed, seen, ...rest } = input
       void courseId
+      refuseLongTitle(rest.title, course.title)
       if (rest.subcategory !== undefined && rest.category === undefined) throw bad('Choose the category with the sub-category.', 'category')
       if (rest.category !== undefined && rest.subcategory === undefined) throw bad('Choose a sub-category for this category.', 'subcategory')
       if (rest.topic !== undefined && rest.subcategory === undefined) throw bad('Choose the sub-category with the topic.', 'subcategory')

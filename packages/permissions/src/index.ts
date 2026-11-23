@@ -2,8 +2,8 @@
 // (layouts); the browser may only use it to hide buttons, never as the real check. Plain data and pure functions, no I/O,
 // so every caller gets the same answer.
 //
-// Provider roles and what each may do follow the Hurak research (docs/auth-and-permissions.md §6, for the client to
-// confirm); business roles are Hurak's owner/member; admins are one role with permission switches and presets.
+// Provider roles and what each may do follow the research (docs/auth-and-permissions.md §6, for the client to
+// confirm); business roles are owner/member; admins are one role with permission switches and presets.
 
 export const PROVIDER_ROLES = ['owner', 'admin', 'tutor', 'course_editor', 'support', 'sales', 'accounts', 'marketing', 'assistant'] as const
 export const BUSINESS_ROLES = ['owner', 'member'] as const
@@ -76,8 +76,10 @@ const PROVIDER_RULES = {
   'provider.courses.delete': { roles: ['owner', 'admin'] },
   'provider.pricing.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'accounts', 'assistant'] },
   'provider.pricing.edit': { roles: ['owner', 'admin', 'course_editor'] },
-  'provider.cohorts.view': { roles: ['owner', 'admin', 'support', 'sales', 'assistant'], own: true },
-  'provider.cohorts.edit': { roles: ['owner', 'admin'] },
+  // course editors add a course's dates (and the venues they need): a course can't be sent for approval without them
+  'provider.cohorts.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'assistant'], own: true },
+  'provider.cohorts.edit': { roles: ['owner', 'admin', 'course_editor'] },
+  'provider.venues.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'assistant'] }, // the Venues page
   'provider.records.view': { roles: ['owner', 'admin', 'support', 'assistant'], own: true }, // register, results, learning records
   'provider.records.edit': { roles: ['owner', 'admin'], own: true },
   'provider.learners.view': { roles: ['owner', 'admin', 'support', 'sales', 'accounts', 'assistant'], own: true },
@@ -96,8 +98,10 @@ const PROVIDER_RULES = {
   'provider.terms.edit': { roles: ['owner', 'admin'] },
   'provider.faqs.edit': { roles: ['owner', 'admin', 'course_editor', 'marketing'] },
   'provider.qa.answer': { roles: ['owner', 'admin', 'course_editor', 'support'] },
-  'provider.vat.view': { roles: ['owner', 'accounts'] },
-  'provider.vat.edit': { roles: ['owner'] },
+  'provider.vat.view': { roles: ['owner', 'admin', 'accounts'] },
+  'provider.vat.edit': { roles: ['owner', 'admin', 'accounts'] },
+  'provider.emails.view': { roles: ['owner', 'admin', 'accounts'] }, // where order, refund and dispute notices go
+  'provider.emails.edit': { roles: ['owner', 'admin', 'accounts'] },
   'provider.payoutAccount.manage': { roles: ['owner'] }, // Stripe / bank details
   'provider.team.view': { roles: ['owner', 'admin'] },
   'provider.team.manage': { roles: ['owner', 'admin'] },
@@ -168,6 +172,7 @@ const ADMIN_RULES = {
   'admin.platform.view': { permission: 'platform.settings' },
   'admin.approvals.decide': { permission: 'approve', notOwnRequest: true },
   'admin.providers.staff': { permission: ['approve', 'pricing'] }, // edit a provider's work from the admin, as ReadTraining staff
+  'admin.providers.remove': { permission: 'approve' }, // delete a provider that wasn't approved (rejected) and holds no records
   'admin.catalogue.edit': { permission: 'catalogue' },
   'admin.content.edit': { permission: 'content' },
   'admin.orders.view': { permission: 'orders.view' },
@@ -194,16 +199,19 @@ export type AdminAction = keyof typeof ADMIN_RULES
 export type Action = ProviderAction | BusinessAction | AdminAction
 
 export const PROVIDER_ACTIONS = Object.keys(PROVIDER_RULES) as ProviderAction[]
+/** Who can teach a provider's dates: someone who can see them (all of them, or a tutor their own). Accounts and marketing can't. */
+export const canTutor = (role: string) => role === 'tutor' || (PROVIDER_RULES['provider.cohorts.view'].roles as readonly string[]).includes(role)
 export const BUSINESS_ACTIONS = Object.keys(BUSINESS_RULES) as BusinessAction[]
 export const ADMIN_ACTIONS = Object.keys(ADMIN_RULES) as AdminAction[]
 
-// Two-step sign-in for every Full admin (one who has none yet is sent to set up an authenticator first) is switched OFF while the
-// platform is being built and tested (the user's decision, 19 November 2026; the method, authenticator app or text message, is
-// still to be decided): set FULL_ADMINS_NEED_TWO_STEP back to true before launch. An admin who has set up an authenticator is
-// still asked for it (Admin › Team › Reset two-step removes it). A test copy may also waive the Full rule (`twoStepWaived`,
-// ADMIN_TWO_STEP_OPTIONAL); live never does.
-export const FULL_ADMINS_NEED_TWO_STEP = false
-export const needsTwoStep = (admin: AdminAccess) => (FULL_ADMINS_NEED_TWO_STEP && admin.preset === 'full' && !admin.twoStepWaived) || admin.twoStep === true
+// Two-step sign-in is switched OFF for every admin while the platform is being built and tested (the user's decision, 23
+// November 2026; the method, authenticator app or text message, is still to be decided): admins sign in with their email and
+// password only, an authenticator set up earlier is not asked for, and the admin pages don't mention two-step. Set ADMIN_TWO_STEP
+// back to true before launch: then every Full admin (one who has none yet sets up an authenticator at the admin login) and any
+// admin who has set one up is asked for a code. A test copy may waive the Full rule (`twoStepWaived`, ADMIN_TWO_STEP_OPTIONAL);
+// live never does.
+export const ADMIN_TWO_STEP = false
+export const needsTwoStep = (admin: AdminAccess) => ADMIN_TWO_STEP && ((admin.preset === 'full' && !admin.twoStepWaived) || admin.twoStep === true)
 
 // The roles one admin can hold together (Admin › Team: Support and Finance ticked for one person); Full is everything already
 export const ADMIN_ROLES = ['support', 'finance'] as const
@@ -234,7 +242,7 @@ const isViewAction = (action: string) => action.endsWith('.view') || action.ends
 // team, VAT, payout account) or money (orders, refunds, payouts: the admin's own pages do those).
 // What staff may read: only what those editors need (courses, dates and their tutors' names, price plans, profile, terms,
 // venues). Never the provider's team list, learners, orders, money, VAT, reviews, leads or performance.
-const STAFF_VIEWS = new Set<string>(['provider.workspace.open', 'provider.courses.view', 'provider.cohorts.view', 'provider.pricing.view', 'provider.settings.view'])
+const STAFF_VIEWS = new Set<string>(['provider.workspace.open', 'provider.courses.view', 'provider.cohorts.view', 'provider.venues.view', 'provider.pricing.view', 'provider.settings.view'])
 const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.courses.editPage', 'provider.cohorts.edit', 'provider.profile.edit', 'provider.profile.rename', 'provider.terms.edit', 'provider.faqs.edit'])
 
 // Until our team approves a provider (its application pending, or changes asked), it can only look around and complete its

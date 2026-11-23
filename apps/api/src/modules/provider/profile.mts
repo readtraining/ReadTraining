@@ -48,6 +48,9 @@ const social = (host: RegExp, example: string) =>
     .refine((v) => v === '' || host.test(v), `Use a full link, like ${example}.`)
     .optional()
 
+// a notice address: one email address, required (the database checks the same shape, organisations_notice_emails)
+const noticeEmail = z.string().trim().toLowerCase().min(1, 'Enter an email address.').max(254).refine((v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), 'Enter an email address, like bookings@yourcompany.co.uk.')
+
 const log = (tx: Parameters<typeof logActivity>[0], ctx: { user: { id: string }; ip: string | null }, organisationId: string, action: string, metadata: Record<string, unknown> = {}) =>
   logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId, action, targetType: 'organisation', targetId: organisationId, metadata, ip: ctx.ip })
 
@@ -162,6 +165,50 @@ export const providerProfileRouter = createTRPCRouter({
         await tx.update(organisations).set(set).where(eq(organisations.id, input.organisationId))
         await log(tx, ctx, input.organisationId, 'provider.terms_updated')
         return { ok: true }
+      })
+    }),
+
+  // VAT (Settings › VAT): owner, admins and the accounts role. Registered with a UK number (GB then 9 digits; spaces dropped,
+  // letters made capitals), or not registered, which clears the number. The database checks the same (organisations_vat).
+  vat: orgProcedure('provider.vat.view').query(async ({ ctx, input }) => {
+    const [o] = await ctx.db.select({ registered: organisations.vatRegistered, number: organisations.vatNumber }).from(organisations).where(eq(organisations.id, input.organisationId))
+    if (!o) throw new TRPCError({ code: 'NOT_FOUND' })
+    return { registered: o.registered, number: o.number ?? '' }
+  }),
+
+  saveVat: orgProcedure('provider.vat.edit')
+    .input(
+      z
+        .object({ registered: z.boolean(), number: z.string().max(40).optional() })
+        .transform((v) => ({ registered: v.registered, number: v.registered ? (v.number ?? '').replace(/\s+/g, '').toUpperCase() : null }))
+        .superRefine((v, c) => {
+          if (v.registered && !/^GB\d{9}$/.test(v.number ?? '')) c.addIssue({ code: 'custom', path: ['number'], message: 'Enter your VAT number: GB then 9 numbers, like GB 123 4567 89.' })
+        }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.transaction(async (tx) => {
+        await tx.update(organisations).set({ vatRegistered: input.registered, vatNumber: input.number, updatedAt: new Date() }).where(eq(organisations.id, input.organisationId))
+        await log(tx, ctx, input.organisationId, 'provider.vat_updated', { registered: input.registered })
+        return { registered: input.registered, number: input.number ?? '' }
+      })
+    }),
+
+  // Where the provider's notices go (Settings › Emails): order, refund and dispute addresses, all three required (one not set
+  // yet, on an account that hasn't saved them, means the account owner's email). Owner, admins and the accounts role. Saved now for the booking and payment
+  // notices that come later.
+  emails: orgProcedure('provider.emails.view').query(async ({ ctx, input }) => {
+    const [o] = await ctx.db.select({ order: organisations.orderEmail, refund: organisations.refundEmail, dispute: organisations.disputeEmail }).from(organisations).where(eq(organisations.id, input.organisationId))
+    if (!o) throw new TRPCError({ code: 'NOT_FOUND' })
+    return { order: o.order ?? '', refund: o.refund ?? '', dispute: o.dispute ?? '' }
+  }),
+
+  saveEmails: orgProcedure('provider.emails.edit')
+    .input(z.object({ order: noticeEmail, refund: noticeEmail, dispute: noticeEmail }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.transaction(async (tx) => {
+        await tx.update(organisations).set({ orderEmail: input.order, refundEmail: input.refund, disputeEmail: input.dispute, updatedAt: new Date() }).where(eq(organisations.id, input.organisationId))
+        await log(tx, ctx, input.organisationId, 'provider.notice_emails_updated')
+        return { order: input.order, refund: input.refund, dispute: input.dispute }
       })
     }),
 

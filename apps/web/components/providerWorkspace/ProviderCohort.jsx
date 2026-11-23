@@ -16,8 +16,9 @@ import { EmptyState } from "@/components/states/States";
 import { useProviderAccess } from "@/lib/providerAccess";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
+import { Req } from "./settingsForm";
 
-// Manage cohort, as Hurak's: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
+// Manage cohort: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
 // whether it takes bookings, tutor), with Edit cohort details, Enrol student (a new order on these dates), Bulk enrolment (a
 // file of people booked outside ReadTraining) and Manage curriculum. Then its students: each one's status, name and email, the
 // customer who paid (name and email), pricing plan, sales channel, payment, notes and LMS access, an email button, the learner record, and a menu
@@ -33,11 +34,11 @@ const customKey = (f) => (typeof f === "string" ? `custom-${slug(f)}` : f.key ||
 const customLabel = (f) => (typeof f === "string" ? f : f.label);
 const csvCell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
-// a small form helper: label, error above the input, the input
-function Field({ id, label, error, hint, children }) {
+// a small form helper: label (with a red * when `required`), error above the input, the input
+function Field({ id, label, error, hint, children, required = false }) {
   return (
     <div className="rt-field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label}{required && <Req />}</label>
       {hint && <p className="rt-field__hint" id={`${id}-h`}>{hint}</p>}
       {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
       {children}
@@ -340,7 +341,7 @@ const fill = (text, e, k, o) => text
   .replace(/\{order\}/g, o?.ref || "");
 
 // "Send email": to one student (address can be changed, e.g. the order confirmation to someone else) or to every picked student.
-// Hurak's "Select email template" (filled in for each student) or "Create new".
+// "Select email template" (filled in for each student) or "Create new".
 function EmailSheet({ value, people, cohort: k, orderOf, onClose, onSent }) {
   const formRef = useRef(null);
   const [mode, setMode] = useState("template");
@@ -389,19 +390,19 @@ function EmailSheet({ value, people, cohort: k, orderOf, onClose, onSent }) {
           {!one && <p className="rt-acc__note">{`Goes to ${list.length} ${list.length === 1 ? "student" : "students"} on this cohort. {name}, {course}, {date}, {where} and {order} are filled in for each one.`}</p>}
           <Choice name="rt-mail-mode" legend="Select email option" value={mode} onChange={(v) => { setMode(v); setTpl(""); setSubject(""); setMessage(""); }} options={[{ value: "template", label: "Select email template" }, { value: "new", label: "Create new" }]} />
           {mode === "template" && (
-            <Field id="rt-mail-tpl" label="Select template" error={errors.tpl}>
+            <Field required id="rt-mail-tpl" label="Select template" error={errors.tpl}>
               <FieldSelect id="rt-mail-tpl" label="Select template" placeholder="Choose email" value={tpl} onChange={useTemplate} options={pw.emailTemplates.map((t) => ({ value: t.key, label: t.label }))} invalid={Boolean(errors.tpl)} describedBy={errors.tpl ? "rt-mail-tpl-e" : undefined} />
             </Field>
           )}
           {one && (
-            <Field id="rt-mail-to" label="Send to" error={errors.to} hint="The student's email. Change it to send this to someone else, such as the person who paid.">
+            <Field required id="rt-mail-to" label="Send to" error={errors.to} hint="The student's email. Change it to send this to someone else, such as the person who paid.">
               <input id="rt-mail-to" type="email" value={to} onChange={(e) => setTo(e.target.value)} autoComplete="off" spellCheck={false} {...ariaFor("rt-mail-to", errors.to, true)} />
             </Field>
           )}
-          <Field id="rt-mail-subject" label="Enter email subject" error={errors.subject}>
+          <Field required id="rt-mail-subject" label="Enter email subject" error={errors.subject}>
             <input id="rt-mail-subject" type="text" maxLength={140} value={subject} onChange={(e) => setSubject(e.target.value)} autoComplete="off" {...ariaFor("rt-mail-subject", errors.subject)} />
           </Field>
-          <Field id="rt-mail-message" label="Message" error={errors.message}>
+          <Field required id="rt-mail-message" label="Message" error={errors.message}>
             <TextArea id="rt-mail-message" rows={7} maxLength={4000} value={message} onChange={(e) => setMessage(e.target.value)} autoComplete="off" {...ariaFor("rt-mail-message", errors.message)} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Send</button>
@@ -450,7 +451,7 @@ function DetailsSheet({ enrolment: e, onClose, onSaved }) {
     }
   };
   const input = (key, label, props) => (
-    <Field id={`rt-sd-${key}`} label={label} error={errors[key]}>
+    <Field required id={`rt-sd-${key}`} label={label} error={errors[key]}>
       <input id={`rt-sd-${key}`} value={f[key]} onChange={(ev) => setF((x) => ({ ...x, [key]: ev.target.value }))} {...props} {...ariaFor(`rt-sd-${key}`, errors[key])} />
     </Field>
   );
@@ -496,10 +497,10 @@ export function MoveSheet({ enrolment: e, options, course, onClose, onSaved }) {
           {policy?.enabled && <p className="rt-acc__note">{policy.paid ? `Your policy: a date change costs ${formatPrice(policy.fee)}.` : "Your policy: date changes are free."}</p>}
           {options.length ? (
             <>
-              <Field id="rt-mv-to" label="New dates" error={error}>
+              <Field required id="rt-mv-to" label="New dates" error={error}>
                 <FieldSelect id="rt-mv-to" label="New dates" placeholder="Choose the dates" value={to} onChange={(v) => { setTo(v); setError(""); }} options={options.map((x) => ({ value: x.id, label: `${dayRange(x.first, x.last)} · ${x.venue ? x.venue.city : "Online"} · ${x.left} left` }))} invalid={Boolean(error)} describedBy={error ? "rt-mv-to-e" : undefined} />
               </Field>
-              <Field id="rt-mv-note" label="Note (optional)">
+              <Field id="rt-mv-note" label="Note">
                 <TextArea id="rt-mv-note" rows={3} maxLength={500} value={note} onChange={(ev) => setNote(ev.target.value)} autoComplete="off" />
               </Field>
               <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Reschedule</button>
@@ -534,7 +535,7 @@ export function ResitSheet({ enrolment: e, options, course, onClose, onSaved }) 
           {e.result !== "fail" && <p className="rt-acc__note">{e.result === "pass" ? "This student passed. A resit is usually for students who did not." : "No result is marked yet. A resit is usually booked after a fail."}</p>}
           {options.length ? (
             <>
-              <Field id="rt-rs-to" label="Resit dates" error={error}>
+              <Field required id="rt-rs-to" label="Resit dates" error={error}>
                 <FieldSelect id="rt-rs-to" label="Resit dates" placeholder="Choose the dates" value={to} onChange={(v) => { setTo(v); setError(""); }} options={options.map((x) => ({ value: x.id, label: `${dayRange(x.first, x.last)} · ${x.venue ? x.venue.city : "Online"} · ${x.left} left` }))} invalid={Boolean(error)} describedBy={error ? "rt-rs-to-e" : undefined} />
               </Field>
               <Choice name="rt-rs-pay" legend="Resit fee" value={pay} onChange={setPay} options={[{ value: "free", label: "Free resit" }, ...(fee ? [{ value: "paid", label: `${course?.settings.resit?.title || "Exam resit"}: ${formatPrice(fee)} (we send a payment link)` }] : [])]} />
@@ -566,7 +567,7 @@ function CancelBookingSheet({ enrolment: e, onClose, onSaved }) {
       {e && (
         <form className="rt-q__form" onSubmit={save} noValidate ref={formRef}>
           <p className="rt-acc__note">{learnerName(e.learner)}'s place is freed for someone else. Any refund is made from the order.</p>
-          <Field id="rt-cb-reason" label="Reason" error={error}>
+          <Field required id="rt-cb-reason" label="Reason" error={error}>
             <TextArea id="rt-cb-reason" rows={4} maxLength={500} value={reason} onChange={(ev) => setReason(ev.target.value)} autoComplete="off" {...ariaFor("rt-cb-reason", error)} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Cancel booking</button>
@@ -600,7 +601,7 @@ function NotesSheet({ title, intro, open, list, onAdd, onClose }) {
           </ol>
         ) : <p className="rt-acc__note">No notes yet.</p>}
         <form className="rt-q__form" onSubmit={add} noValidate ref={formRef}>
-          <Field id="rt-note-text" label="Add a note" error={error}>
+          <Field required id="rt-note-text" label="Add a note" error={error}>
             <TextArea id="rt-note-text" rows={3} maxLength={1000} value={text} onChange={(ev) => setText(ev.target.value)} autoComplete="off" {...ariaFor("rt-note-text", error)} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Add note</button>
@@ -663,7 +664,7 @@ function BulkSheet({ open, cohort: k, onClose, onSaved }) {
     <Sheet open={open} onClose={onClose} title="Bulk students enrolment" closeLabel="Close">
       <form className="rt-q__form" onSubmit={save} noValidate ref={formRef}>
         <p className="rt-acc__note">{`Add students who booked with you outside ReadTraining. Use a CSV with one student a row: first name, last name, email, phone. ${k.left} ${k.left === 1 ? "place" : "places"} left.`}</p>
-        <Field id="rt-bulk-file" label="Student file (CSV)" error={error}>
+        <Field required id="rt-bulk-file" label="Student file (CSV)" error={error}>
           <input id="rt-bulk-file" type="file" accept=".csv,text/csv" onChange={read} {...ariaFor("rt-bulk-file", error)} />
         </Field>
         {rows && <p className="rt-acc__note" role="status">{`${file}: ${rows.length} ${rows.length === 1 ? "student" : "students"} ready to enrol.`}</p>}
@@ -711,7 +712,7 @@ function RecordSheet({ enrolment, clr, onClose, onSaved }) {
         <form className="rt-q__form" onSubmit={save} noValidate ref={formRef}>
           {fields.includes("name") && (
             <div className="rt-field">
-              <label htmlFor="rt-clr-name">Full name</label>
+              <label htmlFor="rt-clr-name">Full name<Req /></label>
               <p className="rt-acc__note">As it should appear on the certificate.</p>
               {err("name")}
               <input id="rt-clr-name" type="text" maxLength={100} value={f.name || ""} onChange={(e) => set("name", e.target.value)} autoComplete="off" {...aria("name")} />

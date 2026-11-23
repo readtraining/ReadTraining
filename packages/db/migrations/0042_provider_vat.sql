@@ -1,0 +1,3 @@
+ALTER TABLE "organisations" ADD COLUMN "vat_registered" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "organisations" ADD COLUMN "vat_number" text;--> statement-breakpoint
+ALTER TABLE "organisations" ADD CONSTRAINT "organisations_vat" CHECK (("organisations"."vat_registered" and "organisations"."vat_number" ~ '^GB[0-9]{9}$') or (not "organisations"."vat_registered" and "organisations"."vat_number" is null));

@@ -9,9 +9,9 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { Toggle } from "./providerParts";
-import { Field, aria, isMoney } from "./settingsForm";
+import { Field, Req, aria, isMoney } from "./settingsForm";
 
-// A price plan, as Hurak's "Create New Plan": the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus,
+// A price plan: the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus,
 // Pro, Elite to start with), and for each package its name, price per delegate, an optional "Save £" amount (shown as a was-price),
 // a tagline, "Most popular" (one package at most) and its features, each included (✓) or not (✗) with an optional description.
 // Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its cheapest package
@@ -88,8 +88,10 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
       if (!t.name.trim()) errs[`t${i}-name`] = "Name the package, like Basic.";
       else if (names.indexOf(names[i]) !== i) errs[`t${i}-name`] = "Give every package a different name.";
       if (!isMoney(t.price)) errs[`t${i}-price`] = "Enter a price, like 249 or 249.99.";
+      else if (Number(t.price) < 1) errs[`t${i}-price`] = "Enter a price of at least £1.";
       else if (Number(t.price) > 100000) errs[`t${i}-price`] = "Enter a price of £100,000 or less.";
       if (t.save.trim() && !isMoney(t.save)) errs[`t${i}-save`] = "Enter a saving, like 30, or leave it empty.";
+      else if (t.save.trim() && isMoney(t.price) && Number(t.save) > Number(t.price)) errs[`t${i}-save`] = "A package can’t save more than its own price.";
       t.features.forEach((f, k) => {
         if (!f.title.trim()) errs[`t${i}-f${k}`] = "Write the feature, or remove it.";
       });
@@ -132,7 +134,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
         </p>
 
         <div className="rt-pws-pkg__top">
-          <Field id="rt-plan-name" label="Plan name" error={errors.name} hint="Only your team sees this name. Learners see the package names.">
+          <Field id="rt-plan-name" label="Plan name" required error={errors.name} hint="Only your team sees this name. Learners see the package names.">
             <input {...aria("rt-plan-name", errors.name, true)} type="text" maxLength={60} autoComplete="off" placeholder="For example: SIA door supervisor packages" value={draft.name} onChange={(e) => { setDraft((d) => ({ ...d, name: e.target.value })); clear("name"); }} />
           </Field>
           <fieldset className="rt-field rt-pws-pkg__count">
@@ -154,19 +156,19 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                   <h3 className="rt-pws-pkg__h3" id={`rt-plan-t${i}-h`}>{t.name.trim() || `Package ${i + 1}`}</h3>
                   {t.popular && <span className="rt-pws-pkg__badge">Most popular</span>}
                 </div>
-                <Field id={`rt-plan-t${i}-name`} label="Package name" error={errors[`t${i}-name`]}>
+                <Field id={`rt-plan-t${i}-name`} label="Package name" required error={errors[`t${i}-name`]}>
                   <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} />
                 </Field>
                 <div className="rt-pws-pkg__money">
-                  <Field id={`rt-plan-t${i}-price`} label="Price (£)" error={errors[`t${i}-price`]}>
+                  <Field id={`rt-plan-t${i}-price`} label="Price (£)" required error={errors[`t${i}-price`]}>
                     <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value.replace(/£|,/g, "") }); clear(`t${i}-price`); }} />
                   </Field>
                   <Field id={`rt-plan-t${i}-save`} label="Save (£)" error={errors[`t${i}-save`]}>
-                    <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" placeholder="Optional" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
+                    <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
                   </Field>
                 </div>
                 <p className="rt-pws-pkg__save" aria-live="polite">Per delegate, including VAT (as learners see it){save > 0 ? ` · was ${formatPrice(Number(t.price) + save)}, saves ${formatPrice(save)}` : ""}</p>
-                <Field id={`rt-plan-t${i}-tag`} label="Tagline (optional)">
+                <Field id={`rt-plan-t${i}-tag`} label="Tagline">
                   <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
                 </Field>
                 <Toggle id={`rt-plan-t${i}-pop`} checked={t.popular} onChange={(on) => setPopular(i, on)} label="Mark as Most popular" />
@@ -181,12 +183,12 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                         return (
                           <li key={k} className={`rt-pws-pkg__feature${f.included ? " -yes" : " -no"}`}>
                             <div className="rt-field">
-                              <label htmlFor={id}>Feature {k + 1}</label>
+                              <label htmlFor={id}>Feature {k + 1}<Req /></label>
                               {err && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{err}</p>}
                               <input id={id} type="text" maxLength={80} autoComplete="off" placeholder="For example: Free date changes" value={f.title} onChange={(e) => { setFeature(i, k, { title: e.target.value }); clear(`t${i}-f${k}`); }} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
                             </div>
                             <div className="rt-field">
-                              <label htmlFor={`${id}-d`}>Description (optional)</label>
+                              <label htmlFor={`${id}-d`}>Description</label>
                               <input id={`${id}-d`} type="text" maxLength={200} autoComplete="off" value={f.description} onChange={(e) => setFeature(i, k, { description: e.target.value })} />
                             </div>
                             <div className="rt-pws-pkg__featurebar">

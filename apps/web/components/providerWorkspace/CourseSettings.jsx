@@ -86,19 +86,19 @@ export function SeoPanel({ course, onSaved, formId, onState, saveRef }) {
   return (
     <form className="rt-q__form" id={formId} onSubmit={submit} noValidate ref={ref}>
       <div className="rt-field">
-        <label htmlFor="rt-pws-cset-st">SEO title (optional)</label>
+        <label htmlFor="rt-pws-cset-st">SEO title</label>
         <Err id="rt-pws-cset-st" text={errors.title} />
         <input id="rt-pws-cset-st" type="text" maxLength={60} autoComplete="off" value={title} disabled={locked} onChange={(e) => setTitle(e.target.value)} aria-invalid={errors.title ? true : undefined} aria-describedby={`${errors.title ? "rt-pws-cset-st-e " : ""}rt-pws-cset-st-c`} />
         <small className="rt-field__hint rt-pws-cset__count" id="rt-pws-cset-st-c">{title.length} of 60 characters</small>
       </div>
       <div className="rt-field">
-        <label htmlFor="rt-pws-cset-sd">SEO description (optional)</label>
+        <label htmlFor="rt-pws-cset-sd">SEO description</label>
         <Err id="rt-pws-cset-sd" text={errors.desc} />
         <TextArea id="rt-pws-cset-sd" rows={4} maxLength={320} autoComplete="off" value={desc} disabled={locked} onChange={(e) => setDesc(e.target.value)} aria-invalid={errors.desc ? true : undefined} aria-describedby={`${errors.desc ? "rt-pws-cset-sd-e " : ""}rt-pws-cset-sd-c`} />
         <small className="rt-field__hint rt-pws-cset__count" id="rt-pws-cset-sd-c">{desc.length} of 320 characters</small>
       </div>
       <div className="rt-field">
-        <label htmlFor="rt-pws-cset-kw">Course keywords (optional)</label>
+        <label htmlFor="rt-pws-cset-kw">Course keywords</label>
         <small className="rt-field__hint" id="rt-pws-cset-kw-h">Press Enter or type a comma after each one. Up to 20.</small>
         {keywords.length > 0 && (
           <ul className="rt-pws-cset__tags">
@@ -246,8 +246,8 @@ export function DeleteCourseForm({ course, onKeep, onDeleted }) {
   );
 }
 
-// The gear on every editor page (Hurak's course settings): its visibility (Public, or Private: only people with its link can book
-// it; one choice, as Hurak v2's "Publish on marketplace"), where it is listed (read only: the subject decides, as on Hurak, placeOn
+// The gear on every editor page (course settings): its visibility (Public, or Private: only people with its link can book
+// it; one choice), where it is listed (read only: the subject decides, placeOn
 // in the API), the address to share, pausing a live course, and deleting it (DeleteBlocked says
 // when it can't be, and a course our team paused has no Put back live; DeleteCourseForm asks). Each choice saves at once.
 export function CourseGear({ course, open, onClose, onSaved, onStale }) {

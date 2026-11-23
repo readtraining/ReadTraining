@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
@@ -10,7 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink, RowMenu } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink, RowMenu, Req } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { waysLabel } from "@/lib/courseModes";
@@ -28,6 +29,10 @@ export const DANGER = new Set(["reject", "suspend"]);
 // The decisions an admin can make on a provider now (this page and the Providers list's row menu): its status's next steps
 // that the admin's switches allow, without approval decisions on an account they opened themselves unless they are the only
 // approver (`ownRequest`, `soleApprover`).
+// Whether the admin can delete this provider: only one that wasn't approved (rejected), with the approve switch; the API also
+// refuses one holding records (orders, payouts, reviews...).
+export const canDelete = (p, me) => p.status === "rejected" && Boolean(me?.permissions?.includes("approve"));
+
 export function decisionsFor(p, me) {
   const allowed = NEXT[p.status].filter((k) => me?.permissions?.includes(SWITCH[k]));
   return p.ownRequest && !p.soleApprover ? allowed.filter((k) => SWITCH[k] !== "approve") : allowed;
@@ -41,6 +46,8 @@ export function decisionsFor(p, me) {
 export default function AdminProvider({ slug }) {
   const me = useAdminAccess();
   const utils = api.useUtils();
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
   const record = api.admin.providers.get.useQuery({ slug }, { retry: (n, e) => e?.data?.code !== "NOT_FOUND" && n < 2 });
   const activity = api.admin.activity.list.useQuery({ q: record.data?.id ?? "", limit: 8 }, { enabled: Boolean(record.data?.id) });
   const [deciding, setDeciding] = useState(null);
@@ -87,6 +94,9 @@ export default function AdminProvider({ slug }) {
           {(p.status === "active" || p.status === "suspended") && d.edit.items.some((x) => x.needs.some((s) => me?.permissions?.includes(s))) && (
             <RowMenu label={`Edit ${p.name}`} trigger={<span aria-hidden="true">{d.edit.label}</span>} triggerClass="button -md -outline-purple-1 text-purple-1"
               items={d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` }))} />
+          )}
+          {canDelete(p, me) && (
+            <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => setDeleting(true)}>{d.remove.action}</button>
           )}
           {p.status === "active" && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
         </div>
@@ -180,7 +190,44 @@ export default function AdminProvider({ slug }) {
       <p className="rt-acc__notice">{d.later}</p>
 
       <DecisionSheet provider={p} decision={deciding} onClose={() => setDeciding(null)} onDone={decided} />
+      <DeleteProviderSheet provider={deleting ? p : null} onClose={() => setDeleting(false)} onDone={() => { utils.admin.providers.invalidate().catch(() => {}); router.replace("/admin/providers?tab=rejected"); }} />
     </div>
+  );
+}
+
+// Delete a provider that wasn't approved: what goes, then the button. The API checks it again and refuses one with records to
+// keep (said here).
+export function DeleteProviderSheet({ provider, onClose, onDone }) {
+  const remove = api.admin.providers.remove.useMutation();
+  const utils = api.useUtils();
+  const r = d.remove;
+  const [general, setGeneral] = useState("");
+  const close = () => {
+    setGeneral("");
+    onClose();
+  };
+  const submit = async () => {
+    setGeneral("");
+    try {
+      const res = await remove.mutateAsync({ organisationId: provider.id });
+      utils.admin.activity.list.invalidate();
+      close();
+      onDone(res);
+    } catch (err) {
+      setGeneral(errorsFrom(err).general);
+    }
+  };
+  return (
+    <Sheet open={Boolean(provider)} onClose={close} title={r.title} closeLabel="Close">
+      {provider && (
+        <div className="rt-q__form rt-biz__sheetform">
+          <p className="rt-acc__note"><strong>{provider.name}</strong></p>
+          <p className="rt-acc__note">{r.text}</p>
+          {general && <p className="rt-q__err rt-acc__formerr" role="alert">{general}</p>}
+          <button type="button" className="button -md -purple-1 text-white rt-btn-block" onClick={submit} disabled={remove.isPending}>{r.button}</button>
+        </div>
+      )}
+    </Sheet>
   );
 }
 
@@ -200,7 +247,7 @@ function CommissionCard({ provider: p, canChange, onSaved }) {
       <p className="rt-acc__note">{(own ? d.hasOwn : d.usesDefault).replace("{rate}", def)}</p>
       {canChange ? (
         <>
-          <RateForm id="rt-adm-pcom" label={d.commissionLabel} hint={d.commissionHint.replace("{rate}", def)} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
+          <RateForm id="rt-adm-pcom" label={<>{d.commissionLabel}<Req /></>} hint={d.commissionHint.replace("{rate}", def)} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
           {own && <button type="button" className="rt-cd__link rt-adm-mt" onClick={async () => { await save.mutateAsync({ organisationId: p.id, bps: null }); onSaved(d.commissionSaved); }} disabled={save.isPending}>{d.useDefault}</button>}
         </>
       ) : null}
@@ -264,7 +311,7 @@ export function DecisionSheet({ provider, decision, onClose, onDone }) {
           <p className="rt-acc__note">{sheet.text}</p>
           {sheet.label && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-pmsg">{sheet.label}</label>
+              <label htmlFor="rt-adm-pmsg">{sheet.label}<Req /></label>
               <small className="rt-field__hint" id="rt-adm-pmsg-hint">{sheet.hint}</small>
               {error && <p className="rt-q__err" id="rt-adm-pmsg-e"><span className="rt-sr">Error: </span>{error}</p>}
               <TextArea id="rt-adm-pmsg" rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-pmsg-hint${error ? " rt-adm-pmsg-e" : ""}`} />
@@ -272,7 +319,7 @@ export function DecisionSheet({ provider, decision, onClose, onDone }) {
           )}
           {own && (
             <div className="rt-field">
-              <label htmlFor="rt-adm-pown">{A.own.label}</label>
+              <label htmlFor="rt-adm-pown">{A.own.label}<Req /></label>
               <small className="rt-field__hint" id="rt-adm-pown-hint">{A.own.hint}</small>
               {reasonError && <p className="rt-q__err" id="rt-adm-pown-e"><span className="rt-sr">Error: </span>{reasonError}</p>}
               <TextArea id="rt-adm-pown" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonError ? true : undefined} aria-describedby={`rt-adm-pown-hint${reasonError ? " rt-adm-pown-e" : ""}`} />

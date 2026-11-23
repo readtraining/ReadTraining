@@ -9,7 +9,7 @@ import { dayRange } from "./ProviderCohorts";
 import { money } from "./charts";
 import { EmptyState } from "@/components/states/States";
 
-// Student profile: Hurak's details (name, phone, town, email) and its booking cards (course, dates and times, venue's full address,
+// Student profile: details (name, phone, town, email) and its booking cards (course, dates and times, venue's full address,
 // booking reference, order number and status, View cohort / Order details), in our layout: a header with the learner's numbers,
 // then the bookings as a timeline, newest first.
 // The page title (ProviderShell's h1): the learner's name once the records have loaded.

@@ -8,14 +8,14 @@ import { addBusinessNote, changeCreditLimit, offerCredit, remindInvoice, setCred
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
-import { formatWhen, Said, DetailSkeleton, Empty } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
 
 const copy = W.businesses;
 const d = copy.detail;
 
-// One business account: the company, places bought vs assigned, the credit facility (as on Hurak, companies don't apply: we offer
+// One business account: the company, places bought vs assigned, the credit facility (companies don't apply: we offer
 // credit with a limit once their history meets every eligibility check; then change the limit, put credit on hold or lift it), money owed by age, the invoices with their purchase orders (send a reminder,
 // mark paid), and the team's notes. Each change is saved.
 export default function AdminBusiness({ slug }) {
@@ -177,7 +177,7 @@ export default function AdminBusiness({ slug }) {
         <form className="rt-q__form" onSubmit={saveLimit} noValidate ref={limitRef}>
           <p className="rt-acc__note">Payment terms: {copy.termsDays} days. Default limit {formatPrice(copy.defaultLimit)}.</p>
           <div className="rt-field">
-            <label htmlFor="rt-adm-limit">{d.limit}</label>
+            <label htmlFor="rt-adm-limit">{d.limit}<Req /></label>
             {errors.limit && <p className="rt-q__err" id="rt-adm-limit-e"><span className="rt-sr">Error: </span>{errors.limit}</p>}
             <input id="rt-adm-limit" type="number" min="500" step="500" inputMode="numeric" value={limit} onChange={(e) => setLimit(e.target.value)} aria-invalid={errors.limit ? true : undefined} aria-describedby={errors.limit ? "rt-adm-limit-e" : undefined} />
           </div>

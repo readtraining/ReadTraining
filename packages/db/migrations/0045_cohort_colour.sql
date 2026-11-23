@@ -1,0 +1,2 @@
+ALTER TABLE "cohorts" ADD COLUMN "colour" text;--> statement-breakpoint
+ALTER TABLE "cohorts" ADD CONSTRAINT "cohorts_colour" CHECK ("cohorts"."colour" in ('purple', 'blue', 'green', 'orange', 'red'));

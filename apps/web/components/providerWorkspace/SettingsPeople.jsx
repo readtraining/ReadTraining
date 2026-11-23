@@ -40,7 +40,7 @@ function AnswerForm({ q, onDone, say }) {
   const id = `rt-qa-ans-${q.id}`;
   return (
     <form className="rt-adm-noteform rt-pws-set__answer" onSubmit={submit} noValidate ref={ref}>
-      <Field id={id} label={q.answer ? "Your answer" : "Answer this question"} error={error} hint="Shown on the course page under the question.">
+      <Field id={id} label={q.answer ? "Your answer" : "Answer this question"} required error={error} hint="Shown on the course page under the question.">
         <TextArea {...aria(id, error, true)} rows={3} maxLength={1500} autoComplete="off" value={v} onChange={(e) => setV(e.target.value)} />
       </Field>
       <div className="rt-pws-set__actions">
@@ -130,13 +130,13 @@ export function QaTab({ data, say }) {
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add question" closeLabel="Close" className="rt-pws-set__sheet">
         <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
           <p className="rt-acc__note">Answer a question learners often ask before they book. It shows on the course page.</p>
-          <Field id="rt-qa-c" label="Course" error={errors.course}>
+          <Field id="rt-qa-c" label="Course" required error={errors.course}>
             <FieldSelect id="rt-qa-c" label="Course" placeholder="Choose a course" value={f.course} onChange={(value) => setF((x) => ({ ...x, course: value }))} options={courses.map((c) => ({ value: c.id, label: c.title }))} invalid={Boolean(errors.course)} describedBy={aria("rt-qa-c", errors.course)["aria-describedby"]} />
           </Field>
-          <Field id="rt-qa-q" label="Question" error={errors.question}>
+          <Field id="rt-qa-q" label="Question" required error={errors.question}>
             <input {...aria("rt-qa-q", errors.question)} type="text" maxLength={200} autoComplete="off" value={f.question} onChange={(e) => setF((x) => ({ ...x, question: e.target.value }))} />
           </Field>
-          <Field id="rt-qa-a" label="Answer" error={errors.answer}>
+          <Field id="rt-qa-a" label="Answer" required error={errors.answer}>
             <TextArea {...aria("rt-qa-a", errors.answer)} rows={5} maxLength={1500} autoComplete="off" value={f.answer} onChange={(e) => setF((x) => ({ ...x, answer: e.target.value }))} />
           </Field>
           <button type="submit" className="button -md -purple-1 text-white rt-btn-block">Add question</button>
@@ -180,7 +180,7 @@ export function TeamTab({ say }) {
   ];
   const who = (m) => m.name || m.email;
   const changeRole = (m, role) =>
-    setRole.mutate({ organisationId, userId: m.userId, role }, { onSuccess: () => { refresh(); say(`${who(m)} is now ${ROLE[role]?.label}`); }, onError: fail });
+    setRole.mutate({ organisationId, userId: m.userId, role }, { onSuccess: (r) => { refresh(); say(`${who(m)} is now ${ROLE[role]?.label}${r.untutored ? `. ${r.untutored === 1 ? "The date they tutored now has" : `The ${r.untutored} dates they tutored now have`} no tutor` : ""}`); }, onError: fail });
   const resendTo = (m) =>
     resend.mutate({ organisationId, userId: m.userId }, { onSuccess: (r) => say(r.outbox ? `Invite saved to the test outbox for ${m.email}` : r.emailed ? `Invite sent again to ${m.email}` : `The email to ${m.email} couldn't be sent. Try again.`), onError: fail });
 
@@ -276,10 +276,10 @@ function InviteSheet({ open, onClose, onDone }) {
   return (
     <Sheet open={open} onClose={close} title="Invite to your team" closeLabel="Close" className="rt-pws-set__sheet">
       <form className="rt-q__form" onSubmit={submit} noValidate ref={formRef}>
-        <Field id="rt-team-email" label="Email address" error={errors.email}>
+        <Field id="rt-team-email" label="Email address" required error={errors.email}>
           <input {...aria("rt-team-email", errors.email)} type="email" autoComplete="off" spellCheck={false} value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value }))} />
         </Field>
-        <Field id="rt-team-role" label="Role" error={errors.role} hint={f.role ? ROLE[f.role].can : undefined}>
+        <Field id="rt-team-role" label="Role" required error={errors.role} hint={f.role ? ROLE[f.role].can : undefined}>
           <FieldSelect id="rt-team-role" label="Role" placeholder="Choose a role" value={f.role} onChange={(value) => setF((x) => ({ ...x, role: value }))} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} invalid={Boolean(errors.role)} describedBy={aria("rt-team-role", errors.role, Boolean(f.role))["aria-describedby"]} />
         </Field>
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={invite.isPending}>{invite.isPending ? "Sending…" : "Send invite"}</button>

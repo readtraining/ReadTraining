@@ -1,7 +1,7 @@
 import { CATALOGUE_HREF } from "@/lib/routes";
 import { TOPICS } from "@/data/courseTopics";
 // Test prep hub content: one list for the hub page and (later) the individual test pages.
-// Titles and slugs follow the reference Hurak test prep hub; the brand name is ours. A card's description and facts come from
+// Titles and slugs follow the reference test prep hub; the brand name is ours. A card's description and facts come from
 // the subject page data (data/testPrepSubjects.js, read through lib/testPrep.js), so the hub and the subject page agree.
 // `live: true` (the default: every subject has a page) makes the card a link to /test-prep/<slug>; `live: false` on an
 // entry shows it as "Coming soon" instead.
@@ -66,7 +66,7 @@ export const testPrepPage = {
     mockHeadingSuffix: "Mock Exams",
     takeLabel: "Take test",
     singleHeading: "Your mock test",
-    // the reviews section at the end of a subject page (as on the reference, hurak.com) and its "Give a review" pop-up
+    // the reviews section at the end of a subject page (as on the reference site) and its "Give a review" pop-up
     reviews: {
       eyebrow: "Reviews",
       title: "Mock exam reviews",
@@ -115,7 +115,7 @@ export const testPrepPage = {
     flaggedLabel: "Flagged",
     prevLabel: "Previous",
     nextLabel: "Next",
-    finishLabel: "Submit & check result", // the last question's button, as on the reference (hurak.com)
+    finishLabel: "Submit & check result", // the last question's button, as on the reference
     navTitle: "Questions",
     navOpenLabel: "Questions",
     navSummary: "{answered} of {total} answered",
@@ -133,7 +133,7 @@ export const testPrepPage = {
     confirmLabel: "Finish and see my result",
     closeLabel: "Close",
   },
-  // "Leave a comment" on a mock test page and the box under the test (as on the reference, hurak.com)
+  // "Leave a comment" on a mock test page and the box under the test (as on the reference site)
   comments: {
     cta: "Leave a comment",
     boxTitle: "Still looking for an answer?",
