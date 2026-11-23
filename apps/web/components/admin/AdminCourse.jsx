@@ -220,6 +220,12 @@ export default function AdminCourse({ id }) {
           <dl className="rt-adm-dl">
             <div><dt>Category</dt><dd>{place || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
             <div><dt>Level</dt><dd>{levelName(c.level) || <span className="rt-adm-muted">Not chosen</span>}</dd></div>
+            <div><dt>Course type</dt><dd>{c.compliance === null ? <span className="rt-adm-muted">{pw.compliance.name(null)}</span> : pw.compliance.name(c.compliance)}
+              {/* the provider's answer against the shared page's (our team's, the one the public sees): check before approving */}
+              {!shared && c.parent && c.parent.compliance !== null && c.compliance !== null && c.parent.compliance !== c.compliance && (
+                <p className="rt-acc__notice -warn rt-adm-mt">The shared page {c.parent.title} is marked {pw.compliance.name(c.parent.compliance)}. Check the provider&apos;s answer before approving.</p>
+              )}
+            </dd></div>
             {!shared && <div><dt>Learning options</dt><dd>{waysOf(c).length ? <>{methodName(c.method)}{waysOf(c).length > 1 && <span className="rt-adm-muted"> (primary) · also {waysOf(c).slice(1).map((m) => wayName(c, m)).join(", ")}</span>}</> : "–"}</dd></div>}
             {!shared && <div><dt>Price</dt><dd>{[
               waysOf(c).includes("self-paced") ? `Self-paced: ${c.pricePence != null ? formatPrice(c.pricePence / 100) : "not set"}` : "",
@@ -357,6 +363,7 @@ function Value({ k, v, place }) {
   if (k === "subcategory") return subcategoryName(place.category, v) || v;
   if (k === "topic") return topicName(place.category, place.subcategory, v) || v;
   if (k === "level") return levelName(v) || v;
+  if (k === "compliance") return pw.compliance.name(v);
   if (k === "units") return <ol className="rt-adm-read__list">{v.map((u, i) => <li key={i}><b>{u.title}</b>{u.body && <span className="rt-adm-read__pre">{u.body}</span>}</li>)}</ol>;
   if (k === "exams") return <ul className="rt-adm-read__list">{v.map((e, i) => <li key={i}><b>{e.unit}</b>{[e.passMark && `Pass mark: ${e.passMark}`, e.duration && `Duration: ${e.duration}`].filter(Boolean).join(" · ")}</li>)}</ul>;
   if (k === "faqs") return <ul className="rt-adm-read__list">{v.map((f, i) => <li key={i}><b>{f.question}</b>{f.answer}</li>)}</ul>;

@@ -814,7 +814,7 @@ export const admin = {
       changeNote: "What the provider changed, against the current version. Approving it makes it the current version.",
       now: "Current",
       proposed: "Proposed",
-      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
+      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", compliance: "Course type", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
     },
     // the catalogue's one list (real, API admin.catalogue): what the site's filters and menus and the provider's course form use
     list: {

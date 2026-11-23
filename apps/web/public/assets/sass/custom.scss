@@ -5526,6 +5526,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cd__hero a.rt-sv-badge.rt-cd__saver { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .rt-cd__hero a.rt-sv-badge.rt-cd__saver i { color: var(--color-green-1); }
 .rt-cd__hero a.rt-sv-badge.rt-cd__saver:focus-visible { outline-color: var(--color-green-1); }
+/* a compliance course's badge, beside Skill Saver's in the same pill */
+.rt-cd__hero .rt-sv-badge.rt-cd__comply { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.rt-cd__hero .rt-sv-badge.rt-cd__comply i { color: var(--color-green-1); }
+.rt-cd__hero .rt-cd__saver + .rt-cd__comply { margin-left: 8px; }
 .rt-bk__saverhint { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--color-light-4); font-size: 14px; line-height: 1.5; color: var(--color-dark-1); }
 .rt-bk__saverhint .rt-sv-badge { flex: none; }
 .rt-bk__saverhint a { font-weight: 600; color: var(--color-purple-1); text-decoration: underline; }
