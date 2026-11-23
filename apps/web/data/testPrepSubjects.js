@@ -1136,7 +1136,7 @@ export const subjects = {
       }
     ],
     more: [
-      "sia-top-up-mock-tests"
+      "sia-refresher-mock-tests"
     ],
     sections: [
       {
@@ -2084,70 +2084,70 @@ export const subjects = {
       }
     ]
   },
-  "sia-top-up-mock-tests": {
+  "sia-refresher-mock-tests": {
     exam: {},
-    lead: "Access over 200 up-to-date mock test questions for the SIA Door Supervisor and Security Guard top-up exams. Includes instant answers, feedback, and a downloadable PDF.",
-    mockHeading: "SIA Top-Up Mock Tests",
+    lead: "Access over 200 up-to-date mock test questions for the SIA Door Supervisor and Security Guard refresher exams. Includes instant answers, feedback, and a downloadable PDF.",
+    mockHeading: "SIA Refresher Mock Tests",
     tests: [
       {
         slug: "wds-refresher-1",
-        title: "Unit 1: Top-Up Refresher for Door Supervisors (Test 1)",
+        title: "Unit 1: Refresher for Door Supervisors (Test 1)",
         subtitle: "Principles of Working as a Door Supervisor (Refresher) Test 1",
         passMark: 71,
         minutes: 55
       },
       {
         slug: "wds-refresher-2",
-        title: "Unit 1: Top-Up Refresher for Door Supervisors (Test 2)",
+        title: "Unit 1: Refresher for Door Supervisors (Test 2)",
         subtitle: "Principles of Working as a Door Supervisor (Refresher) Test 2",
         passMark: 71,
         minutes: 55
       },
       {
         slug: "wds-refresher-3",
-        title: "Unit 1: Top-Up Refresher for Door Supervisors (Test 3)",
+        title: "Unit 1: Refresher for Door Supervisors (Test 3)",
         subtitle: "Principles of Working as a Door Supervisor (Refresher) Test 3",
         passMark: 71,
         minutes: 55
       },
       {
         slug: "wso-refresher-1",
-        title: "Unit 1: Top-Up Refresher for Security Officers (Test 1)",
+        title: "Unit 1: Refresher for Security Officers (Test 1)",
         subtitle: "Principles of Working as a Security Officer in the Private Security Industry (Refresher) Test 1",
         passMark: 71,
         minutes: 45
       },
       {
         slug: "wso-refresher-2",
-        title: "Unit 1: Top-Up Refresher for Security Officers (Test 2)",
+        title: "Unit 1: Refresher for Security Officers (Test 2)",
         subtitle: "Principles of Working as a Security Officer in the Private Security Industry (Refresher) Test 2",
         passMark: 71,
         minutes: 45
       },
       {
         slug: "wso-refresher-3",
-        title: "Unit 1: Top-Up Refresher for Security Officers (Test 3)",
+        title: "Unit 1: Refresher for Security Officers (Test 3)",
         subtitle: "Principles of Working as a Security Officer in the Private Security Industry (Refresher) Test 3",
         passMark: 71,
         minutes: 45
       },
       {
         slug: "api-refresher-1",
-        title: "Unit 2: Top-Up Refresher for Door Supervisors (Test 1)",
+        title: "Unit 2: Refresher for Door Supervisors (Test 1)",
         subtitle: "Application of Physical Intervention Skills in the Private Security Industry (Refresher) Test 1",
         passMark: 80,
         minutes: 45
       },
       {
         slug: "api-refresher-2",
-        title: "Unit 2: Top-Up Refresher for Door Supervisors (Test 2)",
+        title: "Unit 2: Refresher for Door Supervisors (Test 2)",
         subtitle: "Application of Physical Intervention Skills in the Private Security Industry (Refresher) Test 2",
         passMark: 80,
         minutes: 45
       },
       {
         slug: "api-refresher-3",
-        title: "Unit 2: Top-Up Refresher for Door Supervisors (Test 3)",
+        title: "Unit 2: Refresher for Door Supervisors (Test 3)",
         subtitle: "Application of Physical Intervention Skills in the Private Security Industry (Refresher) Test 3",
         passMark: 80,
         minutes: 45
@@ -2158,46 +2158,46 @@ export const subjects = {
     ],
     sections: [
       {
-        id: "about-these-sia-top-up-exam-questions-and-mock-tests",
-        heading: "About These SIA Top-Up Exam Questions and Mock Tests",
+        id: "about-these-sia-refresher-exam-questions-and-mock-tests",
+        heading: "About These SIA Refresher Exam Questions and Mock Tests",
         blocks: [
           {
             type: "p",
-            text: "If you're renewing your SIA licence, you're required to complete an SIA Top-Up course, whether you're a Door Supervisor or a Security Guard. These free SIA Top-Up mock tests are designed to help you prepare with confidence."
+            text: "If you're renewing your SIA licence, you're required to complete an SIA refresher course, whether you're a Door Supervisor or a Security Guard. These free SIA Refresher mock tests are designed to help you prepare with confidence."
           },
           {
             type: "p",
-            text: "We've created separate mock tests for each unit of the SIA Top-Up qualification, based on the latest exam format. You'll find:"
+            text: "We've created separate mock tests for each unit of the SIA Refresher qualification, based on the latest exam format. You'll find:"
           },
           {
             type: "ul",
             items: [
-              "3 mock tests for Unit 1 (Top-Up Door Supervisor) – Principles of Working as a Door Supervisor",
-              "3 mock tests for Unit 2 (Top-Up Door Supervisor) – Physical Intervention Skills",
-              "3 mock tests for Unit 1 (Top-Up Security Guard) – Principles of Working as a Security Officer"
+              "3 mock tests for Unit 1 (Refresher Door Supervisor) – Principles of Working as a Door Supervisor",
+              "3 mock tests for Unit 2 (Refresher Door Supervisor) – Physical Intervention Skills",
+              "3 mock tests for Unit 1 (Refresher Security Guard) – Principles of Working as a Security Officer"
             ]
           },
           {
             type: "p",
-            text: "Each test follows the official SIA Top-Up multiple-choice format, with instant answers and explanations. You can retry any test as often as you like, or download our test prep book as a PDF for offline revision."
+            text: "Each test follows the official SIA Refresher multiple-choice format, with instant answers and explanations. You can retry any test as often as you like, or download our test prep book as a PDF for offline revision."
           },
           {
             type: "p",
-            text: "These mock exams are ideal for anyone taking a Top-Up course — helping you practise in advance, spot knowledge gaps, and walk into your exam with confidence."
+            text: "These mock exams are ideal for anyone taking a refresher course — helping you practise in advance, spot knowledge gaps, and walk into your exam with confidence."
           }
         ]
       },
       {
-        id: "what-are-the-real-sia-top-up-exams-like",
-        heading: "What Are the Real SIA Top-Up Exams Like?",
+        id: "what-are-the-real-sia-refresher-exams-like",
+        heading: "What Are the Real SIA Refresher Exams Like?",
         blocks: [
           {
             type: "p",
-            text: "Before you take a mock test, it’s useful to understand how the real SIA Top-Up exams are structured. Each Top-Up course includes a multiple-choice exam that you must pass to renew your licence. Our mock tests are based on the same format, so you can practise in a realistic way."
+            text: "Before you take a mock test, it’s useful to understand how the real SIA Refresher exams are structured. Each refresher course includes a multiple-choice exam that you must pass to renew your licence. Our mock tests are based on the same format, so you can practise in a realistic way."
           },
           {
             type: "h3",
-            text: "Door Supervisor Top-Up (MCQ Only)"
+            text: "Door Supervisor Refresher (MCQ Only)"
           },
           {
             type: "table",
@@ -2221,7 +2221,7 @@ export const subjects = {
           },
           {
             type: "h3",
-            text: "Security Guard Top-Up (MCQ Only)"
+            text: "Security Guard Refresher (MCQ Only)"
           },
           {
             type: "table",
@@ -2240,24 +2240,24 @@ export const subjects = {
           },
           {
             type: "note",
-            text: "These mock tests focus only on the multiple-choice part of the exam. The real Top-Up qualifications also include practical assessments (e.g. use of radios or physical intervention demonstrations), which are not covered here."
+            text: "These mock tests focus only on the multiple-choice part of the exam. The real refresher qualifications also include practical assessments (e.g. use of radios or physical intervention demonstrations), which are not covered here."
           }
         ]
       },
       {
-        id: "download-sia-top-up-practice-questions-pdf",
-        heading: "Download SIA Top-Up Practice Questions (PDF)",
+        id: "download-sia-refresher-practice-questions-pdf",
+        heading: "Download SIA Refresher Practice Questions (PDF)",
         blocks: [
           {
             type: "p",
-            text: "Prefer to revise offline? We’ve created a free PDF containing a wide range of multiple-choice questions from each SIA Top-Up unit — perfect for practising anywhere, anytime."
+            text: "Prefer to revise offline? We’ve created a free PDF containing a wide range of multiple-choice questions from each SIA Refresher unit — perfect for practising anywhere, anytime."
           },
           {
             type: "ul",
             items: [
-              "100 MCQs from Unit 1 – Door Supervisor (Top-Up)",
-              "100 MCQs from Unit 2 – Door Supervisor (Top-Up)",
-              "100 MCQs from Unit 1 – Security Guard (Top-Up)",
+              "100 MCQs from Unit 1 – Door Supervisor (Refresher)",
+              "100 MCQs from Unit 2 – Door Supervisor (Refresher)",
+              "100 MCQs from Unit 1 – Security Guard (Refresher)",
               "✅ Includes correct answers"
             ]
           }
@@ -2266,11 +2266,11 @@ export const subjects = {
     ],
     faqs: [
       {
-        q: "How many questions are there in the SIA Top-Up exam?",
+        q: "How many questions are there in the SIA Refresher exam?",
         a: "For Door Supervisors, there are 35 MCQs in Unit 1 and 30 in Unit 2. For Security Guards, there are 35 MCQs in the single unit."
       },
       {
-        q: "What is the pass mark for the SIA Top-Up exam?",
+        q: "What is the pass mark for the SIA Refresher exam?",
         a: "You must score 71% in Unit 1 (25/35) and 80% in Unit 2 (24/30) for Door Supervisor. Security Guards must score 71% (25/35)."
       },
       {
@@ -2282,8 +2282,8 @@ export const subjects = {
         a: "No — they’re completely free. You can take each one as many times as you like."
       },
       {
-        q: "Do these tests cover the practical parts of the Top-Up course?",
-        a: "No. These mock exams cover only the multiple-choice sections. The real Top-Up course also includes a practical assessment, which you must complete separately."
+        q: "Do these tests cover the practical parts of the refresher course?",
+        a: "No. These mock exams cover only the multiple-choice sections. The real refresher course also includes a practical assessment, which you must complete separately."
       },
       {
         q: "Can I download the questions as a PDF?",

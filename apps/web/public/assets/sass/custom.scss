@@ -7399,6 +7399,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--cd-band); font-size: 8px; color: var(--cd-muted); }
 .rt-cg__compare th:nth-child(2), .rt-cg__compare th:nth-child(3) { width: 140px; }
 .rt-cg__exams th:nth-child(2), .rt-cg__exams th:nth-child(3) { width: 96px; }
+/* a column of words (a guide's own column, such as Assessment) takes a third of the table instead of a number's width */
+.rt-cg__exams.is-words th:nth-child(2) { width: 34%; }
 .rt-cg__exams th:nth-child(4) { width: 120px; }
 .rt-cg__costs th:nth-child(2) { width: 220px; }
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
@@ -7407,7 +7409,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* the client's packages are information here (chosen when a date is booked): no pick on hover */
 .rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border); }
 .rt-cg__pkgs > li { margin: 0; list-style: none; }
-.rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
+.rt-cd__staff a.rt-cg__inline, .rt-cd a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
 .rt-cg__steps li::before { content: counter(rt-step); position: absolute; top: 0; left: 0; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--cd-brand-subtle); font-size: 14px; font-weight: 700; color: var(--cd-brand); }

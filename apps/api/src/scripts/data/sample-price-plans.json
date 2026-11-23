@@ -887,7 +887,7 @@
   },
   {
     "provider": "harbour-training-group-sample",
-    "name": "Door Supervisor Top-Up packages",
+    "name": "Door Supervisor Refresher packages",
     "tiers": [
       {
         "name": "Course only",
@@ -895,7 +895,7 @@
         "tagline": "Your renewal training, nothing extra.",
         "features": [
           {
-            "title": "Door Supervisor top-up training",
+            "title": "Door Supervisor refresher training",
             "included": true,
             "description": null
           },
@@ -929,7 +929,7 @@
         "tagline": "Peace of mind if an exam doesn't go your way.",
         "features": [
           {
-            "title": "Door Supervisor top-up training",
+            "title": "Door Supervisor refresher training",
             "included": true,
             "description": null
           },
@@ -963,7 +963,7 @@
         "tagline": "We help you through the SIA renewal too.",
         "features": [
           {
-            "title": "Door Supervisor top-up training",
+            "title": "Door Supervisor refresher training",
             "included": true,
             "description": null
           },
@@ -993,7 +993,7 @@
       }
     ],
     "dateCourses": [
-      "harbour-sia-door-supervisor-top-up"
+      "harbour-sia-door-supervisor-refresher"
     ],
     "selfPacedCourses": []
   },

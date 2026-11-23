@@ -23296,7 +23296,7 @@ export const questionBank = {
    ]
   }
  },
- "sia-top-up-mock-tests": {
+ "sia-refresher-mock-tests": {
   "api-refresher-1": {
    "minutes": 45,
    "questions": [

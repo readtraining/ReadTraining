@@ -295,6 +295,27 @@
       "when": 1795084458168,
       "tag": "0041_team_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795179011544,
+      "tag": "0042_sia_refresher_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795241153892,
+      "tag": "0043_course_guides",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795429004713,
+      "tag": "0044_sia_cctv_page_address",
+      "breakpoints": true
     }
   ]
 }

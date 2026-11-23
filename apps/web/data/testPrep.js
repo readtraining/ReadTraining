@@ -202,7 +202,7 @@ export const tests = [
   { slug: "sssts-mock-test", title: "SSSTS Mock Tests 2026", category: "Construction", banner: "{tests} free SSSTS mock tests with {questions} practice exam questions to prepare for the CITB Site Supervision Safety Training Scheme assessment." },
   { slug: "free-cpcs-renewal-mock-test-questions-and-answers", title: "Free CPCS Renewal Mock test Questions and Answers", category: "Construction" },
   { slug: "level-1-health-and-safety-in-a-construction-environment-mock-test", title: "Level 1 Health and Safety in a Construction Environment Mock Test 2026", category: "Construction" },
-  { slug: "sia-top-up-mock-tests", title: "SIA Top-Up Mock Tests for Door Supervisor & Security Guard", category: "Security", banner: "Free SIA Top-Up Refresher Mock Tests for Door Supervisors – {tests} practice tests and {questions} questions" },
+  { slug: "sia-refresher-mock-tests", title: "SIA Refresher Mock Tests for Door Supervisor & Security Guard", category: "Security", banner: "Free SIA Refresher Mock Tests for Door Supervisors – {tests} practice tests and {questions} questions" },
   { slug: "cpcs-360-excavator-mock-test", title: "CPCS 360 Excavator Mock Test", category: "Construction" },
   { slug: "iosh-managing-safely-exam-questions", title: "IOSH Managing Safely Exam Questions Mock Test", category: "Health and Safety" },
   { slug: "cscs-working-at-height-mock-test", title: "CSCS Working at Height", category: "Construction" },
@@ -218,7 +218,7 @@ export const mockTestCourses = {
   "smsts-mock-test": { picks: [TOPICS.smsts], words: "SMSTS" },
   "sssts-mock-test": { picks: [TOPICS.sssts], words: "SSSTS" },
   "personal-licence-mock-exam": { picks: [TOPICS.personalLicence], words: "Personal Licence" },
-  "sia-top-up-mock-tests": { picks: [TOPICS.doorTopUp, TOPICS.securityTopUp], words: "Top-Up" },
+  "sia-refresher-mock-tests": { picks: [TOPICS.doorRefresher, TOPICS.securityRefresher], words: "Door Supervisor Refresher" },
   "iosh-managing-safely-exam-questions": { picks: [TOPICS.ioshManagingSafely], words: "IOSH Managing Safely" },
   // the other tests a CSCS Green Card learner takes (after the Green Card test above, so a course's banner stays that one)
   "cscs-mock-test": { picks: [TOPICS.cscsGreen], words: "CSCS Green Card" },

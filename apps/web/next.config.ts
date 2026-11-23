@@ -108,6 +108,14 @@ const nextConfig: NextConfig = {
       { source: '/account/notifications', destination: '/account/settings#rt-pf-mkt-h', permanent: false },
       // the old provider workspace prototype
       { source: '/admin/provider', destination: '/provider', permanent: true },
+      // the SIA renewal course is the refresher (the client's name), no longer the top-up (migration 0042): old addresses land
+      // on the new ones (a sub-category filter keeps the other filters)
+      { source: '/course/sia-door-supervisor-top-up', destination: '/course/sia-door-supervisor-refresher-training', permanent: true },
+      { source: '/test-prep/sia-top-up-mock-tests', destination: '/test-prep/sia-refresher-mock-tests', permanent: true },
+      { source: '/mock-exams-test/sia-top-up-mock-tests/:path*', destination: '/mock-exams-test/sia-refresher-mock-tests/:path*', permanent: true },
+      { source: '/courses/:page', has: [{ type: 'query', key: 'sub', value: 'sia-top-up' }], destination: '/courses/:page?sub=sia-refresher', permanent: true },
+      // the CCTV page's address is the client's (migration 0044)
+      { source: '/course/sia-cctv-operator', destination: '/course/sia-cctv-operator-training', permanent: true },
       // delivery methods: the address is the method's name (brief §4); the client's old words redirect
       { source: '/courses/virtual', destination: '/courses/live-online', permanent: true },
       { source: '/courses/online', destination: '/courses/self-paced', permanent: true },
