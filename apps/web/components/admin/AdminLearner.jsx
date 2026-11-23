@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
+import { ADMIN_TWO_STEP } from "@readtraining/permissions";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
@@ -114,7 +115,7 @@ export default function AdminLearner({ id }) {
             <div><dt>{sf.confirmed}</dt><dd>{when(l.confirmedAt)}</dd></div>
             <div><dt>{sf.last}</dt><dd>{when(l.lastSignInAt)}</dd></div>
             <div><dt>{sf.methods}</dt><dd>{given(l.signInMethods.map((m) => d.methods[m] ?? m).join(", "))}</dd></div>
-            <div><dt>{sf.twoStep}</dt><dd>{l.twoStep ? "On" : "Off"}</dd></div>
+            {ADMIN_TWO_STEP && <div><dt>{sf.twoStep}</dt><dd>{l.twoStep ? "On" : "Off"}</dd></div>}
           </dl>
         </section>
       </div>

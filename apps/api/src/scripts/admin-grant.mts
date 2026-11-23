@@ -93,7 +93,7 @@ async function main() {
     .values({ userId: user.id, preset, active: true })
     .onConflictDoUpdate({ target: adminUsers.userId, set: { preset, active: true } })
   await log('admin.granted', user.id, { preset })
-  console.log(`${email} is now a ${preset} admin. They sign in at /admin/login${preset === 'full' ? ' and set up two-step sign-in the first time' : ''}.`)
+  console.log(`${email} is now a ${preset} admin. They sign in at /admin/login.`)
 }
 
 main()
