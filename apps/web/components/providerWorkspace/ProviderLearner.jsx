@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { learnerName, timeRange, useProvider, editorHref } from "@/lib/providerWorkspace";
-import { Loading, ORDER_TONE, Pill, RowMenu, Stats } from "./providerParts";
+import { CanLink, Loading, ORDER_TONE, Pill, RowMenu, Stats } from "./providerParts";
 import { dayRange } from "./ProviderCohorts";
 import { money } from "./charts";
 import { EmptyState } from "@/components/states/States";
@@ -48,7 +48,7 @@ export default function ProviderLearner({ learnerId }) {
               <li><span>Email</span><a href={`mailto:${l.email}`}>{l.email}</a></li>
             </ul>
           </div>
-          <Link href={`/provider/orders/new?learner=${l.id}`} className="button -sm -purple-1 text-white">Create order</Link>
+          <CanLink need="provider.orders.create" href={`/provider/orders/new?learner=${l.id}`} className="button -sm -purple-1 text-white">Create order</CanLink>
         </div>
       </section>
       <Stats items={stats} label="This learner's bookings" />

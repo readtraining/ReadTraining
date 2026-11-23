@@ -139,7 +139,7 @@ export const pw = {
     dashboard: { title: "Dashboard", lead: "What needs you today, what is with our team and what is coming up." },
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
-    courses: { title: "Courses", lead: "Every course you run. New courses and edits are reviewed before they go live." },
+    courses: { title: "Courses", lead: "Every course you run. New courses, and changes to a live course's wording, are reviewed before they go live." },
     packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates." },
     course: { title: "Edit course" },
     courseOverview: { title: "Course details" },

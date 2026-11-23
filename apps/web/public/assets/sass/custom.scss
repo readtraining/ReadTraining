@@ -6680,7 +6680,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (hover: hover) and (pointer: fine) { .rt-pws-set__fmtbtn:not(:disabled):hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); } }
 .rt-pws-prof__body { margin: 0 0 16px; white-space: pre-line; font-size: var(--rt-text-sm); line-height: 1.7; color: var(--rt-c-text); }
 .rt-pws-prof__body:last-child { margin-bottom: 0; }
-@media (max-width: 575px) { .rt-pws-prof > .button { width: 100%; justify-content: center; } }
+.rt-pws-prof__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 575px) { .rt-pws-prof__actions { width: 100%; } .rt-pws-prof__actions .button { flex: 1 1 100%; justify-content: center; } }
 /* learners (ours, fields): one filter bar, the table, the profile header and booking timeline */
 .rt-lr-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -8px; }
 .rt-lr-count p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }

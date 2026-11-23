@@ -7,12 +7,14 @@ import { useProvider } from "@/lib/providerWorkspace";
 import { Loading, Search, getQuery, setQuery } from "./providerParts";
 import { formatOrderDay } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
+import { useProviderAccess } from "@/lib/providerAccess";
 
 const PER_PAGE = 10;
 // Learners: searches (first name, last name, email, phone), as one search box in the workspace's filter bar (as on Courses;
 // kept in the address), and its columns (name, email, contact number, View), 10 a page, with each learner's initials, town, bookings
 // and last booking.
 export default function ProviderLearners() {
+  const { can } = useProviderAccess();
   const data = useProvider();
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -22,7 +24,7 @@ export default function ProviderLearners() {
   useEffect(() => setPage(1), [q]);
   if (!data) return <Loading rows={2} />;
   if (!data.learners.length) {
-    return <EmptyState title="No learners yet" text="Once people book your courses, you can see their bookings here." action={{ href: "/provider/orders/new", label: "Create order" }} />;
+    return <EmptyState title="No learners yet" text="Once people book your courses, you can see their bookings here." action={can("provider.orders.create") ? { href: "/provider/orders/new", label: "Create order" } : null} />;
   }
 
   // every word typed must be found in the learner's name, email or phone (a phone number matches with or without its spaces)

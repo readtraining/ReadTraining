@@ -28,7 +28,7 @@ import { Confirm } from "./settingsForm";
 
 const TAB_TEXT = {
   info: "What learners see about you on your public profile and on every course page.",
-  terms: "Your cancellation policy and booking terms. Learners see them before they pay.",
+  terms: "Your cancellation policy and booking terms. Learners see them on your course pages.",
   faqs: "Questions learners ask about booking and training with you, with your answers.",
   vat: "If you are VAT registered, your number shows on learners' receipts.",
   affiliate: "Share this link. Bookings made through it count as yours.",
@@ -115,7 +115,9 @@ function Settings() {
 
 // registered or not, and the number when registered (API provider.profile.vat / saveVat: GB then 9 numbers, saved without spaces)
 function VatTab({ say }) {
-  const { organisationId } = useProviderAccess();
+  const { organisationId, can } = useProviderAccess();
+  // shown, not changeable, where the account can't change it now (a suspended account), as the Emails tab
+  const locked = !can("provider.vat.edit");
   const utils = api.useUtils();
   const saved = api.provider.profile.vat.useQuery({ organisationId });
   const save = api.provider.profile.saveVat.useMutation();
@@ -129,7 +131,7 @@ function VatTab({ say }) {
     setNum(saved.data.number);
   }, [saved.data, reg]);
   const tidy = num.replace(/\s+/g, "").toUpperCase();
-  useUnsavedChanges(Boolean(saved.data) && reg !== null && ((reg === "yes") !== saved.data.registered || (reg === "yes" && tidy !== saved.data.number)));
+  useUnsavedChanges(!locked && Boolean(saved.data) && reg !== null && ((reg === "yes") !== saved.data.registered || (reg === "yes" && tidy !== saved.data.number)));
   if (saved.isError) return <ErrorState inCard onRetry={() => saved.refetch()} />;
   if (!saved.data || reg === null) return <Loading rows={2} />;
   const submit = async (e) => {
@@ -152,16 +154,16 @@ function VatTab({ say }) {
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      <Choice name="rt-set-vatreg" legend="Are you VAT registered?" value={reg} onChange={(v) => { setReg(v); setError(""); }} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
+      <Choice name="rt-set-vatreg" legend="Are you VAT registered?" value={reg} disabled={locked} onChange={(v) => { setReg(v); setError(""); }} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
       {reg === "yes" && (
         <Field required id="rt-set-vat" label="VAT number" error={error} hint="GB then 9 numbers.">
-          <input {...aria("rt-set-vat", error, true)} type="text" autoComplete="off" spellCheck={false} maxLength={16} value={num} onChange={(e) => { setNum(e.target.value); setError(""); }} className="rt-pws-set__short" />
+          <input {...aria("rt-set-vat", error, true)} type="text" autoComplete="off" spellCheck={false} maxLength={16} value={num} readOnly={locked} onChange={(e) => { setNum(e.target.value); setError(""); }} className="rt-pws-set__short" />
         </Field>
       )}
       {reg === "no" && error && <p className="rt-q__err" role="alert">{error}</p>}
       <div className="rt-pws-set__foot">
         <p className="rt-acc__note">The prices you set are the prices learners pay. If you are registered, they include VAT.</p>
-        <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save"}</button>
+        {!locked && <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : "Save"}</button>}
       </div>
     </form>
   );

@@ -17,7 +17,7 @@ import Toast from "@/components/courses/Toast";
 
 // Our dashboard (everything on it opens the page it comes from), from real records only: the provider's courses
 // and dates (API provider.courses.list / provider.cohorts.list, fetched again whenever the window regains focus). Top to bottom:
-// the account's status message; the greeting with how many things there are to do and the Create order / Create cohort buttons;
+// the account's status message; the greeting with how many things there are to do and the Create cohort button;
 // the to-do list (courses our team sent back, upcoming cohorts with no tutor, unfinished drafts with their editor steps left, most
 // urgent first; each row gone once it is done, and only the rows this role may act on); the getting-set-up checklist folded to its
 // next step (ProviderChecklist compact) until every step is done; the courses by status beside the ones waiting for our team; and
@@ -100,7 +100,6 @@ export default function ProviderDashboard() {
           <p className="rt-dash__sub">{loading ? <Bar w="180px" /> : failed ? "" : todo.length ? `You have ${plural(todo.length, "thing", "things")} to do.` : "You're all caught up."}</p>
         </div>
         <div className="rt-dash__quick">
-          {access.can("provider.orders.create") && <Link href="/provider/orders/new" className="button -sm -outline-purple-1 text-purple-1">Create order</Link>}
           {access.can("provider.cohorts.edit") && access.can("provider.pricing.edit") && <Link href="/provider/cohorts?new=1" className="button -sm -purple-1 text-white">Create cohort</Link>}
         </div>
       </section>

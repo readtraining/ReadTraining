@@ -12,7 +12,7 @@ import { methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { COHORT_TONE, Loading, Pill } from "./providerParts";
-import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, longDay, offSale, timeRange, todayIso, tutorOptions } from "./ProviderCohorts";
+import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, deletable, longDay, offSale, timeRange, todayIso, tutorOptions } from "./ProviderCohorts";
 
 // One run of a course (Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
 // whether it takes bookings and its tutor, with Edit, Move to another course, Cancel and Delete. Learners appear under it once booking opens (a later
@@ -92,7 +92,7 @@ export default function ProviderCohortDetail({ cohortId }) {
         </div>
         {/* its learning option isn't taking bookings on the course: these dates can't be booked until it takes them again */}
         {!cancelled && k.optionClosed && (
-          <p className="rt-acc__notice -warn">{methodName(k.method)} isn’t taking new bookings on this course, so nobody can book these dates. <Link href={`/provider/courses/${k.courseId}?tab=mode`} className="rt-cd__link">Take bookings again in Learning options</Link></p>
+          <p className="rt-acc__notice -warn">{methodName(k.method)} isn’t taking new bookings on this course, so nobody can book these dates.{can("provider.courses.edit") && <> <Link href={`/provider/courses/${k.courseId}?tab=mode`} className="rt-cd__link">Take bookings again in Learning options</Link></>}</p>
         )}
         <dl className="rt-pws-coh__details">
           <div><dt>Course</dt><dd><Link href={`/provider/courses/${k.courseId}`} className="rt-adm-strong">{k.courseTitle}</Link><small>{methodName(k.method)}</small></dd></div>
@@ -135,7 +135,7 @@ export default function ProviderCohortDetail({ cohortId }) {
             {/* the destructive actions together, apart from Edit */}
             <div className="rt-pws-danger-group">
               {!cancelled && k.endsOn >= today && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
-              <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setDeleting(true)}>Delete cohort</button>
+              {deletable(k, today) && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setDeleting(true)}>Delete cohort</button>}
             </div>
           </div>
         )}
@@ -143,7 +143,8 @@ export default function ProviderCohortDetail({ cohortId }) {
 
       <section className="rt-acc__card" aria-labelledby="rt-coh-ppl-h">
         <h2 className="rt-acc__h2" id="rt-coh-ppl-h">Students</h2>
-        <EmptyState inCard title="No learners yet." text="Learners booked on these dates show here, with the register, results and certificates. Online booking opens in a later update." />
+        {/* places can already be booked (by our team, for a customer) before the learner list, register and results exist */}
+        <EmptyState inCard title={k.taken ? `${k.taken} ${k.taken === 1 ? "place" : "places"} booked.` : "No learners yet."} text={k.taken ? "The learners' names, the register, results and certificates show here once online booking opens in a later update." : "Learners booked on these dates show here, with the register, results and certificates. Online booking opens in a later update."} />
       </section>
 
       <CohortForm open={editing} onClose={() => setEditing(false)} cohort={k} onSaved={() => { setEditing(false); refresh(); setToast({ message: "Cohort saved" }); }} />
