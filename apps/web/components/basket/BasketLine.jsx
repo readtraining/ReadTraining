@@ -9,6 +9,7 @@ import { formatDateRange, formatPrice } from "@/lib/format";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { RowMenu } from "@/components/admin/adminParts";
 import { QUOTE_HREF, coursePath } from "@/lib/routes";
+import { providerHref } from "@/lib/providers";
 
 // One course on one date. Top: the picture, the title, when and where it runs, the package chosen when the date is sold in
 // packages. On the right the delegates counter, the line's price and two icon buttons under it: Edit (a pencil: a
@@ -60,7 +61,8 @@ export default function BasketLine({ item, onChange, onRemove, onDates, onPackag
               <ul className="rt-bk__facts">
                 <li><i className="icon-calendar" aria-hidden="true"></i><span>{item.mode === "ondemand" ? item.time : `${formatDateRange(item.date, item.endDate)}${item.time ? ` · ${item.time}` : ""}`}</span></li>
                 {item.venue && <li><i className="icon-location" aria-hidden="true"></i><span>{item.venue}{item.postcode ? `, ${item.city}, ${item.postcode}` : ""}</span></li>}
-                {item.provider && <li><i className="icon-person-3" aria-hidden="true"></i><span>Provided by {item.provider}</span></li>}
+                {/* the provider's public page (a line saved before the address was kept shows the name only) */}
+                {item.provider && <li><i className="icon-person-3" aria-hidden="true"></i><span>Provided by {item.providerSlug ? <Link href={providerHref(item.providerSlug)} className="rt-cd__link">{item.provider}</Link> : item.provider}</span></li>}
               </ul>
               <div className="rt-bk__tags">
                 <span className="rt-pill">{modeLabel(item.mode)}</span>

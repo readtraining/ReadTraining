@@ -26,6 +26,7 @@ import { unitKey } from "@/lib/courseGuide";
 import { getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
+import FormattedText from "@/components/forms/FormattedText";
 
 // The sections, in this order, in our own design: features > learning options > overview > who it's for > comparison > mock test >
 // what you will learn > course content > course week > what's included > exams > requirements > packages > business > steps >
@@ -216,8 +217,9 @@ export default function CourseDetail({ course, query = {}, path, reviews = null 
                       <h2 id="rt-cd-terms-h">Booking and cancellation terms</h2>
                       <LongBody>
                         <div className="rt-cd__prose">
-                          {course.provider.cancellationPolicy && <><h3 className="rt-cd__h3">Cancellation policy</h3>{course.provider.cancellationPolicy.split(/\n\s*\n/).map((p) => <p key={p}>{p}</p>)}</>}
-                          {course.provider.bookingTerms && <><h3 className="rt-cd__h3">Booking terms</h3>{course.provider.bookingTerms.split(/\n\s*\n/).map((p) => <p key={p}>{p}</p>)}</>}
+                          {/* the provider's words with their bold words and bullet lists (Settings › Terms), never links */}
+                          {course.provider.cancellationPolicy && <><h3 className="rt-cd__h3">Cancellation and refund policy</h3><FormattedText text={course.provider.cancellationPolicy} ulClass="rt-cd__list" /></>}
+                          {course.provider.bookingTerms && <><h3 className="rt-cd__h3">Booking terms</h3><FormattedText text={course.provider.bookingTerms} ulClass="rt-cd__list" /></>}
                         </div>
                       </LongBody>
                     </section>

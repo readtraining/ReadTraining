@@ -54,9 +54,9 @@ export default function ProviderProfile() {
       <section className="rt-acc__card" aria-labelledby="rt-pws-prof-pol">
         <h2 className="rt-acc__h2" id="rt-pws-prof-pol">Policies</h2>
         <h3 className="rt-adm-h3">Booking terms</h3>
-        {o.bookingTerms ? <p className="rt-pws-prof__body">{o.bookingTerms}</p> : <EmptyState inCard title="No booking terms yet." action={can("provider.terms.edit") ? { label: "Add booking terms", href: "/provider/settings?tab=terms" } : null} />}
-        <h3 className="rt-adm-h3">Cancellation policy</h3>
-        {o.cancellationPolicy ? <p className="rt-pws-prof__body">{o.cancellationPolicy}</p> : <EmptyState inCard title="No cancellation policy yet." action={can("provider.terms.edit") ? { label: "Add cancellation policy", href: "/provider/settings?tab=terms" } : null} />}
+        {o.bookingTerms ? <FormattedText text={o.bookingTerms} pClass="rt-pws-prof__body" ulClass="rt-pws-prof__body rt-pws-prof__list" /> : <EmptyState inCard title="No booking terms yet." action={can("provider.terms.edit") ? { label: "Add booking terms", href: "/provider/settings?tab=terms" } : null} />}
+        <h3 className="rt-adm-h3">Cancellation and refund policy</h3>
+        {o.cancellationPolicy ? <FormattedText text={o.cancellationPolicy} pClass="rt-pws-prof__body" ulClass="rt-pws-prof__body rt-pws-prof__list" /> : <EmptyState inCard title="No cancellation and refund policy yet." action={can("provider.terms.edit") ? { label: "Add your policy", href: "/provider/settings?tab=terms" } : null} />}
       </section>
     </div>
   );

@@ -28,7 +28,7 @@ import { Confirm } from "./settingsForm";
 
 const TAB_TEXT = {
   info: "What learners see about you on your public profile and on every course page.",
-  terms: "Your cancellation policy and booking terms. Learners see them on your course pages.",
+  terms: "Your cancellation and refund policy, and booking terms. Learners see them on your course pages.",
   faqs: "Questions learners ask about booking and training with you, with your answers.",
   vat: "If you are VAT registered, your number shows on learners' receipts.",
   affiliate: "Share this link. Bookings made through it count as yours.",
