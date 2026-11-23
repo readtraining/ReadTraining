@@ -2,6 +2,7 @@
 import { Fragment, useState } from "react";
 import { Inline } from "@/components/doc/DocBlocks";
 import { paragraphs } from "@/lib/paragraphs";
+import { SectionHead } from "./SectionHead";
 
 /* FAQ section: the site's one FAQ (pill, centred title, divider accordion with plus/minus and animated height), used on
    every marketing page, the course catalogue and For Business / For Providers, taking its content as props. One answer is open at a time;
@@ -14,15 +15,7 @@ export default function FaqSection({ eyebrow, title, text, items, idPrefix = "fa
   return (
     <section className={`${className}${compact ? " rt-faq--compact" : ""}`} id={id}>
       <div className="container">
-        <div className="row justify-center text-center">
-          <div className="col-xl-7 col-lg-9">
-            <div className="rt-section-head">
-              {eyebrow && <div className="rt-eyebrow rt-eyebrow--pill"><span className="rt-eyebrow__dot"></span>{eyebrow}</div>}
-              <h2 className="sectionTitle__title mt-20 rt-faqsec__title">{title}</h2>
-              {text && <p className="sectionTitle__text rt-faqsec__text">{text}</p>}
-            </div>
-          </div>
-        </div>
+        <SectionHead eyebrow={eyebrow} title={title} text={text} />
         <div className="bz-acc mt-40">
           {items.map((it, i) => {
             const isOpen = open === i;

@@ -14,7 +14,7 @@ export const pw = {
   // the provider account's status: one line at the top of every workspace page (the status bar), with at most one action. The
   // work itself (the team's message, the changes, sending it back) is on the Account review page (/provider/review).
   accountStatus: {
-    pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. Meanwhile, complete your public profile and cancellation policy; you can add courses once you're approved.", action: { label: "View review", href: "/provider/review" } },
+    pending: { tone: "info", title: "Your account is being reviewed", text: "We'll email you when our team has decided. Meanwhile, complete your public profile and cancellation and refund policy; you can add courses once you're approved.", action: { label: "View review", href: "/provider/review" } },
     changes_requested: { tone: "warning", title: "A few changes are needed before we approve you", text: "Our team has asked for some changes to your account.", action: { label: "Review changes", href: "/provider/review" } },
     suspended: { tone: "critical", title: "Your account is suspended", text: "Your courses can't be booked and you can't make changes.", action: { label: "See why", href: "/provider/review" } },
     approved: { tone: "success", title: "Your account is approved", text: "Learners find you on ReadTraining once you have a live course. Send your courses for approval when they're ready.", action: { label: "Your courses", href: "/provider/courses" } },
@@ -38,7 +38,7 @@ export const pw = {
     asked: { title: "What our team asked for", where: "Where to make the changes" },
     places: [
       { label: "Provider name, logo, headline and biography", href: "/provider/settings?tab=info" },
-      { label: "Cancellation policy and booking terms", href: "/provider/settings?tab=terms" },
+      { label: "Cancellation and refund policy, booking terms", href: "/provider/settings?tab=terms" },
       { label: "Venues", href: "/provider/venues" },
     ],
     send: {
@@ -79,7 +79,7 @@ export const pw = {
     steps: {
       approved: { title: "Get approved by our team", text: { pending: "We're checking your details and will email you.", changes_requested: "Our team has asked for a few changes.", active: "Your account is approved." }, action: { label: "Review changes", href: "/provider/review" } },
       profile: { title: "Complete your public profile", text: "A headline, a short biography and your logo.", action: { label: "Edit profile", href: "/provider/settings?tab=info" } },
-      policy: { title: "Add your cancellation policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
+      policy: { title: "Add your cancellation and refund policy", text: "Learners read it before they book.", action: { label: "Add policy", href: "/provider/settings?tab=terms" } },
       course: { title: "Create your first course", text: { pending: "You can add your courses once our team approves your account.", changes_requested: "You can add your courses once our team approves your account.", active: "Describe it, add its dates and send it to us for approval." }, action: { label: "New course", href: "/provider/courses?newcourse=1" } },
       date: { title: "Add your first date", text: { pending: "Once your account is approved: when and where each course runs.", changes_requested: "Once your account is approved: when and where each course runs.", active: "When and where it runs. A self-paced course needs no dates." }, action: { label: "Create cohort", href: "/provider/cohorts?new=1" } },
       payouts: { title: "Set up payouts", text: "Connect your payout account to get paid." },
