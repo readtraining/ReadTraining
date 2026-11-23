@@ -88,8 +88,10 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
       if (!t.name.trim()) errs[`t${i}-name`] = "Name the package, like Basic.";
       else if (names.indexOf(names[i]) !== i) errs[`t${i}-name`] = "Give every package a different name.";
       if (!isMoney(t.price)) errs[`t${i}-price`] = "Enter a price, like 249 or 249.99.";
+      else if (Number(t.price) < 1) errs[`t${i}-price`] = "Enter a price of at least £1.";
       else if (Number(t.price) > 100000) errs[`t${i}-price`] = "Enter a price of £100,000 or less.";
       if (t.save.trim() && !isMoney(t.save)) errs[`t${i}-save`] = "Enter a saving, like 30, or leave it empty.";
+      else if (t.save.trim() && isMoney(t.price) && Number(t.save) > Number(t.price)) errs[`t${i}-save`] = "A package can’t save more than its own price.";
       t.features.forEach((f, k) => {
         if (!f.title.trim()) errs[`t${i}-f${k}`] = "Write the feature, or remove it.";
       });

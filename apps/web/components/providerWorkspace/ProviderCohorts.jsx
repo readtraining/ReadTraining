@@ -42,10 +42,24 @@ const MODES = [
 export const WHEN = [
   { value: "upcoming", label: "Upcoming and in progress" },
   { value: "past", label: "Past" },
+  { value: "cancelled", label: "Cancelled" },
   { value: "all", label: "Any date" },
 ];
+// cancelled dates are listed under Cancelled and Any date only, so upcoming and past lists (and their counts) are the dates that run
+// a date of a course that isn't on sale (not live): it stays in the workspace, labelled, and learners can't see or book it
+const OFF_SALE = { draft: "Course in draft", pending: "Course in review", changes: "Course needs changes", paused: "Course paused" };
+export const offSale = (k) => OFF_SALE[k.courseStatus] || null;
+export const askWhen = (when) => (when === "cancelled" ? "all" : when);
+export const inWhen = (k, when) => when === "all" || (when === "cancelled" ? Boolean(k.cancelledAt) : !k.cancelledAt);
 export const COHORT_STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
 const ONLINE = "Online";
+// the tutor menu: the team members who can teach, and the date's own tutor if they have left the team since (a finished date keeps
+// who taught it)
+export const tutorOptions = (tutors, k) => [
+  { value: "", label: "Not assigned" },
+  ...tutors.map((t) => ({ value: t.userId, label: t.name })),
+  ...(k?.tutorUserId && !tutors.some((t) => t.userId === k.tutorUserId) ? [{ value: k.tutorUserId, label: k.tutorName || "Former team member" }] : []),
+];
 const PER_PAGE = 10;
 const monthShortFmt = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
 const monthShort = (iso) => monthShortFmt.format(new Date(`${iso}T00:00:00Z`));
@@ -96,7 +110,7 @@ const NONE = { data: [], isError: false, refetch: () => {} };
 export const defaultColour = (method) => (method === "live-online" ? "blue" : "purple");
 export const colourOf = (k) => k.colour || defaultColour(k.method);
 
-export function useSchedule(when = "upcoming", courseId = null) {
+export function useSchedule(when = "upcoming", courseId = null, { near = false } = {}) {
   const access = useProviderAccess();
   const { organisationId } = access;
   const may = {
@@ -106,7 +120,7 @@ export function useSchedule(when = "upcoming", courseId = null) {
     courses: access.can("provider.courses.view"),
   };
   const on = (ok) => ({ enabled: Boolean(organisationId) && ok });
-  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when, ...(courseId ? { courseId } : {}) }, on(may.dates));
+  const cohorts = api.provider.cohorts.list.useQuery({ organisationId, when, ...(courseId ? { courseId } : {}), ...(near ? { near } : {}) }, on(may.dates));
   const courses = api.provider.courses.list.useQuery({ organisationId }, on(may.courses));
   const venues = api.provider.venues.list.useQuery({ organisationId }, on(may.venues));
   const tutors = api.provider.cohorts.tutors.useQuery({ organisationId }, on(may.team));
@@ -156,11 +170,13 @@ export default function ProviderCohorts() {
   // a row change shows at once (bookings on or off, the tutor), before the list loads again; gone again if the save fails
   const [changing, setChanging] = useState({});
   const change = (id, patch) => setChanging((x) => (patch ? { ...x, [id]: { ...x[id], ...patch } } : Object.fromEntries(Object.entries(x).filter(([k]) => k !== id))));
-  const s = useSchedule(when);
+  const s = useSchedule(askWhen(when));
   const utils = api.useUtils();
   const assignTutor = api.provider.cohorts.setTutor.useMutation();
   const bookable = api.provider.cohorts.setBookable.useMutation();
   const edit = can("provider.cohorts.edit");
+  // new dates set their prices, so adding them also needs prices (ReadTraining staff without the pricing switch can't)
+  const add = edit && can("provider.pricing.edit");
   const newCourse = useNewCourse();
 
   useEffect(() => {
@@ -194,9 +210,10 @@ export default function ProviderCohorts() {
   const courses = s.courses.data;
   const courseOf = Object.fromEntries(courses.map((c) => [c.id, c]));
   const tutors = s.tutors.data || [];
-  // a tutor sees only the dates they teach (no team list), so a tutor on them is the tutor themselves
-  const tutorName = (id) => tutors.find((t) => t.userId === id)?.name ?? (!s.may.team && id ? "You" : undefined);
-  const scoped = s.cohorts.data.filter((k) => !changing[k.id]?.deleted).map((k) => {
+  // a tutor sees only the dates they teach (no team list), so a tutor on them is the tutor themselves; someone who has left the
+  // team since keeps their name on the dates they taught
+  const tutorName = (id, k) => tutors.find((t) => t.userId === id)?.name ?? (!s.may.team && id ? "You" : id && id === k?.tutorUserId ? k.tutorName : undefined);
+  const scoped = s.cohorts.data.filter((k) => !changing[k.id]?.deleted && inWhen(k, when)).map((k) => {
     const now = { ...k, ...changing[k.id] };
     return { ...now, status: cohortState(now, today), course: courseOf[k.courseId] };
   });
@@ -211,7 +228,7 @@ export default function ProviderCohorts() {
     .filter((k) => !venue || (venue === "online" ? !k.venueId : k.venueId === venue))
     .filter((k) => !tutor || (tutor === "none" ? !k.tutorUserId : k.tutorUserId === tutor))
     .filter((k) => !date || (k.startsOn <= date && k.endsOn >= date))
-    .filter((k) => !needle || `${k.courseTitle} ${k.venue?.name || ONLINE} ${k.venue?.city || ""} ${tutorName(k.tutorUserId) || ""}`.toLowerCase().includes(needle));
+    .filter((k) => !needle || `${k.courseTitle} ${k.venue?.name || ONLINE} ${k.venue?.city || ""} ${tutorName(k.tutorUserId, k) || ""}`.toLowerCase().includes(needle));
 
   // any filter set (the tab aside), for "Clear filters" under the filters
   const filtersSet = Boolean(course || venue || tutor || date || needle || when !== "upcoming");
@@ -252,7 +269,7 @@ export default function ProviderCohorts() {
     });
   };
 
-  const create = edit && <button type="button" className="button -md -purple-1 text-white" onClick={() => setFormOpen(true)} disabled={!datedCourses.length}>Create cohort</button>;
+  const create = add && <button type="button" className="button -md -purple-1 text-white" onClick={() => setFormOpen(true)} disabled={!datedCourses.length}>Create cohort</button>;
   const nothingYet = !scoped.length && when === "upcoming" && !filtered;
 
   return (
@@ -261,7 +278,7 @@ export default function ProviderCohorts() {
         <EmptyState
           title="No upcoming dates"
           text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live; online booking opens in a later update."
-          action={edit ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", onClick: newCourse }) : null}
+          action={add ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", onClick: newCourse }) : null}
         />
       ) : null}
       {(!nothingYet || mode === "self-paced") && (
@@ -334,6 +351,7 @@ export default function ProviderCohorts() {
                         <td data-label="Status">
                           <span className="rt-pws-coh__pills">
                             <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
+                            {!cancelled && offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}
                             {/* its learning option isn't taking bookings on the course (Learning options › Stop new bookings): nobody can book it,
                                 whatever its own switch; taking bookings again puts it back as it was */}
                             {!cancelled && k.optionClosed ? <Pill tone="warn">Bookings stopped</Pill> : !k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
@@ -343,9 +361,9 @@ export default function ProviderCohorts() {
                           {edit && !cancelled && tutors.length ? (
                             <div className="rt-field rt-adm-select -inline">
                               <label htmlFor={`rt-coh-tu-${k.id}`} className="rt-sr">Tutor for {name}</label>
-                              <FieldSelect id={`rt-coh-tu-${k.id}`} label={`Tutor for ${name}`} value={k.tutorUserId || ""} onChange={(v) => setTutorOf(k, v)} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.userId, label: t.name }))]} disabled={assignTutor.isPending} compact />
+                              <FieldSelect id={`rt-coh-tu-${k.id}`} label={`Tutor for ${name}`} value={k.tutorUserId || ""} onChange={(v) => setTutorOf(k, v)} options={tutorOptions(tutors, k)} disabled={assignTutor.isPending} compact />
                             </div>
-                          ) : (tutorName(k.tutorUserId) || <span className="rt-adm-muted">Not assigned</span>)}
+                          ) : (tutorName(k.tutorUserId, k) || <span className="rt-adm-muted">Not assigned</span>)}
                         </td>
                         <td data-label="Places"><Seats booked={k.taken ?? 0} max={k.capacity} /></td>
                         <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
@@ -354,8 +372,12 @@ export default function ProviderCohorts() {
                             ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),
                             ...(edit && !cancelled ? [
                               { label: "Edit", onClick: () => setEditing({ open: true, k }) },
-                              { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
-                              ...(k.endsOn >= today ? [{ label: "Move to another course", onClick: () => setMoveOne(k) }, { label: "Cancel", onClick: () => setCancelOne(k) }] : []),
+                              // a finished date takes no bookings, so it has nothing to turn on or off
+                              ...(k.endsOn >= today ? [
+                                { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
+                                { label: "Move to another course", onClick: () => setMoveOne(k) },
+                                { label: "Cancel", onClick: () => setCancelOne(k) },
+                              ] : []),
                             ] : []),
                             ...(edit ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
                           ]} />
@@ -527,6 +549,10 @@ export function DeleteSheet({ cohort, onClose, onDone }) {
 const money = (pence) => (pence == null ? "" : (pence / 100).toFixed(2).replace(/\.00$/, ""));
 const PRICE_RE = /^\d+(\.\d{1,2})?$/;
 const MAX_PRICE = 100000; // pounds (the API's limit)
+// the API's limits on a date's sessions (schedule.mts): how many, how long one lasts, how far ahead
+const MAX_SESSIONS = 60;
+const MAX_SESSION_DAYS = 31;
+const MAX_AHEAD_DAYS = 3 * 366;
 const MEETING_LINK_ERROR = "Use the https link to one Zoom, Microsoft Teams or Google Meet meeting, like https://zoom.us/j/1234567890.";
 // the API's names for the form's fields, where they differ
 const FIELD_OF = { pricePence: "price", wasPricePence: "wasPrice" };
@@ -656,10 +682,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     const err = {};
     if (!f.courseId) err.courseId = "Choose the course this cohort is for.";
     if (!f.sessions.length) err.sessions = "Pick at least one date on the calendar.";
+    else if (f.sessions.length > MAX_SESSIONS) err.sessions = `Add up to ${MAX_SESSIONS} sessions.`;
     const firstNow = cohort?.startsOn;
+    const latest = addDays(today, MAX_AHEAD_DAYS);
     f.sessions.forEach((s, i) => {
       if (s.date < today && s.date !== firstNow && (!cohort || s.date < firstNow)) err[`d${i}`] = "The start date can't be in the past.";
       else if ((s.end || s.date) === s.date && s.to <= s.from) err[`d${i}`] = "The end time must be after the start time.";
+      else if (daysBetween(s.date, s.end || s.date) > MAX_SESSION_DAYS) err[`d${i}`] = `A session can last up to ${MAX_SESSION_DAYS} days. Add longer courses as several sessions.`;
+      else if ((s.end || s.date) > latest) err[`d${i}`] = "Dates can be up to 3 years ahead.";
     });
     if (method === "classroom" && !f.venueId) err.venueId = "Choose the venue.";
     if (method === "live-online" && !f.joinUrl.trim()) err.joinUrl = "Enter the joining link for these dates.";
@@ -669,6 +699,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     if (!tiered && (!PRICE_RE.test(f.price) || Number(f.price) < 1)) err.price = "Enter the price per learner in pounds, like 95.";
     else if (!tiered && Number(f.price) > MAX_PRICE) err.price = "Enter a price of £100,000 or less.";
     if (!tiered && f.wasPrice && (!PRICE_RE.test(f.wasPrice) || Number(f.wasPrice) <= Number(f.price))) err.wasPrice = "Enter a “was” price higher than the price, or leave it empty.";
+    else if (!tiered && f.wasPrice && Number(f.wasPrice) > 2 * Number(f.price)) err.wasPrice = "The “was” price can’t be more than double the price.";
     else if (!tiered && f.wasPrice && Number(f.wasPrice) > MAX_PRICE) err.wasPrice = "Enter a “was” price of £100,000 or less.";
     const m = Number(f.capacity);
     if (!Number.isInteger(m) || m < 1 || m > 200) err.capacity = "Enter a whole number from 1 to 200.";
@@ -698,6 +729,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
         });
         setAnchor(null);
         setErrors({});
+        setVenueAdded("");
         // the form stays open, so the confirmation shows in it (the page's message is behind the form)
         setSavedNote(`Cohort saved${first ? ` (starting ${new Date(`${first}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Pick the dates for the next one.`);
         onAnother?.(id, { method, startsOn: values.sessions[0]?.date });
@@ -823,7 +855,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 <div className="rt-field">
                   <label htmlFor="rt-cf-tutorUserId">Tutor</label>
                   {err("tutorUserId")}
-                  <FieldSelect id="rt-cf-tutorUserId" label="Tutor" value={f.tutorUserId} onChange={(value) => set({ tutorUserId: value })} options={[{ value: "", label: "Not assigned" }, ...tutors.map((t) => ({ value: t.userId, label: t.name }))]} />
+                  <FieldSelect id="rt-cf-tutorUserId" label="Tutor" value={f.tutorUserId} onChange={(value) => set({ tutorUserId: value })} options={tutorOptions(tutors, cohort)} />
                 </div>
               )}
               {method === "classroom" && (
@@ -849,7 +881,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
             {f.pricing === "tiered" && (
               <div className="rt-field">
                 <label htmlFor="rt-cf-planId">Price plan<Req /></label>
-                <p className="rt-acc__note" id="rt-cf-planId-h">
+                <p className="rt-field__hint" id="rt-cf-planId-h">
                   Learners choose a package when they book, and the date shows the cheapest package as its price.{" "}
                   <Link href={links.plans()} className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link>
                 </p>

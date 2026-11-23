@@ -6359,6 +6359,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__added { margin: 0; color: var(--rt-c-success); font-weight: 600; }
 .rt-pws-venueform { padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); }
 .rt-pws-venueform__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* the postcode hint under the town and postcode row: close to its boxes, not a form gap away */
+.rt-pws-venueform__hint { margin-top: -14px; }
 .rt-pws-coh__colours { min-width: 0; margin: 0; padding: 0; border: 0; }
 .rt-pws-coh__colours legend { float: none; width: auto; margin: 0 0 4px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-coh__swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -6374,6 +6376,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal__bar { align-items: center; }
 .rt-pws-cal__nav-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rt-pws-cal__nav { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease; }
+/* "Today": the arrows' box, as wide as its word (faded like them while today is on screen) */
+.rt-pws-cal__nav.-text { width: auto; padding: 0 16px; font-size: var(--rt-text-sm); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__nav:not(:disabled):hover { border-color: var(--rt-c-brand); color: var(--rt-c-brand); } }
 .rt-pws-cal__nav:disabled { opacity: 0.4; cursor: not-allowed; }
 .rt-pws-cal__title { margin: 0 0 0 8px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }

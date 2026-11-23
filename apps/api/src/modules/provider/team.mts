@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
 import { and, cohorts, courses, eq, gte, isNull, organisationMembers, organisations, profiles, sql } from '@readtraining/db'
-import { can, PROVIDER_ROLES } from '@readtraining/permissions'
+import { can, canTutor, PROVIDER_ROLES } from '@readtraining/permissions'
 import type { ProviderAction, ProviderRole } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
@@ -77,6 +77,10 @@ async function inviteLink(email: string) {
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e instanceof InviteError && /SERVICE_ROLE/.test(e.message) ? e.message : 'The invite couldn’t be made just now. Please try again in a moment.' })
   }
 }
+
+// the provider's dates someone teaches that haven't finished
+const upcomingTaughtBy = (organisationId: string, userId: string) =>
+  and(eq(cohorts.tutorUserId, userId), gte(cohorts.endsOn, today()), sql`${cohorts.courseId} in (select ${courses.id} from ${courses} where ${courses.organisationId} = ${organisationId}::uuid)`)
 
 export const providerTeamRouter = createTRPCRouter({
   // Everyone on the team: the owner first, then by name; with their role, whether they've joined (an invite's link may have run
@@ -153,13 +157,16 @@ export const providerTeamRouter = createTRPCRouter({
     .mutation(async ({ ctx, input, path }) => {
       const m = await memberOf(ctx.db, input.organisationId, input.userId)
       await mayChange(ctx, path, input.organisationId, { memberRole: m.role, newRole: input.role, memberUserId: input.userId }, m.role === 'owner' ? 'The account owner’s role can’t be changed.' : 'You can’t change your own role.')
-      if (m.role === input.role) return { ok: true }
-      await ctx.db.transaction(async (tx) => {
+      if (m.role === input.role) return { ok: true, untutored: 0 }
+      return ctx.db.transaction(async (tx) => {
         const [row] = await tx.update(organisationMembers).set({ role: input.role }).where(and(eq(organisationMembers.organisationId, input.organisationId), eq(organisationMembers.userId, input.userId), sql`${organisationMembers.role} <> 'owner'`)).returning({ userId: organisationMembers.userId })
         if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: NOT_FOUND })
-        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId: input.organisationId, action: 'provider.member_role_changed', targetType: 'account', targetId: input.userId, metadata: { from: m.role, to: input.role }, ip: ctx.ip })
+        // a role that can't see the dates (accounts, marketing) can't teach them: their upcoming dates lose them as tutor, as when
+        // someone is removed
+        const untutored = canTutor(input.role) ? [] : await tx.update(cohorts).set({ tutorUserId: null, updatedAt: new Date() }).where(upcomingTaughtBy(input.organisationId, input.userId)).returning({ id: cohorts.id })
+        await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId: input.organisationId, action: 'provider.member_role_changed', targetType: 'account', targetId: input.userId, metadata: { from: m.role, to: input.role, ...(untutored.length ? { untutored: untutored.length } : {}) }, ip: ctx.ip })
+        return { ok: true, untutored: untutored.length }
       })
-      return { ok: true }
     }),
 
   // Remove someone, or cancel their invite. They lose access at once and stop tutoring the provider's upcoming dates.
@@ -171,10 +178,7 @@ export const providerTeamRouter = createTRPCRouter({
       await ctx.db.transaction(async (tx) => {
         const [row] = await tx.delete(organisationMembers).where(and(eq(organisationMembers.organisationId, input.organisationId), eq(organisationMembers.userId, input.userId), sql`${organisationMembers.role} <> 'owner'`)).returning({ userId: organisationMembers.userId })
         if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: NOT_FOUND })
-        await tx
-          .update(cohorts)
-          .set({ tutorUserId: null, updatedAt: new Date() })
-          .where(and(eq(cohorts.tutorUserId, input.userId), gte(cohorts.endsOn, today()), sql`${cohorts.courseId} in (select ${courses.id} from ${courses} where ${courses.organisationId} = ${input.organisationId}::uuid)`))
+        await tx.update(cohorts).set({ tutorUserId: null, updatedAt: new Date() }).where(upcomingTaughtBy(input.organisationId, input.userId))
         await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'provider', organisationId: input.organisationId, action: m.status === 'invited' ? 'provider.member_invite_cancelled' : 'provider.member_removed', targetType: 'account', targetId: input.userId, metadata: { role: m.role }, ip: ctx.ip })
       })
       return { ok: true }

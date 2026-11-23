@@ -1,14 +1,15 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { and, asc, cohorts, courses, eq, gte, isNull, ne, organisationMembers, profiles, sql, venues } from '@readtraining/db'
-import { can } from '@readtraining/permissions'
+import { and, asc, cohorts, courses, eq, gte, inArray, isNull, lte, ne, organisationMembers, pricePlans, profiles, sql, venues } from '@readtraining/db'
+import { can, canTutor, PROVIDER_ROLES } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { formatPostcode, lookupDown, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 import { isDated, ownCourse, ukToday as today } from './courses.mjs'
-import { usablePlan } from './plans.mjs'
+import { cheapest, usablePlan } from './plans.mjs'
+import type { Tier } from './plans.mjs'
 
 // a date's prices (adding dates sets them) need the right to change prices: ReadTraining staff without the pricing switch
 const PRICES_NEEDED = 'Adding dates or changing a date’s price needs access to prices. You can change the rest of these dates.'
@@ -72,14 +73,30 @@ async function lockVenue(tx: Tx, venueId: string) {
   return v ?? null
 }
 async function lockCohort(tx: Tx, cohortId: string) {
-  const [c] = await tx.select({ cancelledAt: cohorts.cancelledAt, bookable: cohorts.bookable, endsOn: cohorts.endsOn, updatedAt: cohorts.updatedAt, method: cohorts.method, joinUrl: cohorts.joinUrl }).from(cohorts).where(eq(cohorts.id, cohortId)).for('update')
+  const [c] = await tx.select({ courseId: cohorts.courseId, cancelledAt: cohorts.cancelledAt, bookable: cohorts.bookable, endsOn: cohorts.endsOn, updatedAt: cohorts.updatedAt, method: cohorts.method, joinUrl: cohorts.joinUrl, venueId: cohorts.venueId, sessions: cohorts.sessions }).from(cohorts).where(eq(cohorts.id, cohortId)).for('update')
   return c ?? null
+}
+// A date's course row, locked before the date itself (always in that order: plan, course, date, tutor), so a change to a date and a step
+// that checks the course's dates (sending it for approval, approving it, turning a learning option off) never pass each other
+async function lockCourseRow(tx: Tx, courseId: number) {
+  const [c] = await tx.select({ methods: courses.methods, closedMethods: courses.closedMethods }).from(courses).where(eq(courses.id, courseId)).for('update')
+  return c ?? null
+}
+const wayOf = (method: string) => (method === 'live-online' ? 'live online' : 'in the classroom')
+// a date and its course, locked in that order (a date moved to another course at the same moment: reload)
+async function lockDate(tx: Tx, courseId: number, cohortId: string) {
+  const course = await lockCourseRow(tx, courseId)
+  const date = await lockCohort(tx, cohortId)
+  if (!date) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+  if (!course || date.courseId !== courseId) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have just been moved to another course. Reload the page.' })
+  return { course, date }
 }
 // Two people (or two tabs) editing the same dates: the form sends the version it was filled from (`seen`, the dates' updatedAt), and
 // a save over a newer one is refused, so neither person's change is silently overwritten.
 const DATES_CHANGED =
   'These dates were changed somewhere else (in another tab, or by someone else) since you opened them. Your changes are not saved. Copy anything you want to keep, then close this form and open the dates again.'
 const VENUE_GONE = 'This venue has already been deleted. Reload the page.'
+const VENUE_CHANGED = 'This venue was changed somewhere else (in another tab, or by someone else) since you opened it. Close this form and open the venue again.'
 const DATES_GONE = 'These dates have already been deleted. Reload the page.'
 
 // A venue saved while postcodes.io couldn't be asked has no map point, so no public town page or menu uses its town until it is
@@ -120,13 +137,13 @@ export const providerVenuesRouter = createTRPCRouter({
   // `courses`: the linked courses, those with dates (not cancelled) at the venue
   list: orgProcedure('provider.venues.view').query(async ({ ctx, input }) => {
     const problems = await recheckVenues(ctx.db, input.organisationId).catch(() => new Map<string, string>())
-    const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number; courses: { id: number; title: string }[] }>(sql`
+    const rows = await ctx.db.execute<{ id: string; name: string; street: string; city: string; postcode: string | null; active: boolean; located: boolean; upcoming: number; version: string; courses: { id: number; title: string }[] }>(sql`
       select v.id, v.name, v.street, v.city, v.postcode, v.active, v.lat is not null located,
-             (select count(*)::int from public.cohorts k where k.venue_id = v.id and k.cancelled_at is null and k.ends_on >= ${today()}::date) upcoming,
+             (select count(*)::int from public.cohorts k where k.venue_id = v.id and k.cancelled_at is null and k.ends_on >= ${today()}::date) upcoming, v.updated_at version,
              coalesce((select json_agg(json_build_object('id', c.id, 'title', c.title) order by c.title)
                        from public.courses c where exists (select 1 from public.cohorts k where k.venue_id = v.id and k.course_id = c.id and k.cancelled_at is null)), '[]') courses
       from public.venues v where v.organisation_id = ${input.organisationId}::uuid order by v.active desc, v.name`)
-    return rows.map((r) => ({ ...r, problem: r.located ? null : (problems.get(r.id) ?? null) }))
+    return rows.map((r) => ({ ...r, version: new Date(r.version).toISOString(), problem: r.located ? null : (problems.get(r.id) ?? null) }))
   }),
 
   // The venues one course's dates use (the course overview's Venues tab): each venue its dates (not cancelled) have used, with
@@ -149,7 +166,7 @@ export const providerVenuesRouter = createTRPCRouter({
     }),
 
   save: orgProcedure('provider.cohorts.edit')
-    .input(venueFields.extend({ venueId: z.string().uuid().optional() }))
+    .input(venueFields.extend({ venueId: z.string().uuid().optional(), seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input }) => {
       const postcode = formatPostcode(input.postcode)
       const before = input.venueId ? await ownVenue(ctx.db, input.organisationId, input.venueId) : null
@@ -178,6 +195,12 @@ export const providerVenuesRouter = createTRPCRouter({
       return ctx.db.transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`readtraining.venues:${input.organisationId}`}))`)
         await refuseTwin(tx)
+        // two people (or two tabs) editing one venue: one over a newer save is refused, so neither is silently undone
+        if (before) {
+          const [now] = await tx.select({ updatedAt: venues.updatedAt }).from(venues).where(eq(venues.id, before.id)).for('update')
+          if (!now) throw new TRPCError({ code: 'CONFLICT', message: VENUE_GONE })
+          if (input.seen && now.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: VENUE_CHANGED })
+        }
         const [v] = before
           ? await tx.update(venues).set(values).where(eq(venues.id, before.id)).returning({ id: venues.id })
           : await tx.insert(venues).values({ ...values, organisationId: input.organisationId }).returning({ id: venues.id })
@@ -195,6 +218,15 @@ export const providerVenuesRouter = createTRPCRouter({
         const now = await lockVenue(tx, input.venueId)
         if (!now) throw new TRPCError({ code: 'CONFLICT', message: VENUE_GONE })
         if (now.active === input.active) throw new TRPCError({ code: 'CONFLICT', message: input.active ? 'This venue is already in use again.' : 'This venue is already archived.' })
+        // an archived venue takes no new dates, so dates there still on sale would be sold for a place the provider has stopped
+        // using: archiving waits until they are off sale (bookings off, or cancelled). Turning a date's bookings on reads the venue
+        // under the same lock.
+        if (!input.active) {
+          const [onSale] = await tx.execute<{ n: number }>(sql`
+            select count(*)::int n from public.cohorts k join public.courses c on c.id = k.course_id
+            where k.venue_id = ${input.venueId}::uuid and k.cancelled_at is null and k.bookable and k.starts_on > ${today()}::date and not (k.method = any(c.closed_methods))`)
+          if (onSale.n) throw new TRPCError({ code: 'CONFLICT', message: `${onSale.n === 1 ? 'One date at this venue is' : `${onSale.n} dates at this venue are`} taking bookings. Turn their bookings off, or cancel them, before archiving the venue.` })
+        }
         await tx.update(venues).set({ active: input.active, updatedAt: new Date() }).where(eq(venues.id, input.venueId))
         await log(tx, ctx, input.organisationId, input.active ? 'venue.restored' : 'venue.archived', 'venue', input.venueId)
         return { ok: true }
@@ -242,7 +274,7 @@ const cohortFields = z.object({
   capacity: z.number().int().min(1, 'Allow at least 1 place.').max(200, 'Allow up to 200 places.'),
   // "Flat": the date's own price (and an optional higher "was" price); "Tiered": a price plan (planId), whose cheapest package
   // becomes the date's price
-  pricePence: z.number().int().min(1, 'Enter a price.').max(10000000, 'Enter a price of £100,000 or less.').optional(),
+  pricePence: z.number().int().min(100, 'Enter a price of at least £1.').max(10000000, 'Enter a price of £100,000 or less.').optional(),
   wasPricePence: z.number().int().max(10000000, 'Enter a “was” price of £100,000 or less.').nullable().optional(),
   planId: z.string().uuid().nullable().optional(),
   details: z.string().trim().max(500, 'Keep the details to 500 characters or fewer.').nullable().optional(),
@@ -256,38 +288,97 @@ type CohortInput = z.infer<typeof cohortFields>
 type Session = z.infer<typeof session>
 
 // Another active run of the same course at the same venue, at the same time, is a duplicate: the venue double-booked and learners
-// offered two identical sessions. It is refused. Different courses at one venue at once are allowed (centres run several rooms).
+// offered two identical sessions. It is refused, and so is a second live online run of the course at the same time. Different courses at one venue at once are allowed (centres run several rooms).
 // A session runs from its start day and time to its end day and time, as `overlapping` reads it. Checked inside the transaction,
 // after the course row is locked, so two people adding the same dates at the same moment can't both get through.
 const UK_DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+const whenOf = (o: Session) => `${UK_DAY.format(new Date(`${o.date}T00:00:00Z`))}${o.end !== o.date ? ` to ${UK_DAY.format(new Date(`${o.end}T00:00:00Z`))}` : ''}, ${o.from} to ${o.to}`
+// the first session of `theirs` that overlaps one of `ours` (a session runs from its start day and time to its end day and time)
+const overlapIn = (ours: Session[], theirs: Session[]) => {
+  const start = (s: Session) => `${s.date} ${s.from}`
+  const end = (s: Session) => `${s.end} ${s.to}`
+  return theirs.find((o) => ours.some((s) => start(s) < end(o) && start(o) < end(s))) ?? null
+}
+const lastDay = (sessions: Session[]) => sessions.reduce((max, s) => (s.end > max ? s.end : max), sessions[0].end)
 async function refuseClash(tx: Tx, courseId: number, venueId: string | null, sessions: Session[], exceptId: string | null = null, moving = false) {
-  if (!venueId) return
   await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, courseId)).for('update')
   const others = await tx
     .select({ sessions: cohorts.sessions })
     .from(cohorts)
-    .where(and(eq(cohorts.courseId, courseId), eq(cohorts.venueId, venueId), isNull(cohorts.cancelledAt), gte(cohorts.endsOn, sessions[0].date), exceptId ? ne(cohorts.id, exceptId) : undefined))
-  const start = (s: Session) => `${s.date} ${s.from}`
-  const end = (s: Session) => `${s.end} ${s.to}`
-  for (const other of others)
-    for (const o of other.sessions)
-      if (sessions.some((s) => start(s) < end(o) && start(o) < end(s))) {
-        const [v] = await tx.select({ name: venues.name }).from(venues).where(eq(venues.id, venueId))
-        const when = `${UK_DAY.format(new Date(`${o.date}T00:00:00Z`))}${o.end !== o.date ? ` to ${UK_DAY.format(new Date(`${o.end}T00:00:00Z`))}` : ''}, ${o.from} to ${o.to}`
-        const message = moving
-          ? `That course already has a cohort at ${v?.name ?? 'this venue'} on ${when}.`
-          : `You already have dates for this course at ${v?.name ?? 'this venue'} on ${when}. Change the dates or times, or edit those dates instead.`
-        throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sessions' }) })
-      }
+    .where(
+      and(
+        eq(cohorts.courseId, courseId),
+        venueId ? eq(cohorts.venueId, venueId) : and(isNull(cohorts.venueId), eq(cohorts.method, 'live-online')),
+        isNull(cohorts.cancelledAt),
+        gte(cohorts.endsOn, sessions[0].date),
+        lte(cohorts.startsOn, lastDay(sessions)),
+        exceptId ? ne(cohorts.id, exceptId) : undefined,
+      ),
+    )
+  for (const other of others) {
+    const o = overlapIn(sessions, other.sessions)
+    if (!o) continue
+    const [v] = venueId ? await tx.select({ name: venues.name }).from(venues).where(eq(venues.id, venueId)) : []
+    const where = venueId ? `at ${v?.name ?? 'this venue'}` : 'live online'
+    const message = moving
+      ? `That course already has a cohort ${where} on ${whenOf(o)}.`
+      : `You already have dates for this course ${where} on ${whenOf(o)}. Change the dates or times, or edit those dates instead.`
+    throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sessions' }) })
+  }
 }
 
-// a date's tutor is someone on the provider's team who has joined
-async function refuseNotOnTeam(db: Parameters<typeof ownCourse>[0], organisationId: string, userId: string) {
-  const [m] = await db
+// One person can't teach two classes at once: a date's tutor is refused when they already teach another date (of any course, at
+// any provider they're on) at an overlapping time. Checked inside the transaction under a lock on the tutor, so two saves at the
+// same moment can't both give them the same hour; their place on the team is read again there too (removed at that moment: refused).
+async function refuseTutorClash(tx: Tx, organisationId: string, tutorUserId: string, sessions: Session[], exceptId: string | null = null) {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`readtraining.tutor:${tutorUserId}`}))`)
+  await refuseNotOnTeam(tx, organisationId, tutorUserId, true)
+  const others = await tx
+    .select({ sessions: cohorts.sessions, title: courses.title, organisationId: courses.organisationId })
+    .from(cohorts)
+    .innerJoin(courses, eq(courses.id, cohorts.courseId))
+    .where(and(eq(cohorts.tutorUserId, tutorUserId), isNull(cohorts.cancelledAt), gte(cohorts.endsOn, sessions[0].date), lte(cohorts.startsOn, lastDay(sessions)), exceptId ? ne(cohorts.id, exceptId) : undefined))
+  for (const other of others) {
+    const o = overlapIn(sessions, other.sessions)
+    if (!o) continue
+    const [p] = await tx.select({ firstName: profiles.firstName, lastName: profiles.lastName }).from(profiles).where(eq(profiles.id, tutorUserId))
+    const name = `${p?.firstName ?? ''} ${p?.lastName ?? ''}`.trim() || 'This tutor'
+    // another provider's course stays private: only that the time is taken
+    const what = other.organisationId === organisationId ? other.title : 'a course for another provider'
+    const message = `${name} already teaches ${what} on ${whenOf(o)}. Choose another tutor, or change the dates or times.`
+    throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'tutorUserId' }) })
+  }
+}
+
+// A venue chosen for dates, read again inside the save under a shared lock (archiving locks it to change it, then counts the dates
+// on sale there): of a save and an archive at the same moment, one sees the other, so dates never go on sale at an archived venue
+async function refuseArchivedNow(tx: Tx, venueId: string) {
+  const [v] = await tx.select({ active: venues.active }).from(venues).where(eq(venues.id, venueId)).for('share')
+  if (!v?.active) throw bad('This venue has just been archived. Choose another, or bring it back in Venues.', 'venueId')
+}
+
+// the sessions as compared (a stored session's keys may come back in another order)
+const sameSessions = (a: Session[], b: Session[]) => a.map((x) => `${x.date}|${x.end}|${x.from}|${x.to}`).join() === b.map((x) => `${x.date}|${x.end}|${x.from}|${x.to}`).join()
+
+// A date on a price plan has the plan's cheapest package as its price: read again inside the transaction (shared, so a plan saved
+// at the same moment waits, or is waited for), so a date never keeps a price its plan no longer has, nor takes an archived plan
+async function planPriceNow(tx: Tx, planId: string, keepPlanId: string | null) {
+  const [p] = await tx.select({ tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(eq(pricePlans.id, planId)).for('share')
+  if (!p) throw bad('This price plan was just deleted. Choose another.', 'planId')
+  if (p.archivedAt && planId !== keepPlanId) throw bad('This price plan is archived. Choose another, or restore it in Price plans.', 'planId')
+  return cheapest(p.tiers as Tier[])
+}
+
+// a date's tutor is someone on the provider's team who has joined, in a role that can see the dates they teach (canTutor: not
+// accounts or marketing); `lock` keeps their place as it is until the transaction ends (a removal or role change waits)
+const TUTOR_ROLES = PROVIDER_ROLES.filter(canTutor)
+async function refuseNotOnTeam(db: Parameters<typeof ownCourse>[0] | Tx, organisationId: string, userId: string, lock = false) {
+  const query = db
     .select({ userId: organisationMembers.userId })
     .from(organisationMembers)
-    .where(and(eq(organisationMembers.organisationId, organisationId), eq(organisationMembers.userId, userId), eq(organisationMembers.status, 'active')))
-  if (!m) throw bad('Choose a tutor from your team (someone who has joined).', 'tutorUserId')
+    .where(and(eq(organisationMembers.organisationId, organisationId), eq(organisationMembers.userId, userId), eq(organisationMembers.status, 'active'), inArray(organisationMembers.role, TUTOR_ROLES)))
+  const [m] = lock ? await query.for('share') : await query
+  if (!m) throw bad('Choose a tutor from your team (someone who has joined and can see the dates).', 'tutorUserId')
 }
 
 const NOT_OFFERED = 'This course isn’t offered that way. Turn it on in the course’s Learning options first.'
@@ -299,26 +390,32 @@ async function refuseStopped(db: Parameters<typeof ownCourse>[0], closedMethods:
 }
 
 // checks a cohort against its course and provider; returns the values to save
-// keepVenueId / keepPlanId: the venue and price plan the dates already have (they stay allowed if since archived)
-async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keepVenueId: string | null = null, keepPlanId: string | null = null) {
+// `keep`: what the dates already have, which stays allowed though it has changed since: their venue and price plan (archived
+// since), their tutor (who may have left: a finished date keeps who taught it) and whether they take bookings
+type Keep = { venueId?: string | null; planId?: string | null; tutorUserId?: string | null; bookable?: boolean }
+async function cohortValues(db: Parameters<typeof ownCourse>[0], organisationId: string, method: string | null, input: CohortInput, keep: Keep = {}) {
   if (method !== 'classroom' && method !== 'live-online') throw bad('Only classroom and live online dates can be added. The self-paced option starts any time.')
   const sessions = [...input.sessions].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
   if (sessions.some((s) => daysBetween(today(), s.end) > MAX_AHEAD_DAYS)) throw bad('Dates can be up to 3 years ahead.', 'sessions')
   // the price: a plan's cheapest package (Tiered), or the date's own (Flat)
-  const plan = input.planId ? await usablePlan(db, organisationId, input.planId, keepPlanId) : null
+  const plan = input.planId ? await usablePlan(db, organisationId, input.planId, keep.planId ?? null) : null
   if (!plan && input.pricePence == null) throw bad('Enter a price.', 'price')
   if (!plan && input.wasPricePence != null && input.wasPricePence <= input.pricePence!) throw bad('The “was” price must be higher than the price.', 'wasPrice')
+  // as a plan's "Save £" can't be more than its price: a was-price over double the price isn't a believable reference price
+  if (!plan && input.wasPricePence != null && input.wasPricePence > 2 * input.pricePence!) throw bad('The “was” price can’t be more than double the price.', 'wasPrice')
   let venueId: string | null = null
   if (method === 'classroom') {
     if (!input.venueId) throw bad('Choose the venue.', 'venueId')
     const [v] = await db.select({ id: venues.id, active: venues.active }).from(venues).where(and(eq(venues.id, input.venueId), eq(venues.organisationId, organisationId)))
     if (!v) throw bad('Choose one of your venues.', 'venueId')
-    if (!v.active && input.venueId !== keepVenueId) throw bad('This venue is archived. Choose another, or bring it back in Settings › Venues.', 'venueId')
+    if (!v.active && input.venueId !== keep.venueId) throw bad('This venue is archived. Choose another, or bring it back in Venues.', 'venueId')
+    // dates kept at a venue archived since can still run, but don't start taking bookings there
+    if (!v.active && (input.bookable ?? true) && !keep.bookable) throw bad('This venue is archived, so these dates can’t take bookings there. Bring the venue back in Venues, or choose another.', 'venueId')
     venueId = v.id
   }
   // a live online date needs its joining link, as a classroom date needs its venue: learners can't take part without it
   if (method === 'live-online' && !input.joinUrl) throw bad('Enter the joining link for these dates.', 'joinUrl')
-  if (input.tutorUserId) await refuseNotOnTeam(db, organisationId, input.tutorUserId)
+  if (input.tutorUserId && input.tutorUserId !== keep.tutorUserId) await refuseNotOnTeam(db, organisationId, input.tutorUserId)
   return {
     method,
     sessions,
@@ -348,10 +445,11 @@ async function ownCohort(db: Parameters<typeof ownCourse>[0], organisationId: st
 }
 
 export const providerCohortsRouter = createTRPCRouter({
-  // A course's dates (or every course's, without courseId): upcoming and running ones soonest first, past ones latest first, or all.
+  // A course's dates (or every course's, without courseId): upcoming and running ones soonest first, past ones latest first, or all
+// (`near`: the calendar's, nearest to today first, so a provider with very many dates loses the oldest and furthest, never this month's).
   // A tutor gets only the ones they teach.
   list: orgProcedure('provider.workspace.open')
-    .input(z.object({ courseId: z.number().int().positive().optional(), when: z.enum(['upcoming', 'past', 'all']).default('upcoming') }))
+    .input(z.object({ courseId: z.number().int().positive().optional(), when: z.enum(['upcoming', 'past', 'all']).default('upcoming'), near: z.boolean().optional() }))
     .query(async ({ ctx, input }) => {
       const all = can(ctx.actor, 'provider.cohorts.view', { organisationId: input.organisationId })
       const own = !all && can(ctx.actor, 'provider.cohorts.view', { organisationId: input.organisationId, tutorUserId: ctx.user.id })
@@ -359,7 +457,7 @@ export const providerCohortsRouter = createTRPCRouter({
       if (input.courseId) await ownCourse(ctx.db, input.organisationId, input.courseId)
       const rows = await ctx.db
         .select({
-          cohort: cohorts, courseTitle: courses.title, optionClosed: sql<boolean>`${cohorts.method} = any(${courses.closedMethods})`, venueName: venues.name, venueCity: venues.city,
+          cohort: cohorts, courseTitle: courses.title, courseStatus: courses.status, optionClosed: sql<boolean>`${cohorts.method} = any(${courses.closedMethods})`, venueName: venues.name, venueCity: venues.city,
           tutorFirst: profiles.firstName, tutorLast: profiles.lastName,
           // places taken: the places booked on its course and start day (orders paid or part refunded)
           taken: sql<number>`(select coalesce(sum(o.quantity), 0)::int from public.orders o where o.course_id = ${cohorts.courseId} and o.starts_on = ${cohorts.startsOn} and o.status in ('paid', 'part_refunded'))`,
@@ -376,11 +474,11 @@ export const providerCohortsRouter = createTRPCRouter({
             own ? eq(cohorts.tutorUserId, ctx.user.id) : undefined,
           ),
         )
-        .orderBy(input.when === 'past' ? sql`${cohorts.startsOn} desc` : asc(cohorts.startsOn))
+        .orderBy(input.near ? sql`abs(${cohorts.startsOn} - ${today()}::date)` : input.when === 'past' ? sql`${cohorts.startsOn} desc` : asc(cohorts.startsOn))
         .limit(1000)
       // optionClosed: its learning option isn't taking new bookings on the course (courses.closed_methods), so nobody can book it
       return rows.map((r) => ({
-        ...r.cohort, courseTitle: r.courseTitle, optionClosed: r.optionClosed, venue: r.venueName ? { name: r.venueName, city: r.venueCity } : null,
+        ...r.cohort, courseTitle: r.courseTitle, courseStatus: r.courseStatus, optionClosed: r.optionClosed, venue: r.venueName ? { name: r.venueName, city: r.venueCity } : null,
         tutorName: r.cohort.tutorUserId ? `${r.tutorFirst ?? ''} ${r.tutorLast ?? ''}`.trim() || 'Team member' : null, taken: r.taken,
       }))
     }),
@@ -391,21 +489,23 @@ export const providerCohortsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (!can(ctx.actor, 'provider.cohorts.view', { organisationId: input.organisationId, tutorUserId: cohort.tutorUserId })) throw new TRPCError({ code: 'NOT_FOUND', message: 'These dates were not found.' })
-      const [[c], [venue], [tutor]] = await Promise.all([
+      const [[c], [venue], [tutor], [booked]] = await Promise.all([
         ctx.db.select({ title: courses.title, status: courses.status, optionClosed: sql<boolean>`${cohort.method} = any(${courses.closedMethods})` }).from(courses).where(eq(courses.id, course.id)),
         cohort.venueId ? ctx.db.select({ name: venues.name, street: venues.street, city: venues.city, postcode: venues.postcode }).from(venues).where(eq(venues.id, cohort.venueId)) : Promise.resolve([]),
         cohort.tutorUserId ? ctx.db.select({ firstName: profiles.firstName, lastName: profiles.lastName }).from(profiles).where(eq(profiles.id, cohort.tutorUserId)) : Promise.resolve([]),
+        // places taken, as the list counts them
+        ctx.db.execute<{ taken: number }>(sql`select coalesce(sum(quantity), 0)::int taken from public.orders where course_id = ${cohort.courseId} and starts_on = ${cohort.startsOn}::date and status in ('paid', 'part_refunded')`),
       ])
-      return { ...cohort, courseTitle: c.title, courseStatus: c.status, optionClosed: c.optionClosed, venue: venue ?? null, tutorName: tutor ? `${tutor.firstName} ${tutor.lastName}`.trim() || 'Team member' : null }
+      return { ...cohort, taken: booked?.taken ?? 0, courseTitle: c.title, courseStatus: c.status, optionClosed: c.optionClosed, venue: venue ?? null, tutorName: tutor ? `${tutor.firstName} ${tutor.lastName}`.trim() || 'Team member' : null }
     }),
 
-  // The team members who can be a date's tutor (everyone on the team), A to Z.
+  // The team members who can be a date's tutor (everyone who has joined and can see the dates: canTutor), A to Z.
   tutors: orgProcedure('provider.cohorts.view').query(async ({ ctx, input }) => {
     const rows = await ctx.db
       .select({ userId: organisationMembers.userId, role: organisationMembers.role, firstName: profiles.firstName, lastName: profiles.lastName })
       .from(organisationMembers)
       .innerJoin(profiles, eq(profiles.id, organisationMembers.userId))
-      .where(and(eq(organisationMembers.organisationId, input.organisationId), eq(organisationMembers.status, 'active')))
+      .where(and(eq(organisationMembers.organisationId, input.organisationId), eq(organisationMembers.status, 'active'), inArray(organisationMembers.role, TUTOR_ROLES)))
     return rows
       .map((r) => ({ userId: r.userId, role: r.role, name: `${r.firstName} ${r.lastName}`.trim() || 'Team member' }))
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -415,14 +515,20 @@ export const providerCohortsRouter = createTRPCRouter({
   setBookable: orgProcedure('provider.cohorts.edit')
     .input(z.object({ cohortId: z.string().uuid(), bookable: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const { cohort } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
+      const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       return ctx.db.transaction(async (tx) => {
-        const now = await lockCohort(tx, cohort.id)
-        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        const { course: c, date: now } = await lockDate(tx, course.id, cohort.id)
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
         if (now.bookable === input.bookable) throw new TRPCError({ code: 'CONFLICT', message: input.bookable ? 'Bookings are already on for these dates.' : 'Bookings are already off for these dates.' })
-        // (dates saved before the joining link was required may have none)
-        if (input.bookable && now.method === 'live-online' && !now.joinUrl) throw bad('Add the joining link to these dates before turning bookings on: choose Edit.')
+        if (input.bookable) {
+          if (now.endsOn < today()) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have already finished.' })
+          if (!c.methods.includes(now.method)) throw bad(`This course isn’t taught ${wayOf(now.method)} any more. Turn it back on in the course’s Learning options first.`)
+          // (dates saved before the joining link was required may have none)
+          if (now.method === 'live-online' && !now.joinUrl) throw bad('Add the joining link to these dates before turning bookings on: choose Edit.')
+          // a venue archived since: these dates can run there, but not be sold (read under the lock archiving takes)
+          const [v] = now.venueId ? await tx.select({ active: venues.active }).from(venues).where(eq(venues.id, now.venueId)).for('share') : []
+          if (v && !v.active) throw bad('This venue is archived, so these dates can’t take bookings there. Bring the venue back in Venues first, or choose another venue: choose Edit.')
+        }
         await tx.update(cohorts).set({ bookable: input.bookable, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, input.bookable ? 'cohort.bookings_on' : 'cohort.bookings_off', 'cohort', cohort.id)
         return { ok: true }
@@ -435,7 +541,7 @@ export const providerCohortsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       return ctx.db.transaction(async (tx) => {
-        if (!(await lockCohort(tx, cohort.id))) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        await lockDate(tx, course.id, cohort.id)
         await tx.delete(cohorts).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.deleted', 'cohort', cohort.id, { courseId: course.id, startsOn: cohort.startsOn })
         return { ok: true }
@@ -456,9 +562,14 @@ export const providerCohortsRouter = createTRPCRouter({
       if (!method) throw bad('Choose how these dates are taught.', 'method')
       if (!dated.includes(method)) throw bad(NOT_OFFERED, 'method')
       await refuseStopped(ctx.db, course.closedMethods, method)
+      // a way of learning retired from the catalogue takes no new dates (the course couldn't go live, or be resumed, with it)
+      const [way] = await ctx.db.execute<{ name: string; active: boolean }>(sql`select name, active from public.delivery_methods where slug = ${method}`)
+      if (way && !way.active) throw bad(`${way.name} has been retired from the catalogue, so no new dates can be added for it.`, 'method')
       const values = await cohortValues(ctx.db, input.organisationId, method, input)
       if (values.startsOn < today()) throw bad('New dates can’t start in the past.', 'sessions')
       const made = await ctx.db.transaction(async (tx) => {
+        // (the plan first: locks are always taken plan, course, date, tutor, so two saves never wait on each other)
+        if (values.planId) Object.assign(values, await planPriceNow(tx, values.planId, null))
         // the course's row is locked and its options read again, so an option turned off at the same moment (which locks the same
         // row, then counts its upcoming dates) either sees these dates or refuses them here
         // (and one whose new bookings were stopped takes no new dates)
@@ -466,7 +577,9 @@ export const providerCohortsRouter = createTRPCRouter({
         if (!now) throw new TRPCError({ code: 'NOT_FOUND', message: 'This course was not found.' })
         if (!now.methods.includes(method)) throw bad(NOT_OFFERED, 'method')
         await refuseStopped(tx, now.closedMethods, method)
+        if (values.venueId) await refuseArchivedNow(tx, values.venueId)
         await refuseClash(tx, course.id, values.venueId, values.sessions)
+        if (values.tutorUserId) await refuseTutorClash(tx, input.organisationId, values.tutorUserId, values.sessions)
         const [c] = await tx.insert(cohorts).values({ ...values, courseId: course.id, createdBy: ctx.user.id }).returning({ id: cohorts.id })
         await log(tx, ctx, input.organisationId, 'cohort.created', 'cohort', c.id, { courseId: course.id, startsOn: values.startsOn })
         return { id: c.id }
@@ -482,18 +595,26 @@ export const providerCohortsRouter = createTRPCRouter({
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
       // dates keep the way they are taught (an option turned off since keeps its finished and cancelled dates as they were)
-      const values = await cohortValues(ctx.db, input.organisationId, cohort.method, input, cohort.venueId, cohort.planId)
+      const values = await cohortValues(ctx.db, input.organisationId, cohort.method, input, { venueId: cohort.venueId, planId: cohort.planId, tutorUserId: cohort.tutorUserId, bookable: cohort.bookable })
       // a different price, was-price or plan needs the right to change prices (ReadTraining staff without the pricing switch)
       // (a date on a plan keeps the plan's price, which may have moved since: only choosing another plan counts there)
       const repriced = (values.planId ?? null) !== (cohort.planId ?? null) || (!values.planId && (values.pricePence !== cohort.pricePence || (values.wasPricePence ?? null) !== (cohort.wasPricePence ?? null)))
       if (repriced && !can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path).catch(() => { throw new TRPCError({ code: 'FORBIDDEN', message: PRICES_NEEDED }) })
-      if (values.startsOn < today() && values.startsOn !== cohort.startsOn) throw bad('Dates can’t be moved into the past.', 'sessions')
+      // a run already under way may drop a session it has had (its start moves later), but never start earlier in the past
+      if (values.startsOn < today() && values.startsOn < cohort.startsOn) throw bad('Dates can’t be moved into the past.', 'sessions')
       await ctx.db.transaction(async (tx) => {
-        const now = await lockCohort(tx, cohort.id)
-        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        if (values.planId) Object.assign(values, await planPriceNow(tx, values.planId, cohort.planId))
+        const { course: c, date: now } = await lockDate(tx, course.id, cohort.id)
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have just been cancelled, so they can’t be changed. Reload the page.' })
         if (input.seen && now.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: DATES_CHANGED })
+        // a learning option turned off since (allowed once its dates had finished): those dates stay as they ran, and can't be
+        // moved to today or later, where they would be on sale for a way the course no longer teaches
+        if (!c.methods.includes(cohort.method) && values.endsOn >= today()) throw bad(`This course isn’t taught ${wayOf(cohort.method)} any more, so these dates can’t run from today on. Turn it back on in the course’s Learning options first.`, 'sessions')
+        if (values.venueId && values.venueId !== cohort.venueId) await refuseArchivedNow(tx, values.venueId)
         await refuseClash(tx, course.id, values.venueId, values.sessions, cohort.id)
+        // the tutor's other dates: checked when the tutor or the times change, for dates still to run
+        const retimed = !sameSessions(values.sessions, now.sessions as Session[])
+        if (values.tutorUserId && values.endsOn >= today() && (retimed || values.tutorUserId !== cohort.tutorUserId)) await refuseTutorClash(tx, input.organisationId, values.tutorUserId, values.sessions, cohort.id)
         await tx.update(cohorts).set({ ...values, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id })
       })
@@ -508,9 +629,9 @@ export const providerCohortsRouter = createTRPCRouter({
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       if (input.tutorUserId) await refuseNotOnTeam(ctx.db, input.organisationId, input.tutorUserId)
       return ctx.db.transaction(async (tx) => {
-        const now = await lockCohort(tx, cohort.id)
-        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        const { date: now } = await lockDate(tx, course.id, cohort.id)
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
+        if (input.tutorUserId && now.endsOn >= today()) await refuseTutorClash(tx, input.organisationId, input.tutorUserId, now.sessions as Session[], cohort.id)
         await tx.update(cohorts).set({ tutorUserId: input.tutorUserId, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.updated', 'cohort', cohort.id, { courseId: course.id, fields: ['tutor'] })
         return { ok: true }
@@ -558,8 +679,7 @@ export const providerCohortsRouter = createTRPCRouter({
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are already cancelled.' })
       if (cohort.endsOn < today()) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have already finished.' })
       return ctx.db.transaction(async (tx) => {
-        const now = await lockCohort(tx, cohort.id)
-        if (!now) throw new TRPCError({ code: 'CONFLICT', message: DATES_GONE })
+        const { date: now } = await lockDate(tx, course.id, cohort.id)
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are already cancelled.' })
         await tx.update(cohorts).set({ cancelledAt: new Date(), cancelReason: input.reason, bookable: false, updatedAt: new Date() }).where(eq(cohorts.id, cohort.id))
         await log(tx, ctx, input.organisationId, 'cohort.cancelled', 'cohort', cohort.id, { courseId: course.id, reason: input.reason })
