@@ -200,13 +200,14 @@ export const PROVIDER_ACTIONS = Object.keys(PROVIDER_RULES) as ProviderAction[]
 export const BUSINESS_ACTIONS = Object.keys(BUSINESS_RULES) as BusinessAction[]
 export const ADMIN_ACTIONS = Object.keys(ADMIN_RULES) as AdminAction[]
 
-// Two-step sign-in for every Full admin (one who has none yet is sent to set up an authenticator first) is switched OFF while the
-// platform is being built and tested (the user's decision, 19 November 2026; the method, authenticator app or text message, is
-// still to be decided): set FULL_ADMINS_NEED_TWO_STEP back to true before launch. An admin who has set up an authenticator is
-// still asked for it (Admin › Team › Reset two-step removes it). A test copy may also waive the Full rule (`twoStepWaived`,
-// ADMIN_TWO_STEP_OPTIONAL); live never does.
-export const FULL_ADMINS_NEED_TWO_STEP = false
-export const needsTwoStep = (admin: AdminAccess) => (FULL_ADMINS_NEED_TWO_STEP && admin.preset === 'full' && !admin.twoStepWaived) || admin.twoStep === true
+// Two-step sign-in is switched OFF for every admin while the platform is being built and tested (the user's decision, 23
+// November 2026; the method, authenticator app or text message, is still to be decided): admins sign in with their email and
+// password only, an authenticator set up earlier is not asked for, and the admin pages don't mention two-step. Set ADMIN_TWO_STEP
+// back to true before launch: then every Full admin (one who has none yet sets up an authenticator at the admin login) and any
+// admin who has set one up is asked for a code. A test copy may waive the Full rule (`twoStepWaived`, ADMIN_TWO_STEP_OPTIONAL);
+// live never does.
+export const ADMIN_TWO_STEP = false
+export const needsTwoStep = (admin: AdminAccess) => ADMIN_TWO_STEP && ((admin.preset === 'full' && !admin.twoStepWaived) || admin.twoStep === true)
 
 // The roles one admin can hold together (Admin › Team: Support and Finance ticked for one person); Full is everything already
 export const ADMIN_ROLES = ['support', 'finance'] as const
