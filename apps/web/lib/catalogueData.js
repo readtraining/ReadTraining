@@ -220,6 +220,7 @@ export function toCourseDetail(page, related = []) {
     sub: page.subcategory || "",
     topic: page.topic || "",
     level: page.level || "",
+    compliance: Boolean(page.compliance), // a compliance course: required by law, regulation or an employer's policy
     methods,
     imageSrc: page.images[0]?.url || "",
     // the cover's description as the provider wrote it (course editor, ALT text), or the course's name

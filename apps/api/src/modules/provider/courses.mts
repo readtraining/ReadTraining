@@ -51,7 +51,7 @@ const text = (max: number, what: string) => line(max, what).optional().nullable(
 const slugRef = z.string().trim().max(80).regex(/^[a-z0-9-]*$/)
 
 // the content an admin checks before it shows on a live course
-export const REVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'units', 'exams', 'faqs'] as const
+export const REVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'compliance', 'videoUrl', 'units', 'exams', 'faqs'] as const
 
 // A pass mark: a percentage up to 100%, a score that isn't more than its total ("26 out of 40", "26/40", "26 of 40 marks", decimals
 // too), or words ("Pass or fail"). A bare "of" is a score only when the pass mark ends with it ("26 of 40", "26 of 40 marks"), so
@@ -117,6 +117,8 @@ export const content = {
   subcategory: slugRef,
   topic: slugRef.optional().nullable(),
   level: slugRef,
+  // the course type (courses.compliance): compliance (required by law, regulation or an employer's policy) or learned by choice
+  compliance: z.boolean({ required_error: 'Choose whether this is a compliance course.', invalid_type_error: 'Choose whether this is a compliance course.' }),
   videoUrl: z
     .string()
     .trim()
@@ -290,6 +292,7 @@ export async function applyContent(tx: Tx, courseId: number, c: Partial<Record<(
   for (const k of ['summary', 'description', 'audience', 'entryRequirements', 'videoUrl'] as const) if (c[k] !== undefined) set[k] = (c[k] as string | null) || null
   if (c.outcomes !== undefined) set.outcomes = c.outcomes as string[]
   if (c.features !== undefined) set.features = c.features as string[]
+  if (c.compliance !== undefined) set.compliance = c.compliance as boolean
   await tx.update(courses).set(set).where(eq(courses.id, courseId))
   await writeLists(tx, courseId, c as Parameters<typeof writeLists>[2])
 }
@@ -319,6 +322,7 @@ export async function missing(db: Writer, course: typeof courses.$inferSelect, {
   if (!course.description) gaps.push('a description')
   if (!course.categoryId || !course.subcategoryId) gaps.push('a category and sub-category')
   if (!course.level) gaps.push('a level')
+  if (course.compliance === null) gaps.push('whether it is a compliance course')
   if (course.kind === 'provider' && (!course.method || !course.methods.length)) gaps.push('a learning option')
   if (course.outcomes.length < 4) gaps.push('at least 4 things learners will learn')
   if (!units.n) gaps.push('the syllabus (at least one unit)')
@@ -333,12 +337,12 @@ export async function missing(db: Writer, course: typeof courses.$inferSelect, {
 // (ProviderCourseEditor.jsx SECTIONS without the optional ones, ticked by sectionOk from the draft as it is typed): keep the two
 // the same, and ask what `missing` does: the Price step is done with the self-paced price and a date learners can book on every
 // way it is taught on dates (`datesOk`, datesMissing).
-export type StepFacts = { title: boolean; summary: boolean; description: boolean; filed: boolean; level: boolean; images: boolean; outcomes: number; units: boolean; method: string | null; methods: string[]; priced: boolean; datesOk: boolean }
+export type StepFacts = { title: boolean; summary: boolean; description: boolean; filed: boolean; level: boolean; compliance: boolean; images: boolean; outcomes: number; units: boolean; method: string | null; methods: string[]; priced: boolean; datesOk: boolean }
 export function stepsLeft(f: StepFacts) {
   const method = f.method || 'classroom' // the editor opens a course with no method on classroom
   const methods = f.methods.length ? f.methods : [method]
   const done = [
-    f.title && f.summary && f.description && f.filed && f.level && f.images, // Course landing page
+    f.title && f.summary && f.description && f.filed && f.level && f.compliance && f.images, // Course landing page
     f.outcomes >= 4, // Course information
     f.units, // Syllabus and exam
     methods.includes(method), // Learning options
@@ -357,7 +361,7 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     db.select().from(courseFaqs).where(eq(courseFaqs.courseId, course.id)).orderBy(asc(courseFaqs.position)),
     db.select().from(courseImages).where(eq(courseImages.courseId, course.id)).orderBy(asc(courseImages.position)),
     db.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, course.id), eq(courseRevisions.status, 'pending'))),
-    course.parentId ? db.select({ id: courses.id, title: courses.title, slug: courses.slug, subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, course.parentId)) : Promise.resolve([]),
+    course.parentId ? db.select({ id: courses.id, title: courses.title, slug: courses.slug, subcategoryId: courses.subcategoryId, topicId: courses.topicId, compliance: courses.compliance }).from(courses).where(eq(courses.id, course.parentId)) : Promise.resolve([]),
     db.execute<{ category: string | null; subcategory: string | null; topic: string | null }>(sql`
       select (select slug from public.categories where id = ${course.categoryId}) category,
              (select slug from public.subcategories where id = ${course.subcategoryId}) subcategory,
@@ -390,7 +394,8 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     exams: exams.map((e) => ({ unit: e.unit, passMark: e.passMark ?? '', duration: e.duration ?? '' })),
     faqs: faqs.map((f) => ({ question: f.question, answer: f.answer })),
     images: images.map((i) => ({ id: i.id, url: mediaUrl(i.path), alt: i.alt ?? '' })),
-    parent: parent ? { id: parent.id, title: parent.title, slug: parent.slug, sameSubject: sameSubject(parent, course) } : null,
+    // the shared page's course type (our team's answer, the one the public sees), beside the provider's own in the admin's review
+    parent: parent ? { id: parent.id, title: parent.title, slug: parent.slug, sameSubject: sameSubject(parent, course), compliance: parent.compliance } : null,
     pendingChanges: revision ? { content: revision.content, since: revision.submittedAt } : null,
     version: new Date(Math.max(course.updatedAt.getTime(), revision?.submittedAt?.getTime() ?? 0)).toISOString(),
     lastChange: last ?? null,
@@ -679,7 +684,7 @@ export const providerCoursesRouter = createTRPCRouter({
   // (`submittedAt`); the first day of its next date (`nextDate`, YYYY-MM-DD, a date running now included); a draft's (or a course sent back's) editor steps still to finish (`stepsLeft`, null on the others); and for its ⋮ menu, Pause or Put
   // back live, and Delete with deleteBlock's reason when it can't be deleted.
   list: orgProcedure('provider.courses.view').query(async ({ ctx, input }) => {
-    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; methods: string[]; closed_methods: string[]; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; next_on: string | null; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; outcomes: number; has_units: boolean; priced: boolean; dates_ok: boolean; used: boolean }>(sql`
+    const rows = await ctx.db.execute<{ id: number; title: string; slug: string; status: Course['status']; status_note: string | null; published_at: string | null; method: string | null; methods: string[]; closed_methods: string[]; model: string; category: string | null; subcategory: string | null; is_public: boolean; listed: boolean; updated_at: string; submitted_at: string | null; parent: string | null; cover: string | null; upcoming: number; next_on: string | null; pending_change: boolean; has_title: boolean; has_summary: boolean; has_description: boolean; filed: boolean; has_level: boolean; has_compliance: boolean; outcomes: number; has_units: boolean; priced: boolean; dates_ok: boolean; used: boolean }>(sql`
       select c.id, c.title, c.slug, c.status, c.status_note, c.published_at, c.method, c.methods, c.closed_methods, c.model, c.is_public, c.listed, c.updated_at,
              -- when it was last sent for approval (edits made while it waits move submitted_at, the version, but not this)
              coalesce((select max(l.at) from public.activity_log l where l.action = 'course.submitted' and l.target_type = 'course' and l.target_id = c.id::text), c.submitted_at) submitted_at,
@@ -691,7 +696,7 @@ export const providerCoursesRouter = createTRPCRouter({
              (select min(k.starts_on)::text from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) next_on,
              exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change,
              btrim(c.title) <> '' has_title, coalesce(btrim(c.summary), '') <> '' has_summary, coalesce(btrim(c.description), '') <> '' has_description,
-             c.category_id is not null and c.subcategory_id is not null filed, c.level is not null has_level, cardinality(c.outcomes) outcomes,
+             c.category_id is not null and c.subcategory_id is not null filed, c.level is not null has_level, c.compliance is not null has_compliance, cardinality(c.outcomes) outcomes,
              exists (select 1 from public.course_units u where u.course_id = c.id) has_units, c.price_pence is not null or c.plan_id is not null priced,
              not exists (select 1 from unnest(c.methods) m where m in ('classroom', 'live-online') and m <> all(c.closed_methods)
                and not exists (select 1 from public.cohorts k where k.course_id = c.id and k.method = m and k.cancelled_at is null and k.bookable and k.starts_on > ${ukToday()}::date)) dates_ok,
@@ -704,7 +709,7 @@ export const providerCoursesRouter = createTRPCRouter({
       // ISO times: the database's own text form ("2026-11-14 11:46:40.1+00") isn't a date every browser reads
       updatedAt: new Date(r.updated_at).toISOString(), submittedAt: r.submitted_at ? new Date(r.submitted_at).toISOString() : null, parent: r.parent, coverUrl: mediaUrl(r.cover), upcomingCohorts: r.upcoming, nextDate: r.next_on, pendingChange: r.pending_change,
       stepsLeft: r.status === 'draft' || r.status === 'changes'
-        ? stepsLeft({ title: r.has_title, summary: r.has_summary, description: r.has_description, filed: r.filed, level: r.has_level, images: Boolean(r.cover), outcomes: r.outcomes, units: r.has_units, method: r.method, methods: r.methods, priced: r.priced, datesOk: r.dates_ok })
+        ? stepsLeft({ title: r.has_title, summary: r.has_summary, description: r.has_description, filed: r.filed, level: r.has_level, compliance: r.has_compliance, images: Boolean(r.cover), outcomes: r.outcomes, units: r.has_units, method: r.method, methods: r.methods, priced: r.priced, datesOk: r.dates_ok })
         : null,
       deleteBlock: blockFor({ status: r.status, statusNote: r.status_note }, r.used),
     }))
@@ -745,8 +750,8 @@ export const providerCoursesRouter = createTRPCRouter({
         .limit(200)
     }),
 
-  // The new-course wizard: a title, the catalogue place, how it is taught (its primary learning option, the only one to start
-  // with), the model, Skill Saver, and optionally the shared page it joins. Starts as a draft; the editor fills in the rest.
+  // The new-course wizard: a title, the catalogue place, the course type (compliance or not), how it is taught (its primary
+  // learning option, the only one to start with), the model, Skill Saver, and optionally the shared page it joins. Starts as a draft; the editor fills in the rest.
   create: orgProcedure('provider.courses.edit')
     .input(
       z.object({
@@ -754,6 +759,7 @@ export const providerCoursesRouter = createTRPCRouter({
         category: content.category,
         subcategory: content.subcategory,
         topic: content.topic,
+        compliance: content.compliance,
         method: settings.method,
         model: settings.model,
         skillSaver: settings.skillSaver,
@@ -770,9 +776,9 @@ export const providerCoursesRouter = createTRPCRouter({
       return ctx.db.transaction(async (tx) => {
         const [made] = await tx
           .insert(courses)
-          .values({ kind: 'provider', organisationId: input.organisationId, parentId, slug, title: input.title, ...resolved, methods: [input.method], model: input.model, skillSaver: input.skillSaver, createdBy: ctx.user.id })
+          .values({ kind: 'provider', organisationId: input.organisationId, parentId, slug, title: input.title, ...resolved, compliance: input.compliance, methods: [input.method], model: input.model, skillSaver: input.skillSaver, createdBy: ctx.user.id })
           .returning({ id: courses.id })
-        await log(tx, ctx, input.organisationId, 'course.created', made.id, { title: input.title, parentId })
+        await log(tx, ctx, input.organisationId, 'course.created', made.id, { title: input.title, parentId, compliance: input.compliance })
         return { id: made.id }
       })
     }),
@@ -834,6 +840,7 @@ export const providerCoursesRouter = createTRPCRouter({
               features: pick('features', now.features),
               ...subject,
               level: pick('level', now.level),
+              compliance: pick('compliance', now.compliance),
               method: now.method,
               methods: now.methods,
               model: now.model,
