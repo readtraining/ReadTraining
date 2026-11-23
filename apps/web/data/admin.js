@@ -448,15 +448,12 @@ export const admin = {
         reinstate: { title: "Reinstate this provider?", text: "Everything works for them again, and their public profile is shown again. We email the owner.", button: "Reinstate provider" },
       },
       done: { approve: "Provider approved", changes: "Changes asked for", reject: "Provider not approved", suspend: "Provider suspended", reinstate: "Provider reinstated" },
-      // deleting a provider that wasn't approved (only those: a suspended one stays suspended); the pop-up asks for its name
+      // deleting a provider that wasn't approved (only those: a suspended one stays suspended), confirmed in a pop-up
       remove: {
         action: "Delete provider",
         title: "Delete this provider?",
         text: "This deletes the provider for good: its team access, venues, courses, dates, price plans, FAQs, pictures and logo. It can't be undone. The people on its team keep their logins, and its history stays in the activity log.",
-        label: "Type the provider's name to confirm",
         button: "Delete provider",
-        empty: "Type the provider's name to confirm.",
-        wrong: "That isn't this provider's name. Type it as it is shown above.",
         done: (name) => `${name} deleted`,
       },
       fullApplication: "Open the full application",
