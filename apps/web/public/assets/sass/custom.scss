@@ -7740,6 +7740,7 @@ html { scrollbar-gutter: stable; }
 @media (min-width: 1100px) { .rt-adm-detail { grid-template-columns: minmax(0, 1fr) 340px; } }
 .rt-adm--platform .rt-adm-hero .rt-adm__h1 { font-size: 24px; } /* one title size on every detail page */
 .rt-adm-ml { margin-left: 6px; }
+.rt-adm-mr { margin-right: 8px; }
 /* Dashboard: two columns that stack their own cards (work on the left, what happened on the right) */
 .rt-adm-dash { display: grid; gap: 16px; align-items: stretch; }
 .rt-adm-dash > * { min-width: 0; }

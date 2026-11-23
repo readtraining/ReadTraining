@@ -7,6 +7,7 @@ import type { AdminAction } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { emailOutbox } from '../../lib/email.mjs'
+import { removeMedia } from '../../lib/media.mjs'
 import { notify, ownerOf } from '../../lib/notify.mjs'
 import { OWN_REASON_ERROR, ownReasonOk, ownRequestRefused, soleApprover } from '../../lib/soleApprover.mjs'
 import { bps, defaultCommission, percent } from './commission.mjs'
@@ -213,6 +214,64 @@ export const providersRouter = createTRPCRouter({
         console.error('provider decision email: could not find the owner', error instanceof Error ? error.message : error)
       }
       return { status: rule.to, emailed, outbox: emailOutbox() }
+    }),
+
+  // Delete a provider our team didn't approve (rejected), with everything it made: its team access, venues, courses with their
+  // dates, price plans, FAQs, pictures and logo. Only a rejected one: a suspended provider is never deleted (it stays suspended,
+  // with its reason and history), and anyone else is rejected or suspended first. Never one with records that must be kept (an
+  // order, payout, ledger entry or review of it or its courses, or another provider's date at its venue): it stays not approved.
+  // The people on its team keep their logins (they can still sign in as learners). The admin types the provider's name; everything
+  // is checked again under the row lock (two clicks or two admins delete it once), logged, and its files removed after the commit.
+  remove: adminProcedure('admin.providers.remove')
+    .input(z.object({ organisationId: z.string().uuid(), confirmName: z.string().max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      const field = (message: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: Object.assign(new Error(message), { field: 'confirmName' }) })
+      const gone = await ctx.db.transaction(async (tx) => {
+        const [o] = await tx.execute<{ id: string; name: string; slug: string; status: Status; logo_path: string | null }>(sql`
+          select id, name, slug, status, logo_path from public.organisations where id = ${input.organisationId}::uuid and type = 'provider' for update`)
+        if (!o) throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider has already been deleted. Reload the page.' })
+        if (o.status !== 'rejected') throw new TRPCError({ code: 'CONFLICT', message: `Only a provider that wasn’t approved can be deleted. This one is ${STATUS_WORDS[o.status]}. Reload the page to see it.` })
+        if (!input.confirmName.trim()) throw field('Type the provider’s name to confirm.')
+        if (input.confirmName.trim().toLowerCase() !== o.name.trim().toLowerCase()) throw field('That isn’t this provider’s name. Type it as it is shown above.')
+        const mine = sql`(select c.id from public.courses c where c.organisation_id = ${o.id}::uuid)`
+        const [r] = await tx.execute<{ orders: number; payouts: number; ledger: number; reviews: number; borrowed: number }>(sql`
+          select
+            (select count(*)::int from public.orders x where x.provider_id = ${o.id}::uuid or x.course_id in ${mine}) orders,
+            (select count(*)::int from public.payouts x where x.provider_id = ${o.id}::uuid) payouts,
+            (select count(*)::int from public.ledger_entries x where x.provider_id = ${o.id}::uuid) ledger,
+            (select count(*)::int from public.reviews x where x.provider_id = ${o.id}::uuid or x.course_id in ${mine}) reviews,
+            (select count(*)::int from public.cohorts h join public.venues v on v.id = h.venue_id
+              where v.organisation_id = ${o.id}::uuid and h.course_id not in ${mine}) borrowed`)
+        const kept = [
+          r.orders && `${r.orders} ${r.orders === 1 ? 'order' : 'orders'}`,
+          r.payouts && `${r.payouts} ${r.payouts === 1 ? 'payout' : 'payouts'}`,
+          r.ledger && `${r.ledger} money ${r.ledger === 1 ? 'record' : 'records'}`,
+          r.reviews && `${r.reviews} ${r.reviews === 1 ? 'review' : 'reviews'}`,
+          r.borrowed && `${r.borrowed} other ${r.borrowed === 1 ? 'course’s date' : 'courses’ dates'} at its venues`,
+        ].filter(Boolean)
+        if (kept.length) throw new TRPCError({ code: 'CONFLICT', message: `${o.name} has ${kept.join(', ')}. Those records are kept, so it can’t be deleted: it stays not approved.` })
+
+        const images = await tx.execute<{ path: string }>(sql`select i.path from public.course_images i where i.course_id in ${mine}`)
+        // its courses take their dates, changes, units, exams, FAQs and picture rows with them (cascade); its team, staff visits and
+        // FAQs go with the provider (cascade)
+        const courses = await tx.execute<{ id: number }>(sql`delete from public.courses where organisation_id = ${o.id}::uuid returning id`)
+        const venues = await tx.execute<{ id: string }>(sql`delete from public.venues where organisation_id = ${o.id}::uuid returning id`)
+        await tx.execute(sql`delete from public.price_plans where organisation_id = ${o.id}::uuid`)
+        await tx.execute(sql`delete from public.organisations where id = ${o.id}::uuid`)
+        await logActivity(tx, {
+          actorUserId: ctx.user.id,
+          actorIdentity: 'admin',
+          organisationId: o.id,
+          action: 'admin.provider_deleted',
+          targetType: 'organisation',
+          targetId: o.id,
+          metadata: { name: o.name, slug: o.slug, courses: courses.length, venues: venues.length },
+          ip: ctx.ip,
+        })
+        return { name: o.name, files: [...images.map((i) => i.path), ...(o.logo_path ? [o.logo_path] : [])] }
+      })
+      await removeMedia(gone.files)
+      return { name: gone.name }
     }),
 
   // A provider's own commission, or back to the platform default (null). Applies to bookings made after the change.
