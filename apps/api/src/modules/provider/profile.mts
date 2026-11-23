@@ -164,7 +164,7 @@ export const providerProfileRouter = createTRPCRouter({
     .input(
       z.object({
         bookingTerms: optional(20000, 'booking terms').optional(),
-        cancellationPolicy: z.string().trim().min(1, 'Enter your cancellation policy.').max(10000, 'Keep the cancellation policy to 10000 characters or fewer.').optional(),
+        cancellationPolicy: z.string().trim().min(1, 'Enter your cancellation and refund policy.').max(10000, 'Keep the cancellation and refund policy to 10000 characters or fewer.').optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

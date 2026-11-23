@@ -100,7 +100,7 @@ Set metadata with `pageMetadata({ title, description, path, noindex })` from `li
 - **Hero:** use `MastheadHero` (light, product visual) or `MarketingHero` (dark, centred).
 - **Sections:** `.fb-section` (`-white`, `-lavender`, `-dark`) and `.fb-split` (copy beside a visual), plus
   `Eyebrow`, `Ticks`, `Points` and `ProductFrame` (`components/marketing`).
-- **Closing sections:** `StepsSection`, `FaqSection` and `CtaBand`. Use `FaqSection` for every FAQ; don't make another.
+- **Closing sections:** `StepsSection`, `FaqSection`, `NotesSection` and `CtaBand`. Use `FaqSection` for every FAQ; don't make another. Terms and policies (text to read, not questions) use `NotesSection`: every part open, one card per group, long text with Show more.
 
 **App pages:**
 - **Customer and business:** `AccountShell` (`components/account`).

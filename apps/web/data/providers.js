@@ -35,12 +35,15 @@ export const providerPages = {
       text: "Answers from {name} about booking and training with them.",
     },
     policies: {
-      eyebrow: "Terms and policies",
+      eyebrow: "Before you book",
       title: "Terms and policies",
       text: "These apply to courses booked with {name} through ReadTraining.",
+      // the two groups: the provider's own terms, as it wrote them, then ReadTraining's policies for every booking
+      own: "Terms from {name}",
+      shared: "ReadTraining policies",
       items: [
         { q: "Booking and payment", a: "Online booking is coming soon. Until then, call or email us and we'll book your place for you. The price shown for a date is the price you pay." },
-        { q: "Rescheduling and cancellation", a: "Date changes and cancellations follow the provider's own cancellation policy, shown above when they have added one. If it isn't shown, ask us before you book and we'll tell you what it is." },
+        { q: "Rescheduling and cancellation", a: "Date changes and cancellations follow the provider's own cancellation and refund policy, shown above when they have added one. If it isn't shown, ask us before you book and we'll tell you what it is." },
         { q: "Results and certificates", a: "Your certificate is issued once you have completed the course and passed any assessment. Results from an awarding body can take up to 14 working days." },
         { q: "Conduct", a: "Learners are expected to follow the venue's rules and treat others with respect. A provider can ask someone to leave a course if their behaviour affects other learners." },
       ],

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
@@ -11,12 +11,11 @@ import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill, RowMenu, Search } from "./providerParts";
-import { Confirm, Counter, Field, aria, isUrlOn } from "./settingsForm";
+import { Confirm, Counter, Field, FormatBox, aria, isUrlOn } from "./settingsForm";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Loading } from "./providerParts";
-import TextArea from "@/components/forms/TextArea";
 
 // Settings tabs that use the API: provider information (the name while under review, headline, biography, town, social links), the logo, the terms learners
 // see before they book, and the venues used by classroom dates. Every change shows on the public profile and course pages at once.
@@ -37,7 +36,6 @@ function WithProfile({ children }) {
 
 // ---- provider information --------------------------------------------------------------------------------------------------
 
-const NL = "\n"; // a line break in the biography box
 
 const SOCIAL = [
   { key: "facebook", label: "Facebook", hosts: ["facebook.com"], example: "https://www.facebook.com/yourpage" },
@@ -75,54 +73,6 @@ function InfoForm({ profile, say }) {
   const formRef = useRef(null);
   // typing in a field clears its error
   const set = (k) => (e) => { setF((x) => ({ ...x, [k]: e.target.value })); setErrors((x) => ({ ...x, [k]: "" })); };
-  // the biography's Bold and Bullet list buttons: they add the marks the public profile shows as bold words and a bulleted list
-  // (lib/richText.js) around what is selected, then put the selection back
-  const bioRef = useRef(null);
-  const formatBio = (kind) => {
-    const el = bioRef.current;
-    if (!el) return;
-    const v = f.bio;
-    const a = el.selectionStart;
-    const b = el.selectionEnd;
-    let next;
-    let from;
-    let to;
-    if (kind === "bold") {
-      const words = v.slice(a, b);
-      const inner = words.trim() || "bold text";
-      const lead = words.trim() ? words.length - words.trimStart().length : 0; // spaces picked up with a double-clicked word stay outside
-      const trail = words.trim() ? words.length - words.trimEnd().length : 0;
-      next = `${v.slice(0, a + lead)}**${inner}**${v.slice(b - trail)}`;
-      from = a + lead + 2;
-      to = from + inner.length;
-    } else {
-      // the whole lines the selection touches: each becomes a bullet, or, when all already are, back to plain lines
-      const start = v.lastIndexOf(NL, a - 1) + 1;
-      const stop = v.indexOf(NL, b);
-      const end = stop < 0 ? v.length : stop;
-      const lines = v.slice(start, end).split(NL);
-      const all = lines.every((l) => /^- /.test(l));
-      const out = lines.map((l) => (all ? l.replace(/^- /, "") : /^- /.test(l) || !l.trim() ? l : `- ${l}`)).join(NL);
-      const shown = out === "" ? "- " : out; // an empty line starts a bullet
-      next = `${v.slice(0, start)}${shown}${v.slice(end)}`;
-      from = start + shown.length; // the cursor at the end of those lines, ready to type
-      to = from;
-    }
-    if (next.length > 5000) return; // the box's limit
-    setF((x) => ({ ...x, bio: next }));
-    setErrors((x) => ({ ...x, bio: "" }));
-    selectAfter.current = [from, to];
-  };
-  // the cursor (or the placeholder "bold text", selected) is put back in the same update as the new text, before the next key
-  // is handled, so fast typing after a click always lands in the right place
-  const selectAfter = useRef(null);
-  useLayoutEffect(() => {
-    const at = selectAfter.current;
-    if (!at || !bioRef.current) return;
-    selectAfter.current = null;
-    bioRef.current.focus();
-    bioRef.current.setSelectionRange(at[0], at[1]);
-  });
   const locked = !can("provider.profile.edit");
   useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
   const underReview = UNDER_REVIEW.includes(profile.status);
@@ -173,12 +123,7 @@ function InfoForm({ profile, say }) {
         <input {...aria("rt-set-headline", errors.headline)} type="text" maxLength={120} autoComplete="off" value={f.headline} onChange={set("headline")} disabled={locked} />
       </Field>
       <Field required id="rt-set-bio" label="Biography" hint="Who you are, where you train and what makes your courses good. Bold words and bullet points show formatted on your public profile." error={errors.bio} count={<Counter value={f.bio} max={5000} />}>
-        {/* a click on a button never takes the cursor out of the box (onMouseDown), so the next key types there, not on the button */}
-        <div className="rt-pws-set__fmt" role="toolbar" aria-label="Format the biography" aria-controls="rt-set-bio">
-          <button type="button" className="rt-pws-set__fmtbtn" onMouseDown={(e) => e.preventDefault()} onClick={() => formatBio("bold")} disabled={locked}><b aria-hidden="true">B</b> Bold</button>
-          <button type="button" className="rt-pws-set__fmtbtn" onMouseDown={(e) => e.preventDefault()} onClick={() => formatBio("list")} disabled={locked}><i className="icon-list text-12" aria-hidden="true"></i> Bullet list</button>
-        </div>
-        <TextArea {...aria("rt-set-bio", errors.bio, true)} ref={bioRef} rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={set("bio")} disabled={locked} />
+        <FormatBox {...aria("rt-set-bio", errors.bio, true)} label="the biography" rows={6} maxLength={5000} autoComplete="off" value={f.bio} onChange={(bio) => { setF((x) => ({ ...x, bio })); setErrors((x) => ({ ...x, bio: "" })); }} disabled={locked} />
       </Field>
       <Field id="rt-set-city" label="Town or city" hint="Where you are based, shown on your public profile." error={errors.city}>
         <input {...aria("rt-set-city", errors.city, true)} type="text" maxLength={60} autoComplete="address-level2" value={f.city} onChange={set("city")} disabled={locked} className="rt-pws-set__short" />
@@ -326,7 +271,7 @@ function TermsForms({ profile, say }) {
   const submit = (e) => {
     e.preventDefault();
     if (!policy.trim()) {
-      setErrors({ policy: "Enter your cancellation policy." });
+      setErrors({ policy: "Enter your cancellation and refund policy." });
       return focusFirstError(formRef.current);
     }
     setErrors({});
@@ -338,7 +283,7 @@ function TermsForms({ profile, say }) {
         onSuccess: () => {
           setSaved(sent);
           utils.provider.profile.get.invalidate({ organisationId });
-          say(changed.policy && changed.terms ? "Cancellation policy and booking terms saved" : changed.policy ? "Cancellation policy saved" : "Booking terms saved");
+          say(changed.policy && changed.terms ? "Cancellation and refund policy and booking terms saved" : changed.policy ? "Cancellation and refund policy saved" : "Booking terms saved");
         },
         onError: (er) => {
           const msg = firstError(er);
@@ -350,11 +295,11 @@ function TermsForms({ profile, say }) {
   };
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      <Field required id="rt-set-policy" label="Cancellation policy" hint="When learners can cancel or change dates, and what they get back. Learners see it on your course pages, so keep it short and plain." error={errors.policy} count={<Counter value={policy} max={10000} />}>
-        <TextArea {...aria("rt-set-policy", errors.policy, true)} rows={9} maxLength={10000} autoComplete="off" value={policy} onChange={(e) => { setPolicy(e.target.value); if (errors.policy) setErrors({}); }} disabled={locked} />
+      <Field required id="rt-set-policy" label="Cancellation and refund policy" hint="When learners can cancel or change dates, and what they get back. Learners see it on your course pages and profile: keep it short, and use Bold for headings and Bullet list for lists." error={errors.policy} count={<Counter value={policy} max={10000} />}>
+        <FormatBox {...aria("rt-set-policy", errors.policy, true)} label="the cancellation and refund policy" rows={9} maxLength={10000} autoComplete="off" value={policy} onChange={(v) => { setPolicy(v); if (errors.policy) setErrors({}); }} disabled={locked} />
       </Field>
       <Field id="rt-set-terms" label="Booking terms" hint="Your own terms for learners, if you have them. They sit alongside ReadTraining's booking terms." error={errors.terms} count={<Counter value={terms} max={20000} />}>
-        <TextArea {...aria("rt-set-terms", errors.terms, true)} rows={9} maxLength={20000} autoComplete="off" value={terms} onChange={(e) => { setTerms(e.target.value); if (errors.terms) setErrors({}); }} disabled={locked} />
+        <FormatBox {...aria("rt-set-terms", errors.terms, true)} label="the booking terms" rows={9} maxLength={20000} autoComplete="off" value={terms} onChange={(v) => { setTerms(v); if (errors.terms) setErrors({}); }} disabled={locked} />
       </Field>
       {!locked && (
         <div className="rt-pws-set__foot">
