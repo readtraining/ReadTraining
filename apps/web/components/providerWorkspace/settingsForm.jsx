@@ -53,7 +53,12 @@ export const isMoney = (v, { zero = false } = {}) => /^\d+(\.\d{1,2})?$/.test(St
 // a reversible one (pause, archive) keeps the purple main button
 // While it is working (busy), it can't be closed (Cancel, Esc and the backdrop wait), so the result is never lost or half-seen.
 // `blocked`: it can't be done (the button goes, Close stays); `error`: this try failed (a connection problem), so it can be tried again
+// While it closes it keeps the words it showed: pages clear the record they asked about as they close it, and the pop-up fades out
+// rather than vanishing, so without this it would flash other words (or none) for a moment.
 export function Confirm({ open, onClose, title, text, confirmLabel, onConfirm, blocked, error, busy = false, danger = false }) {
+  const shown = useRef(null);
+  if (open || !shown.current) shown.current = { title, text, confirmLabel, blocked, error };
+  ({ title, text, confirmLabel, blocked, error } = shown.current);
   const close = () => !busy && onClose();
   return (
     <Sheet open={open} onClose={close} title={title} closeLabel="Close" className="rt-pws-set__confirm" noClose>

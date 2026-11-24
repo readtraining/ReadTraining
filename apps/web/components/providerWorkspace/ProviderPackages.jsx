@@ -36,7 +36,8 @@ export default function ProviderPackages() {
   const [q, setQ] = useState("");
   const [show, setShow] = useState("");
   const [editor, setEditor] = useState({ open: false, plan: null });
-  const [removing, setRemoving] = useState(null);
+  // the plan being deleted, kept while its pop-up closes (so its words don't change as it fades)
+  const [removing, setRemoving] = useState({ open: false, plan: null });
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
   const say = (message) => setToast({ message });
@@ -73,8 +74,10 @@ export default function ProviderPackages() {
   const setParam = (k, setter) => (v) => { setter(v); setQuery(k, k === "q" ? v.trim() : v); };
   const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
   const create = () => setEditor({ open: true, plan: null });
-  // any date that has used it (past ones keep it) or a self-paced course on it: archived, not deleted (as the API decides)
-  const inUse = Boolean(removing && (removing.used.ever || removing.used.courses));
+  // Delete is offered only for a plan nothing has ever used (as the API decides): one any date has used (past ones keep it) or a
+  // self-paced course is on is archived instead, as everywhere in the workspace a delete shows only where it can work
+  const deletable = (p) => !p.used.ever && !p.used.courses;
+  const closeRemoving = () => setRemoving((r) => ({ ...r, open: false }));
   const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={closeEditor} onSaved={() => say("Plan saved")} />;
 
   if (!plans.length) {
@@ -125,7 +128,7 @@ export default function ProviderPackages() {
                         <RowMenu label={`Actions for ${p.name}`} items={[
                           { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
                           { label: p.archived ? "Use again" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} can be chosen again` : `${p.name} archived`); }, onError: fail }) },
-                          { label: "Delete", onClick: () => setRemoving(p) },
+                          ...(deletable(p) ? [{ label: "Delete", danger: true, onClick: () => setRemoving({ open: true, plan: p }) }] : []),
                         ]} />
                     </td>
                     )}
@@ -145,11 +148,9 @@ export default function ProviderPackages() {
       )}
 
       {editor_}
-      {/* a plan in use only says why it can't go (no "will be deleted" above it) */}
-      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title={inUse ? "This plan can’t be deleted" : "Delete this plan?"} confirmLabel="Delete plan" busy={remove.isPending}
-        text={removing && !inUse ? `${removing.name} and its packages will be deleted. This can’t be undone.` : ""}
-        blocked={inUse ? `${removing.used.dates || removing.used.courses ? usedText(removing.used) : "Past dates"} use this plan, so it can’t be deleted. Archive it instead.` : ""}
-        onConfirm={() => remove.mutate({ organisationId, planId: removing.id }, { onSuccess: () => { refresh(); say("Plan deleted"); setRemoving(null); }, onError: (er) => { fail(er); setRemoving(null); } })} />
+      <Confirm danger open={removing.open} onClose={closeRemoving} title="Delete this plan?" confirmLabel="Delete plan" busy={remove.isPending}
+        text={removing.plan ? `${removing.plan.name} and its packages will be deleted. This can’t be undone.` : ""}
+        onConfirm={() => remove.mutate({ organisationId, planId: removing.plan.id }, { onSuccess: () => { refresh(); say("Plan deleted"); closeRemoving(); }, onError: (er) => { fail(er); closeRemoving(); } })} />
       <Toast toast={toast} onDone={clearToast} />
     </div>
   );
