@@ -5,7 +5,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import Link from "next/link";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { Loading, Tabs, getQuery, setQuery } from "./providerParts";
-import { addDays, colourOf, longDay, monthLabel, offSale, todayIso, useSchedule, weekday } from "./ProviderCohorts";
+import { addDays, colourOf, longDay, monthLabel, todayIso, useSchedule, weekday, whyNotOnSale } from "./ProviderCohorts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
 // The calendar: every session of every cohort by month, week or day (view and date kept in the address, ?view= and ?date=); the
@@ -248,7 +248,7 @@ function EntryDetails({ entry, onClose }) {
   const facts = (
     <>
       <dl className="rt-pws-cal__facts">
-        <div><dt>Date</dt><dd>{shortWhen(b)}{b.cancelled ? " · Cancelled" : offSale(k) ? ` · ${offSale(k)}` : ""}</dd></div>
+        <div><dt>Date</dt><dd>{shortWhen(b)}{b.cancelled ? " · Cancelled" : whyNotOnSale(k) ? ` · ${whyNotOnSale(k)}` : ""}</dd></div>
         <div><dt>Time</dt><dd>{b.from} to {b.to}</dd></div>
         <div><dt>Places taken</dt><dd>{k.taken} of {k.capacity}</dd></div>
         <div><dt>Venue</dt><dd>{k.venue ? [k.venue.name, k.venue.city].filter(Boolean).join(", ") : "Live online"}</dd></div>

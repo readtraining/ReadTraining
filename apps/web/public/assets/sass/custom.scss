@@ -6218,7 +6218,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 
 /* Cohorts list: the cohort cell (date badge, course, venue, dates), places breakdown, favourite star, date filter, pages */
 .rt-pws-coh__cohort { display: flex; align-items: flex-start; gap: 12px; min-width: 240px; }
-.rt-pws-coh__pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+/* a cohort's status: its one pill, and why learners can't book it as text under it (CohortStatus) */
+.rt-pws-coh__status { display: inline-grid; justify-items: start; gap: 4px; }
+.rt-pws-coh__why { font-size: var(--rt-text-sm); line-height: 1.35; color: var(--rt-c-muted); }
 .rt-pws-coh__cohort > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rt-pws-coh__date { display: inline-flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 52px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); line-height: 1.1; }
 .rt-pws-coh__date small { font-size: var(--rt-text-xs); font-weight: 600; text-transform: uppercase; }
@@ -7379,8 +7381,11 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-widesheet .rt-dd__panel { max-width: 860px; }
 /* Prices and packages on the admin's course review (AdminCoursePrices): the dates and their prices, then each price plan's packages
    side by side, as learners compare them; one under another on phones */
-.rt-adm-cp__tablewrap { margin: 12px 0 0; } /* the admin table reaches the card's edges, as in every card */
-.rt-adm-cp__table td small { white-space: nowrap; }
+/* one part for each way the course is taught (self-paced, classroom dates, live online dates), each under its own heading */
+.rt-adm-cp__way { display: grid; gap: 8px; margin-top: 20px; }
+.rt-adm-cp__tablewrap { margin: 4px 0 0; } /* the admin table reaches the card's edges, as in every card */
+.rt-adm-cp__was { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-muted); white-space: nowrap; }
+.rt-adm-cp__more { justify-self: start; }
 .rt-adm-plan { display: grid; gap: 10px; margin-top: 20px; }
 .rt-adm-plan .rt-acc__h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
 .rt-adm-plan__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
