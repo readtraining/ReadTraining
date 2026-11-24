@@ -7,6 +7,7 @@ import { bookedBy, customerName, useProvider } from "@/lib/providerWorkspace";
 import { formatPrice } from "@/lib/format";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { Loading, ORDER_TONE, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { ColWidths } from "@/components/admin/adminParts";
 import { formatOrderDay } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
 import { useProviderAccess } from "@/lib/providerAccess";
@@ -75,6 +76,7 @@ export default function ProviderOrders() {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table rt-pws-ord__table">
+            <ColWidths widths={["12%", "21%", "21.5%", "12.5%", "11.5%", null, "64px"]} />
             <thead>
               <tr>
                 <th scope="col">Order</th>

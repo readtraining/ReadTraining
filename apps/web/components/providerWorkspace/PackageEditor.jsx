@@ -8,6 +8,7 @@ import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import TextArea from "@/components/forms/TextArea";
 import { Toggle } from "./providerParts";
 import { Field, Req, aria, isMoney } from "./settingsForm";
 
@@ -21,14 +22,16 @@ const NAMES = ["Basic", "Plus", "Pro", "Elite"];
 const MAX_FEATURES = 12;
 const pounds = (pence) => (pence == null || pence === 0 ? "" : (pence / 100).toFixed(2).replace(/\.00$/, ""));
 const pence = (v) => Math.round(Number(String(v).trim()) * 100);
-const blankFeature = () => ({ title: "", description: "", included: true });
+let rowKey = 0;
+const nextKey = () => `f${(rowKey += 1)}`;
+const blankFeature = () => ({ key: nextKey(), title: "", description: "", included: true });
 const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false, features: [] });
 const toDraft = (plan) => {
   const tiers = plan ? plan.tiers : null;
   return {
     name: plan?.name ?? "",
     tiers: tiers
-      ? tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular), features: (t.features ?? []).map((f) => ({ title: f.title, description: f.description ?? "", included: f.included })) }))
+      ? tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular), features: (t.features ?? []).map((f) => ({ key: nextKey(), title: f.title, description: f.description ?? "", included: f.included })) }))
       : [0, 1, 2].map(blankTier),
   };
 };
@@ -51,6 +54,8 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const [start, setStart] = useState("");
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
+  // features whose description box was opened with "Add description" (one with words always shows it)
+  const [described, setDescribed] = useState(() => new Set());
   const formRef = useRef(null);
 
   // a fresh copy each time the dialog opens
@@ -61,6 +66,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     setStart(JSON.stringify(d));
     setErrors({});
     setGeneral("");
+    setDescribed(new Set());
   }, [open, plan?.id, plan?.version]); // eslint-disable-line react-hooks/exhaustive-deps -- read the plan once per opening
   const dirty = open && JSON.stringify(draft) !== start;
   useUnsavedChanges(dirty);
@@ -68,14 +74,45 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   // a field's message goes once the field is changed (the next send checks everything again)
   const clear = (key) => setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
   const setTier = (i, patch) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => (j === i ? { ...t, ...patch } : t)) }));
-  const setFeature = (i, k, patch) => setTier(i, { features: draft.tiers[i].features.map((f, j) => (j === k ? { ...f, ...patch } : f)) });
+  const setFeatures = (i, change) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => (j === i ? { ...t, features: change(t.features) } : t)) }));
+  const setFeature = (i, k, patch) => setFeatures(i, (list) => list.map((f, j) => (j === k ? { ...f, ...patch } : f)));
+  // a feature's message is kept by its row number, so moving or removing a row drops the package's feature messages (the next
+  // save checks them again) rather than leaving one on the wrong row
+  const dropErrors = (test) => setErrors((e) => Object.fromEntries(Object.entries(e).filter(([key]) => !test(key))));
+  const featureErrors = (i) => (key) => key.startsWith(`t${i}-f`);
   const moveFeature = (i, k, by) => {
-    const list = [...draft.tiers[i].features];
-    const [x] = list.splice(k, 1);
-    list.splice(k + by, 0, x);
-    setTier(i, { features: list });
+    setFeatures(i, (old) => {
+      const list = [...old];
+      const [x] = list.splice(k, 1);
+      list.splice(k + by, 0, x);
+      return list;
+    });
+    dropErrors(featureErrors(i));
+    // the arrow pressed stays under the keyboard: focus follows the feature it moved (the other arrow at the ends, where it is off)
+    requestAnimationFrame(() => {
+      const to = `rt-plan-t${i}-f${k + by}`;
+      const el = document.getElementById(`${to}-${by < 0 ? "up" : "down"}`);
+      (el && !el.disabled ? el : document.getElementById(`${to}-${by < 0 ? "down" : "up"}`))?.focus();
+    });
   };
-  const setCount = (n) => setDraft((d) => ({ ...d, tiers: n <= d.tiers.length ? d.tiers.slice(0, n) : [...d.tiers, ...Array.from({ length: n - d.tiers.length }, (_, k) => blankTier(d.tiers.length + k))] }));
+  const removeFeature = (i, k) => {
+    setFeatures(i, (list) => list.filter((_, j) => j !== k));
+    dropErrors(featureErrors(i));
+  };
+  const addDescription = (key, id) => {
+    setDescribed((s) => new Set(s).add(key));
+    requestAnimationFrame(() => document.getElementById(`${id}-d`)?.focus());
+  };
+  const addFeature = (i) => {
+    const k = draft.tiers[i].features.length;
+    setFeatures(i, (list) => [...list, blankFeature()]);
+    requestAnimationFrame(() => document.getElementById(`rt-plan-t${i}-f${k}`)?.focus());
+  };
+  // fewer packages: the removed ones' messages go too, so a package added back starts clean
+  const setCount = (n) => {
+    setDraft((d) => ({ ...d, tiers: n <= d.tiers.length ? d.tiers.slice(0, n) : [...d.tiers, ...Array.from({ length: n - d.tiers.length }, (_, k) => blankTier(d.tiers.length + k))] }));
+    dropErrors((key) => Number(key.match(/^t(\d+)-/)?.[1] ?? -1) >= n);
+  };
   // one "Most popular" at most: turning it on for one package turns it off for the others
   const setPopular = (i, on) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => ({ ...t, popular: j === i ? on : on ? false : t.popular })) }));
 
@@ -167,7 +204,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                     <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
                   </Field>
                 </div>
-                <p className="rt-pws-pkg__save" aria-live="polite">Per delegate, including VAT (as learners see it){save > 0 ? ` · was ${formatPrice(Number(t.price) + save)}, saves ${formatPrice(save)}` : ""}</p>
+                <p className="rt-pws-pkg__save" aria-live="polite">{isMoney(t.price) ? `${formatPrice(Number(t.price))} per delegate` : "Per delegate"}, including VAT{save > 0 ? ` · was ${formatPrice(Number(t.price) + save)}` : ""}</p>
                 <Field id={`rt-plan-t${i}-tag`} label="Tagline">
                   <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
                 </Field>
@@ -175,32 +212,35 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
 
                 <fieldset className="rt-pws-pkg__itemset">
                   <legend>Features</legend>
+                  {t.features.length > 0 && <p className="rt-pws-pkg__fhint">Click <b className="-yes">✓</b> or <b className="-no">✗</b> to switch: included in {t.name.trim() || "this package"}, or not.</p>}
                   {t.features.length > 0 && (
                     <ol className="rt-pws-pkg__itemrows">
                       {t.features.map((f, k) => {
                         const err = errors[`t${i}-f${k}`];
                         const id = `rt-plan-t${i}-f${k}`;
                         return (
-                          <li key={k} className={`rt-pws-pkg__feature${f.included ? " -yes" : " -no"}`}>
-                            <div className="rt-field">
-                              <label htmlFor={id}>Feature {k + 1}<Req /></label>
-                              {err && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{err}</p>}
-                              <input id={id} type="text" maxLength={80} autoComplete="off" placeholder="For example: Free date changes" value={f.title} onChange={(e) => { setFeature(i, k, { title: e.target.value }); clear(`t${i}-f${k}`); }} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
+                          <li key={f.key} className={`rt-field rt-pws-pkg__feature${f.included ? " -yes" : " -no"}`}>
+                            {err && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{err}</p>}
+                            <div className="rt-pws-pkg__frow">
+                              <button type="button" className={`rt-pws-pkg__mark${f.included ? " -yes" : " -no"}`} onClick={() => setFeature(i, k, { included: !f.included })} aria-pressed={f.included} aria-label={`Feature ${k + 1} included in ${t.name.trim() || `package ${i + 1}`}`} title={f.included ? "Included: click for not included" : "Not included: click for included"}>
+                                <i className={f.included ? "icon-check" : "icon-close"} aria-hidden="true"></i>
+                              </button>
+                              <label htmlFor={id} className="rt-sr">Feature {k + 1}</label>
+                              <input id={id} type="text" maxLength={80} autoComplete="off" placeholder="For example: Free resit" value={f.title} onChange={(e) => { setFeature(i, k, { title: e.target.value }); clear(`t${i}-f${k}`); }} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
                             </div>
-                            <div className="rt-field">
-                              <label htmlFor={`${id}-d`}>Description</label>
-                              <input id={`${id}-d`} type="text" maxLength={200} autoComplete="off" value={f.description} onChange={(e) => setFeature(i, k, { description: e.target.value })} />
-                            </div>
-                            <div className="rt-pws-pkg__featurebar">
-                              <div className="rt-pws-pkg__state" role="group" aria-label={`Feature ${k + 1}: included or not`}>
-                                <button type="button" className={f.included ? "is-on -yes" : ""} aria-pressed={f.included} onClick={() => setFeature(i, k, { included: true })}><i className="icon-check text-10" aria-hidden="true"></i>Included</button>
-                                <button type="button" className={!f.included ? "is-on -no" : ""} aria-pressed={!f.included} onClick={() => setFeature(i, k, { included: false })}><i className="icon-close text-10" aria-hidden="true"></i>Not included</button>
+                            {(f.description || described.has(f.key)) && (
+                              <div className="rt-pws-pkg__fdesc">
+                                <label htmlFor={`${id}-d`} className="rt-sr">Description of feature {k + 1} (optional)</label>
+                                <TextArea id={`${id}-d`} rows={2} maxLength={200} autoComplete="off" placeholder="A line under the feature, for example: if you don't pass first time" value={f.description} onChange={(e) => setFeature(i, k, { description: e.target.value.replace(/\s*\n+\s*/g, " ") })} />
                               </div>
-                              <span className="rt-pws-pkg__perkbtns">
-                                <button type="button" className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, -1)} disabled={k === 0} aria-label={`Move feature ${k + 1} up`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
-                                <button type="button" className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, 1)} disabled={k === t.features.length - 1} aria-label={`Move feature ${k + 1} down`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
-                                <button type="button" className="rt-pws-set__textbtn" onClick={() => { setTier(i, { features: t.features.filter((_, j) => j !== k) }); setErrors((e) => Object.fromEntries(Object.entries(e).filter(([key]) => !key.startsWith(`t${i}-f`)))); }}>Remove<span className="rt-sr"> feature {k + 1}</span></button>
-                              </span>
+                            )}
+                            <div className="rt-pws-pkg__ftools">
+                              {!f.description && !described.has(f.key) && <button type="button" className="rt-pws-set__textbtn" onClick={() => addDescription(f.key, id)}>Add description<span className="rt-sr"> to feature {k + 1}</span></button>}
+                              {t.features.length > 1 && <>
+                                <button type="button" id={`${id}-up`} className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, -1)} disabled={k === 0} aria-label={`Move feature ${k + 1} up`}><i className="icon-chevron-up text-10" aria-hidden="true"></i></button>
+                                <button type="button" id={`${id}-down`} className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, 1)} disabled={k === t.features.length - 1} aria-label={`Move feature ${k + 1} down`}><i className="icon-chevron-down text-10" aria-hidden="true"></i></button>
+                              </>}
+                              <button type="button" className="rt-pws-set__textbtn -muted" onClick={() => removeFeature(i, k)}>Remove<span className="rt-sr"> feature {k + 1}</span></button>
                             </div>
                           </li>
                         );
@@ -208,7 +248,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                     </ol>
                   )}
                   {t.features.length < MAX_FEATURES && (
-                    <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setTier(i, { features: [...t.features, blankFeature()] })}>Add feature<span className="rt-sr"> to {t.name || `package ${i + 1}`}</span></button>
+                    <button type="button" className="rt-pws-pkg__add" onClick={() => addFeature(i)}><span aria-hidden="true">+</span> Add feature<span className="rt-sr"> to {t.name || `package ${i + 1}`}</span></button>
                   )}
                 </fieldset>
               </section>

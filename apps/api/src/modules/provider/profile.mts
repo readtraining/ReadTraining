@@ -8,6 +8,7 @@ import { logActivity } from '../../lib/activity.mjs'
 import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
+import { staffChangeCount } from '../../lib/staffAccess.mjs'
 
 // the roles that read an organisation's private details: our team's status note and messages (the same rule as the database's
 // "organisations: read where owner or admin")
@@ -37,7 +38,8 @@ const REVIEW_EVENTS: Record<string, string> = {
   'admin.provider_rejected': 'rejected',
   'admin.provider_suspended': 'suspended',
   'admin.provider_reinstated': 'reinstated',
-  // ReadTraining staff opened the workspace to change something (Admin › Providers › Open workspace), with their reason
+  // ReadTraining staff changed something in the provider's work from the admin, with their reason (visits that changed nothing
+  // are left out, below)
   'admin.staff_access_started': 'staff',
 }
 // a page on one site: https, the site itself or any of its own addresses (www., m., business., uk.) and a page after it; the
@@ -91,11 +93,14 @@ export const providerProfileRouter = createTRPCRouter({
     const mayRead = !member?.staff && PRIVATE_ROLES.includes(member?.role ?? '')
     const [o] = await ctx.db.select({ name: organisations.name, status: organisations.status, statusNote: organisations.statusNote, statusChangedAt: organisations.statusChangedAt, createdAt: organisations.createdAt }).from(organisations).where(eq(organisations.id, input.organisationId))
     if (!o) throw new TRPCError({ code: 'NOT_FOUND' })
-    const rows = await ctx.db.execute<{ action: string; at: string; metadata: Record<string, unknown> | null; actor_identity: string; first_name: string | null; last_name: string | null }>(sql`
-      select l.action, l.at, l.metadata, l.actor_identity, p.first_name, p.last_name
+    const logged = await ctx.db.execute<{ action: string; at: string; target_id: string | null; metadata: Record<string, unknown> | null; actor_identity: string; first_name: string | null; last_name: string | null }>(sql`
+      select l.action, l.at, l.target_id, l.metadata, l.actor_identity, p.first_name, p.last_name
       from public.activity_log l left join public.profiles p on p.id = l.actor_user_id
       where l.organisation_id = ${input.organisationId}::uuid and l.action in ${Object.keys(REVIEW_EVENTS)}
       order by l.at desc limit 50`)
+    // a staff visit that only looked, or undid what it did, isn't one: shown once it has changed something and kept it
+    const counts = await Promise.all(logged.map((r) => (r.action === 'admin.staff_access_started' && r.target_id ? staffChangeCount(ctx.db, r.target_id) : 1)))
+    const rows = logged.filter((_, i) => counts[i] > 0)
     const text = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
     return {
       name: o.name,
