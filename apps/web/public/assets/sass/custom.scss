@@ -6175,8 +6175,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cset__tags button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--rt-c-brand); cursor: pointer; }
 .rt-pws-cset__tags button:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: -3px; }
 /* small controls keep their look, with a 44px tap area round them */
-.rt-pws-course-tags button, .rt-pws-cset__tags button, .rt-pws-nc__suggest .rt-pws-set__textbtn, .rt-pws-pkg__move, .rt-pws-pkg__ftools .rt-pws-set__textbtn { position: relative; }
-.rt-pws-course-tags button::after, .rt-pws-cset__tags button::after, .rt-pws-nc__suggest .rt-pws-set__textbtn::after, .rt-pws-pkg__move::after, .rt-pws-pkg__ftools .rt-pws-set__textbtn::after { content: ""; position: absolute; inset: -6px; }
+.rt-pws-course-tags button, .rt-pws-cset__tags button, .rt-pws-nc__suggest .rt-pws-set__textbtn { position: relative; }
+.rt-pws-course-tags button::after, .rt-pws-cset__tags button::after, .rt-pws-nc__suggest .rt-pws-set__textbtn::after { content: ""; position: absolute; inset: -6px; }
 
 /* provider workspace: part C */
 /* ---- provider workspace: cohorts, cohort, calendar (ProviderCohorts, ProviderCohort, ProviderCalendar) ---- */
@@ -6950,32 +6950,71 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__count legend { float: none; width: auto; margin-bottom: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-pkg__countrow { display: flex; gap: 8px; }
 .rt-pws-pkg__countrow .rt-tr__filter { min-width: 44px; justify-content: center; }
-/* a package's features, as learners see them: ✓ or ✗ (a button: click to switch), the feature, an optional description under it,
-   and its tools (Add description, move, Remove) in small type under that, all on the line after the mark */
-.rt-pws-pkg__fhint { margin: -6px 0 0; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
-.rt-pws-pkg__fhint b { font-weight: 700; }
-.rt-pws-pkg__fhint b.-yes { color: var(--rt-c-success); }
-.rt-pws-pkg__fhint b.-no { color: var(--rt-c-error); }
-.rt-pws-pkg__feature.rt-field { display: grid; gap: 6px; margin: 0; padding: 0 0 10px; border-bottom: 1px solid var(--rt-c-line); list-style: none; }
-.rt-pws-pkg__frow { display: flex; align-items: center; gap: 10px; }
-.rt-pws-pkg__feature.rt-field .rt-pws-pkg__frow input { flex: 1 1 auto; min-width: 0; height: 44px; }
-.rt-pws-pkg__mark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1.5px solid; border-radius: 50%; font-size: 12px; cursor: pointer; transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease; }
-.rt-pws-pkg__mark.-yes { border-color: var(--rt-c-success); background: var(--rt-c-success-soft); color: var(--rt-c-success); }
-.rt-pws-pkg__mark.-no { border-color: var(--rt-c-line); background: var(--rt-c-surface); color: var(--rt-c-error); }
-.rt-pws-pkg__mark:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .rt-pws-pkg__mark { transition: none; } }
-.rt-pws-pkg__feature.-no .rt-pws-pkg__frow input { color: var(--rt-c-muted); }
-.rt-pws-pkg__fdesc, .rt-pws-pkg__ftools { margin-left: 42px; } /* under the words, past the mark */
-.rt-pws-pkg__feature.rt-field .rt-pws-pkg__fdesc textarea { min-height: 56px; max-height: 160px; padding: 8px 12px; font-size: var(--rt-text-sm); field-sizing: content; resize: none; }
-.rt-pws-pkg__ftools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 24px; }
-.rt-pws-pkg__ftools .rt-pws-set__textbtn { min-height: 24px; font-size: var(--rt-text-xs); }
-.rt-pws-pkg__ftools .rt-pws-set__textbtn.-muted { margin-left: auto; color: var(--rt-c-muted); }
-.rt-pws-pkg__ftools .rt-pws-set__textbtn.-muted:hover { color: var(--rt-c-error); }
-.rt-pws-pkg__add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 40px; padding: 0 12px; border: 1px dashed var(--color-border-strong); border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
-.rt-pws-pkg__add span[aria-hidden] { font-size: 18px; line-height: 1; }
-@media (hover: hover) and (pointer: fine) { .rt-pws-pkg__add:hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); } }
-.rt-pws-pkg__add:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .rt-pws-pkg__add { transition: none; } }
+/* the plan's features: one table, a row per feature and a column per package, each cell the feature's state on that package
+   (Included, Not included, Hidden) as a button opening a menu above the pop-up; the add row at the foot */
+.rt-pws-pkg__fsec { display: grid; gap: 12px; }
+.rt-pws-pkg__fsec .rt-acc__note { margin: 4px 0 0; }
+.rt-pws-pkg__fscroll { overflow-x: auto; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
+.rt-pws-pkg__ftable { width: 100%; border-collapse: collapse; }
+.rt-pws-pkg__ftable.-n2 { min-width: 640px; }
+.rt-pws-pkg__ftable.-n3 { min-width: 820px; }
+.rt-pws-pkg__ftable.-n4 { min-width: 1000px; }
+.rt-pws-pkg__ftable th { padding: 12px 14px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-sm); font-weight: 600; text-align: center; color: var(--rt-c-text); overflow-wrap: anywhere; }
+.rt-pws-pkg__ftable th:first-child { width: 36%; text-align: left; }
+.rt-pws-pkg__ftable td { padding: 8px 10px; border-bottom: 1px solid var(--rt-c-line); vertical-align: middle; }
+.rt-pws-pkg__ftable th + th, .rt-pws-pkg__ftable td + td { border-left: 1px solid var(--rt-c-line); }
+.rt-pws-pkg__ftable tfoot td { border-bottom: 0; background: var(--rt-c-soft); }
+.rt-pws-pkg__fcell { padding-left: 14px !important; }
+.rt-pws-pkg__fcell .rt-q__err { margin: 0 0 4px; }
+.rt-pws-pkg__fline { display: flex; align-items: center; gap: 4px; }
+/* the name and description read as text and become fields on hover and focus */
+.rt-pws-pkg__fname, .rt-pws-pkg__fdesc { flex: 1 1 auto; width: 100%; min-width: 0; margin: 0; padding: 0 8px; border: 1px solid transparent; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-text); }
+.rt-pws-pkg__fname { height: 44px; font-size: var(--rt-text-sm); font-weight: 600; }
+.rt-pws-pkg__fdesc { height: 32px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-pws-pkg__fname:hover, .rt-pws-pkg__fdesc:hover { background: var(--rt-c-soft); }
+.rt-pws-pkg__fname:focus, .rt-pws-pkg__fdesc:focus { outline: none; border-color: var(--rt-c-brand); background: var(--rt-c-surface); box-shadow: 0 0 0 3px var(--rt-c-brand-soft); }
+.rt-pws-pkg__fname[aria-invalid="true"] { border-color: var(--rt-c-error); }
+/* + Add description and the remove ✕: shown on the row's hover and focus (always on a touch screen) */
+.rt-pws-pkg__fadd { display: block; min-height: 28px; margin: 0; padding: 0 8px; border: 0; background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
+.rt-pws-pkg__fdel { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: 12px; color: var(--rt-c-muted); cursor: pointer; }
+.rt-pws-pkg__fdel:hover { background: var(--rt-c-soft); color: var(--rt-c-error); }
+:is(.rt-pws-pkg__fadd, .rt-pws-pkg__fdel):focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .rt-pws-pkg__ftable tbody tr:not(:hover):not(:focus-within) :is(.rt-pws-pkg__fadd, .rt-pws-pkg__fdel) { opacity: 0; }
+}
+.rt-pws-pkg__ftable tbody tr:hover > td { background: color-mix(in srgb, var(--rt-c-soft) 60%, transparent); }
+/* the add row */
+.rt-pws-pkg__fnew { display: flex; align-items: center; gap: 8px; }
+.rt-pws-pkg__fnew input { flex: 1 1 auto; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-pws-pkg__fnew input:focus { outline: none; border-color: var(--rt-c-brand); box-shadow: 0 0 0 3px var(--rt-c-brand-soft); }
+.rt-pws-pkg__fnew input[aria-invalid="true"] { border-color: var(--rt-c-error); }
+.rt-pws-pkg__fnew .button { flex: none; gap: 6px; }
+.rt-pws-pkg__fnew .button span[aria-hidden] { font-size: 18px; line-height: 1; }
+/* a feature's state on a package: its mark, its word and a chevron */
+.rt-pws-pkg__scell { text-align: center; }
+.rt-pws-pkg__st { display: inline-flex; align-items: center; gap: 8px; min-width: 150px; min-height: 44px; padding: 0 10px 0 8px; border: 1px solid transparent; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 600; white-space: nowrap; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.rt-pws-pkg__st.-in { color: var(--rt-c-success); }
+.rt-pws-pkg__st.-out { color: var(--rt-c-muted); }
+.rt-pws-pkg__st.-none { font-weight: 500; color: var(--rt-c-muted); }
+.rt-pws-pkg__st:hover, .rt-pws-pkg__st[aria-expanded="true"] { border-color: var(--rt-c-line); background: var(--rt-c-surface); }
+.rt-pws-pkg__st:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-pws-pkg__stcaret { margin-left: auto; font-size: 10px; color: var(--rt-c-muted); }
+.rt-pws-pkg__stmark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--rt-radius-sm); font-size: 10px; }
+.rt-pws-pkg__st.-in .rt-pws-pkg__stmark, .rt-pws-pkg__stmark.-in { background: var(--rt-c-success-soft); color: var(--rt-c-success); }
+.rt-pws-pkg__st.-out .rt-pws-pkg__stmark, .rt-pws-pkg__stmark.-out { background: var(--rt-c-soft); color: var(--rt-c-muted); }
+.rt-pws-pkg__st.-none .rt-pws-pkg__stmark, .rt-pws-pkg__stmark.-none { border: 1.5px dashed var(--color-border-strong); }
+@media (prefers-reduced-motion: reduce) { .rt-pws-pkg__st { transition: none; } }
+/* its menu: a layer above the pop-up, under the button (PackageEditor's StatePicker places it) */
+.rt-rowmenu__list.rt-pws-pkg__stmenu { position: fixed; z-index: 2100; right: auto; width: 260px; }
+.rt-pws-pkg__stmenu :is(a, button) { align-items: flex-start; gap: 10px; min-height: 44px; padding: 8px 10px; }
+.rt-pws-pkg__stmenu button[aria-checked="true"] { background: var(--rt-c-brand-soft); }
+.rt-pws-pkg__stmenu b { display: block; font-weight: 600; }
+.rt-pws-pkg__stmenu small { display: block; font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); }
+/* Edit / Learner preview, beside the pop-up's title */
+.rt-pws-pkg__view { flex: none; align-self: center; }
+.rt-pws-pkg__view .rt-tr__filter { min-width: 0; padding: 0 14px; }
+.rt-pws-pkg__preview { display: grid; gap: 14px; }
+.rt-pws-pkg__preview .rt-pk__note { margin: 0; }
 /* the plans table: the plan (its packages under it), what uses it, its prices, its status and the ⋯ menu (widths: ColWidths) */
 .rt-pws-pkgs td.-prices { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rt-pws-pkgs td.-act { text-align: right; }
@@ -6983,26 +7022,20 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkgs__tiers { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
 .rt-pws-pkgs__tiers li { display: flex; justify-content: space-between; gap: 12px; max-width: 240px; list-style: none; }
 .rt-pws-pkg__tier { display: grid; align-content: start; justify-items: start; gap: 12px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-/* packages side by side keep their rows level: each package's 7 parts (heading, name, prices, the price line, tagline, Most popular,
-   features) share the row of the packages beside it, so a line that wraps or a message in one moves the others with it */
+/* packages side by side keep their rows level: each package's 6 parts (heading, name, prices, the price line, tagline, Most popular)
+   share the row of the packages beside it, so a line that wraps or a message in one moves the others with it */
 @supports (grid-template-rows: subgrid) {
-  .rt-pws-pkg__tier { grid-row: span 7; grid-template-rows: subgrid; row-gap: 12px; align-items: start; } /* level rows, never stretched parts */
+  .rt-pws-pkg__tier { grid-row: span 6; grid-template-rows: subgrid; row-gap: 12px; align-items: start; } /* level rows, never stretched parts */
 }
 .rt-pws-pkg__tier.-popular { border-color: var(--rt-c-brand); box-shadow: 0 0 0 1px var(--rt-c-brand); }
 .rt-pws-pkg__tierhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 30px; } /* the badge's height, so a package with Most popular lines up with the others */
 .rt-pws-pkg__badge { padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); }
 .rt-pws-pkg__money { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; width: 100%; }
 .rt-pws-pkg__save { min-height: 18px; margin: -4px 0 0; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
-.rt-pws-pkg__move { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; }
-.rt-pws-pkg__move:disabled { opacity: 0.4; cursor: not-allowed; }
-.rt-pws-pkg__move:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 /* pricing plans table */
 .rt-pws-pkgs__name { display: block; min-height: 24px; padding: 0; border: 0; background: none; font-weight: 600; color: var(--rt-c-text); text-align: left; cursor: pointer; }
 .rt-pws-pkgs__name:hover { color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; }
 .rt-pws-pkgs small { display: block; margin-top: 2px; }
-.rt-pws-pkg__itemset { display: grid; align-self: start; align-content: start; justify-items: stretch; gap: 10px; width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; } /* the package's full width, whatever its features say */
-.rt-pws-pkg__itemset legend { float: none; width: auto; margin-bottom: 4px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
-.rt-pws-pkg__itemrows { display: grid; align-content: start; gap: 10px; width: 100%; margin: 0; padding: 0; list-style: none; }
 /* packages list */
 /* end provider workspace: Settings */
 /* hidden file inputs inside fields keep the screen-reader-only size (.rt-field sets inputs to full width) */

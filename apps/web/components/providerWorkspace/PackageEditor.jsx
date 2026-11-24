@@ -1,50 +1,159 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Sheet, { DISCARD_MESSAGE } from "@/components/testPrep/runner/Sheet";
+import { PackageCards } from "@/components/courseDetail/PackageChooser";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
-import TextArea from "@/components/forms/TextArea";
 import { Toggle } from "./providerParts";
-import { Field, Req, aria, isMoney } from "./settingsForm";
+import { Field, aria, isMoney } from "./settingsForm";
 
-// A price plan: the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus,
-// Pro, Elite to start with), and for each package its name, price per delegate, an optional "Save £" amount (shown as a was-price),
-// a tagline, "Most popular" (one package at most) and its features, each included (✓) or not (✗) with an optional description.
-// Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its cheapest package
-// as their price. `plan`: the plan to edit, or none for a new one.
+// A price plan: the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus, Pro, Elite to start with), each
+// with its name, price per delegate, an optional "Save £" amount (shown as a was-price), a tagline and "Most popular" (one package
+// at most), and the plan's features: one list for the whole plan, each feature Included (a tick), Not included (crossed out) or
+// Hidden (not shown) on each package, with an optional description. Edit shows the form, Learner preview the course page's own
+// package cards. Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its
+// cheapest package as their price. `plan`: the plan to edit, or none for a new one.
+//
+// The plan is stored as before (each package with its own features, included or not): opening it puts the packages' features
+// side by side by name (a package without one has it Hidden), and saving writes each package's list back in the table's order,
+// leaving out the ones Hidden on it. So a name is used once in a plan.
 
 const NAMES = ["Basic", "Plus", "Pro", "Elite"];
-const MAX_FEATURES = 12;
+const MAX_FEATURES = 12; // the API's limit for one package
+const STATES = [
+  { value: "in", label: "Included", help: "Shown with a tick" },
+  { value: "out", label: "Not included", help: "Shown crossed out" },
+  { value: "none", label: "Hidden", help: "Not shown on this package" },
+];
+const stateOf = (v) => STATES.find((s) => s.value === v);
 const pounds = (pence) => (pence == null || pence === 0 ? "" : (pence / 100).toFixed(2).replace(/\.00$/, ""));
 const pence = (v) => Math.round(Number(String(v).trim()) * 100);
+const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 let rowKey = 0;
 const nextKey = () => `f${(rowKey += 1)}`;
-const blankFeature = () => ({ key: nextKey(), title: "", description: "", included: true });
-const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false, features: [] });
+const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false });
 const toDraft = (plan) => {
-  const tiers = plan ? plan.tiers : null;
-  return {
-    name: plan?.name ?? "",
-    tiers: tiers
-      ? tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular), features: (t.features ?? []).map((f) => ({ key: nextKey(), title: f.title, description: f.description ?? "", included: f.included })) }))
-      : [0, 1, 2].map(blankTier),
-  };
+  if (!plan) return { name: "", tiers: [0, 1, 2].map(blankTier), rows: [] };
+  const tiers = plan.tiers;
+  // one row per feature name, in the order the packages list them (the first package's first)
+  const rows = [];
+  tiers.forEach((t, i) =>
+    (t.features ?? []).forEach((f) => {
+      let row = rows.find((r) => same(r.title, f.title));
+      if (!row) rows.push((row = { key: nextKey(), title: f.title, description: "", states: tiers.map(() => "none") }));
+      row.states[i] = f.included ? "in" : "out";
+      if (!row.description && f.description) row.description = f.description;
+    }),
+  );
+  return { name: plan.name ?? "", tiers: tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular) })), rows };
 };
+// each package's features, in the table's order, without the ones Hidden on it
+const featuresOf = (rows, i) =>
+  rows.filter((r) => r.states[i] !== "none").map((r) => ({ title: r.title.trim(), description: r.description.trim() || null, included: r.states[i] === "in" }));
 // the packages as the API takes them
 const toInput = (d) =>
-  d.tiers.map((t) => ({
+  d.tiers.map((t, i) => ({
     name: t.name.trim(),
     pricePence: pence(t.price),
     savePence: t.save.trim() ? pence(t.save) : null,
     tagline: t.tagline.trim() || null,
     popular: t.popular,
-    features: t.features.map((f) => ({ title: f.title.trim(), description: f.description.trim() || null, included: f.included })),
+    features: featuresOf(d.rows, i),
   }));
+// the packages as the course page's cards take them (the learner preview)
+const toCards = (d) =>
+  d.tiers.map((t, i) => {
+    const price = isMoney(t.price) ? Number(t.price) : 0;
+    const save = isMoney(t.save) ? Number(t.save) : 0;
+    return { key: `p${i}`, name: t.name.trim() || `Package ${i + 1}`, price, wasPrice: save > 0 ? price + save : null, tagline: t.tagline.trim(), popular: t.popular, features: featuresOf(d.rows.filter((r) => r.title.trim()), i) };
+  });
+
+// One package's choice for one feature: a button showing it (its mark, its word, a chevron) that opens a menu of the three. The
+// menu opens in a layer of its own above the pop-up, so the table's sideways scroll never cuts it off; arrow keys move in it,
+// Enter picks, Esc and Tab close it and put focus back on the button.
+function StatePicker({ value, onChange, label }) {
+  const [open, setOpen] = useState(false);
+  const [at, setAt] = useState(null);
+  const btn = useRef(null);
+  const menu = useRef(null);
+  const current = stateOf(value);
+  const close = (refocus = true) => {
+    setOpen(false);
+    if (refocus) btn.current?.focus();
+  };
+  // under the button, centred on it, kept on screen (above it when there is no room below)
+  useLayoutEffect(() => {
+    if (!open || !btn.current || !menu.current) return;
+    const b = btn.current.getBoundingClientRect();
+    const w = menu.current.offsetWidth;
+    const h = menu.current.offsetHeight;
+    const left = Math.min(Math.max(8, b.left + b.width / 2 - w / 2), window.innerWidth - w - 8);
+    const top = b.bottom + 6 + h > window.innerHeight - 8 ? Math.max(8, b.top - 6 - h) : b.bottom + 6;
+    setAt({ left, top });
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    menu.current?.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
+    const items = () => [...(menu.current?.querySelectorAll('[role="menuitemradio"]') ?? [])];
+    // ahead of the pop-up's own keys (its Esc would close the whole pop-up), so they act on the menu only
+    const onKey = (e) => {
+      if (e.key === "Escape" || e.key === "Tab") {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+        return;
+      }
+      const list = items();
+      const i = list.indexOf(document.activeElement);
+      const go = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: list.length - 1 }[e.key];
+      if (go === undefined) return;
+      e.preventDefault();
+      e.stopPropagation();
+      list[(go + list.length) % list.length]?.focus();
+    };
+    const out = (e) => !menu.current?.contains(e.target) && !btn.current?.contains(e.target) && close(false);
+    // scrolling the pop-up or the table moves the button away from its menu: the menu closes
+    const moved = (e) => !menu.current?.contains(e.target) && close(false);
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("pointerdown", out);
+    window.addEventListener("scroll", moved, true);
+    window.addEventListener("resize", moved);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("pointerdown", out);
+      window.removeEventListener("scroll", moved, true);
+      window.removeEventListener("resize", moved);
+    };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- close only uses refs
+  return (
+    <>
+      <button type="button" ref={btn} className={`rt-pws-pkg__st -${value}`} aria-haspopup="menu" aria-expanded={open} aria-label={`${label}: ${current.label}`} onClick={() => (open ? close() : (setAt(null), setOpen(true)))}>
+        <span className="rt-pws-pkg__stmark" aria-hidden="true">{value !== "none" && <i className={value === "in" ? "icon-check" : "icon-close"}></i>}</span>
+        {current.label}
+        <i className="icon-chevron-down rt-pws-pkg__stcaret" aria-hidden="true"></i>
+      </button>
+      {open && createPortal(
+        <ul ref={menu} role="menu" aria-label={label} className="rt-rowmenu__list rt-pws-pkg__stmenu" style={at ? { left: at.left, top: at.top } : { visibility: "hidden" }}>
+          {STATES.map((s) => (
+            <li key={s.value} role="none">
+              <button type="button" role="menuitemradio" aria-checked={s.value === value} tabIndex={-1} onClick={() => { onChange(s.value); close(); }}>
+                <span className={`rt-pws-pkg__stmark -${s.value}`} aria-hidden="true">{s.value !== "none" && <i className={s.value === "in" ? "icon-check" : "icon-close"}></i>}</span>
+                <span><b>{s.label}</b><small>{s.help}</small></span>
+              </button>
+            </li>
+          ))}
+        </ul>,
+        document.body,
+      )}
+    </>
+  );
+}
 
 export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const { organisationId } = useProviderAccess();
@@ -54,9 +163,15 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const [start, setStart] = useState("");
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
-  // features whose description box was opened with "Add description" (one with words always shows it)
+  const [view, setView] = useState("edit");
+  // the add row: the new feature's name and its state on each package (Included to start with, kept from one add to the next)
+  const [newName, setNewName] = useState("");
+  const [newStates, setNewStates] = useState(["in", "in", "in"]);
+  const [newError, setNewError] = useState("");
+  // features whose description box was opened with "+ Add description" (one with words always shows it)
   const [described, setDescribed] = useState(() => new Set());
   const formRef = useRef(null);
+  const newRef = useRef(null);
 
   // a fresh copy each time the dialog opens
   useEffect(() => {
@@ -66,6 +181,10 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     setStart(JSON.stringify(d));
     setErrors({});
     setGeneral("");
+    setView("edit");
+    setNewName("");
+    setNewStates(d.tiers.map(() => "in"));
+    setNewError("");
     setDescribed(new Set());
   }, [open, plan?.id, plan?.version]); // eslint-disable-line react-hooks/exhaustive-deps -- read the plan once per opening
   const dirty = open && JSON.stringify(draft) !== start;
@@ -74,44 +193,40 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   // a field's message goes once the field is changed (the next send checks everything again)
   const clear = (key) => setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
   const setTier = (i, patch) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => (j === i ? { ...t, ...patch } : t)) }));
-  const setFeatures = (i, change) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => (j === i ? { ...t, features: change(t.features) } : t)) }));
-  const setFeature = (i, k, patch) => setFeatures(i, (list) => list.map((f, j) => (j === k ? { ...f, ...patch } : f)));
-  // a feature's message is kept by its row number, so moving or removing a row drops the package's feature messages (the next
-  // save checks them again) rather than leaving one on the wrong row
-  const dropErrors = (test) => setErrors((e) => Object.fromEntries(Object.entries(e).filter(([key]) => !test(key))));
-  const featureErrors = (i) => (key) => key.startsWith(`t${i}-f`);
-  const moveFeature = (i, k, by) => {
-    setFeatures(i, (old) => {
-      const list = [...old];
-      const [x] = list.splice(k, 1);
-      list.splice(k + by, 0, x);
-      return list;
-    });
-    dropErrors(featureErrors(i));
-    // the arrow pressed stays under the keyboard: focus follows the feature it moved (the other arrow at the ends, where it is off)
-    requestAnimationFrame(() => {
-      const to = `rt-plan-t${i}-f${k + by}`;
-      const el = document.getElementById(`${to}-${by < 0 ? "up" : "down"}`);
-      (el && !el.disabled ? el : document.getElementById(`${to}-${by < 0 ? "down" : "up"}`))?.focus();
-    });
+  const setRow = (key, patch) => setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, ...patch } : r)) }));
+  const setState = (key, i, value) => {
+    setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, states: r.states.map((s, j) => (j === i ? value : s)) } : r)) }));
+    clear(`f-${key}`);
   };
-  const removeFeature = (i, k) => {
-    setFeatures(i, (list) => list.filter((_, j) => j !== k));
-    dropErrors(featureErrors(i));
+  const removeRow = (r, k) => {
+    setDraft((d) => ({ ...d, rows: d.rows.filter((x) => x.key !== r.key) }));
+    clear(`f-${r.key}`);
+    // focus stays in the table: the next feature's name, or the add box when it was the last
+    requestAnimationFrame(() => (document.getElementById(`rt-plan-f-${draft.rows[k + 1]?.key}`) || document.getElementById(`rt-plan-f-${draft.rows[k - 1]?.key}`) || newRef.current)?.focus());
   };
-  const addDescription = (key, id) => {
+  const addDescription = (key) => {
     setDescribed((s) => new Set(s).add(key));
-    requestAnimationFrame(() => document.getElementById(`${id}-d`)?.focus());
+    requestAnimationFrame(() => document.getElementById(`rt-plan-f-${key}-d`)?.focus());
   };
-  const addFeature = (i) => {
-    const k = draft.tiers[i].features.length;
-    setFeatures(i, (list) => [...list, blankFeature()]);
-    requestAnimationFrame(() => document.getElementById(`rt-plan-t${i}-f${k}`)?.focus());
+  const addRow = () => {
+    const title = newName.trim();
+    if (!title) return newRef.current?.focus();
+    if (draft.rows.some((r) => same(r.title, title))) return setNewError(`There is already a feature called “${title}”.`);
+    setDraft((d) => ({ ...d, rows: [...d.rows, { key: nextKey(), title, description: "", states: [...newStates] }] }));
+    setNewName("");
+    setNewError("");
+    newRef.current?.focus();
   };
-  // fewer packages: the removed ones' messages go too, so a package added back starts clean
+  // more or fewer packages: a new package has every feature Hidden (the add row's state for it: Included); a removed package's
+  // states and messages go with it
   const setCount = (n) => {
-    setDraft((d) => ({ ...d, tiers: n <= d.tiers.length ? d.tiers.slice(0, n) : [...d.tiers, ...Array.from({ length: n - d.tiers.length }, (_, k) => blankTier(d.tiers.length + k))] }));
-    dropErrors((key) => Number(key.match(/^t(\d+)-/)?.[1] ?? -1) >= n);
+    setDraft((d) => ({
+      ...d,
+      tiers: n <= d.tiers.length ? d.tiers.slice(0, n) : [...d.tiers, ...Array.from({ length: n - d.tiers.length }, (_, k) => blankTier(d.tiers.length + k))],
+      rows: d.rows.map((r) => ({ ...r, states: Array.from({ length: n }, (_, j) => r.states[j] ?? "none") })),
+    }));
+    setNewStates((s) => Array.from({ length: n }, (_, j) => s[j] ?? "in"));
+    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([key]) => Number(key.match(/^t(\d+)-/)?.[1] ?? -1) < n)));
   };
   // one "Most popular" at most: turning it on for one package turns it off for the others
   const setPopular = (i, on) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => ({ ...t, popular: j === i ? on : on ? false : t.popular })) }));
@@ -129,13 +244,18 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
       else if (Number(t.price) > 100000) errs[`t${i}-price`] = "Enter a price of £100,000 or less.";
       if (t.save.trim() && !isMoney(t.save)) errs[`t${i}-save`] = "Enter a saving, like 30, or leave it empty.";
       else if (t.save.trim() && isMoney(t.price) && Number(t.save) > Number(t.price)) errs[`t${i}-save`] = "A package can’t save more than its own price.";
-      t.features.forEach((f, k) => {
-        if (!f.title.trim()) errs[`t${i}-f${k}`] = "Write the feature, or remove it.";
-      });
+    });
+    draft.rows.forEach((r, k) => {
+      if (!r.title.trim()) errs[`f-${r.key}`] = "Write the feature, or remove it.";
+      else if (draft.rows.findIndex((x) => same(x.title, r.title)) !== k) errs[`f-${r.key}`] = "Another feature has this name. Give each its own.";
+      else if (r.states.every((s) => s === "none")) errs[`f-${r.key}`] = "Show it on at least one package, or remove it.";
     });
     setErrors(errs);
     setGeneral("");
-    if (Object.keys(errs).length) return focusFirstError(formRef.current);
+    if (Object.keys(errs).length) {
+      setView("edit");
+      return requestAnimationFrame(() => focusFirstError(formRef.current));
+    }
     save.mutate(
       { organisationId, ...(plan ? { planId: plan.id, seen: plan.version } : {}), name: draft.name.trim(), tiers: toInput(draft) },
       {
@@ -160,101 +280,150 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const n = (k, one, many) => (k ? (k === 1 ? `the ${one}` : `the ${k} ${many}`) : "");
   const used = plan ? [n(plan.used.dates, "upcoming date", "upcoming dates"), n(plan.used.courses, "self-paced course", "self-paced courses")].filter(Boolean).join(" and ") : "";
   const usedMany = plan ? plan.used.dates + plan.used.courses > 1 : false;
+  const tierName = (t, i) => t.name.trim() || `Package ${i + 1}`;
+  const viewSwitch = (
+    <div className="rt-pws-pkg__countrow rt-pws-pkg__view" role="group" aria-label="Show">
+      {[["edit", "Edit"], ["preview", "Learner preview"]].map(([k, label]) => (
+        <button key={k} type="button" className={`rt-tr__filter${view === k ? " is-on" : ""}`} aria-pressed={view === k} onClick={() => setView(k)}>{label}</button>
+      ))}
+    </div>
+  );
   return (
-    <Sheet open={open} onClose={onClose} title={plan ? "Edit price plan" : "Create price plan"} closeLabel="Close" className="rt-pws-pkg__sheet" unsaved={dirty} busy={save.isPending}>
+    <Sheet open={open} onClose={onClose} title={plan ? "Edit price plan" : "Create price plan"} closeLabel="Close" className="rt-pws-pkg__sheet" unsaved={dirty} busy={save.isPending} aside={viewSwitch}>
       <form className="rt-q__form rt-pws-pkg" onSubmit={submit} noValidate ref={formRef}>
         {general && <p className="rt-acc__notice -warn" tabIndex={-1} role="alert">{general}</p>}
-        <p className="rt-acc__note">
-          {plan
-            ? `Changes show to learners as soon as you save.${used ? ` ${used.charAt(0).toUpperCase()}${used.slice(1)} on this plan ${usedMany ? "take" : "takes"} its cheapest package as ${usedMany ? "their" : "its"} price.` : ""}`
-            : "Learners see the packages as soon as you put the plan on a date or a self-paced course. Its cheapest package is the price they show."}
-        </p>
+        {view === "preview" ? (
+          <div className="rt-pws-pkg__preview">
+            <p className="rt-acc__note">The packages as learners see them on the course page.</p>
+            <PackageCards list={toCards(draft)} />
+            <p className="rt-pk__note">Prices are per delegate and include VAT.</p>
+          </div>
+        ) : (
+          <>
+            <p className="rt-acc__note">
+              {plan
+                ? `Changes show to learners as soon as you save.${used ? ` ${used.charAt(0).toUpperCase()}${used.slice(1)} on this plan ${usedMany ? "take" : "takes"} its cheapest package as ${usedMany ? "their" : "its"} price.` : ""}`
+                : "Learners see the packages as soon as you put the plan on a date or a self-paced course. Its cheapest package is the price they show."}
+            </p>
 
-        <div className="rt-pws-pkg__top">
-          <Field id="rt-plan-name" label="Plan name" required error={errors.name} hint="Only your team sees this name. Learners see the package names.">
-            <input {...aria("rt-plan-name", errors.name, true)} type="text" maxLength={60} autoComplete="off" placeholder="For example: SIA door supervisor packages" value={draft.name} onChange={(e) => { setDraft((d) => ({ ...d, name: e.target.value })); clear("name"); }} />
-          </Field>
-          <fieldset className="rt-field rt-pws-pkg__count">
-            <legend>Number of packages</legend>
-            <div className="rt-pws-pkg__countrow" role="group">
-              {[2, 3, 4].map((n) => (
-                <button key={n} type="button" className={`rt-tr__filter${draft.tiers.length === n ? " is-on" : ""}`} aria-pressed={draft.tiers.length === n} onClick={() => setCount(n)}>{n}</button>
-              ))}
+            <div className="rt-pws-pkg__top">
+              <Field id="rt-plan-name" label="Plan name" required error={errors.name} hint="Only your team sees this name. Learners see the package names.">
+                <input {...aria("rt-plan-name", errors.name, true)} type="text" maxLength={60} autoComplete="off" placeholder="For example: SIA door supervisor packages" value={draft.name} onChange={(e) => { setDraft((d) => ({ ...d, name: e.target.value })); clear("name"); }} />
+              </Field>
+              <fieldset className="rt-field rt-pws-pkg__count">
+                <legend>Number of packages</legend>
+                <div className="rt-pws-pkg__countrow" role="group">
+                  {[2, 3, 4].map((k) => (
+                    <button key={k} type="button" className={`rt-tr__filter${draft.tiers.length === k ? " is-on" : ""}`} aria-pressed={draft.tiers.length === k} onClick={() => setCount(k)}>{k}</button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
-          </fieldset>
-        </div>
 
-        <div className={`rt-pws-pkg__tiers -n${draft.tiers.length}`}>
-          {draft.tiers.map((t, i) => {
-            const save = isMoney(t.price) && isMoney(t.save) ? Number(t.save) : 0;
-            return (
-              <section key={i} className={`rt-pws-pkg__tier${t.popular ? " -popular" : ""}`} aria-labelledby={`rt-plan-t${i}-h`}>
-                <div className="rt-pws-pkg__tierhead">
-                  <h3 className="rt-pws-pkg__h3" id={`rt-plan-t${i}-h`}>{t.name.trim() || `Package ${i + 1}`}</h3>
-                  {t.popular && <span className="rt-pws-pkg__badge">Most popular</span>}
-                </div>
-                <Field id={`rt-plan-t${i}-name`} label="Package name" required error={errors[`t${i}-name`]}>
-                  <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} />
-                </Field>
-                <div className="rt-pws-pkg__money">
-                  <Field id={`rt-plan-t${i}-price`} label="Price (£)" required error={errors[`t${i}-price`]}>
-                    <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value.replace(/£|,/g, "") }); clear(`t${i}-price`); }} />
-                  </Field>
-                  <Field id={`rt-plan-t${i}-save`} label="Save (£)" error={errors[`t${i}-save`]}>
-                    <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
-                  </Field>
-                </div>
-                <p className="rt-pws-pkg__save" aria-live="polite">{isMoney(t.price) ? `${formatPrice(Number(t.price))} per delegate` : "Per delegate"}, including VAT{save > 0 ? ` · was ${formatPrice(Number(t.price) + save)}` : ""}</p>
-                <Field id={`rt-plan-t${i}-tag`} label="Tagline">
-                  <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
-                </Field>
-                <Toggle id={`rt-plan-t${i}-pop`} checked={t.popular} onChange={(on) => setPopular(i, on)} label="Mark as Most popular" />
+            <div className={`rt-pws-pkg__tiers -n${draft.tiers.length}`}>
+              {draft.tiers.map((t, i) => {
+                const saving = isMoney(t.price) && isMoney(t.save) ? Number(t.save) : 0;
+                return (
+                  <section key={i} className={`rt-pws-pkg__tier${t.popular ? " -popular" : ""}`} aria-labelledby={`rt-plan-t${i}-h`}>
+                    <div className="rt-pws-pkg__tierhead">
+                      <h3 className="rt-pws-pkg__h3" id={`rt-plan-t${i}-h`}>{tierName(t, i)}</h3>
+                      {t.popular && <span className="rt-pws-pkg__badge">Most popular</span>}
+                    </div>
+                    <Field id={`rt-plan-t${i}-name`} label="Package name" required error={errors[`t${i}-name`]}>
+                      <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} />
+                    </Field>
+                    <div className="rt-pws-pkg__money">
+                      <Field id={`rt-plan-t${i}-price`} label="Price (£)" required error={errors[`t${i}-price`]}>
+                        <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value.replace(/£|,/g, "") }); clear(`t${i}-price`); }} />
+                      </Field>
+                      <Field id={`rt-plan-t${i}-save`} label="Save (£)" error={errors[`t${i}-save`]}>
+                        <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
+                      </Field>
+                    </div>
+                    <p className="rt-pws-pkg__save" aria-live="polite">{isMoney(t.price) ? `${formatPrice(Number(t.price))} per delegate` : "Per delegate"}, including VAT{saving > 0 ? ` · was ${formatPrice(Number(t.price) + saving)}` : ""}</p>
+                    <Field id={`rt-plan-t${i}-tag`} label="Tagline">
+                      <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
+                    </Field>
+                    <Toggle id={`rt-plan-t${i}-pop`} checked={t.popular} onChange={(on) => setPopular(i, on)} label="Mark as Most popular" />
+                  </section>
+                );
+              })}
+            </div>
 
-                <fieldset className="rt-pws-pkg__itemset">
-                  <legend>Features</legend>
-                  {t.features.length > 0 && <p className="rt-pws-pkg__fhint">Click <b className="-yes">✓</b> or <b className="-no">✗</b> to switch: included in {t.name.trim() || "this package"}, or not.</p>}
-                  {t.features.length > 0 && (
-                    <ol className="rt-pws-pkg__itemrows">
-                      {t.features.map((f, k) => {
-                        const err = errors[`t${i}-f${k}`];
-                        const id = `rt-plan-t${i}-f${k}`;
-                        return (
-                          <li key={f.key} className={`rt-field rt-pws-pkg__feature${f.included ? " -yes" : " -no"}`}>
+            <section className="rt-pws-pkg__fsec" aria-labelledby="rt-plan-fh">
+              <div>
+                <h3 className="rt-pws-pkg__h3" id="rt-plan-fh">Features</h3>
+                <p className="rt-acc__note">Choose how each feature appears on each package.</p>
+              </div>
+              <div className="rt-pws-pkg__fscroll">
+                <table className={`rt-pws-pkg__ftable -n${draft.tiers.length}`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">Feature</th>
+                      {draft.tiers.map((t, i) => <th key={i} scope="col">{tierName(t, i)}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {draft.rows.map((r, k) => {
+                      const id = `rt-plan-f-${r.key}`;
+                      const err = errors[`f-${r.key}`];
+                      const named = r.title.trim() || `Feature ${k + 1}`;
+                      const showDesc = Boolean(r.description) || described.has(r.key);
+                      return (
+                        <tr key={r.key}>
+                          <td className="rt-pws-pkg__fcell">
                             {err && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{err}</p>}
-                            <div className="rt-pws-pkg__frow">
-                              <button type="button" className={`rt-pws-pkg__mark${f.included ? " -yes" : " -no"}`} onClick={() => setFeature(i, k, { included: !f.included })} aria-pressed={f.included} aria-label={`Feature ${k + 1} included in ${t.name.trim() || `package ${i + 1}`}`} title={f.included ? "Included: click for not included" : "Not included: click for included"}>
-                                <i className={f.included ? "icon-check" : "icon-close"} aria-hidden="true"></i>
-                              </button>
+                            <div className="rt-pws-pkg__fline">
                               <label htmlFor={id} className="rt-sr">Feature {k + 1}</label>
-                              <input id={id} type="text" maxLength={80} autoComplete="off" placeholder="For example: Free resit" value={f.title} onChange={(e) => { setFeature(i, k, { title: e.target.value }); clear(`t${i}-f${k}`); }} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
+                              <input id={id} className="rt-pws-pkg__fname" type="text" maxLength={80} autoComplete="off" value={r.title} onChange={(e) => { setRow(r.key, { title: e.target.value }); clear(`f-${r.key}`); }} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
+                              <button type="button" className="rt-pws-pkg__fdel" onClick={() => removeRow(r, k)} aria-label={`Remove ${named}`}><i className="icon-close" aria-hidden="true"></i></button>
                             </div>
-                            {(f.description || described.has(f.key)) && (
-                              <div className="rt-pws-pkg__fdesc">
-                                <label htmlFor={`${id}-d`} className="rt-sr">Description of feature {k + 1} (optional)</label>
-                                <TextArea id={`${id}-d`} rows={2} maxLength={200} autoComplete="off" placeholder="A line under the feature, for example: if you don't pass first time" value={f.description} onChange={(e) => setFeature(i, k, { description: e.target.value.replace(/\s*\n+\s*/g, " ") })} />
-                              </div>
+                            {showDesc ? (
+                              <>
+                                <label htmlFor={`${id}-d`} className="rt-sr">Description of {named} (optional)</label>
+                                <input id={`${id}-d`} className="rt-pws-pkg__fdesc" type="text" maxLength={200} autoComplete="off" placeholder="Short description (optional)" value={r.description} onChange={(e) => setRow(r.key, { description: e.target.value })} />
+                              </>
+                            ) : (
+                              <button type="button" className="rt-pws-pkg__fadd" onClick={() => addDescription(r.key)}>+ Add description<span className="rt-sr"> to {named}</span></button>
                             )}
-                            <div className="rt-pws-pkg__ftools">
-                              {!f.description && !described.has(f.key) && <button type="button" className="rt-pws-set__textbtn" onClick={() => addDescription(f.key, id)}>Add description<span className="rt-sr"> to feature {k + 1}</span></button>}
-                              {t.features.length > 1 && <>
-                                <button type="button" id={`${id}-up`} className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, -1)} disabled={k === 0} aria-label={`Move feature ${k + 1} up`}><i className="icon-chevron-up text-10" aria-hidden="true"></i></button>
-                                <button type="button" id={`${id}-down`} className="rt-pws-pkg__move" onClick={() => moveFeature(i, k, 1)} disabled={k === t.features.length - 1} aria-label={`Move feature ${k + 1} down`}><i className="icon-chevron-down text-10" aria-hidden="true"></i></button>
-                              </>}
-                              <button type="button" className="rt-pws-set__textbtn -muted" onClick={() => removeFeature(i, k)}>Remove<span className="rt-sr"> feature {k + 1}</span></button>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  )}
-                  {t.features.length < MAX_FEATURES && (
-                    <button type="button" className="rt-pws-pkg__add" onClick={() => addFeature(i)}><span aria-hidden="true">+</span> Add feature<span className="rt-sr"> to {t.name || `package ${i + 1}`}</span></button>
-                  )}
-                </fieldset>
-              </section>
-            );
-          })}
-        </div>
+                          </td>
+                          {draft.tiers.map((t, i) => (
+                            <td key={i} className="rt-pws-pkg__scell">
+                              <StatePicker value={r.states[i]} onChange={(v) => setState(r.key, i, v)} label={`${named} in ${tierName(t, i)}`} />
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td className="rt-pws-pkg__fcell">
+                        {newError && <p className="rt-q__err" id="rt-plan-new-e"><span className="rt-sr">Error: </span>{newError}</p>}
+                        {draft.rows.length < MAX_FEATURES ? (
+                          <div className="rt-pws-pkg__fnew">
+                            <label htmlFor="rt-plan-new" className="rt-sr">New feature</label>
+                            <input id="rt-plan-new" ref={newRef} type="text" maxLength={80} autoComplete="off" placeholder="New feature, e.g. Free resit" value={newName}
+                              onChange={(e) => { setNewName(e.target.value); setNewError(""); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                              aria-invalid={newError ? true : undefined} aria-describedby={newError ? "rt-plan-new-e" : undefined} />
+                            <button type="button" className="button -md -purple-1 text-white" onClick={addRow}><span aria-hidden="true">+</span> Add<span className="rt-sr"> feature</span></button>
+                          </div>
+                        ) : (
+                          <p className="rt-acc__note">A plan has up to {MAX_FEATURES} features. Remove one to add another.</p>
+                        )}
+                      </td>
+                      {draft.tiers.map((t, i) => (
+                        <td key={i} className="rt-pws-pkg__scell">
+                          {draft.rows.length < MAX_FEATURES && <StatePicker value={newStates[i] ?? "in"} onChange={(v) => setNewStates((s) => s.map((x, j) => (j === i ? v : x)))} label={`New feature in ${tierName(t, i)}`} />}
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
 
         <div className="rt-pws-set__actions">
           <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending} aria-busy={save.isPending || undefined}>{save.isPending ? "Saving…" : plan ? "Save plan" : "Create plan"}</button>
