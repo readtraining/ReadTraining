@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { eq, organisations, sql } from '@readtraining/db'
+import { eq, organisations } from '@readtraining/db'
 
 import { openStaffAccess } from '../../lib/actor.mjs'
-import { endStaffAccess, startStaffAccess } from '../../lib/staffAccess.mjs'
+import { endStaffAccess, staffChangeCount, startStaffAccess } from '../../lib/staffAccess.mjs'
 import { adminProcedure, createTRPCRouter } from '../../trpc/trpc.mjs'
 
 // Editing a provider's work from the admin as ReadTraining staff (components/admin/StaffEdit.jsx): start editing a provider (the
@@ -31,9 +31,7 @@ export const staffRouter = createTRPCRouter({
   current: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
     const open = await openStaffAccess(ctx.db, ctx.user.id)
     if (!open) return null
-    const [n] = await ctx.db.execute<{ changes: number }>(sql`
-      select count(*)::int changes from public.activity_log where metadata->>'staff' = ${open.id} and action <> 'access.denied'`)
-    return { organisationId: open.organisationId, startedAt: open.startedAt, changes: n?.changes ?? 0 }
+    return { organisationId: open.organisationId, startedAt: open.startedAt, changes: await staffChangeCount(ctx.db, open.id) }
   }),
 
   // any admin can end their own session (even after losing the switch); the provider's owner is then emailed what changed

@@ -85,10 +85,25 @@ const DONE: Record<string, string> = {
   'provider.terms_updated': 'Updated your booking terms or cancellation policy',
 }
 
-// One line per thing changed in a session (the same change made several times is one line), in the order first done
-export async function staffChanges(db: typeof Db, session: string) {
-  const rows = await db.execute<{ action: string; name: string | null }>(sql`
-    select l.action, coalesce(c.title, cc.title, pl.name, v.name) name, min(l.at) first
+// A change and the one that puts it back: archiving a plan or venue and restoring it, stopping bookings (on a date, or for a
+// learning option) and reopening them. Done and undone in one session, the two cancel out: nothing changed.
+const UNDOES: Record<string, string> = {
+  'plan.archived': 'plan.restored',
+  'plan.restored': 'plan.archived',
+  'venue.archived': 'venue.restored',
+  'venue.restored': 'venue.archived',
+  'cohort.bookings_off': 'cohort.bookings_on',
+  'cohort.bookings_on': 'cohort.bookings_off',
+  'course.option_stopped': 'course.option_reopened',
+  'course.option_reopened': 'course.option_stopped',
+}
+
+// What a session changed, in order, with the changes it undid itself taken out (see UNDOES; stopping the primary option also
+// moved the primary, which reopening doesn't move back, so that one stays). Refused attempts are never changes.
+async function netChanges(db: typeof Db, session: string) {
+  const rows = await db.execute<{ action: string; key: string; primary: string | null; name: string | null }>(sql`
+    select l.action, concat_ws(':', l.target_type, l.target_id, l.metadata->>'method') key, l.metadata->>'primary' primary,
+           coalesce(c.title, cc.title, pl.name, v.name) name
     from public.activity_log l
     left join public.courses c on l.target_type = 'course' and c.id::text = l.target_id
     left join public.cohorts co on l.target_type = 'cohort' and co.id::text = l.target_id
@@ -96,8 +111,31 @@ export async function staffChanges(db: typeof Db, session: string) {
     left join public.price_plans pl on l.target_type = 'price_plan' and pl.id::text = l.target_id
     left join public.venues v on l.target_type = 'venue' and v.id::text = l.target_id
     where l.metadata->>'staff' = ${session} and l.action <> 'access.denied'
-    group by l.action, 2 order by first`)
-  return rows.filter((r) => DONE[r.action]).map((r) => (r.name ? `${DONE[r.action]} “${r.name}”` : DONE[r.action]))
+    order by l.at, l.id`)
+  const kept: (typeof rows)[number][] = []
+  for (const r of rows) {
+    const undo = UNDOES[r.action]
+    const last = undo ? [...kept].reverse().find((k) => k.key === r.key && (k.action === r.action || k.action === undo)) : undefined
+    if (last && last.action === undo && !last.primary && !r.primary) kept.splice(kept.indexOf(last), 1)
+    else kept.push(r)
+  }
+  return kept
+}
+
+/** How many changes a session has made and kept (the editing bar shows from the first). */
+export async function staffChangeCount(db: typeof Db, session: string) {
+  return (await netChanges(db, session)).length
+}
+
+// One line per thing changed in a session (the same change made several times is one line), in the order first done
+export async function staffChanges(db: typeof Db, session: string) {
+  const lines: string[] = []
+  for (const r of await netChanges(db, session)) {
+    if (!DONE[r.action]) continue
+    const line = r.name ? `${DONE[r.action]} “${r.name}”` : DONE[r.action]
+    if (!lines.includes(line)) lines.push(line)
+  }
+  return lines
 }
 
 // Every admin page (admin.open) closes the sessions anyone left unused for two hours ('idle', logged) and sends the summaries
