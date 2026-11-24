@@ -28,7 +28,7 @@ const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date"
 // course pricing. Edit opens the plan; a plan is archived (dates on it keep it) or, when nothing
 // ever used it, deleted. Search and the archive filter are kept in the address.
 export default function ProviderPackages() {
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, staff } = useProviderAccess();
   const edit = can("provider.pricing.edit");
   const utils = api.useUtils();
   const query = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
@@ -92,7 +92,7 @@ export default function ProviderPackages() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Search value={q} onChange={setParam("q", setQ)} label="Search your price plans" />
+        <Search value={q} onChange={setParam("q", setQ)} label={staff ? "Search price plans" : "Search your price plans"} />
         <div className="rt-adm-toolbar__end">
           <ToolSelect id="rt-plan-show" label="Show" value={show} onChange={setParam("show", setShow)} options={SHOW} />
           {edit && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}

@@ -4853,6 +4853,7 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-demo-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--color-orange-6); border-radius: var(--rt-radius-pill); background: var(--color-orange-7); font-size: var(--rt-text-xs); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); cursor: help; }
 .rt-demo-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-orange-6); }
 .rt-adm__crumbrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px; }
+.rt-adm__crumbstart { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
 .rt-adm__crumbs { display: flex; flex-wrap: wrap; align-items: center; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
 .rt-adm__crumbs li { display: inline-flex; align-items: center; min-width: 0; list-style: none; color: var(--rt-c-muted); }
 .rt-adm__crumbs li + li::before { content: "/"; margin: 0 10px; color: var(--rt-c-line); }
