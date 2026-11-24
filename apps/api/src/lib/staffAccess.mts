@@ -15,13 +15,22 @@ import { notify, ownerOf } from './notify.mjs'
 type Ctx = { db: typeof Db; user: { id: string }; ip: string | null }
 
 // Open a provider's workspace. Any session the admin still has open is ended first (one at a time), and the summaries of
-// ended sessions not yet sent go out.
+// ended sessions not yet sent go out. The admin's own row is locked first, so two starts at the same moment (two tabs, or a page
+// starting it twice) run one after the other: the second finds this provider's session already open and keeps it, instead of
+// both ending and opening one and the second breaking the one-open-session rule (staff_access_one_open).
 export async function startStaffAccess(ctx: Ctx, organisationId: string, reason: string) {
   const [org] = await ctx.db.execute<{ type: string; status: string; name: string }>(sql`select type, status, name from public.organisations where id = ${organisationId}::uuid`)
   if (!org || org.type !== 'provider') throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider no longer exists.' })
   // until our team approves a provider there are no courses, dates or plans to work on; a rejected one is closed
   if (org.status !== 'active' && org.status !== 'suspended') throw new TRPCError({ code: 'BAD_REQUEST', message: 'You can work in a provider’s workspace once the provider is approved (it is active or suspended).' })
+  // someone on the provider's own team works on it in its workspace, as themselves: staff access would stand in for their own
+  const [member] = await ctx.db.execute(sql`select 1 from public.organisation_members where organisation_id = ${organisationId}::uuid and user_id = ${ctx.user.id}::uuid`)
+  if (member) throw new TRPCError({ code: 'BAD_REQUEST', message: 'You’re on this provider’s team, so you work on it in its own workspace (Switch account), not as ReadTraining staff.' })
   const id = await ctx.db.transaction(async (tx) => {
+    await tx.execute(sql`select 1 from public.admin_users where user_id = ${ctx.user.id}::uuid for update`)
+    const [open] = await tx.execute<{ id: string }>(sql`
+      select id from public.staff_access where admin_user_id = ${ctx.user.id}::uuid and ended_at is null and organisation_id = ${organisationId}::uuid`)
+    if (open) return open.id
     const ended = await tx.execute<{ id: string; organisation_id: string }>(sql`
       update public.staff_access set ended_at = now(), ended_how = 'replaced' where admin_user_id = ${ctx.user.id}::uuid and ended_at is null returning id, organisation_id`)
     for (const e of ended) await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: e.organisation_id, action: 'admin.staff_access_ended', targetType: 'staff_access', targetId: e.id, metadata: { how: 'replaced' }, ip: ctx.ip })
@@ -79,10 +88,25 @@ const DONE: Record<string, string> = {
   'provider.terms_updated': 'Updated your booking terms or cancellation policy',
 }
 
-// One line per thing changed in a session (the same change made several times is one line), in the order first done
-export async function staffChanges(db: typeof Db, session: string) {
-  const rows = await db.execute<{ action: string; name: string | null }>(sql`
-    select l.action, coalesce(c.title, cc.title, pl.name, v.name) name, min(l.at) first
+// A change and the one that puts it back: archiving a plan or venue and restoring it, stopping bookings (on a date, or for a
+// learning option) and reopening them. Done and undone in one session, the two cancel out: nothing changed.
+const UNDOES: Record<string, string> = {
+  'plan.archived': 'plan.restored',
+  'plan.restored': 'plan.archived',
+  'venue.archived': 'venue.restored',
+  'venue.restored': 'venue.archived',
+  'cohort.bookings_off': 'cohort.bookings_on',
+  'cohort.bookings_on': 'cohort.bookings_off',
+  'course.option_stopped': 'course.option_reopened',
+  'course.option_reopened': 'course.option_stopped',
+}
+
+// What a session changed, in order, with the changes it undid itself taken out (see UNDOES; stopping the primary option also
+// moved the primary, which reopening doesn't move back, so that one stays). Refused attempts are never changes.
+async function netChanges(db: typeof Db, session: string) {
+  const rows = await db.execute<{ action: string; key: string; primary: string | null; name: string | null }>(sql`
+    select l.action, concat_ws(':', l.target_type, l.target_id, l.metadata->>'method') key, l.metadata->>'primary' primary,
+           coalesce(c.title, cc.title, pl.name, v.name) name
     from public.activity_log l
     left join public.courses c on l.target_type = 'course' and c.id::text = l.target_id
     left join public.cohorts co on l.target_type = 'cohort' and co.id::text = l.target_id
@@ -90,8 +114,31 @@ export async function staffChanges(db: typeof Db, session: string) {
     left join public.price_plans pl on l.target_type = 'price_plan' and pl.id::text = l.target_id
     left join public.venues v on l.target_type = 'venue' and v.id::text = l.target_id
     where l.metadata->>'staff' = ${session} and l.action <> 'access.denied'
-    group by l.action, 2 order by first`)
-  return rows.filter((r) => DONE[r.action]).map((r) => (r.name ? `${DONE[r.action]} “${r.name}”` : DONE[r.action]))
+    order by l.at, l.id`)
+  const kept: (typeof rows)[number][] = []
+  for (const r of rows) {
+    const undo = UNDOES[r.action]
+    const last = undo ? [...kept].reverse().find((k) => k.key === r.key && (k.action === r.action || k.action === undo)) : undefined
+    if (last && last.action === undo && !last.primary && !r.primary) kept.splice(kept.indexOf(last), 1)
+    else kept.push(r)
+  }
+  return kept
+}
+
+/** How many changes a session has made and kept (the editing bar shows from the first). */
+export async function staffChangeCount(db: typeof Db, session: string) {
+  return (await netChanges(db, session)).length
+}
+
+// One line per thing changed in a session (the same change made several times is one line), in the order first done
+export async function staffChanges(db: typeof Db, session: string) {
+  const lines: string[] = []
+  for (const r of await netChanges(db, session)) {
+    if (!DONE[r.action]) continue
+    const line = r.name ? `${DONE[r.action]} “${r.name}”` : DONE[r.action]
+    if (!lines.includes(line)) lines.push(line)
+  }
+  return lines
 }
 
 // Every admin page (admin.open) closes the sessions anyone left unused for two hours ('idle', logged) and sends the summaries
