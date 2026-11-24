@@ -59,7 +59,7 @@ const MAX_PRICE = 100000; // pounds (the API's pricePence limit)
 // The section that shows each field's error, by the API's names (a list's rows come under the list's name) and the editor's own
 // (passMark0, examUnit0: one exam row's fields). Saving with errors goes to the first section that has one.
 const SECTION_OF = {
-  model: "mode", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
+  model: "mode", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", compliance: "landing", videoUrl: "landing",
   features: "info", outcomes: "info", audience: "info", entryRequirements: "info",
   images: "landing", units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode", methods: "mode",
   dates: "pricing",
@@ -89,7 +89,7 @@ export function passMarkProblem(text) {
 const STATUS_NOTES = {
   draft: "Your course is a draft. Only your team can see it.",
   changes: "Our team has asked for changes. Make them, then send your course for review again.",
-  live: "Your course is live. Edits to the course page are reviewed before they go live. Prices, dates and settings update straight away.",
+  live: "Your course is live. Changes to its wording are reviewed before they go live. Pictures, prices, dates and settings update straight away.",
   paused: "Your course is paused, so it isn't shown on ReadTraining. Put it back live from Course settings.",
 };
 const SHARED_NOTES = {
@@ -113,6 +113,7 @@ const draftOf = (c) => {
     title: pick("title") || "", summary: pick("summary") || "", description: pick("description") || "", audience: pick("audience") || "", entryRequirements: pick("entryRequirements") || "",
     outcomes: pick("outcomes") || [], features: pick("features") || [], category: pick("category") || "", subcategory: pick("subcategory") || "", topic: pick("topic") || "", level: pick("level") || "",
     videoUrl: pick("videoUrl") || "",
+    compliance: pick("compliance") ?? null, // true, false, or null (not answered yet)
     units: (pick("units") || []).map((u) => ({ title: u.title, body: u.body || "" })),
     exams: (pick("exams") || []).map((e) => ({ unit: e.unit, passMark: e.passMark || "", duration: e.duration || "" })),
     faqs: (pick("faqs") || []).map((f) => ({ question: f.question, answer: f.answer })),
@@ -134,7 +135,7 @@ const datesGap = (lacking) => `Create a ${lacking.map(methodName).join(" and a "
 // whether each section is complete, from the draft (and the saved images and dates). The API counts a draft's required steps
 // left by the same rules for the Dashboard's to-do list (provider/courses.mts stepsLeft): keep the two the same.
 function sectionOk(d, course, key) {
-  if (key === "landing") return Boolean(d.title.trim() && d.summary.trim() && d.description.trim() && d.category && d.subcategory && d.level && course.images.length);
+  if (key === "landing") return Boolean(d.title.trim() && d.summary.trim() && d.description.trim() && d.category && d.subcategory && d.level && d.compliance !== null && course.images.length);
   if (key === "info") return d.outcomes.length >= 4;
   if (key === "syllabus") return d.units.length > 0;
   if (key === "faqs") return d.faqs.length > 0;
@@ -155,6 +156,7 @@ function stillNeeded(d, course) {
   if (!d.description.trim()) add("landing", "a description");
   if (!d.category || !d.subcategory) add("landing", "a category and sub-category");
   if (!d.level) add("landing", "a level");
+  if (d.compliance === null) add("landing", "whether it is a compliance course");
   if (!course.images.length) add("landing", "at least one image");
   if (d.outcomes.length < 4) add("info", `at least 4 things learners will learn (${d.outcomes.length} so far)`);
   if (!d.units.length) add("syllabus", "at least one syllabus unit");
@@ -179,6 +181,7 @@ function stepGaps(d, course, key) {
     if (!d.level) e.level = "Choose a level.";
     if (!d.category) e.category = "Choose a category.";
     if (!d.subcategory) e.subcategory = "Choose a sub-category.";
+    if (d.compliance === null) e.compliance = pw.compliance.error;
     if (!d.description.trim()) e.description = "Enter the course description.";
     if (!course.images.length) e.images = "Upload at least one image.";
   }
@@ -704,7 +707,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {/* the provider's own notes about where their course stands; ReadTraining staff editing it from the admin pages see the
               status pill only (they know what saving does, and these speak to the provider) */}
           {!ep.staff && <>
-            {status !== "draft" && status !== "pending" && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
+            {/* a course our team paused has its own note below (their reason, Contact us), never "put it back live yourself" */}
+            {status !== "draft" && status !== "pending" && !(!ep.admin && status === "paused" && course.statusNote) && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
             {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
             {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
             {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
@@ -960,6 +964,9 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
             </div>
           )}
         </div>
+        <CardChoice name="rt-pws-ce-compliance" legend={<>{pw.compliance.legend}<Req /></>} value={draft.compliance === null ? "" : draft.compliance ? "yes" : "no"}
+          onChange={(v) => !full && set("compliance")(v === "yes")} options={pw.compliance.options.map((o) => ({ ...o, disabled: full }))} error={errors.compliance} />
+        <p className="rt-acc__note">{pw.compliance.hint}</p>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-details">Course description<Req /></label>
           <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs. Lines starting with "- " show as a list.</span>

@@ -177,7 +177,7 @@ const PREVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirem
 export async function loadCoursePage(db: typeof Db, slug: string, preview: CoursePreview | null = null) {
   const id = /^\d{1,9}$/.test(slug) ? Number(slug) : null
   const [c] = await db.execute<Row & { id: number; kind: 'shared' | 'provider'; parent_id: number | null; organisation_id: string | null; method: string | null; price_pence: number | null }>(sql`
-    select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.method, c.model,
+    select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.compliance, c.method, c.model,
            c.price_pence, c.skill_saver, c.video_url, c.seo_title, c.seo_description, c.seo_keywords, c.published_at, c.updated_at, c.parent_id, c.organisation_id, c.is_public, c.listed,
            (select slug from public.categories where id = c.category_id) category,
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
@@ -217,6 +217,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     subcategory: c.subcategory as string | null,
     topic: c.topic as string | null,
     level: c.level as string | null,
+    // the page's course type: a shared page's is our team's answer (a provider course on one sends visitors there)
+    compliance: c.compliance === true,
     videoUrl: (c.video_url as string | null) ?? null,
     seoTitle: (c.seo_title as string | null) ?? null,
     seoDescription: (c.seo_description as string | null) ?? null,

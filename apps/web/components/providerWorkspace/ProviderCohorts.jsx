@@ -49,6 +49,9 @@ export const WHEN = [
 // a date of a course that isn't on sale (not live): it stays in the workspace, labelled, and learners can't see or book it
 const OFF_SALE = { draft: "Course in draft", pending: "Course in review", changes: "Course needs changes", paused: "Course paused" };
 export const offSale = (k) => OFF_SALE[k.courseStatus] || null;
+// a date can be deleted while nobody has booked it and it hasn't finished (the API checks again, counting every order); otherwise
+// it is cancelled, or kept as the record of a course that ran
+export const deletable = (k, today = todayIso()) => k.endsOn >= today && !k.taken;
 export const askWhen = (when) => (when === "cancelled" ? "all" : when);
 export const inWhen = (k, when) => when === "all" || (when === "cancelled" ? Boolean(k.cancelledAt) : !k.cancelledAt);
 export const COHORT_STATUSES = { upcoming: "Upcoming", progress: "In progress", completed: "Completed", cancelled: "Cancelled" };
@@ -192,7 +195,7 @@ export default function ProviderCohorts() {
     if (t) setTutor(t);
     const s2 = getQuery("q");
     if (s2) setQ(s2);
-    if (getQuery("new") === "1") setFormOpen(true); // "Create cohort" from the dashboard
+    if (getQuery("new") === "1" && add) setFormOpen(true); // "Create cohort" from the dashboard (only for someone who can add dates)
     const d = getQuery("date");
     if (/^\d{4}-\d{2}-\d{2}$/.test(d || "")) { setDate(d); setWhen("all"); }
   }, []);
@@ -379,7 +382,7 @@ export default function ProviderCohorts() {
                                 { label: "Cancel", onClick: () => setCancelOne(k) },
                               ] : []),
                             ] : []),
-                            ...(edit ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
+                            ...(edit && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
                           ]} />
                         </td>
                       </tr>
@@ -573,6 +576,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
+  // another of the provider's courses is at the venue at the same time (the API's question): said as a warning above the buttons,
+  // and Save becomes "Save anyway" (the venue has another room); changing the venue or the dates takes the question away
+  const [venueAsk, setVenueAsk] = useState("");
   // a venue being added from here (it saves as a normal venue, and the date picks it)
   const [addingVenue, setAddingVenue] = useState(false);
   const [venueAdded, setVenueAdded] = useState("");
@@ -621,6 +627,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       setStudyMode(ways.includes(mode) ? mode : ways[0] || (mode === "live-online" ? "live-online" : "classroom"));
     }
     setErrors({});
+    setVenueAsk("");
     setAnchor(null);
     setAddingVenue(false);
     setVenueAdded("");
@@ -634,6 +641,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   // changing a field takes its message away (the next save checks everything again)
   const set = (patch) => {
     setF((x) => ({ ...x, ...patch }));
+    if ("venueId" in patch || "sessions" in patch) setVenueAsk("");
     setErrors((e) => (Object.keys(patch).some((k) => e[k]) ? { ...e, ...Object.fromEntries(Object.keys(patch).map((k) => [k, undefined])) } : e));
   };
   const venueSaved = async (r) => {
@@ -654,6 +662,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const pickDay = (iso) => {
     const r = pickOn(f.sessions, pickMode === "range" ? openRange(f.sessions) : null, iso, pickMode);
     setF((x) => ({ ...x, sessions: r.sessions }));
+    setVenueAsk("");
     setAnchor(r.anchor);
     setErrors((e) => ({ ...e, sessions: undefined }));
     // the session this click added or changed, so its card is brought into view in the list
@@ -672,7 +681,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     const top = card.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
     if (top < list.scrollTop || top + card.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTo({ top: top - 4, behavior: "smooth" });
   }, [shown]);
-  const setSlot = (i, patch) => setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
+  const setSlot = (i, patch) => {
+    setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
+    setVenueAsk("");
+  };
 
   // "Save and create another": the form stays open for the same course and settings
   const save = async (e, another = false) => {
@@ -716,6 +728,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       tutorUserId: f.tutorUserId || null,
       colour: f.colour || null,
       bookable: cohort ? cohort.bookable : true,
+      // "Save anyway": the provider has seen that another course is at the venue then
+      ...(method === "classroom" && venueAsk ? { sharedVenue: true } : {}),
     };
     try {
       // an edit sends the version it was filled from, so one over a colleague's newer change is refused instead of undoing it
@@ -729,6 +743,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
         });
         setAnchor(null);
         setErrors({});
+        setVenueAsk("");
         setVenueAdded("");
         // the form stays open, so the confirmation shows in it (the page's message is behind the form)
         setSavedNote(`Cohort saved${first ? ` (starting ${new Date(`${first}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Pick the dates for the next one.`);
@@ -741,6 +756,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       onSaved?.(id, { method, startsOn: values.sessions[0]?.date });
     } catch (error) {
       const { fields, general } = errorsFrom(error);
+      if (fields.sharedVenue) {
+        setErrors({});
+        setVenueAsk(fields.sharedVenue);
+        requestAnimationFrame(() => document.getElementById("rt-cf-venueask")?.focus());
+        return;
+      }
       const named = Object.fromEntries(Object.entries(fields).map(([k, m]) => [FIELD_OF[k] || k, m]));
       // one the form has no place for (it shouldn't happen) is said above the buttons, so no refusal goes unseen
       const stray = Object.keys(named).filter((k) => !FORM_FIELDS.has(k)).map((k) => named[k])[0];
@@ -837,7 +858,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                             <label className="rt-sr" htmlFor={`rt-cf-t${i}`}>To, {daySpan(s)}</label>
                             <FieldSelect id={`rt-cf-t${i}`} label="To" value={s.to} onChange={(value) => setSlot(i, { to: value })} options={TIMES} />
                           </div>
-                          <button type="button" className="rt-pws-coh__remove" onClick={() => setF((x) => ({ ...x, sessions: x.sessions.filter((_, j) => j !== i) }))}>Remove<span className="rt-sr"> {daySpan(s)}</span></button>
+                          <button type="button" className="rt-pws-coh__remove" onClick={() => { setF((x) => ({ ...x, sessions: x.sessions.filter((_, j) => j !== i) })); setVenueAsk(""); }}>Remove<span className="rt-sr"> {daySpan(s)}</span></button>
                         </li>
                       ))}
                     </ol>
@@ -934,10 +955,11 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               </div>
             </fieldset>
           </section>
+          {venueAsk && <p className="rt-acc__notice -warn" id="rt-cf-venueask" role="alert" tabIndex={-1}>{venueAsk}</p>}
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
           <div className="rt-pws-coh__formfoot">
-            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={(busy && pressed !== "another") || undefined}>{busy && pressed !== "another" ? "Saving…" : cohort ? "Save changes" : "Save cohort"}</button>
-            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} aria-busy={(busy && pressed === "another") || undefined} onClick={(e) => save(e, true)}>{busy && pressed === "another" ? "Saving…" : "Save and create another"}</button>}
+            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={(busy && pressed !== "another") || undefined}>{busy && pressed !== "another" ? "Saving…" : venueAsk ? "Save anyway" : cohort ? "Save changes" : "Save cohort"}</button>
+            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} aria-busy={(busy && pressed === "another") || undefined} onClick={(e) => save(e, true)}>{busy && pressed === "another" ? "Saving…" : venueAsk ? "Save anyway and create another" : "Save and create another"}</button>}
           </div>
         </form>
       )}

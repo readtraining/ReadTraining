@@ -12,7 +12,7 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { KeepWidth, Loading, WayCards } from "./providerParts";
+import { CardChoice, KeepWidth, Loading, WayCards } from "./providerParts";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { categoryName, categoryOptions, getTaxonomy, methodName, pagesForSubject, subcategoryName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { LEARNING_OPTIONS } from "@/lib/courseModes";
@@ -83,7 +83,7 @@ const sharedPageFor = (pages) => (pages.length === 1 ? pages[0] : null);
 const WAY_TEXT = { classroom: "At a venue, on your dates", "live-online": "By video, on your dates", "self-paced": "Any time, at their own pace" };
 // and its icon from the site's own line icons (the header's set): a building, a screen, a clock
 
-const BLANK = { title: "", method: "classroom", category: "", subcategory: "", skillSaver: false };
+const BLANK = { title: "", method: "classroom", category: "", subcategory: "", compliance: "", skillSaver: false };
 
 // anything typed or chosen: closing (×, Esc, the backdrop, Cancel), a link or closing the tab asks first; none once it is created
 export function NewCourseSheet({ open, onClose }) {
@@ -169,11 +169,12 @@ function NewCourseForm({ onCancel, onDirty }) {
     else if (t.length < 3) e.title = "Enter a title of at least 3 characters.";
     if (!f.category) e.category = "Choose a category.";
     else if (!f.subcategory) e.subcategory = "Choose a sub-category."; // only once a category is chosen (until then it can't be)
+    if (!f.compliance) e.compliance = pw.compliance.error;
     setErrors(e);
     if (Object.keys(e).length) return focusFirstError(ref.current);
     setFailed("");
     create.mutate(
-      { organisationId, title: t, category: f.category, subcategory: f.subcategory, method: f.method, model: "bookings", skillSaver: f.skillSaver },
+      { organisationId, title: t, category: f.category, subcategory: f.subcategory, compliance: f.compliance === "yes", method: f.method, model: "bookings", skillSaver: f.skillSaver },
       {
         onSuccess: ({ id }) => {
           onDirty(false);
@@ -244,6 +245,8 @@ function NewCourseForm({ onCancel, onDirty }) {
             {hasTopics ? "Our team chooses the exact topic when they approve the course." : ""}
           </p>
         )}
+        <CardChoice name="rt-pws-nc-compliance" legend={<>{pw.compliance.legend}<Req /></>} value={f.compliance} onChange={(v) => set({ compliance: v })} options={pw.compliance.options} error={errors.compliance} />
+        <p className="rt-pws-nc__hint">{pw.compliance.hint}</p>
       </div>
 
       {/* how it is taught (its primary learning option) and Skill Saver */}

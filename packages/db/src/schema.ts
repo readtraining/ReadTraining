@@ -421,6 +421,11 @@ export const courses = pgTable(
     closedMethods: text('closed_methods').array().notNull().default(sql`'{}'::text[]`),
     model: courseModel('model').notNull().default('bookings'),
     skillSaver: boolean('skill_saver').notNull().default(false),
+    // the course type: a compliance course (true) is one required by law, regulation or an employer's policy (First Aid at Work,
+    // Food Hygiene, Door Supervisor); false is learned by choice. Null until answered (courses made before the question). A
+    // provider's answer is checked by our team at approval; a shared page's is our team's own, and the one the public sees. It
+    // never decides where a course is listed (its topic does, placeOn).
+    compliance: boolean('compliance'),
     // false = only people with the link can book (the editor's "private"); listed = shown on ReadTraining's search and pages
     isPublic: boolean('is_public').notNull().default(true),
     listed: boolean('listed').notNull().default(true),

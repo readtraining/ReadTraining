@@ -12,7 +12,7 @@ import { useProviderCourses } from "./ProviderCourses";
 // Public profile (from the account menu): the provider as learners see it: logo, name, headline, about, social links,
 // and the policies (booking terms, cancellation policy). "Edit profile" opens the provider settings. From the API.
 export default function ProviderProfile() {
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, status } = useProviderAccess();
   // asked for only by a role that may see it (the API would refuse, and log, the rest); the course count likewise
   const allowed = can("provider.settings.view");
   const query = api.provider.profile.get.useQuery({ organisationId }, { enabled: Boolean(organisationId) && allowed });
@@ -41,7 +41,11 @@ export default function ProviderProfile() {
             </ul>
           )}
         </div>
-        {can("provider.profile.edit") && <Link href="/provider/settings" className="button -sm -outline-purple-1 text-purple-1">Edit profile</Link>}
+        <div className="rt-pws-prof__actions">
+          {can("provider.profile.edit") && <Link href="/provider/settings" className="button -sm -outline-purple-1 text-purple-1">Edit profile</Link>}
+          {/* the real page learners open, once the account is approved (before that it isn't on the site) */}
+          {status === "active" && <a href={`/providers/${o.slug}`} target="_blank" rel="noopener noreferrer" className="button -sm -outline-purple-1 text-purple-1">View on ReadTraining</a>}
+        </div>
       </section>
       <section className="rt-acc__card" aria-labelledby="rt-pws-prof-about">
         <h2 className="rt-acc__h2" id="rt-pws-prof-about">About</h2>
@@ -50,9 +54,9 @@ export default function ProviderProfile() {
       <section className="rt-acc__card" aria-labelledby="rt-pws-prof-pol">
         <h2 className="rt-acc__h2" id="rt-pws-prof-pol">Policies</h2>
         <h3 className="rt-adm-h3">Booking terms</h3>
-        {o.bookingTerms ? <p className="rt-pws-prof__body">{o.bookingTerms}</p> : <EmptyState inCard title="No booking terms yet." action={can("provider.terms.edit") ? { label: "Add booking terms", href: "/provider/settings?tab=terms" } : null} />}
-        <h3 className="rt-adm-h3">Cancellation policy</h3>
-        {o.cancellationPolicy ? <p className="rt-pws-prof__body">{o.cancellationPolicy}</p> : <EmptyState inCard title="No cancellation policy yet." action={can("provider.terms.edit") ? { label: "Add cancellation policy", href: "/provider/settings?tab=terms" } : null} />}
+        {o.bookingTerms ? <FormattedText text={o.bookingTerms} pClass="rt-pws-prof__body" ulClass="rt-pws-prof__body rt-pws-prof__list" /> : <EmptyState inCard title="No booking terms yet." action={can("provider.terms.edit") ? { label: "Add booking terms", href: "/provider/settings?tab=terms" } : null} />}
+        <h3 className="rt-adm-h3">Cancellation and refund policy</h3>
+        {o.cancellationPolicy ? <FormattedText text={o.cancellationPolicy} pClass="rt-pws-prof__body" ulClass="rt-pws-prof__body rt-pws-prof__list" /> : <EmptyState inCard title="No cancellation and refund policy yet." action={can("provider.terms.edit") ? { label: "Add your policy", href: "/provider/settings?tab=terms" } : null} />}
       </section>
     </div>
   );

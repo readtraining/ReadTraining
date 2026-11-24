@@ -40,12 +40,22 @@ const REVIEW_EVENTS: Record<string, string> = {
   // ReadTraining staff opened the workspace to change something (Admin › Providers › Open workspace), with their reason
   'admin.staff_access_started': 'staff',
 }
-const social = (host: RegExp, example: string) =>
+// a page on one site: https, the site itself or any of its own addresses (www., m., business., uk.) and a page after it; the
+// form checks the same (settingsForm.jsx isUrlOn with `page`), so a link the form takes is never refused here
+const onSite = (v: string, host: string) => {
+  try {
+    const u = new URL(v)
+    return u.protocol === 'https:' && !u.username && !u.password && (u.hostname === host || u.hostname.endsWith(`.${host}`)) && u.pathname.length > 1
+  } catch {
+    return false
+  }
+}
+const social = (host: string, example: string) =>
   z
     .string()
     .trim()
-    .max(200)
-    .refine((v) => v === '' || host.test(v), `Use a full link, like ${example}.`)
+    .max(200, 'Keep the link to 200 characters or fewer.')
+    .refine((v) => v === '' || onSite(v, host), `Use a full link, like ${example}.`)
     .optional()
 
 // a notice address: one email address, required (the database checks the same shape, organisations_notice_emails)
@@ -119,9 +129,9 @@ export const providerProfileRouter = createTRPCRouter({
         bio: optional(5000, 'about text'),
         city: optional(60, 'town or city'),
         socials: z.object({
-          facebook: social(/^https:\/\/(www\.|m\.)?facebook\.com\/\S+$/, 'https://www.facebook.com/yourpage'),
-          linkedin: social(/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/\S+$/, 'https://www.linkedin.com/company/yourcompany'),
-          youtube: social(/^https:\/\/(www\.)?youtube\.com\/\S+$/, 'https://www.youtube.com/@yourchannel'),
+          facebook: social('facebook.com', 'https://www.facebook.com/yourpage'),
+          linkedin: social('linkedin.com', 'https://www.linkedin.com/company/yourcompany'),
+          youtube: social('youtube.com', 'https://www.youtube.com/@yourchannel'),
         }),
       }),
     )
@@ -154,7 +164,7 @@ export const providerProfileRouter = createTRPCRouter({
     .input(
       z.object({
         bookingTerms: optional(20000, 'booking terms').optional(),
-        cancellationPolicy: z.string().trim().min(1, 'Enter your cancellation policy.').max(10000, 'Keep the cancellation policy to 10000 characters or fewer.').optional(),
+        cancellationPolicy: z.string().trim().min(1, 'Enter your cancellation and refund policy.').max(10000, 'Keep the cancellation and refund policy to 10000 characters or fewer.').optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { NavIcon } from "@/components/header/navIcons";
 import AdminIcon from "@/components/admin/navIcons";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { SHOW_DEMO } from "@/lib/demo";
 import { DetailSkeleton, Pill, TableSkeleton } from "@/components/admin/adminParts";
+import { useProviderAccess } from "@/lib/providerAccess";
 
 // Shared bits of the provider workspace. The pills, tabs, search, address helpers and date-time format are the admin's
 // (components/admin/adminParts.jsx), so both work layouts look and behave the same. Added here: the status tones, the loading
@@ -161,3 +163,10 @@ const dayFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeri
 export const shortDay = (iso) => dayFmt.format(new Date(`${iso}T00:00:00Z`));
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" });
 export const formatDay = (ms) => dateFmt.format(new Date(ms));
+
+// A link for an action only some roles have (`need`, a permission): shown to them alone, so a page built on the server (a page's
+// header button) hides it as the client-side buttons do
+export function CanLink({ need, ...props }) {
+  const { can } = useProviderAccess();
+  return can(need) ? <Link {...props} /> : null;
+}
