@@ -7,12 +7,13 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { errorsFrom } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
 import PackageEditor from "./PackageEditor";
-import { Loading, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { HeaderAction } from "@/components/admin/adminParts";
 
-const SHOW = [{ value: "", label: "In use" }, { value: "archive", label: "Archived" }, { value: "all", label: "All plans" }];
+// every plan by default (an archived one marked so); "In use" and "Archived" narrow it
+const SHOW = [{ value: "", label: "All plans" }, { value: "active", label: "In use" }, { value: "archive", label: "Archived" }];
 // the packages' prices as one range ("£299.00 – £449.00"), or one price when they are all the same
 const priceRange = (tiers) => {
   const p = tiers.map((t) => t.pricePence);
@@ -56,7 +57,6 @@ export default function ProviderPackages() {
     if (!linked) return;
     const p = query.data.find((x) => x.id === linked);
     if (p && edit) {
-      if (p.archived) setShow("all");
       setEditor({ open: true, plan: p });
     } else setQuery("plan", "");
   }, [linked]); // eslint-disable-line react-hooks/exhaustive-deps -- once per link
@@ -69,7 +69,7 @@ export default function ProviderPackages() {
 
   const plans = query.data;
   const needle = q.trim().toLowerCase();
-  const list = plans.filter((p) => !needle || p.name.toLowerCase().includes(needle)).filter((p) => (show === "all" ? true : show === "archive" ? p.archived : !p.archived));
+  const list = plans.filter((p) => !needle || p.name.toLowerCase().includes(needle)).filter((p) => (show === "archive" ? p.archived : show === "active" ? !p.archived : true));
   const filtered = Boolean(needle || show);
   const setParam = (k, setter) => (v) => { setter(v); setQuery(k, k === "q" ? v.trim() : v); };
   const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
@@ -119,15 +119,16 @@ export default function ProviderPackages() {
                   <tr key={p.id}>
                     <td data-label="Plan">
                       {edit ? <button type="button" className="rt-pws-pkgs__name" onClick={() => setEditor({ open: true, plan: p })}>{p.name}</button> : <strong>{p.name}</strong>}
+                      {p.archived && <> <Pill tone="muted">Archived</Pill></>}
                       <small className="rt-adm-muted">{p.tiers.length} packages: {p.tiers.map((t) => t.name).join(", ")}</small>
                     </td>
-                    <td data-label="Used on">{p.archived ? "Archived · " : ""}{usedText(p.used)}</td>
+                    <td data-label="Used on">{usedText(p.used)}</td>
                     <td data-label="Prices" className="rt-adm-num-cell">{priceRange(p.tiers)}</td>
                     {edit && (
                     <td data-label="Actions" className="-act">
                         <RowMenu label={`Actions for ${p.name}`} items={[
                           { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
-                          { label: p.archived ? "Use again" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} can be chosen again` : `${p.name} archived`); }, onError: fail }) },
+                          { label: p.archived ? "Restore" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} restored` : `${p.name} archived`); }, onError: fail }) },
                           ...(deletable(p) ? [{ label: "Delete", danger: true, onClick: () => setRemoving({ open: true, plan: p }) }] : []),
                         ]} />
                     </td>
@@ -139,12 +140,8 @@ export default function ProviderPackages() {
           </table>
         </div>
       ) : (
-        // every plan archived, nothing searched: say so and open the archive, rather than "clear filters" with none set
-        filtered ? (
-          <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
-        ) : (
-          <EmptyState title="No plans in use" text="Your plans are archived. Use one again from the archive, or create a new one." action={{ label: "Show archived plans", onClick: () => setParam("show", setShow)("archive") }} />
-        )
+        // every plan shows unless searched or filtered, so an empty list always has a filter to clear
+        <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
       )}
 
       {editor_}

@@ -290,7 +290,7 @@ function PackagesTab({ course }) {
             {plans.map((p) => (
               <tr key={p.id}>
                 <td data-label="Plan">
-                  <Link href={`/provider/packages?q=${encodeURIComponent(p.name)}${p.archived ? "&show=all" : ""}`} className="rt-adm-strong">{p.name}</Link>
+                  <Link href={`/provider/packages?q=${encodeURIComponent(p.name)}`} className="rt-adm-strong">{p.name}</Link>
                   {p.archived && <small className="rt-adm-muted">Archived</small>}
                 </td>
                 <td data-label="Packages">
