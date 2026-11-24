@@ -59,7 +59,7 @@ export const cookies = {
           rows: [
             ["Name", "Set by", "What it does", "How long"],
             ["rt-cart", "ReadTraining (browser storage)", "Keeps the courses in your basket", "Until you clear it"],
-            ["rt-course-wishlist", "ReadTraining (browser storage)", "Remembers the courses you saved", "Until you clear it"],
+            ["rt-course-wishlist", "ReadTraining (browser storage)", "Remembers the courses you saved while signed in, for your account on this browser", "Until you clear it"],
             ["rt-mock, rt-mock-done", "ReadTraining (browser storage)", "Saves your mock test progress and last result on your device", "Until you clear it"],
             ["[Consent cookie]", "ReadTraining", "Remembers your cookie choices", "[12 months]"],
             ["[Session cookie]", "ReadTraining", "Keeps you signed in", "Until you sign out"],

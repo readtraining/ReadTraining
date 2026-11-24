@@ -6,7 +6,7 @@ import Image from "next/image";
 import { IN_HOUSE_NOTE, enquireHref, quoteHref, useBooking } from "./BookingProvider";
 import { TEAM } from "@/lib/teamTraining";
 import { toItem, trackEvent } from "@/lib/analytics";
-import { useWishlist } from "@/lib/wishlist";
+import { SAVED_HREF, useWishlist } from "@/lib/wishlist";
 import { formatPrice, formatWeekdayDate, savePercent } from "@/lib/format";
 import { Check, Icon } from "./Icon";
 import { NO_DATES, hasDates, modeLabel } from "@/lib/courseModes";
@@ -35,24 +35,28 @@ function Fold({ hidden, children, className = "" }) {
   );
 }
 
-function SaveButton() {
+// The card's footer with "Save for later": signed-in people only (lib/wishlist.js), the same list as the heart on the course
+// cards, so a course saved there shows as saved here. Nothing (not an empty footer) for a visitor.
+function SaveFooter() {
   const { course, notify } = useBooking();
-  // Same list as the heart on the listing cards, so a course saved there shows as saved here.
-  const [saved, toggleSaved] = useWishlist(course.id);
+  const { canSave, saved, toggle: toggleSaved } = useWishlist(course.id);
+  if (!canSave) return null;
   const toggle = () => {
     try {
       const saving = toggleSaved();
-      notify(saving ? "Saved to your list" : "Removed from your list");
+      notify(saving ? { message: "Saved to your list", href: SAVED_HREF, label: "View" } : "Removed from your list");
       if (saving) trackEvent("add_to_wishlist", { items: [toItem(course)] });
     } catch {
-      notify("We could not update your list. Please try again.");
+      notify({ message: "We could not update your list. Please try again.", error: true });
     }
   };
   return (
-    <button type="button" className={`rt-bf__save${saved ? " is-saved" : ""}`} aria-pressed={saved} onClick={toggle}>
-      <Heart filled={saved} />
-      <span>{saved ? "Saved to your list" : "Save for later"}</span>
-    </button>
+    <div className="rt-bf">
+      <button type="button" className={`rt-bf__save${saved ? " is-saved" : ""}`} aria-pressed={saved} onClick={toggle}>
+        <Heart filled={saved} />
+        <span>{saved ? "Saved to your list" : "Save for later"}</span>
+      </button>
+    </div>
   );
 }
 
@@ -77,12 +81,10 @@ function NoDatesCard({ course }) {
       )}
       <div className="rt-bs">
         <p className="rt-bs__name">New dates coming soon</p>
-        <p className="rt-bs__quote">No dates are open for booking yet. Save the course to come back to it, or ask us about it.</p>
+        <p className="rt-bs__quote">No dates are open for booking yet. Ask us about it, or check back soon.</p>
         <Link href="/contact-us" className="button -md -outline-purple-1 text-purple-1 rt-btn-block">Ask about this course</Link>
       </div>
-      <div className="rt-bf">
-        <SaveButton />
-      </div>
+      <SaveFooter />
     </div>
   );
 }
@@ -222,9 +224,7 @@ export default function BookingCard() {
         ))}
       </fieldset>
 
-      <div className="rt-bf">
-        <SaveButton />
-      </div>
+      <SaveFooter />
     </div>
   );
 }
