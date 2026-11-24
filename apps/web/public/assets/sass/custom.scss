@@ -6980,8 +6980,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (prefers-reduced-motion: reduce) { .rt-pws-pkg__add { transition: none; } }
 /* the plans table: the plan (its packages under it), what uses it and its prices side by side, the room left over after the
    prices, and the ⋯ menu at the row's end */
-.rt-pws-pkgs th.-plan { width: 42%; }
-.rt-pws-pkgs th.-used { width: 32%; }
+.rt-pws-pkgs th.-plan { width: 34%; }
+.rt-pws-pkgs th.-used { width: 38%; }
 .rt-pws-pkgs td.-prices { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rt-pws-pkgs th.-act, .rt-pws-pkgs td.-act { width: 64px; text-align: right; }
 /* a course overview's Packages tab: each package and its price */
