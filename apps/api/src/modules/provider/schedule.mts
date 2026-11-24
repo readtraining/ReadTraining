@@ -329,23 +329,48 @@ async function refuseClash(tx: Tx, courseId: number, venueId: string | null, ses
   }
 }
 
-// Another of the provider's courses at the same venue at an overlapping time: allowed (a centre with several rooms), but asked first,
-// so a one-room venue isn't double-booked by mistake. Without `sharedVenue` (the provider's "Save anyway") the save stops with the
-// question, on the form's `sharedVenue`; the form shows it as a warning, not an error. Venues have no rooms, so this is a question,
-// never a refusal (the same course twice there is refused: refuseClash).
-async function askSharedVenue(tx: Tx, courseId: number, venueId: string, sessions: Session[], exceptId: string | null = null) {
-  const others = await tx
+// Another of the provider's courses at the same venue at an overlapping time: allowed (a centre with several rooms), but told first,
+// so a one-room venue isn't double-booked by mistake. The date form asks as soon as a venue and dates are chosen (venueClash) and
+// shows the answer under the Venue field; saving with it shown sends `sharedVenue`. A save without it (the form's check not back
+// yet, or someone else's dates added at that moment) stops with the same words on the form's `sharedVenue`. Venues have no rooms,
+// so this is a warning, never a refusal (the same course twice there is refused: refuseClash).
+async function sharedVenueNote(db: Pick<Tx, 'select'>, courseId: number, venueId: string, sessions: Session[], exceptId: string | null = null) {
+  const others = await db
     .select({ sessions: cohorts.sessions, title: courses.title })
     .from(cohorts)
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
     .where(and(eq(cohorts.venueId, venueId), ne(cohorts.courseId, courseId), isNull(cohorts.cancelledAt), gte(cohorts.endsOn, sessions[0].date), lte(cohorts.startsOn, lastDay(sessions)), exceptId ? ne(cohorts.id, exceptId) : undefined))
-  for (const other of others) {
-    const o = overlapIn(sessions, other.sessions)
-    if (!o) continue
-    const [v] = await tx.select({ name: venues.name }).from(venues).where(eq(venues.id, venueId))
-    const message = `${other.title} is already at ${v?.name ?? 'this venue'} on ${whenOf(o)}. If the venue has another room, save anyway.`
-    throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sharedVenue' }) })
-  }
+  // every other course's session there that overlaps one of these: all of them are named (never only the first), and the most in
+  // use at one moment is how many rooms are already taken then
+  const start = (x: Session) => `${x.date} ${x.from}`
+  const end = (x: Session) => `${x.end} ${x.to}`
+  const clashes = others.flatMap((o) => (o.sessions as Session[]).filter((x) => sessions.some((y) => start(y) < end(x) && start(x) < end(y))).map((x) => ({ title: o.title, session: x })))
+  if (!clashes.length) return null
+  // rooms in use at the busiest moment within these dates' own hours: the most clashes running at one time (each count taken where one
+  // of them starts, or one of these sessions starts, so two others that overlap only outside these hours aren't counted together)
+  let rooms = 0
+  for (const y of sessions)
+    for (const c of clashes) {
+      if (!(start(y) < end(c.session) && start(c.session) < end(y))) continue
+      const t = start(c.session) > start(y) ? start(c.session) : start(y)
+      rooms = Math.max(rooms, clashes.filter((d) => start(d.session) <= t && t < end(d.session)).length)
+    }
+  const [v] = await db.select({ name: venues.name }).from(venues).where(eq(venues.id, venueId))
+  const venue = v?.name ?? 'This venue'
+  // in plain words, without dates or times: who is using the venue then (each course once), and, when several run at the same
+  // moment, how many (that many rooms are taken)
+  const titles = [...new Set(clashes.sort((a, b) => start(a.session).localeCompare(start(b.session))).map((c) => c.title))]
+  const shown = titles.slice(0, 3)
+  const names = titles.length > 3 ? `${shown.join(', ')} and ${titles.length - 3} more` : shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}` : shown[0]
+  const who =
+    rooms > 1 && rooms === titles.length
+      ? `${venue} already has ${rooms} courses at this time: ${names}.`
+      : `${venue} is already in use at this time by ${names}${rooms > 1 ? `, with up to ${rooms} at once` : ''}.`
+  return `${who} Only save if it has another room free.`
+}
+async function askSharedVenue(tx: Tx, courseId: number, venueId: string, sessions: Session[], exceptId: string | null = null) {
+  const message = await sharedVenueNote(tx, courseId, venueId, sessions, exceptId)
+  if (message) throw new TRPCError({ code: 'CONFLICT', message, cause: Object.assign(new Error(message), { field: 'sharedVenue' }) })
 }
 
 // One person can't teach two classes at once: a date's tutor is refused when they already teach another date (of any course, at
@@ -521,6 +546,17 @@ export const providerCohortsRouter = createTRPCRouter({
     }),
 
   // The team members who can be a date's tutor (everyone who has joined and can see the dates: canTutor), A to Z.
+  // The date form's shared-venue note (sharedVenueNote), asked as soon as a venue and dates are chosen: the words to show under the
+  // Venue field, or null. Reads only; the save checks again.
+  venueClash: orgProcedure('provider.cohorts.edit')
+    .input(z.object({ courseId: z.number().int().positive(), venueId: z.string().uuid(), sessions: z.array(session).min(1).max(60), cohortId: z.string().uuid().optional() }))
+    .query(async ({ ctx, input }) => {
+      await ownCourse(ctx.db, input.organisationId, input.courseId)
+      await ownVenue(ctx.db, input.organisationId, input.venueId)
+      const sessions = [...input.sessions].sort((a, b) => (a.date + a.from).localeCompare(b.date + b.from))
+      return { note: await sharedVenueNote(ctx.db, input.courseId, input.venueId, sessions, input.cohortId ?? null) }
+    }),
+
   tutors: orgProcedure('provider.cohorts.view').query(async ({ ctx, input }) => {
     const rows = await ctx.db
       .select({ userId: organisationMembers.userId, role: organisationMembers.role, firstName: profiles.firstName, lastName: profiles.lastName })
