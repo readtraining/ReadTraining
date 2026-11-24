@@ -130,7 +130,7 @@ export default function ProviderCohortDetail({ cohortId }) {
         {cancelled && <p className="rt-acc__notice -warn">This cohort is cancelled{k.cancelReason ? `: ${k.cancelReason}` : "."}</p>}
         {edit && (
           <div className="rt-pws-coh__heroactions">
-            {!cancelled && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>}
+            {!cancelled && k.endsOn >= today && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(true)}>Edit cohort details</button>}
             {!cancelled && k.endsOn >= today && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setMoving(true)}>Move to another course</button>}
             {/* the destructive actions together, apart from Edit */}
             <div className="rt-pws-danger-group">

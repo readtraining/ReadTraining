@@ -370,14 +370,12 @@ export default function ProviderCohorts() {
                         <td data-label="Actions" className="rt-pws-coh__end">
                           <RowMenu label={`Actions for ${name}`} items={[
                             ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),
-                            ...(edit && !cancelled ? [
+                            // a finished cohort is the record of what ran: nothing on it changes (only its tutor, and Delete while unbooked)
+                            ...(edit && !cancelled && k.endsOn >= today ? [
                               { label: "Edit", onClick: () => setEditing({ open: true, k }) },
-                              // a finished date takes no bookings, so it has nothing to turn on or off
-                              ...(k.endsOn >= today ? [
-                                { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
-                                { label: "Move to another course", onClick: () => setMoveOne(k) },
-                                { label: "Cancel", onClick: () => setCancelOne(k) },
-                              ] : []),
+                              { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
+                              { label: "Move to another course", onClick: () => setMoveOne(k) },
+                              { label: "Cancel", onClick: () => setCancelOne(k) },
                             ] : []),
                             ...(edit ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
                           ]} />
@@ -613,7 +611,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const courseOf = (id) => courses.find((c) => String(c.id) === String(id));
 
   // pricing: "flat" (the date's own price) or "tiered" (a price plan's packages, Tiered)
-  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "12", details: "", colour: "" });
+  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "", details: "", colour: "" });
 
   // fill the form each time the panel opens (once the courses are in)
   useEffect(() => {
@@ -645,6 +643,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const course = ready ? courseOf(f.courseId) : null;
   const method = cohort ? cohort.method : studyMode;
   const today = todayIso();
+  // a running cohort's sessions already started: they can stay (or be taken off), but no other day before today can be picked
+  const heldPast = cohort ? cohort.sessions.map((s) => s.date).filter((d) => d < today) : [];
   // changing a field takes its message away (the next save checks everything again)
   const set = (patch) => {
     setF((x) => ({ ...x, ...patch }));
@@ -697,10 +697,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     if (!f.courseId) err.courseId = "Choose the course this cohort is for.";
     if (!f.sessions.length) err.sessions = "Pick at least one date on the calendar.";
     else if (f.sessions.length > MAX_SESSIONS) err.sessions = `Add up to ${MAX_SESSIONS} sessions.`;
-    const firstNow = cohort?.startsOn;
     const latest = addDays(today, MAX_AHEAD_DAYS);
     f.sessions.forEach((s, i) => {
-      if (s.date < today && s.date !== firstNow && (!cohort || s.date < firstNow)) err[`d${i}`] = "The start date can't be in the past.";
+      if (s.date < today && !heldPast.includes(s.date)) err[`d${i}`] = "Dates in the past can't be added.";
       else if ((s.end || s.date) === s.date && s.to <= s.from) err[`d${i}`] = "The end time must be after the start time.";
       else if (daysBetween(s.date, s.end || s.date) > MAX_SESSION_DAYS) err[`d${i}`] = `A session can last up to ${MAX_SESSION_DAYS} days. Add longer courses as several sessions.`;
       else if ((s.end || s.date) > latest) err[`d${i}`] = "Dates can be up to 3 years ahead.";
@@ -823,7 +822,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
             <div className="rt-pws-coh__pickcol">
               <Choice name="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
                 options={[{ value: "range", label: "Date range" }, { value: "days", label: "Individual days" }]} />
-              <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={cohort ? "" : today} />
+              <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={today} keep={heldPast} />
             </div>
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
               <div className="rt-pws-coh__slotpanel">
@@ -977,8 +976,10 @@ function pickOn(list, open, iso, mode) {
 
 // The cohort form's two-month calendar. Each session shows as its first and last day filled and the days between banded;
 // while a range waits for its last day (`anchor`), the days up to the one under the mouse or the keyboard are banded too.
-function DatePicker({ view, setView, sessions, anchor, mode, onPick, min }) {
+// Days before `min` can't be picked, except `keep` (an edited cohort's sessions that already started, so they can be taken off).
+function DatePicker({ view, setView, sessions, anchor, mode, onPick, min, keep = [] }) {
   const today = todayIso();
+  const floor = keep.reduce((a, d) => (d < a ? d : a), min);
   const [focusDay, setFocusDay] = useState(null);
   const [overDay, setOverDay] = useState(null);
   const gridRef = useRef(null);
@@ -1013,7 +1014,7 @@ function DatePicker({ view, setView, sessions, anchor, mode, onPick, min }) {
   return (
     <div className="rt-pws-coh__picker" ref={gridRef} onMouseLeave={() => setOverDay(null)}>
       <div className="rt-pws-coh__pickhead">
-        <button type="button" className="rt-pws-cal__nav" onClick={() => setView(addMonths(view, -1))} disabled={Boolean(min) && view <= monthStart(min)} aria-label="Previous month"><i className="icon-chevron-left text-12" aria-hidden="true"></i></button>
+        <button type="button" className="rt-pws-cal__nav" onClick={() => setView(addMonths(view, -1))} disabled={view <= monthStart(floor)} aria-label="Previous month"><i className="icon-chevron-left text-12" aria-hidden="true"></i></button>
         <p className="rt-pws-coh__pickhint">{mode === "days" ? "Click each day the course runs" : anchor ? "Now click the last day" : "Click the first day, then the last day"}</p>
         <button type="button" className="rt-pws-cal__nav" onClick={() => setView(addMonths(view, 1))} aria-label="Next month"><i className="icon-chevron-right text-12" aria-hidden="true"></i></button>
       </div>
@@ -1035,7 +1036,7 @@ function DatePicker({ view, setView, sessions, anchor, mode, onPick, min }) {
                       const iso = w[di];
                       if (!iso) return <td key={di}></td>;
                       const { on, cls } = look(iso);
-                      const past = Boolean(min) && iso < min;
+                      const past = iso < min && !keep.includes(iso);
                       return (
                         <td key={di}>
                           <button
