@@ -4,7 +4,8 @@ import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, u
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Link from "next/link";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { Loading, Tabs, getQuery, setQuery } from "./providerParts";
+import { Loading, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { NavIcon } from "@/components/header/navIcons";
 import { addDays, colourOf, longDay, monthLabel, todayIso, useSchedule, weekday, whyNotOnSale } from "./ProviderCohorts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
@@ -22,12 +23,12 @@ const VIEWS = [
 ];
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const MONTH_LANES = 3; // sessions shown on a month day at most (fewer when the window is too short for three), then "+N more"
-// A week row's parts, in px (the grid template WeekRow builds): the date line, one session bar (22px) with the gap above it, the
+// A week row's parts, in px (the grid template WeekRow builds): the date line, one session bar (18px) with the gap above it, the
 // "+N more" line and the row's bottom space. The month and week views fit the window: their rows share the height from the top of
 // the rows to the window's bottom, so the page doesn't scroll, and each day shows as many sessions as fit (the rest "+N more").
 // A month row too short for one session and "+N more" (a laptop showing six weeks) shows each day's date with "N sessions" beside
 // it instead (it opens the day); it never goes below that line (COMPACT_ROW).
-const ROW = { date: 39, bar: 25, more: 23, foot: 6, tallTop: 9 };
+const ROW = { date: 26, bar: 20, more: 18, foot: 4, tallTop: 9 };
 const minRow = (tall) => (tall ? ROW.tallTop : ROW.date) + ROW.bar + ROW.more + ROW.foot;
 const COMPACT_ROW = 42;
 // how many sessions a row of height `h` shows when `needed` rows of them overlap: all of them when they fit (and are no more than
@@ -52,7 +53,11 @@ function useRowHeight(ref, count, tall) {
     };
     measure();
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    // and when the calendar's bar or filters change height (a filter's words wrapping onto a second line)
+    const ro = new ResizeObserver(measure);
+    const head = ref.current?.closest(".rt-pws-cal");
+    if (head) [...head.children].filter((c) => c.matches(".rt-pws-cal__head, .rt-pws-cal__filters")).forEach((c) => ro.observe(c));
+    return () => { window.removeEventListener("resize", measure); ro.disconnect(); };
   }, [ref, count, tall]);
   return height;
 }
@@ -108,16 +113,33 @@ const OpenEntry = createContext(() => {});
 export default function ProviderCalendar() {
   const { can } = useProviderAccess();
   const [entry, setEntry] = useState(null); // { bar, el }
-  const { cohorts } = useSchedule("all", null, { near: true });
+  const { cohorts, may } = useSchedule("all", null, { near: true });
   const [view, setView] = useState("month");
   const [date, setDate] = useState(() => todayIso());
+  // the filters (a course, a venue or online, a tutor or none), kept in the address as on the cohort list
+  const [filter, setFilter] = useState({ course: "", venue: "", tutor: "" });
+  // nothing is drawn until the address has been read (the view, the day, the filters), so coming back to the page never shows
+  // everything for a moment before its filters apply
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const v = getQuery("view");
     if (VIEWS.some((x) => x.key === v)) setView(v);
     const d = getQuery("date");
     if (isIso(d)) setDate(d);
+    setFilter({ course: getQuery("course") || "", venue: getQuery("venue") || "", tutor: getQuery("tutor") || "" });
+    setReady(true);
   }, []);
+  const pickFilter = (key, value) => {
+    setEntry(null);
+    setFilter((f) => ({ ...f, [key]: value }));
+    setQuery(key, value);
+  };
+  const clearFilters = () => {
+    setEntry(null);
+    setFilter({ course: "", venue: "", tutor: "" });
+    ["course", "venue", "tutor"].forEach((k) => setQuery(k, ""));
+  };
 
   const go = (d) => {
     setDate(d);
@@ -130,10 +152,27 @@ export default function ProviderCalendar() {
   const openDay = (d) => { setEntry(null); go(d); pickView("day"); };
 
   if (cohorts.isError) return <ErrorState title="We couldn't load your dates." text="Check your connection, then try again." onRetry={() => cohorts.refetch()} />;
-  if (!cohorts.data) return <Loading rows={1} />;
+  if (!cohorts.data || !ready) return <Loading rows={1} />;
   if (!cohorts.data.length) return <EmptyState title="Nothing on the calendar yet" text="Sessions appear here once you add a cohort with dates." action={can("provider.cohorts.edit") && can("provider.pricing.edit") ? { label: "Create cohort", href: "/provider/cohorts?new=1" } : null} />;
 
-  const bars = sessionBars(cohorts.data);
+  // each filter offers only what is on the calendar (so no choice ever shows an empty calendar by itself), A to Z
+  const byName = (a, b) => a.label.localeCompare(b.label);
+  const uniq = (list) => [...new Map(list.map((o) => [o.value, o])).values()].sort(byName);
+  const courseOptions = uniq(cohorts.data.map((k) => ({ value: String(k.courseId), label: k.courseTitle })));
+  const venueOptions = uniq(cohorts.data.filter((k) => k.venueId).map((k) => ({ value: k.venueId, label: k.venue ? `${k.venue.name}, ${k.venue.city}` : "Venue" })));
+  const hasOnline = cohorts.data.some((k) => !k.venueId);
+  const tutorOptions = uniq(cohorts.data.filter((k) => k.tutorUserId).map((k) => ({ value: k.tutorUserId, label: k.tutorName || "Team member" })));
+  const hasNoTutor = cohorts.data.some((k) => !k.tutorUserId);
+  // a tutor sees only their own dates, so the tutor filter is for those who see everyone's
+  const tutorFilter = may.team;
+  const shown = cohorts.data.filter(
+    (k) =>
+      (!filter.course || String(k.courseId) === filter.course) &&
+      (!filter.venue || (filter.venue === "online" ? !k.venueId : k.venueId === filter.venue)) &&
+      (!tutorFilter || !filter.tutor || (filter.tutor === "none" ? !k.tutorUserId : k.tutorUserId === filter.tutor)),
+  );
+  const filtered = Boolean(filter.course || filter.venue || (tutorFilter && filter.tutor));
+  const bars = sessionBars(shown);
   const byDay = barsByDay(bars);
   const today = todayIso();
   const weekStart = addDays(date, -weekday(date));
@@ -147,11 +186,13 @@ export default function ProviderCalendar() {
     day: longDay(date),
   }[view];
   const unit = { month: "month", week: "week", day: "day" }[view];
+  const [from, to] = { month: [monthStart(date), monthEnd(date)], week: [weekStart, addDays(weekStart, 6)], day: [date, date] }[view];
+  const inView = bars.filter((b) => b.start <= to && b.end >= from).length;
 
   return (
     <OpenEntry.Provider value={(bar, el, x) => setEntry({ bar, el, x })}>
-      <div className="rt-acc__stack">
-        <div className="rt-adm-toolbar rt-pws-cal__bar">
+      <div className="rt-pws-cal">
+        <div className="rt-pws-cal__head">
           <div className="rt-pws-cal__nav-group">
             {/* back to today, first (as calendars put it); inactive while today is already shown */}
             <button type="button" className="rt-pws-cal__nav -text" onClick={() => go(today)} disabled={showsToday}>Today</button>
@@ -161,10 +202,21 @@ export default function ProviderCalendar() {
           </div>
           <Tabs tabs={VIEWS} value={view} onChange={pickView} label="Calendar view" />
         </div>
+        <div className="rt-pws-cal__filters">
+          <ToolSelect id="rt-cal-course" label="Course" value={filter.course} onChange={(v) => pickFilter("course", v)} options={[{ value: "", label: "All courses" }, ...courseOptions]} />
+          <ToolSelect id="rt-cal-venue" label="Venue" value={filter.venue} onChange={(v) => pickFilter("venue", v)} options={[{ value: "", label: "All venues" }, ...venueOptions, ...(hasOnline ? [{ value: "online", label: "Online" }] : [])]} />
+          {tutorFilter && <ToolSelect id="rt-cal-tutor" label="Tutor" value={filter.tutor} onChange={(v) => pickFilter("tutor", v)} options={[{ value: "", label: "All tutors" }, ...tutorOptions, ...(hasNoTutor ? [{ value: "none", label: "Not assigned" }] : [])]} />}
+          {filtered && (
+            <p className="rt-pws-cal__filtersum" aria-live="polite">
+              {shown.length ? `${inView} ${inView === 1 ? "session" : "sessions"} ${{ month: `in ${monthLabel(date)}`, week: "this week", day: "on this day" }[view]}` : "No cohorts match these filters"}
+              <button type="button" className="rt-cd__link" onClick={clearFilters}>Clear filters</button>
+            </p>
+          )}
+        </div>
 
         {view === "month" && <MonthView date={date} today={today} bars={bars} byDay={byDay} onDay={openDay} />}
         {view === "week" && <WeekView days={weekDays} today={today} bars={bars} byDay={byDay} onDay={openDay} />}
-        {view === "day" && <DayList days={[date]} today={today} byDay={byDay} showEmpty />}
+        {view === "day" && <DayList days={[date]} today={today} byDay={byDay} showEmpty single />}
         <EntryDetails entry={entry} onClose={() => setEntry(null)} />
       </div>
     </OpenEntry.Provider>
@@ -185,7 +237,7 @@ function WeekView({ days, today, bars, byDay, onDay }) {
   const height = useRowHeight(rowsRef, 1, true);
   return (
     <>
-      <div className="rt-acc__card rt-pws-cal__grid">
+      <div className="rt-pws-cal__grid">
         <Weekdays days={days} today={today} />
         <div ref={rowsRef}>
           <WeekRow days={days} today={today} bars={bars} lanes={Infinity} height={height} onDay={onDay} tall />
@@ -208,7 +260,7 @@ function MonthView({ date, today, bars, byDay, onDay }) {
   const height = useRowHeight(rowsRef, weeks.length, false);
   return (
     <>
-      <div className="rt-acc__card rt-pws-cal__grid">
+      <div className="rt-pws-cal__grid">
         <div className="rt-pws-cal__wdays" aria-hidden="true">{WEEKDAYS.map((d) => <span key={d}>{d.slice(0, 3)}</span>)}</div>
         <div role="group" aria-label={`${monthLabel(date)} sessions`} ref={rowsRef}>
           {weeks.map((w) => <WeekRow key={w[0]} days={w} today={today} bars={bars} lanes={MONTH_LANES} height={height} onDay={onDay} month={[first, last]} />)}
@@ -251,7 +303,7 @@ function WeekRow({ days, today, bars, lanes: fixedLanes, onDay, month, height = 
   const shownRows = Math.min(taken.length, lanes);
   const hidden = compact ? days.map(() => 0) : days.map((_, i) => segs.filter((g) => g.row >= lanes && g.col <= i && g.col + g.len - 1 >= i).length);
   const anyHidden = hidden.some(Boolean);
-  const rows = `${tall ? "0px" : "36px"}${shownRows ? ` repeat(${shownRows}, 22px)` : ""}${anyHidden ? " 20px" : ""} 1fr`;
+  const rows = `${tall ? "0px" : "24px"}${shownRows ? ` repeat(${shownRows}, 18px)` : ""}${anyHidden ? " 16px" : ""} 1fr`;
   return (
     <div className={`rt-pws-cal__wk${tall ? " -tall" : ""}`} style={{ gridTemplateRows: rows, ...(height ? { height, minHeight: 0 } : null) }}>
       {days.map((d, i) => {
@@ -273,6 +325,7 @@ function WeekRow({ days, today, bars, lanes: fixedLanes, onDay, month, height = 
         <button key={`${g.b.key}-${lo}`} type="button" aria-haspopup="dialog" onClick={(e) => open(g.b, e.currentTarget, e.clientX || null)} title={describe(g.b)}
           className={`rt-pws-cal__seg ${tone(g.b)}${g.before ? " -before" : ""}${g.after ? " -after" : ""}`}
           style={{ gridColumn: `${g.col + 1} / span ${g.len}`, gridRow: g.row + 2 }}>
+          {g.b.cohort.method === "live-online" && <NavIcon name="screen" size={12} className="rt-pws-cal__segicon" />}
           <span aria-hidden="true"><b>{g.b.from}</b> {g.b.title} · {g.b.where}{g.b.cancelled ? " · Cancelled" : ""}</span>
           <span className="rt-sr">{describe(g.b)}</span>
         </button>
@@ -329,8 +382,11 @@ function EntryCard({ entry, onClose, children }) {
     const top = Math.max(12, Math.min(r.top, window.innerHeight - h - 12));
     setPos({ left, top });
   }, [entry]);
+  // focus moves into the card once it is placed and shown (an element still hidden can't take it)
   useEffect(() => {
-    ref.current?.focus();
+    if (pos) ref.current?.focus({ preventScroll: true });
+  }, [pos]);
+  useEffect(() => {
     const back = () => entry.el?.isConnected && entry.el.focus();
     const out = (e) => { if (ref.current && !ref.current.contains(e.target) && !entry.el.contains(e.target)) onClose(); };
     const key = (e) => { if (e.key === "Escape") { e.preventDefault(); onClose(); back(); } };
@@ -357,18 +413,19 @@ function EntryCard({ entry, onClose, children }) {
   );
 }
 
-function DayList({ days, today, byDay, showEmpty = false, emptyText = "" }) {
+// `single`: the day view, whose bar already says the day, so its own heading is read by screen readers only
+function DayList({ days, today, byDay, showEmpty = false, emptyText = "", single = false }) {
   const open = useContext(OpenEntry);
   const withSessions = days.filter((d) => byDay[d]);
   if (!withSessions.length && !showEmpty) return <EmptyState title={emptyText} />;
   const shown = showEmpty ? days : withSessions;
   return (
-    <div className="rt-acc__stack rt-pws-cal__list">
+    <div className="rt-pws-cal__list">
       {shown.map((d) => {
         const list = byDay[d] || [];
         return (
-          <section key={d} className="rt-acc__card rt-pws-cal__listday" aria-labelledby={`rt-cal-${d}`}>
-            <h3 className="rt-pws-cal__listh" id={`rt-cal-${d}`}>{longDay(d)}{d === today && <span className="rt-pws-cal__today">Today</span>}</h3>
+          <section key={d} className="rt-pws-cal__listday" aria-labelledby={`rt-cal-${d}`}>
+            <h3 className={single ? "rt-sr" : "rt-pws-cal__listh"} id={`rt-cal-${d}`}>{longDay(d)}{d === today && <span className="rt-pws-cal__today">Today</span>}</h3>
             {list.length ? (
               <ul className="rt-pws-cal__rows">
                 {list.map((b) => (
