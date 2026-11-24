@@ -70,7 +70,6 @@ export default function ProviderPackages() {
   const plans = query.data;
   const needle = q.trim().toLowerCase();
   const list = plans.filter((p) => !needle || p.name.toLowerCase().includes(needle)).filter((p) => (show === "archive" ? p.archived : show === "active" ? !p.archived : true));
-  const filtered = Boolean(needle || show);
   const setParam = (k, setter) => (v) => { setter(v); setQuery(k, k === "q" ? v.trim() : v); };
   const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
   const create = () => setEditor({ open: true, plan: null });
@@ -96,7 +95,6 @@ export default function ProviderPackages() {
         <Search value={q} onChange={setParam("q", setQ)} label="Search your price plans" />
         <div className="rt-adm-toolbar__end">
           <ToolSelect id="rt-plan-show" label="Show" value={show} onChange={setParam("show", setShow)} options={SHOW} />
-          {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filters</button>}
           {edit && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}
         </div>
       </div>
@@ -107,9 +105,9 @@ export default function ProviderPackages() {
           <table className="rt-biz__table rt-adm-table rt-pws-pkgs">
             <thead>
               <tr>
-                <th scope="col">Plan</th>
-                <th scope="col">Used on</th>
-                <th scope="col" className="rt-adm-num">Prices</th>
+                <th scope="col" className="-plan">Plan</th>
+                <th scope="col" className="-used">Used on</th>
+                <th scope="col">Prices</th>
                 {edit && <th scope="col" className="-act"><span className="rt-sr">Actions</span></th>}
               </tr>
             </thead>
@@ -123,7 +121,7 @@ export default function ProviderPackages() {
                       <small className="rt-adm-muted">{p.tiers.length} packages: {p.tiers.map((t) => t.name).join(", ")}</small>
                     </td>
                     <td data-label="Used on">{usedText(p.used)}</td>
-                    <td data-label="Prices" className="rt-adm-num-cell">{priceRange(p.tiers)}</td>
+                    <td data-label="Prices" className="-prices">{priceRange(p.tiers)}</td>
                     {edit && (
                     <td data-label="Actions" className="-act">
                         <RowMenu label={`Actions for ${p.name}`} items={[

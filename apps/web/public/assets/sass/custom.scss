@@ -6978,8 +6978,11 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (hover: hover) and (pointer: fine) { .rt-pws-pkg__add:hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); } }
 .rt-pws-pkg__add:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws-pkg__add { transition: none; } }
-/* the plans table: the plan (its packages under it), what uses it, its prices to the right, and its ⋯ menu at the row's end */
-.rt-pws-pkgs th.rt-adm-num, .rt-pws-pkgs td.rt-adm-num-cell { text-align: right; white-space: nowrap; }
+/* the plans table: the plan (its packages under it), what uses it and its prices side by side, the room left over after the
+   prices, and the ⋯ menu at the row's end */
+.rt-pws-pkgs th.-plan { width: 38%; }
+.rt-pws-pkgs th.-used { width: 28%; }
+.rt-pws-pkgs td.-prices { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rt-pws-pkgs th.-act, .rt-pws-pkgs td.-act { width: 64px; text-align: right; }
 /* a course overview's Packages tab: each package and its price */
 .rt-pws-pkgs__tiers { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
