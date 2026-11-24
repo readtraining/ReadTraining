@@ -10,8 +10,8 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { formatPrice } from "@/lib/format";
 import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
-import { COHORT_TONE, COURSE_TONE, Loading, Pill, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
-import { COHORT_STATUSES, CohortCell, CohortForm, Seats, WHEN, askWhen, cohortState, inWhen, todayIso, useSchedule } from "./ProviderCohorts";
+import { COURSE_TONE, Loading, Pill, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { CohortCell, CohortForm, CohortStatus, Seats, WHEN, askWhen, cohortState, inWhen, todayIso, useSchedule } from "./ProviderCohorts";
 
 // One course's overview (course Details): a head card with the cover picture, status, learning options and performance model,
 // the shared course page it is listed on, Edit course and Preview; then its tabs, in this order: Learners, Venues, Cohorts,
@@ -192,10 +192,7 @@ function CohortsTab({ course }) {
                 <tr key={k.id}>
                   <td data-label="Cohort"><CohortCell k={k} forCourse /></td>
                   <td data-label="Status">
-                    <span className="rt-pws-coh__pills">
-                      <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
-                      {!k.cancelledAt && (k.optionClosed ? <Pill tone="warn">Bookings stopped</Pill> : !k.bookable && <Pill tone="warn">Bookings off</Pill>)}
-                    </span>
+                    <CohortStatus k={k} status={k.status} />
                   </td>
                   <td data-label="Tutor">{tutorName(k.tutorUserId, k) || <span className="rt-adm-muted">Not assigned</span>}</td>
                   <td data-label="Places"><Seats booked={0} max={k.capacity} /></td>
