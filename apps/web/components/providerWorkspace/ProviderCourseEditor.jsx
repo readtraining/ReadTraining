@@ -203,7 +203,9 @@ function stepGaps(d, course, key) {
 // (a retired learning option comes in `retiredMethods`: it is turned off in Learning options, not chosen again)
 const RETIRED_KEY = { category: "category", "sub-category": "subcategory", topic: "topic", level: "level" };
 
-// What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together).
+// What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together); a
+// provider sends only the category and sub-category (the topic is our team's choice at approval: `access.topic` is ReadTraining's
+// own, a shared page or staff editing).
 function changes(draft, base, access) {
   const out = {};
   const keys = Object.keys(draft).filter((k) => !same(draft[k], base[k]));
@@ -218,7 +220,8 @@ function changes(draft, base, access) {
     else if (k === "price") {
       if (!draft.planId) out.pricePence = draft.price === "" ? null : Math.round(Number(draft.price) * 100);
     }
-    else if (["category", "subcategory", "topic"].includes(k)) Object.assign(out, { category: draft.category, subcategory: draft.subcategory, topic: draft.topic || null });
+    else if (k === "topic" && !access.topic) continue;
+    else if (["category", "subcategory", "topic"].includes(k)) Object.assign(out, { category: draft.category, subcategory: draft.subcategory, ...(access.topic ? { topic: draft.topic || null } : {}) });
     // the learning options and the primary one go together (the primary is always one of them)
     else if (k === "method" || k === "methods") Object.assign(out, { method: draft.method, methods: draft.methods });
     else out[k] = draft[k];
@@ -908,6 +911,8 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
   const set = useSet(setDraft);
   const subs = subcategoryOptions(draft.category);
   const topics = topicOptions(draft.category, draft.subcategory);
+  // going back to the saved sub-category brings back its saved topic (a provider can't choose one: it would otherwise look changed)
+  const saved = draftOf(course);
   const full = !access.full;
   const page = !access.page;
 
@@ -943,13 +948,17 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-subcat">Course sub-category<Req /></label>
             <FieldErr id="rt-pws-ce-subcat" text={errors.subcategory} />
-            <FieldSelect id="rt-pws-ce-subcat" label="Course sub-category" placeholder={draft.category ? "Choose a sub-category" : "Choose a category first"} value={draft.subcategory} onChange={(v) => setDraft((d) => ({ ...d, subcategory: v, topic: "" }))} options={subs} disabled={full || !draft.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-pws-ce-subcat-e" : undefined} />
+            <FieldSelect id="rt-pws-ce-subcat" label="Course sub-category" placeholder={draft.category ? "Choose a sub-category" : "Choose a category first"} value={draft.subcategory} onChange={(v) => setDraft((d) => ({ ...d, subcategory: v, topic: d.category === saved.category && v === saved.subcategory ? saved.topic : "" }))} options={subs} disabled={full || !draft.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-pws-ce-subcat-e" : undefined} />
           </div>
-          <div className="rt-field">
-            <label htmlFor="rt-pws-ce-topic">Course topic</label>
-            <FieldErr id="rt-pws-ce-topic" text={errors.topic} />
-            <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={!draft.subcategory ? "Choose a sub-category first" : topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} invalid={Boolean(errors.topic)} describedBy={errors.topic ? "rt-pws-ce-topic-e" : undefined} />
-          </div>
+          {/* the topic: ReadTraining's choice (a shared page, staff). A provider's course gets it from our team when they approve it
+              (admin.courses.decide), so a provider never sees the field */}
+          {access.topic && (
+            <div className="rt-field">
+              <label htmlFor="rt-pws-ce-topic">Course topic</label>
+              <FieldErr id="rt-pws-ce-topic" text={errors.topic} />
+              <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={!draft.subcategory ? "Choose a sub-category first" : topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} invalid={Boolean(errors.topic)} describedBy={errors.topic ? "rt-pws-ce-topic-e" : undefined} />
+            </div>
+          )}
         </div>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-details">Course description<Req /></label>

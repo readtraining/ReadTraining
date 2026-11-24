@@ -12,7 +12,7 @@ import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, Loading, Pill, RowMenu, Search, SegmentedControl, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
@@ -807,8 +807,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               the calendar that scrolls inside itself on a computer */}
           <div className="rt-pws-coh__dates">
             <div className="rt-pws-coh__pickcol">
-              <Choice name="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
-                options={[{ value: "range", label: "Date range" }, { value: "days", label: "Individual days" }]} />
+              <SegmentedControl id="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
+                options={[{ value: "range", label: "Date range", icon: "sessions" }, { value: "days", label: "Individual days", icon: "cohorts" }]} />
               <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={cohort ? "" : today} />
             </div>
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
@@ -876,8 +876,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </div>
               )}
             </div>
-            <Choice name="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
-              options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
+            <SegmentedControl id="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
+              options={[{ value: "flat", label: "Flat price", icon: "coupons" }, { value: "tiered", label: "Tiered packages", icon: "layers" }]}
+              hint={f.pricing === "tiered" ? "Learners pick a package from a price plan when they book." : "One price per learner for this date."} />
             {f.pricing === "tiered" && (
               <div className="rt-field">
                 <label htmlFor="rt-cf-planId">Price plan<Req /></label>

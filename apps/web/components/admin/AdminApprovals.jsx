@@ -14,6 +14,7 @@ import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty, RowMenu, Req, for
 import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
+import { TOPIC_ERROR, TopicField } from "./AdminCourse";
 
 const copy = A.approvals;
 const TABS = ["waiting", "changes", "decided"];
@@ -23,7 +24,8 @@ const DAY = 86400000;
 // nothing waits silently, each with its deadline and the date it was sent; oldest first (or newest first, kept across the tabs). Each card's ⋮ menu: Review (the course), Preview, and its decisions: a new course
 // can be approved or sent back here,
 // a change approved or turned down. Sending back and turning down need a note, which the provider sees and is emailed (the site's
-// pop-up, the first error focused). Waiting new courses can be ticked and approved together. Tabs and the type filter are kept in
+// pop-up, the first error focused). Approving one whose sub-category has topics asks for its topic in a pop-up (TopicField; the
+// provider doesn't choose it), so those aren't ticked for approving together; the others can be. Tabs and the type filter are kept in
 // the address. Deciding needs the "approve" switch; the API also stops anyone deciding on what they sent themselves.
 const ORDERS = { oldest: "Oldest first", newest: "Newest first" };
 
@@ -37,6 +39,7 @@ export default function AdminApprovals() {
   const [asking, setAsking] = useState(null); // { item, decision }
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const [topic, setTopic] = useState(""); // the topic chosen in the Approve pop-up
   const [said, setSaid] = useState("");
   const [unsent, setUnsent] = useState(""); // decisions saved whose email to the provider couldn't be sent: shown until the next run
   const [busy, setBusy] = useState(false);
@@ -62,7 +65,9 @@ export default function AdminApprovals() {
   const when = (a) => (a.sent || a.at ? new Date(a.sent || a.at).getTime() : now);
   const items = query.data.map((a) => ({ ...a, key: `${a.type}-${a.courseId}-${a.at}` }));
   const shown = items.filter((a) => type === "all" || a.type === type).sort((x, y) => (order === "newest" ? when(y) - when(x) : when(x) - when(y)));
-  const pickable = tab === "waiting" ? shown.filter((a) => a.type === "new" && a.providerStatus === "active" && !a.own) : [];
+  // a topic to choose (topicChoice.ask) is chosen one course at a time, in the Approve pop-up
+  const asksTopic = (a) => Boolean(a.topicChoice?.ask);
+  const pickable = tab === "waiting" ? shown.filter((a) => a.type === "new" && a.providerStatus === "active" && !a.own && !asksTopic(a)) : [];
   const allPicked = pickable.length > 0 && pickable.every((a) => picked.includes(a.key));
   // the queue on screen is waited for, so a decided card never stays with its buttons live; the rest catch up behind it
   const refresh = async () => {
@@ -87,7 +92,7 @@ export default function AdminApprovals() {
     setQuery("order", o === "oldest" ? "" : o);
   };
   const toggle = (key) => setPicked((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
-  const run = async (list, decision, message) => {
+  const run = async (list, decision, message, chosenTopic) => {
     setBusy(true);
     setUnsent("");
     let done = 0;
@@ -97,7 +102,7 @@ export default function AdminApprovals() {
     for (const it of list) {
       try {
         // decided on the version listed (sent at it.at); a course or change the provider changed since is refused
-        const r = await decide.mutateAsync({ courseId: it.courseId, decision, message, seen: it.at });
+        const r = await decide.mutateAsync({ courseId: it.courseId, decision, message, seen: it.at, ...(chosenTopic ? { topic: chosenTopic } : {}) });
         done += 1;
         if (r.outbox) outbox = true;
         else if (!r.emailed) notEmailed.push(`“${it.title}”`);
@@ -120,9 +125,23 @@ export default function AdminApprovals() {
     setAsking({ item, decision });
     setReason("");
     setError("");
+    setTopic(item.topicChoice?.current || "");
   };
+  // Approve: straight through, or the pop-up when the topic is to be chosen
+  const approve = (a, decision) => (asksTopic(a) ? open(a, decision) : !busy && run([a], decision));
+  const approving = asking && (asking.decision === "approve" || asking.decision === "approveChange");
   const send = async (e) => {
     e.preventDefault();
+    if (approving) {
+      if (!topic) {
+        setError(TOPIC_ERROR);
+        return focusFirstError(formRef.current);
+      }
+      const failed = await run([asking.item], asking.decision, undefined, topic);
+      if (!failed.length) setAsking(null);
+      else setError(failed[0].split(": ").slice(1).join(": ") || "That didn’t work. Reload the page and try again.");
+      return;
+    }
     if (!reason.trim()) {
       setError(asking.decision === "rejectChange" ? "Enter why the change is not approved." : "Enter what the provider needs to change.");
       return focusFirstError(formRef.current);
@@ -177,7 +196,7 @@ export default function AdminApprovals() {
             const providerReady = a.providerStatus === "active";
             return (
               <li key={a.key} className={`rt-acc__card rt-adm-item${picked.includes(a.key) ? " is-picked" : ""}`}>
-                {canDecide && tab === "waiting" && a.type === "new" && providerReady && !a.own && (
+                {canDecide && tab === "waiting" && a.type === "new" && providerReady && !a.own && !asksTopic(a) && (
                   <label className="rt-adm-item__pick" htmlFor={`rt-adm-p-${a.key}`}>
                     <input id={`rt-adm-p-${a.key}`} type="checkbox" checked={picked.includes(a.key)} onChange={() => toggle(a.key)} />
                     <span className="rt-sr">Select {a.title}</span>
@@ -195,6 +214,7 @@ export default function AdminApprovals() {
                   <p className="rt-acc__note">{[a.provider, waysLabel(a), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
                   {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive(a.providerStatus)}</p>}
                   {a.note && <p className="rt-adm-item__reason"><strong>Note to the provider:</strong> {a.note}</p>}
+                  {canDecide && tab === "waiting" && asksTopic(a) && !a.own && <p className="rt-acc__note">Choose its topic when you approve it.</p>}
                   {canDecide && tab === "waiting" && a.own && <p className="rt-adm-item__reason">{a.soleApprover ? copy.ownQueueSole : copy.ownBlocked}</p>}
                 </div>
                 <div className="rt-adm-item__actions">
@@ -202,10 +222,10 @@ export default function AdminApprovals() {
                     { label: copy.review, href: `/admin/catalogue/${a.courseId}` },
                     { label: a.type === "change" ? "Preview the change" : "Preview", href: `/admin/catalogue/${a.courseId}/preview`, newTab: true },
                     ...(canDecide && tab === "waiting" && a.type === "new" && !a.own
-                      ? [...(providerReady ? [{ label: copy.approve, onClick: () => !busy && run([a], "approve") }] : []), { label: copy.requestChanges, onClick: () => open(a, "changes") }]
+                      ? [...(providerReady ? [{ label: copy.approve, onClick: () => approve(a, "approve") }] : []), { label: copy.requestChanges, onClick: () => open(a, "changes") }]
                       : []),
                     ...(canDecide && tab === "waiting" && a.type === "change" && !a.own
-                      ? [{ label: copy.approveChange, onClick: () => !busy && run([a], "approveChange") }, { label: copy.rejectChange, danger: true, onClick: () => open(a, "rejectChange") }]
+                      ? [{ label: copy.approveChange, onClick: () => approve(a, "approveChange") }, { label: copy.rejectChange, danger: true, onClick: () => open(a, "rejectChange") }]
                       : []),
                   ]} />
                 </div>
@@ -217,8 +237,15 @@ export default function AdminApprovals() {
         type === "all" ? <Empty title={copy.empty[tab][0]} text={copy.empty[tab][1]} /> : <Empty kind="none" title="Nothing of this type here." />
       )}
 
-      <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={asking ? `${asking.decision === "rejectChange" ? copy.rejectChange : copy.requestChanges}: ${asking.item.title}` : ""} closeLabel="Close">
-        {asking && (
+      <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={asking ? `${{ rejectChange: copy.rejectChange, approve: copy.approve, approveChange: copy.approveChange }[asking.decision] || copy.requestChanges}: ${asking.item.title}` : ""} closeLabel="Close">
+        {asking && approving && (
+          <form className="rt-q__form rt-biz__sheetform" onSubmit={send} noValidate ref={formRef}>
+            <p className="rt-acc__note">{asking.item.provider} · {copy.types[asking.item.type]}</p>
+            <TopicField id="rt-adm-topic" choice={asking.item.topicChoice} value={topic} onChange={(v) => { setTopic(v); setError(""); }} error={error} />
+            <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={busy} aria-busy={busy || undefined}>{asking.decision === "approveChange" ? copy.approveChange : copy.approve}</button>
+          </form>
+        )}
+        {asking && !approving && (
           <form className="rt-q__form rt-biz__sheetform" onSubmit={send} noValidate ref={formRef}>
             <p className="rt-acc__note">{asking.item.provider} · {copy.types[asking.item.type]}</p>
             <div className="rt-field">

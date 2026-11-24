@@ -223,6 +223,12 @@ export async function resolveCatalogue(db: Writer, input: { category?: string; s
   return out
 }
 
+/** The topics in use under a sub-category, A to Z: when there are any, a provider's course is listed under one, chosen by our team. */
+export async function activeTopics(db: Writer, subcategoryId: string | null) {
+  if (!subcategoryId) return []
+  return db.select({ id: topics.id, name: topics.name }).from(topics).where(and(eq(topics.subcategoryId, subcategoryId), eq(topics.active, true))).orderBy(asc(topics.name))
+}
+
 // The catalogue ids for the slugs a change waiting for approval holds, whether or not each is still offered (a duplicated course
 // is a draft: sending it says if one has been retired). The topic stays `topicId` when the change doesn't name one.
 async function subjectOf(db: Writer, c: { category?: unknown; subcategory?: unknown; topic?: unknown }, topicId: string | null) {
@@ -745,15 +751,15 @@ export const providerCoursesRouter = createTRPCRouter({
         .limit(200)
     }),
 
-  // The new-course wizard: a title, the catalogue place, how it is taught (its primary learning option, the only one to start
-  // with), the model, Skill Saver, and optionally the shared page it joins. Starts as a draft; the editor fills in the rest.
+  // The new-course wizard: a title, the catalogue place (category and sub-category: the topic is chosen by our team when they
+  // approve the course, admin.courses.decide), how it is taught (its primary learning option, the only one to start with), the
+  // model and Skill Saver. Starts as a draft; the editor fills in the rest.
   create: orgProcedure('provider.courses.edit')
     .input(
       z.object({
         title: content.title,
         category: content.category,
         subcategory: content.subcategory,
-        topic: content.topic,
         method: settings.method,
         model: settings.model,
         skillSaver: settings.skillSaver,
@@ -764,7 +770,7 @@ export const providerCoursesRouter = createTRPCRouter({
       refuseLongTitle(input.title)
       if (input.model === 'enquiries') throw bad(ENQUIRIES_LATER, 'model')
       taughtAll([input.method])
-      const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
+      const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: null, method: input.method })
       const parentId = await placeOn(ctx.db, { subcategoryId: resolved.subcategoryId ?? null, topicId: resolved.topicId ?? null })
       const slug = await courseSlug(ctx.db, input.title)
       return ctx.db.transaction(async (tx) => {
@@ -883,6 +889,9 @@ export const providerCoursesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input, path }) => {
       const { organisationId, courseId, seen, ...fields } = input as { organisationId: string; courseId: number; seen?: string } & Record<string, unknown>
+      // the topic is our team's choice (when they approve the course, admin.courses.decide; or staff editing it here), never the
+      // provider's: one they send is ignored
+      if (!ctx.staff) delete fields.topic
       const keys = Object.keys(fields).filter((k) => fields[k] !== undefined)
       // nothing to save: the editor keeps the version it had (handing it a newer one would hide a change made elsewhere)
       if (!keys.length) return { ok: true, pendingChange: false, version: seen ?? (await courseVersion(ctx.db, courseId)) }
@@ -902,7 +911,12 @@ export const providerCoursesRouter = createTRPCRouter({
       if (fields.method !== undefined) taughtAll([fields.method as string])
       const reviewed = Object.fromEntries(keys.filter((k) => (REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
       const direct = Object.fromEntries(keys.filter((k) => !(REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
-      // check the catalogue choices now, so a pending change never holds an impossible one
+      // check the catalogue choices now, so a pending change never holds an impossible one; a provider moving the course to another
+      // sub-category leaves it without a topic (the old one belongs to the old sub-category) until our team chooses one at approval
+      if (!ctx.staff && reviewed.subcategory !== undefined) {
+        const moved = await resolveCatalogue(ctx.db, { category: reviewed.category as string, subcategory: reviewed.subcategory as string })
+        if (moved.subcategoryId !== course.subcategoryId) reviewed.topic = null
+      }
       const subject = Object.keys(reviewed).length ? await resolveCatalogue(ctx.db, { category: reviewed.category as string | undefined, subcategory: reviewed.subcategory as string | undefined, topic: reviewed.topic as string | null | undefined, level: reviewed.level as string | undefined }) : {}
       const subjectAfter = { subcategoryId: subject.subcategoryId ?? course.subcategoryId, topicId: subject.topicId !== undefined ? subject.topicId : course.topicId }
       const subjectChanged = subjectAfter.subcategoryId !== course.subcategoryId || subjectAfter.topicId !== course.topicId
@@ -944,6 +958,8 @@ export const providerCoursesRouter = createTRPCRouter({
             const [applied] = await tx.select().from(courses).where(eq(courses.id, courseId))
             const lost = (await missing(tx, applied)).filter((gap) => !before.includes(gap))
             if (lost.length) throw new TRPCError({ code: 'CONFLICT', message: `With this change the live course would be missing ${lost.join(', ')}. Add it, then save.` })
+            // staff moving a live course choose its topic as an approver would (a sub-category with topics needs one)
+            if (subjectChanged && !applied.topicId && (await activeTopics(tx, applied.subcategoryId)).length) throw bad('Choose the topic this course is listed under.', 'topic')
           } else if (isLive) {
             const [open] = await tx.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, courseId), eq(courseRevisions.status, 'pending')))
             if (open) await tx.update(courseRevisions).set({ content: { ...(open.content as object), ...reviewed }, submittedBy: ctx.user.id, submittedAt: new Date() }).where(eq(courseRevisions.id, open.id))
