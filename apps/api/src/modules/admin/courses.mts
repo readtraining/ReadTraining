@@ -1,13 +1,14 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { and, courseRevisions, courses, eq, inArray, pricePlans, sql } from '@readtraining/db'
+import { and, courseGuides, courseRevisions, courses, eq, inArray, pricePlans, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 import type { AdminAction } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { emailOutbox } from '../../lib/email.mjs'
+import { guideProblem, guideSchema, loadGuide } from '../../lib/courseGuide.mjs'
 import { notify, ownerOf } from '../../lib/notify.mjs'
 import { OWN_REASON_ERROR, ownReasonOk, ownRequestRefused, soleApprover } from '../../lib/soleApprover.mjs'
 import { refuseRetired } from '../../lib/retired.mjs'
@@ -329,6 +330,8 @@ export const adminCoursesRouter = createTRPCRouter({
         ...detail,
         provider: provider ?? null,
         children,
+        // a shared page's guide (its Course guide step), or null
+        guide: course.kind === 'shared' ? await loadGuide(ctx.db, course.id) : null,
         change: await changeView(ctx.db, detail),
         pricing: await pricingView(ctx.db, course),
         // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver
@@ -506,6 +509,34 @@ export const adminCoursesRouter = createTRPCRouter({
         return courseVersion(tx, course.id)
       })
       return { ok: true, pendingChange: false, version }
+    }),
+
+  // Save a shared page's guide (lib/courseGuide.mts), the Course guide step: the whole guide at once, checked; null takes it away.
+  // Staff write it, so it is live at once. It moves the page's version on, so a save over a newer one is refused, as every save.
+  saveGuide: adminProcedure('admin.catalogue.edit')
+    .input(z.object({ courseId: id, guide: z.unknown(), seen: seenVersion }))
+    .mutation(async ({ ctx, input }) => {
+      const course = await sharedPage(ctx.db, input.courseId)
+      // checked here rather than as the input, so the message names the field ("Packages › package 2: Write the package name.")
+      const parsed = input.guide == null ? null : guideSchema.safeParse(input.guide)
+      if (parsed && !parsed.success) throw bad(guideProblem(parsed.error))
+      const given = parsed?.data ?? null
+      const guide = given && Object.values(given).some((v) => v !== undefined && !(Array.isArray(v) && !v.length)) ? given : null
+      const version = await ctx.db.transaction(async (tx) => {
+        await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+        await refuseIfChanged(tx, course.id, input.seen)
+        const now = new Date()
+        if (guide) {
+          await tx
+            .insert(courseGuides)
+            .values({ courseId: course.id, content: guide, updatedAt: now, updatedBy: ctx.user.id })
+            .onConflictDoUpdate({ target: courseGuides.courseId, set: { content: guide, updatedAt: now, updatedBy: ctx.user.id } })
+        } else await tx.delete(courseGuides).where(eq(courseGuides.courseId, course.id))
+        await tx.update(courses).set({ updatedAt: now }).where(eq(courses.id, course.id))
+        await logFor(ctx, course, guide ? 'admin.shared_course_guide_saved' : 'admin.shared_course_guide_removed', { sections: guide ? Object.keys(guide).filter((k) => guide[k as keyof typeof guide] !== undefined) : [] })(tx)
+        return courseVersion(tx, course.id)
+      })
+      return { ok: true, version }
     }),
 
   // Publish a shared page (once nothing required is missing), take it off the site, or put it back. Taking it off hides the

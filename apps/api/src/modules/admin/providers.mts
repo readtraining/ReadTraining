@@ -220,19 +220,16 @@ export const providersRouter = createTRPCRouter({
   // dates, price plans, FAQs, pictures and logo. Only a rejected one: a suspended provider is never deleted (it stays suspended,
   // with its reason and history), and anyone else is rejected or suspended first. Never one with records that must be kept (an
   // order, payout, ledger entry or review of it or its courses, or another provider's date at its venue): it stays not approved.
-  // The people on its team keep their logins (they can still sign in as learners). The admin types the provider's name; everything
+  // The people on its team keep their logins (they can still sign in as learners). The admin confirms in a pop-up; everything
   // is checked again under the row lock (two clicks or two admins delete it once), logged, and its files removed after the commit.
   remove: adminProcedure('admin.providers.remove')
-    .input(z.object({ organisationId: z.string().uuid(), confirmName: z.string().max(200) }))
+    .input(z.object({ organisationId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const field = (message: string) => new TRPCError({ code: 'BAD_REQUEST', message, cause: Object.assign(new Error(message), { field: 'confirmName' }) })
       const gone = await ctx.db.transaction(async (tx) => {
         const [o] = await tx.execute<{ id: string; name: string; slug: string; status: Status; logo_path: string | null }>(sql`
           select id, name, slug, status, logo_path from public.organisations where id = ${input.organisationId}::uuid and type = 'provider' for update`)
         if (!o) throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider has already been deleted. Reload the page.' })
         if (o.status !== 'rejected') throw new TRPCError({ code: 'CONFLICT', message: `Only a provider that wasn’t approved can be deleted. This one is ${STATUS_WORDS[o.status]}. Reload the page to see it.` })
-        if (!input.confirmName.trim()) throw field('Type the provider’s name to confirm.')
-        if (input.confirmName.trim().toLowerCase() !== o.name.trim().toLowerCase()) throw field('That isn’t this provider’s name. Type it as it is shown above.')
         const mine = sql`(select c.id from public.courses c where c.organisation_id = ${o.id}::uuid)`
         const [r] = await tx.execute<{ orders: number; payouts: number; ledger: number; reviews: number; borrowed: number }>(sql`
           select

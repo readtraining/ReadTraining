@@ -19,6 +19,7 @@ import { videoEmbed } from "@/lib/catalogueData";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
+import { GuidePanel } from "./CourseGuideEditor";
 import { CohortForm, todayIso } from "./ProviderCohorts";
 import { COURSE_TONE, CardChoice, Choice, KeepWidth, Loading, Pill, WayCards, getQuery, setQuery } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -39,6 +40,8 @@ const SECTIONS = [
   { key: "mode", label: "Learning options" },
   { key: "pricing", label: "Price" },
   { key: "seo", label: "SEO settings", optional: true },
+  // a shared page's extra sections (ReadTraining's own pages only): CourseGuideEditor.jsx
+  { key: "guide", label: "Course guide", optional: true },
 ];
 // the price step's name: the self-paced option has one price, and a course on dates is priced on each date
 const pricingLabel = (methods) => {
@@ -47,7 +50,7 @@ const pricingLabel = (methods) => {
   return own && dated ? "Prices and dates" : own ? "Price" : "Dates and prices";
 };
 // a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
-const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo"];
+const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo", "guide"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "mode", "pricing"];
 const LIMITS = { title: 60, summary: 300, feature: 70, outcome: 160 }; // a title saved longer before the 60 limit stays until changed (the API's refuseLongTitle)
 // how many of each list a course can have (the API's limits, provider/courses.mts `content`)
@@ -56,7 +59,7 @@ const MAX_PRICE = 100000; // pounds (the API's pricePence limit)
 // The section that shows each field's error, by the API's names (a list's rows come under the list's name) and the editor's own
 // (passMark0, examUnit0: one exam row's fields). Saving with errors goes to the first section that has one.
 const SECTION_OF = {
-  model: "mode", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", videoUrl: "landing",
+  model: "mode", title: "landing", summary: "landing", description: "landing", category: "landing", subcategory: "landing", topic: "landing", level: "landing", compliance: "landing", videoUrl: "landing",
   features: "info", outcomes: "info", audience: "info", entryRequirements: "info",
   images: "landing", units: "syllabus", exams: "syllabus", faqs: "faqs", price: "pricing", planId: "pricing", skillSaver: "pricing", method: "mode", methods: "mode",
   dates: "pricing",
@@ -110,6 +113,7 @@ const draftOf = (c) => {
     title: pick("title") || "", summary: pick("summary") || "", description: pick("description") || "", audience: pick("audience") || "", entryRequirements: pick("entryRequirements") || "",
     outcomes: pick("outcomes") || [], features: pick("features") || [], category: pick("category") || "", subcategory: pick("subcategory") || "", topic: pick("topic") || "", level: pick("level") || "",
     videoUrl: pick("videoUrl") || "",
+    compliance: pick("compliance") ?? null, // true, false, or null (not answered yet)
     units: (pick("units") || []).map((u) => ({ title: u.title, body: u.body || "" })),
     exams: (pick("exams") || []).map((e) => ({ unit: e.unit, passMark: e.passMark || "", duration: e.duration || "" })),
     faqs: (pick("faqs") || []).map((f) => ({ question: f.question, answer: f.answer })),
@@ -131,13 +135,14 @@ const datesGap = (lacking) => `Create a ${lacking.map(methodName).join(" and a "
 // whether each section is complete, from the draft (and the saved images and dates). The API counts a draft's required steps
 // left by the same rules for the Dashboard's to-do list (provider/courses.mts stepsLeft): keep the two the same.
 function sectionOk(d, course, key) {
-  if (key === "landing") return Boolean(d.title.trim() && d.summary.trim() && d.description.trim() && d.category && d.subcategory && d.level && course.images.length);
+  if (key === "landing") return Boolean(d.title.trim() && d.summary.trim() && d.description.trim() && d.category && d.subcategory && d.level && d.compliance !== null && course.images.length);
   if (key === "info") return d.outcomes.length >= 4;
   if (key === "syllabus") return d.units.length > 0;
   if (key === "faqs") return d.faqs.length > 0;
   // priced: the self-paced option has its own price; dates are priced each, so each way taught on dates needs a date learners can book
   if (key === "pricing") return (!d.methods.includes("self-paced") || d.price !== "" || Boolean(d.planId)) && !datesNeeded(d, course).length;
   if (key === "mode") return d.methods.includes(d.method);
+  if (key === "guide") return Boolean(course.guide);
   return Boolean(course.seoTitle && course.seoDescription);
 }
 
@@ -151,6 +156,7 @@ function stillNeeded(d, course) {
   if (!d.description.trim()) add("landing", "a description");
   if (!d.category || !d.subcategory) add("landing", "a category and sub-category");
   if (!d.level) add("landing", "a level");
+  if (d.compliance === null) add("landing", "whether it is a compliance course");
   if (!course.images.length) add("landing", "at least one image");
   if (d.outcomes.length < 4) add("info", `at least 4 things learners will learn (${d.outcomes.length} so far)`);
   if (!d.units.length) add("syllabus", "at least one syllabus unit");
@@ -175,6 +181,7 @@ function stepGaps(d, course, key) {
     if (!d.level) e.level = "Choose a level.";
     if (!d.category) e.category = "Choose a category.";
     if (!d.subcategory) e.subcategory = "Choose a sub-category.";
+    if (d.compliance === null) e.compliance = pw.compliance.error;
     if (!d.description.trim()) e.description = "Enter the course description.";
     if (!course.images.length) e.images = "Upload at least one image.";
   }
@@ -275,6 +282,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const [gear, setGear] = useState(false);
   const [seo, setSeo] = useState({ dirty: false, busy: false }); // the SEO step's own form, saved from the bar
   const seoSave = useRef(null); // saves the SEO form (Save and Send for approval save it with the rest)
+  const [guideForm, setGuideForm] = useState({ dirty: false, busy: false }); // a shared page's Course guide step, saved from the bar too
+  const guideSave = useRef(null);
   const [pressed, setPressed] = useState("");
   // a picture uploading (or a picture change saving) on Course landing page: the editor waits for it, so nobody moves on before
   // it is in, and an upload that fails says so on the step they are on
@@ -293,7 +302,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   // a provider our team hasn't approved yet can open its courses but not change them (the shared permission table)
   const { status: providerStatus, can: providerCan } = useProviderAccess();
   const notApproved = !ep.admin && (providerStatus === "pending" || providerStatus === "changes_requested");
-  const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS;
+  const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS.filter((x) => x.key !== "guide");
   const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: links.courses(course?.id) };
 
   useEffect(() => {
@@ -338,7 +347,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   useEffect(() => {
     if (!course) return;
     const fresh = loadedFor.current !== course.id;
-    if (!fresh && (course.version === ep.seen() || dirty || seo.dirty)) return;
+    if (!fresh && (course.version === ep.seen() || dirty || seo.dirty || guideForm.dirty)) return;
     loadedFor.current = course.id;
     const d = draftOf(course);
     setDraft(d);
@@ -417,8 +426,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   // list already marks what is left, and the last step's button lists it)
   const sendFromList = canSubmit && building && Boolean(next) && ready;
   const errorAt = sendAt === "list" && sendFromList ? "list" : "bar";
-  const unsaved = dirty || seo.dirty;
-  const saving = ep.updating || seo.busy;
+  const unsaved = dirty || seo.dirty || guideForm.dirty;
+  const saving = ep.updating || seo.busy || guideForm.busy;
   const refresh = ep.refresh;
 
   // shows a save's errors: each in its section, the editor going to the first section that has one (staying on this one if it
@@ -522,6 +531,10 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (dirty && !(await save())) return false;
     if (seo.dirty && !(await seoSave.current?.())) {
       if (tab !== "seo") changeTab("seo"); // its error shows on its own step
+      return false;
+    }
+    if (guideForm.dirty && !(await guideSave.current?.())) {
+      if (tab !== "guide") changeTab("guide");
       return false;
     }
     return true;
@@ -759,6 +772,13 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
             <p className="rt-acc__note">How the course page shows in Google and other search results.</p>
             <SeoPanel key={latest.n} course={latest.course || course} onSaved={saved} formId="rt-pws-ce-seo-form" onState={setSeo} saveRef={seoSave} />
           </section>
+          {ep.admin && (
+            <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-guide-h" hidden={tab !== "guide"}>
+              <h2 className="rt-acc__h2" id="rt-pws-ce-guide-h">Course guide</h2>
+              <p className="rt-acc__note">Extra sections for this page, in its own words. Switch on the ones it needs. Prices are never typed here: they come from the providers' live dates.</p>
+              <GuidePanel key={latest.n} course={latest.course || course} onSaved={saved} onState={setGuideForm} saveRef={guideSave} />
+            </section>
+          )}
           {/* the bar keeps its buttons where they are: "Unsaved changes" keeps its place while hidden, each button keeps the width of
               its own label while it says "Saving…", and the second button always says what it does. Nothing to do there (a role
               that can only look, on a course past its building steps): no bar. */}
@@ -935,9 +955,12 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
             <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={!draft.subcategory ? "Choose a sub-category first" : topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} invalid={Boolean(errors.topic)} describedBy={errors.topic ? "rt-pws-ce-topic-e" : undefined} />
           </div>
         </div>
+        <CardChoice name="rt-pws-ce-compliance" legend={<>{pw.compliance.legend}<Req /></>} value={draft.compliance === null ? "" : draft.compliance ? "yes" : "no"}
+          onChange={(v) => !full && set("compliance")(v === "yes")} options={pw.compliance.options.map((o) => ({ ...o, disabled: full }))} error={errors.compliance} />
+        <p className="rt-acc__note">{pw.compliance.hint}</p>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-details">Course description<Req /></label>
-          <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs.</span>
+          <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs. Lines starting with "- " show as a list.</span>
           <FieldErr id="rt-pws-ce-details" text={errors.description} />
           <TextArea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-invalid={errors.description ? true : undefined} aria-describedby={`rt-pws-ce-details-h${errors.description ? " rt-pws-ce-details-e" : ""}`} autoComplete="off" />
         </div>
@@ -1159,7 +1182,7 @@ function InfoSection({ draft, setDraft, access, errors }) {
         </div>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-req">Entry requirements</label>
-          <span className="rt-field__hint" id="rt-pws-ce-req-h">What learners need before they book, like an age, ID or an earlier qualification. Leave it empty if there are none.</span>
+          <span className="rt-field__hint" id="rt-pws-ce-req-h">What learners need before they book, like an age, ID or an earlier qualification. Lines starting with "- " show as a list. Leave it empty if there are none.</span>
           <FieldErr id="rt-pws-ce-req" text={errors.entryRequirements} />
           <TextArea id="rt-pws-ce-req" rows={3} maxLength={2000} value={draft.entryRequirements} onChange={(e) => set("entryRequirements")(e.target.value)} disabled={page} aria-invalid={errors.entryRequirements ? true : undefined} aria-describedby={`rt-pws-ce-req-h${errors.entryRequirements ? " rt-pws-ce-req-e" : ""}`} autoComplete="off" />
         </div>

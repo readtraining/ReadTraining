@@ -53,9 +53,9 @@ export const blogPosts = [
     summary: "When to apply, the refresher training and first aid you need, and how to avoid a gap in your licence.",
     lead: "A front-line SIA licence lasts three years. Renewing on time keeps you working, and the steps are simple once you know the order.",
     published: "2026-10-13",
-    // the refresher it is about has no topic of its own in the catalogue (and the top-up isn't it): related courses only
+    // about renewing, not one course: no topic of its own; the door supervisor refresher, first aid and the full course are related
     topic: null,
-    related: [TOPICS.efaw, TOPICS.doorSupervisor],
+    related: [TOPICS.doorRefresher, TOPICS.efaw, TOPICS.doorSupervisor],
     sources: [
       { label: "Renew your SIA licence (GOV.UK)", href: "https://www.gov.uk/guidance/renew-your-sia-licence" },
       { label: "Security Industry Authority (GOV.UK)", href: "https://www.gov.uk/government/organisations/security-industry-authority" },

@@ -305,6 +305,9 @@ export const admin = {
       "admin.course_resumed": "Put a course live again",
       "admin.shared_course_created": "Created a shared course page",
       "admin.shared_course_updated": "Edited a shared course page",
+      "admin.shared_course_guide_saved": "Edited a shared course page's guide",
+      "admin.shared_course_guide_removed": "Removed a shared course page's guide",
+      "system.course_guide_imported": "Moved a course guide into the database",
       "admin.shared_course_image_added": "Added a picture to a shared course page",
       "admin.shared_course_images_changed": "Changed a shared course page's pictures",
       "admin.shared_course_published": "Published a shared course page",
@@ -448,15 +451,12 @@ export const admin = {
         reinstate: { title: "Reinstate this provider?", text: "Everything works for them again, and their public profile is shown again. We email the owner.", button: "Reinstate provider" },
       },
       done: { approve: "Provider approved", changes: "Changes asked for", reject: "Provider not approved", suspend: "Provider suspended", reinstate: "Provider reinstated" },
-      // deleting a provider that wasn't approved (only those: a suspended one stays suspended); the pop-up asks for its name
+      // deleting a provider that wasn't approved (only those: a suspended one stays suspended), confirmed in a pop-up
       remove: {
         action: "Delete provider",
         title: "Delete this provider?",
         text: "This deletes the provider for good: its team access, venues, courses, dates, price plans, FAQs, pictures and logo. It can't be undone. The people on its team keep their logins, and its history stays in the activity log.",
-        label: "Type the provider's name to confirm",
         button: "Delete provider",
-        empty: "Type the provider's name to confirm.",
-        wrong: "That isn't this provider's name. Type it as it is shown above.",
         done: (name) => `${name} deleted`,
       },
       fullApplication: "Open the full application",
@@ -814,7 +814,7 @@ export const admin = {
       changeNote: "What the provider changed, against the current version. Approving it makes it the current version.",
       now: "Current",
       proposed: "Proposed",
-      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
+      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", compliance: "Course type", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
     },
     // the catalogue's one list (real, API admin.catalogue): what the site's filters and menus and the provider's course form use
     list: {

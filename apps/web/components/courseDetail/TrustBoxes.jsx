@@ -1,19 +1,20 @@
 import React from "react";
-import { TEAM } from "@/lib/teamTraining";
-import { topBar } from "@/data/home";
 
-// The four trust points (site-wide facts, not course data), as home's benefit cards (.rt-benefit-card) with icon-font glyphs.
+// Why book with Read Training: the same heading and points on every course page (site-wide facts, not course data: the client's
+// points, worded for every subject), as home's benefit cards (.rt-benefit-card) with icon-font glyphs.
 const ITEMS = [
+  { icon: "icon-global-search", title: "Compare in one place", text: "Prices, venues and dates from multiple approved providers, side by side." },
+  { icon: "icon-badge", title: "Approved providers only", text: "Every provider and course is checked by our team before it is listed." },
+  { icon: "icon-coupon", title: "Clear pricing", text: "See what's included (exams, resits, materials) before you book." },
+  { icon: "icon-calendar", title: "Flexible dates", text: "Weekday and weekend courses across the UK." },
   { icon: "icon-save-money", title: "No booking fee", text: "We provide our services without any additional charges." },
-  { icon: "icon-badge", title: "Approved providers only", text: "All courses on our platform undergo thorough manual screening to ensure the utmost quality." },
-  { icon: "icon-friend", title: TEAM.trust.title, text: TEAM.trust.text },
-  // online booking and payment (with pay by invoice for businesses) come in Milestone 4; until then a place is booked by phone
-  { icon: "icon-message", title: "Book by phone", text: `Online payment is coming soon. Until then, call us on ${topBar.phone} and we'll confirm your place with you.` },
+  { icon: "icon-message", title: "Support", text: "Our team can help you choose the right course or bundle for your goals." },
 ];
 
 export default function TrustBoxes() {
   return (
-    <section className="rt-cd__sec" aria-label="Why book with us">
+    <section className="rt-cd__sec" id="why-book" aria-labelledby="rt-cd-why-h">
+      <h2 id="rt-cd-why-h">Why book with Read Training?</h2>
       <ul className="rt-benefit-grid rt-cd__benefits">
         {ITEMS.map((i) => (
           <li key={i.title} className="rt-benefit-card">

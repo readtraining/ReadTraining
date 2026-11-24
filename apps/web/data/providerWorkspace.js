@@ -7,6 +7,18 @@ export const PROVIDER_HOME = "/provider";
 const DAY = 86400000;
 
 export const pw = {
+  // the course type (brief: required by law/regulation or not): asked in New course and the editor, saved as courses.compliance;
+  // our team checks it at approval. It never decides where a course is listed (its topic does).
+  compliance: {
+    legend: "Course type",
+    hint: "Our team checks this before the course goes live. It doesn't change where your course is listed.",
+    error: "Choose whether this is a compliance course.",
+    options: [
+      { value: "yes", label: "Compliance", text: "Required by law, regulation or an employer's policy. For example First Aid at Work, Food Hygiene or Door Supervisor." },
+      { value: "no", label: "Non compliance", text: "Learned by choice. For example personal development, photography or sales." },
+    ],
+    name: (v) => (v === true ? "Compliance" : v === false ? "Non compliance" : "Not answered"),
+  },
   title: "Provider workspace",
   tag: "Provider",
   backToSite: { label: "View site", href: "/" },

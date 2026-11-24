@@ -40,6 +40,7 @@ export function useCourseEndpoints(scope, courseId) {
     upload: api.admin.courses.sharedImageUploadUrl.useMutation(),
     add: api.admin.courses.sharedAddImage.useMutation(),
     images: api.admin.courses.sharedSetImages.useMutation(),
+    guide: api.admin.courses.saveGuide.useMutation(),
   };
   const base = admin ? { courseId } : { organisationId, courseId };
   // The version of the course the editor's draft was loaded from. Every change sends it (`seen`: saves, images, send for approval,
@@ -76,6 +77,8 @@ export function useCourseEndpoints(scope, courseId) {
     uploadUrl: (contentType) => (admin ? a.upload : p.upload).mutateAsync({ ...base, contentType }),
     addImage: (path) => (admin ? a.add : p.add).mutateAsync({ ...base, path, seen: seen() }).then(keep),
     setImages: (images) => (admin ? a.images : p.images).mutateAsync({ ...base, images, seen: seen() }).then(keep),
+    // a shared page's Course guide, the whole of it (null takes it away)
+    saveGuide: (guide) => a.guide.mutateAsync({ courseId, guide, seen: seen() }).then(keep),
     // the version the draft is based on: set when the draft is (re)loaded; `seen()` for a call made outside these (the gear)
     setVersion: (v) => (version.current = v || null),
     seen,
