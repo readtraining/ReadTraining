@@ -1,11 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { AdminTag } from "./AdminStatus";
 
 const money = (pence) => formatPrice(pence / 100);
+const FIRST_DATES = 10; // a long list of dates shows this many, then "Show all N dates"
+const short = (iso) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 
 // One price plan's packages side by side, as learners compare them: each one's price, its "Save £" (shown to learners as a was-price),
 // tagline, Most popular, and features included (✓) or not (✗).
@@ -21,7 +23,7 @@ function Packages({ plan }) {
           </div>
           <p className="rt-adm-plan__price">
             {money(t.pricePence)}
-            {t.savePence ? <small> · shown as “Save {money(t.savePence)}”, was {money(t.pricePence + t.savePence)}</small> : null}
+            {t.savePence ? <small>Shown as “Save {money(t.savePence)}”, was {money(t.pricePence + t.savePence)}</small> : null}
           </p>
           {t.tagline && <p className="rt-acc__note">{t.tagline}</p>}
           {t.features?.length ? (
@@ -46,74 +48,109 @@ function Packages({ plan }) {
   );
 }
 
-// What learners will pay for a provider's course (API admin.courses.get `pricing`), for our team to check before approving it: a
-// self-paced course's price or price plan; a classroom or live online course's upcoming dates, each with its own price (and any
-// was-price) or the plan it uses ("From" its cheapest package); then every plan used, in full. Plans need no approval of their
-// own, so this is where our team sees them. Nothing for a shared page (providers set the prices on their own courses).
+// One way of learning's dates (classroom, or live online): each with where, how it is priced (Flat, or Tiered on a plan) and the
+// price; a long list shows its first dates with "Show all N dates"
+function DatesTable({ method, dates, planOf }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? dates : dates.slice(0, FIRST_DATES);
+  const label = methodName(method);
+  return (
+    <div className="rt-adm-cp__way">
+      <h3 className="rt-acc__h3">{label} dates</h3>
+      {dates.length ? (
+        <>
+          <div className="rt-adm-cp__tablewrap">
+            <table className="rt-biz__table rt-adm-table rt-adm-cp__table">
+              <thead>
+                <tr>
+                  <th scope="col">Dates</th>
+                  <th scope="col">Where</th>
+                  <th scope="col">Pricing</th>
+                  <th scope="col" className="rt-adm-num">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((k) => {
+                  const plan = k.planId ? planOf(k.planId) : null;
+                  return (
+                    <tr key={k.id}>
+                      <td data-label="Dates">
+                        {formatDateRange(k.startsOn, k.endsOn)}
+                        {k.optionClosed ? <> <AdminTag>Bookings stopped</AdminTag></> : !k.bookable && <> <AdminTag>Bookings off</AdminTag></>}
+                      </td>
+                      <td data-label="Where">{k.place || label}</td>
+                      <td data-label="Pricing">{plan ? <>Tiered: {plan.name}</> : "Flat"}</td>
+                      <td data-label="Price" className="rt-adm-num-cell">
+                        {plan ? <>From {money(k.pricePence)}</> : money(k.pricePence)}
+                        {!plan && k.wasPricePence ? <small className="rt-adm-cp__was">was {money(k.wasPricePence)}</small> : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {dates.length > FIRST_DATES && (
+            <button type="button" className="rt-cd__link rt-adm-cp__more" aria-expanded={all} onClick={() => setAll((x) => !x)}>
+              {all ? "Show fewer dates" : `Show all ${dates.length} dates`}
+            </button>
+          )}
+        </>
+      ) : (
+        <p className="rt-acc__notice -warn">No upcoming {label.toLowerCase()} dates yet, so learners would have nothing to book this way.</p>
+      )}
+    </div>
+  );
+}
+
+// What learners will pay for a provider's course (API admin.courses.get `pricing`), for our team to check before approving it, one
+// part for each way it is taught: the self-paced price (Flat, or a price plan), then each dated way's upcoming dates (classroom,
+// live online), each date with how it is priced and its price, then every plan used, in full, with what uses it. A course taught
+// several ways shows every part. Plans need no approval of their own, so this is where our team sees them. Nothing for a shared
+// page (providers set the prices on their own courses).
 export default function AdminCoursePrices({ pricing }) {
   if (!pricing) return null;
   const planOf = (id) => pricing.plans.find((p) => p.id === id);
   const sp = pricing.selfPaced;
+  const dated = pricing.dated ?? [];
+  // what each plan is used on: the self-paced price and the dates, by way of learning
+  const usedOn = (plan) => [
+    ...(sp?.planId === plan.id ? [methodName("self-paced")] : []),
+    ...dated.map((m) => [m, pricing.dates.filter((k) => k.method === m && k.planId === plan.id)]).filter(([, ks]) => ks.length).map(([m, ks]) => `${methodName(m)} ${ks.slice(0, 5).map((k) => short(k.startsOn)).join(", ")}${ks.length > 5 ? ` and ${ks.length - 5} more` : ""}`),
+  ];
   return (
     <section className="rt-acc__card" aria-labelledby="rt-adm-cp-h">
       <h2 className="rt-acc__h2" id="rt-adm-cp-h">Prices and packages</h2>
       <p className="rt-acc__note">What learners will pay, including VAT. Check the prices, any “was” price or saving, and what each package includes before approving.</p>
 
-      {sp ? (
-        <dl className="rt-adm-dl">
-          <div>
-            <dt>Price</dt>
-            <dd>
-              {sp.planId && planOf(sp.planId) ? <>Price plan <strong>{planOf(sp.planId).name}</strong>: from {money(sp.pricePence)}</> : sp.pricePence != null ? money(sp.pricePence) : <span className="rt-adm-muted">Not set</span>}
-            </dd>
-          </div>
-        </dl>
-      ) : pricing.dates.length ? (
-        <div className="rt-adm-cp__tablewrap">
-          <table className="rt-biz__table rt-adm-table rt-adm-cp__table">
-            <thead>
-              <tr>
-                <th scope="col">Dates</th>
-                <th scope="col">Where</th>
-                <th scope="col" className="rt-adm-num">Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pricing.dates.map((k) => {
-                const plan = k.planId ? planOf(k.planId) : null;
-                return (
-                  <tr key={k.id}>
-                    <td data-label="Dates">
-                      {formatDateRange(k.startsOn, k.endsOn)}
-                      {k.optionClosed ? <> <AdminTag>Bookings stopped</AdminTag></> : !k.bookable && <> <AdminTag>Bookings off</AdminTag></>}
-                    </td>
-                    <td data-label="Where">{k.place || methodName(k.method)}</td>
-                    <td data-label="Price" className="rt-adm-num-cell">
-                      {plan ? (
-                        <>From {money(k.pricePence)}<small className="rt-adm-muted"> · {plan.name}</small></>
-                      ) : (
-                        <>{money(k.pricePence)}{k.wasPricePence ? <small className="rt-adm-muted"> · was {money(k.wasPricePence)}</small> : null}</>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {sp && (
+        <div className="rt-adm-cp__way">
+          <h3 className="rt-acc__h3">
+            {methodName("self-paced")}
+            {sp.closed && <> <AdminTag>Bookings stopped</AdminTag></>}
+          </h3>
+          <dl className="rt-adm-dl">
+            <div><dt>Pricing</dt><dd>{sp.planId && planOf(sp.planId) ? <>Tiered: {planOf(sp.planId).name}</> : "Flat"}</dd></div>
+            <div><dt>Price</dt><dd>{sp.pricePence == null ? <span className="rt-adm-muted">Not set</span> : sp.planId ? <>From {money(sp.pricePence)}</> : money(sp.pricePence)}</dd></div>
+          </dl>
         </div>
-      ) : (
-        <p className="rt-acc__notice -warn">No upcoming dates yet, so learners would have nothing to book.</p>
       )}
 
-      {pricing.plans.map((p) => (
-        <div key={p.id} className="rt-adm-plan">
-          <h3 className="rt-acc__h3">
-            Price plan: {p.name}
-            {p.archived && <> <AdminTag>Archived</AdminTag></>}
-          </h3>
-          <Packages plan={p} />
-        </div>
-      ))}
+      {dated.map((m) => <DatesTable key={m} method={m} dates={pricing.dates.filter((k) => k.method === m)} planOf={planOf} />)}
+
+      {pricing.plans.map((p) => {
+        const used = usedOn(p);
+        return (
+          <div key={p.id} className="rt-adm-plan">
+            <h3 className="rt-acc__h3">
+              Price plan: {p.name}
+              {p.archived && <> <AdminTag>Archived</AdminTag></>}
+            </h3>
+            {used.length > 0 && <p className="rt-acc__note">Used on: {used.join("; ")}</p>}
+            <Packages plan={p} />
+          </div>
+        );
+      })}
     </section>
   );
 }

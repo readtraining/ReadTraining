@@ -6222,7 +6222,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 
 /* Cohorts list: the cohort cell (date badge, course, venue, dates), places breakdown, favourite star, date filter, pages */
 .rt-pws-coh__cohort { display: flex; align-items: flex-start; gap: 12px; min-width: 240px; }
-.rt-pws-coh__pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+/* a cohort's status: its one pill, and why learners can't book it as text under it (CohortStatus) */
+.rt-pws-coh__status { display: inline-grid; justify-items: start; gap: 4px; }
+.rt-pws-coh__why { font-size: var(--rt-text-sm); line-height: 1.35; color: var(--rt-c-muted); }
 .rt-pws-coh__cohort > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rt-pws-coh__date { display: inline-flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 52px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); line-height: 1.1; }
 .rt-pws-coh__date small { font-size: var(--rt-text-xs); font-weight: 600; text-transform: uppercase; }
@@ -6394,15 +6396,23 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (prefers-reduced-motion: reduce) { .rt-pws-coh__day { transition: none; } }
 
 /* calendar */
-.rt-pws-cal__bar { align-items: center; }
+/* the calendar as one card: its bar (Today, arrows, the month; the colour key and the views) on top, then the grid or the list */
+.rt-pws-cal { overflow: hidden; background: var(--rt-c-surface); border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); }
+.rt-pws-cal__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 12px 16px; border-bottom: 1px solid var(--rt-c-line); }
+/* the filters under the bar (as the cohort list's), and what they found with Clear filters */
+.rt-pws-cal__filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-pws-cal__filters .rt-adm-select { width: auto; min-width: 180px; margin: 0; }
+.rt-pws-cal__filtersum { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 0 auto; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+@media (max-width: 575px) { .rt-pws-cal__filters .rt-adm-select { flex: 1 1 100%; } .rt-pws-cal__filtersum { margin-left: 0; } }
 .rt-pws-cal__nav-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rt-pws-cal__nav { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease; }
 /* "Today": the arrows' box, as wide as its word (faded like them while today is on screen) */
 .rt-pws-cal__nav.-text { width: auto; padding: 0 16px; font-size: var(--rt-text-sm); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__nav:not(:disabled):hover { border-color: var(--rt-c-brand); color: var(--rt-c-brand); } }
 .rt-pws-cal__nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.rt-pws-cal__nav.-text:disabled { opacity: 1; color: color-mix(in srgb, var(--rt-c-muted) 45%, var(--rt-c-surface)); cursor: default; }
 .rt-pws-cal__title { margin: 0 0 0 8px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-cal__daynum { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 6px; border: 0; border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
+.rt-pws-cal__daynum { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 5px; border: 0; border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__daynum:hover { background: var(--rt-c-brand-soft); } }
 /* cohort colours (cohort colour), from the template palette; past cohorts are grey on the calendar */
 .-c-purple { --rt-coh: var(--color-purple-1); }
@@ -6415,16 +6425,18 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* the month and week views fit the window (ProviderCalendar useRowHeight), so the page keeps only a small space under them */
 @media (min-width: 768px) { .rt-pws .rt-adm__main:has(.rt-pws-cal__grid) { padding-bottom: 24px; } }
 .rt-pws-cal__phone { display: none; }
+/* a list of days inside the calendar's card (the day view, and the month and week on a phone): each day split by a line */
+.rt-pws-cal__listday { padding: 16px; }
+.rt-pws-cal__listday + .rt-pws-cal__listday { border-top: 1px solid var(--rt-c-line); }
 .rt-pws-cal__wdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--rt-c-line); }
-.rt-pws-cal__wdays > span { padding: 10px 8px; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
+.rt-pws-cal__wdays > span { padding: 8px; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
 .rt-pws-cal__wdays b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-pws-cal__wdays .is-today b { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand); color: var(--rt-c-surface); }
-.rt-pws-cal__wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 3px; min-height: 120px; padding-bottom: 6px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-pws-cal__wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; min-height: 120px; padding-bottom: 4px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-pws-cal__wk:last-child { border-bottom: 0; }
 .rt-pws-cal__wk.-tall { min-height: 420px; padding-top: 6px; }
-.rt-pws-cal__day { grid-row: 1 / -1; padding: 4px 6px; border-right: 1px solid var(--rt-c-line); }
+.rt-pws-cal__day { grid-row: 1 / -1; padding: 2px 4px; border-right: 1px solid var(--rt-c-line); }
 .rt-pws-cal__day:nth-child(7) { border-right: 0; }
-.rt-pws-cal__day.-out { background: var(--rt-c-soft); }
 /* a month row too short for session bars: the date with "N sessions" beside it (it opens the day, as the date does) */
 .rt-pws-cal__day.-compact { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 2px 6px; }
 .rt-pws-cal__count { min-width: 0; max-width: 100%; padding: 2px 8px; border: 0; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font: inherit; font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; color: var(--rt-c-brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
@@ -6433,6 +6445,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal__day.is-today .rt-pws-cal__daynum { background: var(--rt-c-brand); color: var(--rt-c-surface); }
 .rt-pws-cal__seg { position: relative; z-index: 1; display: flex; align-items: center; min-width: 0; margin: 0 4px; padding: 0 8px; border: 0; border-left: 3px solid var(--rt-coh, var(--rt-c-brand)); border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 16%, var(--rt-c-surface)); font: inherit; font-size: var(--rt-text-xs); line-height: 1.2; text-align: left; color: var(--rt-c-text); cursor: pointer; }
 .rt-pws-cal__seg > span[aria-hidden] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-pws-cal__segicon { flex: none; margin-right: 4px; color: var(--rt-coh, var(--rt-c-brand)); }
 .rt-pws-cal__seg.-before { margin-left: 0; border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .rt-pws-cal__seg.-after { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .rt-pws-cal__seg.-past { --rt-coh: var(--rt-c-muted); }
@@ -7389,8 +7402,11 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-widesheet .rt-dd__panel { max-width: 860px; }
 /* Prices and packages on the admin's course review (AdminCoursePrices): the dates and their prices, then each price plan's packages
    side by side, as learners compare them; one under another on phones */
-.rt-adm-cp__tablewrap { margin: 12px 0 0; } /* the admin table reaches the card's edges, as in every card */
-.rt-adm-cp__table td small { white-space: nowrap; }
+/* one part for each way the course is taught (self-paced, classroom dates, live online dates), each under its own heading */
+.rt-adm-cp__way { display: grid; gap: 8px; margin-top: 20px; }
+.rt-adm-cp__tablewrap { margin: 4px 0 0; } /* the admin table reaches the card's edges, as in every card */
+.rt-adm-cp__was { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-muted); white-space: nowrap; }
+.rt-adm-cp__more { justify-self: start; }
 .rt-adm-plan { display: grid; gap: 10px; margin-top: 20px; }
 .rt-adm-plan .rt-acc__h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
 .rt-adm-plan__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }

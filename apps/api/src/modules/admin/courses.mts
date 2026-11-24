@@ -36,6 +36,7 @@ import {
   REVIEWED,
   seenVersion,
   setCourseImages,
+  ukToday,
 } from '../provider/courses.mjs'
 
 // Courses for the admin (Milestone 2): the approvals queue (new courses, and changes to live courses), every course in the
@@ -155,11 +156,13 @@ async function pricingView(db: typeof Db, course: { id: number; kind: string; me
       : await db.execute<{ id: string; method: string; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; plan_id: string | null; bookable: boolean; venue: string | null; city: string | null; postcode: string | null }>(sql`
           select k.id, k.method, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.plan_id, k.bookable, v.name venue, v.city, v.postcode
           from public.cohorts k left join public.venues v on v.id = k.venue_id
-          where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= current_date order by k.starts_on`)
+          where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date order by k.starts_on`)
   const planIds = [...new Set([selfPaced ? course.planId : null, ...dates.map((k) => k.plan_id)].filter((x): x is string => Boolean(x)))]
   const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
   return {
-    selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId } : null,
+    selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId, closed: course.closedMethods.includes('self-paced') } : null,
+    // the ways it is taught on dates (classroom, live online), each shown with its own dates, even when it has none yet
+    dated: course.methods.filter(isDated),
     dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, optionClosed: course.closedMethods.includes(k.method), place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
     plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
   }

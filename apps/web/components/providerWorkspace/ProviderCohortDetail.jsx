@@ -11,8 +11,8 @@ import { formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { COHORT_TONE, Loading, Pill } from "./providerParts";
-import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, deletable, longDay, offSale, timeRange, todayIso, tutorOptions } from "./ProviderCohorts";
+import { Loading, Pill } from "./providerParts";
+import { CancelSheet, CohortForm, CohortStatus, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, deletable, longDay, timeRange, todayIso, tutorOptions } from "./ProviderCohorts";
 
 // One run of a course (Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
 // whether it takes bookings and its tutor, with Edit, Move to another course, Cancel and Delete. Learners appear under it once booking opens (a later
@@ -85,10 +85,7 @@ export default function ProviderCohortDetail({ cohortId }) {
       <section className="rt-acc__card" aria-labelledby="rt-coh-det-h">
         <div className="rt-acc__cardhead rt-adm-cardhead">
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
-          <span className="rt-pws-coh__pills">
-            <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
-            {!cancelled && offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}
-          </span>
+          <CohortStatus k={k} status={status} />
         </div>
         {/* its learning option isn't taking bookings on the course: these dates can't be booked until it takes them again */}
         {!cancelled && k.optionClosed && (

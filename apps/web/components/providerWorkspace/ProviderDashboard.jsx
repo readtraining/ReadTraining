@@ -7,7 +7,7 @@ import { useMe } from "@/lib/useMe";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { ErrorState } from "@/components/states/States";
 import { COURSE_TONE, Pill } from "./providerParts";
-import { Seats, offSale, todayIso, useSchedule } from "./ProviderCohorts";
+import { Seats, todayIso, useSchedule, whyNotOnSale } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 import NavIcon from "@/components/admin/navIcons";
@@ -175,8 +175,8 @@ export default function ProviderDashboard() {
                     <li key={k.id}>
                       <span className={`rt-dash__date -c-${k.method === "live-online" ? "blue" : "purple"}`} aria-hidden="true"><small>{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${k.startsOn}T00:00:00Z`))}</small><b>{Number(k.startsOn.slice(8))}</b></span>
                       <span className="rt-dash__cmeta">
-                        <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
-                        <small><span className="rt-dash__soon">Starts {soon(daysFrom(today, k.startsOn))}</span> · {k.venue ? k.venue.name : "Online"}{tutorName(k.tutorUserId) ? ` · ${tutorName(k.tutorUserId)}` : ""}</small>
+                        <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
+                        <small><span className="rt-dash__soon">Starts {soon(daysFrom(today, k.startsOn))}</span> · {k.venue ? k.venue.name : "Online"}{tutorName(k.tutorUserId) ? ` · ${tutorName(k.tutorUserId)}` : ""}{whyNotOnSale(k) ? ` · ${whyNotOnSale(k)}` : ""}</small>
                       </span>
                       <Seats booked={k.taken ?? 0} max={k.capacity} />
                     </li>
