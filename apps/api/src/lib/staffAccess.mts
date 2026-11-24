@@ -15,13 +15,19 @@ import { notify, ownerOf } from './notify.mjs'
 type Ctx = { db: typeof Db; user: { id: string }; ip: string | null }
 
 // Open a provider's workspace. Any session the admin still has open is ended first (one at a time), and the summaries of
-// ended sessions not yet sent go out.
+// ended sessions not yet sent go out. The admin's own row is locked first, so two starts at the same moment (two tabs, or a page
+// starting it twice) run one after the other: the second finds this provider's session already open and keeps it, instead of
+// both ending and opening one and the second breaking the one-open-session rule (staff_access_one_open).
 export async function startStaffAccess(ctx: Ctx, organisationId: string, reason: string) {
   const [org] = await ctx.db.execute<{ type: string; status: string; name: string }>(sql`select type, status, name from public.organisations where id = ${organisationId}::uuid`)
   if (!org || org.type !== 'provider') throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider no longer exists.' })
   // until our team approves a provider there are no courses, dates or plans to work on; a rejected one is closed
   if (org.status !== 'active' && org.status !== 'suspended') throw new TRPCError({ code: 'BAD_REQUEST', message: 'You can work in a provider’s workspace once the provider is approved (it is active or suspended).' })
   const id = await ctx.db.transaction(async (tx) => {
+    await tx.execute(sql`select 1 from public.admin_users where user_id = ${ctx.user.id}::uuid for update`)
+    const [open] = await tx.execute<{ id: string }>(sql`
+      select id from public.staff_access where admin_user_id = ${ctx.user.id}::uuid and ended_at is null and organisation_id = ${organisationId}::uuid`)
+    if (open) return open.id
     const ended = await tx.execute<{ id: string; organisation_id: string }>(sql`
       update public.staff_access set ended_at = now(), ended_how = 'replaced' where admin_user_id = ${ctx.user.id}::uuid and ended_at is null returning id, organisation_id`)
     for (const e of ended) await logActivity(tx, { actorUserId: ctx.user.id, actorIdentity: 'admin', organisationId: e.organisation_id, action: 'admin.staff_access_ended', targetType: 'staff_access', targetId: e.id, metadata: { how: 'replaced' }, ip: ctx.ip })

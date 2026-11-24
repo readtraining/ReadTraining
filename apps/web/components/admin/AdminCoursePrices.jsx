@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { AdminTag } from "./AdminStatus";
@@ -50,7 +51,10 @@ function Packages({ plan }) {
 // self-paced course's price or price plan; a classroom or live online course's upcoming dates, each with its own price (and any
 // was-price) or the plan it uses ("From" its cheapest package); then every plan used, in full. Plans need no approval of their
 // own, so this is where our team sees them. Nothing for a shared page (providers set the prices on their own courses).
-export default function AdminCoursePrices({ pricing }) {
+// A course offered both ways shows both: its self-paced price and its dates. `planHref(id)`: where an admin who may change prices
+// edits a plan (the provider's Price plans page, that plan open), or none; a plan is the provider's, so it says what else uses it.
+const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+export default function AdminCoursePrices({ pricing, planHref }) {
   if (!pricing) return null;
   const planOf = (id) => pricing.plans.find((p) => p.id === id);
   const sp = pricing.selfPaced;
@@ -59,16 +63,17 @@ export default function AdminCoursePrices({ pricing }) {
       <h2 className="rt-acc__h2" id="rt-adm-cp-h">Prices and packages</h2>
       <p className="rt-acc__note">What learners will pay, including VAT. Check the prices, any “was” price or saving, and what each package includes before approving.</p>
 
-      {sp ? (
+      {sp && (
         <dl className="rt-adm-dl">
           <div>
-            <dt>Price</dt>
+            <dt>{pricing.dated ? "Self-paced price" : "Price"}</dt>
             <dd>
               {sp.planId && planOf(sp.planId) ? <>Price plan <strong>{planOf(sp.planId).name}</strong>: from {money(sp.pricePence)}</> : sp.pricePence != null ? money(sp.pricePence) : <span className="rt-adm-muted">Not set</span>}
             </dd>
           </div>
         </dl>
-      ) : pricing.dates.length ? (
+      )}
+      {!pricing.dated ? null : pricing.dates.length ? (
         <div className="rt-adm-cp__tablewrap">
           <table className="rt-biz__table rt-adm-table rt-adm-cp__table">
             <thead>
@@ -107,10 +112,16 @@ export default function AdminCoursePrices({ pricing }) {
 
       {pricing.plans.map((p) => (
         <div key={p.id} className="rt-adm-plan">
-          <h3 className="rt-acc__h3">
-            Price plan: {p.name}
-            {p.archived && <> <AdminTag>Archived</AdminTag></>}
-          </h3>
+          <div className="rt-adm-plan__top">
+            <div>
+              <h3 className="rt-acc__h3">
+                Price plan: {p.name}
+                {p.archived && <> <AdminTag>Archived</AdminTag></>}
+              </h3>
+              <p className="rt-acc__note">The provider&apos;s plan, used on {[p.used.dates ? count(p.used.dates, "upcoming date", "upcoming dates") : "", count(p.used.courses, "course", "courses")].filter(Boolean).join(" across ")}. A change reaches all of them.</p>
+            </div>
+            {planHref && <Link href={planHref(p.id)} className="button -sm -outline-purple-1 text-purple-1">Edit plan<span className="rt-sr"> {p.name}</span></Link>}
+          </div>
           <Packages plan={p} />
         </div>
       ))}

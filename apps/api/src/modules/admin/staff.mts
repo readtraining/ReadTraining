@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { eq, organisations } from '@readtraining/db'
+import { eq, organisations, sql } from '@readtraining/db'
 
 import { openStaffAccess } from '../../lib/actor.mjs'
 import { endStaffAccess, startStaffAccess } from '../../lib/staffAccess.mjs'
@@ -26,9 +26,14 @@ export const staffRouter = createTRPCRouter({
     }),
 
   // the provider the admin is editing, if any
+  // with how many changes it has saved: opening a provider's pages to look changes nothing, so the editing bar (and the provider's
+  // summary and history) come only once something is saved
   current: adminProcedure('admin.panel.open').query(async ({ ctx }) => {
     const open = await openStaffAccess(ctx.db, ctx.user.id)
-    return open ? { organisationId: open.organisationId, startedAt: open.startedAt } : null
+    if (!open) return null
+    const [n] = await ctx.db.execute<{ changes: number }>(sql`
+      select count(*)::int changes from public.activity_log where metadata->>'staff' = ${open.id} and action <> 'access.denied'`)
+    return { organisationId: open.organisationId, startedAt: open.startedAt, changes: n?.changes ?? 0 }
   }),
 
   // any admin can end their own session (even after losing the switch); the provider's owner is then emailed what changed

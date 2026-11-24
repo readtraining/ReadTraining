@@ -12,6 +12,7 @@ export const pw = {
   compliance: {
     legend: "Course type",
     hint: "Our team checks this before the course goes live. It doesn't change where your course is listed.",
+    sharedHint: "Shown on this page as Compliance training. At approval, a provider's answer for a course on it is checked against this one.",
     error: "Choose whether this is a compliance course.",
     options: [
       { value: "yes", label: "Compliance", text: "Required by law, regulation or an employer's policy. For example First Aid at Work, Food Hygiene or Door Supervisor." },
@@ -152,7 +153,7 @@ export const pw = {
     review: { title: "Account review", lead: "Where your provider account stands, what our team needs from you, and what has happened so far." },
     performance: { title: "Performance", lead: "Revenue, enrolments and enquiries over time, and what learners say about your courses." },
     courses: { title: "Courses", lead: "Every course you run. New courses, and changes to a live course's wording, are reviewed before they go live." },
-    packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates." },
+    packages: { title: "Price plans", lead: "Packages learners choose between, like Basic, Plus and Pro. Create a plan once, then choose it on any of your dates or self-paced courses." },
     course: { title: "Edit course" },
     courseOverview: { title: "Course details" },
     cohorts: { title: "Cohorts", lead: "Each run of a course: its dates, venue, tutor and places. Open one to take the register and record results." },

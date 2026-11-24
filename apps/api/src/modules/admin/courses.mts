@@ -158,10 +158,22 @@ async function pricingView(db: typeof Db, course: { id: number; kind: string; me
           where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= current_date order by k.starts_on`)
   const planIds = [...new Set([selfPaced ? course.planId : null, ...dates.map((k) => k.plan_id)].filter((x): x is string => Boolean(x)))]
   const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
+  // a plan is the provider's, shared by its courses: editing it reaches every date still to run on it and every course using it
+  const used = planIds.length
+    ? await db.execute<{ id: string; dates: number; courses: number }>(sql`
+        select p.id,
+               (select count(*)::int from public.cohorts k where k.plan_id = p.id and k.cancelled_at is null and k.ends_on >= current_date) dates,
+               (select count(*)::int from (select k.course_id from public.cohorts k where k.plan_id = p.id and k.cancelled_at is null and k.ends_on >= current_date
+                                           union select c.id from public.courses c where c.plan_id = p.id) s) courses
+        from public.price_plans p where p.id in (${sql.join(planIds.map((x) => sql`${x}::uuid`), sql`, `)})`)
+    : []
+  const usedBy = new Map(used.map((u) => [u.id, { dates: u.dates, courses: u.courses }]))
   return {
+    // taught on dates: its dates' prices are shown (with a warning when there are none), as well as any self-paced price
+    dated: course.methods.some(isDated),
     selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId } : null,
     dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, optionClosed: course.closedMethods.includes(k.method), place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
-    plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
+    plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt), used: usedBy.get(x.id) ?? { dates: 0, courses: 0 } })),
   }
 }
 
@@ -315,10 +327,18 @@ export const adminCoursesRouter = createTRPCRouter({
         : []
       const children =
         course.kind === 'shared'
-          ? await ctx.db.execute<{ id: number; title: string; status: string; provider: string; upcoming: number }>(sql`
-              select c.id, c.title, c.status, o.name provider,
-                     (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming
-              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} and c.status <> 'draft' order by o.name`)
+          ? // each provider course on the page with what learners see of it there: its learning options, its dates still to run,
+            // the next one, and its lowest price open to booking (a date taking bookings, or the self-paced option's price)
+            await ctx.db.execute<{ id: number; title: string; status: string; provider: string; method: string | null; methods: string[]; closed_methods: string[]; upcoming: number; next_on: string | null; from_pence: number | null }>(sql`
+              select c.id, c.title, c.status, o.name provider, c.method, c.methods, c.closed_methods,
+                     (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming,
+                     (select min(k.starts_on)::text from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.starts_on >= current_date) next_on,
+                     least(
+                       (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable
+                          and k.starts_on > current_date and not (k.method = any(c.closed_methods))),
+                       case when 'self-paced' = any(c.methods) and not ('self-paced' = any(c.closed_methods)) then c.price_pence end
+                     )::int from_pence
+              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} and c.status <> 'draft' order by o.name, c.title`)
           : []
       const asked = await requesters(ctx.db, course)
       const ownCourse = asked.course.has(ctx.user.id)
@@ -326,7 +346,7 @@ export const adminCoursesRouter = createTRPCRouter({
       return {
         ...detail,
         provider: provider ?? null,
-        children,
+        children: children.map((x) => ({ id: x.id, title: x.title, status: x.status, provider: x.provider, method: x.method, methods: x.methods, closedMethods: x.closed_methods, upcoming: x.upcoming, nextOn: x.next_on, fromPence: x.from_pence })),
         // a shared page's guide (its Course guide step), or null
         guide: course.kind === 'shared' ? await loadGuide(ctx.db, course.id) : null,
         change: await changeView(ctx.db, detail),

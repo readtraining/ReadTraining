@@ -37,7 +37,8 @@ const REVIEW_EVENTS: Record<string, string> = {
   'admin.provider_rejected': 'rejected',
   'admin.provider_suspended': 'suspended',
   'admin.provider_reinstated': 'reinstated',
-  // ReadTraining staff opened the workspace to change something (Admin › Providers › Open workspace), with their reason
+  // ReadTraining staff changed something in the provider's work from the admin, with their reason (visits that changed nothing
+  // are left out, below)
   'admin.staff_access_started': 'staff',
 }
 // a page on one site: https, the site itself or any of its own addresses (www., m., business., uk.) and a page after it; the
@@ -95,6 +96,9 @@ export const providerProfileRouter = createTRPCRouter({
       select l.action, l.at, l.metadata, l.actor_identity, p.first_name, p.last_name
       from public.activity_log l left join public.profiles p on p.id = l.actor_user_id
       where l.organisation_id = ${input.organisationId}::uuid and l.action in ${Object.keys(REVIEW_EVENTS)}
+        -- a staff visit that only looked isn't one: shown once it changed something (its entries carry the session)
+        and (l.action <> 'admin.staff_access_started'
+             or exists (select 1 from public.activity_log x where x.metadata->>'staff' = l.target_id and x.action <> 'access.denied'))
       order by l.at desc limit 50`)
     const text = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
     return {
