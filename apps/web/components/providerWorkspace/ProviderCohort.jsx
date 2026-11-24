@@ -20,8 +20,8 @@ import { Req } from "./settingsForm";
 
 // Manage cohort: the cohort's details (course, venue, status set by hand, session notes, dates, timings, students,
 // whether it takes bookings, tutor), with Edit cohort details, Enrol student (a new order on these dates), Bulk enrolment (a
-// file of people booked outside ReadTraining) and Manage curriculum. Then its students: each one's status, name and email, the
-// customer who paid (name and email), pricing plan, sales channel, payment, notes and LMS access, an email button, the learner record, and a menu
+// file of people booked outside ReadTraining) and Manage curriculum. Then its students: each one's name and email, the
+// customer who paid (name and email), pricing plan, sales channel, payment, notes, LMS access and status (last, as in every table), an email button, the learner record, and a menu
 // (Edit Details, Reschedule, Resit, Notes, Timeline). A row opens to the register (attended, result, certificate). Picked rows
 // can be emailed together; "Email students" uses a template or a new message.
 
@@ -193,7 +193,6 @@ export default function ProviderCohort({ cohortId }) {
                     </label>
                   </th>
                   <th scope="col"><span className="rt-sr">More</span></th>
-                  <th scope="col">Student status</th>
                   <th scope="col">Student</th>
                   <th scope="col">Customer</th>
                   <th scope="col">Pricing plan</th>
@@ -201,6 +200,7 @@ export default function ProviderCohort({ cohortId }) {
                   <th scope="col">Payment</th>
                   <th scope="col">Notes</th>
                   <th scope="col">LMS access</th>
+                  <th scope="col">Student status</th>
                   <th scope="col"><span className="rt-sr">Actions</span></th>
                 </tr>
               </thead>
@@ -225,12 +225,6 @@ export default function ProviderCohort({ cohortId }) {
                             <span aria-hidden="true">+</span><span className="rt-sr">Register for {name}</span>
                           </button>
                         </td>
-                        <td data-label="Student status">
-                          <div className="rt-field rt-adm-select -inline">
-                            <label htmlFor={`rt-coh-ss-${e.id}`} className="rt-sr">Student status for {name}</label>
-                            <FieldSelect id={`rt-coh-ss-${e.id}`} label={`Student status for ${name}`} value={st} onChange={(v) => changeStudentStatus(e, v)} options={Object.entries(pw.studentStatuses).map(([value, label]) => ({ value, label }))} disabled={st === "cancelled" || k.cancelled} compact />
-                          </div>
-                        </td>
                         <td data-label="Student"><Link href={`/provider/learners/${e.learnerId}`} className="rt-adm-strong">{name}</Link><small>{e.learner?.email}</small>{e.resitOf && <small>Resit</small>}</td>
                         <td data-label="Customer">{o ? <>{customerName(o.customer)}<small>{o.customer.email}</small></> : "—"}</td>
                         <td data-label="Pricing plan">{planOf(e) || <span className="rt-adm-muted">—</span>}</td>
@@ -238,6 +232,12 @@ export default function ProviderCohort({ cohortId }) {
                         <td data-label="Payment">{o ? <Pill tone={ORDER_TONE[o.status]}>{pw.orderStatuses[o.status]}</Pill> : "—"}</td>
                         <td data-label="Notes">{e.notes?.length ? <button type="button" className="rt-cd__link" onClick={() => setNotes(e)}>{`${e.notes.length} ${e.notes.length === 1 ? "note" : "notes"}`}<span className="rt-sr"> for {name}</span></button> : <span className="rt-adm-muted">—</span>}</td>
                         <td data-label="LMS access">{lms && st !== "cancelled" ? "Yes" : <span className="rt-adm-muted">—</span>}</td>
+                        <td data-label="Student status">
+                          <div className="rt-field rt-adm-select -inline">
+                            <label htmlFor={`rt-coh-ss-${e.id}`} className="rt-sr">Student status for {name}</label>
+                            <FieldSelect id={`rt-coh-ss-${e.id}`} label={`Student status for ${name}`} value={st} onChange={(v) => changeStudentStatus(e, v)} options={Object.entries(pw.studentStatuses).map(([value, label]) => ({ value, label }))} disabled={st === "cancelled" || k.cancelled} compact />
+                          </div>
+                        </td>
                         <td data-label="Actions">
                           <div className="rt-pws-coh__rowactions">
                             <button type="button" className="rt-icon-btn rt-pws-coh__icon" onClick={() => setMail({ ids: [e.id], single: true })} disabled={st === "cancelled"}>

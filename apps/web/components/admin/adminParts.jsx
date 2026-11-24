@@ -81,6 +81,13 @@ export function useSort(first = null) {
   const by = (key, numeric = false) => setSort((s) => (s?.key === key ? { key, dir: -s.dir } : { key, dir: numeric ? -1 : 1 }));
   return { sort, by, apply };
 }
+// A table's column widths, as its first child (a <colgroup>; the header cells stay as they are): each column's usual content plus
+// one even gap, so the space between columns comes out the same (set per table from its real content, measured in the browser).
+// `null` leaves a column to take what is left (the last one, or the row menu). Phones show the rows as cards, where it does nothing.
+export function ColWidths({ widths }) {
+  return <colgroup>{widths.map((w, i) => <col key={i} style={w ? { width: w } : undefined} />)}</colgroup>;
+}
+
 // `numeric`: sorts largest first (numbers, prices, dates); `right`: a number or price column, header and cells on the right.
 export function SortTh({ label, col, sorter, numeric = false, right = false }) {
   const on = sorter.sort?.key === col;

@@ -10,6 +10,7 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
 import { Loading, Pill, RowMenu, Tabs, ToolSelect, formatDay } from "./providerParts";
+import { ColWidths } from "@/components/admin/adminParts";
 import { Confirm, Field, aria, isEmail, useParam } from "./settingsForm";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -195,6 +196,7 @@ export function TeamTab({ say }) {
       ) : (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
+            <ColWidths widths={manage ? ["36%", "36%", null, "64px"] : ["36%", "36%", null]} />
             <thead><tr><th scope="col">Member</th><th scope="col">Role</th><th scope="col">Status</th>{manage && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
             <tbody>
               {shown.map((m) => {

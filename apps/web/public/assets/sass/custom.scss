@@ -5864,10 +5864,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
    course (its title link), and its ⋮ menu (RowMenu) holds the course's actions. */
 @container rt-pws-main (width >= 1015px) {
   .rt-cx-table { table-layout: fixed; }
-  .rt-cx-table th:nth-child(2) { width: 200px; } /* status, and what it needs next */
-  .rt-cx-table th:nth-child(3) { width: 120px; } /* visibility */
-  .rt-cx-table th:nth-child(4) { width: 150px; } /* next date */
-  .rt-cx-table th:nth-child(5) { width: 80px; }  /* the ⋮ menu: its 44px button and the cell padding */
+  /* its column widths: ColWidths in ProviderCourses.jsx (the ⋮ menu 80px: its 44px button and the cell padding) */
   .rt-cx-table th, .rt-cx-table td:not(.-act) { overflow: hidden; text-overflow: ellipsis; }
   .rt-cx-table td:not(.-act) { white-space: nowrap; }
 }
@@ -6979,12 +6976,9 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (hover: hover) and (pointer: fine) { .rt-pws-pkg__add:hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); } }
 .rt-pws-pkg__add:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws-pkg__add { transition: none; } }
-/* the plans table: the plan (its packages under it), what uses it and its prices side by side, the room left over after the
-   prices, and the ⋯ menu at the row's end */
-.rt-pws-pkgs th.-plan { width: 34%; }
-.rt-pws-pkgs th.-used { width: 38%; }
+/* the plans table: the plan (its packages under it), what uses it, its prices, its status and the ⋯ menu (widths: ColWidths) */
 .rt-pws-pkgs td.-prices { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rt-pws-pkgs th.-act, .rt-pws-pkgs td.-act { width: 64px; text-align: right; }
+.rt-pws-pkgs td.-act { text-align: right; }
 /* a course overview's Packages tab: each package and its price */
 .rt-pws-pkgs__tiers { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
 .rt-pws-pkgs__tiers li { display: flex; justify-content: space-between; gap: 12px; max-width: 240px; list-style: none; }
@@ -7860,8 +7854,9 @@ html { scrollbar-gutter: stable; }
 .rt-adm--platform .rt-demo-tag { padding: 1px 10px; line-height: 18px; }
 /* N6: a notice is always the full width of its column */
 .rt-adm--platform .rt-acc__notice { align-self: stretch; }
-/* G7: the page content stops growing on wide screens */
-.rt-adm--platform .rt-adm__main > * { max-width: 1440px; }
+/* G7: the page content stops growing on wide screens, and sits centred beside the menu, with the same room left and right (as the
+   provider workspace); on a laptop it fills the space and nothing changes */
+@media (min-width: 992px) { .rt-adm--platform .rt-adm__main { padding-inline: max(32px, calc((100% - 1440px) / 2)); } }
 /* G8, G9, N3: one header height on desktop (tabs start at the same place on every page) and the main action stays at the top
    right beside the title instead of dropping under the description */
 @media (min-width: 992px) {
@@ -7897,6 +7892,11 @@ html { scrollbar-gutter: stable; }
 }
 /* N9: a cell's lines stay left aligned (numbers stay right) */
 @media (min-width: 576px) { .rt-adm--platform .rt-adm-table td { text-align: left; } .rt-adm--platform .rt-adm-table td.rt-adm-num-cell { text-align: right; } }
+/* a column after a number column (right-aligned) starts further in, so the two don't meet in the middle ("25%" against "Active") */
+@media (min-width: 576px) {
+  .rt-adm--platform .rt-adm-table th.rt-adm-num + th:not(.rt-adm-num),
+  .rt-adm--platform .rt-adm-table td.rt-adm-num-cell + td:not(.rt-adm-num-cell) { padding-left: clamp(32px, 4vw, 88px); } /* grows with the screen, as the gaps do */
+}
 /* C18, N4: form blocks inside a card are 20px apart; side-by-side fields keep their inputs level whatever their hint; a date
    field with a button beside it (Legal: Last updated + Today) is as wide as the one next to it */
 .rt-adm--platform .rt-acc__card > :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) + :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) { margin-top: 20px; }

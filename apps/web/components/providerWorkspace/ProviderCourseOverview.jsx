@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/format";
 import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { COURSE_TONE, Loading, Pill, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { ColWidths } from "@/components/admin/adminParts";
 import { CohortCell, CohortForm, CohortStatus, Seats, WHEN, askWhen, cohortState, inWhen, todayIso, useSchedule } from "./ProviderCohorts";
 
 // One course's overview (course Details): a head card with the cover picture, status, learning options and performance model,
@@ -178,25 +179,26 @@ function CohortsTab({ course }) {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
+            <ColWidths widths={["38%", "23%", "10%", "13%", null]} />
             <thead>
               <tr>
                 <th scope="col">Cohort</th>
-                <th scope="col">Status</th>
                 <th scope="col">Tutor</th>
                 <th scope="col">Places</th>
                 <th scope="col">Price</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
               {list.slice((at - 1) * PER_PAGE, at * PER_PAGE).map((k) => (
                 <tr key={k.id}>
                   <td data-label="Cohort"><CohortCell k={k} forCourse /></td>
-                  <td data-label="Status">
-                    <CohortStatus k={k} status={k.status} />
-                  </td>
                   <td data-label="Tutor">{tutorName(k.tutorUserId, k) || <span className="rt-adm-muted">Not assigned</span>}</td>
                   <td data-label="Places"><Seats booked={0} max={k.capacity} /></td>
                   <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
+                  <td data-label="Status">
+                    <CohortStatus k={k} status={k.status} />
+                  </td>
                 </tr>
               ))}
             </tbody>

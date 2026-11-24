@@ -10,10 +10,10 @@ import PackageEditor from "./PackageEditor";
 import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
-import { HeaderAction } from "@/components/admin/adminParts";
+import { ColWidths, HeaderAction } from "@/components/admin/adminParts";
 
-// every plan by default (an archived one marked so); "In use" and "Archived" narrow it
-const SHOW = [{ value: "", label: "All plans" }, { value: "active", label: "In use" }, { value: "archive", label: "Archived" }];
+// every plan by default; "Active" and "Archived" narrow it to one status (the words of the Status column)
+const SHOW = [{ value: "", label: "All plans" }, { value: "active", label: "Active" }, { value: "archive", label: "Archived" }];
 // the packages' prices as one range ("£299.00 – £449.00"), or one price when they are all the same
 const priceRange = (tiers) => {
   const p = tiers.map((t) => t.pricePence);
@@ -103,11 +103,13 @@ export default function ProviderPackages() {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table rt-pws-pkgs">
+            <ColWidths widths={edit ? ["27%", "33%", "21%", null, "64px"] : ["27%", "33%", "21%", null]} />
             <thead>
               <tr>
-                <th scope="col" className="-plan">Plan</th>
-                <th scope="col" className="-used">Used on</th>
+                <th scope="col">Plan</th>
+                <th scope="col">Used on</th>
                 <th scope="col">Prices</th>
+                <th scope="col">Status</th>
                 {edit && <th scope="col" className="-act"><span className="rt-sr">Actions</span></th>}
               </tr>
             </thead>
@@ -117,11 +119,12 @@ export default function ProviderPackages() {
                   <tr key={p.id}>
                     <td data-label="Plan">
                       {edit ? <button type="button" className="rt-pws-pkgs__name" onClick={() => setEditor({ open: true, plan: p })}>{p.name}</button> : <strong>{p.name}</strong>}
-                      {p.archived && <> <Pill tone="muted">Archived</Pill></>}
                       <small className="rt-adm-muted">{p.tiers.length} packages: {p.tiers.map((t) => t.name).join(", ")}</small>
                     </td>
                     <td data-label="Used on">{usedText(p.used)}</td>
                     <td data-label="Prices" className="-prices">{priceRange(p.tiers)}</td>
+                    {/* can it be picked for dates (Active) or not (Archived), last before the menu as in the other tables */}
+                    <td data-label="Status">{p.archived ? <Pill tone="muted">Archived</Pill> : <Pill tone="ok">Active</Pill>}</td>
                     {edit && (
                     <td data-label="Actions" className="-act">
                         <RowMenu label={`Actions for ${p.name}`} items={[
