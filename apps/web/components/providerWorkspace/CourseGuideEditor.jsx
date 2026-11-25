@@ -1,245 +1,546 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useEndpoints } from "@/lib/courseEditorApi";
+import Link from "next/link";
+import Sheet, { DISCARD_MESSAGE } from "@/components/testPrep/runner/Sheet";
 import { errorsFrom } from "@/lib/useMe";
-import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { api } from "@/lib/trpc/react";
+import { contentDefaults } from "@/data/home";
+import { formatPrice } from "@/lib/format";
+import { focusFirstError } from "@/lib/focusFirstError";
 import TextArea from "@/components/forms/TextArea";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
+import { Confirm, Counter, Field, aria } from "./settingsForm";
 import { Toggle } from "./providerParts";
+import LineList from "./LineList";
 
-// The shared page editor's Course guide step: the guide's sections (API admin.courses.saveGuide; their shape and rules are
-// apps/api/src/lib/courseGuide.mts, the page shows them in components/courseDetail/CourseGuide.jsx). Every section is optional:
-// switched on, it shows its fields; switched off, it leaves the page. Prices are never typed: a package adds to each date's own
-// price, and the costs are worked out from the live dates. Kept open (hidden) on the other steps as
-// the SEO step is, so the bar's Save saves it (`saveRef`, `onState`). Built from the editor's own parts: a card per section
-// (.rt-acc__card), the switches (Toggle), .rt-field fields, and the price plan editor's package cards (.rt-pws-pkg__tier) for
-// each item of a list.
+// A shared page's optional sections (its Course guide: API admin.courses.saveGuide; their shape and rules are
+// apps/api/src/lib/courseGuide.mts, the page shows them in components/courseDetail/CourseGuide.jsx). Each one sits in the editor
+// step for its part of the page (`step`): the top of the page on Course landing page, the comparison, course week and what's
+// included on Course information, and a step of their own, Licence, costs and careers (team training, the licence steps, the cost
+// table and careers). A shared page lists every provider's dates, so none of them is a price, a package or a bundle: those are
+// each provider's own (its dates and price plans). In a step a section
+// is one compact card (GuideExtras): its name, Added or Not added, where it shows on the page and what it holds. Add and Edit open
+// it in a pop-up made for what it is: a table for the comparison, the course week and the costs, titled groups for the licence
+// steps, and the course editor's lists for items. The pop-up's Save saves the section at once (no approval, logged), and Remove asks first, then saves.
+// Prices are never typed: the cost table's course and first aid rows come from live prices, and the licence fee and the team
+// training words are the site's own (Site content), picked or switched on here.
 
-// A field: `text` (one line), `area` (a box: paragraphs, and "- " lines for a list), `lines` (one item per line), `money`
-// (pounds), `check` (a switch), `rows` (a list of items with `fields`), `group` (fields together; `optional`: switched on and off).
-const T = (key, label, max, hint) => ({ key, label, type: "text", max, hint });
-const A = (key, label, max, hint) => ({ key, label, type: "area", max, hint });
-const L = (key, label, hint) => ({ key, label, type: "lines", hint });
-const TITLE = T("title", "Heading", 120);
-const LIST_HINT = "One per line.";
-const TEXT_HINT = "A blank line starts a new paragraph. Lines starting with \"- \" show as a list. [words](/course/...) or [words](https://...) makes a link.";
-
+// The sections, in the page's order. `step`: the editor step that holds it; `where`: where it shows on the page; `anchor`: its
+// heading on the page, for "View on page" ("" the top); `toggle`: nothing to fill in, only added or not (the words are the site's);
+// `wide`: its pop-up is the wide one (a table or cards side by side).
 export const GUIDE_SECTIONS = [
-  { key: "heroTitle", label: "Hero heading", hint: "The page's main heading, in place of the course name (which stays everywhere else).", field: T("heroTitle", "Heading", 120) },
-  { key: "trust", label: "Trust strip", hint: "Short lines in the hero, under its buttons, shown one after another with dots between them.", field: L("trust", "Lines", "One per line, up to 6 (60 characters each).") },
-  {
-    key: "compare", label: "Comparison table", hint: "A table comparing options (licences, fees), after Who is this course for.",
-    fields: [TITLE, A("intro", "Line under the heading", 600), L("columns", "Column headings", LIST_HINT), { key: "rows", label: "Rows", type: "rows", item: "row", fields: [T("label", "Row label", 120), L("cells", "Cells", "One per column after the first. Yes or No shows a tick or a cross.")] }, T("note", "Note under the table", 400)],
-  },
-  { key: "unitsIntro", label: "Syllabus intro", hint: "A line above the syllabus units.", field: A("unitsIntro", "Text", 600) },
-  { key: "week", label: "Course week", hint: "What happens on each day.", fields: [TITLE, { key: "items", label: "Days", type: "rows", item: "day", fields: [T("day", "Day", 40), T("text", "What happens", 200)] }, T("note", "Note", 300)] },
-  { key: "included", label: "What's included", fields: [TITLE, L("items", "Items", LIST_HINT)] },
-  {
-    key: "exams", label: "Exam table extras", hint: "One more column for the exam table, matched to its rows by the unit's name (Syllabus and exam). A row whose name isn't here leaves the column out.",
-    fields: [A("intro", "Text above the table", 1200, TEXT_HINT), T("column", "Column heading", 30, "Questions unless you name another, such as Assessment."), { key: "units", label: "Units", type: "rows", item: "unit", fields: [T("unit", "Unit name, as in the exam table", 120), T("value", "Column value", 120, "For Questions: a number, or — for a practical assessment.")] }],
-  },
-  {
-    key: "packages", label: "Packages", hint: "Packages learners choose when they book a date. Each one is the date's own price plus what it adds; one with no price yet shows \"Price not set yet\" and isn't offered when booking until it has one. A date on a provider's price plan keeps that plan. Team training isn't a package: it is in Learning options, priced by quote.",
-    fields: [TITLE, A("intro", "Line under the heading", 600), { key: "items", label: "Packages", type: "rows", item: "package", most: 6, fields: [T("name", "Name", 60), T("text", "Best for", 200), L("points", "What's in it", LIST_HINT), { key: "add", label: "Adds to the date's price (£)", type: "money", hint: "Leave it empty while the price isn't set." }, T("badge", "Badge", 30, "For example: Most popular"), { key: "firstAid", label: "Includes Emergency First Aid at Work (the basket then doesn't ask about first aid)", type: "check" }] }, T("note", "Note", 400)],
-  },
-  {
-    key: "business", label: "Team training", hint: "A section for employers.",
-    fields: [TITLE, A("intro", "Line under the heading", 800), { key: "benefits", label: "Benefits", type: "rows", item: "benefit", fields: [T("title", "Benefit", 60), T("text", "Text", 200)] }, { key: "tiers", label: "Volume savings", type: "rows", item: "saving", fields: [T("learners", "Group size", 40), T("saving", "Saving", 40)] }, T("account", "Account line", 200), T("signIn", "Line for business account holders", 120), { key: "quote", label: "Quote", type: "group", fields: [T("title", "Heading", 60), T("text", "Line", 200), T("cta", "Button words", 40)] }],
-  },
-  { key: "licence", label: "Steps", hint: "Numbered steps (how to get or renew a licence), with a tip under them.", fields: [TITLE, { key: "steps", label: "Steps", type: "rows", item: "step", fields: [T("title", "Step", 80), A("text", "Text", 400)] }, A("note", "Tip under the steps", 400)] },
-  {
-    key: "costs", label: "Cost table", hint: "What it costs in total. The course row and the total are worked out from the live prices.",
-    fields: [
-      TITLE, A("intro", "Line under the heading", 400), T("courseLabel", "Course row label", 80, "Empty: the course name."),
-      { key: "firstAid", label: "First aid row", type: "group", optional: true, fields: [T("label", "Label", 80), { key: "from", label: "From (£)", type: "money" }] },
-      { key: "rows", label: "Other rows", type: "rows", item: "row", fields: [T("label", "Cost", 80), T("value", "Price", 60, "For example: Free")] },
-      { key: "licenceFee", label: "Licence fee row", type: "group", optional: true, fields: [T("label", "Label", 80), { key: "amount", label: "Amount (£)", type: "money" }] },
-      A("note", "Note under the table", 400),
-    ],
-  },
-  { key: "careers", label: "Careers", fields: [TITLE, A("text", "Text", 800), L("areas", "Areas of work", LIST_HINT), A("roles", "Roles", 400), T("cta", "Link words", 40), T("href", "Link address", 200, "A page on this site, starting /")] },
+  { key: "heroTitle", step: "landing", label: "Main heading", anchor: "", where: "Top of the page, in place of the course name." },
+  { key: "trust", step: "landing", label: "Trust strip", anchor: "", where: "Top of the page, under the buttons." },
+  { key: "compare", step: "info", label: "Comparison table", anchor: "rt-cg-compare-h", wide: true, where: "After Who is this course for." },
+  { key: "week", step: "info", label: "Course week", anchor: "rt-cg-week-h", wide: true, where: "After the syllabus." },
+  { key: "included", step: "info", label: "What's included", anchor: "rt-cg-incl-h", where: "After the course week." },
+  { key: "business", step: "after", label: "Team training", anchor: "business", toggle: true, edit: "/admin/content?tab=teamTraining", where: "After the entry requirements. Same words on every page." },
+  { key: "licence", step: "after", label: "Licence steps", anchor: "licence", where: "After team training." },
+  { key: "costs", step: "after", label: "Cost table", anchor: "costs", wide: true, where: "After the licence steps." },
+  { key: "careers", step: "after", label: "Careers", anchor: "rt-cg-career-h", where: "After the cost table." },
 ];
 
-// ---- the guide as the form holds it, and as it is saved ------------------------------------------------------------------------
+export const stepOfSection = (key) => GUIDE_SECTIONS.find((s) => s.key === key)?.step || null;
+/** The sections a saved guide has, in the page's order (`step`: only that step's). */
+export const addedSections = (guide, step) => GUIDE_SECTIONS.filter((s) => (!step || s.step === step) && guide?.[s.key] !== undefined);
 
-const blank = (f) => (f.type === "lines" ? [] : f.type === "rows" ? [blankRow(f)] : f.type === "money" ? "0" : f.type === "check" ? false : f.type === "group" ? (f.optional ? undefined : blankObj(f.fields)) : "");
-const blankObj = (fields) => Object.fromEntries(fields.map((f) => [f.key, blank(f)]).filter(([, v]) => v !== undefined));
-const blankRow = (f) => blankObj(f.fields);
-const startOf = (s) => (s.field ? "" : s.list ? [blankObj(s.list.fields)] : blankObj(s.fields));
+// ---- each section as its pop-up holds it, and as it is saved ---------------------------------------------------------------
 
-// one value as saved: words trimmed, empty ones left out, lists without empty lines, pounds as numbers, empty rows dropped
-function cleanValue(f, v) {
-  if (f.type === "lines") return (v || []).map((x) => String(x).trim()).filter(Boolean);
-  if (f.type === "money") return v === "" || v == null ? undefined : Number(v);
-  if (f.type === "check") return Boolean(v);
-  if (f.type === "rows") return (v || []).map((r) => cleanObj(f.fields, r)).filter((r) => r && Object.keys(r).length);
-  if (f.type === "group") return v ? cleanObj(f.fields, v) : undefined;
-  const t = String(v ?? "").trim();
-  return t || undefined;
-}
-function cleanObj(fields, obj) {
-  const out = { ...obj };
-  for (const f of fields) {
-    const c = cleanValue(f, obj?.[f.key]);
-    if (c === undefined || (Array.isArray(c) && !c.length && f.type !== "lines")) delete out[f.key];
-    else out[f.key] = c;
+const text = (v) => String(v ?? "").trim();
+const lines = (a) => (a || []).map(text).filter(Boolean);
+const opt = (v) => text(v) || undefined;
+
+// A blank section, and a saved one, as its pop-up's draft (lists never missing)
+function draftOf(key, v) {
+  switch (key) {
+    case "heroTitle": return v || "";
+    case "trust": return v || [];
+    case "compare": {
+      const columns = v?.columns?.length ? [...v.columns] : ["", "", ""];
+      return { title: v?.title || "", intro: v?.intro || "", note: v?.note || "", columns, rows: (v?.rows?.length ? v.rows : [{ label: "", cells: [] }]).map((r) => ({ label: r.label, cells: columns.slice(1).map((_, i) => r.cells?.[i] ?? "") })) };
+    }
+    case "week": return { title: v?.title || "", note: v?.note || "", items: v?.items?.length ? v.items.map((x) => ({ ...x })) : [{ day: "", text: "" }] };
+    case "included": return { title: v?.title || "What's included", items: v?.items || [] };
+    case "licence": return { title: v?.title || "", note: v?.note || "", steps: v?.steps?.length ? v.steps.map((x) => ({ ...x })) : [{ title: "", text: "" }] };
+    case "costs": return {
+      title: v?.title || "What does it cost in total?", intro: v?.intro || "", note: v?.note || "", courseLabel: v?.courseLabel || "",
+      firstAid: v?.firstAid ? { label: v.firstAid.label } : null,
+      rows: (v?.rows || []).map((r) => ({ ...r })),
+      licenceFee: v?.licenceFee ? { label: v.licenceFee.label || "", fee: v.licenceFee.fee || "" } : null,
+    };
+    case "careers": return { title: v?.title || "", text: v?.text || "", areas: v?.areas || [], roles: v?.roles || "", cta: v?.cta || "", href: v?.href || "" };
+    default: return v;
   }
-  // a row with nothing typed in it (a switch alone isn't anything typed)
-  const typed = fields.some((f) => f.type !== "check" && out[f.key] !== undefined && !(Array.isArray(out[f.key]) && !out[f.key].length));
-  return typed ? out : null;
 }
-/** The form's guide as it is saved: switched-off sections left out; null when nothing is left. */
-export function cleanGuide(g) {
-  const out = {};
-  for (const s of GUIDE_SECTIONS) {
-    if (g[s.key] === undefined) continue;
-    const v = s.field ? cleanValue(s.field, g[s.key]) : s.list ? cleanValue({ type: "rows", fields: s.list.fields }, g[s.key]) : cleanObj(s.fields, g[s.key]);
-    if (v !== undefined && v !== null && !(Array.isArray(v) && !v.length)) out[s.key] = v;
+
+// The draft as it is saved (words trimmed, empty ones left out)
+function cleanOf(key, d) {
+  switch (key) {
+    case "heroTitle": return text(d);
+    case "trust": return lines(d);
+    case "compare": return { title: text(d.title), intro: opt(d.intro), note: opt(d.note), columns: d.columns.map(text), rows: d.rows.map((r) => ({ label: text(r.label), cells: r.cells.map(text) })) };
+    case "week": return { title: text(d.title), note: opt(d.note), items: d.items.map((x) => ({ day: text(x.day), text: text(x.text) })) };
+    case "included": return { title: text(d.title), items: lines(d.items) };
+    case "licence": return { title: text(d.title), note: opt(d.note), steps: d.steps.map((x) => ({ title: text(x.title), text: text(x.text) })) };
+    case "costs": return {
+      title: text(d.title), intro: opt(d.intro), note: opt(d.note), courseLabel: opt(d.courseLabel),
+      ...(d.firstAid ? { firstAid: { label: text(d.firstAid.label) } } : {}),
+      rows: d.rows.map((r) => ({ label: text(r.label), value: text(r.value) })),
+      ...(d.licenceFee ? { licenceFee: { label: text(d.licenceFee.label), fee: d.licenceFee.fee } } : {}),
+    };
+    case "careers": return { title: text(d.title), text: text(d.text), areas: lines(d.areas), roles: opt(d.roles), cta: opt(d.cta), href: opt(d.href) };
+    default: return d;
   }
-  return Object.keys(out).length ? out : null;
 }
 
-const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+// What the draft still needs before it can be saved, as { field id: message } (the API checks the same: lib/courseGuide.mts)
+function problemsOf(key, d) {
+  const e = {};
+  const need = (id, v, what) => { if (!text(v)) e[id] = `Enter ${what}.`; };
+  if (key === "heroTitle") need("g-hero", d, "the heading");
+  if (key === "trust" && !lines(d).length) e["g-trust"] = "Add at least one line.";
+  if (["compare", "week", "included", "licence", "costs", "careers"].includes(key)) need("g-title", d.title, "the heading");
+  if (key === "compare") {
+    d.columns.forEach((c, i) => need(`g-col${i}`, c, "the column heading"));
+    d.rows.forEach((r, i) => { need(`g-row${i}`, r.label, "the row label"); r.cells.forEach((c, j) => need(`g-cell${i}-${j}`, c, "Yes, No or a few words")); });
+  }
+  if (key === "week") d.items.forEach((x, i) => { need(`g-day${i}`, x.day, "the day"); need(`g-what${i}`, x.text, "what happens"); });
+  if (key === "included" && !lines(d.items).length) e["g-items"] = "Add at least one item.";
+  if (key === "licence") d.steps.forEach((x, i) => { need(`g-step${i}`, x.title, "the step"); need(`g-steptext${i}`, x.text, "what happens in this step"); });
+  if (key === "costs") {
+    if (d.firstAid) need("g-fa-label", d.firstAid.label, "the row's label");
+    d.rows.forEach((r, i) => { need(`g-crow${i}`, r.label, "what the cost is"); need(`g-cval${i}`, r.value, "the price, or words like Free"); });
+    if (d.licenceFee) { need("g-lf-label", d.licenceFee.label, "the row's label"); if (!d.licenceFee.fee) e["g-lf-fee"] = "Choose the licence fee."; }
+  }
+  if (key === "careers") need("g-text", d.text, "the text");
+  return e;
+}
 
-// ---- the form --------------------------------------------------------------------------------------------------------------
+// what an added section holds, in a few words (shown on its card)
+const n = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+function summaryOf(s, v, fees) {
+  if (s.toggle) return "";
+  if (s.key === "heroTitle") return v;
+  if (s.key === "trust") return (v || []).join(" · ");
+  if (s.key === "compare") return [v.title, n(v.rows?.length || 0, "row"), n(v.columns?.length || 0, "column")].join(" · ");
+  if (s.key === "week") return [v.title, n(v.items?.length || 0, "day")].join(" · ");
+  if (s.key === "included") return [v.title, n(v.items?.length || 0, "item")].join(" · ");
+  if (s.key === "costs") {
+    const fee = v.licenceFee && fees.find((f) => f.key === v.licenceFee.fee);
+    return [v.title, v.firstAid && "first aid row", fee && `${fee.name} ${formatPrice(fee.amount)}`, v.rows?.length && n(v.rows.length, "other row")].filter(Boolean).join(" · ");
+  }
+  if (s.key === "licence") return [v.title, n(v.steps?.length || 0, "step")].join(" · ");
+  if (s.key === "careers") return [v.title, n(v.areas?.length || 0, "area of work", "areas of work")].join(" · ");
+  return "";
+}
 
-export function GuidePanel({ course, onSaved, onState, saveRef }) {
-  const ep = useEndpoints();
-  const [guide, setGuide] = useState(() => course.guide || {});
-  const [saved, setSaved] = useState(() => course.guide || null);
+// ---- the saved guide, held by the editor -------------------------------------------------------------------------------------
+
+/**
+ * The shared page's guide for the editor's steps. `ep`: the editor's endpoints (lib/courseEditorApi.js). `saveSection(key,
+ * value, message)` saves the guide with that section (undefined takes it off) and resolves to "" or what went wrong ("stale":
+ * changed somewhere else, which the editor's banner says); `reset(course)` starts again from a course loaded again ("Load the
+ * latest version"). Each section is saved from its own pop-up, so nothing here is ever unsaved (`dirty` is always false).
+ */
+export function useGuideForm({ ep, course, onSaved }) {
+  const [saved, setSaved] = useState(() => course?.guide || null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const errRef = useRef(null);
-  const dirty = !same(cleanGuide(guide), cleanGuide(saved || {}));
-  useUnsavedChanges(dirty);
-  useEffect(() => { onState?.({ dirty, busy }); }, [dirty, busy]); // eslint-disable-line react-hooks/exhaustive-deps -- onState is the editor's setter
-  // a newer guide (saved in another tab, or by a colleague) shows here while nothing is typed
-  const savedKey = JSON.stringify(course.guide || null);
-  useEffect(() => {
-    if (dirty) return;
-    setSaved(course.guide || null);
-    setGuide(course.guide || {});
-  }, [savedKey]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the saved guide changes
-
-  const save = () => {
-    const clean = cleanGuide(guide);
-    setError("");
+  const savedKey = JSON.stringify(course?.guide || null);
+  useEffect(() => { setSaved(course?.guide || null); }, [savedKey]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the saved guide changes
+  const saveSection = async (key, value, message) => {
+    const next = { ...(saved || {}) };
+    if (value === undefined) delete next[key];
+    else next[key] = value;
+    const ordered = Object.fromEntries(GUIDE_SECTIONS.filter((s) => next[s.key] !== undefined).map((s) => [s.key, next[s.key]]));
+    const clean = Object.keys(ordered).length ? ordered : null;
     setBusy(true);
-    return ep.saveGuide(clean)
-      .then(() => { setSaved(clean); setGuide(clean || {}); ep.refresh(); onSaved("Course guide saved. The page shows it now."); return true; })
-      .catch((err) => {
-        if (ep.stale(err)) return false; // changed somewhere else: the editor's banner says so
-        const { fields, general } = errorsFrom(err);
-        setError(general || Object.values(fields)[0] || "We couldn't save the course guide. Check your connection, then try again.");
-        requestAnimationFrame(() => { errRef.current?.scrollIntoView({ block: "center" }); errRef.current?.focus({ preventScroll: true }); });
-        return false;
-      })
-      .finally(() => setBusy(false));
+    try {
+      await ep.saveGuide(clean);
+      setSaved(clean);
+      ep.refresh();
+      onSaved?.(message);
+      return "";
+    } catch (err) {
+      if (ep.stale(err)) return "stale";
+      const { fields, general } = errorsFrom(err);
+      return Object.values(fields)[0] || general || "We couldn't save it. Check your connection, then try again.";
+    } finally {
+      setBusy(false);
+    }
   };
-  useEffect(() => { if (saveRef) saveRef.current = save; });
-  const locked = !ep.access.page;
-  const setKey = (key) => (value) => setGuide((g) => (value === undefined ? Object.fromEntries(Object.entries(g).filter(([k]) => k !== key)) : { ...g, [key]: value }));
+  return { saved, busy, saveSection, dirty: false, reset: (fresh) => setSaved(fresh?.guide || null), locked: !ep.access.page };
+}
 
+// ---- the sections of one step --------------------------------------------------------------------------------------------
+
+/**
+ * One step's optional sections, each a compact card. `own`: the step is only these (Licence, costs and careers): its
+ * card has the step's heading; otherwise they are a card of their own under the step's fields. `onView(anchor)`: the Preview at
+ * that section. `pageTitle`: the page's name (the cost table's course row says it when it has no label of its own).
+ */
+export function GuideExtras({ form, step, own, onView, pageTitle }) {
+  const list = GUIDE_SECTIONS.filter((s) => s.step === step);
+  if (!list.length) return null;
+  const hid = own ? `rt-pws-ce-${step}-h` : `rt-pws-ce-${step}-x`;
   return (
-    <div className="rt-q__form">
-      {error && <p className="rt-q__err" role="alert" tabIndex={-1} ref={errRef}><span className="rt-sr">Error: </span>{error}</p>}
-      {GUIDE_SECTIONS.map((s) => {
-        const on = guide[s.key] !== undefined;
-        const id = `rt-pws-guide-${s.key}`;
-        return (
-          <fieldset key={s.key} className="rt-acc__card">
-            <legend className="rt-sr">{s.label}</legend>
-            <Toggle id={`${id}-on`} checked={on} disabled={locked} onChange={(v) => setKey(s.key)(v ? startOf(s) : undefined)} label={s.label} hint={s.hint} />
-            {on && (
-              <div className="rt-q__form">
-                {s.field ? (
-                  <Field f={s.field} id={id} value={guide[s.key]} onChange={setKey(s.key)} locked={locked} />
-                ) : s.list ? (
-                  <Rows f={{ key: s.key, label: s.label, item: s.list.item, fields: s.list.fields }} id={id} value={guide[s.key]} onChange={setKey(s.key)} locked={locked} />
-                ) : (
-                  <Fields fields={s.fields} id={id} value={guide[s.key]} onChange={setKey(s.key)} locked={locked} />
-                )}
-              </div>
-            )}
-          </fieldset>
-        );
-      })}
-    </div>
+    <section className="rt-acc__card rt-pws-course-form" aria-labelledby={hid}>
+      <h2 className="rt-acc__h2" id={hid}>{own ? own.title : "Optional sections"}</h2>
+      {own?.note && <p className="rt-acc__note">{own.note}</p>}
+      <ul className="rt-pws-extras">
+        {list.map((s) => <ExtraCard key={s.key} s={s} form={form} onView={onView} pageTitle={pageTitle} />)}
+      </ul>
+    </section>
   );
 }
 
-function Fields({ fields, id, value, onChange, locked }) {
-  const obj = value || {};
-  return fields.map((f) => <Field key={f.key} f={f} id={`${id}-${f.key}`} value={obj[f.key]} onChange={(v) => onChange({ ...obj, [f.key]: v })} locked={locked} />);
-}
-
-function Field({ f, id, value, onChange, locked }) {
-  if (f.type === "rows") return <Rows f={f} id={id} value={value} onChange={onChange} locked={locked} />;
-  if (f.type === "group") {
-    const on = value !== undefined;
-    return (
-      <div className="rt-q__form">
-        {f.optional ? <Toggle id={`${id}-on`} checked={on} disabled={locked} onChange={(v) => onChange(v ? blankObj(f.fields) : undefined)} label={f.label} /> : <p className="rt-pws-pkg__h3">{f.label}</p>}
-        {on && <Fields fields={f.fields} id={id} value={value} onChange={onChange} locked={locked} />}
-      </div>
-    );
-  }
-  if (f.type === "check") return <Toggle id={id} checked={Boolean(value)} disabled={locked} onChange={onChange} label={f.label} />;
-  const hint = f.hint ? <span className="rt-field__hint" id={`${id}-h`}>{f.hint}</span> : null;
-  const described = f.hint ? `${id}-h` : undefined;
-  if (f.type === "area" || f.type === "lines") {
-    const text = f.type === "lines" ? (value || []).join("\n") : value ?? "";
-    return (
-      <div className="rt-field">
-        <label htmlFor={id}>{f.label}</label>
-        {hint}
-        <TextArea id={id} rows={f.type === "lines" ? 4 : 3} maxLength={f.max} value={text} disabled={locked} aria-describedby={described}
-          onChange={(e) => onChange(f.type === "lines" ? e.target.value.split("\n") : e.target.value)} />
-      </div>
-    );
-  }
-  return (
-    <div className="rt-field">
-      <label htmlFor={id}>{f.label}</label>
-      {hint}
-      <input id={id} type="text" inputMode={f.type === "money" ? "decimal" : undefined} maxLength={f.max} value={value ?? ""} disabled={locked} autoComplete="off" aria-describedby={described}
-        onChange={(e) => onChange(f.type === "money" ? e.target.value.replace(/[^0-9.]/g, "") : e.target.value)} />
-    </div>
-  );
-}
-
-// A list of items (packages, steps, rows), each in the price plan editor's package card with up, down and remove; Add another
-// under them.
-function Rows({ f, id, value, onChange, locked }) {
-  const rows = value || [];
-  const most = f.most ?? 20;
-  const move = (i, by) => {
-    const next = [...rows];
-    const [x] = next.splice(i, 1);
-    next.splice(i + by, 0, x);
-    onChange(next);
+function ExtraCard({ s, form, onView, pageTitle }) {
+  const fees = useLicenceFees();
+  const [editing, setEditing] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState("");
+  const value = form.saved?.[s.key];
+  const on = value !== undefined;
+  const id = `rt-pws-guide-${s.key}`;
+  const save = async (v, message) => {
+    setError("");
+    const problem = await form.saveSection(s.key, v, message);
+    if (problem && problem !== "stale") setError(problem);
+    return problem;
+  };
+  const add = () => (s.toggle ? save(true, `${s.label} added. The page shows it now.`) : setEditing(true));
+  const remove = async () => {
+    const problem = await save(undefined, `${s.label} removed from the page.`);
+    if (!problem || problem === "stale") setRemoving(false);
   };
   return (
-    <div className="rt-q__form">
-      <p className="rt-pws-pkg__h3">{f.label}</p>
-      {rows.map((r, i) => (
-        <div key={i} className="rt-pws-pkg__tier" role="group" aria-label={`${f.item} ${i + 1}`}>
-          <div className="rt-pws-pkg__tierhead">
-            <span>{f.item.charAt(0).toUpperCase() + f.item.slice(1)} {i + 1}</span>
-            {!locked && (
-              <span className="rt-pws-course-list__tools">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${f.item} ${i + 1} up`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label={`Move ${f.item} ${i + 1} down`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>
-                <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => onChange(rows.filter((_, j) => j !== i))} aria-label={`Remove ${f.item} ${i + 1}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>
-              </span>
-            )}
+    <li id={id} className={`rt-pws-extra${on ? " is-on" : ""}`}>
+      <div className="rt-pws-extra__head">
+        <Toggle id={`${id}-on`} checked={on} disabled={form.locked || form.busy} onChange={(v) => (v ? add() : setRemoving(true))} label={s.label} hint={s.where} />
+        {on && !form.locked && (
+          <div className="rt-pws-extra__actions">
+            {!s.toggle && <button type="button" className="rt-pws-ce__iconbtn" onClick={() => setEditing(true)} aria-haspopup="dialog" aria-label={`Edit: ${s.label}`} title="Edit"><i className="icon-edit text-14" aria-hidden="true"></i></button>}
+            <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => setRemoving(true)} aria-haspopup="dialog" aria-label={`Remove: ${s.label}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>
           </div>
-          <Fields fields={f.fields} id={`${id}-${i}`} value={r} onChange={(v) => onChange(rows.map((x, j) => (j === i ? v : x)))} locked={locked} />
+        )}
+      </div>
+      {on && (
+        <div className="rt-pws-extra__body">
+          {summaryOf(s, value, fees) && <p className="rt-pws-extra__sum">{summaryOf(s, value, fees)}</p>}
+          <p className="rt-pws-extra__links">
+            {s.toggle && <Link href={s.edit} className="fb-textlink">Edit the words</Link>}
+            {onView && <button type="button" className="fb-textlink rt-pws-course-linkbtn" onClick={() => onView(s.anchor)}>View on page<span className="rt-sr">: {s.label} (opens in a new tab)</span></button>}
+          </p>
         </div>
-      ))}
-      {!locked && rows.length < most && (
-        <div><button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => onChange([...rows, blankRow(f)])}>Add {rows.length ? "another" : "a"} {f.item}</button></div>
       )}
-    </div>
+      {error && !editing && !removing && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+      {!s.toggle && <SectionSheet s={s} open={editing} value={value} fees={fees} pageTitle={pageTitle} onClose={() => setEditing(false)} onSave={(v) => save(v, `${s.label} saved. The page shows it now.`)} />}
+      <Confirm danger open={removing} onClose={() => { setRemoving(false); setError(""); }} busy={form.busy} error={removing ? error : ""}
+        title={`Remove ${s.label.toLowerCase()}?`} text="It comes off the page straight away." confirmLabel="Remove" onConfirm={remove} />
+    </li>
+  );
+}
+
+// The site's licence fees (Site content › Licence fees), as saved, else the built-in list
+function useLicenceFees() {
+  const site = api.content.site.useQuery(undefined, { staleTime: 60_000 });
+  return site.data?.licenceFees?.items || contentDefaults.licenceFees.items;
+}
+
+// ---- one section's pop-up ------------------------------------------------------------------------------------------------
+
+function SectionSheet({ s, open, value, fees, pageTitle, onClose, onSave }) {
+  const [draft, setDraft] = useState(() => draftOf(s.key, value));
+  const [start, setStart] = useState(draft);
+  const [errors, setErrors] = useState({});
+  const [general, setGeneral] = useState("");
+  const [saving, setSaving] = useState(false);
+  const formRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const d = draftOf(s.key, value);
+    setDraft(d);
+    setStart(d);
+    setErrors({});
+    setGeneral("");
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- a fresh draft each time it opens
+  const dirty = JSON.stringify(draft) !== JSON.stringify(start);
+  const submit = async (e) => {
+    e.preventDefault();
+    const found = problemsOf(s.key, draft);
+    setErrors(found);
+    setGeneral("");
+    if (Object.keys(found).length) return requestAnimationFrame(() => focusFirstError(formRef.current));
+    setSaving(true);
+    const problem = await onSave(cleanOf(s.key, draft));
+    setSaving(false);
+    if (!problem || problem === "stale") return onClose();
+    setGeneral(problem);
+  };
+  const set = (patch) => setDraft((d) => (typeof patch === "function" ? patch(d) : { ...d, ...patch }));
+  const clear = (id) => setErrors((x) => (x[id] ? Object.fromEntries(Object.entries(x).filter(([k]) => k !== id)) : x));
+  const props = { d: draft, set, errors, clear, fees, pageTitle };
+  return (
+    <Sheet open={open} onClose={onClose} title={value === undefined ? `Add ${s.label.toLowerCase()}` : s.label} closeLabel="Close" className={s.wide ? "rt-pws-pkg__sheet" : ""} unsaved={dirty} busy={saving}>
+      <form className="rt-q__form rt-pws-gx" onSubmit={submit} noValidate ref={formRef}>
+        {general && <p className="rt-acc__notice -warn" role="alert">{general}</p>}
+        {s.key === "heroTitle" && <HeroEditor {...props} />}
+        {s.key === "trust" && <TrustEditor {...props} />}
+        {s.key === "compare" && <CompareEditor {...props} />}
+        {s.key === "week" && <WeekEditor {...props} />}
+        {s.key === "included" && <IncludedEditor {...props} />}
+        {s.key === "licence" && <StepsEditor {...props} />}
+        {s.key === "costs" && <CostsEditor {...props} />}
+        {s.key === "careers" && <CareersEditor {...props} />}
+        <div className="rt-pws-set__actions">
+          <button type="submit" className="button -md -purple-1 text-white" disabled={saving} aria-busy={saving || undefined}>{saving ? "Saving…" : value === undefined ? "Add to the page" : "Save"}</button>
+          <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => (!dirty || window.confirm(DISCARD_MESSAGE)) && onClose()} disabled={saving}>Cancel</button>
+        </div>
+      </form>
+    </Sheet>
+  );
+}
+
+// ---- the editors ------------------------------------------------------------------------------------------------------------
+
+// a text field with its label, hint, error and (a box with `max`) a count
+function Text({ id, label, value, onChange, errors, clear, max, hint, required, area, rows = 3, placeholder }) {
+  const err = errors?.[id];
+  return (
+    <Field id={id} label={label} hint={hint} error={err} required={required} count={max && area ? <Counter value={value || ""} max={max} /> : null}>
+      {area
+        ? <TextArea {...aria(id, err, hint)} rows={rows} maxLength={max} value={value} placeholder={placeholder} onChange={(e) => { onChange(e.target.value); clear?.(id); }} />
+        : <input {...aria(id, err, hint)} type="text" maxLength={max} autoComplete="off" value={value} placeholder={placeholder} onChange={(e) => { onChange(e.target.value); clear?.(id); }} />}
+    </Field>
+  );
+}
+
+// the up, down and remove buttons of a row in a table or list
+function RowTools({ i, count, name, onMove, onRemove, min = 1 }) {
+  return (
+    <span className="rt-pws-gx__tools">
+      {onMove && <button type="button" className="rt-pws-ce__iconbtn" onClick={() => onMove(i, -1)} disabled={i === 0} aria-label={`Move up: ${name}`}><i className="icon-chevron-up text-12" aria-hidden="true"></i></button>}
+      {onMove && <button type="button" className="rt-pws-ce__iconbtn" onClick={() => onMove(i, 1)} disabled={i === count - 1} aria-label={`Move down: ${name}`}><i className="icon-chevron-down text-12" aria-hidden="true"></i></button>}
+      <Bin onClick={() => onRemove(i)} disabled={count <= min} name={name} />
+    </span>
+  );
+}
+const Bin = ({ onClick, name, disabled }) => (
+  <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={onClick} disabled={disabled} aria-label={`Remove ${name}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>
+);
+const moved = (list, i, by) => {
+  const next = [...list];
+  const [x] = next.splice(i, 1);
+  next.splice(i + by, 0, x);
+  return next;
+};
+// a text box inside a table cell, with its error above it
+function CellInput({ id, label, value, onChange, errors, clear, max, placeholder, strong }) {
+  const err = errors?.[id];
+  return (
+    <>
+      {err && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{err}</p>}
+      <label htmlFor={id} className="rt-sr">{label}</label>
+      <input id={id} className={`rt-pws-gx__input${strong ? " -strong" : ""}`} type="text" maxLength={max} autoComplete="off" value={value} placeholder={placeholder}
+        onChange={(e) => { onChange(e.target.value); clear?.(id); }} aria-invalid={err ? true : undefined} aria-describedby={err ? `${id}-e` : undefined} />
+    </>
+  );
+}
+const AddRow = ({ onClick, children, disabled }) => (
+  <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={onClick} disabled={disabled}>{children}</button>
+);
+
+function HeroEditor({ d, set, errors, clear }) {
+  return <Text id="g-hero" label="Heading" required max={120} value={d} onChange={(v) => set(() => v)} errors={errors} clear={clear} />;
+}
+
+function TrustEditor({ d, set, errors }) {
+  return <LineList id="g-trust" label="Lines" hint="Press Enter to add. Up to 6." items={d} onChange={(v) => set(() => v)} max={60} most={6}  ordered error={errors["g-trust"]} />;
+}
+
+function IncludedEditor({ d, set, errors, clear }) {
+  return (
+    <>
+      <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
+      <LineList id="g-items" label="Items" hint="Press Enter to add. Up to 15." items={d.items} onChange={(v) => set({ items: v })} max={160} most={15}  ordered error={errors["g-items"]} />
+    </>
+  );
+}
+
+// a table to fill in: the first column the rows' labels, then up to 4 more; each cell Yes, No or a few words
+function CompareEditor({ d, set, errors, clear }) {
+  const cols = d.columns.length;
+  const setCol = (i, v) => set({ columns: d.columns.map((c, j) => (j === i ? v : c)) });
+  const setRow = (i, patch) => set({ rows: d.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
+  const addCol = () => set({ columns: [...d.columns, ""], rows: d.rows.map((r) => ({ ...r, cells: [...r.cells, ""] })) });
+  const removeCol = (i) => set({ columns: d.columns.filter((_, j) => j !== i), rows: d.rows.map((r) => ({ ...r, cells: r.cells.filter((_, j) => j !== i - 1) })) });
+  return (
+    <>
+      <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
+      <Text id="g-intro" label="Line under the heading" area rows={2} max={600} value={d.intro} onChange={(v) => set({ intro: v })} errors={errors} clear={clear} />
+      <div className="rt-pws-pkg__fsec">
+        <p className="rt-pws-gx__label">The table</p>
+        <div className="rt-pws-pkg__fscroll">
+          <table className="rt-pws-pkg__ftable rt-pws-gx__table">
+            <thead>
+              <tr>
+                {d.columns.map((c, i) => (
+                  <th key={i} scope="col">
+                    <span className="rt-pws-gx__headcell">
+                      <CellInput id={`g-col${i}`} label={i === 0 ? "Heading over the row labels" : `Column ${i} heading`} value={c} onChange={(v) => setCol(i, v)} errors={errors} clear={clear} max={60} placeholder={i === 0 ? "You can work in" : `Option ${i}`} strong />
+                      {i > 0 && cols > 2 && <Bin onClick={() => removeCol(i)} name={`column ${c || i}`} />}
+                    </span>
+                  </th>
+                ))}
+                <th scope="col" className="rt-pws-gx__toolcol"><span className="rt-sr">Row tools</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.rows.map((r, i) => (
+                <tr key={i}>
+                  <td><CellInput id={`g-row${i}`} label={`Row ${i + 1} label`} value={r.label} onChange={(v) => setRow(i, { label: v })} errors={errors} clear={clear} max={120}  strong /></td>
+                  {r.cells.map((c, j) => (
+                    <td key={j}><CellInput id={`g-cell${i}-${j}`} label={`${r.label || `Row ${i + 1}`}: ${d.columns[j + 1] || `column ${j + 1}`}`} value={c} onChange={(v) => setRow(i, { cells: r.cells.map((x, k) => (k === j ? v : x)) })} errors={errors} clear={clear} max={80} placeholder="Yes, No or words" /></td>
+                  ))}
+                  <td className="rt-pws-gx__toolcol"><RowTools i={i} count={d.rows.length} name={r.label || `row ${i + 1}`} onMove={(k, by) => set({ rows: moved(d.rows, k, by) })} onRemove={(k) => set({ rows: d.rows.filter((_, j) => j !== k) })} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="rt-pws-gx__adds">
+          <AddRow onClick={() => set({ rows: [...d.rows, { label: "", cells: d.columns.slice(1).map(() => "") }] })} disabled={d.rows.length >= 20}>Add a row</AddRow>
+          <AddRow onClick={addCol} disabled={cols >= 5}>Add a column</AddRow>
+        </div>
+      </div>
+      <Text id="g-note" label="Note under the table" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+    </>
+  );
+}
+
+// the days, a row each: the day and what happens
+function WeekEditor({ d, set, errors, clear }) {
+  const setItem = (i, patch) => set({ items: d.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+  return (
+    <>
+      <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
+      <div className="rt-pws-pkg__fsec">
+        <p className="rt-pws-gx__label">The days</p>
+        <div className="rt-pws-pkg__fscroll">
+          <table className="rt-pws-pkg__ftable rt-pws-gx__table">
+            <thead><tr><th scope="col" className="rt-pws-gx__daycol">Day</th><th scope="col">What happens</th><th scope="col" className="rt-pws-gx__toolcol"><span className="rt-sr">Row tools</span></th></tr></thead>
+            <tbody>
+              {d.items.map((x, i) => (
+                <tr key={i}>
+                  <td><CellInput id={`g-day${i}`} label={`Day ${i + 1}`} value={x.day} onChange={(v) => setItem(i, { day: v })} errors={errors} clear={clear} max={40} placeholder={i === 0 ? "Days 1 and 2" : ""} strong /></td>
+                  <td><CellInput id={`g-what${i}`} label={`What happens on ${x.day || `day ${i + 1}`}`} value={x.text} onChange={(v) => setItem(i, { text: v })} errors={errors} clear={clear} max={200} /></td>
+                  <td className="rt-pws-gx__toolcol"><RowTools i={i} count={d.items.length} name={x.day || `day ${i + 1}`} onMove={(k, by) => set({ items: moved(d.items, k, by) })} onRemove={(k) => set({ items: d.items.filter((_, j) => j !== k) })} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="rt-pws-gx__adds"><AddRow onClick={() => set({ items: [...d.items, { day: "", text: "" }] })} disabled={d.items.length >= 10}>Add a day</AddRow></div>
+      </div>
+      <Text id="g-note" label="Note under the days" area rows={2} max={300} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+    </>
+  );
+}
+
+// numbered steps, each a title and a few lines
+function StepsEditor({ d, set, errors, clear }) {
+  const setStep = (i, patch) => set({ steps: d.steps.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+  return (
+    <>
+      <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
+      {d.steps.map((x, i) => (
+        <fieldset key={i} className="rt-pws-course-repeat">
+          <legend>Step {i + 1}</legend>
+          <div className="rt-pws-gx__repeathead"><RowTools i={i} count={d.steps.length} name={x.title || `step ${i + 1}`} onMove={(k, by) => set({ steps: moved(d.steps, k, by) })} onRemove={(k) => set({ steps: d.steps.filter((_, j) => j !== k) })} /></div>
+          <Text id={`g-step${i}`} label="Title" required max={80} value={x.title} onChange={(v) => setStep(i, { title: v })} errors={errors} clear={clear} />
+          <Text id={`g-steptext${i}`} label="What happens" required area rows={2} max={400} value={x.text} onChange={(v) => setStep(i, { text: v })} errors={errors} clear={clear} />
+        </fieldset>
+      ))}
+      <div className="rt-pws-gx__adds"><AddRow onClick={() => set({ steps: [...d.steps, { title: "", text: "" }] })} disabled={d.steps.length >= 10}>Add a step</AddRow></div>
+      <Text id="g-note" label="Tip under the steps" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+    </>
+  );
+}
+
+// the cost table as learners see it: the course row and the total from the live prices, the rows typed here between them
+function CostsEditor({ d, set, errors, clear, fees, pageTitle }) {
+  const setRow = (i, patch) => set({ rows: d.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
+  const remove = (onClick, what) => <Bin onClick={onClick} name={`the ${what} row`} />;
+  return (
+    <>
+      <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
+      <Text id="g-intro" label="Line under the heading" area rows={2} max={400} value={d.intro} onChange={(v) => set({ intro: v })} errors={errors} clear={clear} />
+      <div className="rt-pws-pkg__fsec">
+        <p className="rt-pws-gx__label">The table</p>
+        <div className="rt-pws-pkg__fscroll">
+          <table className="rt-pws-pkg__ftable rt-pws-gx__table">
+            <thead><tr><th scope="col">Cost</th><th scope="col" className="rt-pws-gx__pricecol">Price</th><th scope="col" className="rt-pws-gx__toolcol"><span className="rt-sr">Remove</span></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><CellInput id="g-course" label="The course row's label" value={d.courseLabel} onChange={(v) => set({ courseLabel: v })} errors={errors} clear={clear} max={80} placeholder={`${pageTitle || "The"} course`} strong /></td>
+                <td><span className="rt-pws-gx__live">Live price</span></td>
+                <td className="rt-pws-gx__toolcol"></td>
+              </tr>
+              {d.firstAid && (
+                <tr>
+                  <td><CellInput id="g-fa-label" label="The first aid row's label" value={d.firstAid.label} onChange={(v) => set({ firstAid: { ...d.firstAid, label: v } })} errors={errors} clear={clear} max={80} strong /></td>
+                  <td><span className="rt-pws-gx__live">Live price</span></td>
+                  <td className="rt-pws-gx__toolcol">{remove(() => set({ firstAid: null }), "first aid")}</td>
+                </tr>
+              )}
+              {d.rows.map((r, i) => (
+                <tr key={i}>
+                  <td><CellInput id={`g-crow${i}`} label={`Cost ${i + 1}`} value={r.label} onChange={(v) => setRow(i, { label: v })} errors={errors} clear={clear} max={80}  strong /></td>
+                  <td><CellInput id={`g-cval${i}`} label={`Price of ${r.label || `cost ${i + 1}`}`} value={r.value} onChange={(v) => setRow(i, { value: v })} errors={errors} clear={clear} max={60} placeholder="Free" /></td>
+                  <td className="rt-pws-gx__toolcol">{remove(() => set({ rows: d.rows.filter((_, j) => j !== i) }), r.label || `cost ${i + 1}`)}</td>
+                </tr>
+              ))}
+              {d.licenceFee && (
+                <tr>
+                  <td><CellInput id="g-lf-label" label="The licence fee row's label" value={d.licenceFee.label} onChange={(v) => set({ licenceFee: { ...d.licenceFee, label: v } })} errors={errors} clear={clear} max={80} placeholder="SIA licence fee (paid to the SIA)" strong /></td>
+                  <td>
+                    {errors["g-lf-fee"] && <p className="rt-q__err" id="g-lf-fee-e"><span className="rt-sr">Error: </span>{errors["g-lf-fee"]}</p>}
+                    <FieldSelect id="g-lf-fee" label="Licence fee" placeholder="Choose a fee" value={d.licenceFee.fee} compact invalid={Boolean(errors["g-lf-fee"])} describedBy={errors["g-lf-fee"] ? "g-lf-fee-e" : undefined}
+                      onChange={(v) => { set({ licenceFee: { ...d.licenceFee, fee: v } }); clear("g-lf-fee"); }} options={fees.map((x) => ({ value: x.key, label: `${x.name}: ${formatPrice(x.amount)}` }))} />
+                  </td>
+                  <td className="rt-pws-gx__toolcol">{remove(() => set({ licenceFee: null }), "licence fee")}</td>
+                </tr>
+              )}
+              <tr className="rt-pws-gx__total">
+                <td>Typical total</td>
+                <td><span className="rt-pws-gx__live">Worked out</span></td>
+                <td className="rt-pws-gx__toolcol"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="rt-pws-gx__adds">
+          <AddRow onClick={() => set({ rows: [...d.rows, { label: "", value: "" }] })} disabled={d.rows.length >= 6}>Add a cost</AddRow>
+          {!d.firstAid && <AddRow onClick={() => set({ firstAid: { label: "Emergency First Aid at Work (if needed)" } })}>Add a first aid row</AddRow>}
+          {!d.licenceFee && <AddRow onClick={() => set({ licenceFee: { label: "", fee: fees[0]?.key || "" } })}>Add a licence fee row</AddRow>}
+        </div>
+      </div>
+      <Text id="g-note" label="Note under the table" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+    </>
+  );
+}
+
+function CareersEditor({ d, set, errors, clear }) {
+  return (
+    <>
+      <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
+      <Text id="g-text" label="Text" required area rows={3} max={800} value={d.text} onChange={(v) => set({ text: v })} errors={errors} clear={clear} />
+      <LineList id="g-areas" label="Areas of work" hint="Press Enter to add. Up to 12." items={d.areas} onChange={(v) => set({ areas: v })} max={120} most={12} />
+      <Text id="g-roles" label="Roles" area rows={2} max={400} value={d.roles} onChange={(v) => set({ roles: v })} errors={errors} clear={clear} />
+      <div className="rt-pws-gx__pair">
+        <Text id="g-cta" label="Link words" max={40} value={d.cta} onChange={(v) => set({ cta: v })} errors={errors} clear={clear} />
+        <Text id="g-href" label="Link address" max={200} value={d.href} onChange={(v) => set({ href: v })} errors={errors} clear={clear} placeholder="/security-jobs" />
+      </div>
+    </>
   );
 }

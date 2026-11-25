@@ -56,3 +56,6 @@ export const featuredGroups = () => current.featured.groups;
 // Whether any customer review is published (browser components: the footer). Server code reads the reviews themselves.
 export const hasReviews = () => current.hasReviews === true;
 export const seoSettings = () => current.seo;
+// The team training section a shared page can switch on, and the licence fees a cost table can add (Site content's own tabs).
+export const teamTrainingContent = () => current.teamTraining;
+export const licenceFees = () => current.licenceFees.items;

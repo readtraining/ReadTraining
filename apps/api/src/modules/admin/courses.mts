@@ -537,7 +537,8 @@ export const adminCoursesRouter = createTRPCRouter({
       const course = await sharedPage(ctx.db, input.courseId)
       // checked here rather than as the input, so the message names the field ("Packages › package 2: Write the package name.")
       const parsed = input.guide == null ? null : guideSchema.safeParse(input.guide)
-      if (parsed && !parsed.success) throw bad(guideProblem(parsed.error))
+      // the field is the section the problem is in, so the editor opens that section's card
+      if (parsed && !parsed.success) throw bad(guideProblem(parsed.error), String(parsed.error.issues[0]?.path[0] ?? '') || undefined)
       const given = parsed?.data ?? null
       const guide = given && Object.values(given).some((v) => v !== undefined && !(Array.isArray(v) && !v.length)) ? given : null
       const version = await ctx.db.transaction(async (tx) => {

@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { basket as basketCopy } from "@/data/basket";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { Icon } from "./Icon";
 import PopShell from "./PopShell";
+import { firstAidCourseHref } from "@/lib/basket";
+import { useNav } from "@/lib/navContext";
 
 // The steps between a date's Book now and the basket: "Choose your package" when the date is sold in packages (a
 // provider's price plan, or the client's own on a course page), then, on a course the SIA licence needs first aid for, the first
@@ -93,8 +96,10 @@ function PackagePanel({ titleId, sub, step, session, quantity, current, onSelect
   );
 }
 
-// The SIA's first aid requirement: one of the two to go on (the basket asks again if it is skipped some other way).
+// The SIA's first aid requirement: one of the two answers to go on (the basket asks again if it is skipped some other way). Nothing
+// is added to the price: a learner without a certificate takes Emergency First Aid at Work (its own course) before this one.
 function FirstAidPanel({ titleId, sub, step, quantity, pkg, unit, onChoose, onBack, backLabel, onClose }) {
+  const aidHref = firstAidCourseHref(useNav().courses);
   return (
     <>
       <Head titleId={titleId} title={fa.title} sub={sub} step={step} onBack={onBack} backLabel={backLabel} onClose={onClose} />
@@ -102,16 +107,14 @@ function FirstAidPanel({ titleId, sub, step, quantity, pkg, unit, onChoose, onBa
         <span className="rt-fa__tag">{fa.badge}</span>
         <p className="rt-fa__text">{fa.text}</p>
         <div className="rt-fa__add">
-          <p>{fa.addText.replace("{price}", formatPrice(fa.add.price))}</p>
+          <p>{fa.needText}{aidHref && <> <Link href={aidHref} target="_blank" rel="noopener">{fa.findCourse}<span className="rt-sr"> (opens in a new tab)</span></Link></>}</p>
         </div>
         <h3 className="rt-fa__h">{fa.haveTitle}</h3>
         <ul className="rt-fa__list">{fa.haveRules.map((r) => <li key={r}><Icon name="check" /> <span>{r}</span></li>)}</ul>
         <p className="rt-fa__pick">{fa.pick}</p>
         <div className="rt-fa__choices">
           <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => onChoose("have")}>{fa.have.label}</button>
-          <button type="button" className="button -md -purple-1 text-white" onClick={() => onChoose("add")}>
-            {fa.addButton.replace("{price}", formatPrice(fa.add.price))}{quantity > 1 ? ` (per delegate)` : ""}
-          </button>
+          <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => onChoose("need")}>{fa.need.label}</button>
         </div>
       </div>
       {unit != null && (

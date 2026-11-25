@@ -13,7 +13,7 @@ import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 import { toCourseCard } from "@/lib/courses";
 import { pickCourses } from "@/lib/catalogueData";
-import { loadCatalogue } from "@/lib/catalogueServer";
+import { examplePackages, loadCatalogue } from "@/lib/catalogueServer";
 import { featuredGroups, seoSettings } from "@/lib/siteContent";
 import { contentDefaults } from "@/data/home";
 import { CATALOGUE_HREF } from "@/lib/routes";
@@ -47,7 +47,7 @@ const subjectsHref = (picked) => {
 };
 
 export default async function HomePage() {
-  const [, , courses, reviews] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadCatalogue(), loadReviews()]);
+  const [, , courses, reviews, example] = await Promise.all([loadTaxonomy(), loadSiteContent(), loadCatalogue(), loadReviews(), examplePackages()]);
   const byId = new Map(courses.map((c) => [c.id, c]));
   const tabs = (groups) => groups
     .map((g) => {
@@ -68,7 +68,7 @@ export default async function HomePage() {
           <HomeHero />
           <HomeSearchBand />
           {featured.length > 0 && <HomeCourses groups={featured} />}
-          <HomeBookingOptions />
+          <HomeBookingOptions example={example} />
           <HomeSubjects />
           <HomeRoles />
           <HomeStories reviews={reviews} />

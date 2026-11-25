@@ -6102,7 +6102,53 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__datecount { margin: 0 auto 0 0; font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-ce__exams { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .rt-pws-ce__exam { display: grid; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); list-style: none; }
-@media (min-width: 768px) { .rt-pws-ce__exam { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; } }
+@media (min-width: 768px) { .rt-pws-ce__exam { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; } .rt-pws-ce__exam-wide { grid-column: 1 / -1; } }
+/* a shared page's optional sections in the course editor (CourseGuideEditor.jsx GuideExtras): one compact card each, its switch
+   (on: on the page) with where it shows under it, the editor's Edit and Remove icon buttons, and what it holds under the switch */
+.rt-pws-extras { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.rt-pws-extra { display: grid; gap: 4px; padding: 12px 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); }
+.rt-pws-extra__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rt-pws-extra__head > .rt-pws-toggle { flex: 1 1 auto; min-width: 0; }
+.rt-pws-extra__actions { display: flex; flex: none; align-items: center; }
+.rt-pws-extra__body { padding-left: 52px; } /* under the switch's label: the track (40px) and its gap (12px) */
+.rt-pws-extra__sum { margin: 0; font-size: var(--rt-text-sm); line-height: 1.45; color: var(--rt-c-text); overflow-wrap: anywhere; }
+.rt-pws-extra__links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 0; font-size: var(--rt-text-sm); }
+.rt-pws-extra__links .rt-pws-course-linkbtn { min-height: 24px; font-size: inherit; }
+/* a shared page's optional section pop-ups (CourseGuideEditor.jsx SectionSheet), on the workspace's own parts: the form's fields
+   and inputs, its 44px icon buttons (arrows, Edit, the bin), the unit pop-up's titled groups (.rt-pws-course-repeat), and the price
+   plan editor's table (.rt-pws-pkg__ftable) */
+.rt-pws-gx__label { margin: 0; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
+.rt-pws-gx__adds { display: flex; flex-wrap: wrap; gap: 8px; }
+.rt-pws-gx__table { min-width: 640px; }
+.rt-pws-pkg__ftable.rt-pws-gx__table :is(th, td) { padding: 8px; vertical-align: top; text-align: left; }
+.rt-pws-pkg__ftable .rt-q__err { margin: 0 0 4px; font-size: var(--rt-text-xs); }
+/* a text box in a table cell or row: the form's own input (.rt-field input), at the workspace's 44px */
+.rt-pws-gx__input { width: 100%; min-width: 0; height: 44px; margin: 0; padding: 0 14px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-soft); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-pws-gx__input.-strong { font-weight: 600; }
+.rt-pws-pkg__ftable th .rt-pws-gx__input { background: var(--rt-c-surface); }
+.rt-pws-gx__input:focus { outline: none; border-color: var(--rt-c-text); background: var(--rt-c-surface); }
+.rt-pws-gx__input[aria-invalid="true"] { border-color: var(--rt-c-error); }
+.rt-pws-gx__headcell { display: flex; align-items: center; gap: 4px; }
+.rt-pws-gx__toolcol { width: 1%; white-space: nowrap; }
+.rt-pws-gx__daycol { width: 28%; }
+.rt-pws-gx__pricecol { width: 36%; }
+.rt-pws-gx__tools { display: inline-flex; flex: none; }
+.rt-pws-gx__live { display: flex; align-items: center; min-height: 44px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-gx__total td { background: var(--rt-c-soft); }
+.rt-pws-pkg__ftable.rt-pws-gx__table .rt-pws-gx__total td:first-child { padding: 18px 16px; font-size: var(--rt-text-sm); font-weight: 700; color: var(--rt-c-text); }
+/* a titled group (a step) has its arrows and bin in its top right corner */
+.rt-pws-gx .rt-pws-course-repeat { position: relative; }
+.rt-pws-gx__repeathead { position: absolute; top: 4px; right: 4px; }
+.rt-pws-gx__pair { display: grid; gap: 16px; }
+@media (min-width: 768px) { .rt-pws-gx__pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rt-pws-gx__pair > .rt-field { margin: 0; }
+/* a short box (two lines) is two lines tall, not the form's tall default */
+.rt-pws-gx .rt-field textarea[rows="2"] { min-height: 76px; max-height: 240px; field-sizing: content; }
+/* the Review step: each step with its tick, what it still needs, and Change */
+.rt-pws-review > li { align-items: center; }
+.rt-pws-review > li > .rt-pws-course-tick { flex: none; }
+.rt-pws-review > li > div:not(.rt-adm-list__side) { flex: 1 1 auto; min-width: 0; }
+.rt-pws-review__todo { color: var(--rt-c-error); }
 /* course list: a note under the status pill */
 .rt-cx-note { display: block; margin-top: 4px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 @media (max-width: 575px) { .rt-pws-course-mediaitem { flex-direction: column; align-items: stretch; } .rt-pws-course-mediaitem img { width: 100%; height: auto; aspect-ratio: 16 / 10; } }
@@ -7022,10 +7068,10 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkgs__tiers { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
 .rt-pws-pkgs__tiers li { display: flex; justify-content: space-between; gap: 12px; max-width: 240px; list-style: none; }
 .rt-pws-pkg__tier { display: grid; align-content: start; justify-items: start; gap: 12px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
-/* packages side by side keep their rows level: each package's 6 parts (heading, name, prices, the price line, tagline, Most popular)
-   share the row of the packages beside it, so a line that wraps or a message in one moves the others with it */
+/* packages side by side keep their rows level: each package's 7 parts (heading, name, prices, the price line, tagline, Most popular,
+   first aid) share the row of the packages beside it, so a line that wraps or a message in one moves the others with it */
 @supports (grid-template-rows: subgrid) {
-  .rt-pws-pkg__tier { grid-row: span 6; grid-template-rows: subgrid; row-gap: 12px; align-items: start; } /* level rows, never stretched parts */
+  .rt-pws-pkg__tier { grid-row: span 7; grid-template-rows: subgrid; row-gap: 12px; align-items: start; } /* level rows, never stretched parts */
 }
 .rt-pws-pkg__tier.-popular { border-color: var(--rt-c-brand); box-shadow: 0 0 0 1px var(--rt-c-brand); }
 .rt-pws-pkg__tierhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 30px; } /* the badge's height, so a package with Most popular lines up with the others */
@@ -7549,7 +7595,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-table th { white-space: nowrap; }
 .rt-adm__link > span:not(.rt-adm__count) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---- Course guide sections on the course page (components/courseDetail/CourseGuide.jsx, data/courseGuides.js). They reuse the
+/* ---- Course guide sections on the course page (components/courseDetail/CourseGuide.jsx). They reuse the
    page's own parts (.rt-cd__sec, .rt-cd__learn, .rt-cd__checks, .rt-cd__table, .rt-lc cards, .rt-benefit-card, .rt-cd__staff);
    these rules only fit them to the new content. ------------------------------------------------------------------------------- */
 .rt-cd__lead.rt-cg__note { margin: 12px 0 0; }
@@ -7579,11 +7625,6 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__exams th:nth-child(4) { width: 120px; }
 .rt-cg__costs th:nth-child(2) { width: 220px; }
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
-.rt-cg__pkgs { padding: 0; list-style: none; }
-.rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
-/* the client's packages are information here (chosen when a date is booked): no pick on hover */
-.rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border); }
-.rt-cg__pkgs > li { margin: 0; list-style: none; }
 .rt-cd__staff a.rt-cg__inline, .rt-cd a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
@@ -7717,6 +7758,7 @@ html { scrollbar-gutter: stable; }
 .rt-fa__text { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--cd-text); }
 .rt-fa__add { padding: 12px 14px; border-radius: 10px; background: var(--cd-band); }
 .rt-fa__add p { margin: 0; font-size: 14px; line-height: 21px; color: var(--cd-text); }
+.rt-fa__add a { font-weight: 600; color: var(--cd-brand); text-decoration: underline; text-underline-offset: 2px; }
 .rt-fa__h { margin: 4px 0 0; font-size: 15px; line-height: 22px; font-weight: 700; color: var(--cd-text); }
 .rt-fa__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .rt-fa__list li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-text); list-style: none; }

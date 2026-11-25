@@ -173,11 +173,11 @@ export async function loadListings(db: typeof Db): Promise<Listing[]> {
 // provider course with its own dates even before it is live, and a change still waiting for approval (`pending`) shown as if
 // approved, so the page is the one learners will see. The caller checks who may see it.
 export type CoursePreview = { id: number; pending?: Record<string, unknown> | null }
-const PREVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'units', 'exams', 'faqs'] as const
+const PREVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'videoUrl', 'syllabusIntro', 'units', 'examsIntro', 'exams', 'faqs'] as const
 export async function loadCoursePage(db: typeof Db, slug: string, preview: CoursePreview | null = null) {
   const id = /^\d{1,9}$/.test(slug) ? Number(slug) : null
   const [c] = await db.execute<Row & { id: number; kind: 'shared' | 'provider'; parent_id: number | null; organisation_id: string | null; method: string | null; price_pence: number | null }>(sql`
-    select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.compliance, c.method, c.model,
+    select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.syllabus_intro, c.exams_intro, c.outcomes, c.features, c.level, c.compliance, c.method, c.model,
            c.price_pence, c.skill_saver, c.video_url, c.seo_title, c.seo_description, c.seo_keywords, c.published_at, c.updated_at, c.parent_id, c.organisation_id, c.is_public, c.listed,
            (select slug from public.categories where id = c.category_id) category,
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
@@ -211,6 +211,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     description: (c.description as string | null) ?? '',
     audience: (c.audience as string | null) ?? '',
     entryRequirements: (c.entry_requirements as string | null) ?? '',
+    syllabusIntro: (c.syllabus_intro as string | null) ?? '',
+    examsIntro: (c.exams_intro as string | null) ?? '',
     outcomes: (c.outcomes as string[]) ?? [],
     features: (c.features as string[]) ?? [],
     category: c.category as string | null,
@@ -228,7 +230,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     updatedAt: c.updated_at ? new Date(c.updated_at as string).toISOString() : null,
     images: images.map((i) => ({ url: mediaUrl(i.path)!, alt: i.alt ?? '' })),
     units: units.map((u) => ({ title: u.title, body: u.body ?? '' })),
-    exams: exams.map((e) => ({ unit: e.unit, passMark: e.passMark ?? '', duration: e.duration ?? '' })),
+    exams: exams.map((e) => ({ unit: e.unit, passMark: e.passMark ?? '', duration: e.duration ?? '', assessment: e.assessment ?? '' })),
     faqs: faqs.map((f) => ({ question: f.question, answer: f.answer })),
     // the provider's own FAQs, on a provider course with its own page only (a shared page never names a provider)
     providerFaqs: c.kind === 'provider' && !parent ? await loadProviderFaqs(db, c.organisation_id as string) : [],

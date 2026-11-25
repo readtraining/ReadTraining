@@ -131,20 +131,12 @@ function timetable(list = []) {
 }
 
 // A price plan's packages (API publicTiers) as the booking parts read them, in pounds; `key` is the package's name in lower case
-// (names are unique in a plan), so a basket line keeps which one was chosen. Null for a date or course with one flat price.
+// (names are unique in a plan), so a basket line keeps which one was chosen; `firstAid`: it includes Emergency First Aid at Work
+// (the booking then doesn't ask about it). Null for a date or course with one flat price.
 const toPackages = (tiers) =>
   Array.isArray(tiers) && tiers.length >= 2
-    ? tiers.map((t) => ({ key: t.name.trim().toLowerCase(), name: t.name, price: pounds(t.pricePence), wasPrice: pounds(t.wasPence), tagline: t.tagline || "", popular: Boolean(t.popular), features: t.features || [] }))
+    ? tiers.map((t) => ({ key: t.name.trim().toLowerCase(), name: t.name, price: pounds(t.pricePence), wasPrice: pounds(t.wasPence), tagline: t.tagline || "", popular: Boolean(t.popular), firstAid: Boolean(t.firstAid), features: t.features || [] }))
     : null;
-
-// The packages of a course's guide (lib/courseGuide.js: the shared page's Course guide) on one of its dates of one price, in the
-// same shape: each package is the date's price plus its `add`; only the course alone keeps the date's was-price. Only the packages
-// with a price are offered (not one whose price isn't set yet), and only when there are two to choose from.
-// `firstAid`: the package includes first aid (the basket then doesn't ask about it).
-const cents = (n) => Math.round(n * 100) / 100;
-const priced = (guide) => (guide?.packages?.items || []).filter((p) => p.add != null);
-const guidePackages = (guide, d) =>
-  priced(guide).map((p) => ({ key: p.key, name: p.name, price: cents(d.price + (p.add || 0)), wasPrice: p.add ? null : d.wasPrice, tagline: p.text || "", popular: Boolean(p.badge), features: p.points.map((t) => ({ title: t, description: null, included: true })), firstAid: Boolean(p.firstAid) }));
 
 // a learning option's booking mode on the course page
 const MODE_OF = { classroom: "classroom", "live-online": "online", "self-paced": "ondemand" };
@@ -191,9 +183,7 @@ export function toCourseDetail(page, related = []) {
       });
     }
   }
-  // the guide's packages on a course with them (a date on a price plan keeps the plan's)
   const guide = guideOf(page);
-  if (priced(guide).length >= 2) for (const s of sessions) if (!s.packages) s.packages = guidePackages(guide, s);
   sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.price - b.price));
 
   const dated = sessions.filter((s) => s.mode !== "ondemand");
@@ -236,7 +226,9 @@ export function toCourseDetail(page, related = []) {
     // left blank, the provider hasn't said (not "none"), so the page leaves the section out
     requirements: entry.length ? { title: `Entry requirements for the ${page.title}`, paragraphs: entry, list: [] } : null,
     modules: page.units.map((u) => ({ title: u.title, duration: "", topics: lines(u.body) })),
-    exams: page.exams.length ? { title: "How will I be assessed?", intro: [], rows: page.exams, outro: [] } : undefined,
+    // the line above the syllabus, and the exam table with the text above it and, when any row says what it is, its Assessment
+    syllabusIntro: page.syllabusIntro || "",
+    exams: page.exams.length ? { title: "How will I be assessed?", intro: page.examsIntro || "", rows: page.exams, assessed: page.exams.some((e) => e.assessment) } : undefined,
     // the course's own FAQs, then (a provider course with its own page) the provider's general ones, without repeating a question
     faqs: [...page.faqs, ...(page.providerFaqs ?? []).filter((f) => !page.faqs.some((x) => x.question.trim().toLowerCase() === f.question.trim().toLowerCase()))],
     sessions,

@@ -1,7 +1,9 @@
 import "server-only";
 import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
-import { pickCourses, toCatalogueCourse } from "@/lib/catalogueData";
+import { pickCourses, toCatalogueCourse, toCourseDetail } from "@/lib/catalogueData";
+import { modeLabel } from "@/lib/courseModes";
+import { TOPICS } from "@/data/courseTopics";
 import { toCourseCard } from "@/lib/courses";
 import { withLinks } from "@/lib/nav";
 import { coursePages } from "@/data/coursePages";
@@ -33,6 +35,20 @@ export const methodPages = coursePages.filter((p) => p.select?.method && !p.sele
 
 // Every listing as a catalogue course (lib/catalogueData.js toCatalogueCourse), for the pages that pick some of them.
 export const loadCatalogue = cache(async () => (await loadListings()).map(toCatalogueCourse));
+
+// The home page's example packages: a live course's real packages (a provider's price plan on one of its dates), SIA Door
+// Supervisor first, then the other security courses; null while none is sold in packages (the home page then shows no example).
+// Never typed prices: they are that date's packages, as its Book now offers them.
+export const examplePackages = cache(async () => {
+  for (const c of pickCourses(await loadCatalogue(), [TOPICS.doorSupervisor, "security"], 6)) {
+    const page = await loadCoursePage(c.slug);
+    if (!page) continue;
+    const detail = toCourseDetail(page);
+    const date = detail.sessions.find((s) => s.packages?.length >= 2);
+    if (date) return { course: detail.title, slug: detail.slug, meta: modeLabel(date.mode), packages: date.packages };
+  }
+  return null;
+});
 
 // The course cards a marketing or help page shows: the live courses under its picks (data/courseTopics.js), most popular
 // first, as the home page's cards (HomeCourseCard). [] when none is live yet: the page then leaves the cards out.

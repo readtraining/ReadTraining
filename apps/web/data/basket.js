@@ -27,25 +27,24 @@ export const basket = {
   select: { all: "Select all", count: "{n} of {total} selected", none: "Select at least one course to continue", off: "Not in this booking. It stays in your basket.", include: "Include {title} in this booking" },
 
 
-  // security licence courses need a first aid qualification: the learner confirms they have one or adds the course
-  // asked after the date and package (components/courseDetail/PackageChooser.jsx), on the classroom courses whose SIA licence or
-  // renewal needs Emergency First Aid at Work: Door Supervisor, Security Officer and their refreshers (not CCTV, which doesn't, nor
-  // Close Protection, which needs a higher first aid qualification than this add-on)
+  // security licence courses need a first aid qualification: the learner says whether they have one (no price is added here:
+  // first aid is its own course, from whichever provider, or part of a provider's package that includes it). Asked after the date
+  // and package (components/courseDetail/PackageChooser.jsx), on the classroom courses whose SIA licence or renewal needs
+  // Emergency First Aid at Work: Door Supervisor, Security Officer and their refreshers (not CCTV, which doesn't, nor Close
+  // Protection, which needs a higher first aid qualification than Emergency First Aid at Work)
   firstAid: {
     picks: [TOPICS.doorSupervisor, TOPICS.securityOfficer, TOPICS.doorRefresher, TOPICS.securityRefresher],
     badge: "Required for your SIA licence",
     title: "First aid qualification required",
     text: "To get your SIA licence you must hold an Emergency First Aid at Work qualification (or higher).",
-    addText: "For {price}, you can add Emergency First Aid at Work: a 1-day course with its own certificate, which your SIA licence application needs.",
+    needText: "No certificate yet? Take Emergency First Aid at Work, a 1-day course, before this course starts.",
+    findCourse: "Find Emergency First Aid at Work",
     haveTitle: "Already have a first aid certificate?",
     haveRules: ["Bring the original certificate to your course", "It must have been taken in person (online courses aren't accepted)", "It must stay valid for at least 12 months after your course starts"],
     pick: "Choose one to continue",
-    addButton: "Add first aid for {price}",
     have: { label: "I already have a valid first aid certificate", note: "Bring the original certificate. It must have been taken in person and stay valid for at least 12 months after your course.", short: "You have a valid first aid certificate (bring the original)" },
-    // the client's own price: "Course + first aid" is £70 more than the course alone (data/courseGuides.js packages)
-    add: { label: "Add Emergency First Aid at Work", note: "A 1-day course with its own certificate.", price: 70, short: "Emergency First Aid at Work added" },
-    remove: "Remove first aid", // Edit menu: takes the add-on off and asks the question again
-    addItem: "Add first aid (+{price})", // Edit menu, for someone who said they hold a certificate
+    need: { label: "I still need one", note: "Take Emergency First Aid at Work before this course starts.", short: "You still need a first aid certificate: take Emergency First Aid at Work before this course starts." },
+    change: "Change first aid answer", // Edit menu: asks the question again
   },
 
   promo: {
