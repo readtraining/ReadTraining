@@ -7608,7 +7608,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* ---- Course guide sections on the course page (components/courseDetail/CourseGuide.jsx). They reuse the
    page's own parts (.rt-cd__sec, .rt-cd__learn, .rt-cd__checks, .rt-cd__table, .rt-lc cards, .rt-benefit-card, .rt-cd__staff);
    these rules only fit them to the new content. ------------------------------------------------------------------------------- */
-.rt-cd__lead.rt-cg__note { margin: 12px 0 0; }
+.rt-cd__lead.rt-cg__note { margin: 16px 0 0; }
 /* a section that ends on a table, or opens with the mock test callout, keeps the page's one 36px gap between sections */
 .rt-cd__sec .rt-cd__table-wrap:last-child > .rt-cd__table, .rt-cd__sec .rt-cd__table-wrap:has(+ .rt-cd__prose:empty) > .rt-cd__table { margin-bottom: 0; }
 .rt-cd__sec > .rt-cd__mock:first-child { margin-top: 0; }
@@ -7623,7 +7623,9 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
   .rt-cd .rt-cd__mock .rt-cd__mock-text { flex: 1 1 auto; min-width: 0; }
   .rt-cd .rt-cd__mock .rt-cd__mock-cta { flex: 0 0 auto; width: auto; }
 }
-.rt-cd__learn .rt-cd__checks + .rt-cd__lead { margin-top: 4px; }
+/* in a card: 16px between a list and the words after it (as between the words and a list), and nothing extra under its last part */
+.rt-cd__learn .rt-cd__checks + .rt-cd__lead { margin-top: 16px; }
+.rt-cd__learn > :last-child, .rt-cd__learn > .rt-cd__checks:last-child li:last-child { margin-bottom: 0; }
 .rt-cd__learn > .rt-cd__link { display: inline-flex; align-items: center; margin-top: 4px; }
 .rt-cg__yes { display: inline-flex; align-items: center; gap: 8px; }
 .rt-cg__no { display: inline-flex; align-items: center; gap: 8px; color: var(--cd-muted); }
