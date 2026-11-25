@@ -8,7 +8,7 @@ import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import { RowMenu } from "@/components/admin/adminParts";
 import NavIcon from "@/components/admin/navIcons";
-import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useNameTip, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "@/components/admin/workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useNameTip, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useKeptScroll, useWorkDrawer } from "@/components/admin/workNav";
 import { pw } from "@/data/providerWorkspace";
 import { signOut } from "@/lib/auth/authClient";
 import { actAs } from "@/lib/providerWorkspace";
@@ -47,6 +47,7 @@ export default function ProviderShell({ current, need = null, title, lead, actio
   const [search, setSearch] = useState("");
   const [folded, fold] = useFoldedGroups("rt-pws-nav-folded");
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
+  useKeptScroll(sideRef, "rt-pws-side-scroll", folded); // opening a page keeps the sidebar where it was
   const { closed: rail, width: sideWidth } = useSideMenu(); // from 992px: folded to its icon rail, or open at this width
   useSideShortcut();
   const [tipProps, railTip] = useRailTip(rail);
