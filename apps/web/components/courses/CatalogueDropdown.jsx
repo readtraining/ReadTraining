@@ -74,15 +74,18 @@ export default function CatalogueDropdown({
     if (open && inDialog) rootRef.current?.querySelector(".rt-cat-dd__panel")?.scrollIntoView({ block: "nearest" });
   }, [open, inDialog]);
 
-  // which way the list opens: to the right of the trigger when it fits on the screen, otherwise leftwards. Worked out on load,
-  // on resize and on opening, and kept while closed, so the list never jumps sideways as it fades out.
+  // which way the list opens: to the right of the trigger when it fits inside its filter bar or card (and the screen), otherwise
+  // leftwards, lined up with the trigger's right edge, so the last filter's list never sticks out past the card. Worked out on
+  // load, on resize and on opening, and kept while closed, so the list never jumps sideways as it fades out.
   useEffect(() => {
     const measure = () => {
       const root = rootRef.current;
       const panel = root?.querySelector(".rt-cat-dd__panel");
       if (!root || !panel) return;
       const r = root.getBoundingClientRect();
-      setToLeft(r.left + Math.max(panel.offsetWidth, r.width) > document.documentElement.clientWidth - 8);
+      const box = root.parentElement?.closest(".rt-cx__bar, .rt-adm-toolbar, .rt-cx, .rt-acc__card");
+      const edge = Math.min(document.documentElement.clientWidth - 8, box ? box.getBoundingClientRect().right : Infinity);
+      setToLeft(r.left + Math.max(panel.offsetWidth, r.width) > edge);
     };
     measure();
     window.addEventListener("resize", measure);
