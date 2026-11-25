@@ -5283,6 +5283,13 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 /* the search keeps enough width for its full placeholder; on a phone it takes the whole row */
 @media (min-width: 576px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 0 1 340px; min-width: 260px; } }
 @media (max-width: 575px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 1 1 100%; margin-right: 0; } }
+/* a bar with only its pills and a search (Providers, Learners, Coupons, Orders...): one row, the pills on the left and the search
+   on the right, its edge on the table's; when they don't fit side by side the search goes under the pills, still on the right
+   (on a phone it takes the whole row, as above) */
+.rt-adm--platform .rt-adm-toolbar:has(> .rt-acc__tabs):has(.rt-adm-search):not(:has(> :not(.rt-acc__tabs, .rt-adm-search, .rt-adm-toolbar__end), .rt-adm-toolbar__end > :not(.rt-adm-search))) {
+  > .rt-acc__tabs { flex: 0 1 auto; }
+  .rt-adm-search { margin-right: 0; margin-left: auto; }
+}
 /* a button that can't be used yet looks it (e.g. "Approve selected" with nothing ticked) */
 .rt-adm--platform .button:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 /* the page never shifts sideways when a scrollbar appears or goes */

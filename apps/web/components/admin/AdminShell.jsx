@@ -8,7 +8,7 @@ import { confirmLeave, leaveWithoutAsking } from "@/lib/unsavedChanges";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import AdminSearch from "./AdminSearch";
 import NavIcon from "./navIcons";
-import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useWorkDrawer } from "./workNav";
+import { DrawerHead, FoldChevron, MenuButton, SideMenuButton, SideResizer, sideWidthStyle, useFoldedGroups, useRailOpen, useRailTip, useSideMenu, useSideShortcut, useKeptScroll, useWorkDrawer } from "./workNav";
 import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { useAdminAccess } from "@/lib/adminContext";
@@ -46,6 +46,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
     return () => document.body.classList.remove("rt-adm-open");
   }, []);
   const drawer = useWorkDrawer(sideRef); // the sidebar as a drawer, below 992px
+  useKeptScroll(sideRef, "rt-adm-side-scroll", folded); // opening a page keeps the sidebar where it was
   const { closed, width: sideWidth } = useSideMenu(); // from 992px: folded to its icon rail, or open at this width
   useSideShortcut();
   const [tipProps, railTip] = useRailTip(closed);
