@@ -6,13 +6,13 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspaceLinks } from "@/lib/workspaceContext";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import Toast from "@/components/courses/Toast";
-import { COHORT_TONE, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
+import { COHORT_TONE, Loading, Pill, RowMenu, Search, SegmentedControl, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
 import { ColWidths } from "@/components/admin/adminParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -184,6 +184,7 @@ export default function ProviderCohorts() {
   const [moveOne, setMoveOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [said, setSaid] = useState(""); // a row change is on screen already, so it is only read out
   // a row change shows at once (bookings on or off, the tutor), before the list loads again; gone again if the save fails
   const [changing, setChanging] = useState({});
   const change = (id, patch) => setChanging((x) => (patch ? { ...x, [id]: { ...x[id], ...patch } } : Object.fromEntries(Object.entries(x).filter(([k]) => k !== id))));
@@ -269,19 +270,19 @@ export default function ProviderCohorts() {
   };
   const refresh = () =>
     Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
-  const fail = (e) => setToast({ message: errorsFrom(e).general || "We couldn't save that. Please try again." });
+  const fail = (e) => setToast({ message: errorText(e) });
   // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
   const setTutorOf = (k, v) => {
     change(k.id, { tutorUserId: v || null });
     assignTutor.mutate({ organisationId, cohortId: k.id, tutorUserId: v || null }, {
-      onSuccess: async () => { setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); await refresh(); change(k.id, null); },
+      onSuccess: async () => { setSaid(v ? `${tutorName(v, k) || "Tutor"} assigned` : "Tutor removed"); await refresh(); change(k.id, null); },
       onError: (e) => { change(k.id, null); fail(e); },
     });
   };
   const toggleBookings = (k) => {
     change(k.id, { bookable: !k.bookable });
     bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
-      onSuccess: async () => { setToast({ message: k.bookable ? "Bookings turned off. Learners can't book this cohort now." : "Bookings turned on. Learners can book this cohort once online booking opens." }); await refresh(); change(k.id, null); },
+      onSuccess: async () => { setSaid(k.bookable ? "Bookings turned off" : "Bookings turned on"); await refresh(); change(k.id, null); },
       onError: (e) => { change(k.id, null); fail(e); },
     });
   };
@@ -294,7 +295,7 @@ export default function ProviderCohorts() {
       {nothingYet && mode !== "self-paced" ? (
         <EmptyState
           title="No upcoming dates"
-          text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live; online booking opens in a later update."
+          text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live."
           action={add ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", onClick: newCourse }) : null}
         />
       ) : null}
@@ -411,6 +412,7 @@ export default function ProviderCohorts() {
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
       <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onCancelInstead={(k) => { setDeleting(null); setCancelOne(k); }} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
+      <p className="rt-sr" aria-live="polite">{said}</p>
     </div>
   );
 }
@@ -465,7 +467,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
       setError("Say why the dates are cancelled.");
       return document.getElementById("rt-coh-cancel-why")?.focus();
     }
-    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]) });
+    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorText(er)) });
   };
   return (
     <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose busy={cancel.isPending}>
@@ -510,7 +512,7 @@ export function MoveSheet({ cohort, onClose, onDone }) {
     }
     move.mutate({ organisationId, cohortId: cohort.id, courseId: Number(courseId) }, {
       onSuccess: (r) => onDone(r.courseTitle),
-      onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]),
+      onError: (er) => setError(errorText(er)),
     });
   };
   return (
@@ -559,7 +561,7 @@ export function DeleteSheet({ cohort, onClose, onDone, onCancelInstead }) {
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, will be deleted permanently. This can&apos;t be undone.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-pws-set__actions">
-            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete"}</button>
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorText(e)) })}>{remove.isPending ? "Deleting…" : "Delete"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={close}>Cancel</button>
           </div>
         </div>
@@ -859,8 +861,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               the calendar that scrolls inside itself on a computer */}
           <div className="rt-pws-coh__dates">
             <div className="rt-pws-coh__pickcol">
-              <Choice name="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
-                options={[{ value: "range", label: "Date range" }, { value: "days", label: "Individual days" }]} />
+              <SegmentedControl id="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
+                options={[{ value: "range", label: "Date range", icon: "sessions" }, { value: "days", label: "Individual days", icon: "cohorts" }]} />
               <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={today} keep={heldPast} />
             </div>
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
@@ -923,14 +925,15 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               {method === "live-online" && (
                 <div className="rt-field">
                   <label htmlFor="rt-cf-joinUrl">Joining link<Req /></label>
-                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Google Meet meeting learners join, like https://zoom.us/j/1234567890. Once online booking opens, learners get it before the first session.</p>
+                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Google Meet meeting learners join, like https://zoom.us/j/1234567890.</p>
                   {err("joinUrl")}
                   <input id="rt-cf-joinUrl" type="url" inputMode="url" value={f.joinUrl} onChange={(e) => set({ joinUrl: e.target.value })} autoComplete="url" aria-invalid={errors.joinUrl ? true : undefined} aria-describedby={`rt-cf-joinUrl-h${errors.joinUrl ? " rt-cf-joinUrl-e" : ""}`} />
                 </div>
               )}
             </div>
-            <Choice name="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
-              options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
+            <SegmentedControl id="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
+              options={[{ value: "flat", label: "Flat price", icon: "coupons" }, { value: "tiered", label: "Tiered packages", icon: "layers" }]}
+              hint={f.pricing === "tiered" ? "Learners pick a package from a price plan when they book." : "One price per learner for this date."} />
             {f.pricing === "tiered" && (
               <div className="rt-field">
                 <label htmlFor="rt-cf-planId">Price plan<Req /></label>

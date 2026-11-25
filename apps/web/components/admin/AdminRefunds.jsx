@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { Said, TableSkeleton, Tabs, formatWhen, Empty, PageLink } from "./adminParts";
 import { RefundDecision, useMoneyRefresh } from "./moneyParts";
 import { AdminStatus } from "./AdminStatus";
@@ -74,7 +74,7 @@ export function AdminDisputes() {
       await refresh();
       setSaid(outcome === "won" ? c.wonDone : c.lostDone);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
   };
   return (

@@ -131,7 +131,7 @@ export default function ProviderDashboard() {
                 )}
               </>
             ) : (
-              <div className="rt-dash__clear"><i className="icon-check text-16" aria-hidden="true"></i><p>You&apos;re all caught up.</p></div>
+              <div className="rt-dash__clear"><i className="icon-check text-16" aria-hidden="true"></i><p>Nothing to do.</p></div>
             )}
           </section>
 

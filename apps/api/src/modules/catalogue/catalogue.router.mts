@@ -91,7 +91,7 @@ export const catalogueRouter = createTRPCRouter({
       subjects,
       methods: methods.filter((m) => used.has(m.slug)),
       towns: [...towns.values()].sort((a, b) => b.courses - a.courses || a.name.localeCompare(b.name)),
-      courses: all.slice(0, 300).map((l) => ({ title: l.title, slug: l.slug, subject: l.category, imageUrl: l.imageUrl, towns: [...new Set(l.venues.map((v) => townName(v.city)).filter(Boolean))] })),
+      courses: all.slice(0, 300).map((l) => ({ title: l.title, slug: l.slug, subject: l.category, sub: l.subcategory, topic: l.topic, imageUrl: l.imageUrl, towns: [...new Set(l.venues.map((v) => townName(v.city)).filter(Boolean))] })),
     }
   }),
 

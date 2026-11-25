@@ -7,7 +7,7 @@ import { EmptyState, ErrorState } from "@/components/states/States";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { Loading } from "./providerParts";
 import { Confirm, Req } from "./settingsForm";
 
@@ -34,23 +34,23 @@ function FaqsList({ initial, locked, say }) {
   const [error, setError] = useState("");
   const busy = save.isPending;
   // every change saves the whole list at once; the list on screen changes only once it is saved
-  const commit = async (next, message) => {
+  const commit = async (next, message, opts) => {
     setError("");
     try {
       const r = await save.mutateAsync({ organisationId, faqs: next });
       utils.provider.faqs.list.setData({ organisationId }, r);
       setFaqs(r);
-      say(message);
+      if (message) say(message, opts);
       return true;
     } catch (err) {
-      setError(errorsFrom(err).general || "We couldn't save that. Check your connection, then try again.");
+      setError(errorText(err));
       return false;
     }
   };
   const move = (i, by) => {
     const next = [...faqs];
     [next[i], next[i + by]] = [next[i + by], next[i]];
-    commit(next, "Order saved");
+    commit(next, "Order saved", { shown: true });
   };
   return (
     <div className="rt-acc__card rt-q__form rt-pws-set__form" aria-busy={busy || undefined}>

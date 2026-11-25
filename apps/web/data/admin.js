@@ -36,7 +36,7 @@ export const admin = {
     ] },
     { group: "Marketplace", items: [
       { key: "providers", label: "Providers", href: "/admin/providers", badge: "applications", permission: ["approve", "suspend", "finance.settings", "pricing"] },
-      { key: "catalogue", label: "Catalogue", href: "/admin/catalogue", demo: "partly", permission: ["approve", "catalogue"] },
+      { key: "catalogue", label: "Catalogue", href: "/admin/catalogue", permission: ["approve", "catalogue"] },
       { key: "sessions", label: "Sessions and venues", href: "/admin/sessions", demo: true, permission: "approve" },
     ] },
     { group: "Sales", items: [
@@ -400,13 +400,10 @@ export const admin = {
     // a course can't be approved while its provider's account isn't active, by the provider's status
     providerState: { pending: "not approved yet", changes_requested: "not approved yet", suspended: "suspended", rejected: "application turned down" },
     providerNotActive: (status) => ({ suspended: "The provider's account is suspended. Decide on the provider first.", rejected: "The provider's application was turned down, so this course can't be approved." }[status] || "The provider isn't approved yet. Decide on the provider first."),
-    ownBlocked: "You sent this yourself, so another admin must decide on it.",
-    ownSole: "You sent this yourself. No other admin can approve it, so you can decide on it, with a reason. It is recorded in the activity log as your own request.",
+    ownBlocked: "Sent by you. Another admin decides.",
     ownQueue: "Sent by you",
-    ownQueueSole: "You sent this yourself. Open it to decide, with a reason.",
-    // your own published course: pausing it or putting it back live is a decision too
-    ownPublished: "You sent this course yourself, so another admin must pause it or put it back live.",
-    ownPublishedSole: "You sent this course yourself. No other admin can approve, so you can pause it or put it back live, with a reason. It is recorded in the activity log as your own request.",
+    // your own course our team paused: putting it back live is a decision too
+    ownPaused: "Sent by you. Another admin puts it back live.",
     providerPaused: "The provider paused this course themselves. They put it back live from their workspace.",
     // after a decision: whether the provider was told by email
     emailed: "The provider was emailed.",
@@ -466,8 +463,7 @@ export const admin = {
       courses: "Courses",
       coursesNone: "Courses this provider writes show here, whatever their status.",
       coursesAll: (n) => `All ${n} courses`,
-      ownRequest: "You opened this provider account yourself, so another admin must decide on it.",
-      ownSole: "You opened this provider account yourself. No other admin can approve it, so you can decide on it, with a reason. It is recorded in the activity log as your own request.",
+      ownRequest: "Opened by you. Another admin decides.",
       noteFor: { changes_requested: "Changes asked for", rejected: "Reason not approved", suspended: "Reason suspended" },
       waiting: "The provider has made the changes and sent their account back for review.",
       details: "Details",
@@ -485,13 +481,12 @@ export const admin = {
       activity: "Activity",
       allActivity: "See all activity",
       noActivity: "Nothing recorded yet.",
-      later: "Courses, documents and payouts appear here once they are live on the site.",
     },
   },
 
   // Money (Part B, B4): real (API admin.orders / refunds / disputes / payouts / ledger / fees). No payment provider is connected
   // yet, so refunds and payouts are recorded, not paid: the screens say so wherever money would move.
-  recordOnly: "Recorded only. No money moves until a payment provider (Stripe) is connected; pay it by bank transfer for now.",
+  recordOnly: "Recorded only: no money moves here yet. Pay by bank transfer.",
   orders: {
     title: "Orders and bookings",
     lead: "Every order across every provider: who booked, what, the payment and how the money splits.",
@@ -620,7 +615,7 @@ export const admin = {
     tabs: { draft: "To approve", approved: "Approved", held: "Held", sent: "Sent" },
     statuses: { draft: "To approve", approved: "Approved", held: "Held", sent: "Sent" },
     owed: "Owed now",
-    owedNote: "Each provider’s ledger balance up to the day, less what is held back, less payouts already waiting. Held back is the provider’s share of each open refund request and dispute (after the payment fee and our commission), which is what they would lose if it goes against them.",
+    owedNote: "Each provider’s balance to date, less payouts already waiting and what is held back: their share of each open refund request and dispute.",
     heldRefunds: "{n} refunds",
     heldDisputes: "{n} disputes",
     upTo: "Up to and including",
@@ -700,7 +695,7 @@ export const admin = {
   content: {
     title: "Site content",
     lead: "The numbers, featured courses and customer words the website shows. Change one here and every page that uses it agrees.",
-    tabs: { trust: "Trust numbers", featured: "Featured courses", faqs: "FAQs", legal: "Legal pages" },
+    tabs: { trust: "Trust numbers", featured: "Featured courses", faqs: "FAQs", legal: "Legal pages", teamTraining: "Team training", licenceFees: "Licence fees" },
     saved: "Saved. The site shows it within a few seconds.",
     lastChanged: "Last changed {when} by {who}",
     neverChanged: "The site shows its built-in wording.",
@@ -730,6 +725,38 @@ export const admin = {
       previewCustomers: "{customers} customers",
       previewCourses: "{courses} courses",
       previewNone: "The site shows no rating, review count, customer or course numbers.",
+    },
+    teamTraining: {
+      title: "Team training on course pages",
+      note: "Shown on every shared course page that has Team training added.",
+      legal: "Only say what is true on every page: no discounts or services we don't offer.",
+      heading: "Heading",
+      intro: "Line under the heading",
+      benefits: "Benefits",
+      benefitsNote: "Up to 6.",
+      benefit: "Benefit {n}",
+      benefitTitle: "Title",
+      benefitText: "Line",
+      addBenefit: "Add a benefit",
+      maxBenefits: "Up to 6 benefits.",
+      quote: "The quote box",
+      quoteNote: "Shown with our phone, email and the Get a team quote button.",
+      quoteTitle: "Box heading",
+      quoteText: "Line",
+    },
+    licenceFees: {
+      title: "Licence fees",
+      note: "Used by the cost tables on shared course pages. Change a fee here and every page shows it.",
+      fee: "Fee {n}",
+      name: "Licence",
+      nameHint: "",
+      amount: "Fee (£)",
+      checked: "Last checked",
+      checkedHint: "",
+      add: "Add a fee",
+      max: "Up to 20 fees.",
+      remove: "Remove fee",
+      removeNote: "Removing it takes it off any cost table that uses it.",
     },
     featured: {
       title: "Featured courses on the home page",
@@ -807,14 +834,14 @@ export const admin = {
       previewChange: "Preview the change",
       provider: "Provider",
       sharedPage: "Shared page",
-      otherSubject: (page) => `This course's subject doesn't match its shared page, “${page}”, so it is listed as a provider of a different course. Ask the provider to choose None (or a matching page) in the course settings before approving.`,
+      otherSubject: (page) => `This course's subject doesn't match its shared page, “${page}”. Approving it moves it to the page for its own subject.`,
       children: "Providers' courses on this page",
       childrenNone: "No provider has listed a course on this page yet.",
       change: "Waiting change",
-      changeNote: "What the provider changed, against the current version. Approving it makes it the current version.",
+      changeNote: "Approving makes these changes the current version.",
       now: "Current",
       proposed: "Proposed",
-      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", compliance: "Course type", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
+      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", compliance: "Course type", videoUrl: "Video", syllabusIntro: "Line above the syllabus", units: "Syllabus", examsIntro: "Text above the exam table", exams: "Exam and assessment", faqs: "FAQs" },
     },
     // the catalogue's one list (real, API admin.catalogue): what the site's filters and menus and the provider's course form use
     list: {
@@ -825,7 +852,8 @@ export const admin = {
       add: { category: "Add a category", subcategory: "Add a sub-category", topic: "Add a topic", method: "Add a delivery method", level: "Add a level" },
       name: "Name",
       addressHint: "Its web address is made from the name and never changes, so links keep working.",
-      fixedName: "The name is also its web address, so it can't be renamed. Retire it and add a new one instead.",
+      // methods and levels: said when one is added, the only time it can be named
+      fixedName: "Its web address is made from the name, so it can't be renamed. To change it later, retire it and add a new one.",
       rename: "Rename",
       retire: "Retire",
       restore: "Restore",
@@ -1025,7 +1053,7 @@ export const admin = {
   // Coupons (Part B, B3): real (API admin.coupons). Checkout applies them once payments are real.
   coupons: {
     title: "Coupons",
-    lead: "Discount codes for courses. A coupon can be turned off at any time; it is never deleted, so past orders keep its name.",
+    lead: "Discount codes for courses. Turn one off at any time; an unused one can be deleted.",
     add: "Create coupon",
     search: "Search by code",
     tabs: { all: "All", live: "Live", scheduled: "Scheduled", ended: "Ended", off: "Turned off" },

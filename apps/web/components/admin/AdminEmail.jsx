@@ -89,9 +89,10 @@ function Editor({ t, initial, canEdit, when, note, onRestart }) {
   };
   const fail = (err) => {
     const { fields, general } = errorsFrom(err);
-    setErrors(fields);
-    if (Object.keys(fields).length) focusFirstError(formRef.current);
-    else setSaid(general);
+    const shown = Object.fromEntries(Object.entries(fields).filter(([k]) => FIELDS.includes(k)));
+    setErrors(shown);
+    if (Object.keys(shown).length) focusFirstError(formRef.current);
+    else setSaid(general || Object.values(fields)[0]);
   };
   const submit = async (e) => {
     e.preventDefault();

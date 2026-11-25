@@ -21,22 +21,20 @@ import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
 import { AudienceSection, BusinessSection, CompareTable, GuideText, LicenceSection, TickCard } from "@/components/courseDetail/CourseGuide";
-import PackagePicker from "@/components/courseDetail/PackagePicker";
-import { unitKey } from "@/lib/courseGuide";
 import { getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
 import { CATALOGUE_HREF } from "@/lib/routes";
 import FormattedText from "@/components/forms/FormattedText";
 
 // The sections, in this order, in our own design: features > learning options > overview > who it's for > comparison > mock test >
-// what you will learn > course content > course week > what's included > exams > requirements > packages > business > steps >
+// what you will learn > course content > course week > what's included > exams > requirements > business > steps >
 // costs > careers > why book with Read Training (the same on every course page) > the provider's terms > FAQs > reviews > more courses > need help >
 // footer. The booking card is sticky on
 // the right. `course`: a live course (lib/catalogueData.js toCourseDetail); a section it has nothing for is left out, and
 // nothing it doesn't have (a rating of its own) is shown. A course with a guide (course.guide: its shared page's Course guide,
 // lib/courseGuide.js) also gets the guide's sections (CourseGuide.jsx), in the page's own parts: the hero's heading, a comparison,
-// the course week, what's included, the exam table's extra column and its intro, packages, business training, steps, costs and
-// careers. `path` is the page's own address (canonical and structured data);
+// the course week, what's included, team training, steps, costs and careers (the syllabus intro, the exam table's text
+// and its Assessment column are the course's own). `path` is the page's own address (canonical and structured data);
 // `query` is its search params (?mode=&session=). `reviews`: the first page of the reviews shown as reviews of Read Training
 // (lib/courseDetailServer.js: those that name this course's topic, or, when none does, a few general ones, said to be about
 // Read Training in general; CourseReviews asks for the other pages); null when there are none, and the section is left out.
@@ -47,19 +45,15 @@ export default function CourseDetail({ course, query = {}, path, reviews = null 
   // links in a course's own text only on ReadTraining's shared pages (staff write them); a provider's text never links anywhere
   const shared = course.kind === "shared";
   const { requirements, exams } = course;
-  // the guide's extra exam column (Questions, or the one it names) for each unit, when every exam row is one of the guide's units
-  // (matched by name); a row it doesn't know leaves the column out, so no unit ever shows another unit's value
-  const units = new Map((guide?.exams?.units || []).map((u) => [unitKey(u.unit), u.value]));
-  const matched = exams && units.size ? exams.rows.map((r) => units.get(unitKey(r.unit))) : [];
-  const questions = matched.length > 0 && matched.every((q) => q != null) ? matched : null;
-  const columns = questions ? ["Unit", guide.exams.column || "Questions", "Time", "Pass mark"] : ["Unit", "Pass mark", "Duration"];
+  // the exam table: its Assessment column (what each exam is) only when a row has one; a row without one shows a dash
+  const assessed = Boolean(exams?.assessed);
+  const columns = assessed ? ["Unit", "Assessment", "Duration", "Pass mark"] : ["Unit", "Pass mark", "Duration"];
 
   const navSections = [
     { id: "learning-options", label: "Learning options" },
     { id: "overview", label: "Overview" },
     ...(course.modules.length ? [{ id: "content", label: "Course content" }] : []),
     ...(requirements ? [{ id: "requirements", label: "Requirements" }] : []),
-    ...(guide?.packages ? [{ id: "packages", label: "Packages" }] : []),
     ...(guide?.business ? [{ id: "business", label: "For business" }] : []),
     ...(guide?.licence ? [{ id: "licence", label: "Your licence" }] : []),
     ...(course.faqs.length ? [{ id: "faqs", label: "FAQs" }] : []),
@@ -152,7 +146,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = null 
 
                   {course.modules.length > 0 && (
                   <section className="rt-cd__sec" id="content" aria-labelledby="rt-cd-content-h">
-                    <ModulesAccordion modules={course.modules} title="Course content" titleId="rt-cd-content-h" intro={guide?.unitsIntro} />
+                    <ModulesAccordion modules={course.modules} title="Course content" titleId="rt-cd-content-h" intro={course.syllabusIntro} />
                   </section>
                   )}
 
@@ -164,29 +158,22 @@ export default function CourseDetail({ course, query = {}, path, reviews = null 
                     <section className="rt-cd__sec" aria-labelledby="rt-cd-exams-h">
                       <h2 id="rt-cd-exams-h">{exams.title}</h2>
                       <LongBody>
-                      {guide?.exams?.intro ? <GuideText text={guide.exams.intro} /> : (
-                        <div className="rt-cd__prose">
-                          {exams.intro.map((p) => <p key={p}>{p}</p>)}
-                        </div>
-                      )}
+                      {exams.intro && <GuideText text={exams.intro} links={shared} />}
                       <div className="rt-cd__table-wrap">
-                        <table className={`rt-cd__table${questions ? " rt-cg__exams" : ""}${questions?.some((q) => q.length > 12) ? " is-words" : ""}`}>
+                        <table className={`rt-cd__table${assessed ? " rt-cg__exams" : ""}${exams.rows.some((r) => (r.assessment || "").length > 12) ? " is-words" : ""}`}>
                           <thead>
                             <tr>{columns.map((c) => <th key={c} scope="col">{c}</th>)}</tr>
                           </thead>
                           <tbody>
-                            {exams.rows.map((r, i) =>
-                              questions ? (
-                                <tr key={r.unit}><td>{r.unit}</td><td data-label={columns[1]}>{questions[i]}</td><td data-label={columns[2]}>{r.duration}</td><td data-label={columns[3]}>{r.passMark}</td></tr>
+                            {exams.rows.map((r) =>
+                              assessed ? (
+                                <tr key={r.unit}><td>{r.unit}</td><td data-label={columns[1]}>{r.assessment || "—"}</td><td data-label={columns[2]}>{r.duration}</td><td data-label={columns[3]}>{r.passMark}</td></tr>
                               ) : (
                                 <tr key={r.unit}><td>{r.unit}</td><td>{r.passMark}</td><td>{r.duration}</td></tr>
                               )
                             )}
                           </tbody>
                         </table>
-                      </div>
-                      <div className="rt-cd__prose">
-                        {exams.outro.map((p) => <p key={p}>{p}</p>)}
                       </div>
                       </LongBody>
                     </section>
@@ -203,8 +190,6 @@ export default function CourseDetail({ course, query = {}, path, reviews = null 
                     </LongBody>
                   </section>
                   )}
-
-                  <PackagePicker packages={guide?.packages} />
 
                   <BusinessSection business={guide?.business} course={course} />
 

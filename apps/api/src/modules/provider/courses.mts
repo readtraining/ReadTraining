@@ -51,7 +51,7 @@ const text = (max: number, what: string) => line(max, what).optional().nullable(
 const slugRef = z.string().trim().max(80).regex(/^[a-z0-9-]*$/)
 
 // the content an admin checks before it shows on a live course
-export const REVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'compliance', 'videoUrl', 'units', 'exams', 'faqs'] as const
+export const REVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirements', 'outcomes', 'features', 'category', 'subcategory', 'topic', 'level', 'compliance', 'videoUrl', 'syllabusIntro', 'units', 'examsIntro', 'exams', 'faqs'] as const
 
 // A pass mark: a percentage up to 100%, a score that isn't more than its total ("26 out of 40", "26/40", "26 of 40 marks", decimals
 // too), or words ("Pass or fail"). A bare "of" is a score only when the pass mark ends with it ("26 of 40", "26 of 40 marks"), so
@@ -126,12 +126,17 @@ export const content = {
     .refine((v) => v === '' || videoEmbed(v) !== null, 'Use a link to one YouTube or Vimeo video, starting https://')
     .optional()
     .nullable(),
+  // a line above the syllabus units, and the text above the exam table (both optional)
+  syllabusIntro: text(600, 'syllabus intro'),
   units: z.array(z.object({ title: line(120, 'unit title').min(1, 'Give every unit a title.'), body: text(2000, 'unit text') })).max(40, 'Add up to 40 units.'),
-  // the course page shows each row as a line of a table (unit, pass mark, duration): a row needs all three, or no row at all
+  examsIntro: text(1200, 'text above the exam table'),
+  // the course page shows each row as a line of a table (unit, pass mark, duration): a row needs all three, or no row at all;
+  // what the exam is (its Assessment column: "72 multiple-choice questions") is optional
   exams: z.array(z.object({
     unit: line(120, 'exam unit').min(1, 'Name every exam row.'),
     passMark: line(40, 'pass mark').min(1, 'Give every exam row its pass mark.').refine((v) => !passMarkProblem(v), (v) => ({ message: passMarkProblem(v) })),
     duration: line(40, 'duration').min(1, 'Give every exam row its duration.'),
+    assessment: line(120, 'assessment').optional().nullable(),
   })).max(20, 'Add up to 20 exam rows.'),
   faqs: z.array(z.object({ question: line(160, 'question').min(1, 'Write every question.'), answer: line(1200, 'answer').min(1, 'Write every answer.') })).max(30, 'Add up to 30 FAQs.'),
 }
@@ -225,6 +230,12 @@ export async function resolveCatalogue(db: Writer, input: { category?: string; s
   return out
 }
 
+/** The topics in use under a sub-category, A to Z: when there are any, a provider's course is listed under one, chosen by our team. */
+export async function activeTopics(db: Writer, subcategoryId: string | null) {
+  if (!subcategoryId) return []
+  return db.select({ id: topics.id, name: topics.name }).from(topics).where(and(eq(topics.subcategoryId, subcategoryId), eq(topics.active, true))).orderBy(asc(topics.name))
+}
+
 // The catalogue ids for the slugs a change waiting for approval holds, whether or not each is still offered (a duplicated course
 // is a draft: sending it says if one has been retired). The topic stays `topicId` when the change doesn't name one.
 async function subjectOf(db: Writer, c: { category?: unknown; subcategory?: unknown; topic?: unknown }, topicId: string | null) {
@@ -266,14 +277,14 @@ export async function courseSlug(db: Writer, title: string) {
 }
 
 /** Replaces a course's units, exams and FAQs with the lists given (each only when given). */
-async function writeLists(tx: Tx, courseId: number, lists: { units?: { title: string; body?: string | null }[]; exams?: { unit: string; passMark?: string | null; duration?: string | null }[]; faqs?: { question: string; answer: string }[] }) {
+async function writeLists(tx: Tx, courseId: number, lists: { units?: { title: string; body?: string | null }[]; exams?: { unit: string; passMark?: string | null; duration?: string | null; assessment?: string | null }[]; faqs?: { question: string; answer: string }[] }) {
   if (lists.units) {
     await tx.delete(courseUnits).where(eq(courseUnits.courseId, courseId))
     if (lists.units.length) await tx.insert(courseUnits).values(lists.units.map((u, i) => ({ courseId, position: i, title: u.title, body: u.body || null })))
   }
   if (lists.exams) {
     await tx.delete(courseExams).where(eq(courseExams.courseId, courseId))
-    if (lists.exams.length) await tx.insert(courseExams).values(lists.exams.map((e, i) => ({ courseId, position: i, unit: e.unit, passMark: e.passMark || null, duration: e.duration || null })))
+    if (lists.exams.length) await tx.insert(courseExams).values(lists.exams.map((e, i) => ({ courseId, position: i, unit: e.unit, passMark: e.passMark || null, duration: e.duration || null, assessment: e.assessment?.trim() || null })))
   }
   if (lists.faqs) {
     await tx.delete(courseFaqs).where(eq(courseFaqs.courseId, courseId))
@@ -289,7 +300,7 @@ export async function applyContent(tx: Tx, courseId: number, c: Partial<Record<(
   const resolved = await resolveCatalogue(tx, { category: c.category as string | undefined, subcategory: c.subcategory as string | undefined, topic: c.topic as string | null | undefined, level: c.level as string | undefined })
   const set: Partial<typeof courses.$inferInsert> = { ...resolved, updatedAt: new Date() }
   if (c.title !== undefined) set.title = c.title as string
-  for (const k of ['summary', 'description', 'audience', 'entryRequirements', 'videoUrl'] as const) if (c[k] !== undefined) set[k] = (c[k] as string | null) || null
+  for (const k of ['summary', 'description', 'audience', 'entryRequirements', 'videoUrl', 'syllabusIntro', 'examsIntro'] as const) if (c[k] !== undefined) set[k] = (c[k] as string | null) || null
   if (c.outcomes !== undefined) set.outcomes = c.outcomes as string[]
   if (c.features !== undefined) set.features = c.features as string[]
   if (c.compliance !== undefined) set.compliance = c.compliance as boolean
@@ -391,7 +402,7 @@ export async function courseDetail(db: Writer, course: typeof courses.$inferSele
     subcategory: cat[0]?.subcategory ?? null,
     topic: cat[0]?.topic ?? null,
     units: units.map((u) => ({ title: u.title, body: u.body ?? '' })),
-    exams: exams.map((e) => ({ unit: e.unit, passMark: e.passMark ?? '', duration: e.duration ?? '' })),
+    exams: exams.map((e) => ({ unit: e.unit, passMark: e.passMark ?? '', duration: e.duration ?? '', assessment: e.assessment ?? '' })),
     faqs: faqs.map((f) => ({ question: f.question, answer: f.answer })),
     images: images.map((i) => ({ id: i.id, url: mediaUrl(i.path), alt: i.alt ?? '' })),
     // the shared page's course type (our team's answer, the one the public sees), beside the provider's own in the admin's review
@@ -750,15 +761,15 @@ export const providerCoursesRouter = createTRPCRouter({
         .limit(200)
     }),
 
-  // The new-course wizard: a title, the catalogue place, the course type (compliance or not), how it is taught (its primary
-  // learning option, the only one to start with), the model, Skill Saver, and optionally the shared page it joins. Starts as a draft; the editor fills in the rest.
+  // The new-course wizard: a title, the catalogue place (category and sub-category: the topic is chosen by our team when they
+  // approve the course, admin.courses.decide), the course type (compliance or not), how it is taught (its primary learning option,
+  // the only one to start with), the model and Skill Saver. Starts as a draft; the editor fills in the rest.
   create: orgProcedure('provider.courses.edit')
     .input(
       z.object({
         title: content.title,
         category: content.category,
         subcategory: content.subcategory,
-        topic: content.topic,
         compliance: content.compliance,
         method: settings.method,
         model: settings.model,
@@ -770,7 +781,7 @@ export const providerCoursesRouter = createTRPCRouter({
       refuseLongTitle(input.title)
       if (input.model === 'enquiries') throw bad(ENQUIRIES_LATER, 'model')
       taughtAll([input.method])
-      const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: input.topic ?? null, method: input.method })
+      const resolved = await resolveCatalogue(ctx.db, { category: input.category, subcategory: input.subcategory, topic: null, method: input.method })
       const parentId = await placeOn(ctx.db, { subcategoryId: resolved.subcategoryId ?? null, topicId: resolved.topicId ?? null })
       const slug = await courseSlug(ctx.db, input.title)
       return ctx.db.transaction(async (tx) => {
@@ -836,6 +847,8 @@ export const providerCoursesRouter = createTRPCRouter({
               description: pick('description', now.description),
               audience: pick('audience', now.audience),
               entryRequirements: pick('entryRequirements', now.entryRequirements),
+              syllabusIntro: pick('syllabusIntro', now.syllabusIntro),
+              examsIntro: pick('examsIntro', now.examsIntro),
               outcomes: pick('outcomes', now.outcomes),
               features: pick('features', now.features),
               ...subject,
@@ -858,7 +871,7 @@ export const providerCoursesRouter = createTRPCRouter({
             .returning({ id: courses.id })
           await writeLists(tx, made.id, {
             units: pick('units', units.map((u) => ({ title: u.title, body: u.body }))),
-            exams: pick('exams', exams.map((e) => ({ unit: e.unit, passMark: e.passMark, duration: e.duration }))),
+            exams: pick('exams', exams.map((e) => ({ unit: e.unit, passMark: e.passMark, duration: e.duration, assessment: e.assessment }))),
             faqs: pick('faqs', faqs.map((f) => ({ question: f.question, answer: f.answer }))),
           })
           if (images.length) {
@@ -890,6 +903,9 @@ export const providerCoursesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input, path }) => {
       const { organisationId, courseId, seen, ...fields } = input as { organisationId: string; courseId: number; seen?: string } & Record<string, unknown>
+      // the topic is our team's choice (when they approve the course, admin.courses.decide; or staff editing it here), never the
+      // provider's: one they send is ignored
+      if (!ctx.staff) delete fields.topic
       const keys = Object.keys(fields).filter((k) => fields[k] !== undefined)
       // nothing to save: the editor keeps the version it had (handing it a newer one would hide a change made elsewhere)
       if (!keys.length) return { ok: true, pendingChange: false, version: seen ?? (await courseVersion(ctx.db, courseId)) }
@@ -909,7 +925,12 @@ export const providerCoursesRouter = createTRPCRouter({
       if (fields.method !== undefined) taughtAll([fields.method as string])
       const reviewed = Object.fromEntries(keys.filter((k) => (REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
       const direct = Object.fromEntries(keys.filter((k) => !(REVIEWED as readonly string[]).includes(k)).map((k) => [k, fields[k]]))
-      // check the catalogue choices now, so a pending change never holds an impossible one
+      // check the catalogue choices now, so a pending change never holds an impossible one; a provider moving the course to another
+      // sub-category leaves it without a topic (the old one belongs to the old sub-category) until our team chooses one at approval
+      if (!ctx.staff && reviewed.subcategory !== undefined) {
+        const moved = await resolveCatalogue(ctx.db, { category: reviewed.category as string, subcategory: reviewed.subcategory as string })
+        if (moved.subcategoryId !== course.subcategoryId) reviewed.topic = null
+      }
       const subject = Object.keys(reviewed).length ? await resolveCatalogue(ctx.db, { category: reviewed.category as string | undefined, subcategory: reviewed.subcategory as string | undefined, topic: reviewed.topic as string | null | undefined, level: reviewed.level as string | undefined }) : {}
       const subjectAfter = { subcategoryId: subject.subcategoryId ?? course.subcategoryId, topicId: subject.topicId !== undefined ? subject.topicId : course.topicId }
       const subjectChanged = subjectAfter.subcategoryId !== course.subcategoryId || subjectAfter.topicId !== course.topicId
@@ -951,6 +972,8 @@ export const providerCoursesRouter = createTRPCRouter({
             const [applied] = await tx.select().from(courses).where(eq(courses.id, courseId))
             const lost = (await missing(tx, applied)).filter((gap) => !before.includes(gap))
             if (lost.length) throw new TRPCError({ code: 'CONFLICT', message: `With this change the live course would be missing ${lost.join(', ')}. Add it, then save.` })
+            // staff moving a live course choose its topic as an approver would (a sub-category with topics needs one)
+            if (subjectChanged && !applied.topicId && (await activeTopics(tx, applied.subcategoryId)).length) throw bad('Choose the topic this course is listed under.', 'topic')
           } else if (isLive) {
             const [open] = await tx.select().from(courseRevisions).where(and(eq(courseRevisions.courseId, courseId), eq(courseRevisions.status, 'pending')))
             if (open) await tx.update(courseRevisions).set({ content: { ...(open.content as object), ...reviewed }, submittedBy: ctx.user.id, submittedAt: new Date() }).where(eq(courseRevisions.id, open.id))

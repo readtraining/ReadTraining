@@ -54,7 +54,9 @@ const TABS = [
 export function AdminProviderProfile({ slug }) {
   const [tab, setTab] = useState(() => (TABS.some((t) => t.key === getQuery("tab")) ? getQuery("tab") : "info"));
   const [toast, setToast] = useState(null);
-  const say = useCallback((message) => setToast({ message }), []);
+  const [said, setSaid] = useState("");
+  // a toast, or only read out when the page already shows the change (`shown`: a logo, the FAQs' order)
+  const say = useCallback((message, { shown = false } = {}) => (shown ? setSaid(message) : setToast({ message })), []);
   const Panel = TABS.find((t) => t.key === tab).Panel;
   return (
     <ProviderFrame slug={slug}>
@@ -63,6 +65,7 @@ export function AdminProviderProfile({ slug }) {
         <Panel say={say} />
       </div>
       <Toast toast={toast} onDone={() => setToast(null)} />
+      <p className="rt-sr" aria-live="polite">{said}</p>
     </ProviderFrame>
   );
 }

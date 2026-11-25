@@ -35,6 +35,8 @@ const tier = z
     savePence: z.number().int().min(0).max(MAX_PENCE).optional().nullable(), // "Save £": shown as a was-price of price + save
     tagline: line(80, 'tagline').optional().nullable(),
     popular: z.boolean().optional(),
+    // the package includes Emergency First Aid at Work: a course whose SIA licence needs first aid then doesn't ask about it
+    firstAid: z.boolean().optional(),
     features: z.array(feature).max(12, 'Add up to 12 features to a package.'),
   })
   // a saving bigger than the price itself would claim a was-price over double what learners pay: not a believable reference price
@@ -59,6 +61,7 @@ export const publicTiers = (tiers: unknown) =>
         wasPence: t.savePence ? t.pricePence + t.savePence : null,
         tagline: t.tagline || null,
         popular: Boolean(t.popular),
+        firstAid: Boolean(t.firstAid),
         features: (t.features ?? []).map((f) => ({ title: f.title, description: f.description || null, included: f.included })),
       }))
     : null

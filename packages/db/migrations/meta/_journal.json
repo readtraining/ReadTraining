@@ -351,6 +351,34 @@
       "when": 1795438979213,
       "tag": "0049_course_compliance",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795585629275,
+      "tag": "0050_course_syllabus_and_assessment",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1795585649940,
+      "tag": "0051_move_guide_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1795594210303,
+      "tag": "0052_guides_without_packages",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1795595350529,
+      "tag": "0053_cost_table_without_bundles",
+      "breakpoints": true
     }
   ]
 }

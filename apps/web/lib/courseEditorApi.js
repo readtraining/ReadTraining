@@ -60,7 +60,8 @@ export function useCourseEndpoints(scope, courseId) {
     admin,
     query: admin ? aGet : pGet,
     // what the person may change: the page wording, everything else, prices
-    access: admin ? { page: writer, full: writer, pricing: false } : { full: can("provider.courses.edit"), page: can("provider.courses.editPage"), pricing: can("provider.pricing.edit") },
+    // and the topic (`topic`: ReadTraining's own choice, so a shared page and staff only; a provider's course gets it at approval)
+    access: admin ? { page: writer, full: writer, pricing: false, topic: true } : { full: can("provider.courses.edit"), page: can("provider.courses.editPage"), pricing: can("provider.pricing.edit"), topic: Boolean(staff) },
     // ReadTraining staff editing from the admin (StaffEdit): their changes apply at once (a live course included) and stay
     // waiting when the course is with our team; sending, pausing and withdrawing stay the provider's (the API refuses them)
     staff: !admin && Boolean(staff),

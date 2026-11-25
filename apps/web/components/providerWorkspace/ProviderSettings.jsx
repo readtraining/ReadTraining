@@ -63,7 +63,9 @@ function Settings() {
   const data = useProvider();
   const sp = useSearchParams();
   const [toast, setToast] = useState(null);
-  const say = useCallback((message, extra = {}) => setToast({ message, ...extra }), []);
+  const [said, setSaid] = useState("");
+  // what a change did: a toast, or only read out when the page already shows it (`shown`: a logo, the FAQs' order)
+  const say = useCallback((message, { shown = false, ...extra } = {}) => (shown ? setSaid(message) : setToast({ message, ...extra })), []);
   const clear = useCallback(() => setToast(null), []);
   const router = useRouter();
   const asked = sp.get("tab");
@@ -107,6 +109,7 @@ function Settings() {
         {NOT_SAVED.has(tab) ? <FormGate form="providerSettings"><Panel key={tab} data={data} say={say} /></FormGate> : data ? <Panel key={tab} data={data} say={say} /> : <Loading rows={2} />}
       </section>
       <Toast toast={toast} onDone={clear} />
+      <p className="rt-sr" aria-live="polite">{said}</p>
     </div>
   );
 }

@@ -13,9 +13,10 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { builtInLegal, getLegalList, legalContentKey } from "@/lib/legal";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Req } from "./adminParts";
 import { FaqForm, LegalForm } from "./AdminContentPages";
+import { LicenceFeesForm, TeamTrainingForm } from "./AdminContentShared";
 import { History, SaveRow, describedBy, field, useSave } from "./contentParts";
 
 const copy = A.content;
@@ -25,8 +26,8 @@ const MAX_PER_TAB = 4;
 const LEGAL = getLegalList();
 
 // Site content (Part B, B2): the numbers and featured courses the whole site shares (the customer reviews have
-// their own page, admin › Customer reviews), each page's
-// FAQs, and the legal pages (API content.*). Each tab saves its own piece; a piece that was never saved shows the site's
+// their own page, admin › Customer reviews), each page's FAQs, the legal pages, and the team training words and licence fees
+// shared course pages use (API content.*). Each tab saves its own piece; a piece that was never saved shows the site's
 // built-in wording ("Use the built-in wording" goes back to it), and every saved version is kept under "Earlier versions". With
 // the "content" switch an admin can change them; after a save the site's saved copy is marked out of date, so every page shows
 // it within seconds. Tab, FAQ page and legal page are kept in the address.
@@ -94,11 +95,11 @@ export default function AdminContent() {
       setLoaded(null);
       setSaid(copy.resetDone);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
     setConfirming(false);
   };
-  const Panel = { trust: TrustForm, featured: FeaturedForm, faqs: FaqForm, legal: LegalForm }[tab];
+  const Panel = { trust: TrustForm, featured: FeaturedForm, faqs: FaqForm, legal: LegalForm, teamTraining: TeamTrainingForm, licenceFees: LicenceFeesForm }[tab];
   const panelProps = tab === "faqs" ? { contentKey, set: faq } : tab === "legal" ? { contentKey, doc: legal } : {};
 
   return (
@@ -279,8 +280,7 @@ function FeaturedForm({ value, canEdit }) {
       markSaved();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
-      setGeneral(g);
-      if (fields.groups) setGeneral(fields.groups);
+      setGeneral(g || fields.groups || Object.values(fields)[0]);
     }
     setSaving(false);
   };
