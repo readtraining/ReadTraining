@@ -15,11 +15,19 @@ export default function FilterScrollPill({ scrollRef, watch }) {
   const [scrollable, setScrollable] = useState(false);
   const [dragging, setDragging] = useState(false);
 
-  // Does the body overflow? Re-checked on resize and whenever the groups' height changes.
+  // Does the body overflow? Re-checked on resize and whenever the groups' height changes. The state changes only when the answer
+  // does: a new ResizeObserver reports at once, so in a text box (watch: its words) every key would otherwise cost a second render,
+  // and fast typing piles those up until React drops a keystroke.
+  const scrollableNow = useRef(false);
   useEffect(() => {
     const body = scrollRef.current;
     if (!body) return;
-    const check = () => setScrollable(body.scrollHeight > body.clientHeight + 1);
+    const check = () => {
+      const next = body.scrollHeight > body.clientHeight + 1;
+      if (next === scrollableNow.current) return;
+      scrollableNow.current = next;
+      setScrollable(next);
+    };
     check();
     const ro = new ResizeObserver(check);
     ro.observe(body);

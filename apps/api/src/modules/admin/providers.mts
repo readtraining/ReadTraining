@@ -7,7 +7,7 @@ import type { AdminAction } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import { emailOutbox } from '../../lib/email.mjs'
-import { removeMedia } from '../../lib/media.mjs'
+import { mediaUrl, removeMedia } from '../../lib/media.mjs'
 import { notify, ownerOf } from '../../lib/notify.mjs'
 import { OWN_REASON_ERROR, ownReasonOk, ownRequestRefused, soleApprover } from '../../lib/soleApprover.mjs'
 import { bps, defaultCommission, percent } from './commission.mjs'
@@ -123,8 +123,9 @@ export const providersRouter = createTRPCRouter({
   get: adminProcedure('admin.providers.read')
     .input(z.object({ slug: z.string().max(80) }))
     .query(async ({ ctx, input }) => {
-      const [o] = await ctx.db.execute<{ id: string; name: string; slug: string; mobile: string | null; status: Status; status_note: string | null; status_changed_at: string | null; commission_bps: number | null; terms_accepted_at: string | null; terms_version: string | null; created_by: string | null; created_at: string }>(sql`
-        select o.id, o.name, o.slug, o.mobile, o.status, o.status_note, o.status_changed_at, o.commission_bps, o.terms_accepted_at, o.terms_version, o.created_by, o.created_at
+      const [o] = await ctx.db.execute<{ id: string; name: string; slug: string; mobile: string | null; status: Status; status_note: string | null; status_changed_at: string | null; commission_bps: number | null; terms_accepted_at: string | null; terms_version: string | null; created_by: string | null; created_at: string; logo_path: string | null; headline: string | null; bio: string | null; city: string | null; socials: { facebook?: string; linkedin?: string; youtube?: string } | null; cancellation_policy: string | null; booking_terms: string | null }>(sql`
+        select o.id, o.name, o.slug, o.mobile, o.status, o.status_note, o.status_changed_at, o.commission_bps, o.terms_accepted_at, o.terms_version, o.created_by, o.created_at,
+          o.logo_path, o.headline, o.bio, o.city, o.socials, o.cancellation_policy, o.booking_terms
         from public.organisations o where o.type = 'provider' and o.slug = ${input.slug}`)
       if (!o) throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider was not found.' })
       const team = await ctx.db.execute<{ user_id: string; email: string; first_name: string | null; last_name: string | null; role: string; status: string; created_at: string }>(sql`
@@ -149,6 +150,16 @@ export const providersRouter = createTRPCRouter({
         termsAcceptedAt: iso(o.terms_accepted_at),
         termsVersion: o.terms_version,
         appliedAt: iso(o.created_at)!,
+        // what learners will see about them (their public profile and the terms shown before booking), so a decision is made on it
+        profile: {
+          logoUrl: mediaUrl(o.logo_path),
+          headline: o.headline ?? '',
+          bio: o.bio ?? '',
+          city: o.city ?? '',
+          socials: o.socials ?? {},
+          cancellationPolicy: o.cancellation_policy ?? '',
+          bookingTerms: o.booking_terms ?? '',
+        },
         // an admin doesn't decide on a provider account they opened themselves, unless no other admin can (lib/soleApprover.mts:
         // a Full admin, with a written reason)
         ownRequest: o.created_by === ctx.user.id,

@@ -11,7 +11,7 @@ import { TeamTab } from "./SettingsPeople";
 export default function ProviderTeam() {
   const { can } = useProviderAccess();
   const [toast, setToast] = useState(null);
-  const say = useCallback((message) => setToast({ message }), []);
+  const say = useCallback((message, { error = false } = {}) => setToast({ message, error }), []);
   const clear = useCallback(() => setToast(null), []);
   if (!can("provider.team.view")) return <EmptyState title="The team isn't part of your role" text="Ask your provider's owner or an admin if someone needs adding, changing or removing." />;
   return (
