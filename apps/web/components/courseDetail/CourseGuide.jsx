@@ -2,21 +2,21 @@ import React from "react";
 import Link from "next/link";
 import { Check } from "./Icon";
 import { formatPrice } from "@/lib/format";
-import { AUTH_ROUTES, QUOTE_HREF } from "@/lib/routes";
+import { QUOTE_HREF } from "@/lib/routes";
+import { TEAM } from "@/lib/teamTraining";
 import { inlineParts, textBlocks } from "@/lib/courseGuide";
 import { topBar } from "@/data/home";
 
 // The course guide's sections (lib/courseGuide.js: the shared page's Course guide), built only from the course page's own parts:
 // .rt-cd__sec sections with an h2 and an .rt-cd__lead line, the .rt-cd__learn card with .rt-cd__checks, the .rt-cd__table table,
-// the learning options' cards (.rt-lc) for packages, the trust boxes' tiles (.rt-benefit-card) and the staff training callout
+// the trust boxes' tiles (.rt-benefit-card) and the staff training callout
 // (.rt-cd__staff). Every section is left out when its guide has nothing for it. Prices are never typed in a guide: they are the
-// course's live prices (course.price, its lowest; course.sessions). The packages are chosen on the page, so they are a client
-// component of their own (PackagePicker).
+// course's live prices (course.price, its lowest; course.sessions).
 
 const quote = (course) => `${QUOTE_HREF}?course=${course.slug}`;
 const tel = (phone) => `tel:${phone.replace(/\s+/g, "")}`;
-// the icons a guide's tiles use when it names none, in turn
-const TILE_ICONS = ["icon-badge", "icon-save-money", "icon-calendar", "icon-friend", "icon-message", "icon-person-3", "icon-location"];
+// the team training tiles' icons, in turn
+const TILE_ICONS = ["icon-location", "icon-friend", "icon-basket", "icon-badge", "icon-calendar", "icon-person-3"];
 
 const Ticks = ({ items, one }) => (
   <ul className={`rt-cd__checks${one || items.length <= 5 ? " is-one" : ""}`}>
@@ -95,9 +95,10 @@ export function TickCard({ id, title, items, note }) {
 }
 
 
-// Training for a team: the trust boxes' tiles, then the staff training callout with the volume savings and the quote.
+// Training for a team, in the site's own words (Site content › Team training, switched on by the page's guide): the trust boxes'
+// tiles, then the staff training callout with the quote button (TEAM.cta, the one team button the whole site has).
 export function BusinessSection({ business, course }) {
-  if (!business) return null;
+  if (!business?.title) return null;
   return (
     <section className="rt-cd__sec" id="business" aria-labelledby="rt-cg-biz-h">
       <h2 id="rt-cg-biz-h">{business.title}</h2>
@@ -106,7 +107,7 @@ export function BusinessSection({ business, course }) {
         <ul className="rt-benefit-grid rt-cd__benefits">
           {business.benefits.map((i, n) => (
             <li key={i.title} className="rt-benefit-card">
-              <span className="rt-benefit__icon" aria-hidden="true"><i className={`${i.icon || TILE_ICONS[n % TILE_ICONS.length]} text-16`}></i></span>
+              <span className="rt-benefit__icon" aria-hidden="true"><i className={`${TILE_ICONS[n % TILE_ICONS.length]} text-16`}></i></span>
               <div className="rt-benefit__title mt-15">{i.title}</div>
               <div className="rt-benefit__text">{i.text}</div>
             </li>
@@ -115,14 +116,11 @@ export function BusinessSection({ business, course }) {
       )}
       <div className="rt-cd__staff">
         <strong>{business.quote.title}</strong>
-        {business.tiers?.length > 0 && <p>Volume savings: {business.tiers.map((t) => `${t.learners} ${t.saving}`).join(", ").replace(/, ([^,]*)$/, " and $1")}.</p>}
-        {business.account && <p>{business.account}</p>}
         <p>
           {business.quote.text ? `${business.quote.text} ` : ""}Prefer to talk? Call <a href={tel(topBar.phone)} className="rt-cg__inline">{topBar.phone}</a> or email{" "}
           <a href={`mailto:${topBar.email}`} className="rt-cg__inline">{topBar.email}</a>.
         </p>
-        <Link href={quote(course)} className="rt-cd__link">{business.quote.cta}</Link>
-        {business.signIn && <p>{business.signIn} <Link href={`${AUTH_ROUTES.login}?next=/business`} className="rt-cg__inline">Sign in</Link></p>}
+        <Link href={quote(course)} className="rt-cd__link">{TEAM.cta}</Link>
       </div>
     </section>
   );

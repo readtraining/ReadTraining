@@ -15,7 +15,7 @@ const CATALOGUE = CATALOGUE_HREF;
 // quote for this course, lib/teamTraining.js), then Read Training's rating (the site's trust numbers, Admin › Site content: our Google rating and its
 // number of reviews, worded as ours, not the course's; left out until an admin has entered one). With reviews
 // on the page (`hasReviews`: the course's own, or a few general ones), the rating is a link down to them.
-// `heroTitle`: a course guide's heading for the hero (data/courseGuides.js); without one, the course's own name.
+// `heroTitle`: a course guide's heading for the hero (its shared page's Course guide, lib/courseGuide.js); without one, the course's own name.
 // `trust`: a course guide's trust strip (short lines, shown with dots between them under the buttons).
 export default function CourseHero({ course, hasReviews = false, heroTitle = null, trust: strip = null }) {
   const subject = getSubjectLabel(course);

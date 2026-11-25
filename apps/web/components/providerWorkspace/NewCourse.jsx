@@ -14,17 +14,17 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { CardChoice, KeepWidth, Loading, WayCards } from "./providerParts";
 import { useTaxonomy } from "@/lib/taxonomyContext";
-import { categoryName, categoryOptions, getTaxonomy, methodName, pagesForSubject, subcategoryName, subcategoryOptions, topicName, topicOptions } from "@/lib/taxonomy";
+import { categoryName, categoryOptions, getTaxonomy, methodName, pagesForSubject, subcategoryName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { LEARNING_OPTIONS } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { Req } from "./settingsForm";
 
 // New course: one pop-up on one screen, over whatever workspace page it was opened from (ProviderShell holds it). What the
-// course is (working title; category, sub-category and topic, the topic optional) and how it is taught (its primary learning
-// option, three cards in a row; more ways later in the editor's Learning options), plus Skill Saver
+// course is (working title; category and sub-category: the topic is chosen by our team when they approve it, admin.courses.decide)
+// and how it is taught (its primary learning option, three cards in a row; more ways later in the editor's Learning options), plus Skill Saver
 // (an unticked opt-in, changeable later in the editor's Dates and prices step). Where learners find it is not asked: when the subject has a shared course page, the course goes on it (sharedPageFor), said in one quiet line, and the
 // course settings (the gear) can change it later. The pop-up also does some of the work: the subject is suggested from the
-// title (subjectFor; "Use this" fills all three), and a title the provider already has is pointed out (a note, not a block).
+// title (subjectFor; "Use this" fills both), and a title the provider already has is pointed out (a note, not a block).
 // The cursor starts in the title, Enter creates the draft, and the performance model (Bookings to start) is set in its editor
 // step. Create course saves it as a draft and opens the editor.
 const NewCourseContext = createContext(() => {});
@@ -63,26 +63,27 @@ export function subjectFor(title) {
   };
   for (const c of getTaxonomy().categories) {
     for (const sub of c.subcategories || []) {
-      consider(sub.name, { category: c.slug, subcategory: sub.slug, topic: "" }, 0);
-      for (const t of sub.topics || []) consider(t.name, { category: c.slug, subcategory: sub.slug, topic: t.slug }, 1);
+      // a topic's name points to its sub-category too (the topic itself is our team's choice)
+      consider(sub.name, { category: c.slug, subcategory: sub.slug }, 0);
+      for (const t of sub.topics || []) consider(t.name, { category: c.slug, subcategory: sub.slug }, 1);
     }
   }
   fits.sort((a, b) => b.score - a.score);
   const [best] = fits;
   const rival = fits.find((x) => x.subcategory !== best?.subcategory);
   if (!best || (rival && best.score - rival.score < 8)) return null;
-  return { category: best.category, subcategory: best.subcategory, topic: best.topic };
+  return { category: best.category, subcategory: best.subcategory };
 }
 
-// the one shared page a course with this subject goes on: the page for its topic, or the sub-category's only page; none when
-// that isn't clear (a sub-category with several pages and no topic chosen), so nothing is guessed
-const sharedPageFor = (pages, topic) => (topic && pages.find((p) => p.topic === topic)) || (pages.length === 1 ? pages[0] : null);
+// the one shared page a course with this sub-category goes on for now: the sub-category's only page; none when it has several
+// (the topic our team chooses at approval decides), so nothing is guessed
+const sharedPageFor = (pages) => (pages.length === 1 ? pages[0] : null);
 
 // how each learning option reads on its card: one short line, so three fit side by side
 const WAY_TEXT = { classroom: "At a venue, on your dates", "live-online": "By video, on your dates", "self-paced": "Any time, at their own pace" };
 // and its icon from the site's own line icons (the header's set): a building, a screen, a clock
 
-const BLANK = { title: "", method: "classroom", category: "", subcategory: "", topic: "", compliance: "", skillSaver: false };
+const BLANK = { title: "", method: "classroom", category: "", subcategory: "", compliance: "", skillSaver: false };
 
 // anything typed or chosen: closing (×, Esc, the backdrop, Cancel), a link or closing the tab asks first; none once it is created
 export function NewCourseSheet({ open, onClose }) {
@@ -118,10 +119,10 @@ function NewCourseForm({ onCancel, onDirty }) {
   const shared = api.provider.courses.sharedPages.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const mine = api.provider.courses.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const pages = f.subcategory ? pagesForSubject(shared.data || [], f) : [];
-  const page = sharedPageFor(pages, f.topic);
+  const page = sharedPageFor(pages);
   const ref = useRef(null);
   // a change clears the message of what changed and of the questions that depend on it
-  const DEPENDS = { category: ["subcategory", "topic"], subcategory: ["topic"] };
+  const DEPENDS = { category: ["subcategory"] };
   const set = (patch) => {
     setF((x) => ({ ...x, ...patch }));
     setErrors((e) => {
@@ -129,7 +130,7 @@ function NewCourseForm({ onCancel, onDirty }) {
       return gone.some((k) => e[k]) ? Object.fromEntries(Object.entries(e).filter(([k]) => !gone.includes(k))) : e;
     });
   };
-  const topics = topicOptions(f.category, f.subcategory);
+  const hasTopics = topicOptions(f.category, f.subcategory).length > 0;
   // the subject the title points to, offered until a category is chosen; a course of theirs with the same title, pointed out
   const suggestion = useMemo(() => (f.category || f.title.trim().length < 4 ? null : subjectFor(f.title)), [f.title, f.category]);
   const twin = useMemo(() => {
@@ -173,7 +174,7 @@ function NewCourseForm({ onCancel, onDirty }) {
     if (Object.keys(e).length) return focusFirstError(ref.current);
     setFailed("");
     create.mutate(
-      { organisationId, title: t, category: f.category, subcategory: f.subcategory, topic: f.topic || null, compliance: f.compliance === "yes", method: f.method, model: "bookings", skillSaver: f.skillSaver },
+      { organisationId, title: t, category: f.category, subcategory: f.subcategory, compliance: f.compliance === "yes", method: f.method, model: "bookings", skillSaver: f.skillSaver },
       {
         onSuccess: ({ id }) => {
           onDirty(false);
@@ -214,11 +215,11 @@ function NewCourseForm({ onCancel, onDirty }) {
         <div aria-live="polite" className="rt-pws-nc__live">
           {suggestion && (
             <p className="rt-pws-nc__suggest">
-              <span>Looks like <b>{[categoryName(suggestion.category), subcategoryName(suggestion.category, suggestion.subcategory), suggestion.topic && topicName(suggestion.category, suggestion.subcategory, suggestion.topic)].filter(Boolean).join(" › ")}</b></span>
+              <span>Looks like <b>{[categoryName(suggestion.category), subcategoryName(suggestion.category, suggestion.subcategory)].join(" › ")}</b></span>
               <button type="button" className="rt-pws-set__textbtn" onClick={() => {
-                set({ category: suggestion.category, subcategory: suggestion.subcategory, topic: suggestion.topic });
-                // the button goes once the subject is filled in: the keyboard moves on to the topic (or the sub-category)
-                requestAnimationFrame(() => (document.getElementById(suggestion.topic ? "rt-pws-nc-topic" : "rt-pws-nc-subcategory") || document.getElementById("rt-pws-nc-category"))?.focus());
+                set({ category: suggestion.category, subcategory: suggestion.subcategory });
+                // the button goes once the subject is filled in: the keyboard moves on to the sub-category
+                requestAnimationFrame(() => (document.getElementById("rt-pws-nc-subcategory") || document.getElementById("rt-pws-nc-category"))?.focus());
               }}>Use this</button>
             </p>
           )}
@@ -227,19 +228,23 @@ function NewCourseForm({ onCancel, onDirty }) {
           <div className="rt-field">
             <label htmlFor="rt-pws-nc-category">Category<Req /></label>
             <Err k="category" />
-            <FieldSelect id="rt-pws-nc-category" label="Category" placeholder="Choose a category" value={f.category} onChange={(v) => set({ category: v, subcategory: "", topic: "" })} options={categoryOptions()} invalid={Boolean(errors.category)} describedBy={errors.category ? "rt-pws-nc-category-e" : undefined} />
+            <FieldSelect id="rt-pws-nc-category" label="Category" placeholder="Choose a category" value={f.category} onChange={(v) => set({ category: v, subcategory: "" })} options={categoryOptions()} invalid={Boolean(errors.category)} describedBy={errors.category ? "rt-pws-nc-category-e" : undefined} />
           </div>
           <div className="rt-field">
             <label htmlFor="rt-pws-nc-subcategory">Sub-category<Req /></label>
             <Err k="subcategory" />
-            <FieldSelect id="rt-pws-nc-subcategory" label="Sub-category" placeholder={f.category ? "Choose a sub-category" : "Choose a category first"} value={f.subcategory} onChange={(v) => set({ subcategory: v, topic: "" })} options={subcategoryOptions(f.category)} disabled={!f.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-pws-nc-subcategory-e" : undefined} />
+            <FieldSelect id="rt-pws-nc-subcategory" label="Sub-category" placeholder={f.category ? "Choose a sub-category" : "Choose a category first"} value={f.subcategory} onChange={(v) => set({ subcategory: v })} options={subcategoryOptions(f.category)} disabled={!f.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-pws-nc-subcategory-e" : undefined} />
           </div>
         </div>
-        <div className="rt-field">
-          <label htmlFor="rt-pws-nc-topic">Topic</label>
-          <FieldSelect id="rt-pws-nc-topic" label="Topic" placeholder={!f.subcategory ? "Choose a sub-category first" : topics.length ? "Choose a topic" : "No topics for this sub-category"} value={f.topic} onChange={(v) => set({ topic: v })} options={topics} disabled={!topics.length} />
-          {page && <p className="rt-pws-nc__note" id="rt-pws-nc-page">Listed on the shared course page for {page.title}, beside other providers.</p>}
-        </div>
+        {/* where it is listed: the sub-category's shared page when there is one; the topic (and so the page, when the
+            sub-category has several) is our team's choice when they approve it */}
+        {f.subcategory && (page || hasTopics) && (
+          <p className="rt-pws-nc__note" id="rt-pws-nc-page">
+            {page ? `Listed on the shared course page for ${page.title}, beside other providers.` : ""}
+            {page && hasTopics ? " " : ""}
+            {hasTopics ? "Our team chooses the exact topic when they approve the course." : ""}
+          </p>
+        )}
         <CardChoice name="rt-pws-nc-compliance" legend={<>{pw.compliance.legend}<Req /></>} value={f.compliance} onChange={(v) => set({ compliance: v })} options={pw.compliance.options} error={errors.compliance} />
         <p className="rt-pws-nc__hint">{pw.compliance.hint}</p>
       </div>

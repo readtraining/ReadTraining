@@ -1,9 +1,18 @@
 import React from "react";
 import Link from "next/link";
 import { bookingOptions as d } from "@/data/home";
+import { formatPrice } from "@/lib/format";
+import { coursePath } from "@/lib/routes";
 
-// Why book through us: header, four benefit cards, then three booking-tier cards.
-export default function HomeBookingOptions() {
+const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+// Why book through us: header, four benefit cards, then, as an example, a live course's real packages (`example`: lib/
+// catalogueServer.js examplePackages, a provider's price plan on one of its dates), each with every feature of the plan ticked or
+// crossed; no example while no live course is sold in packages.
+export default function HomeBookingOptions({ example = null }) {
+  // every feature the packages name, in the order they first list them
+  const features = [];
+  for (const t of example?.packages || []) for (const f of t.features) if (!features.some((x) => same(x, f.title))) features.push(f.title);
   return (
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">
@@ -26,37 +35,41 @@ export default function HomeBookingOptions() {
           </div>
         </div>
 
-        <div className="d-flex justify-center pt-60 lg:pt-50">
-          <div className="rt-example-tag">
-            <span className="rt-eyebrow text-light-1">{d.example.eyebrow}</span>
-            <span className="rt-example-tag__course">{d.example.course}</span>
-            <span className="rt-example-tag__meta">{d.example.meta}</span>
-          </div>
-        </div>
-
-        <div className="row y-gap-24 justify-center pt-25">
-          {d.tiers.map((t, i) => (
-            <div key={t.type} className="col-lg-4 col-md-6">
-              <div className={`rt-tier${t.recommended ? " is-rec" : ""}`}>
-                {t.recommended && <span className="rt-tier__badge">Recommended</span>}
-                <div className="rt-tier__type">{t.type}</div>
-                <div className="rt-tier__text">{t.text}</div>
-                <div className="rt-tier__price"><span>From</span>£{t.price}<small>per learner</small></div>
-                <ul className="rt-tier__list">
-                  {d.features.map((f) => {
-                    const on = f.tiers.includes(i);
-                    return (
-                      <li key={f.label} className={on ? "" : "is-off"}>
-                        <i className={on ? "icon-check" : "icon-close"} aria-hidden="true"></i>
-                        <span>{!on && <span className="rt-sr">Not included: </span>}{f.label}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
+        {example && (
+          <>
+            <div className="d-flex justify-center pt-60 lg:pt-50">
+              <div className="rt-example-tag">
+                <span className="rt-eyebrow text-light-1">{d.example.eyebrow}</span>
+                <Link href={coursePath(example.slug)} className="rt-example-tag__course">{example.course}</Link>
+                {example.meta && <span className="rt-example-tag__meta">{example.meta}</span>}
               </div>
             </div>
-          ))}
-        </div>
+
+            <div className="row y-gap-24 justify-center pt-25">
+              {example.packages.map((t) => (
+                <div key={t.key} className={example.packages.length > 3 ? "col-lg-3 col-md-6" : "col-lg-4 col-md-6"}>
+                  <div className={`rt-tier${t.popular ? " is-rec" : ""}`}>
+                    {t.popular && <span className="rt-tier__badge">Most popular</span>}
+                    <div className="rt-tier__type">{t.name}</div>
+                    {t.tagline && <div className="rt-tier__text">{t.tagline}</div>}
+                    <div className="rt-tier__price"><span>From</span>{formatPrice(t.price)}<small>per learner</small></div>
+                    <ul className="rt-tier__list">
+                      {features.map((f) => {
+                        const on = t.features.some((x) => same(x.title, f) && x.included);
+                        return (
+                          <li key={f} className={on ? "" : "is-off"}>
+                            <i className={on ? "icon-check" : "icon-close"} aria-hidden="true"></i>
+                            <span>{!on && <span className="rt-sr">Not included: </span>}{f}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="d-flex flex-column items-center pt-40">
           <Link href={d.cta.href} className="button -md -dark-1 text-white">

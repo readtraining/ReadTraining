@@ -28,15 +28,6 @@ if (!termsRefunds) throw new Error("Help Centre: the terms section \"refunds-and
 const tel = `[${topBar.phone}](${topBar.phoneHref})`;
 const contactLine = `If you need help, [send us a message](/contact-us) or call us on ${tel}, ${topBar.hoursLong}.`;
 
-// what each SIA Door Supervisor package includes, as a table built from the home page's example packages
-const optionsTable = {
-  type: "table",
-  caption: "What each SIA Door Supervisor package includes",
-  rows: [
-    ["What is included", ...bookingOptions.tiers.map((t) => `${t.type} (from £${t.price})`)],
-    ...bookingOptions.features.map((f) => [f.label, ...bookingOptions.tiers.map((_, i) => (f.tiers.includes(i) ? "Included" : "Not included"))]),
-  ],
-};
 
 export const helpTopics = [
   {
@@ -70,10 +61,9 @@ export const helpTopics = [
         title: "Course packages",
         summary: "Some courses come in packages: what they are and how to choose one.",
         blocks: [
-          "Some courses come in packages, such as the course on its own or with the first aid it needs. Each package has its own price and lists what it includes, and you choose one after picking your date. A course without packages has one price for each date.",
-          "For example, the SIA Door Supervisor course:",
-          optionsTable,
-          `${bookingOptions.footnote} Packages vary by course and training provider. If you're not sure which one you need, call us on ${tel}.`,
+          "Some courses come in packages, such as the course on its own or with the first aid it needs. Each training provider sets its own packages, prices and what each one includes, so they can differ between providers and dates. You see a date's packages after you choose the date, and pick one there. A date without packages has one price.",
+          "If a package includes Emergency First Aid at Work, we don't ask you about first aid when you book.",
+          `Prices include VAT. The SIA licence fee is paid separately, to the SIA. If you're not sure which package you need, call us on ${tel}.`,
         ],
       },
       {

@@ -15,7 +15,7 @@ import { courseReviews, publishedReviews } from '../admin/reviews.mjs'
 // value uses the website's built-in wording. Admins with the "content" switch save one key at a time; each save is checked
 // against that key's shape, logged, and kept as a version (so earlier wording can be looked at and brought back).
 //
-// Keys: trust, featured, seo (fixed); faq:<set> (one page's FAQ list: any name in the safe pattern, the
+// Keys: trust, featured, seo, teamTraining, licenceFees (fixed); faq:<set> (one page's FAQ list: any name in the safe pattern, the
 // website decides which sets exist); page:<slug> (a legal document: terms, privacy, cookies, accessibility, provider-terms);
 // email:<template> (an automated email's words, emails/templates.mts: never sent to the website).
 // `seo` is a platform setting (the "platform.settings" switch); everything else needs the "content" switch.
@@ -57,6 +57,23 @@ const FIXED = {
       )
       .min(1, 'Keep at least one tab.')
       .max(4, 'Keep to 4 tabs or fewer.'),
+  }),
+  // The team training section a shared course page can switch on (its Course guide's `business`): one set of words for every
+  // page. Only what is true of every page: nothing here may promise a discount, a service or a reply time we don't offer.
+  teamTraining: z.object({
+    title: text(2, 120, 'heading'),
+    intro: z.string().trim().max(800, 'Keep the line under the heading to 800 characters or fewer.'),
+    benefits: z.array(z.object({ title: text(2, 60, 'benefit'), text: text(2, 200, 'benefit text') })).max(6, 'Keep to 6 benefits or fewer.'),
+    quote: z.object({ title: text(2, 60, 'box heading'), text: z.string().trim().max(200, 'Keep the box line to 200 characters or fewer.') }),
+  }),
+  // Licence fees a course page's cost table adds (its Course guide's costs.licenceFee names one by its key): kept once, so a new
+  // fee is typed once. `checked`: the day someone last checked it with the licensing body.
+  licenceFees: z.object({
+    items: z
+      .array(z.object({ key: z.string().regex(/^[a-z0-9-]{1,40}$/, 'Use lower-case letters, numbers and hyphens for the short name.'), name: text(2, 80, 'licence name'), amount: z.number({ invalid_type_error: 'Enter the fee in pounds.' }).min(0, 'Enter the fee in pounds.').max(5000, 'Enter a fee of £5,000 or less.').multipleOf(0.01, 'Enter the fee in pounds and pence, like 204 or 204.50.'), checked: day }))
+      .min(1, 'Keep at least one fee.')
+      .max(20, 'Keep to 20 fees or fewer.')
+      .refine((a) => new Set(a.map((x) => x.key)).size === a.length, 'Two fees have the same short name.'),
   }),
   // (the customer reviews are their own table, `reviews`: admin.reviews, content.reviews)
   // Platform settings: the search-engine words for the homepage, and the description any page without its own uses

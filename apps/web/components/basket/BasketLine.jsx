@@ -4,7 +4,8 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { basket as copy } from "@/data/basket";
-import { MAX_DELEGATES, maxDelegates, bundleOf, firstAidInBundle, hasDate, isSelected, lineParts, modeLabel, needsFirstAid, needsPackage } from "@/lib/basket";
+import { MAX_DELEGATES, maxDelegates, bundleOf, firstAidAnswer, firstAidCourseHref, firstAidInBundle, hasDate, isSelected, lineParts, modeLabel, needsFirstAid, needsPackage } from "@/lib/basket";
+import { useNav } from "@/lib/navContext";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import SaverBadge from "@/components/skillSaver/SaverBadge";
 import { RowMenu } from "@/components/admin/adminParts";
@@ -31,13 +32,13 @@ export default function BasketLine({ item, onChange, onRemove, onDates, onPackag
   const bundle = bundleOf(item);
   const planned = Boolean(item.packages);
   const pickPackage = needsPackage(item);
-  // the first aid add-on, when this line has an answer of its own (not one its package gives)
-  const aid = dated && needsFirstAid(item) && !firstAidInBundle(item) ? item.firstAid : null;
+  // the first aid answer, when this line has one of its own (not one its package gives); "need" links to the course
+  const aid = dated && needsFirstAid(item) && !firstAidInBundle(item) ? firstAidAnswer(item) : null;
+  const aidHref = firstAidCourseHref(useNav().courses);
   const edits = [
     { label: copy.changeDate, onClick: onDates },
     planned && bundle && !pickPackage && { label: copy.package.change, onClick: onPackage },
-    aid === "add" && { label: fa.remove, onClick: () => onChange({ firstAid: undefined }) },
-    aid === "have" && { label: fa.addItem.replace("{price}", formatPrice(fa.add.price)), onClick: () => onChange({ firstAid: "add" }) },
+    aid && { label: fa.change, onClick: () => onChange({ firstAid: undefined }) },
   ].filter(Boolean);
 
   return (
@@ -116,13 +117,18 @@ export default function BasketLine({ item, onChange, onRemove, onDates, onPackag
       )}
 
       {dated && needsFirstAid(item) && firstAidInBundle(item) && (
-        <p className="rt-bk__note rt-bk__inpkg"><i className="icon-check text-10" aria-hidden="true"></i>Emergency First Aid at Work is included in your {bundle?.name || "package"} package.</p>
+        <p className="rt-bk__note rt-bk__inpkg"><i className="icon-check text-10" aria-hidden="true"></i>Emergency First Aid at Work is included in your {/package$/i.test(bundle?.name || "") ? bundle.name : `${bundle?.name || "chosen"} package`}.</p>
       )}
 
-      {aid && (
+      {aid === "have" && (
         <p className="rt-bk__note rt-bk__inpkg">
           <i className="icon-check text-10" aria-hidden="true"></i>
-          <span>{aid === "add" ? `${fa.add.short} (+${formatPrice(fa.add.price)} each)` : fa.have.short}</span>
+          <span>{fa.have.short}</span>
+        </p>
+      )}
+      {aid === "need" && (
+        <p className="rt-bk__note">
+          {fa.need.short}{aidHref && <> <Link href={aidHref} className="fb-textlink">{fa.findCourse}</Link></>}
         </p>
       )}
 
@@ -135,12 +141,9 @@ export default function BasketLine({ item, onChange, onRemove, onDates, onPackag
               <input type="radio" name={`${id}-fa`} value="have" checked={item.firstAid === "have"} onChange={() => onChange({ firstAid: "have" })} />
               <span><b>{fa.have.label}</b><small>{fa.have.note}</small></span>
             </label>
-            <label className={`rt-bk__opt${item.firstAid === "add" ? " is-on" : ""}`}>
-              <input type="radio" name={`${id}-fa`} value="add" checked={item.firstAid === "add"} onChange={() => onChange({ firstAid: "add" })} />
-              <span>
-                <b>{fa.add.label} <em>+{formatPrice(fa.add.price)}{fa.add.wasPrice > fa.add.price && <s>{formatPrice(fa.add.wasPrice)}</s>}</em></b>
-                <small>{fa.add.note}</small>
-              </span>
+            <label className={`rt-bk__opt${item.firstAid === "need" ? " is-on" : ""}`}>
+              <input type="radio" name={`${id}-fa`} value="need" checked={item.firstAid === "need"} onChange={() => onChange({ firstAid: "need" })} />
+              <span><b>{fa.need.label}</b><small>{fa.need.note}</small></span>
             </label>
           </div>
           {!item.firstAid && <p className="rt-bk__reqwarn" role="status">Choose one to continue.</p>}

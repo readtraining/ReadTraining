@@ -14,8 +14,9 @@ import { Toggle } from "./providerParts";
 import { Field, aria, isMoney } from "./settingsForm";
 
 // A price plan: the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus, Pro, Elite to start with), each
-// with its name, price per delegate, an optional "Save £" amount (shown as a was-price), a tagline and "Most popular" (one package
-// at most), and the plan's features: one list for the whole plan, each feature Included (a tick), Not included (crossed out) or
+// with its name, price per delegate, an optional "Save £" amount (shown as a was-price), a tagline, "Most popular" (one package
+// at most) and "Includes Emergency First Aid at Work" (a course whose SIA licence needs first aid then doesn't ask about it at
+// booking), and the plan's features: one list for the whole plan, each feature Included (a tick), Not included (crossed out) or
 // Hidden (not shown) on each package, with an optional description. Edit shows the form, Learner preview the course page's own
 // package cards. Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its
 // cheapest package as their price. `plan`: the plan to edit, or none for a new one.
@@ -37,7 +38,7 @@ const pence = (v) => Math.round(Number(String(v).trim()) * 100);
 const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 let rowKey = 0;
 const nextKey = () => `f${(rowKey += 1)}`;
-const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false });
+const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false, firstAid: false });
 const toDraft = (plan) => {
   if (!plan) return { name: "", tiers: [0, 1, 2].map(blankTier), rows: [] };
   const tiers = plan.tiers;
@@ -51,7 +52,7 @@ const toDraft = (plan) => {
       if (!row.description && f.description) row.description = f.description;
     }),
   );
-  return { name: plan.name ?? "", tiers: tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular) })), rows };
+  return { name: plan.name ?? "", tiers: tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular), firstAid: Boolean(t.firstAid) })), rows };
 };
 // each package's features, in the table's order, without the ones Hidden on it
 const featuresOf = (rows, i) =>
@@ -64,6 +65,7 @@ const toInput = (d) =>
     savePence: t.save.trim() ? pence(t.save) : null,
     tagline: t.tagline.trim() || null,
     popular: t.popular,
+    firstAid: t.firstAid,
     features: featuresOf(d.rows, i),
   }));
 // the packages as the course page's cards take them (the learner preview)
@@ -345,6 +347,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                       <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
                     </Field>
                     <Toggle id={`rt-plan-t${i}-pop`} checked={t.popular} onChange={(on) => setPopular(i, on)} label="Mark as Most popular" />
+                    <Toggle id={`rt-plan-t${i}-fa`} checked={t.firstAid} onChange={(on) => setTier(i, { firstAid: on })} label="Includes Emergency First Aid at Work" />
                   </section>
                 );
               })}

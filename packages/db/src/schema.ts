@@ -404,6 +404,9 @@ export const courses = pgTable(
     description: text('description'), // the long description; a blank line starts a new paragraph
     audience: text('audience'), // who it's for
     entryRequirements: text('entry_requirements'),
+    // a line above the syllabus units, and the text above the exam table (both optional; on every kind of course)
+    syllabusIntro: text('syllabus_intro'),
+    examsIntro: text('exams_intro'),
     outcomes: text('outcomes').array().notNull().default(sql`'{}'::text[]`), // what you'll learn
     features: text('features').array().notNull().default(sql`'{}'::text[]`),
     categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'restrict' }),
@@ -529,6 +532,8 @@ export const courseExams = pgTable(
     unit: text('unit').notNull(),
     passMark: text('pass_mark'),
     duration: text('duration'),
+    // what the exam is ("72 multiple-choice questions", "Practical assessment"): optional, the exam table's Assessment column
+    assessment: text('assessment'),
   },
   (t) => [index('course_exams_course_idx').on(t.courseId, t.position), apiOnly('course_exams')],
 ).enableRLS()

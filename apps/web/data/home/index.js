@@ -1,8 +1,10 @@
 // The home page's fixed wording. Courses, subjects, methods and towns come from the live catalogue (catalogue.nav); the trust
-// numbers, featured courses and FAQs can be changed in Admin › Site content (contentDefaults is their built-in wording).
+// numbers, featured courses, FAQs, team training and licence fees can be changed in Admin › Site content (contentDefaults is their
+// built-in wording).
 
 import { courseSearch } from "@/data/courseTopics";
 import { CATALOGUE_HREF, QUOTE_HREF } from "@/lib/routes";
+import { TEAM } from "@/lib/teamTraining";
 
 // a route that searches the courses for some words (`q`: one or more ways the course is named, the first that a live course
 // has is searched for); the finder shows it only while a live course matches one of them. `slug` keeps the client's original
@@ -51,24 +53,8 @@ export const bookingOptions = {
     { icon: "icon-star", title: "Packages on selected courses", text: "Some courses come in packages, such as the course with the first aid it needs, for less than booking each one separately." },
     { icon: "icon-message", title: "Support throughout your booking", text: "Get help choosing, booking and managing your course from start to finish." },
   ],
-  // the client's own SIA Door Supervisor packages and starting prices (docs/door-supervisor-course (1).html; the course page's
-  // packages are data/courseGuides.js `packages`)
-  example: { eyebrow: "Example packages", course: "SIA Door Supervisor Course", meta: "Classroom" },
-  tiers: [
-    { type: "Course only", price: 249.99, text: "You already hold a valid first aid (EFAW) certificate." },
-    { type: "Course + first aid", price: 319.99, text: "Everything a new starter needs to qualify.", recommended: true },
-    { type: "Career bundle", price: 479.99, text: "Stand out to employers from day one." },
-  ],
-  // which tiers include each feature (index into tiers)
-  features: [
-    { label: "6-day SIA Door Supervisor course", tiers: [0, 1, 2] },
-    { label: "Exams, registration and certificate", tiers: [0, 1, 2] },
-    { label: "Free mock exams and study guide", tiers: [0, 1, 2] },
-    { label: "1-day Emergency First Aid at Work (EFAW)", tiers: [1, 2] },
-    { label: "Priority licence application support", tiers: [1, 2] },
-    { label: "SIA CCTV Operator course", tiers: [2] },
-    { label: "CV review and access to our security job board", tiers: [2] },
-  ],
+  // the example under the benefits is a live course's real packages (lib/catalogueServer.js examplePackages), never typed here
+  example: { eyebrow: "Example packages" },
   footnote: "Starting prices including VAT; they vary by location and date. The SIA licence fee is paid separately, to the SIA.",
   disclaimer: "Courses are delivered by independent training providers. ReadTraining helps you find, book and manage the option that suits you.",
   cta: { label: "Find course options", href: CATALOGUE_HREF },
@@ -158,6 +144,25 @@ export const contentDefaults = {
       { name: "First Aid & Health and Safety", picks: ["first-aid", "health-and-safety"] },
       { name: "Construction", picks: ["construction"] },
     ],
+  },
+  // The team training section a shared course page can switch on (Course guide › Packages and costs): the same words on every
+  // page, from lib/teamTraining.js (so it says what the booking card and the quote page say). Only what is true of every page:
+  // no discount, account terms or service we don't offer; an admin can change it in Site content › Team training.
+  teamTraining: {
+    title: "Training for your team",
+    intro: TEAM.line,
+    benefits: [
+      { title: "At your workplace", text: "Your team trains together at your workplace, on a date that suits you, if a provider can run it." },
+      { title: "Groups of 6 or more", text: "Team training is for groups of 6 or more. For fewer, book places on a public date." },
+      { title: "One basket for everyone", text: TEAM.trust.text },
+      { title: "Providers we have checked", text: "Every training provider on ReadTraining is checked by our team before it can list a course." },
+    ],
+    quote: { title: "Training a team?", text: "Ask us and we'll check availability and the price." },
+  },
+  // Licence fees a cost table adds (Course guide › Cost table picks one by its key), typed once. The SIA's: £204, as the client's
+  // SIA pages said ("correct as of April 2026"); whoever checks it next with GOV.UK updates it and the date in Site content.
+  licenceFees: {
+    items: [{ key: "sia", name: "SIA licence", amount: 204, checked: "2026-04-01" }],
   },
 };
 
