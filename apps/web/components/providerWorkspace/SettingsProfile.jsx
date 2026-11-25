@@ -235,7 +235,8 @@ function LogoForm({ profile, say }) {
           {!locked && (
             <div className="rt-pws-set__actions">
               <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy && !removeLogo.isPending ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}</button>
-              {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
+              {/* not while a new logo is uploading */}
+              {logoUrl && !(busy && !removeLogo.isPending) && <button type="button" className="button -sm -outline-red-3 text-red-3" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
             </div>
           )}
           <p className="rt-field__hint">{hintFor("logo")} It is saved as soon as you choose it.</p>

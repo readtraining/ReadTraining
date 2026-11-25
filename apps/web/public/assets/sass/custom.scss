@@ -3694,6 +3694,9 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-pabout__card { padding: 0 28px 28px; }
 .rt-pabout__head { display: flex; align-items: flex-end; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--color-light-5); }
 .rt-pabout__head .rt-plogo { margin-top: -36px; background: #fff; box-shadow: 0 4px 12px rgba(20, 3, 66, 0.10); }
+/* without a cover photo the logo sits inside the card, not over its top edge */
+.rt-pabout__card:first-child { padding-top: 24px; }
+.rt-pabout__card:first-child .rt-pabout__head .rt-plogo { margin-top: 0; }
 .rt-pabout__head .bz-card__label { display: block; margin: 0; }
 .rt-pabout__name { display: block; margin-top: 2px; font-size: 20px; line-height: 1.3; color: var(--color-dark-1); }
 .rt-pabout__rows { margin: 0; }
@@ -6731,8 +6734,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-dash__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-dash__go { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: var(--rt-c-soft); font-family: inherit; cursor: pointer; font-size: var(--rt-text-xs); font-weight: 700; text-decoration: none; color: var(--rt-c-text) !important; transition: background-color 150ms ease, color 150ms ease; }
 @media (hover: hover) and (pointer: fine) { .rt-dash__go:hover { background: var(--rt-c-brand-soft); color: var(--rt-c-brand) !important; } }
-.rt-dash__clear { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: var(--rt-radius-control); background: var(--rt-c-success-soft); color: var(--rt-c-success); }
-.rt-dash__clear p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+/* an empty To do: one quiet line with a small grey tick, as task lists show "nothing here" (no coloured bar) */
+.rt-dash__clear { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.rt-dash__clearicon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--rt-c-soft); color: var(--rt-c-muted); }
+.rt-dash__clear p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 /* while the records load: a skeleton line in each row of the final layout, so nothing moves when they arrive */
 .rt-dash__bar { display: inline-block; height: 1em; vertical-align: middle; }
 .rt-dash__skel { display: flex; align-items: center; min-height: 52px; list-style: none; }
@@ -6826,6 +6831,9 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pabout__list { margin-top: 0; padding-left: 22px; list-style: disc; }
 .rt-pabout__list li { list-style: disc; }
 .rt-pabout__social { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+/* the provider's links read like the values beside them (same size and line, not bold), in the link colour; the row's own height
+   still gives each a comfortable tap target */
+.rt-pabout__social .rt-cd__link { min-height: 0; font-size: 15px; line-height: 1.5; font-weight: 500; }
 /* the biography box's Bold and Bullet list buttons, above it */
 .rt-pws-set__fmt { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .rt-pws-set__fmtbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); font-weight: 500; color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
@@ -7062,10 +7070,14 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__sheet .rt-dd__panel { width: 1040px; }
 .rt-pws-pkg__h3 { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-pkg__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-/* 2 or 3 packages side by side on wide screens, 4 two by two (the pop-up is at most 1040px: four across leaves each too narrow
-   for its fields); one under another on phones */
+/* the packages side by side on wide screens, one row whatever their number: 2 or 3 in the 1040px pop-up, 4 in a wider one (on a
+   screen wide enough for it, each still roomy for its fields; narrower screens show 4 two by two); one under another on phones */
 @media (min-width: 768px) { .rt-pws-pkg__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
 @media (min-width: 992px) { .rt-pws-pkg__tiers.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1320px) {
+  .rt-pws-pkg__sheet .rt-dd__panel:has(.rt-pws-pkg__tiers.-n4) { width: 1280px; }
+  .rt-pws-pkg__tiers.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 .rt-pws-pkg__tier > .rt-field, .rt-pws-pkg__tier > .rt-pws-toggle { width: 100%; margin: 0; }
 .rt-pws-pkg__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: end; }
 @media (min-width: 768px) { .rt-pws-pkg__top { grid-template-columns: minmax(0, 1fr) auto; } }

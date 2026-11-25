@@ -615,7 +615,7 @@ const planLine = (p) => p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence
 
 // a course's learning options taught on dates (classroom, live online), its primary first; `open`: only the ones taking bookings
 // (new dates are only for those: the API refuses one for an option whose new bookings were stopped)
-const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(isDatedMethod);
+export const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(isDatedMethod);
 
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
 // `suggestCourseId`). New dates are for one of the course's dated learning options: `mode` (the list's Classroom / Live online tab)
