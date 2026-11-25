@@ -4852,6 +4852,10 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-adm__link.is-active .rt-adm__count { background: var(--rt-c-surface); color: var(--rt-c-brand); }
 .rt-adm__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
 .rt-adm__h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 700; color: var(--color-dark-1); }
+/* a provider's staff pages (Dates, Price plans, Profile and venues): its name as the title, a link back to its page */
+.rt-adm-staffhead a { color: inherit; text-decoration: none; }
+.rt-adm-staffhead a:hover { text-decoration: underline; }
+.rt-adm-staffhead a:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
 .rt-adm__lead { max-width: 70ch; margin: 6px 0 0; font-size: var(--rt-text); line-height: 1.5; color: var(--color-light-1); }
 @media (max-width: 575px) { .rt-adm__toprow { padding: 0 16px; } .rt-adm__logo img { width: 120px; } .rt-adm__mewho { display: none; } .rt-adm__h1 { font-size: 24px; } }
 /* page head: the title with its "Demo data" tag; a record's breadcrumb */
@@ -5008,6 +5012,11 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 @media (max-width: 575px) { .rt-adm-dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .rt-adm-inline__row { display: flex; align-items: center; gap: 8px; }
 .rt-adm-num { width: 120px !important; }
+/* a commission rate: the % inside the box (RateForm) */
+.rt-adm-rate { position: relative; display: inline-flex; flex: none; }
+.rt-adm-rate .rt-adm-num { padding-right: 32px !important; text-align: right; font-variant-numeric: tabular-nums; }
+.rt-adm-rate > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: var(--rt-text-sm); color: var(--rt-c-muted); pointer-events: none; }
+.rt-adm-inline .rt-adm-rate__save { min-width: 88px; }
 .rt-adm-hold { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-light-5); }
 .rt-adm-hold .rt-bk__check { font-weight: 600; }
 .rt-adm-noteform { display: grid; justify-items: start; gap: 10px; }
@@ -5236,6 +5245,16 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 @media (prefers-reduced-motion: reduce) { .rt-pws-check__bar span, .rt-pws-rev__places a { transition: none; } }
 /* providers (/admin/providers): the admin's message or the provider's note, kept as written */
 .rt-adm-provider__note { margin: 0; white-space: pre-line; overflow-wrap: anywhere; font-size: var(--rt-text-sm); line-height: 1.6; color: var(--rt-c-text); }
+.rt-adm-provider__note + .rt-adm-provider__note { margin-top: 8px; }
+.rt-adm-provider__list { padding-left: 20px; white-space: normal; list-style: disc; }
+.rt-adm-provider__list li { list-style: disc; }
+/* the admin's provider page, Public profile: the logo beside the headline, the town and links */
+.rt-adm-provider__head { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.rt-adm-provider__head > div { display: grid; gap: 2px; min-width: 0; }
+.rt-adm-provider__head b { font-weight: 600; overflow-wrap: anywhere; }
+.rt-adm-provider__head small { font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-adm-provider__logo { flex: none; width: 56px; height: 56px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); object-fit: contain; background: var(--rt-c-surface); }
+.rt-adm-provider__logo.-none { display: inline-flex; align-items: center; justify-content: center; background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); }
 /* learners (/admin/learners): the accounts a person also has, and the record's photo */
 .rt-adm-learners__orgs { display: grid; gap: 4px; }
 .rt-adm-learners__orgs small { display: inline !important; margin-left: 6px !important; }

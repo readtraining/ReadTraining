@@ -16,6 +16,7 @@ import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { waysLabel } from "@/lib/courseModes";
 import TextArea from "@/components/forms/TextArea";
+import FormattedText from "@/components/forms/FormattedText";
 
 const copy = A.providers;
 const d = copy.detail;
@@ -131,6 +132,8 @@ export default function AdminProvider({ slug }) {
             </dl>
           </section>
 
+          <ProfileCard profile={p.profile} name={p.name} />
+
           <section className="rt-acc__card" aria-labelledby="rt-adm-pt-h">
             <h2 className="rt-acc__h2" id="rt-adm-pt-h">{d.team}</h2>
             {p.team.length ? (
@@ -229,6 +232,39 @@ export function DeleteProviderSheet({ provider, onClose, onDone }) {
         </div>
       )}
     </Sheet>
+  );
+}
+
+// What learners will see about the provider: its logo, headline, town and links, its biography, and the terms shown before
+// booking (bold and bullet lists as on the public profile), so an application is decided on what goes public.
+function ProfileCard({ profile: pr, name }) {
+  const t = d.profile;
+  const links = Object.entries(t.socials).filter(([k]) => pr.socials?.[k]);
+  const block = (text, empty) => (text ? <FormattedText text={text} pClass="rt-adm-provider__note" ulClass="rt-adm-provider__note rt-adm-provider__list" /> : <p className="rt-adm-muted">{empty}</p>);
+  return (
+    <section className="rt-acc__card" aria-labelledby="rt-adm-pp-h">
+      <h2 className="rt-acc__h2" id="rt-adm-pp-h">{t.title}</h2>
+      <p className="rt-acc__note">{t.lead}</p>
+      <div className="rt-adm-provider__head">
+        {pr.logoUrl ? <img src={pr.logoUrl} alt={`${name} logo`} className="rt-adm-provider__logo" /> : <span className="rt-adm-provider__logo -none" aria-hidden="true">{name.slice(0, 2).toUpperCase()}</span>}
+        <div>
+          <b>{pr.headline || <span className="rt-adm-muted">{t.noHeadline}</span>}</b>
+          {(pr.city || links.length > 0) && (
+            <small>
+              {pr.city}
+              {pr.city && links.length > 0 && " · "}
+              {links.map(([k, label], i) => <React.Fragment key={k}>{i > 0 && " · "}<a href={pr.socials[k]} target="_blank" rel="noopener noreferrer" className="rt-cd__link">{label}</a></React.Fragment>)}
+            </small>
+          )}
+        </div>
+      </div>
+      <h3 className="rt-adm-h3">{t.bio}</h3>
+      {block(pr.bio, t.noBio)}
+      <h3 className="rt-adm-h3">{t.policy}</h3>
+      {block(pr.cancellationPolicy, t.noPolicy)}
+      <h3 className="rt-adm-h3">{t.terms}</h3>
+      {block(pr.bookingTerms, t.noTerms)}
+    </section>
   );
 }
 

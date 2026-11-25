@@ -28,7 +28,7 @@ export function RateForm({ id, label, hint, bps, save, saving, onSaved }) {
     e.preventDefault();
     const next = parseRate(value);
     if (next === null) {
-      setError("Enter a rate from 0 to 60, like 25 or 27.5.");
+      setError("Enter a rate between 0% and 60%, like 25 or 27.5.");
       return focusFirstError(ref.current);
     }
     setError("");
@@ -48,9 +48,13 @@ export function RateForm({ id, label, hint, bps, save, saving, onSaved }) {
         <label htmlFor={id}>{label}</label>
         {hint && <small className="rt-field__hint" id={`${id}-hint`}>{hint}</small>}
         {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
+        {/* the rate with its % inside the box, and Save the box's height beside it */}
         <div className="rt-adm-inline__row">
-          <input id={id} type="text" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={[hint && `${id}-hint`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} className="rt-adm-num" />
-          <button type="submit" className="button -sm -purple-1 text-white" disabled={saving}>Save</button>
+          <span className="rt-adm-rate">
+            <input id={id} type="text" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={[hint && `${id}-hint`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} className="rt-adm-num" />
+            <span aria-hidden="true">%</span>
+          </span>
+          <button type="submit" className="button -md -purple-1 text-white rt-adm-rate__save" disabled={saving} aria-busy={saving || undefined}>{saving ? "Saving…" : "Save"}</button>
         </div>
       </div>
     </form>

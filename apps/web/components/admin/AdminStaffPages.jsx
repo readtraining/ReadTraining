@@ -9,7 +9,7 @@ import ProviderPackages from "@/components/providerWorkspace/ProviderPackages";
 import { InfoTab, TermsTab, VenuesTab } from "@/components/providerWorkspace/SettingsProfile";
 import { FaqsTab } from "@/components/providerWorkspace/SettingsFaqs";
 import { api } from "@/lib/trpc/react";
-import { DetailSkeleton, Empty, Tabs, getQuery, setQuery } from "./adminParts";
+import { DetailSkeleton, Empty, PageLink, Tabs, getQuery, setQuery } from "./adminParts";
 import StaffEdit from "./StaffEdit";
 
 // The admin's edit pages for a provider's work (StaffEdit hosts the provider's own editors inside the admin):
@@ -34,7 +34,12 @@ function ProviderFrame({ slug, children }) {
   if (p.isLoading) return <DetailSkeleton />;
   if (p.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" />;
   if (p.error) return <ErrorState onRetry={() => p.refetch()} />;
-  return <StaffEdit provider={p.data}>{children}</StaffEdit>;
+  // whose work this is, from the first look (the breadcrumb says which part: Dates, Price plans, Profile and venues)
+  return (
+    <StaffEdit provider={p.data} heading={<h1 className="rt-adm__h1 rt-adm-staffhead"><PageLink href={`/admin/providers/${p.data.slug}`}>{p.data.name}</PageLink></h1>}>
+      {children}
+    </StaffEdit>
+  );
 }
 
 export function AdminProviderPlans({ slug }) {
