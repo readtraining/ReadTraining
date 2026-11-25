@@ -10,7 +10,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink, RowMenu, Req } from "./adminParts";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
@@ -60,9 +60,9 @@ export default function AdminProvider({ slug }) {
   if (record.error) return <ErrorState onRetry={() => record.refetch()} />;
   const p = record.data;
   const decisions = decisionsFor(p, me);
-  // why an approver sees no decision here: they opened this provider account themselves (another admin decides it)
-  const blockedNote = NEXT[p.status].length && !decisions.length && p.ownRequest && me?.permissions?.includes("approve") ? d.ownRequest : "";
-  const soleNote = p.ownRequest && p.soleApprover && decisions.some((k) => SWITCH[k] === "approve") ? d.ownSole : "";
+  // why an approver sees no decision on an application waiting here: they opened this provider account themselves (another admin
+  // decides it); the sole approver gets the buttons, and the pop-up asks for the reason
+  const blockedNote = (p.status === "pending" || p.status === "changes_requested") && !decisions.length && p.ownRequest && me?.permissions?.includes("approve") ? d.ownRequest : "";
   const decided = async (decision, { emailed, outbox }) => {
     setRefreshing(true);
     utils.admin.activity.list.invalidate();
@@ -89,8 +89,6 @@ export default function AdminProvider({ slug }) {
           {!refreshing && decisions.map((k) => (
             <button key={k} type="button" className={PRIMARY.has(k) ? "button -md -purple-1 text-white" : DANGER.has(k) ? "button -md -outline-red-3 text-red-3" : "button -md -outline-purple-1 text-purple-1"} onClick={() => setDeciding(k)}>{d.actions[k]}</button>
           ))}
-          {blockedNote && <p className="rt-acc__notice">{blockedNote}</p>}
-          {soleNote && <p className="rt-acc__notice -warn">{soleNote}</p>}
           {(p.status === "active" || p.status === "suspended") && d.edit.items.some((x) => x.needs.some((s) => me?.permissions?.includes(s))) && (
             <RowMenu label={`Edit ${p.name}`} trigger={<span aria-hidden="true">{d.edit.label}</span>} triggerClass="button -md -outline-purple-1 text-purple-1"
               items={d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` }))} />
@@ -98,6 +96,7 @@ export default function AdminProvider({ slug }) {
           {canDelete(p, me) && (
             <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => setDeleting(true)}>{d.remove.action}</button>
           )}
+          {blockedNote && <p className="rt-adm-item__hint">{blockedNote}</p>}
           {p.status === "active" && <Link href={`/providers/${p.slug}`} className="button -md -outline-purple-1 text-purple-1" target="_blank">{d.publicProfile}<i className="icon-arrow-top-right text-12 rt-adm-ml" aria-hidden="true"></i></Link>}
         </div>
       </section>
@@ -187,7 +186,6 @@ export default function AdminProvider({ slug }) {
         ) : activity.isLoading ? null : <p className="rt-acc__note">{d.noActivity}</p>}
       </section>
 
-      <p className="rt-acc__notice">{d.later}</p>
 
       <DecisionSheet provider={p} decision={deciding} onClose={() => setDeciding(null)} onDone={decided} />
       <DeleteProviderSheet provider={deleting ? p : null} onClose={() => setDeleting(false)} onDone={() => { utils.admin.providers.invalidate().catch(() => {}); router.replace("/admin/providers?tab=rejected"); }} />
@@ -214,7 +212,7 @@ export function DeleteProviderSheet({ provider, onClose, onDone }) {
       close();
       onDone(res);
     } catch (err) {
-      setGeneral(errorsFrom(err).general);
+      setGeneral(errorText(err));
     }
   };
   return (
@@ -290,11 +288,11 @@ export function DecisionSheet({ provider, decision, onClose, onDone }) {
       close();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
-      if (fields.message || fields.ownReason) {
+      if (fields.message || (own && fields.ownReason)) {
         setError(fields.message || "");
         setReasonError(fields.ownReason || "");
         focusFirstError(ref.current);
-      } else setGeneral(g);
+      } else setGeneral(g || Object.values(fields)[0]);
     }
   };
   return (

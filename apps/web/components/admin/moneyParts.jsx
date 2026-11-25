@@ -106,7 +106,8 @@ export function RefundRequestForm({ order, onDone }) {
       await refresh();
       onDone(c.requested);
     } catch (err) {
-      setErrors(errorsFrom(err).fields);
+      const { fields, general } = errorsFrom(err);
+      setErrors({ ...fields, form: general });
       focusFirstError(ref.current);
     }
   };
@@ -114,6 +115,7 @@ export function RefundRequestForm({ order, onDone }) {
     <form className="rt-q__form rt-biz__sheetform" ref={ref} noValidate onSubmit={submit}>
       {field("rt-rf-amount", <>{c.amount}<Req /></>, hint, errors.amountPence, <input id="rt-rf-amount" type="text" inputMode="decimal" className="rt-adm-num" value={v.amount} onChange={(e) => setV((x) => ({ ...x, amount: e.target.value }))} aria-invalid={errors.amountPence ? true : undefined} aria-describedby={describedBy("rt-rf-amount", hint, errors.amountPence)} />)}
       {field("rt-rf-reason", <>{c.reason}<Req /></>, null, errors.reason, <TextArea id="rt-rf-reason" rows={4} maxLength={500} value={v.reason} onChange={(e) => setV((x) => ({ ...x, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={describedBy("rt-rf-reason", null, errors.reason)} />)}
+      {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={request.isPending}>{c.requestTitle}</button>
     </form>
   );
@@ -142,7 +144,8 @@ export function DisputeForm({ order, onDone }) {
       await refresh();
       onDone(c.opened);
     } catch (err) {
-      setErrors(errorsFrom(err).fields);
+      const { fields, general } = errorsFrom(err);
+      setErrors({ ...fields, form: general });
       focusFirstError(ref.current);
     }
   };
@@ -151,6 +154,7 @@ export function DisputeForm({ order, onDone }) {
       {field("rt-dp-amount", <>{c.amount}<Req /></>, null, errors.amountPence, <input id="rt-dp-amount" type="text" inputMode="decimal" className="rt-adm-num" value={v.amount} onChange={(e) => setV((x) => ({ ...x, amount: e.target.value }))} aria-invalid={errors.amountPence ? true : undefined} aria-describedby={describedBy("rt-dp-amount", null, errors.amountPence)} />)}
       {field("rt-dp-reason", <>{c.reason}<Req /></>, null, errors.reason, <TextArea id="rt-dp-reason" rows={3} maxLength={500} value={v.reason} onChange={(e) => setV((x) => ({ ...x, reason: e.target.value }))} aria-invalid={errors.reason ? true : undefined} aria-describedby={describedBy("rt-dp-reason", null, errors.reason)} />)}
       {field("rt-dp-due", <>{c.due}<Req /></>, c.dueHint, errors.evidenceDue, <DateField id="rt-dp-due" value={v.due} onChange={(d) => setV((x) => ({ ...x, due: d }))} invalid={Boolean(errors.evidenceDue)} describedBy={describedBy("rt-dp-due", c.dueHint, errors.evidenceDue)} />)}
+      {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={open.isPending}>{c.openTitle}</button>
     </form>
   );

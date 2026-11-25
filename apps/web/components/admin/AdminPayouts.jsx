@@ -10,7 +10,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { HeaderAction, Said, Stats, TableSkeleton, Tabs, formatWhen, useSort, SortTh, Pager, usePaging, Empty, PageLink, Req } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { LedgerTable } from "./AdminOrder";
@@ -49,7 +49,7 @@ export function AdminPayouts() {
       await refresh();
       setSaid(message);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
   };
   const c = P.columns;
@@ -151,7 +151,7 @@ function HoldForm({ payout, onDone }) {
       await refresh();
       onDone(P.held);
     } catch (err) {
-      setError(errorsFrom(err).general);
+      setError(errorText(err));
     }
   };
   return (
@@ -251,7 +251,8 @@ function AdjustForm({ providers, onDone }) {
       await refresh();
       onDone(L.adjusted);
     } catch (err) {
-      setErrors(errorsFrom(err).fields);
+      const { fields, general } = errorsFrom(err);
+      setErrors({ ...fields, form: general });
       focusFirstError(ref.current);
     }
   };
@@ -261,6 +262,7 @@ function AdjustForm({ providers, onDone }) {
       <Choice name="rt-adj-type" legend={L.adjustType} value={v.type} onChange={(t) => setV((x) => ({ ...x, type: t }))} options={Object.keys(L.adjustTypes).map((k) => ({ value: k, label: L.adjustTypes[k] }))} />
       {field("rt-adj-amount", <>{L.adjustAmount}<Req /></>, L.adjustAmountHint, errors.amountPence, <input id="rt-adj-amount" type="text" inputMode="decimal" className="rt-adm-num" value={v.amount} onChange={(e) => setV((x) => ({ ...x, amount: e.target.value }))} aria-invalid={errors.amountPence ? true : undefined} aria-describedby={describedBy("rt-adj-amount", L.adjustAmountHint, errors.amountPence)} />)}
       {field("rt-adj-note", <>{L.adjustNote}<Req /></>, null, errors.note, <TextArea id="rt-adj-note" rows={3} maxLength={500} value={v.note} onChange={(e) => setV((x) => ({ ...x, note: e.target.value }))} aria-invalid={errors.note ? true : undefined} aria-describedby={describedBy("rt-adj-note", null, errors.note)} />)}
+      {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
       <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={adjust.isPending}>{L.adjust}</button>
     </form>
   );

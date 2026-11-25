@@ -64,7 +64,7 @@ export function FaqForm({ contentKey, set, value, canEdit }) {
         if (m) mapped[`${m[2]}${m[1]}`] = v;
       }
       setErrors(mapped);
-      setGeneral(Object.keys(mapped).length ? "" : g);
+      setGeneral(Object.keys(mapped).length ? "" : g || Object.values(fields)[0]);
       if (Object.keys(mapped).length) focusFirstError(ref.current);
     }
     setSaving(false);
@@ -141,13 +141,15 @@ export function LegalForm({ contentKey, doc, value, canEdit }) {
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
       const mapped = {};
+      let stray = "";
       for (const [k, msg] of Object.entries(fields)) {
         const m = /^sections\.(\d+)\.(title|blocks)/.exec(k);
         if (m) mapped[m[2] === "title" ? `title${m[1]}` : `text${m[1]}`] = msg;
-        else mapped[k] = msg;
+        else if (["lead", "updated", "effective"].includes(k)) mapped[k] = msg;
+        else stray ||= msg;
       }
       setErrors(mapped);
-      setGeneral(Object.keys(mapped).length ? "" : g);
+      setGeneral(stray || (Object.keys(mapped).length ? "" : g));
       if (Object.keys(mapped).length) focusFirstError(ref.current);
     }
     setSaving(false);

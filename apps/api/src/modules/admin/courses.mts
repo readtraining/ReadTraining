@@ -195,6 +195,14 @@ async function requesters(db: typeof Db, course: Course): Promise<{ course: Set<
   }
 }
 
+// Who put the course on its current pause (our team's latest pause): an admin who paused their own course puts it back live
+// themselves; one another admin paused waits for another admin.
+async function pausedBy(db: typeof Db, courseId: number): Promise<string | null> {
+  const [p] = await db.execute<{ actor: string | null }>(sql`
+    select actor_user_id actor from public.activity_log where action = 'admin.course_paused' and target_type = 'course' and target_id = ${String(courseId)} order by at desc limit 1`)
+  return p?.actor ?? null
+}
+
 // A provider's draft isn't shown to our team (not listed, and its page is "not found"): it is their unfinished work until they
 // send it for approval.
 function notProviderDraft<T extends { kind: string; status: string }>(course: T): T {
@@ -326,6 +334,7 @@ export const adminCoursesRouter = createTRPCRouter({
       const asked = await requesters(ctx.db, course)
       const ownCourse = asked.course.has(ctx.user.id)
       const ownChange = Boolean(detail.pendingChanges) && asked.change.has(ctx.user.id)
+      const pausedByYou = ownCourse && course.status === 'paused' && Boolean(course.statusNote) && (await pausedBy(ctx.db, course.id)) === ctx.user.id
       return {
         ...detail,
         provider: provider ?? null,
@@ -334,15 +343,18 @@ export const adminCoursesRouter = createTRPCRouter({
         guide: course.kind === 'shared' ? await loadGuide(ctx.db, course.id) : null,
         change: await changeView(ctx.db, detail),
         pricing: await pricingView(ctx.db, course),
-        // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver
+        // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver,
+        // except pausing it, and putting it back live when they paused it (pausedByYou)
         ownCourse,
         ownChange,
+        pausedByYou,
         soleApprover: (ownCourse || ownChange) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide')),
       }
     }),
 
   // A decision on a provider's course: approve it, ask for changes, approve or turn down a change to a live course, pause a live
-  // course or put it back. The person who sent the course or the change can't decide on it.
+  // course or put it back. The person who sent the course or the change can't decide on it, except pausing their own course (taking
+  // it down needs no second look: as the provider they could pause it too) and putting back live one they paused themselves.
   decide: adminProcedure('admin.panel.open')
     .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input, path }) => {
@@ -356,7 +368,8 @@ export const adminCoursesRouter = createTRPCRouter({
       // their own course or change (they created it, sent it, or worked on the change): only as the sole approver, with a reason
       // (lib/soleApprover.mts)
       const asked = await requesters(ctx.db, course)
-      const own = (isChange ? asked.change : asked.course).has(ctx.user.id)
+      const selfServe = input.decision === 'pause' || (input.decision === 'resume' && (await pausedBy(ctx.db, course.id)) === ctx.user.id)
+      const own = !selfServe && (isChange ? asked.change : asked.course).has(ctx.user.id)
       if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, action)) : !can(ctx.actor, action)) {
         // logged as refused either way; an admin who may approve but sent this themselves is told why (a sole approver may have lost
         // the exception since the page loaded: another admin can approve now)

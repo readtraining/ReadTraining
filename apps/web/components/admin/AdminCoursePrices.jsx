@@ -121,7 +121,7 @@ export default function AdminCoursePrices({ pricing }) {
   return (
     <section className="rt-acc__card" aria-labelledby="rt-adm-cp-h">
       <h2 className="rt-acc__h2" id="rt-adm-cp-h">Prices and packages</h2>
-      <p className="rt-acc__note">What learners will pay, including VAT. Check the prices, any “was” price or saving, and what each package includes before approving.</p>
+      <p className="rt-acc__note">What learners pay, including VAT.</p>
 
       {sp && (
         <div className="rt-adm-cp__way">

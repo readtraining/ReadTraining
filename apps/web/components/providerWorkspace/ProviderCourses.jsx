@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { COURSE_TONE, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { SortTh, useSort } from "@/components/admin/adminParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
@@ -114,7 +114,7 @@ export default function ProviderCourses() {
   };
 
   const refresh = () => utils.provider.courses.list.invalidate({ organisationId });
-  const failed = (e) => setToast({ message: errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0] || "We couldn't do that. Please try again.", error: true });
+  const failed = (e) => setToast({ message: errorText(e), error: true });
   const setPaused = (c, paused) => pause.mutate({ organisationId, courseId: c.id, paused }, {
     onSuccess: () => { setPausing(null); refresh(); setToast({ message: paused ? COURSE_SAID.paused : COURSE_SAID.resumed }); },
     onError: (e) => { setPausing(null); refresh(); failed(e); },

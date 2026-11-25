@@ -9,7 +9,7 @@ import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { RowMenu, Said, TableSkeleton, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
@@ -44,16 +44,15 @@ export default function AdminCatalogueList() {
     await utils.admin.catalogue.list.invalidate();
     await refreshCatalogueList();
   };
-  // a refusal (like retiring an entry with live courses) stays on screen until the next change, as well as in the toast
+  // a refusal (like retiring an entry with live courses) stays on screen until the next change
   const run = async (fn, what) => {
     try {
       await fn();
       setProblem("");
       await changed(what);
     } catch (err) {
-      const message = errorsFrom(err).general;
+      const message = errorText(err);
       setProblem(message);
-      setSaid(message);
     }
   };
   const actions = (kind, row, siblings, extra = []) => {
@@ -154,7 +153,6 @@ export default function AdminCatalogueList() {
               ))}
             </ul>
             {addButton(kind)}
-            <p className="rt-acc__note">{copy.fixedName}</p>
           </section>
         ))}
       </div>
@@ -219,7 +217,7 @@ function NameSheet({ sheet, onClose, onDone }) {
           {sheet.where && <p className="rt-acc__note">In <strong>{sheet.where}</strong></p>}
           <div className="rt-field">
             <label htmlFor="rt-adm-cat-name">{copy.name}<Req /></label>
-            <small className="rt-field__hint" id="rt-adm-cat-name-hint">{copy.addressHint}</small>
+            <small className="rt-field__hint" id="rt-adm-cat-name-hint">{RENAMEABLE.has(sheet.kind) ? copy.addressHint : copy.fixedName}</small>
             {error && <p className="rt-q__err" id="rt-adm-cat-name-e"><span className="rt-sr">Error: </span>{error}</p>}
             <input id="rt-adm-cat-name" type="text" maxLength={60} autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={`rt-adm-cat-name-hint${error ? " rt-adm-cat-name-e" : ""}`} />
           </div>

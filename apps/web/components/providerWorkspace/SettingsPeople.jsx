@@ -8,7 +8,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { addQuestion, answerQuestion, deleteQuestion } from "@/lib/providerWorkspace";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { Loading, Pill, RowMenu, Tabs, ToolSelect, formatDay } from "./providerParts";
 import { Confirm, Field, aria, isEmail, useParam } from "./settingsForm";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -167,7 +167,7 @@ export function TeamTab({ say }) {
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(null);
   const refresh = () => utils.provider.team.list.invalidate({ organisationId });
-  const fail = (e) => say(errorsFrom(e).general || "That didn't work. Try again.");
+  const fail = (e) => say(errorText(e));
 
   if (list.isError) return <ErrorState title="We couldn't load your team." text="Check your connection, then try again." onRetry={() => list.refetch()} />;
   if (!list.data) return <Loading rows={3} />;

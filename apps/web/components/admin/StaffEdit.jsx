@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ErrorState } from "@/components/states/States";
 import { useAdminAccess } from "@/lib/adminContext";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { WorkspaceProvider } from "@/lib/workspaceContext";
 import { DetailSkeleton } from "./adminParts";
 
@@ -55,7 +55,7 @@ export default function StaffEdit({ provider, children }) {
   }, [provider, slug, me]);
 
   if (current.isError) return <ErrorState onRetry={() => current.refetch()} />;
-  if (start.isError) return <ErrorState title={errorsFrom(start.error).general || "This provider can't be edited just now."} onRetry={() => start.reset()} />;
+  if (start.isError) return <ErrorState title={errorText(start.error)} onRetry={() => start.reset()} />;
   if (!provider || !editing) return <DetailSkeleton />;
 
   const finish = async () => {
