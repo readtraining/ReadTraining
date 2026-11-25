@@ -13,22 +13,30 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
-import { ColWidths, Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty, HeaderAction, Req } from "./adminParts";
+import { ColWidths, Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty, HeaderAction, Req, RowMenu, Said } from "./adminParts";
 import { describedBy, field } from "./contentParts";
-import { toPence, useMoneyRefresh } from "./moneyParts";
+import { DisputeForm, RefundRequestForm, toPence, useMoneyRefresh } from "./moneyParts";
+import { CancelForm } from "./AdminOrder";
 import DateField from "./DateField";
 import { AdminStatus } from "./AdminStatus";
 import TextArea from "@/components/forms/TextArea";
 
 const copy = A.orders;
+const d = copy.detail;
 const TABS = Object.keys(copy.tabs);
+// the order page's own forms, opened from a row's ⋯ menu
+const SHEETS = { refund: [A.refunds.requestTitle, RefundRequestForm], dispute: [A.disputes.openTitle, DisputeForm], cancel: [d.cancelTitle, CancelForm] };
 
 // Orders and bookings (Part B, B4): every real order (API admin.orders.list), newest first, by status with counts, searchable,
 // a page at a time. With the "book for a customer" switch an admin books by invoice or payment link (or free, with that
-// switch), as staff do for phone sales; the order opens straight away.
+// switch), as staff do for phone sales; the order opens straight away. Each row's ⋯ menu asks for a refund, records a dispute or
+// cancels the booking with the order page's own forms, by the same rules as its buttons.
 export default function AdminOrders() {
   const me = useAdminAccess();
-  const canBook = me?.permissions?.includes("orders.book");
+  const perms = me?.permissions ?? [];
+  const canBook = perms.includes("orders.book");
+  const [acting, setActing] = useState(null); // { order, kind }: a row's refund, dispute or cancel form
+  const [said, setSaid] = useState("");
   const [tab, setTab] = useState("all");
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
@@ -47,11 +55,24 @@ export default function AdminOrders() {
   const rows = list.data?.orders ?? [];
   const s = paging.sorter;
   const c = copy.columns;
+  // the order page's buttons: only on an order still open, a refund or dispute only while money is left on it
+  const menu = (o) => {
+    const open = !["cancelled", "refunded"].includes(o.status);
+    const act = (kind) => () => setActing({ order: o, kind });
+    return [
+      { label: d.open, href: `/admin/orders/${o.ref}` },
+      ...(open && o.left > 0 && o.method !== "free" ? [{ label: d.requestRefund, onClick: act("refund") }] : []),
+      ...(open && o.left > 0 && perms.includes("disputes") && ["card", "payment_link", "bnpl"].includes(o.method) ? [{ label: d.openDispute, onClick: act("dispute") }] : []),
+      ...(open && perms.includes("refunds") ? [{ label: d.cancel, onClick: act("cancel"), danger: true }] : []),
+    ];
+  };
+  const [sheetTitle, SheetForm] = acting ? SHEETS[acting.kind] : ["", null];
 
   // nothing at all yet: the empty state has the button, so the toolbar doesn't repeat it
   const blank = Boolean(list.data) && !rows.length && !search && tab === "all";
   return (
     <div className="rt-acc__stack">
+      <Said text={said} />
       <div className="rt-adm-toolbar">
         <Tabs tabs={TABS.map((key) => ({ key, label: copy.tabs[key], count: counts?.[key] }))} value={tab} onChange={pick} label="Show orders" />
         <div className="rt-adm-toolbar__end">
@@ -68,8 +89,8 @@ export default function AdminOrders() {
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
-              <ColWidths widths={["15%", "18%", "19.5%", "22%", "6.5%", null]} />
-              <thead><tr><SortTh label={c.ref} col="booked" sorter={s} numeric /><SortTh label={c.buyer} col="buyer" sorter={s} /><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><SortTh label={c.total} col="total" sorter={s} numeric right /><SortTh label={c.state} col="status" sorter={s} /></tr></thead>
+              <ColWidths widths={["14%", "17%", "19%", "20%", "8%", null, "64px"]} />
+              <thead><tr><SortTh label={c.ref} col="booked" sorter={s} numeric /><SortTh label={c.buyer} col="buyer" sorter={s} /><th scope="col">{c.course}</th><th scope="col">{c.provider}</th><SortTh label={c.total} col="total" sorter={s} numeric right /><SortTh label={c.state} col="status" sorter={s} /><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
               <tbody>
                 {rows.map((o) => (
                   <tr key={o.id}>
@@ -79,6 +100,7 @@ export default function AdminOrders() {
                     <td data-label={c.provider}>{o.provider}{o.bookedBy && <small>{copy.staff.replace("{name}", o.bookedBy)}</small>}</td>
                     <td data-label={c.total} className="rt-adm-num-cell"><span className="rt-adm-num-cell">{formatPrice(o.gross)}</span><small>{copy.methods[o.method]}</small></td>
                     <td data-label={c.state}><AdminStatus kind="order" status={o.status}>{copy.statuses[o.status]}</AdminStatus></td>
+                    <td className="rt-biz__act"><RowMenu label={`Actions for ${o.ref}`} items={menu(o)} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -92,6 +114,9 @@ export default function AdminOrders() {
         <Empty title={copy.empty} text={copy.emptyText} action={canBook ? { label: copy.book, onClick: () => setBooking(true) } : undefined} />
       )}
 
+      <Sheet open={Boolean(acting)} onClose={() => setActing(null)} title={sheetTitle} closeLabel="Close">
+        {acting && <SheetForm order={acting.order} onDone={(message) => { setActing(null); setSaid(message); }} />}
+      </Sheet>
       <Sheet open={booking} onClose={() => setBooking(false)} title={copy.bookSheet.title} closeLabel="Close">
         {booking && <BookForm />}
       </Sheet>

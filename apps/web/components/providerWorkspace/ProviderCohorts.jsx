@@ -179,6 +179,51 @@ export function isMeetingLink(v) {
 
 // ---- the list --------------------------------------------------------------------------------------------------------------
 
+// A cohort's ⋯ menu and the pop-ups it opens, the same on the Cohorts list and a course's Cohorts tab: View, Edit, bookings on or
+// off, Move to another course, Cancel and Delete. `refresh` loads the dates again, `toast` shows what was done, `say` reads out a
+// change already on screen, and `change` (the list's) shows a row's change before the dates load again.
+export function useCohortActions({ refresh, toast, say, change = () => {} }) {
+  const links = useWorkspaceLinks();
+  const { organisationId, can } = useProviderAccess();
+  const bookable = api.provider.cohorts.setBookable.useMutation();
+  // the date being edited stays set while its form closes, so the closing form doesn't turn into an empty "Create cohort"
+  const [editing, setEditing] = useState({ open: false, k: null });
+  const [deleting, setDeleting] = useState(null);
+  const [cancelOne, setCancelOne] = useState(null);
+  const [moveOne, setMoveOne] = useState(null);
+  const edit = can("provider.cohorts.edit");
+  const toggleBookings = (k) => {
+    change(k.id, { bookable: !k.bookable });
+    bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
+      onSuccess: async () => { say(k.bookable ? "Bookings turned off" : "Bookings turned on"); await refresh(); change(k.id, null); },
+      onError: (e) => { change(k.id, null); toast(errorText(e), { error: true }); }, // a refusal: no tick, read out at once
+    });
+  };
+  const items = (k, today) => {
+    const cancelled = Boolean(k.cancelledAt);
+    return [
+      ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),
+      // a finished cohort is the record of what ran: nothing on it changes (only its tutor, and Delete while unbooked)
+      ...(edit && !cancelled && k.endsOn >= today ? [
+        { label: "Edit", onClick: () => setEditing({ open: true, k }) },
+        { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
+        { label: "Move to another course", onClick: () => setMoveOne(k) },
+        { label: "Cancel", onClick: () => setCancelOne(k) },
+      ] : []),
+      ...(edit && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
+    ];
+  };
+  const sheets = (
+    <>
+      <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); toast("Cohort saved"); }} />
+      <MoveSheet cohort={moveOne} onClose={() => setMoveOne(null)} onDone={async (title) => { setMoveOne(null); toast(`Moved to ${title}`); await refresh(); }} />
+      <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); toast("Cohort cancelled"); await refresh(); change(id, null); }} />
+      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onCancelInstead={(k) => { setDeleting(null); setCancelOne(k); }} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); toast("Cohort deleted"); await refresh(); change(id, null); }} />
+    </>
+  );
+  return { items, sheets };
+}
+
 export default function ProviderCohorts() {
   const links = useWorkspaceLinks();
   const { organisationId, can } = useProviderAccess();
@@ -193,11 +238,6 @@ export default function ProviderCohorts() {
   const [whenNote, setWhenNote] = useState("");
   const [showFilters, setShowFilters] = useState(false); // phones: the filters' fold
   const [page, setPage] = useState(1);
-  // the date being edited stays set while its form closes, so the closing form doesn't turn into an empty "Create cohort"
-  const [editing, setEditing] = useState({ open: false, k: null });
-  const [deleting, setDeleting] = useState(null);
-  const [cancelOne, setCancelOne] = useState(null);
-  const [moveOne, setMoveOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [said, setSaid] = useState(""); // a row change is on screen already, so it is only read out
@@ -207,7 +247,9 @@ export default function ProviderCohorts() {
   const s = useSchedule(askWhen(when));
   const utils = api.useUtils();
   const assignTutor = api.provider.cohorts.setTutor.useMutation();
-  const bookable = api.provider.cohorts.setBookable.useMutation();
+  const refresh = () =>
+    Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
+  const actions = useCohortActions({ refresh, toast: (message, { error = false } = {}) => setToast({ message, error }), say: setSaid, change });
   const edit = can("provider.cohorts.edit");
   // new dates set their prices, so adding them also needs prices (ReadTraining staff without the pricing switch can't)
   const add = edit && can("provider.pricing.edit");
@@ -293,8 +335,6 @@ export default function ProviderCohorts() {
     setWhenNote("");
     [...(keepTab ? [] : ["mode"]), "course", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
-  const refresh = () =>
-    Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
   const fail = (e) => setToast({ message: errorText(e), error: true });
   // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
   const setTutorOf = (k, v) => {
@@ -304,14 +344,6 @@ export default function ProviderCohorts() {
       onError: (e) => { change(k.id, null); fail(e); },
     });
   };
-  const toggleBookings = (k) => {
-    change(k.id, { bookable: !k.bookable });
-    bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
-      onSuccess: async () => { setSaid(k.bookable ? "Bookings turned off" : "Bookings turned on"); await refresh(); change(k.id, null); },
-      onError: (e) => { change(k.id, null); fail(e); },
-    });
-  };
-
   const create = add && <button type="button" className="button -md -purple-1 text-white" onClick={() => setFormOpen(true)} disabled={!datedCourses.length}>Create cohort</button>;
   const nothingYet = !scoped.length && when === "upcoming" && !filtered;
 
@@ -408,17 +440,7 @@ export default function ProviderCohorts() {
                           <CohortStatus k={k} status={k.status} />
                         </td>
                         <td data-label="Actions" className="rt-pws-coh__end">
-                          <RowMenu label={`Actions for ${name}`} items={[
-                            ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),
-                            // a finished cohort is the record of what ran: nothing on it changes (only its tutor, and Delete while unbooked)
-                            ...(edit && !cancelled && k.endsOn >= today ? [
-                              { label: "Edit", onClick: () => setEditing({ open: true, k }) },
-                              { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
-                              { label: "Move to another course", onClick: () => setMoveOne(k) },
-                              { label: "Cancel", onClick: () => setCancelOne(k) },
-                            ] : []),
-                            ...(edit && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
-                          ]} />
+                          <RowMenu label={`Actions for ${name}`} items={actions.items(k, today)} />
                         </td>
                       </tr>
                     );
@@ -434,10 +456,7 @@ export default function ProviderCohorts() {
       )}
 
       <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", ...(links.cohort(id) ? { href: links.cohort(id), label: "Open" } : {}) }); }} onAnother={() => refresh()} />
-      <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); setToast({ message: "Cohort saved" }); }} />
-      <MoveSheet cohort={moveOne} onClose={() => setMoveOne(null)} onDone={async (title) => { setMoveOne(null); setToast({ message: `Moved to ${title}` }); await refresh(); }} />
-      <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
-      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onCancelInstead={(k) => { setDeleting(null); setCancelOne(k); }} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
+      {actions.sheets}
       <Toast toast={toast} onDone={() => setToast(null)} />
       <p className="rt-sr" aria-live="polite">{said}</p>
     </div>

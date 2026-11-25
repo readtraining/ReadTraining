@@ -167,7 +167,7 @@ export function LedgerTable({ entries, showOrder = false, sorter = null }) {
   );
 }
 
-function CancelForm({ order, onDone }) {
+export function CancelForm({ order, onDone }) {
   const cancel = api.admin.orders.cancel.useMutation();
   const refresh = useMoneyRefresh();
   const [reason, setReason] = useState("");
