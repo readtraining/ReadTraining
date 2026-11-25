@@ -7,7 +7,7 @@ import { CtaLink } from "@/components/marketing/parts";
 // The For providers page's main button for someone who already has a provider account: their own next step (their application,
 // or "Manage your courses") instead of "Become a provider", which would ask them to create an account they already have.
 // Signed out, without a provider account, or with a rejected application (the API leaves that one out of their identities), it
-// stays "Become a provider" and opens the sign-up pop-up. `known`: whether we know yet. Signed out is known at once; for someone
+// stays "Become a provider", which opens provider onboarding (signed out, the login first). `known`: whether we know yet. Signed out is known at once; for someone
 // signed in it waits for their account (me.get), and until then the button keeps its place unseen (.rt-cta-wait), so it never
 // shows the wrong words or does nothing when clicked.
 export function useProviderStep() {

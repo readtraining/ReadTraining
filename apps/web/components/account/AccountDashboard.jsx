@@ -7,7 +7,8 @@ import { bookingState, calendarFile, firstDate, getBookings, getCertificates } f
 import { useMe } from "@/lib/useMe";
 import { demoCourseHref } from "@/data/demoCourses";
 import { formatDay } from "@/lib/format";
-import { savedCourseIds } from "@/lib/wishlist";
+import { useSavedCourses } from "@/lib/wishlist";
+import { api } from "@/lib/trpc/react";
 import BookingRow, { placeOf, whenOf } from "./BookingRow";
 import { Stats } from "@/components/admin/adminParts";
 import { EmptyState } from "@/components/states/States";
@@ -32,6 +33,11 @@ export default function AccountDashboard() {
   const { person, data: me } = useMe();
   const myName = me ? `${me.profile.firstName} ${me.profile.lastName}`.trim() : person?.name || "";
   const cert = useCertificatePrint();
+  // saved courses still live, as the Saved courses page counts them
+  const { ids: savedIds } = useSavedCourses();
+  const listings = api.catalogue.listings.useQuery(undefined, { enabled: savedIds.length > 0 });
+  const live = new Set((listings.data || []).map((l) => l.id));
+  const savedCount = savedIds.filter((id) => live.has(id)).length;
   useEffect(() => {
     const bookings = getBookings();
     const upcoming = bookings.filter((b) => bookingState(b) === "upcoming" || bookingState(b) === "requested").sort((a, b) => (firstDate(a) < firstDate(b) ? -1 : 1));
@@ -39,7 +45,6 @@ export default function AccountDashboard() {
       upcoming,
       completed: bookings.filter((b) => bookingState(b) === "past").length,
       certificates: getCertificates(),
-      saved: savedCourseIds().length,
     });
   }, []);
   if (!data) return null;
@@ -53,7 +58,7 @@ export default function AccountDashboard() {
     { label: s.upcoming.label, value: data.upcoming.length, icon: "icon-calendar", href: "/account/learning", hint: s.upcoming.hint(nextLine && nextLine.mode !== "ondemand" ? formatDay(nextLine.date) : "") },
     { label: s.completed.label, value: data.completed, icon: "icon-check", href: "/account/learning?tab=completed", hint: s.completed.hint },
     { label: s.certificates.label, value: data.certificates.length, icon: "icon-badge", href: "#rt-acc-cert-h", hint: s.certificates.hint(renew) },
-    { label: s.saved.label, value: data.saved, icon: "icon-bookmark", href: "/account/saved", hint: s.saved.hint(data.saved) },
+    { label: s.saved.label, value: savedCount, icon: "icon-bookmark", href: "/account/saved", hint: s.saved.hint(savedCount) },
   ];
 
   return (

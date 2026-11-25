@@ -383,14 +383,12 @@ export default function ProviderCohorts() {
                         <td data-label="Actions" className="rt-pws-coh__end">
                           <RowMenu label={`Actions for ${name}`} items={[
                             ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),
-                            ...(edit && !cancelled ? [
+                            // a finished cohort is the record of what ran: nothing on it changes (only its tutor, and Delete while unbooked)
+                            ...(edit && !cancelled && k.endsOn >= today ? [
                               { label: "Edit", onClick: () => setEditing({ open: true, k }) },
-                              // a finished date takes no bookings, so it has nothing to turn on or off
-                              ...(k.endsOn >= today ? [
-                                { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
-                                { label: "Move to another course", onClick: () => setMoveOne(k) },
-                                { label: "Cancel", onClick: () => setCancelOne(k) },
-                              ] : []),
+                              { label: k.bookable ? "Turn bookings off" : "Turn bookings on", onClick: () => toggleBookings(k) },
+                              { label: "Move to another course", onClick: () => setMoveOne(k) },
+                              { label: "Cancel", onClick: () => setCancelOne(k) },
                             ] : []),
                             ...(edit && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
                           ]} />
@@ -412,7 +410,7 @@ export default function ProviderCohorts() {
       <CohortForm open={editing.open} onClose={() => setEditing((x) => ({ ...x, open: false }))} cohort={editing.k} onSaved={() => { setEditing((x) => ({ ...x, open: false })); refresh(); setToast({ message: "Cohort saved" }); }} />
       <MoveSheet cohort={moveOne} onClose={() => setMoveOne(null)} onDone={async (title) => { setMoveOne(null); setToast({ message: `Moved to ${title}` }); await refresh(); }} />
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
-      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
+      <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onCancelInstead={(k) => { setDeleting(null); setCancelOne(k); }} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
       <p className="rt-sr" aria-live="polite">{said}</p>
     </div>
@@ -472,10 +470,10 @@ export function CancelSheet({ cohort, onClose, onDone }) {
     cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: () => onDone(reason.trim()), onError: (er) => setError(errorText(er)) });
   };
   return (
-    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose>
+    <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose busy={cancel.isPending}>
       {cohort && (
         <form className="rt-q__form" onSubmit={submit} noValidate>
-          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Nobody can book it after this, and it can&apos;t be undone.</p>
+          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}. Learners can&apos;t book it after this, and it can&apos;t be undone.</p>
           <div className="rt-field">
             <label htmlFor="rt-coh-cancel-why">Reason<Req /></label>
             {error && <p className="rt-q__err" id="rt-coh-cancel-why-e"><span className="rt-sr">Error: </span>{error}</p>}
@@ -483,7 +481,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
           </div>
           <div className="rt-pws-set__actions">
             <button type="submit" className="button -md -outline-red-3 text-red-3" disabled={cancel.isPending} aria-busy={cancel.isPending || undefined}>{cancel.isPending ? "Cancelling…" : "Cancel cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Go back</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Keep cohort</button>
           </div>
         </form>
       )}
@@ -521,7 +519,7 @@ export function MoveSheet({ cohort, onClose, onDone }) {
     <Sheet open={Boolean(cohort)} onClose={onClose} title="Move to another course" closeLabel="Close">
       {cohort && (!courses.data ? <Loading rows={1} /> : eligible.length ? (
         <form className="rt-q__form" onSubmit={submit} noValidate>
-          <p className="rt-acc__note">The dates, times, venue, tutor, places and price move with it.</p>
+          <p className="rt-acc__note">This cohort will be removed from {cohort.courseTitle} and added to the course you choose. The dates, times, venue, tutor, places and price move with it.</p>
           <div className="rt-field">
             <label htmlFor="rt-coh-move-course">Course<Req /></label>
             {error && <p className="rt-q__err" id="rt-coh-move-course-e"><span className="rt-sr">Error: </span>{error}</p>}
@@ -538,22 +536,36 @@ export function MoveSheet({ cohort, onClose, onDone }) {
 }
 const COURSE_STATUS = { draft: "Draft", changes: "Changes asked", pending: "Waiting for review", paused: "Paused" };
 
-export function DeleteSheet({ cohort, onClose, onDone }) {
+// Delete a cohort nobody has booked, permanently. One learners have booked can't be deleted (the API refuses it too,
+// provider.cohorts.remove), so their bookings keep their date: the pop-up says so and, while it can still be cancelled, offers
+// that instead (onCancelInstead).
+export function DeleteSheet({ cohort, onClose, onDone, onCancelInstead }) {
   const { organisationId } = useProviderAccess();
   const remove = api.provider.cohorts.remove.useMutation();
   const [error, setError] = useState("");
+  const booked = (cohort?.taken ?? 0) > 0;
+  const canCancel = Boolean(cohort) && !cohort.cancelledAt && cohort.endsOn >= todayIso();
+  const close = () => { setError(""); onClose(); };
   return (
-    <Sheet open={Boolean(cohort)} onClose={() => { setError(""); onClose(); }} title="Delete this cohort?" closeLabel="Close" noClose>
-      {cohort && (
+    <Sheet open={Boolean(cohort)} onClose={close} title={booked ? "This cohort can’t be deleted" : "Delete this cohort?"} closeLabel="Close" noClose busy={remove.isPending}>
+      {cohort && (booked ? (
         <div className="rt-q__form">
-          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, is removed for good.</p>
-          {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+          <p className="rt-acc__note">Learners have booked {cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, so it can&apos;t be deleted: their bookings need it.{canCancel ? " Cancel it instead: nobody else can book it, and it stays on record." : " It stays on record."}</p>
           <div className="rt-pws-set__actions">
-            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorText(e)) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
-            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
+            {canCancel && onCancelInstead && <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => { setError(""); onCancelInstead(cohort); }}>Cancel cohort</button>}
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={close}>Keep cohort</button>
           </div>
         </div>
-      )}
+      ) : (
+        <div className="rt-q__form">
+          <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, will be deleted permanently. This can&apos;t be undone.</p>
+          {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
+          <div className="rt-pws-set__actions">
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorText(e)) })}>{remove.isPending ? "Deleting…" : "Delete"}</button>
+            <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={close}>Cancel</button>
+          </div>
+        </div>
+      ))}
     </Sheet>
   );
 }
@@ -617,7 +629,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const courseOf = (id) => courses.find((c) => String(c.id) === String(id));
 
   // pricing: "flat" (the date's own price) or "tiered" (a price plan's packages, Tiered)
-  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "12", details: "", colour: "" });
+  const blankFor = (c) => ({ courseId: c ? String(c.id) : "", sessions: [], tutorUserId: "", venueId: "", joinUrl: "", pricing: "flat", planId: "", price: "", wasPrice: "", capacity: "", details: "", colour: "" });
 
   // fill the form each time the panel opens (once the courses are in)
   useEffect(() => {
@@ -650,6 +662,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const course = ready ? courseOf(f.courseId) : null;
   const method = cohort ? cohort.method : studyMode;
   const today = todayIso();
+  // a running cohort's sessions already started: they can stay (or be taken off), but no other day before today can be picked
+  const heldPast = cohort ? cohort.sessions.map((s) => s.date).filter((d) => d < today) : [];
   // the shared-venue check: once a classroom date has its course, venue and complete sessions (a finish after its start)
   const clashSessions = (f?.sessions || []).map((x) => ({ ...x, end: x.end || x.date }));
   const clashReady = Boolean(open && f && method === "classroom" && f.courseId && f.venueId && clashSessions.length && clashSessions.length <= 60 && clashSessions.every((x) => x.end > x.date || x.to > x.from));
@@ -715,10 +729,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
     if (!f.courseId) err.courseId = "Choose the course this cohort is for.";
     if (!f.sessions.length) err.sessions = "Pick at least one date on the calendar.";
     else if (f.sessions.length > MAX_SESSIONS) err.sessions = `Add up to ${MAX_SESSIONS} sessions.`;
-    const firstNow = cohort?.startsOn;
     const latest = addDays(today, MAX_AHEAD_DAYS);
     f.sessions.forEach((s, i) => {
-      if (s.date < today && s.date !== firstNow && (!cohort || s.date < firstNow)) err[`d${i}`] = "The start date can't be in the past.";
+      if (s.date < today && !heldPast.includes(s.date)) err[`d${i}`] = "Dates in the past can't be added.";
       else if ((s.end || s.date) === s.date && s.to <= s.from) err[`d${i}`] = "The end time must be after the start time.";
       else if (daysBetween(s.date, s.end || s.date) > MAX_SESSION_DAYS) err[`d${i}`] = `A session can last up to ${MAX_SESSION_DAYS} days. Add longer courses as several sessions.`;
       else if ((s.end || s.date) > latest) err[`d${i}`] = "Dates can be up to 3 years ahead.";
@@ -850,7 +863,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
             <div className="rt-pws-coh__pickcol">
               <SegmentedControl id="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
                 options={[{ value: "range", label: "Date range", icon: "sessions" }, { value: "days", label: "Individual days", icon: "cohorts" }]} />
-              <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={cohort ? "" : today} />
+              <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={today} keep={heldPast} />
             </div>
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
               <div className="rt-pws-coh__slotpanel">
@@ -1006,8 +1019,10 @@ function pickOn(list, open, iso, mode) {
 
 // The cohort form's two-month calendar. Each session shows as its first and last day filled and the days between banded;
 // while a range waits for its last day (`anchor`), the days up to the one under the mouse or the keyboard are banded too.
-function DatePicker({ view, setView, sessions, anchor, mode, onPick, min }) {
+// Days before `min` can't be picked, except `keep` (an edited cohort's sessions that already started, so they can be taken off).
+function DatePicker({ view, setView, sessions, anchor, mode, onPick, min, keep = [] }) {
   const today = todayIso();
+  const floor = keep.reduce((a, d) => (d < a ? d : a), min);
   const [focusDay, setFocusDay] = useState(null);
   const [overDay, setOverDay] = useState(null);
   const gridRef = useRef(null);
@@ -1042,7 +1057,7 @@ function DatePicker({ view, setView, sessions, anchor, mode, onPick, min }) {
   return (
     <div className="rt-pws-coh__picker" ref={gridRef} onMouseLeave={() => setOverDay(null)}>
       <div className="rt-pws-coh__pickhead">
-        <button type="button" className="rt-pws-cal__nav" onClick={() => setView(addMonths(view, -1))} disabled={Boolean(min) && view <= monthStart(min)} aria-label="Previous month"><i className="icon-chevron-left text-12" aria-hidden="true"></i></button>
+        <button type="button" className="rt-pws-cal__nav" onClick={() => setView(addMonths(view, -1))} disabled={view <= monthStart(floor)} aria-label="Previous month"><i className="icon-chevron-left text-12" aria-hidden="true"></i></button>
         <p className="rt-pws-coh__pickhint">{mode === "days" ? "Click each day the course runs" : anchor ? "Now click the last day" : "Click the first day, then the last day"}</p>
         <button type="button" className="rt-pws-cal__nav" onClick={() => setView(addMonths(view, 1))} aria-label="Next month"><i className="icon-chevron-right text-12" aria-hidden="true"></i></button>
       </div>
@@ -1064,7 +1079,7 @@ function DatePicker({ view, setView, sessions, anchor, mode, onPick, min }) {
                       const iso = w[di];
                       if (!iso) return <td key={di}></td>;
                       const { on, cls } = look(iso);
-                      const past = Boolean(min) && iso < min;
+                      const past = iso < min && !keep.includes(iso);
                       return (
                         <td key={di}>
                           <button

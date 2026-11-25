@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useContextElement } from "@/context/Context";
 import { categoryName, levelName, methodName } from "@/lib/taxonomy";
 import { toItem, trackEvent } from "@/lib/analytics";
-import { useWishlist } from "@/lib/wishlist";
+import { SAVED_HREF, useWishlist } from "@/lib/wishlist";
 import { bookableModes, cheapestMode, firstSession } from "@/lib/courses";
 import { cardWays, offeredModes } from "@/lib/courseModes";
 import { MODE_METHOD } from "@/lib/courseModes";
@@ -34,15 +34,15 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
   const hasDiscount = course.wasPrice > course.price;
   const discount = hasDiscount ? Math.round((1 - course.price / course.wasPrice) * 100) : 0;
 
-  // ---- save heart: optimistic, remembered per browser (localStorage) until a real account list exists ----
-  const [wished, toggleSaved] = useWishlist(course.id);
+  // ---- save heart: signed-in people only, the account's list (lib/wishlist.js); "View" opens it ----
+  const { canSave, saved: wished, toggle: toggleSaved } = useWishlist(course.id);
   const toggleWish = () => {
     try {
       const saving = toggleSaved();
-      onNotify?.({ message: saving ? "Saved to your list" : "Removed from your list" });
+      onNotify?.(saving ? { message: "Saved to your list", href: SAVED_HREF, label: "View" } : { message: "Removed from your list" });
       if (saving) trackEvent("add_to_wishlist", { items: [toItem(course, index)] });
     } catch {
-      onNotify?.({ message: "We could not update your list. Please try again." });
+      onNotify?.({ message: "We could not update your list. Please try again.", error: true });
     }
   };
 
@@ -123,7 +123,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
           </div>
         )}
         {course.skillSaver && <SaverBadge className="-onImage" />}
-        <button
+        {canSave && <button
           type="button"
           className={`rt-card__heart${wished ? " is-saved" : ""}`}
           aria-pressed={wished}
@@ -133,7 +133,7 @@ export default function CatalogueCourseCard({ course, index = 0, onNotify, dista
           <svg viewBox="0 0 24 24" fill={wished ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
           </svg>
-        </button>
+        </button>}
       </div>
 
       <div className="rt-card__body">

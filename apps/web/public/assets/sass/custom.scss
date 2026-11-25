@@ -5307,6 +5307,13 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 /* the search keeps enough width for its full placeholder; on a phone it takes the whole row */
 @media (min-width: 576px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 0 1 340px; min-width: 260px; } }
 @media (max-width: 575px) { .rt-adm--platform .rt-adm-toolbar .rt-adm-search { flex: 1 1 100%; margin-right: 0; } }
+/* a bar with only its pills and a search (Providers, Learners, Coupons, Orders...): one row, the pills on the left and the search
+   on the right, its edge on the table's; when they don't fit side by side the search goes under the pills, still on the right
+   (on a phone it takes the whole row, as above) */
+.rt-adm--platform .rt-adm-toolbar:has(> .rt-acc__tabs):has(.rt-adm-search):not(:has(> :not(.rt-acc__tabs, .rt-adm-search, .rt-adm-toolbar__end), .rt-adm-toolbar__end > :not(.rt-adm-search))) {
+  > .rt-acc__tabs { flex: 0 1 auto; }
+  .rt-adm-search { margin-right: 0; margin-left: auto; }
+}
 /* a button that can't be used yet looks it (e.g. "Approve selected" with nothing ticked) */
 .rt-adm--platform .button:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 /* the page never shifts sideways when a scrollbar appears or goes */
@@ -5625,31 +5632,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* end CITB HS&E TEST */
 
 /* =====================================================================
-   PROVIDER SIGN-UP (components/providerSignup): the "Become a provider" pop-up on /for-providers and the provider onboarding
-   (/provider/onboarding). DESIGN-SYSTEM.md tokens only; the pop-up is the Sheet dialog, the onboarding an app page card.
+   PROVIDER SIGN-UP (components/providerSignup): the provider onboarding (/provider/onboarding), where "Become a provider"
+   leads. DESIGN-SYSTEM.md tokens only; an app page card.
    ===================================================================== */
-.rt-bp__sheet { --fp-border-strong: var(--color-border-strong); --fp-surface: var(--rt-c-surface); --fp-brand: var(--rt-c-brand); }
-@media (min-width: 768px) { .rt-bp__sheet .rt-dd__panel { width: 920px; max-width: 94vw; } } /* room for the two columns; full screen below, as every Sheet */
-.rt-bp__lead { margin: 0 0 20px; font-size: var(--rt-text); line-height: 1.55; color: var(--rt-c-muted); }
-.rt-bp__grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 24px; align-items: start; }
-.rt-bp__for { padding: 20px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-soft); }
-.rt-bp__for b { display: block; font-size: var(--rt-text); color: var(--rt-c-text); }
-.rt-bp__for ul { display: grid; gap: 12px; margin: 14px 0 0; padding: 0; list-style: none; }
-.rt-bp__for li { display: flex; align-items: flex-start; gap: 10px; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); list-style: none; }
-.rt-bp__tick { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
-.rt-bp__tick svg { width: 10px; height: 10px; }
-.rt-bp__pw { position: relative; }
-.rt-bp__pw input { padding-right: 72px; }
-.rt-bp__show { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); height: 36px; padding: 0 10px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
-.rt-bp__show:hover { background: var(--rt-c-brand-soft); }
-.rt-bp__show:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-.rt-bp__terms, .rt-bp__login { margin: 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-muted); }
-.rt-bp__terms a, .rt-bp__login a { font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; }
-.rt-bp__login { text-align: center; }
-.rt-bp__h { margin: 0; font-size: var(--rt-app-h3); font-weight: var(--rt-heading-weight); color: var(--rt-c-text); }
-.rt-bp__h:focus { outline: none; }
-.rt-bp__signed p { margin: 8px 0 20px; font-size: var(--rt-text); line-height: 1.55; color: var(--rt-c-muted); }
-
 /* onboarding */
 /* provider onboarding and creating a business account: one card on the page tint */
 .rt-po { padding-top: 32px; padding-bottom: 64px; }
@@ -5661,7 +5646,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-po__check:has(input:checked) { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
 .rt-lic__consent .rt-po__check, .rt-po .rt-po__check { align-items: flex-start; padding: 12px; }
 
-@media (max-width: 991px) { .rt-bp__grid { grid-template-columns: minmax(0, 1fr); } .rt-bp__for { order: 2; } }
 /* end PROVIDER SIGN-UP */
 
 /* =====================================================================
@@ -6277,7 +6261,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 :is(.rt-adm-table, .rt-cx-table) tbody tr:has(.rt-rowmenu.is-open) { position: relative; z-index: 30; }
 .rt-rowmenu__btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); font-size: 11px; letter-spacing: 1px; color: var(--rt-c-text); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
 .rt-rowmenu__btn:hover, .rt-rowmenu.is-open .rt-rowmenu__btn { border-color: var(--rt-c-text); }
-.rt-rowmenu__btn:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+/* focus hugs the button, as on the search boxes: its border turns purple with the soft ring round it (an outline outside the
+   border looked doubled) */
+.rt-rowmenu__btn:focus-visible { outline: none; border-color: var(--color-purple-1); box-shadow: 0 0 0 3px var(--color-purple-3); }
 .rt-rowmenu__list { position: absolute; z-index: 40; top: calc(100% + 6px); right: 0; min-width: 190px; margin: 0; padding: 6px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); box-shadow: var(--rt-shadow-dialog); list-style: none; }
 .rt-rowmenu__list.-side { top: 0; right: calc(100% + 8px); } /* a ⋯ menu: beside its button, top in line (RowMenu slides it up near the screen's bottom) */
 .rt-rowmenu__list li { list-style: none; }
@@ -6825,7 +6811,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-hp-search__box { position: relative; max-width: 640px; }
 .rt-hp-search__box i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--rt-c-muted); pointer-events: none; }
 .rt-hp-search__box input { width: 100%; height: 52px; padding: 0 18px 0 48px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text); color: var(--rt-c-text); box-shadow: 0 6px 18px -12px color-mix(in srgb, var(--rt-c-dark) 35%, transparent); }
-.rt-hp-search__box input:focus { outline: 3px solid var(--rt-c-brand); outline-offset: 1px; border-color: var(--rt-c-brand); }
+/* focused as every search box: the purple border and the soft ring round it (no outline outside it, which looked doubled) */
+.rt-hp-search__box input:focus { outline: none; border-color: var(--rt-c-brand); box-shadow: 0 0 0 3px var(--color-purple-3), 0 6px 18px -12px color-mix(in srgb, var(--rt-c-dark) 35%, transparent); }
 .rt-hp-results { display: grid; max-width: 640px; margin: 0; padding: 6px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); list-style: none; }
 .rt-hp-results li { list-style: none; }
 .rt-hp-results a { position: relative; display: grid; gap: 2px; padding: 10px 40px 10px 12px; border-radius: var(--rt-radius-sm); text-decoration: none; }
@@ -7199,6 +7186,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 /* text fields in the workspace's pop-ups keep the field's own focus (.rt-field: dark border, white fill), not the course page
    pop-ups' outline (.rt-dd input:focus-visible); buttons and dropdowns keep their keyboard focus ring */
 body.rt-pws-open .rt-dd .rt-field :is(input, textarea):focus-visible { outline: none; }
+/* a search box in a pop-up (the coupon's course finder) shows only its focused border, as in the workspace */
+.rt-dd .rt-field input[type="search"]:focus-visible { outline: none; }
 /* pop-ups: forms 640px wide, questions 480px (the cohort and price plan pop-ups keep their own 1040px: a two-month calendar and the
    package cards need it); a form's button row stays at the bottom of the pop-up while it scrolls, the main button on the right */
 body.rt-pws-open .rt-dd.rt-tq-sheet:not(.rt-pws-coh__sheet):not(.rt-pws-pkg__sheet) .rt-dd__panel { width: 640px; }
@@ -7969,8 +7958,7 @@ html { scrollbar-gutter: stable; }
 }
 /* G10: a page's extra explanation is no wider than its description */
 .rt-adm--platform .rt-adm-help { max-width: 860px; }
-/* I2: a clear focus ring on search boxes; a focused link keeps its weight */
-.rt-adm--platform .rt-adm-search input:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; box-shadow: none; }
+/* I2: a focused link keeps its weight (a search box shows its focus as everywhere: the purple border and the soft ring round it) */
 .rt-adm--platform a.rt-adm-strong:focus, .rt-adm--platform a.rt-adm-strong:focus-visible { font-weight: 600; }
 /* I4: row menus: room for their longest item, 36px items, a divider above the destructive one */
 .rt-adm--platform .rt-rowmenu__list { min-width: 220px; }
