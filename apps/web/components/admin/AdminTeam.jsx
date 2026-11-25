@@ -8,8 +8,8 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
-import { RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh, Empty, HeaderAction, Req } from "./adminParts";
+import { errorsFrom, errorText } from "@/lib/useMe";
+import { ColWidths, RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh, Empty, HeaderAction, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
 const copy = A.team;
@@ -45,7 +45,7 @@ export default function AdminTeam() {
         : emailed ? `A new invite was sent to ${a.email}` : `A new invite link was made, but the email to ${a.email} couldn't be sent. Try again in a moment.`,
       );
     } catch (error) {
-      setSaid(errorsFrom(error).general);
+      setSaid(errorText(error));
     }
   };
 
@@ -76,6 +76,7 @@ export default function AdminTeam() {
       {admins.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
+            <ColWidths widths={ADMIN_TWO_STEP ? ["28%", "17%", "15%", "13%", null, "64px"] : ["33%", "20%", "21%", null, "64px"]} />
             <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.access} col="access" sorter={sorter} /><SortTh label={c.limit} col="limit" sorter={sorter} numeric />{ADMIN_TWO_STEP && <th scope="col">{c.twoStep}</th>}<SortTh label={c.last} col="last" sorter={sorter} numeric /><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
             <tbody>
               {sorter.apply(admins, TEAM_SORT).map((a) => {
@@ -270,7 +271,7 @@ function ConfirmSheet({ confirm, onClose, onDone }) {
       onDone(sheet.said);
       close();
     } catch (error) {
-      setGeneral(errorsFrom(error).general);
+      setGeneral(errorText(error));
     }
   };
   return (

@@ -8,8 +8,9 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { addQuestion, answerQuestion, deleteQuestion } from "@/lib/providerWorkspace";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { Loading, Pill, RowMenu, Tabs, ToolSelect, formatDay } from "./providerParts";
+import { ColWidths } from "@/components/admin/adminParts";
 import { Confirm, Field, aria, isEmail, useParam } from "./settingsForm";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -167,7 +168,7 @@ export function TeamTab({ say }) {
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(null);
   const refresh = () => utils.provider.team.list.invalidate({ organisationId });
-  const fail = (e) => say(errorsFrom(e).general || "That didn't work. Try again.");
+  const fail = (e) => say(errorText(e));
 
   if (list.isError) return <ErrorState title="We couldn't load your team." text="Check your connection, then try again." onRetry={() => list.refetch()} />;
   if (!list.data) return <Loading rows={3} />;
@@ -195,6 +196,7 @@ export function TeamTab({ say }) {
       ) : (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
+            <ColWidths widths={manage ? ["36%", "36%", null, "64px"] : ["36%", "36%", null]} />
             <thead><tr><th scope="col">Member</th><th scope="col">Role</th><th scope="col">Status</th>{manage && <th scope="col"><span className="rt-sr">Actions</span></th>}</tr></thead>
             <tbody>
               {shown.map((m) => {

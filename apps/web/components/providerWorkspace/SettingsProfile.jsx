@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useWorkspace, useWorkspaceLinks } from "@/lib/workspaceContext";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { getSupabase } from "@/lib/supabase/client";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Pill, RowMenu, Search } from "./providerParts";
 import { Confirm, Counter, Field, FormatBox, aria, isUrlOn } from "./settingsForm";
@@ -24,7 +24,6 @@ const useProfile = () => {
   const { organisationId } = useProviderAccess();
   return api.provider.profile.get.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
 };
-const firstError = (e) => errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0];
 
 // shows a loading or error state until the profile is in, then the tab with it
 function WithProfile({ children }) {
@@ -201,11 +200,11 @@ function LogoForm({ profile, say }) {
       if (upError) throw new Error("The logo didn't upload. Please try again.");
       await setLogo.mutateAsync({ organisationId, path });
       utils.provider.profile.get.invalidate({ organisationId });
-      say("Logo saved");
+      say("Logo saved", { shown: true });
     } catch (err) {
       setLocal(before);
       URL.revokeObjectURL(preview);
-      setError(err?.data ? firstError(err) : err.message || "The logo didn't upload. Please try again.");
+      setError(err?.data ? errorText(err) : err.message || "The logo didn't upload. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -215,8 +214,8 @@ function LogoForm({ profile, say }) {
     setAsking(false);
     setBusy(true);
     removeLogo.mutate({ organisationId }, {
-      onSuccess: () => { setLocal({ url: null, was: profile.logoUrl }); utils.provider.profile.get.invalidate({ organisationId }); say("Logo removed"); },
-      onError: (er) => setError(firstError(er)),
+      onSuccess: () => { setLocal({ url: null, was: profile.logoUrl }); utils.provider.profile.get.invalidate({ organisationId }); say("Logo removed", { shown: true }); },
+      onError: (er) => setError(errorText(er)),
       onSettled: () => setBusy(false),
     });
   };
@@ -286,7 +285,7 @@ function TermsForms({ profile, say }) {
           say(changed.policy && changed.terms ? "Cancellation and refund policy and booking terms saved" : changed.policy ? "Cancellation and refund policy saved" : "Booking terms saved");
         },
         onError: (er) => {
-          const msg = firstError(er);
+          const msg = errorText(er);
           setErrors(changed.policy ? { policy: msg } : { terms: msg });
           focusFirstError(formRef.current);
         },
@@ -339,7 +338,7 @@ export function VenuesTab({ say }) {
   const toggleActive = (v) =>
     setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, {
       onSuccess: () => { setArchiving(null); refresh(); say(v.active ? "Venue archived" : "Venue restored"); },
-      onError: (e) => { setArchiving(null); say(firstError(e)); },
+      onError: (e) => { setArchiving(null); say(errorText(e)); },
     });
   const edit = can("provider.cohorts.edit");
   const refresh = () => utils.provider.venues.list.invalidate({ organisationId });

@@ -6,7 +6,7 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, PageLink, RowMenu, Said } from "./adminParts";
+import { ColWidths, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, PageLink, RowMenu, Said } from "./adminParts";
 import { formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { DANGER, DecisionSheet, DeleteProviderSheet, canDelete, decisionsFor } from "./AdminProvider";
@@ -86,6 +86,7 @@ export default function AdminProviders() {
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
+              <ColWidths widths={["23%", "27%", "12%", "12%", null, "64px"]} />
               <thead><tr><SortTh label={c.name} col="name" sorter={s} /><th scope="col">{c.owner}</th><SortTh label={c.applied} col="applied" sorter={s} numeric /><SortTh label={c.commission} col="commission" sorter={s} numeric right /><SortTh label={c.status} col="status" sorter={s} /><th scope="col"><span className="rt-sr">Actions</span></th></tr></thead>
               <tbody>
                 {providers.map((p) => (

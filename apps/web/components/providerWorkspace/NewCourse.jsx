@@ -9,7 +9,7 @@ import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { CardChoice, KeepWidth, Loading, WayCards } from "./providerParts";
@@ -180,7 +180,7 @@ function NewCourseForm({ onCancel, onDirty }) {
           onDirty(false);
           leaveWithoutAsking(() => router.push(`/provider/courses/${id}?created=1`));
         },
-        onError: (error) => setFailed(errorsFrom(error).general || Object.values(errorsFrom(error).fields)[0]),
+        onError: (error) => setFailed(errorText(error)),
       },
     );
   };

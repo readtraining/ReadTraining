@@ -6,13 +6,14 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspaceLinks } from "@/lib/workspaceContext";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import Toast from "@/components/courses/Toast";
 import { COHORT_TONE, Loading, Pill, RowMenu, Search, SegmentedControl, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
+import { ColWidths } from "@/components/admin/adminParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
@@ -48,7 +49,20 @@ export const WHEN = [
 // cancelled dates are listed under Cancelled and Any date only, so upcoming and past lists (and their counts) are the dates that run
 // a date of a course that isn't on sale (not live): it stays in the workspace, labelled, and learners can't see or book it
 const OFF_SALE = { draft: "Course in draft", pending: "Course in review", changes: "Course needs changes", paused: "Course paused" };
-export const offSale = (k) => OFF_SALE[k.courseStatus] || null;
+const offSale = (k) => OFF_SALE[k.courseStatus] || null;
+// A cohort's status, as every list shows it: its own status (Upcoming, In progress…) is the one pill, and why learners can't book it
+// (the course isn't on sale, its learning option has stopped taking bookings, or its own bookings are off) is plain text under it,
+// so a row never carries several coloured badges (one badge per cell, the reasons as text)
+export const whyNotOnSale = (k) => (k.cancelledAt ? "" : [offSale(k), k.optionClosed ? "Bookings stopped" : !k.bookable ? "Bookings off" : null].filter(Boolean).join(" · "));
+export function CohortStatus({ k, status }) {
+  const why = whyNotOnSale(k);
+  return (
+    <span className="rt-pws-coh__status">
+      <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
+      {why && <small className="rt-pws-coh__why">{why}</small>}
+    </span>
+  );
+}
 // a date can be deleted while nobody has booked it and it hasn't finished (the API checks again, counting every order); otherwise
 // it is cancelled, or kept as the record of a course that ran
 export const deletable = (k, today = todayIso()) => k.endsOn >= today && !k.taken;
@@ -170,6 +184,7 @@ export default function ProviderCohorts() {
   const [moveOne, setMoveOne] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [said, setSaid] = useState(""); // a row change is on screen already, so it is only read out
   // a row change shows at once (bookings on or off, the tutor), before the list loads again; gone again if the save fails
   const [changing, setChanging] = useState({});
   const change = (id, patch) => setChanging((x) => (patch ? { ...x, [id]: { ...x[id], ...patch } } : Object.fromEntries(Object.entries(x).filter(([k]) => k !== id))));
@@ -255,19 +270,19 @@ export default function ProviderCohorts() {
   };
   const refresh = () =>
     Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
-  const fail = (e) => setToast({ message: errorsFrom(e).general || "We couldn't save that. Please try again." });
+  const fail = (e) => setToast({ message: errorText(e) });
   // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
   const setTutorOf = (k, v) => {
     change(k.id, { tutorUserId: v || null });
     assignTutor.mutate({ organisationId, cohortId: k.id, tutorUserId: v || null }, {
-      onSuccess: async () => { setToast({ message: v ? `${tutorName(v) || "Tutor"} assigned` : "Tutor removed" }); await refresh(); change(k.id, null); },
+      onSuccess: async () => { setSaid(v ? `${tutorName(v, k) || "Tutor"} assigned` : "Tutor removed"); await refresh(); change(k.id, null); },
       onError: (e) => { change(k.id, null); fail(e); },
     });
   };
   const toggleBookings = (k) => {
     change(k.id, { bookable: !k.bookable });
     bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
-      onSuccess: async () => { setToast({ message: k.bookable ? "Bookings turned off. Learners can't book this cohort now." : "Bookings turned on. Learners can book this cohort once online booking opens." }); await refresh(); change(k.id, null); },
+      onSuccess: async () => { setSaid(k.bookable ? "Bookings turned off" : "Bookings turned on"); await refresh(); change(k.id, null); },
       onError: (e) => { change(k.id, null); fail(e); },
     });
   };
@@ -280,7 +295,7 @@ export default function ProviderCohorts() {
       {nothingYet && mode !== "self-paced" ? (
         <EmptyState
           title="No upcoming dates"
-          text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live; online booking opens in a later update."
+          text="A cohort is one run of a course on set dates. Add one so learners see it once the course is live."
           action={add ? (datedCourses.length ? { label: "Create cohort", onClick: () => setFormOpen(true) } : { label: "Create a course first", onClick: newCourse }) : null}
         />
       ) : null}
@@ -334,13 +349,14 @@ export default function ProviderCohorts() {
           ) : list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
+                <ColWidths widths={["38%", "23%", "9%", "12%", null, "64px"]} />
                 <thead>
                   <tr>
                     <th scope="col">Cohorts</th>
-                    <th scope="col">Status</th>
                     <th scope="col">Tutor</th>
                     <th scope="col">Places</th>
                     <th scope="col">Price</th>
+                    <th scope="col">Status</th>
                     <th scope="col"><span className="rt-sr">Actions</span></th>
                   </tr>
                 </thead>
@@ -351,15 +367,6 @@ export default function ProviderCohorts() {
                     return (
                       <tr key={k.id}>
                         <td data-label="Cohort"><CohortCell k={k} /></td>
-                        <td data-label="Status">
-                          <span className="rt-pws-coh__pills">
-                            <Pill tone={COHORT_TONE[k.status]}>{COHORT_STATUSES[k.status]}</Pill>
-                            {!cancelled && offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}
-                            {/* its learning option isn't taking bookings on the course (Learning options › Stop new bookings): nobody can book it,
-                                whatever its own switch; taking bookings again puts it back as it was */}
-                            {!cancelled && k.optionClosed ? <Pill tone="warn">Bookings stopped</Pill> : !k.bookable && !cancelled && <Pill tone="warn">Bookings off</Pill>}
-                          </span>
-                        </td>
                         <td data-label="Tutor">
                           {edit && !cancelled && tutors.length ? (
                             <div className="rt-field rt-adm-select -inline">
@@ -370,6 +377,9 @@ export default function ProviderCohorts() {
                         </td>
                         <td data-label="Places"><Seats booked={k.taken ?? 0} max={k.capacity} /></td>
                         <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
+                        <td data-label="Status">
+                          <CohortStatus k={k} status={k.status} />
+                        </td>
                         <td data-label="Actions" className="rt-pws-coh__end">
                           <RowMenu label={`Actions for ${name}`} items={[
                             ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),
@@ -404,6 +414,7 @@ export default function ProviderCohorts() {
       <CancelSheet cohort={cancelOne} onClose={() => setCancelOne(null)} onDone={async () => { const id = cancelOne.id; setCancelOne(null); change(id, { cancelledAt: new Date().toISOString() }); setToast({ message: "Cohort cancelled" }); await refresh(); change(id, null); }} />
       <DeleteSheet cohort={deleting} onClose={() => setDeleting(null)} onDone={async () => { const id = deleting.id; setDeleting(null); change(id, { deleted: true }); setToast({ message: "Cohort deleted" }); await refresh(); change(id, null); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
+      <p className="rt-sr" aria-live="polite">{said}</p>
     </div>
   );
 }
@@ -458,7 +469,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
       setError("Say why the dates are cancelled.");
       return document.getElementById("rt-coh-cancel-why")?.focus();
     }
-    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]) });
+    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorText(er)) });
   };
   return (
     <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose>
@@ -503,7 +514,7 @@ export function MoveSheet({ cohort, onClose, onDone }) {
     }
     move.mutate({ organisationId, cohortId: cohort.id, courseId: Number(courseId) }, {
       onSuccess: (r) => onDone(r.courseTitle),
-      onError: (er) => setError(errorsFrom(er).general || Object.values(errorsFrom(er).fields)[0]),
+      onError: (er) => setError(errorText(er)),
     });
   };
   return (
@@ -538,7 +549,7 @@ export function DeleteSheet({ cohort, onClose, onDone }) {
           <p className="rt-acc__note">{cohort.courseTitle}, {dayRange(cohort.startsOn, cohort.endsOn)}, is removed for good.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-pws-set__actions">
-            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ organisationId, cohortId: cohort.id }, { onSuccess: onDone, onError: (e) => setError(errorText(e)) })}>{remove.isPending ? "Deleting…" : "Delete cohort"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={onClose}>Cancel</button>
           </div>
         </div>
@@ -576,8 +587,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
-  // another of the provider's courses is at the venue at the same time (the API's question): said as a warning above the buttons,
-  // and Save becomes "Save anyway" (the venue has another room); changing the venue or the dates takes the question away
+  // another of the provider's courses is at the venue at the same time: said under the Venue field as soon as a venue and dates are
+  // chosen (the API's venueClash, below); saving with it shown tells the API the provider has seen it (the venue has another room).
+  // `venueAsk`: the same words when only the save found it (the check not back yet, or dates added elsewhere at that moment)
   const [venueAsk, setVenueAsk] = useState("");
   // a venue being added from here (it saves as a normal venue, and the date picks it)
   const [addingVenue, setAddingVenue] = useState(false);
@@ -638,6 +650,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const course = ready ? courseOf(f.courseId) : null;
   const method = cohort ? cohort.method : studyMode;
   const today = todayIso();
+  // the shared-venue check: once a classroom date has its course, venue and complete sessions (a finish after its start)
+  const clashSessions = (f?.sessions || []).map((x) => ({ ...x, end: x.end || x.date }));
+  const clashReady = Boolean(open && f && method === "classroom" && f.courseId && f.venueId && clashSessions.length && clashSessions.length <= 60 && clashSessions.every((x) => x.end > x.date || x.to > x.from));
+  const clashQ = api.provider.cohorts.venueClash.useQuery(
+    { organisationId, courseId: Number(f?.courseId) || 1, venueId: f?.venueId || "00000000-0000-0000-0000-000000000000", sessions: clashSessions.length ? clashSessions : [{ date: today, end: today, from: "09:00", to: "17:00" }], ...(cohort ? { cohortId: cohort.id } : {}) },
+    { enabled: clashReady, retry: false, staleTime: 15_000 },
+  );
+  const venueNote = clashReady ? clashQ.data?.note || venueAsk : "";
   // changing a field takes its message away (the next save checks everything again)
   const set = (patch) => {
     setF((x) => ({ ...x, ...patch }));
@@ -729,7 +749,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       colour: f.colour || null,
       bookable: cohort ? cohort.bookable : true,
       // "Save anyway": the provider has seen that another course is at the venue then
-      ...(method === "classroom" && venueAsk ? { sharedVenue: true } : {}),
+      ...(method === "classroom" && venueNote ? { sharedVenue: true } : {}),
     };
     try {
       // an edit sends the version it was filled from, so one over a colleague's newer change is refused instead of undoing it
@@ -759,7 +779,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
       if (fields.sharedVenue) {
         setErrors({});
         setVenueAsk(fields.sharedVenue);
-        requestAnimationFrame(() => document.getElementById("rt-cf-venueask")?.focus());
+        requestAnimationFrame(() => document.getElementById("rt-cf-venuenote")?.scrollIntoView({ block: "center" }));
         return;
       }
       const named = Object.fromEntries(Object.entries(fields).map(([k, m]) => [FIELD_OF[k] || k, m]));
@@ -885,13 +905,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   {err("venueId")}
                   <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
                   {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
+                  {venueNote && <p className="rt-acc__notice -warn" id="rt-cf-venuenote" role="status">{venueNote}</p>}
                   {venues.length > 0 && (addingVenue ? venueForm : <button type="button" className="rt-cd__link rt-pws-coh__hintlink" onClick={() => setAddingVenue(true)}>Add a new venue</button>)}
                 </div>
               )}
               {method === "live-online" && (
                 <div className="rt-field">
                   <label htmlFor="rt-cf-joinUrl">Joining link<Req /></label>
-                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Google Meet meeting learners join, like https://zoom.us/j/1234567890. Once online booking opens, learners get it before the first session.</p>
+                  <p className="rt-acc__note" id="rt-cf-joinUrl-h">The Zoom, Teams or Google Meet meeting learners join, like https://zoom.us/j/1234567890.</p>
                   {err("joinUrl")}
                   <input id="rt-cf-joinUrl" type="url" inputMode="url" value={f.joinUrl} onChange={(e) => set({ joinUrl: e.target.value })} autoComplete="url" aria-invalid={errors.joinUrl ? true : undefined} aria-describedby={`rt-cf-joinUrl-h${errors.joinUrl ? " rt-cf-joinUrl-e" : ""}`} />
                 </div>
@@ -955,11 +976,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               </div>
             </fieldset>
           </section>
-          {venueAsk && <p className="rt-acc__notice -warn" id="rt-cf-venueask" role="alert" tabIndex={-1}>{venueAsk}</p>}
           {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
           <div className="rt-pws-coh__formfoot">
-            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={(busy && pressed !== "another") || undefined}>{busy && pressed !== "another" ? "Saving…" : venueAsk ? "Save anyway" : cohort ? "Save changes" : "Save cohort"}</button>
-            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} aria-busy={(busy && pressed === "another") || undefined} onClick={(e) => save(e, true)}>{busy && pressed === "another" ? "Saving…" : venueAsk ? "Save anyway and create another" : "Save and create another"}</button>}
+            <button type="submit" className="button -md -purple-1 text-white" disabled={busy} aria-busy={(busy && pressed !== "another") || undefined}>{busy && pressed !== "another" ? "Saving…" : cohort ? "Save changes" : "Save cohort"}</button>
+            {!cohort && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} aria-busy={(busy && pressed === "another") || undefined} onClick={(e) => save(e, true)}>{busy && pressed === "another" ? "Saving…" : "Save and create another"}</button>}
           </div>
         </form>
       )}

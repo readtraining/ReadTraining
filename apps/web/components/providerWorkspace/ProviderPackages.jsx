@@ -4,15 +4,23 @@ import React, { useCallback, useEffect, useState } from "react";
 import Toast from "@/components/courses/Toast";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
 import PackageEditor from "./PackageEditor";
-import { Loading, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
-import { HeaderAction } from "@/components/admin/adminParts";
+import { ColWidths, HeaderAction } from "@/components/admin/adminParts";
 
-const SHOW = [{ value: "", label: "In use" }, { value: "archive", label: "Archived" }, { value: "all", label: "All plans" }];
+// every plan by default; "Active" and "Archived" narrow it to one status (the words of the Status column)
+const SHOW = [{ value: "", label: "All plans" }, { value: "active", label: "Active" }, { value: "archive", label: "Archived" }];
+// the packages' prices as one range ("£299.00 – £449.00"), or one price when they are all the same
+const priceRange = (tiers) => {
+  const p = tiers.map((t) => t.pricePence);
+  const lo = Math.min(...p);
+  const hi = Math.max(...p);
+  return lo === hi ? formatPrice(lo / 100) : `${formatPrice(lo / 100)} – ${formatPrice(hi / 100)}`;
+};
 const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date" : "dates"}` : "", u.courses ? `${u.courses} self-paced ${u.courses === 1 ? "course" : "courses"}` : ""].filter(Boolean).join(" and ") || (u.ever ? "Used by past dates" : "Not used yet");
 
 // Price plans (Tiered Plans), from the API (provider.plans): each plan's packages and prices, and how many dates and
@@ -20,7 +28,7 @@ const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date"
 // course pricing. Edit opens the plan; a plan is archived (dates on it keep it) or, when nothing
 // ever used it, deleted. Search and the archive filter are kept in the address.
 export default function ProviderPackages() {
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, staff } = useProviderAccess();
   const edit = can("provider.pricing.edit");
   const utils = api.useUtils();
   const query = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
@@ -29,11 +37,12 @@ export default function ProviderPackages() {
   const [q, setQ] = useState("");
   const [show, setShow] = useState("");
   const [editor, setEditor] = useState({ open: false, plan: null });
-  const [removing, setRemoving] = useState(null);
+  // the plan being deleted, kept while its pop-up closes (so its words don't change as it fades)
+  const [removing, setRemoving] = useState({ open: false, plan: null });
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
   const say = (message) => setToast({ message });
-  const fail = (er) => say(errorsFrom(er).general || "That didn’t work. Please try again.");
+  const fail = (er) => say(errorText(er));
   const refresh = () => utils.provider.plans.list.invalidate();
 
   useEffect(() => {
@@ -41,19 +50,34 @@ export default function ProviderPackages() {
     const s = getQuery("show");
     if (SHOW.some((x) => x.value === s)) setShow(s);
   }, []);
+  // a link to one plan (/plans?plan=<id>, from a course's prices in the admin) opens it once the plans have loaded: an archived
+  // plan with the archive shown; one that isn't this provider's (or no longer exists) opens nothing
+  const linked = query.data && getQuery("plan");
+  useEffect(() => {
+    if (!linked) return;
+    const p = query.data.find((x) => x.id === linked);
+    if (p && edit) {
+      setEditor({ open: true, plan: p });
+    } else setQuery("plan", "");
+  }, [linked]); // eslint-disable-line react-hooks/exhaustive-deps -- once per link
+  const closeEditor = () => {
+    setEditor((x) => ({ ...x, open: false }));
+    if (getQuery("plan")) setQuery("plan", "");
+  };
   if (query.isError) return <ErrorState title="We couldn't load your price plans." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
   if (!query.data) return <Loading rows={3} />;
 
   const plans = query.data;
   const needle = q.trim().toLowerCase();
-  const list = plans.filter((p) => !needle || p.name.toLowerCase().includes(needle)).filter((p) => (show === "all" ? true : show === "archive" ? p.archived : !p.archived));
-  const filtered = Boolean(needle || show);
+  const list = plans.filter((p) => !needle || p.name.toLowerCase().includes(needle)).filter((p) => (show === "archive" ? p.archived : show === "active" ? !p.archived : true));
   const setParam = (k, setter) => (v) => { setter(v); setQuery(k, k === "q" ? v.trim() : v); };
   const clear = () => { setQ(""); setShow(""); ["q", "show"].forEach((k) => setQuery(k, "")); };
   const create = () => setEditor({ open: true, plan: null });
-  // any date that has used it (past ones keep it) or a self-paced course on it: archived, not deleted (as the API decides)
-  const inUse = Boolean(removing && (removing.used.ever || removing.used.courses));
-  const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={() => setEditor((x) => ({ ...x, open: false }))} onSaved={() => say("Plan saved")} />;
+  // Delete is offered only for a plan nothing has ever used (as the API decides): one any date has used (past ones keep it) or a
+  // self-paced course is on is archived instead, as everywhere in the workspace a delete shows only where it can work
+  const deletable = (p) => !p.used.ever && !p.used.courses;
+  const closeRemoving = () => setRemoving((r) => ({ ...r, open: false }));
+  const editor_ = <PackageEditor open={editor.open} plan={editor.plan} onClose={closeEditor} onSaved={() => say("Plan saved")} />;
 
   if (!plans.length) {
     return (
@@ -68,10 +92,9 @@ export default function ProviderPackages() {
   return (
     <div className="rt-acc__stack">
       <div className="rt-adm-toolbar">
-        <Search value={q} onChange={setParam("q", setQ)} label="Search your price plans" />
+        <Search value={q} onChange={setParam("q", setQ)} label={staff ? "Search price plans" : "Search your price plans"} />
         <div className="rt-adm-toolbar__end">
           <ToolSelect id="rt-plan-show" label="Show" value={show} onChange={setParam("show", setShow)} options={SHOW} />
-          {filtered && <button type="button" className="rt-cd__link" onClick={clear}>Clear filters</button>}
           {edit && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}
         </div>
       </div>
@@ -80,11 +103,14 @@ export default function ProviderPackages() {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table rt-pws-pkgs">
+            <ColWidths widths={edit ? ["27%", "33%", "21%", null, "64px"] : ["27%", "33%", "21%", null]} />
             <thead>
               <tr>
                 <th scope="col">Plan</th>
-                <th scope="col">Packages</th>
-                <th scope="col"><span className="rt-sr">Actions</span></th>
+                <th scope="col">Used on</th>
+                <th scope="col">Prices</th>
+                <th scope="col">Status</th>
+                {edit && <th scope="col" className="-act"><span className="rt-sr">Actions</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -93,22 +119,21 @@ export default function ProviderPackages() {
                   <tr key={p.id}>
                     <td data-label="Plan">
                       {edit ? <button type="button" className="rt-pws-pkgs__name" onClick={() => setEditor({ open: true, plan: p })}>{p.name}</button> : <strong>{p.name}</strong>}
-                      <small className="rt-adm-muted">{p.archived ? "Archived · " : ""}{usedText(p.used)}</small>
+                      <small className="rt-adm-muted">{p.tiers.length} packages: {p.tiers.map((t) => t.name).join(", ")}</small>
                     </td>
-                    <td data-label="Packages">
-                      <ul className="rt-pws-pkgs__tiers">
-                        {p.tiers.map((t) => <li key={t.name}><span>{t.name}</span> <b className="rt-pws-money__num">{formatPrice(t.pricePence / 100)}</b></li>)}
-                      </ul>
-                    </td>
-                    <td data-label="Actions">
-                      {edit && (
+                    <td data-label="Used on">{usedText(p.used)}</td>
+                    <td data-label="Prices" className="-prices">{priceRange(p.tiers)}</td>
+                    {/* can it be picked for dates (Active) or not (Archived), last before the menu as in the other tables */}
+                    <td data-label="Status">{p.archived ? <Pill tone="muted">Archived</Pill> : <Pill tone="ok">Active</Pill>}</td>
+                    {edit && (
+                    <td data-label="Actions" className="-act">
                         <RowMenu label={`Actions for ${p.name}`} items={[
                           { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
-                          { label: p.archived ? "Use again" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} can be chosen again` : `${p.name} archived`); }, onError: fail }) },
-                          { label: "Delete", onClick: () => setRemoving(p) },
+                          { label: p.archived ? "Restore" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} restored` : `${p.name} archived`); }, onError: fail }) },
+                          ...(deletable(p) ? [{ label: "Delete", danger: true, onClick: () => setRemoving({ open: true, plan: p }) }] : []),
                         ]} />
-                      )}
                     </td>
+                    )}
                   </tr>
                 );
               })}
@@ -116,21 +141,14 @@ export default function ProviderPackages() {
           </table>
         </div>
       ) : (
-        // every plan archived, nothing searched: say so and open the archive, rather than "clear filters" with none set
-        filtered ? (
-          <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
-        ) : (
-          <EmptyState title="No plans in use" text="Your plans are archived. Use one again from the archive, or create a new one." action={{ label: "Show archived plans", onClick: () => setParam("show", setShow)("archive") }} />
-        )
+        // every plan shows unless searched or filtered, so an empty list always has a filter to clear
+        <EmptyState title="No plans match these filters." action={{ label: "Clear filters", onClick: clear }} />
       )}
-      <p className="rt-acc__note">Choose a plan on a date (its pricing: Tiered) or on a self-paced course. Archived plans stay on the dates that use them, but can&apos;t be chosen for others.</p>
 
       {editor_}
-      {/* a plan in use only says why it can't go (no "will be deleted" above it) */}
-      <Confirm danger open={Boolean(removing)} onClose={() => setRemoving(null)} title={inUse ? "This plan can’t be deleted" : "Delete this plan?"} confirmLabel="Delete plan" busy={remove.isPending}
-        text={removing && !inUse ? `${removing.name} and its packages will be deleted. This can’t be undone.` : ""}
-        blocked={inUse ? `${removing.used.dates || removing.used.courses ? usedText(removing.used) : "Past dates"} use this plan, so it can’t be deleted. Archive it instead.` : ""}
-        onConfirm={() => remove.mutate({ organisationId, planId: removing.id }, { onSuccess: () => { refresh(); say("Plan deleted"); setRemoving(null); }, onError: (er) => { fail(er); setRemoving(null); } })} />
+      <Confirm danger open={removing.open} onClose={closeRemoving} title="Delete this plan?" confirmLabel="Delete plan" busy={remove.isPending}
+        text={removing.plan ? `${removing.plan.name} and its packages will be deleted. This can’t be undone.` : ""}
+        onConfirm={() => remove.mutate({ organisationId, planId: removing.plan.id }, { onSuccess: () => { refresh(); say("Plan deleted"); closeRemoving(); }, onError: (er) => { fail(er); closeRemoving(); } })} />
       <Toast toast={toast} onDone={clearToast} />
     </div>
   );

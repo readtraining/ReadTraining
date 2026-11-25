@@ -11,7 +11,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { RowMenu, Said, Search, TableSkeleton, Tabs, useSort, SortTh, getQuery, Empty, HeaderAction, Req } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
@@ -38,7 +38,7 @@ const datesText = (c) =>
 const COUPON_SORT = { code: (x) => x.code, discount: (x) => (x.kind === "percent" ? x.value : x.value / 1000), dates: (x) => x.endsOn || x.startsOn, used: (x) => x.used, status: (x) => x.status };
 
 // Coupons (Part B, B3): the real list (API admin.coupons), by status with counts, searchable by code. With the "coupons" switch an
-// admin creates one, edits it, or turns it off and on again (never deletes it). Checkout (still demo) applies them once payments
+// admin creates one, edits it, turns it off and on again, or deletes one never used. Checkout (still demo) applies them once payments
 // are real, so "Used" stays at 0 until then.
 export default function AdminCoupons() {
   const me = useAdminAccess();
@@ -60,7 +60,7 @@ export default function AdminCoupons() {
       utils.admin.activity.list.invalidate();
       setSaid(`${c.code} deleted.`);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
   }; // the coupon waiting for "Turn off this coupon?"
   const sorter = useSort();
@@ -84,7 +84,7 @@ export default function AdminCoupons() {
       utils.admin.activity.list.invalidate();
       setSaid((c.status === "off" ? copy.turnedOn : copy.turnedOff).replace("{code}", c.code));
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
   };
   const counts = list.data?.counts;
@@ -137,7 +137,7 @@ export default function AdminCoupons() {
       ) : (
         <Empty title={copy.empty} text={copy.emptyText} action={canEdit ? { label: copy.add, onClick: () => setSheet({}) } : undefined} />
       )}
-      {rows.length > 0 && <p className="rt-acc__notice">{copy.usedNote}</p>}
+      {rows.length > 0 && <p className="rt-acc__note">{copy.usedNote}</p>}
 
       <Sheet open={Boolean(sheet)} onClose={() => setSheet(null)} title={sheet?.coupon ? copy.sheet.edit : copy.sheet.add} closeLabel="Close">
         {sheet && <CouponForm coupon={sheet.coupon} onDone={(message) => { setSheet(null); setSaid(message); }} />}

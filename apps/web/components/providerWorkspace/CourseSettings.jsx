@@ -8,7 +8,7 @@ import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspaceLinks } from "@/lib/workspaceContext";
 import { useEndpoints } from "@/lib/courseEditorApi";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import { Choice, Toggle } from "./providerParts";
@@ -160,7 +160,7 @@ export function useSendForApproval(onDone) {
       },
       onError: (e) => {
         if (e?.data?.code === "CONFLICT" && /already waiting/i.test(e.message)) return onDone(COURSE_SAID.sent);
-        onDone(errorsFrom(e).general || "We couldn't send it. Check your connection, then try again.", true);
+        onDone(errorText(e), true);
       },
       onSettled: () => utils.provider.courses.list.invalidate({ organisationId }),
     });
@@ -277,18 +277,18 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const fail = (e) => {
     // changed somewhere else since the editor loaded it: the editor says so, with a way to load the latest version
     if (onStale && e?.data?.code === "CONFLICT" && /changed somewhere else/i.test(e.message)) return onStale();
-    setError(errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0]);
+    setError(errorText(e));
   };
   const doPause = (paused) => {
     setError("");
     pause.mutate({ organisationId, courseId: course.id, paused, seen: ep?.seen() }, {
-      onSuccess: (r) => { ep?.keep(r); refresh(); setAskPause(false); onSaved(paused ? COURSE_SAID.paused : COURSE_SAID.resumed); },
+      onSuccess: (r) => { ep?.keep(r); refresh(); setAskPause(false); onSaved(paused ? COURSE_SAID.paused : COURSE_SAID.resumed, { shown: true }); },
       onError: (e) => { setAskPause(false); fail(e); },
     });
   };
   const change = (patch, message, undo) => {
     setError("");
-    update.mutate({ organisationId, courseId: course.id, ...patch, seen: ep?.seen() }, { onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(message); }, onError: (e) => { undo?.(); fail(e); } });
+    update.mutate({ organisationId, courseId: course.id, ...patch, seen: ep?.seen() }, { onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(message, { shown: true }); }, onError: (e) => { undo?.(); fail(e); } });
   };
   // Visibility moves the moment it is chosen (the save follows); the saved course takes over once it has reloaded, or a failed
   // save puts it back
@@ -312,7 +312,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const doWithdraw = () => {
     setError("");
     withdraw.mutate({ organisationId, courseId: course.id, seen: ep?.seen() }, {
-      onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(COURSE_SAID.withdrawn); },
+      onSuccess: (r) => { ep?.keep(r); refresh(); onSaved(COURSE_SAID.withdrawn, { shown: true }); },
       onError: fail,
     });
   };
@@ -428,7 +428,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
   const run = (fn, message) => {
     setError("");
     setBusy(true);
-    fn().then(() => { ep.refresh(); onSaved(message); }).catch((e) => setError(errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0])).finally(() => setBusy(false));
+    fn().then(() => { ep.refresh(); onSaved(message); }).catch((e) => setError(errorText(e))).finally(() => setBusy(false));
   };
   const close = () => {
     setConfirm(false);
@@ -444,7 +444,7 @@ export function SharedGear({ course, open, onClose, onSaved }) {
           <p className="rt-acc__note">“{course.title}” and its images will be deleted for good.</p>
           {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
           <div className="rt-adm-cellrow">
-            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ courseId: course.id }, { onSuccess: () => { utils.admin.courses.list.invalidate(); leaveWithoutAsking(() => router.push("/admin/catalogue")); }, onError: (e) => setError(errorsFrom(e).general) })}>{remove.isPending ? "Deleting…" : "Delete page"}</button>
+            <button type="button" className="button -md -outline-red-3 text-red-3" disabled={remove.isPending} onClick={() => remove.mutate({ courseId: course.id }, { onSuccess: () => { utils.admin.courses.list.invalidate(); leaveWithoutAsking(() => router.push("/admin/catalogue")); }, onError: (e) => setError(errorText(e)) })}>{remove.isPending ? "Deleting…" : "Delete page"}</button>
             <button type="button" className="button -md -outline-purple-1 text-purple-1" onClick={() => setConfirm(false)} disabled={remove.isPending}>Cancel</button>
           </div>
         </div>

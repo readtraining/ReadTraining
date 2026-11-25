@@ -107,7 +107,7 @@ export default function AdminOrder({ reference }) {
             ))}
           </ul>
         ) : <p className="rt-acc__note">{d.noRefunds}</p>}
-        <p className="rt-acc__notice rt-adm-mt">{A.recordOnly}</p>
+        {o.refunds.length > 0 && <p className="rt-acc__notice rt-adm-mt">{A.recordOnly}</p>}
       </section>
 
       {o.disputes.length > 0 && (

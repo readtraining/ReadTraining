@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { COURSE_TONE, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
-import { SortTh, useSort } from "@/components/admin/adminParts";
+import { ColWidths, SortTh, useSort } from "@/components/admin/adminParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
 import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -114,7 +114,7 @@ export default function ProviderCourses() {
   };
 
   const refresh = () => utils.provider.courses.list.invalidate({ organisationId });
-  const failed = (e) => setToast({ message: errorsFrom(e).general || Object.values(errorsFrom(e).fields)[0] || "We couldn't do that. Please try again.", error: true });
+  const failed = (e) => setToast({ message: errorText(e), error: true });
   const setPaused = (c, paused) => pause.mutate({ organisationId, courseId: c.id, paused }, {
     onSuccess: () => { setPausing(null); refresh(); setToast({ message: paused ? COURSE_SAID.paused : COURSE_SAID.resumed }); },
     onError: (e) => { setPausing(null); refresh(); failed(e); },
@@ -194,12 +194,13 @@ export default function ProviderCourses() {
 
         {list.length ? (
           <table className="rt-cx-table">
+            <ColWidths widths={["50%", "14.5%", "15%", null, "80px"]} />
             <thead>
               <tr>
                 <SortTh label="Course" col="title" sorter={sorter} />
-                <SortTh label="Status" col="status" sorter={sorter} />
                 <SortTh label="Visibility" col="visibility" sorter={sorter} />
                 <SortTh label="Next date" col="next" sorter={sorter} />
+                <SortTh label="Status" col="status" sorter={sorter} />
                 <th scope="col"><span className="rt-sr">Actions</span></th>
               </tr>
             </thead>
@@ -222,9 +223,9 @@ export default function ProviderCourses() {
                         </span>
                       </span>
                     </td>
-                    <td data-label="Status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill>{step && <small className="rt-cx-note" title={c.status === "changes" ? c.statusNote || undefined : undefined}>{step}</small>}</td>
                     <td data-label="Visibility">{pw.visibility[visibilityOf(c)]}</td>
                     <td data-label="Next date">{dates(c)}</td>
+                    <td data-label="Status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill>{step && <small className="rt-cx-note" title={c.status === "changes" ? c.statusNote || undefined : undefined}>{step}</small>}</td>
                     <td data-label="Actions" className="-act"><RowMenu label={`Actions for ${c.title}`} items={actions(c, href)} /></td>
                   </tr>
                 );

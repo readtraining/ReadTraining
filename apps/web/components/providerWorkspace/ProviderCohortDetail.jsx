@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import Toast from "@/components/courses/Toast";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState, ErrorState } from "@/components/states/States";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
-import { COHORT_TONE, Loading, Pill } from "./providerParts";
-import { COHORT_STATUSES, CancelSheet, CohortForm, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, deletable, longDay, offSale, timeRange, todayIso, tutorOptions } from "./ProviderCohorts";
+import { Loading, Pill } from "./providerParts";
+import { CancelSheet, CohortForm, CohortStatus, DeleteSheet, MoveSheet, Seats, cohortState, dayRange, deletable, longDay, timeRange, todayIso, tutorOptions } from "./ProviderCohorts";
 
 // One run of a course (Manage cohort), from the API: its course, dates and times, venue or joining link, places, price,
 // whether it takes bookings and its tutor, with Edit, Move to another course, Cancel and Delete. Learners appear under it once booking opens (a later
@@ -43,6 +43,7 @@ export default function ProviderCohortDetail({ cohortId }) {
   const [deleting, setDeleting] = useState(false);
   const [moving, setMoving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [said, setSaid] = useState(""); // bookings on or off and the tutor are on screen already, so they are only read out
   // bookings on or off shows at once, before the cohort loads again; gone again if the save fails
   const [bookableNow, setBookableNow] = useState(null);
   const k = query.data && (bookableNow === null ? query.data : { ...query.data, bookable: bookableNow });
@@ -66,16 +67,16 @@ export default function ProviderCohortDetail({ cohortId }) {
     const to = !k.bookable;
     setBookableNow(to);
     bookable.mutate({ organisationId, cohortId, bookable: to }, {
-      onSuccess: async () => { setToast({ message: to ? "Bookings turned on. Learners can book this cohort once online booking opens." : "Bookings turned off. Learners can't book this cohort now." }); await refresh(); setBookableNow(null); },
-      onError: (e) => { setBookableNow(null); setToast({ message: errorsFrom(e).general || "We couldn't change that. Please try again." }); },
+      onSuccess: async () => { setSaid(to ? "Bookings turned on" : "Bookings turned off"); await refresh(); setBookableNow(null); },
+      onError: (e) => { setBookableNow(null); setToast({ message: errorText(e) }); },
     });
   };
 
   // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
   const setTutor = (v) =>
     assignTutor.mutate({ organisationId, cohortId, tutorUserId: v || null }, {
-      onSuccess: async () => { await refresh(); setToast({ message: v ? "Tutor assigned" : "Tutor removed" }); },
-      onError: (e) => setToast({ message: errorsFrom(e).general || "We couldn't change the tutor. Please try again." }),
+      onSuccess: () => { setSaid(v ? "Tutor assigned" : "Tutor removed"); refresh(); },
+      onError: (e) => setToast({ message: errorText(e) }),
     });
   const tutors = tutorsQ.data || [];
   const today = todayIso();
@@ -85,10 +86,7 @@ export default function ProviderCohortDetail({ cohortId }) {
       <section className="rt-acc__card" aria-labelledby="rt-coh-det-h">
         <div className="rt-acc__cardhead rt-adm-cardhead">
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
-          <span className="rt-pws-coh__pills">
-            <Pill tone={COHORT_TONE[status]}>{COHORT_STATUSES[status]}</Pill>
-            {!cancelled && offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}
-          </span>
+          <CohortStatus k={k} status={status} />
         </div>
         {/* its learning option isn't taking bookings on the course: these dates can't be booked until it takes them again */}
         {!cancelled && k.optionClosed && (
@@ -144,7 +142,7 @@ export default function ProviderCohortDetail({ cohortId }) {
       <section className="rt-acc__card" aria-labelledby="rt-coh-ppl-h">
         <h2 className="rt-acc__h2" id="rt-coh-ppl-h">Students</h2>
         {/* places can already be booked (by our team, for a customer) before the learner list, register and results exist */}
-        <EmptyState inCard title={k.taken ? `${k.taken} ${k.taken === 1 ? "place" : "places"} booked.` : "No learners yet."} text={k.taken ? "The learners' names, the register, results and certificates show here once online booking opens in a later update." : "Learners booked on these dates show here, with the register, results and certificates. Online booking opens in a later update."} />
+        <EmptyState inCard title={k.taken ? `${k.taken} ${k.taken === 1 ? "place" : "places"} booked.` : "No learners yet."} text={k.taken ? "Their names, the register, results and certificates show here once online booking opens." : "Learners booked on these dates show here once online booking opens."} />
       </section>
 
       <CohortForm open={editing} onClose={() => setEditing(false)} cohort={k} onSaved={() => { setEditing(false); refresh(); setToast({ message: "Cohort saved" }); }} />
@@ -152,6 +150,7 @@ export default function ProviderCohortDetail({ cohortId }) {
       <MoveSheet cohort={moving ? k : null} onClose={() => setMoving(false)} onDone={(title) => { setMoving(false); refresh(); utils.provider.courses.list.invalidate(); setToast({ message: `Moved to ${title}` }); }} />
       <DeleteSheet cohort={deleting ? k : null} onClose={() => setDeleting(false)} onDone={() => { utils.provider.cohorts.list.invalidate(); router.push("/provider/cohorts"); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />
+      <p className="rt-sr" aria-live="polite">{said}</p>
     </div>
   );
 }

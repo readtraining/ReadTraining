@@ -37,6 +37,7 @@ import {
   activeTopics,
   seenVersion,
   setCourseImages,
+  ukToday,
 } from '../provider/courses.mjs'
 
 // Courses for the admin (Milestone 2): the approvals queue (new courses, and changes to live courses), every course in the
@@ -193,13 +194,25 @@ async function pricingView(db: typeof Db, course: { id: number; kind: string; me
       : await db.execute<{ id: string; method: string; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; plan_id: string | null; bookable: boolean; venue: string | null; city: string | null; postcode: string | null }>(sql`
           select k.id, k.method, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.plan_id, k.bookable, v.name venue, v.city, v.postcode
           from public.cohorts k left join public.venues v on v.id = k.venue_id
-          where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= current_date order by k.starts_on`)
+          where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date order by k.starts_on`)
   const planIds = [...new Set([selfPaced ? course.planId : null, ...dates.map((k) => k.plan_id)].filter((x): x is string => Boolean(x)))]
   const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
+  // a plan is the provider's, shared by its courses: editing it reaches every date still to run on it and every course using it
+  const used = planIds.length
+    ? await db.execute<{ id: string; dates: number; courses: number }>(sql`
+        select p.id,
+               (select count(*)::int from public.cohorts k where k.plan_id = p.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) dates,
+               (select count(*)::int from (select k.course_id from public.cohorts k where k.plan_id = p.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date
+                                           union select c.id from public.courses c where c.plan_id = p.id) s) courses
+        from public.price_plans p where p.id in (${sql.join(planIds.map((x) => sql`${x}::uuid`), sql`, `)})`)
+    : []
+  const usedBy = new Map(used.map((u) => [u.id, { dates: u.dates, courses: u.courses }]))
   return {
-    selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId } : null,
+    selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId, closed: course.closedMethods.includes('self-paced') } : null,
+    // the ways it is taught on dates (classroom, live online), each shown with its own dates, even when it has none yet
+    dated: course.methods.filter(isDated),
     dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, optionClosed: course.closedMethods.includes(k.method), place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
-    plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
+    plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt), used: usedBy.get(x.id) ?? { dates: 0, courses: 0 } })),
   }
 }
 
@@ -228,6 +241,14 @@ async function requesters(db: typeof Db, course: Course): Promise<{ course: Set<
     course: new Set([course.createdBy, sent?.actor, ...inReview.map((e) => e.actor)].filter((x): x is string => Boolean(x))),
     change: new Set(editors.map((e) => e.actor)),
   }
+}
+
+// Who put the course on its current pause (our team's latest pause): an admin who paused their own course puts it back live
+// themselves; one another admin paused waits for another admin.
+async function pausedBy(db: typeof Db, courseId: number): Promise<string | null> {
+  const [p] = await db.execute<{ actor: string | null }>(sql`
+    select actor_user_id actor from public.activity_log where action = 'admin.course_paused' and target_type = 'course' and target_id = ${String(courseId)} order by at desc limit 1`)
+  return p?.actor ?? null
 }
 
 // A provider's draft isn't shown to our team (not listed, and its page is "not found"): it is their unfinished work until they
@@ -359,33 +380,45 @@ export const adminCoursesRouter = createTRPCRouter({
         : []
       const children =
         course.kind === 'shared'
-          ? await ctx.db.execute<{ id: number; title: string; status: string; provider: string; upcoming: number }>(sql`
-              select c.id, c.title, c.status, o.name provider,
-                     (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming
-              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} and c.status <> 'draft' order by o.name`)
+          ? // each provider course on the page with what learners see of it there: its learning options, its dates still to run,
+            // the next one, and its lowest price open to booking (a date taking bookings, or the self-paced option's price)
+            await ctx.db.execute<{ id: number; title: string; status: string; provider: string; method: string | null; methods: string[]; closed_methods: string[]; upcoming: number; next_on: string | null; from_pence: number | null }>(sql`
+              select c.id, c.title, c.status, o.name provider, c.method, c.methods, c.closed_methods,
+                     (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming,
+                     (select min(k.starts_on)::text from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.starts_on >= current_date) next_on,
+                     least(
+                       (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable
+                          and k.starts_on > current_date and not (k.method = any(c.closed_methods))),
+                       case when 'self-paced' = any(c.methods) and not ('self-paced' = any(c.closed_methods)) then c.price_pence end
+                     )::int from_pence
+              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} and c.status <> 'draft' order by o.name, c.title`)
           : []
       const asked = await requesters(ctx.db, course)
       const ownCourse = asked.course.has(ctx.user.id)
       const ownChange = Boolean(detail.pendingChanges) && asked.change.has(ctx.user.id)
+      const pausedByYou = ownCourse && course.status === 'paused' && Boolean(course.statusNote) && (await pausedBy(ctx.db, course.id)) === ctx.user.id
       return {
         ...detail,
         provider: provider ?? null,
-        children,
+        children: children.map((x) => ({ id: x.id, title: x.title, status: x.status, provider: x.provider, method: x.method, methods: x.methods, closedMethods: x.closed_methods, upcoming: x.upcoming, nextOn: x.next_on, fromPence: x.from_pence })),
         // a shared page's guide (its Course guide step), or null
         guide: course.kind === 'shared' ? await loadGuide(ctx.db, course.id) : null,
         change: await changeView(ctx.db, detail),
         // the topic to choose when approving the course or its waiting change (topicChoice); null when there is nothing to choose
         topicChoice: course.status === 'pending' || detail.pendingChanges ? await topicChoice(ctx.db, course, course.status === 'pending' ? null : ((detail.pendingChanges?.content ?? null) as Record<string, unknown> | null)) : null,
         pricing: await pricingView(ctx.db, course),
-        // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver
+        // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver,
+        // except pausing it, and putting it back live when they paused it (pausedByYou)
         ownCourse,
         ownChange,
+        pausedByYou,
         soleApprover: (ownCourse || ownChange) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide')),
       }
     }),
 
   // A decision on a provider's course: approve it, ask for changes, approve or turn down a change to a live course, pause a live
-  // course or put it back. The person who sent the course or the change can't decide on it.
+  // course or put it back. The person who sent the course or the change can't decide on it, except pausing their own course (taking
+  // it down needs no second look: as the provider they could pause it too) and putting back live one they paused themselves.
   decide: adminProcedure('admin.panel.open')
     .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime().optional(), topic: z.string().uuid().nullable().optional() }))
     .mutation(async ({ ctx, input, path }) => {
@@ -399,7 +432,8 @@ export const adminCoursesRouter = createTRPCRouter({
       // their own course or change (they created it, sent it, or worked on the change): only as the sole approver, with a reason
       // (lib/soleApprover.mts)
       const asked = await requesters(ctx.db, course)
-      const own = (isChange ? asked.change : asked.course).has(ctx.user.id)
+      const selfServe = input.decision === 'pause' || (input.decision === 'resume' && (await pausedBy(ctx.db, course.id)) === ctx.user.id)
+      const own = !selfServe && (isChange ? asked.change : asked.course).has(ctx.user.id)
       if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, action)) : !can(ctx.actor, action)) {
         // logged as refused either way; an admin who may approve but sent this themselves is told why (a sole approver may have lost
         // the exception since the page loaded: another admin can approve now)

@@ -63,3 +63,10 @@ export function errorsFrom(error) {
           : "We couldn't save that. Check your connection and try again.";
   return { fields, general };
 }
+
+// A failed action, as one message (a toast, a notice, a pop-up's error line): the server's reason, also when it names a field (a
+// tutor who already teaches at that time), which `general` leaves to a form's own fields.
+export function errorText(error) {
+  const { fields, general } = errorsFrom(error);
+  return general || Object.values(fields)[0];
+}

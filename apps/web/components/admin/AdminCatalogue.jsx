@@ -12,7 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { waysLabel } from "@/lib/courseModes";
-import { Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction, RowMenu, Req } from "./adminParts";
+import { ColWidths, Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction, RowMenu, Req } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { ErrorState } from "@/components/states/States";
 import AdminCatalogueList from "./AdminCatalogueList";
@@ -26,8 +26,8 @@ const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.providers, ses
 
 // The catalogue: Courses (API admin.courses: the shared course pages and every provider's course, with search, kind and status
 // filters, the table with status, providers on a shared page, upcoming dates and the "From" price; 20 at a time with "Show more";
-// "New shared page" for admins with the catalogue switch), Categories and filters (the real list, AdminCatalogueList) and Packages
-// and add-ons (DEMO: the basket's Saver / Flexi packages and the first aid add-on). Tabs and filters in the address.
+// "New shared page" for admins with the catalogue switch) and Categories and filters (the real list, AdminCatalogueList). Tabs and
+// filters in the address.
 export default function AdminCatalogue() {
   const me = useAdminAccess();
   const [tab, setTab] = useState("courses");
@@ -85,8 +85,9 @@ export default function AdminCatalogue() {
           ) : rows.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table">
+                <ColWidths widths={["45%", "10%", "14%", "8.5%", null, "64px"]} />
                 <thead>
-                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><th scope="col">{cols.status}</th><SortTh label={cols.providers} col="providers" sorter={sorter} numeric right /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric right /><SortTh label={cols.from} col="from" sorter={sorter} numeric right /><th scope="col"><span className="rt-sr">Actions</span></th></tr>
+                  <tr><SortTh label={cols.course} col="course" sorter={sorter} /><SortTh label={cols.providers} col="providers" sorter={sorter} numeric right /><SortTh label={cols.sessions} col="sessions" sorter={sorter} numeric right /><SortTh label={cols.from} col="from" sorter={sorter} numeric right /><th scope="col">{cols.status}</th><th scope="col"><span className="rt-sr">Actions</span></th></tr>
                 </thead>
                 <tbody>
                   {sorter.apply(rows, COURSE_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((c) => (
@@ -95,13 +96,13 @@ export default function AdminCatalogue() {
                         <Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link>
                         <small>{c.kind === "shared" ? copy.kind.shared : [c.provider, waysLabel(c), c.parent ? `on ${c.parent}` : ""].filter(Boolean).join(" · ")}</small>
                       </td>
+                      <td data-label={cols.providers} className="rt-adm-num-cell">{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
+                      <td data-label={cols.sessions} className="rt-adm-num-cell">{c.methods?.length === 1 && c.methods[0] === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
+                      <td data-label={cols.from} className="rt-adm-num-cell">{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
                       <td data-label={cols.status}>
                         <AdminStatus kind="course" status={c.status}>{copy.statuses[c.status]}</AdminStatus>
                         {c.pendingChange && <small>Change waiting</small>}
                       </td>
-                      <td data-label={cols.providers} className="rt-adm-num-cell">{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>
-                      <td data-label={cols.sessions} className="rt-adm-num-cell">{c.methods?.length === 1 && c.methods[0] === "self-paced" ? <span className="rt-adm-muted">Any time</span> : c.upcoming}</td>
-                      <td data-label={cols.from} className="rt-adm-num-cell">{c.fromPence != null ? formatPrice(c.fromPence / 100) : <span className="rt-adm-muted">–</span>}</td>
                       <td className="rt-biz__act">
                         <RowMenu label={`Actions for ${c.title}`} items={[
                           { label: c.pendingChange || c.status === "pending" ? "Review" : "Open", href: `/admin/catalogue/${c.id}` },
@@ -181,6 +182,7 @@ function NewSharedPage({ open, onClose }) {
         </div>
         <div className="rt-field">
           <label htmlFor="rt-adm-ns-topic">Topic</label>
+          <Err k="topic" />
           <FieldSelect id="rt-adm-ns-topic" label="Topic" placeholder={topics.length ? "Choose a topic" : "No topics for this sub-category"} value={f.topic} onChange={(v) => setF({ ...f, topic: v })} options={topics} disabled={!topics.length} />
         </div>
         {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}

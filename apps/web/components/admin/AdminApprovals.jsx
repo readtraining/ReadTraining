@@ -215,7 +215,6 @@ export default function AdminApprovals() {
                   {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive(a.providerStatus)}</p>}
                   {a.note && <p className="rt-adm-item__reason"><strong>Note to the provider:</strong> {a.note}</p>}
                   {canDecide && tab === "waiting" && asksTopic(a) && !a.own && <p className="rt-acc__note">Choose its topic when you approve it.</p>}
-                  {canDecide && tab === "waiting" && a.own && <p className="rt-adm-item__reason">{a.soleApprover ? copy.ownQueueSole : copy.ownBlocked}</p>}
                 </div>
                 <div className="rt-adm-item__actions">
                   <RowMenu label={`Actions for ${a.title}`} items={[
