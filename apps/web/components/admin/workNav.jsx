@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { SIDE, SIDE_COOKIE, SIDE_WIDTH_COOKIE } from "@/lib/sideMenu";
@@ -286,6 +286,39 @@ export function useFoldedGroups(storageKey) {
   const fold = (group) => setFolded((f) => keep(f.includes(group) ? f.filter((g) => g !== group) : [...f, group]));
   const setAll = (groups) => setFolded(keep(groups));
   return [folded, fold, setAll];
+}
+
+// Keeps the sidebar where it was scrolled when another page opens. Each page draws its own sidebar, which would otherwise start
+// at the top, so an item clicked near the bottom would jump out of view. The position is kept in this tab (sessionStorage, under
+// `storageKey`), put back once the groups are folded as they were (`folded`, from useFoldedGroups), and then the current page's
+// item is scrolled into view only if it is out of sight (a page opened from a link or the address bar).
+export function useKeptScroll(sideRef, storageKey, folded) {
+  useEffect(() => {
+    const side = sideRef.current;
+    if (!side) return;
+    const save = () => {
+      try {
+        window.sessionStorage.setItem(storageKey, String(Math.round(side.scrollTop)));
+      } catch {}
+    };
+    side.addEventListener("scroll", save, { passive: true });
+    return () => side.removeEventListener("scroll", save);
+  }, [sideRef, storageKey]);
+  useLayoutEffect(() => {
+    const side = sideRef.current;
+    if (!side) return;
+    try {
+      const saved = window.sessionStorage.getItem(storageKey);
+      if (saved !== null) side.scrollTop = Number(saved) || 0;
+    } catch {}
+    const item = side.querySelector('[aria-current="page"]');
+    if (!item) return;
+    const box = side.getBoundingClientRect();
+    const at = item.getBoundingClientRect();
+    if (!at.height) return; // inside a folded group
+    if (at.top < box.top) side.scrollTop -= box.top - at.top + 12;
+    else if (at.bottom > box.bottom) side.scrollTop += at.bottom - box.bottom + 12;
+  }, [sideRef, storageKey, folded]);
 }
 
 // The top bar's menu button (shown below 992px).

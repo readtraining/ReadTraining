@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import { account } from "@/data/account";
 import { toCatalogueCourse } from "@/lib/catalogueData";
 import { api } from "@/lib/trpc/react";
-import { savedCourseIds } from "@/lib/wishlist";
+import { useSavedCourses } from "@/lib/wishlist";
 import CatalogueCourseCard from "@/components/courses/CatalogueCourseCard";
 import Toast from "@/components/courses/Toast";
 import { EmptyState } from "@/components/states/States";
@@ -13,20 +13,15 @@ const copy = account.saved;
 
 // Saved courses: the courses saved with the heart, newest first, as the course list's cards. Everything on a card works as it does
 // there: the heart removes it (it leaves this list), "Add to basket" opens the date pop-up, "More details" opens the course.
-// The courses are the live listings (API catalogue.listings); a saved course that is no longer live is left out.
+// The courses are the live listings (API catalogue.listings); a saved course that is no longer live is left out (and comes back
+// if it is live again). The list follows the hearts at once (lib/wishlist.js), so one taken off leaves it.
 export default function AccountSaved() {
   const listings = api.catalogue.listings.useQuery();
-  const [ids, setIds] = useState(null);
+  const { signedIn, ids } = useSavedCourses();
   const [toast, setToast] = useState(null);
-  const reload = useCallback(() => setIds([...savedCourseIds()].reverse()), []);
-  useEffect(reload, [reload]);
-  const notify = useCallback((t) => {
-    setToast(t);
-    reload(); // a heart taken off leaves the list
-  }, [reload]);
-  if (!ids || !listings.data) return null;
+  if (!signedIn || !listings.data) return null;
   const byId = new Map(listings.data.map((l) => [l.id, l]));
-  const courses = ids.map((id) => byId.get(id)).filter(Boolean).map(toCatalogueCourse);
+  const courses = [...ids].reverse().map((id) => byId.get(id)).filter(Boolean).map(toCatalogueCourse);
 
   return (
     <div className="rt-acc__stack">
@@ -34,7 +29,7 @@ export default function AccountSaved() {
         <>
           <p className="rt-acc__count" aria-live="polite">{courses.length} saved {courses.length === 1 ? "course" : "courses"}</p>
           <div className="rt-acc__savedlist">
-            {courses.map((c, i) => <CatalogueCourseCard key={c.id} course={c} index={i} onNotify={notify} />)}
+            {courses.map((c, i) => <CatalogueCourseCard key={c.id} course={c} index={i} onNotify={setToast} />)}
           </div>
         </>
       ) : (
