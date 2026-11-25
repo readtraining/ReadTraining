@@ -305,6 +305,9 @@ export const admin = {
       "admin.course_resumed": "Put a course live again",
       "admin.shared_course_created": "Created a shared course page",
       "admin.shared_course_updated": "Edited a shared course page",
+      "admin.shared_course_guide_saved": "Edited a shared course page's guide",
+      "admin.shared_course_guide_removed": "Removed a shared course page's guide",
+      "system.course_guide_imported": "Moved a course guide into the database",
       "admin.shared_course_image_added": "Added a picture to a shared course page",
       "admin.shared_course_images_changed": "Changed a shared course page's pictures",
       "admin.shared_course_published": "Published a shared course page",
@@ -811,7 +814,7 @@ export const admin = {
       changeNote: "What the provider changed, against the current version. Approving it makes it the current version.",
       now: "Current",
       proposed: "Proposed",
-      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
+      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", compliance: "Course type", videoUrl: "Video", units: "Syllabus", exams: "Exam and assessment", faqs: "FAQs" },
     },
     // the catalogue's one list (real, API admin.catalogue): what the site's filters and menus and the provider's course form use
     list: {

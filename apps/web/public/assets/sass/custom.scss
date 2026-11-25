@@ -977,6 +977,23 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
 .bz-acc__inner p { margin: 0; padding: 0 44px 22px 4px; font-size: 16px; line-height: 1.65; color: var(--color-light-1); max-width: 70ch; }
 @media (prefers-reduced-motion: reduce) { .bz-acc__panel, .bz-acc__icon, .bz-acc__icon i { transition: none; } }
 
+/* Terms and policies as notes (components/marketing/NotesSection.jsx): every part open, each group its own card (the provider's
+   terms, then ReadTraining's policies), one above the other at the FAQ list's reading width */
+.rt-notes { display: grid; gap: var(--rt-gap); max-width: 800px; margin-inline: auto; }
+.rt-notes__card { display: grid; gap: 16px; padding: var(--rt-pad-card); background: var(--rt-c-surface); border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); }
+.rt-notes__items { display: grid; gap: var(--rt-gap); }
+.rt-notes__h3 { margin: 0; font-size: var(--rt-app-h3); font-weight: var(--rt-heading-weight); line-height: 1.3; color: var(--rt-c-text); }
+.rt-notes__h4 { margin: 0 0 8px; font-size: var(--rt-page-h3-size); font-weight: var(--rt-heading-weight); line-height: 1.4; color: var(--rt-c-text); }
+.rt-notes__item p, .rt-notes__list { margin: 0; max-width: 70ch; font-size: var(--rt-text); line-height: 1.65; color: var(--rt-c-muted); }
+.rt-notes__item p + p, .rt-notes__item p + .rt-notes__list, .rt-notes__list + p { margin-top: 12px; }
+.rt-notes__item b { color: var(--rt-c-text); }
+.rt-notes__list { padding-left: 20px; list-style: disc; }
+.rt-notes__list li { list-style: disc; }
+.rt-notes__list li + li { margin-top: 4px; }
+/* Show more (LongBody) right under the fading text: the card's gap less the fade's own space, and only as wide as its words */
+.rt-notes__card > .rt-clamp__btn { justify-self: start; margin-top: -8px; }
+@media (max-width: 575px) { .rt-notes__card { padding: 16px; } }
+
 /* CTA band, horizontal */
 .bz-cta3 { display: flex; justify-content: space-between; align-items: center; gap: 32px; padding: 28px 32px; border-radius: 18px; background: var(--color-dark-1); color: #fff; }
 .rt-home .bz-cta3__title { font-size: 30px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: #fff; }
@@ -4836,6 +4853,7 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-demo-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--color-orange-6); border-radius: var(--rt-radius-pill); background: var(--color-orange-7); font-size: var(--rt-text-xs); font-weight: 600; white-space: nowrap; color: var(--rt-c-text); cursor: help; }
 .rt-demo-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-orange-6); }
 .rt-adm__crumbrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px; }
+.rt-adm__crumbstart { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
 .rt-adm__crumbs { display: flex; flex-wrap: wrap; align-items: center; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
 .rt-adm__crumbs li { display: inline-flex; align-items: center; min-width: 0; list-style: none; color: var(--rt-c-muted); }
 .rt-adm__crumbs li + li::before { content: "/"; margin: 0 10px; color: var(--rt-c-line); }
@@ -5128,7 +5146,7 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 /* an admin editing a provider's work from the admin (StaffEdit): one slim line, whose work, Finish */
 .rt-pws-staff { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; margin: 0 0 16px; padding: 4px 4px 4px 14px; border-radius: var(--rt-radius-control); background: var(--rt-c-brand-soft); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-acc__stack > .rt-pws-staff { margin: 0; } /* in the admin's editing area the stack spaces it */
-.rt-pws-staff span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-pws-staff span { min-width: 0; }
 .rt-pws-staff__end { flex: none; min-height: 28px; padding: 0 12px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-staff__end:hover { background: var(--rt-c-surface); } }
 .rt-pws-staff__end:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 1px; }
@@ -5533,6 +5551,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-cd__hero a.rt-sv-badge.rt-cd__saver { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .rt-cd__hero a.rt-sv-badge.rt-cd__saver i { color: var(--color-green-1); }
 .rt-cd__hero a.rt-sv-badge.rt-cd__saver:focus-visible { outline-color: var(--color-green-1); }
+/* a compliance course's badge, beside Skill Saver's in the same pill */
+.rt-cd__hero .rt-sv-badge.rt-cd__comply { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.rt-cd__hero .rt-sv-badge.rt-cd__comply i { color: var(--color-green-1); }
+.rt-cd__hero .rt-cd__saver + .rt-cd__comply { margin-left: 8px; }
 .rt-bk__saverhint { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--color-light-4); font-size: 14px; line-height: 1.5; color: var(--color-dark-1); }
 .rt-bk__saverhint .rt-sv-badge { flex: none; }
 .rt-bk__saverhint a { font-weight: 600; color: var(--color-purple-1); text-decoration: underline; }
@@ -5826,10 +5848,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
    course (its title link), and its ⋮ menu (RowMenu) holds the course's actions. */
 @container rt-pws-main (width >= 1015px) {
   .rt-cx-table { table-layout: fixed; }
-  .rt-cx-table th:nth-child(2) { width: 200px; } /* status, and what it needs next */
-  .rt-cx-table th:nth-child(3) { width: 120px; } /* visibility */
-  .rt-cx-table th:nth-child(4) { width: 150px; } /* next date */
-  .rt-cx-table th:nth-child(5) { width: 80px; }  /* the ⋮ menu: its 44px button and the cell padding */
+  /* its column widths: ColWidths in ProviderCourses.jsx (the ⋮ menu 80px: its 44px button and the cell padding) */
   .rt-cx-table th, .rt-cx-table td:not(.-act) { overflow: hidden; text-overflow: ellipsis; }
   .rt-cx-table td:not(.-act) { white-space: nowrap; }
 }
@@ -6140,9 +6159,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cset__tags button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--rt-c-brand); cursor: pointer; }
 .rt-pws-cset__tags button:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: -3px; }
 /* small controls keep their look, with a 44px tap area round them */
-.rt-pws-course-tags button, .rt-pws-cset__tags button, .rt-pws-nc__suggest .rt-pws-set__textbtn, .rt-pws-pkg__move, .rt-pws-pkg__perkbtns .rt-pws-set__textbtn, .rt-pws-pkg__state button { position: relative; }
-.rt-pws-course-tags button::after, .rt-pws-cset__tags button::after, .rt-pws-nc__suggest .rt-pws-set__textbtn::after, .rt-pws-pkg__move::after, .rt-pws-pkg__perkbtns .rt-pws-set__textbtn::after { content: ""; position: absolute; inset: -6px; }
-.rt-pws-pkg__state button::after { content: ""; position: absolute; inset: -6px 0; }
+.rt-pws-course-tags button, .rt-pws-cset__tags button, .rt-pws-nc__suggest .rt-pws-set__textbtn { position: relative; }
+.rt-pws-course-tags button::after, .rt-pws-cset__tags button::after, .rt-pws-nc__suggest .rt-pws-set__textbtn::after { content: ""; position: absolute; inset: -6px; }
 
 /* provider workspace: part C */
 /* ---- provider workspace: cohorts, cohort, calendar (ProviderCohorts, ProviderCohort, ProviderCalendar) ---- */
@@ -6185,7 +6203,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 
 /* Cohorts list: the cohort cell (date badge, course, venue, dates), places breakdown, favourite star, date filter, pages */
 .rt-pws-coh__cohort { display: flex; align-items: flex-start; gap: 12px; min-width: 240px; }
-.rt-pws-coh__pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+/* a cohort's status: its one pill, and why learners can't book it as text under it (CohortStatus) */
+.rt-pws-coh__status { display: inline-grid; justify-items: start; gap: 4px; }
+.rt-pws-coh__why { font-size: var(--rt-text-sm); line-height: 1.35; color: var(--rt-c-muted); }
 .rt-pws-coh__cohort > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rt-pws-coh__date { display: inline-flex; flex: none; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 52px; border-radius: var(--rt-radius-sm); background: var(--rt-c-brand-soft); color: var(--rt-c-brand); line-height: 1.1; }
 .rt-pws-coh__date small { font-size: var(--rt-text-xs); font-weight: 600; text-transform: uppercase; }
@@ -6357,15 +6377,23 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (prefers-reduced-motion: reduce) { .rt-pws-coh__day { transition: none; } }
 
 /* calendar */
-.rt-pws-cal__bar { align-items: center; }
+/* the calendar as one card: its bar (Today, arrows, the month; the colour key and the views) on top, then the grid or the list */
+.rt-pws-cal { overflow: hidden; background: var(--rt-c-surface); border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); }
+.rt-pws-cal__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 12px 16px; border-bottom: 1px solid var(--rt-c-line); }
+/* the filters under the bar (as the cohort list's), and what they found with Clear filters */
+.rt-pws-cal__filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-pws-cal__filters .rt-adm-select { width: auto; min-width: 180px; margin: 0; }
+.rt-pws-cal__filtersum { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 0 auto; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+@media (max-width: 575px) { .rt-pws-cal__filters .rt-adm-select { flex: 1 1 100%; } .rt-pws-cal__filtersum { margin-left: 0; } }
 .rt-pws-cal__nav-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rt-pws-cal__nav { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease; }
 /* "Today": the arrows' box, as wide as its word (faded like them while today is on screen) */
 .rt-pws-cal__nav.-text { width: auto; padding: 0 16px; font-size: var(--rt-text-sm); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__nav:not(:disabled):hover { border-color: var(--rt-c-brand); color: var(--rt-c-brand); } }
 .rt-pws-cal__nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.rt-pws-cal__nav.-text:disabled { opacity: 1; color: color-mix(in srgb, var(--rt-c-muted) 45%, var(--rt-c-surface)); cursor: default; }
 .rt-pws-cal__title { margin: 0 0 0 8px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
-.rt-pws-cal__daynum { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 6px; border: 0; border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
+.rt-pws-cal__daynum { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 5px; border: 0; border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__daynum:hover { background: var(--rt-c-brand-soft); } }
 /* cohort colours (cohort colour), from the template palette; past cohorts are grey on the calendar */
 .-c-purple { --rt-coh: var(--color-purple-1); }
@@ -6378,16 +6406,18 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* the month and week views fit the window (ProviderCalendar useRowHeight), so the page keeps only a small space under them */
 @media (min-width: 768px) { .rt-pws .rt-adm__main:has(.rt-pws-cal__grid) { padding-bottom: 24px; } }
 .rt-pws-cal__phone { display: none; }
+/* a list of days inside the calendar's card (the day view, and the month and week on a phone): each day split by a line */
+.rt-pws-cal__listday { padding: 16px; }
+.rt-pws-cal__listday + .rt-pws-cal__listday { border-top: 1px solid var(--rt-c-line); }
 .rt-pws-cal__wdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--rt-c-line); }
-.rt-pws-cal__wdays > span { padding: 10px 8px; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
+.rt-pws-cal__wdays > span { padding: 8px; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); }
 .rt-pws-cal__wdays b { font-size: var(--rt-text-sm); color: var(--rt-c-text); }
 .rt-pws-cal__wdays .is-today b { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand); color: var(--rt-c-surface); }
-.rt-pws-cal__wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 3px; min-height: 120px; padding-bottom: 6px; border-bottom: 1px solid var(--rt-c-line); }
+.rt-pws-cal__wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; min-height: 120px; padding-bottom: 4px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-pws-cal__wk:last-child { border-bottom: 0; }
 .rt-pws-cal__wk.-tall { min-height: 420px; padding-top: 6px; }
-.rt-pws-cal__day { grid-row: 1 / -1; padding: 4px 6px; border-right: 1px solid var(--rt-c-line); }
+.rt-pws-cal__day { grid-row: 1 / -1; padding: 2px 4px; border-right: 1px solid var(--rt-c-line); }
 .rt-pws-cal__day:nth-child(7) { border-right: 0; }
-.rt-pws-cal__day.-out { background: var(--rt-c-soft); }
 /* a month row too short for session bars: the date with "N sessions" beside it (it opens the day, as the date does) */
 .rt-pws-cal__day.-compact { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 2px 6px; }
 .rt-pws-cal__count { min-width: 0; max-width: 100%; padding: 2px 8px; border: 0; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font: inherit; font-size: var(--rt-text-xs); font-weight: 600; line-height: 1.4; color: var(--rt-c-brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
@@ -6396,6 +6426,7 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal__day.is-today .rt-pws-cal__daynum { background: var(--rt-c-brand); color: var(--rt-c-surface); }
 .rt-pws-cal__seg { position: relative; z-index: 1; display: flex; align-items: center; min-width: 0; margin: 0 4px; padding: 0 8px; border: 0; border-left: 3px solid var(--rt-coh, var(--rt-c-brand)); border-radius: var(--rt-radius-sm); background: color-mix(in srgb, var(--rt-coh, var(--rt-c-brand)) 16%, var(--rt-c-surface)); font: inherit; font-size: var(--rt-text-xs); line-height: 1.2; text-align: left; color: var(--rt-c-text); cursor: pointer; }
 .rt-pws-cal__seg > span[aria-hidden] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-pws-cal__segicon { flex: none; margin-right: 4px; color: var(--rt-coh, var(--rt-c-brand)); }
 .rt-pws-cal__seg.-before { margin-left: 0; border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .rt-pws-cal__seg.-after { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .rt-pws-cal__seg.-past { --rt-coh: var(--rt-c-muted); }
@@ -6664,7 +6695,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (hover: hover) and (pointer: fine) { .rt-pws-set__fmtbtn:not(:disabled):hover { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); } }
 .rt-pws-prof__body { margin: 0 0 16px; white-space: pre-line; font-size: var(--rt-text-sm); line-height: 1.7; color: var(--rt-c-text); }
 .rt-pws-prof__body:last-child { margin-bottom: 0; }
-@media (max-width: 575px) { .rt-pws-prof > .button { width: 100%; justify-content: center; } }
+.rt-pws-prof__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 575px) { .rt-pws-prof__actions { width: 100%; } .rt-pws-prof__actions .button { flex: 1 1 100%; justify-content: center; } }
 /* learners (ours, fields): one filter bar, the table, the profile header and booking timeline */
 .rt-lr-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -8px; }
 .rt-lr-count p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
@@ -6891,10 +6923,10 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__sheet .rt-dd__panel { width: 1040px; }
 .rt-pws-pkg__h3 { margin: 0; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-pkg__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-/* 2, 3 or 4 packages side by side on wide screens (4 go two by two below 1200px); one under another on phones */
-@media (min-width: 768px) { .rt-pws-pkg__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+/* 2 or 3 packages side by side on wide screens, 4 two by two (the pop-up is at most 1040px: four across leaves each too narrow
+   for its fields); one under another on phones */
+@media (min-width: 768px) { .rt-pws-pkg__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
 @media (min-width: 992px) { .rt-pws-pkg__tiers.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 1200px) { .rt-pws-pkg__tiers.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .rt-pws-pkg__tier > .rt-field, .rt-pws-pkg__tier > .rt-pws-toggle { width: 100%; margin: 0; }
 .rt-pws-pkg__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: end; }
 @media (min-width: 768px) { .rt-pws-pkg__top { grid-template-columns: minmax(0, 1fr) auto; } }
@@ -6902,49 +6934,103 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__count legend { float: none; width: auto; margin-bottom: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-pkg__countrow { display: flex; gap: 8px; }
 .rt-pws-pkg__countrow .rt-tr__filter { min-width: 44px; justify-content: center; }
-/* one feature: its words, an optional description, and Included / Not included with move and remove */
-.rt-pws-pkg__feature { display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--rt-radius-sm); background: var(--rt-c-soft); border-left: 3px solid var(--rt-c-success); list-style: none; }
-.rt-pws-pkg__feature.-no { border-left-color: var(--rt-c-error); }
-.rt-pws-pkg__feature .rt-field { margin: 0; }
-.rt-pws-pkg__featurebar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.rt-pws-pkg__state { display: inline-flex; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); overflow: hidden; background: var(--rt-c-surface); }
-.rt-pws-pkg__state button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 0; background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-muted); cursor: pointer; }
-.rt-pws-pkg__state button + button { border-left: 1px solid var(--rt-c-line); }
-.rt-pws-pkg__state button.is-on.-yes { background: var(--rt-c-success-soft); color: var(--rt-c-success); }
-.rt-pws-pkg__state button.is-on.-no { background: var(--rt-c-soft); color: var(--rt-c-error); }
-.rt-pws-pkg__state button:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: -3px; }
-/* the plans table: each package and its price */
+/* the plan's features: one table, a row per feature and a column per package, each cell the feature's state on that package
+   (Included, Not included, Hidden) as a button opening a menu above the pop-up; the add row at the foot */
+.rt-pws-pkg__fsec { display: grid; gap: 12px; }
+.rt-pws-pkg__fsec .rt-acc__note { margin: 4px 0 0; }
+.rt-pws-pkg__fscroll { overflow-x: auto; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
+.rt-pws-pkg__ftable { width: 100%; border-collapse: collapse; }
+.rt-pws-pkg__ftable.-n2 { min-width: 640px; }
+.rt-pws-pkg__ftable.-n3 { min-width: 820px; }
+.rt-pws-pkg__ftable.-n4 { min-width: 1000px; }
+.rt-pws-pkg__ftable th { padding: 12px 14px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-sm); font-weight: 600; text-align: center; color: var(--rt-c-text); overflow-wrap: anywhere; }
+.rt-pws-pkg__ftable th:first-child { width: 36%; text-align: left; }
+.rt-pws-pkg__ftable td { padding: 8px 10px; border-bottom: 1px solid var(--rt-c-line); vertical-align: middle; }
+.rt-pws-pkg__ftable th + th, .rt-pws-pkg__ftable td + td { border-left: 1px solid var(--rt-c-line); }
+.rt-pws-pkg__ftable tfoot td { border-bottom: 0; background: var(--rt-c-soft); }
+.rt-pws-pkg__fcell { padding-left: 14px !important; }
+.rt-pws-pkg__fcell .rt-q__err { margin: 0 0 4px; }
+.rt-pws-pkg__fline { display: flex; align-items: center; gap: 4px; }
+/* the name and description read as text and become fields on hover and focus */
+.rt-pws-pkg__fname, .rt-pws-pkg__fdesc { flex: 1 1 auto; width: 100%; min-width: 0; margin: 0; padding: 0 8px; border: 1px solid transparent; border-radius: var(--rt-radius-sm); background: none; color: var(--rt-c-text); }
+.rt-pws-pkg__fname { height: 44px; font-size: var(--rt-text-sm); font-weight: 600; }
+.rt-pws-pkg__fdesc { height: 32px; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-pws-pkg__fname:hover, .rt-pws-pkg__fdesc:hover { background: var(--rt-c-soft); }
+.rt-pws-pkg__fname:focus, .rt-pws-pkg__fdesc:focus { outline: none; border-color: var(--rt-c-brand); background: var(--rt-c-surface); box-shadow: 0 0 0 3px var(--rt-c-brand-soft); }
+.rt-pws-pkg__fname[aria-invalid="true"] { border-color: var(--rt-c-error); }
+/* + Add description and the remove ✕: shown on the row's hover and focus (always on a touch screen) */
+.rt-pws-pkg__fadd { display: block; min-height: 28px; margin: 0; padding: 0 8px; border: 0; background: none; font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
+.rt-pws-pkg__fdel { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: 12px; color: var(--rt-c-muted); cursor: pointer; }
+.rt-pws-pkg__fdel:hover { background: var(--rt-c-soft); color: var(--rt-c-error); }
+:is(.rt-pws-pkg__fadd, .rt-pws-pkg__fdel):focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .rt-pws-pkg__ftable tbody tr:not(:hover):not(:focus-within) :is(.rt-pws-pkg__fadd, .rt-pws-pkg__fdel) { opacity: 0; }
+}
+.rt-pws-pkg__ftable tbody tr:hover > td { background: color-mix(in srgb, var(--rt-c-soft) 60%, transparent); }
+/* the add row */
+.rt-pws-pkg__fnew { display: flex; align-items: center; gap: 8px; }
+.rt-pws-pkg__fnew input { flex: 1 1 auto; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); font-size: var(--rt-text-sm); color: var(--rt-c-text); }
+.rt-pws-pkg__fnew input:focus { outline: none; border-color: var(--rt-c-brand); box-shadow: 0 0 0 3px var(--rt-c-brand-soft); }
+.rt-pws-pkg__fnew input[aria-invalid="true"] { border-color: var(--rt-c-error); }
+.rt-pws-pkg__fnew .button { flex: none; gap: 6px; }
+.rt-pws-pkg__fnew .button span[aria-hidden] { font-size: 18px; line-height: 1; }
+/* a feature's state on a package: its mark, its word and a chevron */
+.rt-pws-pkg__scell { text-align: center; }
+.rt-pws-pkg__st { display: inline-flex; align-items: center; gap: 8px; min-width: 150px; min-height: 44px; padding: 0 10px 0 8px; border: 1px solid transparent; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 600; white-space: nowrap; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.rt-pws-pkg__st.-in { color: var(--rt-c-success); }
+.rt-pws-pkg__st.-out { color: var(--rt-c-muted); }
+.rt-pws-pkg__st.-none { font-weight: 500; color: var(--rt-c-muted); }
+.rt-pws-pkg__st:hover, .rt-pws-pkg__st[aria-expanded="true"] { border-color: var(--rt-c-line); background: var(--rt-c-surface); }
+.rt-pws-pkg__st:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-pws-pkg__stcaret { margin-left: auto; font-size: 10px; color: var(--rt-c-muted); }
+.rt-pws-pkg__stmark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--rt-radius-sm); font-size: 10px; }
+.rt-pws-pkg__st.-in .rt-pws-pkg__stmark, .rt-pws-pkg__stmark.-in { background: var(--rt-c-success-soft); color: var(--rt-c-success); }
+.rt-pws-pkg__st.-out .rt-pws-pkg__stmark, .rt-pws-pkg__stmark.-out { background: var(--rt-c-soft); color: var(--rt-c-muted); }
+.rt-pws-pkg__st.-none .rt-pws-pkg__stmark, .rt-pws-pkg__stmark.-none { border: 1.5px dashed var(--color-border-strong); }
+@media (prefers-reduced-motion: reduce) { .rt-pws-pkg__st { transition: none; } }
+/* its menu: a layer above the pop-up, under the button (PackageEditor's StatePicker places it) */
+.rt-rowmenu__list.rt-pws-pkg__stmenu { position: fixed; z-index: 2100; right: auto; width: 260px; }
+.rt-pws-pkg__stmenu :is(a, button) { align-items: flex-start; gap: 10px; min-height: 44px; padding: 8px 10px; }
+.rt-pws-pkg__stmenu button[aria-checked="true"] { background: var(--rt-c-brand-soft); }
+.rt-pws-pkg__stmenu b { display: block; font-weight: 600; }
+.rt-pws-pkg__stmenu small { display: block; font-size: var(--rt-text-xs); font-weight: 400; color: var(--rt-c-muted); }
+/* Edit / Learner preview, beside the pop-up's title */
+.rt-pws-pkg__view { flex: none; align-self: center; }
+.rt-pws-pkg__view .rt-tr__filter { min-width: 0; padding: 0 14px; }
+.rt-pws-pkg__preview { display: grid; gap: 14px; }
+.rt-pws-pkg__preview .rt-pk__note { margin: 0; }
+/* the plans table: the plan (its packages under it), what uses it, its prices, its status and the ⋯ menu (widths: ColWidths) */
+.rt-pws-pkgs td.-prices { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rt-pws-pkgs td.-act { text-align: right; }
+/* a course overview's Packages tab: each package and its price */
 .rt-pws-pkgs__tiers { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
 .rt-pws-pkgs__tiers li { display: flex; justify-content: space-between; gap: 12px; max-width: 240px; list-style: none; }
-.rt-pws-pkg__tier { display: grid; justify-items: start; gap: 12px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
+.rt-pws-pkg__tier { display: grid; align-content: start; justify-items: start; gap: 12px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
+/* packages side by side keep their rows level: each package's 6 parts (heading, name, prices, the price line, tagline, Most popular)
+   share the row of the packages beside it, so a line that wraps or a message in one moves the others with it */
+@supports (grid-template-rows: subgrid) {
+  .rt-pws-pkg__tier { grid-row: span 6; grid-template-rows: subgrid; row-gap: 12px; align-items: start; } /* level rows, never stretched parts */
+}
 .rt-pws-pkg__tier.-popular { border-color: var(--rt-c-brand); box-shadow: 0 0 0 1px var(--rt-c-brand); }
-.rt-pws-pkg__tierhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.rt-pws-pkg__tierhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 30px; } /* the badge's height, so a package with Most popular lines up with the others */
 .rt-pws-pkg__badge { padding: 3px 10px; border-radius: var(--rt-radius-pill); background: var(--rt-c-brand-soft); font-size: var(--rt-text-xs); font-weight: 600; color: var(--rt-c-brand); }
 .rt-pws-pkg__money { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; width: 100%; }
 .rt-pws-pkg__save { min-height: 18px; margin: -4px 0 0; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
-.rt-pws-pkg__perkbtns { display: inline-flex; gap: 12px; }
-.rt-pws-pkg__perkbtns .rt-pws-set__textbtn { min-height: 32px; font-size: var(--rt-text-xs); }
-.rt-pws-pkg__move { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; }
-.rt-pws-pkg__move:disabled { opacity: 0.4; cursor: not-allowed; }
-.rt-pws-pkg__move:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 /* pricing plans table */
 .rt-pws-pkgs__name { display: block; min-height: 24px; padding: 0; border: 0; background: none; font-weight: 600; color: var(--rt-c-text); text-align: left; cursor: pointer; }
 .rt-pws-pkgs__name:hover { color: var(--rt-c-brand); text-decoration: underline; text-underline-offset: 3px; }
 .rt-pws-pkgs small { display: block; margin-top: 2px; }
-.rt-pws-pkg__itemset { display: grid; justify-items: start; gap: 12px; margin: 0; padding: 0; border: 0; }
-.rt-pws-pkg__itemset legend { float: none; width: auto; margin-bottom: 4px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
-.rt-pws-pkg__itemrows { display: grid; gap: 12px; width: 100%; margin: 0; padding: 0; list-style: none; }
 /* packages list */
 /* end provider workspace: Settings */
 /* hidden file inputs inside fields keep the screen-reader-only size (.rt-field sets inputs to full width) */
-:is(.rt-pws, .rt-dd) .rt-field input.rt-sr { width: 1px; height: 1px; padding: 0; }
+:is(.rt-adm, .rt-dd) .rt-field input.rt-sr { width: 1px; height: 1px; padding: 0; }
 /* .rt-field styles every input as a 52px text box: keep radios, checkboxes and switches inside fields at their own size, in the
-   workspace and in its pop-ups (rendered outside .rt-pws) */
-:is(.rt-pws, .rt-dd) .rt-field input:is(.rt-fp__radio, .rt-fp__check) { flex: none; width: 18px; height: 18px; padding: 0; border: 1.5px solid var(--fp-border-strong, var(--color-border-strong)); background: var(--fp-surface, var(--rt-c-surface)); }
-:is(.rt-pws, .rt-dd) .rt-field input.rt-fp__radio { border-radius: 50%; }
-:is(.rt-pws, .rt-dd) .rt-field input.rt-fp__check { border-radius: 4px; }
-:is(.rt-pws, .rt-dd) .rt-field input:is(.rt-fp__radio, .rt-fp__check):checked { border-color: var(--fp-brand, var(--rt-c-brand)); background: var(--fp-brand, var(--rt-c-brand)); }
-:is(.rt-pws, .rt-dd) .rt-field input.rt-pws-toggle__input { width: 1px; height: 1px; padding: 0; }
+   provider workspace and the admin (both .rt-adm, the provider editor runs in both) and in their pop-ups (rendered outside) */
+:is(.rt-adm, .rt-dd) .rt-field input:is(.rt-fp__radio, .rt-fp__check) { flex: none; width: 18px; height: 18px; padding: 0; border: 1.5px solid var(--fp-border-strong, var(--color-border-strong)); background: var(--fp-surface, var(--rt-c-surface)); }
+:is(.rt-adm, .rt-dd) .rt-field input.rt-fp__radio { border-radius: 50%; }
+:is(.rt-adm, .rt-dd) .rt-field input.rt-fp__check { border-radius: 4px; }
+:is(.rt-adm, .rt-dd) .rt-field input:is(.rt-fp__radio, .rt-fp__check):checked { border-color: var(--fp-brand, var(--rt-c-brand)); background: var(--fp-brand, var(--rt-c-brand)); }
+:is(.rt-adm, .rt-dd) .rt-field input.rt-pws-toggle__input { width: 1px; height: 1px; padding: 0; }
 /* the large provider pop-ups (create / edit cohort, pricing plan) open below the 64px top bar instead of over it */
 @media (min-width: 768px) {
   .rt-dd:is(.rt-pws-coh__sheet, .rt-pws-pkg__sheet) { padding: 88px 0 24px; }
@@ -7081,7 +7167,7 @@ body.rt-pws-open .rt-dd .button.-outline-purple-1:disabled { background-color: t
 /* the editor's column is already a readable width: its fields fill it, so every right edge lines up */
 .rt-pws .rt-pws-ce__main .rt-field { max-width: none; }
 /* Mode of study's choice cards: one height in a row */
-.rt-pws .rt-pws-optcards__row { align-items: stretch; }
+.rt-adm .rt-pws-optcards__row { align-items: stretch; }
 /* images: the picture, its ALT text and its actions in one row */
 .rt-pws-course-mediahead { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 /* each step's status under its name (12px, the label size); one still to do in the text colour */
@@ -7351,9 +7437,18 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-adm-widesheet .rt-dd__panel { max-width: 860px; }
 /* Prices and packages on the admin's course review (AdminCoursePrices): the dates and their prices, then each price plan's packages
    side by side, as learners compare them; one under another on phones */
-.rt-adm-cp__tablewrap { margin: 12px 0 0; } /* the admin table reaches the card's edges, as in every card */
-.rt-adm-cp__table td small { white-space: nowrap; }
+/* one part for each way the course is taught (self-paced, classroom dates, live online dates), each under its own heading */
+.rt-adm-cp__way { display: grid; gap: 8px; margin-top: 20px; }
+.rt-adm-cp__tablewrap { margin: 4px 0 0; } /* the admin table reaches the card's edges, as in every card */
+.rt-adm-cp__was { display: block; font-size: var(--rt-text-sm); color: var(--rt-c-muted); white-space: nowrap; }
+.rt-adm-cp__more { justify-self: start; }
 .rt-adm-plan { display: grid; gap: 10px; margin-top: 20px; }
+/* a plan's name and what uses it, with Edit plan beside them (under them on a phone) */
+.rt-adm-plan__top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rt-adm-plan__top .rt-acc__note { margin: 4px 0 0; }
+/* the shared page editor's providers' courses: the provider and the next date under their line */
+.rt-pws-ce__provs td small { display: block; margin-top: 2px; }
+.rt-pws-ce__provs td[data-label="Dates"] small { white-space: nowrap; }
 .rt-adm-plan .rt-acc__h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
 .rt-adm-plan__tiers { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
 @media (min-width: 768px) { .rt-adm-plan__tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -7463,6 +7558,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--cd-band); font-size: 8px; color: var(--cd-muted); }
 .rt-cg__compare th:nth-child(2), .rt-cg__compare th:nth-child(3) { width: 140px; }
 .rt-cg__exams th:nth-child(2), .rt-cg__exams th:nth-child(3) { width: 96px; }
+/* a column of words (a guide's own column, such as Assessment) takes a third of the table instead of a number's width */
+.rt-cg__exams.is-words th:nth-child(2) { width: 34%; }
 .rt-cg__exams th:nth-child(4) { width: 120px; }
 .rt-cg__costs th:nth-child(2) { width: 220px; }
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
@@ -7471,7 +7568,7 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 /* the client's packages are information here (chosen when a date is booked): no pick on hover */
 .rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border); }
 .rt-cg__pkgs > li { margin: 0; list-style: none; }
-.rt-cd__staff a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
+.rt-cd__staff a.rt-cg__inline, .rt-cd a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
 .rt-cg__steps li::before { content: counter(rt-step); position: absolute; top: 0; left: 0; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--cd-brand-subtle); font-size: 14px; font-weight: 700; color: var(--cd-brand); }
@@ -7564,6 +7661,8 @@ html { scrollbar-gutter: stable; }
 .rt-pk__tag { margin: 2px 0 0; font-size: 14px; line-height: 20px; color: var(--cd-text); }
 .rt-pk__features { display: grid; gap: 8px; margin: 8px 0 4px; padding: 10px 0 0; border-top: 1px solid var(--cd-border); list-style: none; }
 .rt-pk__features li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cd-text); list-style: none; }
+/* a provider's own words (a long web address, a word with no spaces) break inside the card instead of running out of it */
+.rt-pk__name, .rt-pk__tag, .rt-pk__features li, .rt-adm-plan__features li, .rt-adm-plan__head strong, .rt-adm-plan .rt-acc__note, .rt-pws-pkg__h3 { overflow-wrap: anywhere; }
 .rt-pk__features li.-no { color: var(--cd-muted); }
 .rt-pk__features small { display: block; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
 .rt-pk__mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; font-size: 8px; background: var(--color-purple-3); color: var(--color-purple-1); } /* the page's tick (.rt-cd__check) */
@@ -7772,8 +7871,9 @@ html { scrollbar-gutter: stable; }
 .rt-adm--platform .rt-demo-tag { padding: 1px 10px; line-height: 18px; }
 /* N6: a notice is always the full width of its column */
 .rt-adm--platform .rt-acc__notice { align-self: stretch; }
-/* G7: the page content stops growing on wide screens */
-.rt-adm--platform .rt-adm__main > * { max-width: 1440px; }
+/* G7: the page content stops growing on wide screens, and sits centred beside the menu, with the same room left and right (as the
+   provider workspace); on a laptop it fills the space and nothing changes */
+@media (min-width: 992px) { .rt-adm--platform .rt-adm__main { padding-inline: max(32px, calc((100% - 1440px) / 2)); } }
 /* G8, G9, N3: one header height on desktop (tabs start at the same place on every page) and the main action stays at the top
    right beside the title instead of dropping under the description */
 @media (min-width: 992px) {
@@ -7809,6 +7909,11 @@ html { scrollbar-gutter: stable; }
 }
 /* N9: a cell's lines stay left aligned (numbers stay right) */
 @media (min-width: 576px) { .rt-adm--platform .rt-adm-table td { text-align: left; } .rt-adm--platform .rt-adm-table td.rt-adm-num-cell { text-align: right; } }
+/* a column after a number column (right-aligned) starts further in, so the two don't meet in the middle ("25%" against "Active") */
+@media (min-width: 576px) {
+  .rt-adm--platform .rt-adm-table th.rt-adm-num + th:not(.rt-adm-num),
+  .rt-adm--platform .rt-adm-table td.rt-adm-num-cell + td:not(.rt-adm-num-cell) { padding-left: clamp(32px, 4vw, 88px); } /* grows with the screen, as the gaps do */
+}
 /* C18, N4: form blocks inside a card are 20px apart; side-by-side fields keep their inputs level whatever their hint; a date
    field with a button beside it (Legal: Last updated + Today) is as wide as the one next to it */
 .rt-adm--platform .rt-acc__card > :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) + :is(.rt-field, .rt-adm-fees__grid, .rt-contact__pair, .rt-bk__check) { margin-top: 20px; }

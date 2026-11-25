@@ -421,6 +421,11 @@ export const courses = pgTable(
     closedMethods: text('closed_methods').array().notNull().default(sql`'{}'::text[]`),
     model: courseModel('model').notNull().default('bookings'),
     skillSaver: boolean('skill_saver').notNull().default(false),
+    // the course type: a compliance course (true) is one required by law, regulation or an employer's policy (First Aid at Work,
+    // Food Hygiene, Door Supervisor); false is learned by choice. Null until answered (courses made before the question). A
+    // provider's answer is checked by our team at approval; a shared page's is our team's own, and the one the public sees. It
+    // never decides where a course is listed (its topic does, placeOn).
+    compliance: boolean('compliance'),
     // false = only people with the link can book (the editor's "private"); listed = shown on ReadTraining's search and pages
     isPublic: boolean('is_public').notNull().default(true),
     listed: boolean('listed').notNull().default(true),
@@ -573,6 +578,23 @@ export const courseImages = pgTable(
     alt: text('alt'),
   },
   (t) => [index('course_images_course_idx').on(t.courseId, t.position), apiOnly('course_images')],
+).enableRLS()
+
+// A shared course page's guide: the sections ReadTraining writes for it beyond a course's own fields (the course at a glance,
+// packages, the steps, costs, locations, a closing call to action…), one checked document per page (its shape and rules:
+// apps/api/src/lib/courseGuide.mts). Staff edit it in the shared page editor's Course guide step, with no approval; the page and
+// the provider courses on it show it. A page without one shows only its own fields.
+export const courseGuides = pgTable(
+  'course_guides',
+  {
+    courseId: integer('course_id')
+      .primaryKey()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    content: jsonb('content').notNull(),
+    updatedAt: updatedAt(),
+    updatedBy: uuid('updated_by').references(() => authUsers.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('course_guides_updated_by_idx').on(t.updatedBy), apiOnly('course_guides')],
 ).enableRLS()
 
 // A provider's venues. lat/lng come from the postcode when the venue is saved, so search can sort by real distance.

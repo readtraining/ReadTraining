@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
+import { ColWidths, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.learners;
@@ -57,6 +57,7 @@ export default function AdminLearnerList() {
         <>
           <div className="rt-acc__card rt-biz__tablecard" aria-busy={list.isFetching}>
             <table className="rt-biz__table rt-adm-table">
+              <ColWidths widths={["27%", "14%", "14.5%", "27%", null]} />
               <thead><tr><SortTh label={c.name} col="name" sorter={s} /><SortTh label={c.joined} col="joined" sorter={s} numeric /><SortTh label={c.last} col="last" sorter={s} numeric /><th scope="col">{c.accounts}</th><th scope="col">{c.status}</th></tr></thead>
               <tbody>
                 {students.map((st) => (

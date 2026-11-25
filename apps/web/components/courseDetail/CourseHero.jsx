@@ -16,7 +16,8 @@ const CATALOGUE = CATALOGUE_HREF;
 // number of reviews, worded as ours, not the course's; left out until an admin has entered one). With reviews
 // on the page (`hasReviews`: the course's own, or a few general ones), the rating is a link down to them.
 // `heroTitle`: a course guide's heading for the hero (data/courseGuides.js); without one, the course's own name.
-export default function CourseHero({ course, hasReviews = false, heroTitle = null }) {
+// `trust`: a course guide's trust strip (short lines, shown with dots between them under the buttons).
+export default function CourseHero({ course, hasReviews = false, heroTitle = null, trust: strip = null }) {
   const subject = getSubjectLabel(course);
   const sub = getSubLabel(course);
   const lowest = course.sessions.reduce((best, s) => (!best || s.price < best.price ? s : best), null);
@@ -36,6 +37,8 @@ export default function CourseHero({ course, hasReviews = false, heroTitle = nul
 
         {/* in Skill Saver on every date, or on some (the dates pop-up and the booking card then mark which) */}
         {course.skillSaver && <SaverBadge href="/skill-saver" className="rt-cd__saver" label={course.skillSaver === "some" ? "Skill Saver on some dates" : undefined} />}
+        {/* a compliance course (our team's answer on the page): training required by law, regulation or an employer's policy */}
+        {course.compliance && <span className="rt-sv-badge rt-cd__saver rt-cd__comply" title="Training required by law, regulation or an employer's policy"><i className="icon-check" aria-hidden="true"></i>Compliance training</span>}
         <h1 className="rt-cd__title" id="rt-cd-title">{heroTitle || course.title}</h1>
         <p className="rt-cd__summary">{course.summary}</p>
 
@@ -59,6 +62,8 @@ export default function CourseHero({ course, hasReviews = false, heroTitle = nul
             <Link href={`${QUOTE_HREF}?course=${course.slug}`} className="button -md -outline-white text-white rt-cd__hteam">{TEAM.cta}</Link>
           </div>
         </div>
+
+        {strip?.length > 0 && <p className="rt-cd__htrust">{strip.join(" · ")}</p>}
 
         {trust.rating && trust.reviews && (
           <p className="rt-cd__htrust">

@@ -14,8 +14,9 @@ import FilterScrollPill from "@/components/courses/FilterScrollPill";
 // Apple's and Material's confirmation dialogs do; forms and longer pop-ups keep the ×.
 // busy: its request is running (saving, deleting): ×, Esc and the backdrop don't close it until the answer comes, so what the
 // answer does (open the new course, reload a list) still happens.
+// aside: a control in the head, beside the title (the price plan editor's Edit / Learner preview).
 export const DISCARD_MESSAGE = "Close without saving? What you typed will be lost.";
-export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, unsaved = false, noClose = false, busy = false, children }) {
+export default function Sheet({ open, onClose, title, closeLabel, className = "", fallbackFocus, unsaved = false, noClose = false, busy = false, aside = null, children }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const panelRef = useRef(null);
@@ -95,6 +96,7 @@ export default function Sheet({ open, onClose, title, closeLabel, className = ""
       <div className="rt-dd__panel" role="dialog" aria-modal="true" aria-labelledby="rt-tq-sheet-title" ref={panelRef}>
         <div className="rt-dd__head">
           <h2 id="rt-tq-sheet-title" className="rt-dd__title" tabIndex={-1}>{title}</h2>
+          {aside}
           {!noClose && <button type="button" className="rt-icon-btn" aria-label={closeLabel} onClick={close}><Icon name="close" /></button>}
         </div>
         <div className="rt-tq-sheet__body rt-pill-scroll" ref={bodyRef}>{children}</div>

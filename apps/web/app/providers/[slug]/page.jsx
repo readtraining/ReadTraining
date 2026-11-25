@@ -6,6 +6,7 @@ import HomeHelp from "@/components/home/HomeHelp";
 import HomeFooter from "@/components/home/HomeFooter";
 import MarketingHero from "@/components/marketing/MarketingHero";
 import FaqSection from "@/components/marketing/FaqSection";
+import NotesSection from "@/components/marketing/NotesSection";
 import SubjectFacts from "@/components/testPrep/subject/SubjectFacts";
 import ProviderAbout from "@/components/providers/ProviderAbout";
 import ProviderCourses from "@/components/providers/ProviderCourses";
@@ -69,10 +70,10 @@ export default async function ProviderPage(props) {
   ];
   const crumbs = [{ label: "Home", href: "/" }, { label: "Listed training providers", href: PROVIDERS_HREF }, { label: p.name }];
   const orgLd = { "@context": "https://schema.org", "@type": "EducationalOrganization", name: p.name, url: abs(p.href), description: plainText(p.about) || lead, areaServed: "GB", ...(p.socials.length ? { sameAs: p.socials.map((s) => s.url) } : {}), ...(p.city ? { address: { "@type": "PostalAddress", addressLocality: p.city, addressCountry: "GB" } } : {}), ...(p.logoUrl ? { logo: p.logoUrl } : {}) };
-  // the provider's own booking terms first (as it typed them: plain text, never links), then the policies every provider follows
+  // the provider's own booking terms first (as it typed them, with its bold words and bullet lists, never links), then the policies every provider follows
   const terms = [
-    p.cancellationPolicy && { q: "Cancellation policy", a: p.cancellationPolicy, plain: true },
-    p.bookingTerms && { q: "Booking terms", a: p.bookingTerms, plain: true },
+    p.cancellationPolicy && { q: "Cancellation and refund policy", a: p.cancellationPolicy, formatted: true },
+    p.bookingTerms && { q: "Booking terms", a: p.bookingTerms, formatted: true },
   ].filter(Boolean);
 
   return (
@@ -104,13 +105,12 @@ export default async function ProviderPage(props) {
               idPrefix="prov-faq"
             />
           )}
-          <FaqSection
+          <NotesSection
             compact
             eyebrow={d.policies.eyebrow}
             title={d.policies.title}
             text={fillName(d.policies.text, p.name)}
-            items={[...terms, ...d.policies.items]}
-            idPrefix="prov-policy"
+            groups={[{ title: fillName(d.policies.own, p.name), items: terms, long: true }, { title: d.policies.shared, items: d.policies.items }]}
           />
         </main>
         <HomeHelp />
@@ -148,7 +148,7 @@ function NewProviderPage({ provider }) {
             <EmptyState title={fillName(n.about.title, provider.name)} text={fillName(n.about.text, provider.name)} />
             <EmptyState title={n.courses.title} text={fillName(n.courses.text, provider.name)} action={n.courses.action} />
           </div>
-          <FaqSection compact eyebrow={d.policies.eyebrow} title={d.policies.title} text={fillName(d.policies.text, provider.name)} items={d.policies.items} idPrefix="prov-policy" />
+          <NotesSection compact eyebrow={d.policies.eyebrow} title={d.policies.title} text={fillName(d.policies.text, provider.name)} groups={[{ title: d.policies.shared, items: d.policies.items }]} />
         </main>
         <HomeHelp />
         <HomeFooter />

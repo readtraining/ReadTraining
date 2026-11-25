@@ -1,7 +1,7 @@
 import React from "react";
-import Link from "next/link";
 import ProviderShell from "@/components/providerWorkspace/ProviderShell";
 import ProviderOrders from "@/components/providerWorkspace/ProviderOrders";
+import { CanLink } from "@/components/providerWorkspace/providerParts";
 import { pw } from "@/data/providerWorkspace";
 import { pageMetadata } from "@/lib/seo";
 
@@ -12,7 +12,7 @@ export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, descri
 
 export default function Page() {
   return (
-    <ProviderShell demo={pw.demo.orders} current="orders" title={p.title} lead={p.lead} actions={<Link href="/provider/orders/new" className="button -md -purple-1 text-white">Create order</Link>}>
+    <ProviderShell demo={pw.demo.orders} current="orders" title={p.title} lead={p.lead} actions={<CanLink need="provider.orders.create" href="/provider/orders/new" className="button -md -purple-1 text-white">Create order</CanLink>}>
       <ProviderOrders />
     </ProviderShell>
   );

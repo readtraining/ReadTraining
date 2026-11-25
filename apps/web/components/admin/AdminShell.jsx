@@ -167,13 +167,17 @@ export default function AdminShell({ current, title, lead, actions = null, detai
         <main id="rt-adm-main" className="rt-adm__main" tabIndex={-1}>
           {detail ? (
             <div className="rt-adm__crumbrow">
-              <nav aria-label="Breadcrumb">
-                <ol className="rt-adm__crumbs">
-                  <li><Link href={page?.href ?? "/admin"}>{page?.label ?? title}</Link></li>
-                  <li aria-current="page">{detail}</li>
-                </ol>
-              </nav>
-              {demoTag}
+              <div className="rt-adm__crumbstart">
+                <nav aria-label="Breadcrumb">
+                  <ol className="rt-adm__crumbs">
+                    <li><Link href={page?.href ?? "/admin"}>{page?.label ?? title}</Link></li>
+                    <li aria-current="page">{detail}</li>
+                  </ol>
+                </nav>
+                {demoTag}
+              </div>
+              {/* a record's page has its main action here too (a provider's Price plans: Create price plan, as staff) */}
+              <div className="rt-adm__actions" id="rt-adm-actions">{actions}</div>
             </div>
           ) : (
             <div className="rt-adm__head">

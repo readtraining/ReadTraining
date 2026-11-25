@@ -370,7 +370,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
                   )}
                 </div>
               )}
-              {dated && <Link href={links.dates(course.id)} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true">{"\u00a0"}→</span></Link>}
+              {dated && can("provider.cohorts.view") && <Link href={links.dates(course.id)} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true">{"\u00a0"}→</span></Link>}
             </section>
           )}
           {course.status === "pending" && can("provider.courses.edit") && !staff && (

@@ -1,13 +1,14 @@
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
-import { and, courseRevisions, courses, eq, inArray, pricePlans, sql } from '@readtraining/db'
+import { and, courseGuides, courseRevisions, courses, eq, inArray, pricePlans, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 import type { AdminAction } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { emailOutbox } from '../../lib/email.mjs'
+import { guideProblem, guideSchema, loadGuide } from '../../lib/courseGuide.mjs'
 import { notify, ownerOf } from '../../lib/notify.mjs'
 import { OWN_REASON_ERROR, ownReasonOk, ownRequestRefused, soleApprover } from '../../lib/soleApprover.mjs'
 import { refuseRetired } from '../../lib/retired.mjs'
@@ -35,6 +36,7 @@ import {
   REVIEWED,
   seenVersion,
   setCourseImages,
+  ukToday,
 } from '../provider/courses.mjs'
 
 // Courses for the admin (Milestone 2): the approvals queue (new courses, and changes to live courses), every course in the
@@ -154,13 +156,25 @@ async function pricingView(db: typeof Db, course: { id: number; kind: string; me
       : await db.execute<{ id: string; method: string; starts_on: string; ends_on: string; price_pence: number; was_price_pence: number | null; plan_id: string | null; bookable: boolean; venue: string | null; city: string | null; postcode: string | null }>(sql`
           select k.id, k.method, k.starts_on::text, k.ends_on::text, k.price_pence, k.was_price_pence, k.plan_id, k.bookable, v.name venue, v.city, v.postcode
           from public.cohorts k left join public.venues v on v.id = k.venue_id
-          where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= current_date order by k.starts_on`)
+          where k.course_id = ${course.id} and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date order by k.starts_on`)
   const planIds = [...new Set([selfPaced ? course.planId : null, ...dates.map((k) => k.plan_id)].filter((x): x is string => Boolean(x)))]
   const plans = planIds.length ? await db.select({ id: pricePlans.id, name: pricePlans.name, tiers: pricePlans.tiers, archivedAt: pricePlans.archivedAt }).from(pricePlans).where(inArray(pricePlans.id, planIds)) : []
+  // a plan is the provider's, shared by its courses: editing it reaches every date still to run on it and every course using it
+  const used = planIds.length
+    ? await db.execute<{ id: string; dates: number; courses: number }>(sql`
+        select p.id,
+               (select count(*)::int from public.cohorts k where k.plan_id = p.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) dates,
+               (select count(*)::int from (select k.course_id from public.cohorts k where k.plan_id = p.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date
+                                           union select c.id from public.courses c where c.plan_id = p.id) s) courses
+        from public.price_plans p where p.id in (${sql.join(planIds.map((x) => sql`${x}::uuid`), sql`, `)})`)
+    : []
+  const usedBy = new Map(used.map((u) => [u.id, { dates: u.dates, courses: u.courses }]))
   return {
-    selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId } : null,
+    selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId, closed: course.closedMethods.includes('self-paced') } : null,
+    // the ways it is taught on dates (classroom, live online), each shown with its own dates, even when it has none yet
+    dated: course.methods.filter(isDated),
     dates: dates.map((k) => ({ id: k.id, method: k.method, startsOn: k.starts_on, endsOn: k.ends_on, pricePence: k.price_pence, wasPricePence: k.was_price_pence, planId: k.plan_id, bookable: k.bookable, optionClosed: course.closedMethods.includes(k.method), place: k.venue ? [k.venue, k.city, k.postcode].filter(Boolean).join(', ') : null })),
-    plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt) })),
+    plans: plans.map((x) => ({ id: x.id, name: x.name, tiers: x.tiers, archived: Boolean(x.archivedAt), used: usedBy.get(x.id) ?? { dates: 0, courses: 0 } })),
   }
 }
 
@@ -314,10 +328,18 @@ export const adminCoursesRouter = createTRPCRouter({
         : []
       const children =
         course.kind === 'shared'
-          ? await ctx.db.execute<{ id: number; title: string; status: string; provider: string; upcoming: number }>(sql`
-              select c.id, c.title, c.status, o.name provider,
-                     (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming
-              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} and c.status <> 'draft' order by o.name`)
+          ? // each provider course on the page with what learners see of it there: its learning options, its dates still to run,
+            // the next one, and its lowest price open to booking (a date taking bookings, or the self-paced option's price)
+            await ctx.db.execute<{ id: number; title: string; status: string; provider: string; method: string | null; methods: string[]; closed_methods: string[]; upcoming: number; next_on: string | null; from_pence: number | null }>(sql`
+              select c.id, c.title, c.status, o.name provider, c.method, c.methods, c.closed_methods,
+                     (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= current_date) upcoming,
+                     (select min(k.starts_on)::text from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.starts_on >= current_date) next_on,
+                     least(
+                       (select min(k.price_pence) from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.bookable
+                          and k.starts_on > current_date and not (k.method = any(c.closed_methods))),
+                       case when 'self-paced' = any(c.methods) and not ('self-paced' = any(c.closed_methods)) then c.price_pence end
+                     )::int from_pence
+              from public.courses c join public.organisations o on o.id = c.organisation_id where c.parent_id = ${course.id} and c.status <> 'draft' order by o.name, c.title`)
           : []
       const asked = await requesters(ctx.db, course)
       const ownCourse = asked.course.has(ctx.user.id)
@@ -325,7 +347,9 @@ export const adminCoursesRouter = createTRPCRouter({
       return {
         ...detail,
         provider: provider ?? null,
-        children,
+        children: children.map((x) => ({ id: x.id, title: x.title, status: x.status, provider: x.provider, method: x.method, methods: x.methods, closedMethods: x.closed_methods, upcoming: x.upcoming, nextOn: x.next_on, fromPence: x.from_pence })),
+        // a shared page's guide (its Course guide step), or null
+        guide: course.kind === 'shared' ? await loadGuide(ctx.db, course.id) : null,
         change: await changeView(ctx.db, detail),
         pricing: await pricingView(ctx.db, course),
         // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver
@@ -503,6 +527,34 @@ export const adminCoursesRouter = createTRPCRouter({
         return courseVersion(tx, course.id)
       })
       return { ok: true, pendingChange: false, version }
+    }),
+
+  // Save a shared page's guide (lib/courseGuide.mts), the Course guide step: the whole guide at once, checked; null takes it away.
+  // Staff write it, so it is live at once. It moves the page's version on, so a save over a newer one is refused, as every save.
+  saveGuide: adminProcedure('admin.catalogue.edit')
+    .input(z.object({ courseId: id, guide: z.unknown(), seen: seenVersion }))
+    .mutation(async ({ ctx, input }) => {
+      const course = await sharedPage(ctx.db, input.courseId)
+      // checked here rather than as the input, so the message names the field ("Packages › package 2: Write the package name.")
+      const parsed = input.guide == null ? null : guideSchema.safeParse(input.guide)
+      if (parsed && !parsed.success) throw bad(guideProblem(parsed.error))
+      const given = parsed?.data ?? null
+      const guide = given && Object.values(given).some((v) => v !== undefined && !(Array.isArray(v) && !v.length)) ? given : null
+      const version = await ctx.db.transaction(async (tx) => {
+        await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, course.id)).for('update')
+        await refuseIfChanged(tx, course.id, input.seen)
+        const now = new Date()
+        if (guide) {
+          await tx
+            .insert(courseGuides)
+            .values({ courseId: course.id, content: guide, updatedAt: now, updatedBy: ctx.user.id })
+            .onConflictDoUpdate({ target: courseGuides.courseId, set: { content: guide, updatedAt: now, updatedBy: ctx.user.id } })
+        } else await tx.delete(courseGuides).where(eq(courseGuides.courseId, course.id))
+        await tx.update(courses).set({ updatedAt: now }).where(eq(courses.id, course.id))
+        await logFor(ctx, course, guide ? 'admin.shared_course_guide_saved' : 'admin.shared_course_guide_removed', { sections: guide ? Object.keys(guide).filter((k) => guide[k as keyof typeof guide] !== undefined) : [] })(tx)
+        return courseVersion(tx, course.id)
+      })
+      return { ok: true, version }
     }),
 
   // Publish a shared page (once nothing required is missing), take it off the site, or put it back. Taking it off hides the

@@ -230,7 +230,7 @@ export const questionIndex = {
    "minutes": 60
   }
  },
- "sia-top-up-mock-tests": {
+ "sia-refresher-mock-tests": {
   "api-refresher-1": {
    "questions": 30,
    "minutes": 45

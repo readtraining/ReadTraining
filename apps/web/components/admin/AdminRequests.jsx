@@ -6,7 +6,7 @@ import { admin as A } from "@/data/admin";
 import { adminWork as W } from "@/data/adminWork";
 import { useAdmin } from "@/lib/admin";
 import { currentAdmin } from "@/lib/adminStore";
-import { Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty } from "./adminParts";
+import { ColWidths, Search, Tabs, formatWhen, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty } from "./adminParts";
 import { AdminStatus, AdminDue } from "./AdminStatus";
 
 const copy = W.requests;
@@ -48,8 +48,9 @@ export default function AdminRequests() {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table">
+            <ColWidths widths={["15.5%", "21.5%", "22.5%", "18%", null]} />
             <thead>
-              <tr><SortTh label={c.ref} col="when" sorter={sorter} numeric /><SortTh label={c.who} col="who" sorter={sorter} /><SortTh label={c.kind} col="kind" sorter={sorter} /><SortTh label={c.status} col="status" sorter={sorter} /><SortTh label={c.due} col="due" sorter={sorter} numeric /></tr>
+              <tr><SortTh label={c.ref} col="when" sorter={sorter} numeric /><SortTh label={c.who} col="who" sorter={sorter} /><SortTh label={c.kind} col="kind" sorter={sorter} /><SortTh label={c.due} col="due" sorter={sorter} numeric /><SortTh label={c.status} col="status" sorter={sorter} /></tr>
             </thead>
             <tbody>
               {sorter.apply(list, REQUEST_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((r) => (
@@ -57,8 +58,8 @@ export default function AdminRequests() {
                   <td data-label={c.ref}><Link href={`/admin/requests/${r.ref}`} className="rt-adm-strong">{r.ref}</Link><small>{formatWhen(r.at)}</small></td>
                   <td data-label={c.who}>{r.name}<small>{r.company || r.email}</small></td>
                   <td data-label={c.kind}>{copy.kinds[r.kind]}<small>{r.title}</small></td>
-                  <td data-label={c.status}><AdminStatus kind="request" status={r.status}>{copy.statuses[r.status]}</AdminStatus><small>{r.assignee || copy.unassigned}</small></td>
                   <td data-label={c.due}>{r.status === "new" ? <AdminDue due={r.due} now={data.now} /> : <span className="rt-adm-muted">–</span>}</td>
+                  <td data-label={c.status}><AdminStatus kind="request" status={r.status}>{copy.statuses[r.status]}</AdminStatus><small>{r.assignee || copy.unassigned}</small></td>
                 </tr>
               ))}
             </tbody>

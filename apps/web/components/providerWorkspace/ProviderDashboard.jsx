@@ -7,7 +7,7 @@ import { useMe } from "@/lib/useMe";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { ErrorState } from "@/components/states/States";
 import { COURSE_TONE, Pill } from "./providerParts";
-import { Seats, offSale, todayIso, useSchedule } from "./ProviderCohorts";
+import { Seats, todayIso, useSchedule, whyNotOnSale } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 import NavIcon from "@/components/admin/navIcons";
@@ -17,7 +17,7 @@ import Toast from "@/components/courses/Toast";
 
 // Our dashboard (everything on it opens the page it comes from), from real records only: the provider's courses
 // and dates (API provider.courses.list / provider.cohorts.list, fetched again whenever the window regains focus). Top to bottom:
-// the account's status message; the greeting with how many things there are to do and the Create order / Create cohort buttons;
+// the account's status message; the greeting with how many things there are to do and the Create cohort button;
 // the to-do list (courses our team sent back, upcoming cohorts with no tutor, unfinished drafts with their editor steps left, most
 // urgent first; each row gone once it is done, and only the rows this role may act on); the getting-set-up checklist folded to its
 // next step (ProviderChecklist compact) until every step is done; the courses by status beside the ones waiting for our team; and
@@ -100,7 +100,6 @@ export default function ProviderDashboard() {
           <p className="rt-dash__sub">{loading ? <Bar w="180px" /> : failed ? "" : todo.length ? `You have ${plural(todo.length, "thing", "things")} to do.` : "You're all caught up."}</p>
         </div>
         <div className="rt-dash__quick">
-          {access.can("provider.orders.create") && <Link href="/provider/orders/new" className="button -sm -outline-purple-1 text-purple-1">Create order</Link>}
           {access.can("provider.cohorts.edit") && access.can("provider.pricing.edit") && <Link href="/provider/cohorts?new=1" className="button -sm -purple-1 text-white">Create cohort</Link>}
         </div>
       </section>
@@ -176,8 +175,8 @@ export default function ProviderDashboard() {
                     <li key={k.id}>
                       <span className={`rt-dash__date -c-${k.method === "live-online" ? "blue" : "purple"}`} aria-hidden="true"><small>{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${k.startsOn}T00:00:00Z`))}</small><b>{Number(k.startsOn.slice(8))}</b></span>
                       <span className="rt-dash__cmeta">
-                        <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{offSale(k) && <Pill tone="warn">{offSale(k)}</Pill>}{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
-                        <small><span className="rt-dash__soon">Starts {soon(daysFrom(today, k.startsOn))}</span> · {k.venue ? k.venue.name : "Online"}{tutorName(k.tutorUserId) ? ` · ${tutorName(k.tutorUserId)}` : ""}</small>
+                        <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
+                        <small><span className="rt-dash__soon">Starts {soon(daysFrom(today, k.startsOn))}</span> · {k.venue ? k.venue.name : "Online"}{tutorName(k.tutorUserId) ? ` · ${tutorName(k.tutorUserId)}` : ""}{whyNotOnSale(k) ? ` · ${whyNotOnSale(k)}` : ""}</small>
                       </span>
                       <Seats booked={k.taken ?? 0} max={k.capacity} />
                     </li>

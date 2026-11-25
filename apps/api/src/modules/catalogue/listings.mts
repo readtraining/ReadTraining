@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { asc, courseExams, courseFaqs, courseImages, courseUnits, eq, sql } from '@readtraining/db'
 
 import type { db as Db } from '../../lib/db.mjs'
+import { loadGuide } from '../../lib/courseGuide.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
 import { loadProviderFaqs } from '../provider/faqs.mjs'
 import { publicTiers } from '../provider/plans.mjs'
@@ -176,7 +177,7 @@ const PREVIEWED = ['title', 'summary', 'description', 'audience', 'entryRequirem
 export async function loadCoursePage(db: typeof Db, slug: string, preview: CoursePreview | null = null) {
   const id = /^\d{1,9}$/.test(slug) ? Number(slug) : null
   const [c] = await db.execute<Row & { id: number; kind: 'shared' | 'provider'; parent_id: number | null; organisation_id: string | null; method: string | null; price_pence: number | null }>(sql`
-    select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.method, c.model,
+    select c.id, c.kind, c.slug, c.title, c.summary, c.description, c.audience, c.entry_requirements, c.outcomes, c.features, c.level, c.compliance, c.method, c.model,
            c.price_pence, c.skill_saver, c.video_url, c.seo_title, c.seo_description, c.seo_keywords, c.published_at, c.updated_at, c.parent_id, c.organisation_id, c.is_public, c.listed,
            (select slug from public.categories where id = c.category_id) category,
            (select slug from public.subcategories where id = c.subcategory_id) subcategory,
@@ -195,6 +196,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
   const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`, Boolean(preview) && c.kind === 'provider')
   if (!preview && c.kind === 'shared' && !offers.length) return null
   const [parent] = c.parent_id ? await db.execute<{ slug: string; title: string }>(sql`select slug, title from public.courses where id = ${c.parent_id} and status = 'live'`) : []
+  // the shared page's guide (lib/courseGuide.mts): its own, or, for a provider course on a live shared page, that page's
+  const guide = c.kind === 'shared' ? await loadGuide(db, c.id) : parent && c.parent_id ? await loadGuide(db, c.parent_id) : null
   const [provider] = c.kind === 'provider'
     ? await db.execute<{ name: string; slug: string; logo_path: string | null; headline: string | null; city: string | null; booking_terms: string | null; cancellation_policy: string | null }>(sql`
         select name, slug, logo_path, headline, city, booking_terms, cancellation_policy from public.organisations where id = ${c.organisation_id}::uuid`)
@@ -214,6 +217,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     subcategory: c.subcategory as string | null,
     topic: c.topic as string | null,
     level: c.level as string | null,
+    // the page's course type: a shared page's is our team's answer (a provider course on one sends visitors there)
+    compliance: c.compliance === true,
     videoUrl: (c.video_url as string | null) ?? null,
     seoTitle: (c.seo_title as string | null) ?? null,
     seoDescription: (c.seo_description as string | null) ?? null,
@@ -228,6 +233,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
     // the provider's own FAQs, on a provider course with its own page only (a shared page never names a provider)
     providerFaqs: c.kind === 'provider' && !parent ? await loadProviderFaqs(db, c.organisation_id as string) : [],
     parent: parent ?? null,
+    guide,
     provider: provider
       ? { name: provider.name, slug: provider.slug, logoUrl: mediaUrl(provider.logo_path), headline: provider.headline ?? '', city: provider.city ?? '', bookingTerms: provider.booking_terms ?? '', cancellationPolicy: provider.cancellation_policy ?? '' }
       : null,
