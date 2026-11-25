@@ -13,6 +13,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import Toast from "@/components/courses/Toast";
 import { COHORT_TONE, Choice, Loading, Pill, RowMenu, Search, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
+import { ColWidths } from "@/components/admin/adminParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
@@ -348,13 +349,14 @@ export default function ProviderCohorts() {
           ) : list.length ? (
             <div className="rt-acc__card rt-biz__tablecard">
               <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
+                <ColWidths widths={["38%", "23%", "9%", "12%", null, "64px"]} />
                 <thead>
                   <tr>
                     <th scope="col">Cohorts</th>
-                    <th scope="col">Status</th>
                     <th scope="col">Tutor</th>
                     <th scope="col">Places</th>
                     <th scope="col">Price</th>
+                    <th scope="col">Status</th>
                     <th scope="col"><span className="rt-sr">Actions</span></th>
                   </tr>
                 </thead>
@@ -365,9 +367,6 @@ export default function ProviderCohorts() {
                     return (
                       <tr key={k.id}>
                         <td data-label="Cohort"><CohortCell k={k} /></td>
-                        <td data-label="Status">
-                          <CohortStatus k={k} status={k.status} />
-                        </td>
                         <td data-label="Tutor">
                           {edit && !cancelled && tutors.length ? (
                             <div className="rt-field rt-adm-select -inline">
@@ -378,6 +377,9 @@ export default function ProviderCohorts() {
                         </td>
                         <td data-label="Places"><Seats booked={k.taken ?? 0} max={k.capacity} /></td>
                         <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
+                        <td data-label="Status">
+                          <CohortStatus k={k} status={k.status} />
+                        </td>
                         <td data-label="Actions" className="rt-pws-coh__end">
                           <RowMenu label={`Actions for ${name}`} items={[
                             ...(links.cohort(k.id) ? [{ label: "View", href: links.cohort(k.id) }] : []),

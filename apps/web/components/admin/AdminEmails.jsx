@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { Empty, Pager, Search, Tabs, TableSkeleton, formatWhen, useSort, SortTh, usePaging } from "./adminParts";
+import { ColWidths, Empty, Pager, Search, Tabs, TableSkeleton, formatWhen, useSort, SortTh, usePaging } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 
 const copy = A.emails;
@@ -40,6 +40,7 @@ export default function AdminEmails() {
       {rows.length ? (
       <div className="rt-acc__card rt-biz__tablecard">
         <table className="rt-biz__table rt-adm-table">
+          <ColWidths widths={["24.5%", "8%", "48.5%", null]} />
           <thead><tr><SortTh label={c.name} col="name" sorter={sorter} /><SortTh label={c.audience} col="audience" sorter={sorter} /><th scope="col">{c.trigger}</th><SortTh label={c.status} col="status" sorter={sorter} /></tr></thead>
           <tbody>
             {rows.slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((e) => (

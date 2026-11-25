@@ -69,8 +69,10 @@ export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Acto
   }
   // an admin working in a provider's workspace as staff: that provider comes first (the workspace opens on it), as one of its
   // admins within their own switches (packages/permissions, `staff`), while they still may (switch, two-step sign-in)
+  // Never over someone's own place on that provider's team: a member (its owner, say) keeps their own access, never swapped for
+  // a staff one (the workspace leaves staff access out, so they would lose their own provider); startStaffAccess refuses it too.
   const staff = actor.admin && can(actor, 'admin.providers.staff') ? await openStaffAccess(db, user.id) : null
-  if (staff) {
+  if (staff && !actor.memberships.some((m) => m.organisationId === staff.organisationId)) {
     const held = adminPermissions(actor.admin)
     actor.memberships = [
       { organisationId: staff.organisationId, type: 'provider', role: 'admin', status: 'active', organisationStatus: staff.organisationStatus, staff: { pricing: held.includes('pricing'), content: held.includes('approve'), session: staff.id } },

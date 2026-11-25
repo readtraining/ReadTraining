@@ -9,7 +9,7 @@ import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { errorText } from "@/lib/useMe";
 import { COURSE_TONE, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
-import { SortTh, useSort } from "@/components/admin/adminParts";
+import { ColWidths, SortTh, useSort } from "@/components/admin/adminParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
 import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -194,12 +194,13 @@ export default function ProviderCourses() {
 
         {list.length ? (
           <table className="rt-cx-table">
+            <ColWidths widths={["50%", "14.5%", "15%", null, "80px"]} />
             <thead>
               <tr>
                 <SortTh label="Course" col="title" sorter={sorter} />
-                <SortTh label="Status" col="status" sorter={sorter} />
                 <SortTh label="Visibility" col="visibility" sorter={sorter} />
                 <SortTh label="Next date" col="next" sorter={sorter} />
+                <SortTh label="Status" col="status" sorter={sorter} />
                 <th scope="col"><span className="rt-sr">Actions</span></th>
               </tr>
             </thead>
@@ -222,9 +223,9 @@ export default function ProviderCourses() {
                         </span>
                       </span>
                     </td>
-                    <td data-label="Status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill>{step && <small className="rt-cx-note" title={c.status === "changes" ? c.statusNote || undefined : undefined}>{step}</small>}</td>
                     <td data-label="Visibility">{pw.visibility[visibilityOf(c)]}</td>
                     <td data-label="Next date">{dates(c)}</td>
+                    <td data-label="Status"><Pill tone={COURSE_TONE[c.status]}>{pw.courseStatuses[c.status]}</Pill>{step && <small className="rt-cx-note" title={c.status === "changes" ? c.statusNote || undefined : undefined}>{step}</small>}</td>
                     <td data-label="Actions" className="-act"><RowMenu label={`Actions for ${c.title}`} items={actions(c, href)} /></td>
                   </tr>
                 );

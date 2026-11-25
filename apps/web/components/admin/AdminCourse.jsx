@@ -241,7 +241,8 @@ export default function AdminCourse({ id }) {
           {c.missing.length > 0 && <p className="rt-acc__note">Still missing: {c.missing.join("; ")}.</p>}
         </section>
 
-        <AdminCoursePrices pricing={c.pricing} />
+        {/* a plan is edited on the provider's Price plans page, as staff: the pricing switch, an active or suspended provider */}
+        <AdminCoursePrices pricing={c.pricing} planHref={me?.permissions?.includes("pricing") && c.provider && ["active", "suspended"].includes(c.provider.status) ? (id) => `/admin/providers/${c.provider.slug}/plans?plan=${id}` : null} />
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cc-h">
         <h2 className="rt-acc__h2" id="rt-adm-cc-h">The course page</h2>

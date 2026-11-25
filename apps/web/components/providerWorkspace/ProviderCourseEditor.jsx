@@ -21,7 +21,7 @@ import { formatPrice } from "@/lib/format";
 import { CourseGear, SeoPanel, SharedGear } from "./CourseSettings";
 import { GuidePanel } from "./CourseGuideEditor";
 import { CohortForm, todayIso } from "./ProviderCohorts";
-import { COURSE_TONE, CardChoice, Choice, KeepWidth, Loading, Pill, WayCards, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, CardChoice, Choice, KeepWidth, Loading, Pill, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { categoryOptions, levelOptions, methodName, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { LEARNING_OPTIONS, isClosedWay, isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
@@ -42,6 +42,8 @@ const SECTIONS = [
   { key: "seo", label: "SEO settings", optional: true },
   // a shared page's extra sections (ReadTraining's own pages only): CourseGuideEditor.jsx
   { key: "guide", label: "Course guide", optional: true },
+  // a shared page's providers' courses, to look at: their learning options, dates and prices (ReadTraining's own pages only)
+  { key: "providers", label: "Providers' dates and prices", optional: true },
 ];
 // the price step's name: the self-paced option has one price, and a course on dates is priced on each date
 const pricingLabel = (methods) => {
@@ -50,7 +52,7 @@ const pricingLabel = (methods) => {
   return own && dated ? "Prices and dates" : own ? "Price" : "Dates and prices";
 };
 // a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
-const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo", "guide"];
+const SHARED_SECTIONS = ["landing", "info", "syllabus", "faqs", "seo", "guide", "providers"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "mode", "pricing"];
 const LIMITS = { title: 60, summary: 300, feature: 70, outcome: 160 }; // a title saved longer before the 60 limit stays until changed (the API's refuseLongTitle)
 // how many of each list a course can have (the API's limits, provider/courses.mts `content`)
@@ -143,6 +145,7 @@ function sectionOk(d, course, key) {
   if (key === "pricing") return (!d.methods.includes("self-paced") || d.price !== "" || Boolean(d.planId)) && !datesNeeded(d, course).length;
   if (key === "mode") return d.methods.includes(d.method);
   if (key === "guide") return Boolean(course.guide);
+  if (key === "providers") return (course.children || []).some((x) => x.status === "live");
   return Boolean(course.seoTitle && course.seoDescription);
 }
 
@@ -303,7 +306,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   // a provider our team hasn't approved yet can open its courses but not change them (the shared permission table)
   const { status: providerStatus, can: providerCan } = useProviderAccess();
   const notApproved = !ep.admin && (providerStatus === "pending" || providerStatus === "changes_requested");
-  const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key)) : SECTIONS.filter((x) => x.key !== "guide");
+  // a page still being written has no provider courses yet (they go only on live pages), so its providers' tab comes once published
+  const sections = ep.admin ? SECTIONS.filter((x) => SHARED_SECTIONS.includes(x.key) && (x.key !== "providers" || course?.status !== "draft")) : SECTIONS.filter((x) => x.key !== "guide" && x.key !== "providers");
   const back = ep.admin ? { label: "Back to the catalogue", href: "/admin/catalogue" } : { label: "Back to courses", href: links.courses(course?.id) };
 
   useEffect(() => {
@@ -404,6 +408,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   // Optional
   const stepStatus = (x) => {
     if (x.key === "mode" && x.ok) return `${waysLabel({ ...base, closedMethods: course.closedMethods })} · ${pw.models[base.model]?.label || ""}`;
+    if (x.key === "providers") return providersStatus(course.children || []);
     if (x.ok) return "Complete";
     if (x.optional) return "Optional";
     const n = x.key === "info" ? Math.max(0, 4 - base.outcomes.length) : Object.keys(stepGaps(base, course, x.key)).length;
@@ -765,6 +770,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {tab === "faqs" && <FaqSection {...sectionProps} />}
           {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} onBookings={setOptionOpen} bookingsBusy={ep.settingOption} />}
           {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} onSaved={saved} />}
+          {ep.admin && tab === "providers" && <ProvidersSection course={course} />}
           {/* kept open (hidden) on the other sections, so SEO words typed there aren't lost and the bar's Save saves them */}
           <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-seo-h" hidden={tab !== "seo"}>
             <h2 className="rt-acc__h2" id="rt-pws-ce-seo-h">SEO settings</h2>
@@ -833,6 +839,55 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
 }
 
 // ---- shared parts ----------------------------------------------------------------------------------------------------------
+
+// ---- A shared page's providers (admin only) ------------------------------------------------------------------------------------
+
+// "2 live courses", under the tab's name
+const providersStatus = (list) => {
+  const live = list.filter((x) => x.status === "live").length;
+  return live ? `${live} live ${live === 1 ? "course" : "courses"}` : "No live courses yet";
+};
+
+// What learners book on a shared page: the providers' courses on it, each with its learning options, its dates still to run (the
+// next one) and its lowest price open to booking. A shared page has none of these of its own, so they are only shown here; each is
+// changed on its own course (Edit course there, as staff), so this tab has nothing to save.
+function ProvidersSection({ course }) {
+  const list = course.children || [];
+  return (
+    <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-prov-h">
+      <h2 className="rt-acc__h2" id="rt-pws-ce-prov-h">Providers&apos; dates and prices</h2>
+      <p className="rt-acc__note">This page has no learning options, dates or prices of its own: learners book the providers&apos; courses on it. Open a course to change its dates, prices or price plan.</p>
+      {list.length ? (
+        <div className="rt-adm-cp__tablewrap">
+          <table className="rt-biz__table rt-adm-table rt-pws-ce__provs">
+            <thead>
+              <tr>
+                <th scope="col">Course</th>
+                <th scope="col">Learning options</th>
+                <th scope="col">Dates</th>
+                <th scope="col" className="rt-adm-num">From</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((x) => (
+                <tr key={x.id}>
+                  <td data-label="Course"><Link href={`/admin/catalogue/${x.id}`} className="rt-adm-strong">{x.title}</Link><small className="rt-adm-muted">{x.provider}</small></td>
+                  <td data-label="Learning options">{waysLabel(x) || "–"}</td>
+                  <td data-label="Dates">{x.upcoming ? <>{x.upcoming} upcoming{x.nextOn && <small className="rt-adm-muted">Next: {shortDay(x.nextOn)}</small>}</> : waysOf(x).some(isDatedMethod) ? <span className="rt-adm-muted">None to come</span> : "–"}</td>
+                  <td data-label="From" className="rt-adm-num-cell">{x.fromPence != null ? formatPrice(x.fromPence / 100) : <span className="rt-adm-muted">Nothing to book</span>}</td>
+                  <td data-label="Status"><Pill tone={COURSE_TONE[x.status]}>{pw.courseStatuses[x.status]}</Pill></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="rt-acc__note">No provider courses are listed on this page yet. A provider&apos;s course goes on it when our team approves it.</p>
+      )}
+    </section>
+  );
+}
 
 function Counter({ value, max }) {
   return <span className="rt-field__hint rt-pws-course-count">{value.length} of {max}</span>;
@@ -955,7 +1010,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         </div>
         <CardChoice name="rt-pws-ce-compliance" legend={<>{pw.compliance.legend}<Req /></>} value={draft.compliance === null ? "" : draft.compliance ? "yes" : "no"}
           onChange={(v) => !full && set("compliance")(v === "yes")} options={pw.compliance.options.map((o) => ({ ...o, disabled: full }))} error={errors.compliance} />
-        <p className="rt-acc__note">{pw.compliance.hint}</p>
+        <p className="rt-acc__note">{shared ? pw.compliance.sharedHint : pw.compliance.hint}</p>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-details">Course description<Req /></label>
           <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs. Lines starting with "- " show as a list.</span>

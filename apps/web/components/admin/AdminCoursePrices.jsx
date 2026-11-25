@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { formatDateRange, formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
 import { AdminTag } from "./AdminStatus";
@@ -107,8 +108,10 @@ function DatesTable({ method, dates, planOf }) {
 // part for each way it is taught: the self-paced price (Flat, or a price plan), then each dated way's upcoming dates (classroom,
 // live online), each date with how it is priced and its price, then every plan used, in full, with what uses it. A course taught
 // several ways shows every part. Plans need no approval of their own, so this is where our team sees them. Nothing for a shared
-// page (providers set the prices on their own courses).
-export default function AdminCoursePrices({ pricing }) {
+// page (providers set the prices on their own courses). `planHref(id)`: where an admin who may change prices edits a plan (the
+// provider's Price plans page, that plan open), or none; a plan is the provider's, so it also says what else uses it.
+const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+export default function AdminCoursePrices({ pricing, planHref }) {
   if (!pricing) return null;
   const planOf = (id) => pricing.plans.find((p) => p.id === id);
   const sp = pricing.selfPaced;
@@ -142,11 +145,17 @@ export default function AdminCoursePrices({ pricing }) {
         const used = usedOn(p);
         return (
           <div key={p.id} className="rt-adm-plan">
-            <h3 className="rt-acc__h3">
-              Price plan: {p.name}
-              {p.archived && <> <AdminTag>Archived</AdminTag></>}
-            </h3>
-            {used.length > 0 && <p className="rt-acc__note">Used on: {used.join("; ")}</p>}
+            <div className="rt-adm-plan__top">
+              <div>
+                <h3 className="rt-acc__h3">
+                  Price plan: {p.name}
+                  {p.archived && <> <AdminTag>Archived</AdminTag></>}
+                </h3>
+                {used.length > 0 && <p className="rt-acc__note">Used on: {used.join("; ")}</p>}
+                <p className="rt-acc__note">The provider&apos;s plan, used on {[p.used.dates ? count(p.used.dates, "upcoming date", "upcoming dates") : "", count(p.used.courses, "course", "courses")].filter(Boolean).join(" across ")} in all. A change reaches every one.</p>
+              </div>
+              {planHref && <Link href={planHref(p.id)} className="button -sm -outline-purple-1 text-purple-1">Edit plan<span className="rt-sr"> {p.name}</span></Link>}
+            </div>
             <Packages plan={p} />
           </div>
         );
