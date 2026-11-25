@@ -5999,8 +5999,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__part + .rt-pws-ce__part { padding-top: 20px; border-top: 1px solid var(--rt-c-line); }
 /* editor: hero, review checklist */
 .rt-pws-course-herotext { flex: 1 1 360px; min-width: 0; }
-.rt-pws-course-unsaved { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-muted); }
-.rt-pws-course-unsaved.is-hidden { visibility: hidden; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button:disabled { opacity: 0.6; cursor: not-allowed; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button.-outline-purple-1:disabled:hover { background-color: transparent; border-color: var(--color-purple-1); color: var(--color-purple-1) !important; }
 :is(.rt-pws, body.rt-pws-open .rt-dd) .button.-purple-1:disabled:hover { background-color: var(--color-purple-1) !important; border-color: var(--color-purple-1); color: #fff !important; } /* keeps its place, so the bar's buttons don't move when it shows */
@@ -6116,28 +6114,34 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__progress { display: grid; gap: 6px; }
 .rt-pws-ce__progress p { margin: 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 .rt-pws-ce__steptext { display: grid; }
-/* the bar under each section: the existing card (.rt-acc__card), kept in view at the bottom of the screen; Back on the left, Save
-   and Continue on the right. Layout only: its surface, border and padding are the card's */
+/* the bar under each section: the existing card (.rt-acc__card), kept in view at the bottom of the screen; Previous on the left,
+   Save and Continue on the right. Layout only: its surface, border and padding are the card's */
 .rt-pws-ce__bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .rt-pws-cepage .rt-toast { bottom: 112px; }
 .rt-pws-ce__baractions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; margin-left: auto; }
-.rt-pws-ce__bar .rt-cd__link { display: inline-flex; align-items: center; gap: 8px; }
-/* phones: one row, Back as its arrow (its name still read out), the buttons sharing the rest; "Unsaved changes" left out, as the
-   Save button beside it says the same */
+.rt-pws-ce__back { display: inline-flex; align-items: center; gap: 8px; }
+/* phones: one row, Previous as its arrow (its name still read out), the buttons sharing the rest */
 @media (max-width: 575px) {
   .rt-pws-ce__bar { flex-wrap: nowrap; }
-  .rt-pws-ce__back { flex: none; justify-content: center; min-width: 44px; min-height: 44px; }
+  .rt-pws-ce__back { flex: none; justify-content: center; min-width: 44px; padding-left: 12px; padding-right: 12px; }
   .rt-pws-ce__backname { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .rt-pws-ce__baractions { flex: 1 1 auto; flex-wrap: nowrap; gap: 8px; }
   .rt-pws-ce__baractions .button { flex: 1 1 auto; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
-  .rt-pws-ce__baractions .rt-pws-course-unsaved { display: none; }
 }
 /* the price step's dates: how many, Create cohort and the link to them, on one row (no panel of its own) */
 .rt-pws-ce__dates { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
 .rt-pws-ce__datecount { margin: 0 auto 0 0; font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-ce__exams { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .rt-pws-ce__exam { display: grid; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); list-style: none; }
-@media (min-width: 768px) { .rt-pws-ce__exam { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; } .rt-pws-ce__exam-wide { grid-column: 1 / -1; } }
+@media (min-width: 768px) { .rt-pws-ce__exam { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; } .rt-pws-ce__exam-wide { grid-column: 1 / -1; } }
+/* an exam's pass mark: how it is marked (Percentage, Score, Pass or fail), then its number(s) beside it */
+.rt-pws-ce__pm { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.rt-pws-ce__pm > .rt-field-dd { flex: 0 1 260px; min-width: 200px; }
+.rt-pws-ce__pmunit { position: relative; display: inline-flex; flex: none; }
+.rt-pws-ce__pmunit input { width: 120px !important; padding-right: 32px !important; text-align: right; font-variant-numeric: tabular-nums; }
+.rt-pws-ce__pmunit > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: var(--rt-text-sm); color: var(--rt-c-muted); pointer-events: none; }
+.rt-pws-ce__pmscore { display: inline-flex; align-items: center; gap: 10px; flex: none; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-ce__pmscore input { width: 90px !important; text-align: right; font-variant-numeric: tabular-nums; }
 /* a shared page's optional sections in the course editor (CourseGuideEditor.jsx GuideExtras): one compact card each, its switch
    (on: on the page) with where it shows under it, the editor's Edit and Remove icon buttons, and what it holds under the switch */
 .rt-pws-extras { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
