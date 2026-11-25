@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { account } from "@/data/account";
 import { topBar } from "@/data/home";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom, useMe } from "@/lib/useMe";
+import { errorsFrom, useMe, errorText } from "@/lib/useMe";
 import { getSupabase } from "@/lib/supabase/client";
 import { PHOTO_ACCEPT, squarePhoto } from "@/lib/photo";
 import { validPostcode } from "@/lib/checkout";
@@ -216,7 +216,7 @@ function PhotoRow({ me }) {
       await utils.me.get.invalidate();
       setState({ busy: false, error: "", saved: copy.photo.removed });
     } catch (err) {
-      setState({ busy: false, error: errorsFrom(err).general, saved: "" });
+      setState({ busy: false, error: errorText(err), saved: "" });
     }
   };
 
@@ -434,7 +434,7 @@ function BusinessSection({ me }) {
       await utils.me.get.invalidate();
       router.refresh(); // the switch-account menus and the business pages follow
     } catch (err) {
-      setState({ error: errorsFrom(err).general, done: "" });
+      setState({ error: errorText(err), done: "" });
     }
   };
   return (
@@ -519,7 +519,7 @@ function CloseSection({ me }) {
       await utils.me.get.invalidate();
       setSaid(c.withdrawn);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
   };
 

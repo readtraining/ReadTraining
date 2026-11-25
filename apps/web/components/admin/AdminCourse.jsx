@@ -53,7 +53,7 @@ export default function AdminCourse({ id }) {
   useEffect(() => {
     if (!c || getQuery("do") !== "pause") return;
     setQuery("do", null);
-    if (c.kind !== "shared" && c.status === "live" && me?.permissions?.includes("approve") && (!c.ownCourse || c.soleApprover)) setAsking("pause");
+    if (c.kind !== "shared" && c.status === "live" && me?.permissions?.includes("approve")) setAsking("pause");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c?.id]);
 
@@ -74,8 +74,9 @@ export default function AdminCourse({ id }) {
     utils.admin.courses.list.invalidate();
     await utils.admin.courses.get.invalidate({ courseId }).catch(() => {});
   };
-  // a decision on the admin's own course (or its change): only as the sole approver, with a reason (API lib/soleApprover.mts)
-  const ownFor = (decision) => (decision === "approveChange" || decision === "rejectChange" ? c.ownChange : c.ownCourse);
+  // a decision on the admin's own course (or its change): only as the sole approver, with a reason (API lib/soleApprover.mts); pausing
+  // it isn't one, nor putting it back live after pausing it themselves
+  const ownFor = (decision) => (decision === "approveChange" || decision === "rejectChange" ? c.ownChange : decision === "pause" || (decision === "resume" && c.pausedByYou) ? false : c.ownCourse);
   const allowedFor = (decision) => !ownFor(decision) || c.soleApprover;
   const needsNote = (decision) => NOTE.has(decision);
   const run = async (decision, message, ownReason) => {
@@ -126,10 +127,10 @@ export default function AdminCourse({ id }) {
   };
   const busy = decide.isPending || settling;
   const sheetTitle = { approve: ap.approve, changes: ap.requestChanges, approveChange: ap.approveChange, rejectChange: ap.rejectChange, pause: ap.pause, resume: ap.resume }[asking] || "";
-  // the "you sent this yourself" notice: while their own course, or their own change, waits for a decision; and on their own
-  // published course, which they pause or put back live only as the sole approver
+  // their own course, or their own change, waiting for a decision; and their own course another admin paused: another admin decides,
+  // so a short line says why the decision buttons aren't there (the sole approver gets the buttons, and the pop-up asks for the reason)
   const own = Boolean((c.status === "pending" && c.ownCourse) || (c.pendingChanges && c.ownChange));
-  const ownPublished = !own && c.ownCourse && (c.status === "live" || (c.status === "paused" && c.statusNote));
+  const ownWhy = !canDecide || c.soleApprover ? "" : own ? ap.ownBlocked : c.ownCourse && c.status === "paused" && c.statusNote && !c.pausedByYou ? ap.ownPaused : "";
   // a course (or a change) waiting for a decision opens every section of its page: the admin reads it all before deciding
   const reviewing = c.status === "pending" || Boolean(c.pendingChanges);
   const place = [categoryName(c.category), subcategoryName(c.category, c.subcategory), topicName(c.category, c.subcategory, c.topic)].filter(Boolean).join(" › ");
@@ -157,8 +158,6 @@ export default function AdminCourse({ id }) {
           {c.parent && !c.parent.sameSubject && <p className="rt-acc__notice -warn">{d.otherSubject(c.parent.title)}</p>}
           {c.statusNote && (c.status === "changes" || c.status === "paused") && <p className="rt-adm-item__reason"><strong>{c.status === "changes" ? "Note to the provider:" : "Why it is paused:"}</strong> {c.statusNote}</p>}
           {canDecide && c.status === "pending" && !providerReady && <p className="rt-adm-item__block">{ap.providerNotActive(c.provider?.status)}</p>}
-          {canDecide && own && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownSole : ap.ownBlocked}</p>}
-          {canDecide && ownPublished && <p className={`rt-acc__notice${c.soleApprover ? " -warn" : ""}`}>{c.soleApprover ? ap.ownPublishedSole : ap.ownPublished}</p>}
           {canDecide && c.status === "paused" && !c.statusNote && <p className="rt-acc__note">{ap.providerPaused}</p>}
         </div>
         {/* only the decision waiting on this page (or Edit course when there is none); the rest is in the catalogue table's menu */}
@@ -173,6 +172,7 @@ export default function AdminCourse({ id }) {
               {c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
             </>
           ) : canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -md -purple-1 text-white">{shared ? d.edit : "Edit course"}</Link>}
+          {ownWhy && <p className="rt-adm-item__hint">{ownWhy}</p>}
         </div>
       </section>
 

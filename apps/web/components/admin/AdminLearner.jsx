@@ -11,7 +11,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, Req } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { CloseAccountSheet } from "./AdminClosures";
@@ -59,7 +59,7 @@ export default function AdminLearner({ id }) {
       URL.revokeObjectURL(url);
       changed(d.exported);
     } catch (error) {
-      setSaid(errorsFrom(error).general);
+      setSaid(errorText(error));
     }
   };
   const f = d.fields;
@@ -170,12 +170,10 @@ export default function AdminLearner({ id }) {
                 {mine ? <p className="rt-acc__notice">{d.selfNote}</p> : l.admin ? <p className="rt-acc__notice">{d.adminNote}</p> : l.status === "blocked" ? (
                   <>
                     <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setSheet("unblock")}>{d.unblock}</button>
-                    <p className="rt-acc__note">{d.unblockNote}</p>
                   </>
                 ) : (
                   <>
                     <button type="button" className="rt-cd__link rt-adm-danger" onClick={() => setSheet("block")}>{d.block}</button>
-                    <p className="rt-acc__note">{d.blockNote}</p>
                   </>
                 )}
               </div>

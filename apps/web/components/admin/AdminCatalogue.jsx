@@ -26,8 +26,8 @@ const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.providers, ses
 
 // The catalogue: Courses (API admin.courses: the shared course pages and every provider's course, with search, kind and status
 // filters, the table with status, providers on a shared page, upcoming dates and the "From" price; 20 at a time with "Show more";
-// "New shared page" for admins with the catalogue switch), Categories and filters (the real list, AdminCatalogueList) and Packages
-// and add-ons (DEMO: the basket's Saver / Flexi packages and the first aid add-on). Tabs and filters in the address.
+// "New shared page" for admins with the catalogue switch) and Categories and filters (the real list, AdminCatalogueList). Tabs and
+// filters in the address.
 export default function AdminCatalogue() {
   const me = useAdminAccess();
   const [tab, setTab] = useState("courses");
@@ -182,6 +182,7 @@ function NewSharedPage({ open, onClose }) {
         </div>
         <div className="rt-field">
           <label htmlFor="rt-adm-ns-topic">Topic</label>
+          <Err k="topic" />
           <FieldSelect id="rt-adm-ns-topic" label="Topic" placeholder={topics.length ? "Choose a topic" : "No topics for this sub-category"} value={f.topic} onChange={(v) => setF({ ...f, topic: v })} options={topics} disabled={!topics.length} />
         </div>
         {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
