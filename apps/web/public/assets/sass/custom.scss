@@ -600,6 +600,12 @@
   --rt-nav-ink-2: #3F3C52;                 /* secondary text in the menu card */
   --rt-nav-muted: #6B6880;                 /* meta lines (5.3:1 on white) */
   --rt-nav-hover: #F7F5FF;                 /* link hover */
+
+  /* the segmented control (a pill toggle: SegmentedControl in providerParts.jsx) */
+  --rt-seg-track: #F1F0F7;                 /* its light grey track */
+  --rt-seg-ink: #1E1B4B;                   /* the chosen option's text, and an option's on hover */
+  --rt-seg-muted: #5B5876;                 /* the other options' text, and the hint under it (6.6:1 on white) */
+  --rt-seg-shadow: 0 1px 3px rgba(30, 27, 75, 0.14); /* the chosen option, raised */
 }
 /* end DESIGN TOKENS */
 
@@ -5778,6 +5784,21 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-toggle__hint { margin: 0 0 0 52px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws-toggle__track, .rt-pws-toggle__track span { transition: none; } }
 /* radio choices */
+/* SEGMENTED CONTROL (SegmentedControl in providerParts.jsx): one of a few choices as a pill toggle, the chosen one raised in white */
+.rt-seg-field__legend { margin: 0 0 8px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
+.rt-seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: var(--rt-seg-track); width: fit-content; max-width: 100%; align-self: flex-start; }
+.rt-seg__opt {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--rt-seg-muted); font-size: var(--rt-text-sm); font-weight: 600; line-height: 1.2; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.rt-seg__opt:hover { color: var(--rt-seg-ink); }
+.rt-seg__opt[aria-pressed="true"] { background: var(--rt-c-surface); color: var(--rt-seg-ink); box-shadow: var(--rt-seg-shadow); }
+.rt-seg__opt:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-seg__icon { width: 16px; height: 16px; flex: none; }
+.rt-seg-field__hint { margin: 8px 0 0; font-size: var(--rt-text-sm); color: var(--rt-seg-muted); }
+@media (prefers-reduced-motion: reduce) { .rt-seg__opt { transition: none; } }
+
 .rt-pws-choice { margin: 0; padding: 0; border: 0; }
 .rt-pws-choice legend { margin-bottom: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); float: none; width: auto; }
 .rt-pws-choice legend.rt-sr { width: 1px; margin: -1px; } /* a quiet legend (Choice quietLegend) stays hidden */

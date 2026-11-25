@@ -14,7 +14,7 @@ import { useWorkspaceLinks } from "@/lib/workspaceContext";
 import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
 import { getSupabase } from "@/lib/supabase/client";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { videoEmbed } from "@/lib/catalogueData";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
@@ -97,7 +97,7 @@ export function passMarkProblem(text) {
 const STATUS_NOTES = {
   draft: "Your course is a draft. Only your team can see it.",
   changes: "Our team has asked for changes. Make them, then send your course for review again.",
-  live: "Your course is live. Changes to its wording are reviewed before they go live. Pictures, prices, dates and settings update straight away.",
+  live: "Your course is live. Wording changes are reviewed first; pictures, prices, dates and settings update straight away.",
   paused: "Your course is paused, so it isn't shown on ReadTraining. Put it back live from Course settings.",
 };
 const SHARED_NOTES = {
@@ -216,7 +216,9 @@ function stepGaps(d, course, key) {
 // (a retired learning option comes in `retiredMethods`: it is turned off in Learning options, not chosen again)
 const RETIRED_KEY = { category: "category", "sub-category": "subcategory", topic: "topic", level: "level" };
 
-// What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together).
+// What changed in the draft, as the API takes it. The catalogue place goes as one (category, sub-category and topic together); a
+// provider sends only the category and sub-category (the topic is our team's choice at approval: `access.topic` is ReadTraining's
+// own, a shared page or staff editing).
 function changes(draft, base, access) {
   const out = {};
   const keys = Object.keys(draft).filter((k) => !same(draft[k], base[k]));
@@ -231,7 +233,8 @@ function changes(draft, base, access) {
     else if (k === "price") {
       if (!draft.planId) out.pricePence = draft.price === "" ? null : Math.round(Number(draft.price) * 100);
     }
-    else if (["category", "subcategory", "topic"].includes(k)) Object.assign(out, { category: draft.category, subcategory: draft.subcategory, topic: draft.topic || null });
+    else if (k === "topic" && !access.topic) continue;
+    else if (["category", "subcategory", "topic"].includes(k)) Object.assign(out, { category: draft.category, subcategory: draft.subcategory, ...(access.topic ? { topic: draft.topic || null } : {}) });
     // the learning options and the primary one go together (the primary is always one of them)
     else if (k === "method" || k === "methods") Object.assign(out, { method: draft.method, methods: draft.methods });
     else out[k] = draft[k];
@@ -305,7 +308,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const navRef = useRef(null);
   const loadedFor = useRef(null);
   const clearToast = useCallback(() => setToast(null), []);
-  const saved = useCallback((message) => { setToast({ message }); setSaid(message); }, []);
+  // what a change did: announced to screen readers, and shown as a toast unless its result is already on screen (`shown`)
+  const saved = useCallback((message, { shown = false } = {}) => { if (!shown) setToast({ message }); setSaid(message); }, []);
   // a shared page's optional sections (its Course guide): each saved from its own pop-up, in the step for its part of the page
   const guide = useGuideForm({ ep, course, onSaved: saved });
   // in the admin, the editor's pop-ups take the provider workspace's form look (as StaffEdit's do)
@@ -349,7 +353,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       const message = made === "copied"
         ? "This is a copy, saved as a draft without its dates. Change what's different, then send it for approval."
         : "Draft created. Fill in each section, then send it for approval.";
-      setToast({ message });
+      if (made === "copied") setToast({ message });
       setSaid(message);
       setQuery(made, "");
     }
@@ -581,7 +585,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
         return leaveWithoutAsking(() => router.push("/provider/courses?sent=1"));
       }
       if (ep.stale(error)) return;
-      const message = errorsFrom(error).general || "We couldn't send it. Check your connection, then try again.";
+      const message = errorText(error);
       setSubmitError(message);
       setSaid(message);
       requestAnimationFrame(() => needRef.current?.focus());
@@ -602,7 +606,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       setToast({ message });
     } catch (error) {
       if (ep.stale(error)) return;
-      const message = errorsFrom(error).general || "We couldn't withdraw your changes. Check your connection, then try again.";
+      const message = errorText(error);
       setSaid(message);
       setToast({ message, error: true });
     }
@@ -695,13 +699,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       ep.patch({ method: r.method, closedMethods: r.closedMethods }); // the new state shows straight away
       refresh();
       const lo = pw.learningOptions.bookings;
-      const message = (open ? lo.reopened : lo.stopped)(methodName(method));
-      setSaid(message);
-      setToast({ message });
+      setSaid((open ? lo.reopened : lo.stopped)(methodName(method)));
       return "";
     } catch (error) {
       if (ep.stale(error)) return "";
-      const message = errorsFrom(error).general || "We couldn't change it. Check your connection, then try again.";
+      const message = errorText(error);
       setSaid(message);
       if (open) setToast({ message, error: true });
       if (error?.data) refresh();
@@ -728,7 +730,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
               status pill only (they know what saving does, and these speak to the provider) */}
           {!ep.staff && <>
             {/* a course our team paused has its own note below (their reason, Contact us), never "put it back live yourself" */}
-            {status !== "draft" && status !== "pending" && !(!ep.admin && status === "paused" && course.statusNote) && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
+            {status !== "draft" && status !== "pending" && !(!ep.admin && (status === "paused" || status === "changes") && course.statusNote) && <p className="rt-acc__note">{(ep.admin ? SHARED_NOTES : STATUS_NOTES)[status]}</p>}
             {status === "changes" && course.statusNote && <p className="rt-acc__notice -warn"><b>What to change:</b> {course.statusNote}</p>}
             {course.parent && <p className="rt-acc__note">Listed on the shared course page <b>{course.parent.title}</b>.</p>}
             {!ep.admin && course.lastChange?.status === "rejected" && course.lastChange.note && !course.pendingChanges && <p className="rt-acc__notice -warn"><b>Your last change was not approved:</b> {course.lastChange.note}</p>}
@@ -968,6 +970,8 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
   const set = useSet(setDraft);
   const subs = subcategoryOptions(draft.category);
   const topics = topicOptions(draft.category, draft.subcategory);
+  // going back to the saved sub-category brings back its saved topic (a provider can't choose one: it would otherwise look changed)
+  const saved = draftOf(course);
   const full = !access.full;
   const page = !access.page;
 
@@ -975,7 +979,6 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
     <form className="rt-acc__card rt-pws-ce__groups" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-basics-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-basics-h">Course landing page</h2>
-        <p className="rt-acc__note">What learners read first: the title, a short description and where the course is filed. Fields marked * are required.</p>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-title">Course title<Req /></label>
           <FieldErr id="rt-pws-ce-title" text={errors.title} />
@@ -1003,13 +1006,17 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-subcat">Course sub-category<Req /></label>
             <FieldErr id="rt-pws-ce-subcat" text={errors.subcategory} />
-            <FieldSelect id="rt-pws-ce-subcat" label="Course sub-category" placeholder={draft.category ? "Choose a sub-category" : "Choose a category first"} value={draft.subcategory} onChange={(v) => setDraft((d) => ({ ...d, subcategory: v, topic: "" }))} options={subs} disabled={full || !draft.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-pws-ce-subcat-e" : undefined} />
+            <FieldSelect id="rt-pws-ce-subcat" label="Course sub-category" placeholder={draft.category ? "Choose a sub-category" : "Choose a category first"} value={draft.subcategory} onChange={(v) => setDraft((d) => ({ ...d, subcategory: v, topic: d.category === saved.category && v === saved.subcategory ? saved.topic : "" }))} options={subs} disabled={full || !draft.category} invalid={Boolean(errors.subcategory)} describedBy={errors.subcategory ? "rt-pws-ce-subcat-e" : undefined} />
           </div>
-          <div className="rt-field">
-            <label htmlFor="rt-pws-ce-topic">Course topic</label>
-            <FieldErr id="rt-pws-ce-topic" text={errors.topic} />
-            <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={!draft.subcategory ? "Choose a sub-category first" : topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} invalid={Boolean(errors.topic)} describedBy={errors.topic ? "rt-pws-ce-topic-e" : undefined} />
-          </div>
+          {/* the topic: ReadTraining's choice (a shared page, staff). A provider's course gets it from our team when they approve it
+              (admin.courses.decide), so a provider never sees the field */}
+          {access.topic && (
+            <div className="rt-field">
+              <label htmlFor="rt-pws-ce-topic">Course topic</label>
+              <FieldErr id="rt-pws-ce-topic" text={errors.topic} />
+              <FieldSelect id="rt-pws-ce-topic" label="Course topic" placeholder={!draft.subcategory ? "Choose a sub-category first" : topics.length ? "Choose a topic" : "No topics for this sub-category"} value={draft.topic} onChange={set("topic")} options={topics} disabled={full || !topics.length} invalid={Boolean(errors.topic)} describedBy={errors.topic ? "rt-pws-ce-topic-e" : undefined} />
+            </div>
+          )}
         </div>
         <CardChoice name="rt-pws-ce-compliance" legend={<>{pw.compliance.legend}<Req /></>} value={draft.compliance === null ? "" : draft.compliance ? "yes" : "no"}
           onChange={(v) => !full && set("compliance")(v === "yes")} options={pw.compliance.options.map((o) => ({ ...o, disabled: full }))} error={errors.compliance} />
@@ -1116,7 +1123,7 @@ function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
       setSaved((x) => [...x, image]);
       setList((x) => x.map((i) => (i.id === temp.id ? { ...image, url: temp.url } : i)));
       refresh();
-      onSaved("Image added");
+      onSaved("Image added", { shown: true });
       whenLoaded(added.url).then(() => {
         setList((x) => x.map((i) => (i.id === image.id && i.url === temp.url ? { ...i, url: added.url } : i)));
         URL.revokeObjectURL(temp.url);
@@ -1124,7 +1131,7 @@ function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
     } catch (err) {
       drop();
       if (ep.stale(err)) return; // changed somewhere else: the editor's banner says so, with a way to load the latest version
-      setError(err?.data ? errorsFrom(err).general || Object.values(errorsFrom(err).fields)[0] || "The image didn't upload. Please try again." : err.message || "The image didn't upload. Please try again.");
+      setError(err?.data ? errorText(err) : err.message || "The image didn't upload. Please try again.");
     } finally {
       setAction(null);
     }
@@ -1140,11 +1147,11 @@ function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
       await ep.setImages(next.map((i) => ({ id: i.id, alt: i.alt || "" })));
       setSaved(next);
       refresh();
-      onSaved(message);
+      onSaved(message, { shown: true });
       return true;
     } catch (err) {
       setList(before);
-      if (!ep.stale(err)) setError(errorsFrom(err).general || Object.values(errorsFrom(err).fields)[0] || "We couldn't save that. Check your connection, then try again.");
+      if (!ep.stale(err)) setError(errorText(err));
       return false;
     } finally {
       setAction(null);
@@ -1161,7 +1168,7 @@ function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
   return (
     <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
       <h3 className="rt-adm-h3" id="rt-pws-ce-media-h">Course images<Req /></h3>
-      <p className="rt-acc__note">They show at the top of the course page; the first image is the cover in search results. Images are saved as soon as you add or change them.</p>
+      <p className="rt-acc__note">The first image is the cover. Images save as soon as you add or change them.</p>
       {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
       {required && !list.length && !error && <p className="rt-q__err"><span className="rt-sr">Error: </span>{required}</p>}
       {!disabled && (
@@ -1227,7 +1234,6 @@ function InfoSection({ draft, setDraft, access, errors }) {
     <form className="rt-acc__stack" noValidate onSubmit={(e) => e.preventDefault()}>
       <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-learn-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-learn-h">Course information</h2>
-        <p className="rt-acc__note">These show on the public course page and help it perform in search. Fields marked * are required.</p>
         <LineList id="rt-pws-ce-feature" label="Course features" hint={`Short facts shown as tags, like "1 day" or "Certificate valid 3 years". Press Enter or type a comma to add. Up to ${MOST.features}.`} items={draft.features} onChange={set("features")} max={LIMITS.feature} most={MOST.features} commas disabled={page} error={errors.features} />
         <LineList id="rt-pws-ce-obj" label={<>What will learners learn?<Req /></>} hint={`Add at least 4 (up to ${MOST.outcomes}), each starting with a verb. Press Enter to add. ${draft.outcomes.length} added${draft.outcomes.length < 4 ? `, ${4 - draft.outcomes.length} more to reach 4` : ""}.`} items={draft.outcomes} onChange={set("outcomes")} max={LIMITS.outcome} most={MOST.outcomes} placeholder="For example: Give CPR to an adult" ordered disabled={page} error={errors.outcomes} />
         <div className="rt-field">
@@ -1279,7 +1285,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
           <h2 className="rt-acc__h2" id="rt-pws-ce-units-h">Syllabus</h2>
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(null); setSheet(true); }} disabled={draft.units.length >= MOST.units}>Add unit</button>}
         </div>
-        <p className="rt-acc__note">The course&apos;s units, in order. Learners open each one on the course page to see what it covers.{draft.units.length >= MOST.units ? ` That's the most a course can have (${MOST.units}): remove one to add another.` : ""}</p>
+        {draft.units.length >= MOST.units && <p className="rt-acc__note">{`That's the most a course can have (${MOST.units}): remove one to add another.`}</p>}
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-sylintro">Line above the units</label>
           <span className="rt-field__hint" id="rt-pws-ce-sylintro-h">Optional.</span>
@@ -1311,7 +1317,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
           <h3 className="rt-adm-h3" id="rt-pws-ce-exam-h">Exam and assessment</h3>
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => set("exams")([...draft.exams, { unit: "", passMark: "", duration: "", assessment: "" }])} disabled={draft.exams.length >= MOST.exams}>Add exam</button>}
         </div>
-        <p className="rt-acc__note">If the course ends with an exam, add one row per paper or practical, each with what it covers, its pass mark and how long it takes. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
+        <p className="rt-acc__note">One row per paper or practical. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
         {(draft.exams.length > 0 || draft.examsIntro) && (
           <div className="rt-field">
             <label htmlFor="rt-pws-ce-exintro">Text above the exam table</label>
@@ -1427,7 +1433,7 @@ function FaqSection({ draft, setDraft, access, errors }) {
           <h2 className="rt-acc__h2" id="rt-pws-ce-faqs-h">FAQs</h2>
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(null)} disabled={draft.faqs.length >= MOST.faqs}>Add FAQ</button>}
         </div>
-        <p className="rt-acc__note">Questions learners ask about this course, with your answers. They show on the course page.{draft.faqs.length >= MOST.faqs ? ` That's the most a course can have (${MOST.faqs}).` : ""}</p>
+        {draft.faqs.length >= MOST.faqs && <p className="rt-acc__note">{`That's the most a course can have (${MOST.faqs}).`}</p>}
         <FieldErr id="rt-pws-ce-faqs" text={errors.faqs} />
         {draft.faqs.length ? (
           <ul className="rt-adm-list">
@@ -1578,7 +1584,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
               <p className="rt-acc__note">Save your learning options first: the dates follow from them.</p>
             ) : (
               <>
-                <p className="rt-acc__note">Each date (a cohort) has its own {own}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live; online booking opens in a later update."}</p>
+                <p className="rt-acc__note">Each date (a cohort) has its own {own}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live."}</p>
                 <FieldErr id="rt-pws-ce-dates" text={errors.dates && lacking.length ? datesGap(lacking) : ""} />
                 <div className="rt-pws-ce__dates">
                   <p className="rt-pws-ce__datecount">{dateLine}</p>

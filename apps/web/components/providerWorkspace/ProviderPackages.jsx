@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Toast from "@/components/courses/Toast";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
 import PackageEditor from "./PackageEditor";
 import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
@@ -42,7 +42,7 @@ export default function ProviderPackages() {
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
   const say = (message) => setToast({ message });
-  const fail = (er) => say(errorsFrom(er).general || "That didn’t work. Please try again.");
+  const fail = (er) => say(errorText(er));
   const refresh = () => utils.provider.plans.list.invalidate();
 
   useEffect(() => {

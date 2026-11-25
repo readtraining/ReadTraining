@@ -13,7 +13,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { builtInLegal, getLegalList, legalContentKey } from "@/lib/legal";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Req } from "./adminParts";
 import { FaqForm, LegalForm } from "./AdminContentPages";
 import { LicenceFeesForm, TeamTrainingForm } from "./AdminContentShared";
@@ -95,7 +95,7 @@ export default function AdminContent() {
       setLoaded(null);
       setSaid(copy.resetDone);
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
     setConfirming(false);
   };
@@ -280,8 +280,7 @@ function FeaturedForm({ value, canEdit }) {
       markSaved();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);
-      setGeneral(g);
-      if (fields.groups) setGeneral(fields.groups);
+      setGeneral(g || fields.groups || Object.values(fields)[0]);
     }
     setSaving(false);
   };

@@ -34,6 +34,7 @@ import {
   refuseLongTitle,
   resolveCatalogue,
   REVIEWED,
+  activeTopics,
   seenVersion,
   setCourseImages,
   ukToday,
@@ -53,6 +54,43 @@ async function placeBySubject(tx: Tx, courseId: number) {
   if (!c || c.kind !== 'provider') return
   const parentId = await placeOn(tx, c)
   if (parentId !== c.parentId) await tx.update(courses).set({ parentId }).where(eq(courses.id, courseId))
+}
+
+// The topic is our team's choice, never the provider's (provider.courses create/update don't take one): approving a course, or a
+// change to one, whose sub-category has topics in use needs one of them (`topic`), so a course is never listed under the wrong
+// topic, or none, by a quick click. A sub-category without topics needs none (and keeps none).
+const CHOOSE_TOPIC = 'Choose the topic this course is listed under.'
+
+// The topic choice an approval needs: the topics in use under the sub-category the course will have once approved (a waiting
+// change's own, when it moves the course) and the topic it has now (none after such a move), or null when that sub-category has
+// none. `ask`: the choice must be made on screen (always for a new course; for a change, only when it has no topic to keep).
+async function topicChoice(db: typeof Db, course: Course, change: Record<string, unknown> | null) {
+  let subId = course.subcategoryId
+  let current = course.topicId
+  if (change && typeof change.subcategory === 'string') {
+    const [sub] = await db.execute<{ id: string }>(sql`
+      select s.id from public.subcategories s join public.categories k on k.id = s.category_id where k.slug = ${String(change.category)} and s.slug = ${change.subcategory}`)
+    if (sub?.id !== course.subcategoryId) current = null
+    subId = sub?.id ?? null
+  }
+  const options = await activeTopics(db, subId)
+  if (!options.length) return null
+  if (!options.some((o) => o.id === current)) current = null
+  return { options, current, ask: !change || !current }
+}
+
+// Files the course under the topic chosen at approval, under the course's row lock (after a change is applied): one of its
+// sub-category's topics in use when it has any (refused without one), none when it has none. Returns the move for the log.
+async function fileTopic(tx: Tx, courseId: number, chosen: string | null | undefined, mustChoose: boolean) {
+  const [c] = await tx.select({ subcategoryId: courses.subcategoryId, topicId: courses.topicId }).from(courses).where(eq(courses.id, courseId))
+  const options = await activeTopics(tx, c.subcategoryId)
+  // a change that keeps the course's subject may keep its topic without asking again
+  const pick = options.length ? (chosen ?? (mustChoose ? null : c.topicId)) : null
+  if (options.length && !options.some((o) => o.id === pick)) throw bad(CHOOSE_TOPIC, 'topic')
+  if (pick === c.topicId) return null
+  await tx.update(courses).set({ topicId: pick }).where(eq(courses.id, courseId))
+  const [from] = c.topicId ? await tx.execute<{ name: string }>(sql`select name from public.topics where id = ${c.topicId}::uuid`) : []
+  return { from: from?.name ?? null, to: options.find((o) => o.id === pick)?.name ?? null }
 }
 
 type Decision = 'approve' | 'changes' | 'approveChange' | 'rejectChange' | 'pause' | 'resume'
@@ -205,6 +243,14 @@ async function requesters(db: typeof Db, course: Course): Promise<{ course: Set<
   }
 }
 
+// Who put the course on its current pause (our team's latest pause): an admin who paused their own course puts it back live
+// themselves; one another admin paused waits for another admin.
+async function pausedBy(db: typeof Db, courseId: number): Promise<string | null> {
+  const [p] = await db.execute<{ actor: string | null }>(sql`
+    select actor_user_id actor from public.activity_log where action = 'admin.course_paused' and target_type = 'course' and target_id = ${String(courseId)} order by at desc limit 1`)
+  return p?.actor ?? null
+}
+
 // A provider's draft isn't shown to our team (not listed, and its page is "not found"): it is their unfinished work until they
 // send it for approval.
 function notProviderDraft<T extends { kind: string; status: string }>(course: T): T {
@@ -260,7 +306,13 @@ export const adminCoursesRouter = createTRPCRouter({
                 ) q order by at desc nulls last limit 100`)
       // own: the admin asked for it themselves; soleApprover: they may still decide it, with a reason (lib/soleApprover.mts)
       const sole = rows.some((r) => r.requester === ctx.user.id) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide'))
-      return rows.map((r) => ({ courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), sent: iso(r.sent ?? r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, methods: r.methods, closedMethods: r.closed_methods, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
+      // the topic each waiting one needs chosen when it is approved (topicChoice), so the list's Approve asks for it
+      const choices = input.tab !== 'waiting' ? [] : await Promise.all(rows.map(async (r) => {
+        const [course] = await ctx.db.select().from(courses).where(eq(courses.id, r.course_id))
+        const [rev] = r.type === 'change' ? await ctx.db.select({ content: courseRevisions.content }).from(courseRevisions).where(and(eq(courseRevisions.courseId, r.course_id), eq(courseRevisions.status, 'pending'))) : []
+        return course ? topicChoice(ctx.db, course, (rev?.content as Record<string, unknown> | undefined) ?? null) : null
+      }))
+      return rows.map((r, n) => ({ topicChoice: choices[n] ?? null, courseId: r.course_id, title: r.title, type: r.type, at: iso(r.at), sent: iso(r.sent ?? r.at), note: r.note, outcome: r.outcome, provider: r.provider, providerStatus: r.provider_status, method: r.method, methods: r.methods, closedMethods: r.closed_methods, parent: r.parent, own: r.requester === ctx.user.id, soleApprover: r.requester === ctx.user.id && sole }))
     }),
 
   // Every course, newest change first: shared pages and providers' courses, with search and filters.
@@ -344,6 +396,7 @@ export const adminCoursesRouter = createTRPCRouter({
       const asked = await requesters(ctx.db, course)
       const ownCourse = asked.course.has(ctx.user.id)
       const ownChange = Boolean(detail.pendingChanges) && asked.change.has(ctx.user.id)
+      const pausedByYou = ownCourse && course.status === 'paused' && Boolean(course.statusNote) && (await pausedBy(ctx.db, course.id)) === ctx.user.id
       return {
         ...detail,
         provider: provider ?? null,
@@ -351,18 +404,23 @@ export const adminCoursesRouter = createTRPCRouter({
         // a shared page's guide (its Course guide step), or null
         guide: course.kind === 'shared' ? await loadGuide(ctx.db, course.id) : null,
         change: await changeView(ctx.db, detail),
+        // the topic to choose when approving the course or its waiting change (topicChoice); null when there is nothing to choose
+        topicChoice: course.status === 'pending' || detail.pendingChanges ? await topicChoice(ctx.db, course, course.status === 'pending' ? null : ((detail.pendingChanges?.content ?? null) as Record<string, unknown> | null)) : null,
         pricing: await pricingView(ctx.db, course),
-        // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver
+        // the admin sent the course (ownCourse) or its waiting change (ownChange) themselves: they decide only as the sole approver,
+        // except pausing it, and putting it back live when they paused it (pausedByYou)
         ownCourse,
         ownChange,
+        pausedByYou,
         soleApprover: (ownCourse || ownChange) && (await soleApprover(ctx.db, ctx.actor, ctx.user.id, 'admin.approvals.decide')),
       }
     }),
 
   // A decision on a provider's course: approve it, ask for changes, approve or turn down a change to a live course, pause a live
-  // course or put it back. The person who sent the course or the change can't decide on it.
+  // course or put it back. The person who sent the course or the change can't decide on it, except pausing their own course (taking
+  // it down needs no second look: as the provider they could pause it too) and putting back live one they paused themselves.
   decide: adminProcedure('admin.panel.open')
-    .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime().optional() }))
+    .input(z.object({ courseId: id, decision: z.enum(['approve', 'changes', 'approveChange', 'rejectChange', 'pause', 'resume']), message: z.string().trim().max(2000).optional(), ownReason: z.string().trim().max(500).optional(), seen: z.string().datetime().optional(), topic: z.string().uuid().nullable().optional() }))
     .mutation(async ({ ctx, input, path }) => {
       const rule = DECISIONS[input.decision]
       const [course] = await ctx.db.select().from(courses).where(eq(courses.id, input.courseId))
@@ -374,7 +432,8 @@ export const adminCoursesRouter = createTRPCRouter({
       // their own course or change (they created it, sent it, or worked on the change): only as the sole approver, with a reason
       // (lib/soleApprover.mts)
       const asked = await requesters(ctx.db, course)
-      const own = (isChange ? asked.change : asked.course).has(ctx.user.id)
+      const selfServe = input.decision === 'pause' || (input.decision === 'resume' && (await pausedBy(ctx.db, course.id)) === ctx.user.id)
+      const own = !selfServe && (isChange ? asked.change : asked.course).has(ctx.user.id)
       if (own ? !(await soleApprover(ctx.db, ctx.actor, ctx.user.id, action)) : !can(ctx.actor, action)) {
         // logged as refused either way; an admin who may approve but sent this themselves is told why (a sole approver may have lost
         // the exception since the page loaded: another admin can approve now)
@@ -446,6 +505,8 @@ export const adminCoursesRouter = createTRPCRouter({
           const lost = (await missing(tx, applied)).filter((gap) => !before.includes(gap))
           if (lost.length) throw new TRPCError({ code: 'CONFLICT', message: `With this change the course would be missing ${andList(lost)}. Turn the change down and say what to add.` })
         }
+        // the topic, chosen by the approver (a new course always; a change keeps the course's own when it still fits)
+        const topicMoved = input.decision === 'approve' || input.decision === 'approveChange' ? await fileTopic(tx, course.id, input.topic, input.decision === 'approve') : null
         // never live under a retired category, method or level (a change may move it into one retired since it was sent)
         if (input.decision === 'approve' || input.decision === 'resume' || (input.decision === 'approveChange' && locked.status === 'live')) await refuseRetired(tx, course.id, 'admin')
         // a course on a shared course page keeps the page's subject: the shared page may have been chosen after the change was sent
@@ -456,7 +517,7 @@ export const adminCoursesRouter = createTRPCRouter({
           // change could send it again unwarned)
           await tx.update(courses).set({ updatedAt: now }).where(eq(courses.id, course.id))
         }
-        await logFor(ctx, course, rule.log, { from: locked.status, ...(message ? { message } : {}), ...(slug !== locked.slug ? { address: { from: locked.slug, to: slug } } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })(tx)
+        await logFor(ctx, course, rule.log, { from: locked.status, ...(message ? { message } : {}), ...(slug !== locked.slug ? { address: { from: locked.slug, to: slug } } : {}), ...(topicMoved ? { topic: topicMoved } : {}), ...(own ? { ownRequest: true, ownReason: input.ownReason!.trim() } : {}) })(tx)
         // a decision on their own request gets its own line in the log, so it is never missed
         if (own) await logFor(ctx, course, 'admin.own_request_decided', { decision: input.decision, reason: input.ownReason!.trim() })(tx)
         const [after] = await tx.select({ status: courses.status, title: courses.title }).from(courses).where(eq(courses.id, course.id))

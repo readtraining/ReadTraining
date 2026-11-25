@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { ColWidths, RowMenu, formatWhen, Said, TableSkeleton, useSort, SortTh, Empty, HeaderAction, Req } from "./adminParts";
 import { AdminStatus } from "./AdminStatus";
 
@@ -45,7 +45,7 @@ export default function AdminTeam() {
         : emailed ? `A new invite was sent to ${a.email}` : `A new invite link was made, but the email to ${a.email} couldn't be sent. Try again in a moment.`,
       );
     } catch (error) {
-      setSaid(errorsFrom(error).general);
+      setSaid(errorText(error));
     }
   };
 
@@ -271,7 +271,7 @@ function ConfirmSheet({ confirm, onClose, onDone }) {
       onDone(sheet.said);
       close();
     } catch (error) {
-      setGeneral(errorsFrom(error).general);
+      setGeneral(errorText(error));
     }
   };
   return (
