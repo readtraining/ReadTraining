@@ -5597,31 +5597,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* end CITB HS&E TEST */
 
 /* =====================================================================
-   PROVIDER SIGN-UP (components/providerSignup): the "Become a provider" pop-up on /for-providers and the provider onboarding
-   (/provider/onboarding). DESIGN-SYSTEM.md tokens only; the pop-up is the Sheet dialog, the onboarding an app page card.
+   PROVIDER SIGN-UP (components/providerSignup): the provider onboarding (/provider/onboarding), where "Become a provider"
+   leads. DESIGN-SYSTEM.md tokens only; an app page card.
    ===================================================================== */
-.rt-bp__sheet { --fp-border-strong: var(--color-border-strong); --fp-surface: var(--rt-c-surface); --fp-brand: var(--rt-c-brand); }
-@media (min-width: 768px) { .rt-bp__sheet .rt-dd__panel { width: 920px; max-width: 94vw; } } /* room for the two columns; full screen below, as every Sheet */
-.rt-bp__lead { margin: 0 0 20px; font-size: var(--rt-text); line-height: 1.55; color: var(--rt-c-muted); }
-.rt-bp__grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 24px; align-items: start; }
-.rt-bp__for { padding: 20px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-soft); }
-.rt-bp__for b { display: block; font-size: var(--rt-text); color: var(--rt-c-text); }
-.rt-bp__for ul { display: grid; gap: 12px; margin: 14px 0 0; padding: 0; list-style: none; }
-.rt-bp__for li { display: flex; align-items: flex-start; gap: 10px; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-text); list-style: none; }
-.rt-bp__tick { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: var(--rt-c-brand-soft); color: var(--rt-c-brand); }
-.rt-bp__tick svg { width: 10px; height: 10px; }
-.rt-bp__pw { position: relative; }
-.rt-bp__pw input { padding-right: 72px; }
-.rt-bp__show { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); height: 36px; padding: 0 10px; border: 0; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; }
-.rt-bp__show:hover { background: var(--rt-c-brand-soft); }
-.rt-bp__show:focus-visible { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
-.rt-bp__terms, .rt-bp__login { margin: 0; font-size: var(--rt-text-sm); line-height: 1.5; color: var(--rt-c-muted); }
-.rt-bp__terms a, .rt-bp__login a { font-weight: 600; color: var(--rt-c-brand); text-decoration: underline; }
-.rt-bp__login { text-align: center; }
-.rt-bp__h { margin: 0; font-size: var(--rt-app-h3); font-weight: var(--rt-heading-weight); color: var(--rt-c-text); }
-.rt-bp__h:focus { outline: none; }
-.rt-bp__signed p { margin: 8px 0 20px; font-size: var(--rt-text); line-height: 1.55; color: var(--rt-c-muted); }
-
 /* onboarding */
 /* provider onboarding and creating a business account: one card on the page tint */
 .rt-po { padding-top: 32px; padding-bottom: 64px; }
@@ -5633,7 +5611,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-po__check:has(input:checked) { border-color: var(--rt-c-brand); background: var(--rt-c-brand-soft); }
 .rt-lic__consent .rt-po__check, .rt-po .rt-po__check { align-items: flex-start; padding: 12px; }
 
-@media (max-width: 991px) { .rt-bp__grid { grid-template-columns: minmax(0, 1fr); } .rt-bp__for { order: 2; } }
 /* end PROVIDER SIGN-UP */
 
 /* =====================================================================

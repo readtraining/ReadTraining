@@ -97,8 +97,8 @@ export async function resetPassword({ password }) {
 // Creates the account with the name and marketing choice, and sends the confirmation email. `needsConfirmation` is true until
 // the link is opened (always, while the project requires confirmation). For an email that already has an account Supabase
 // returns no error and sends nothing, so the screen says the same either way. `next` is where the email link continues to
-// (the account by default; provider onboarding from "Become a provider"), and `intent` records why the account was made.
-export async function registerAccount({ firstName, lastName, email, password, marketingOptIn, next, intent }) {
+// (the account by default; provider onboarding from "Become a provider").
+export async function registerAccount({ firstName, lastName, email, password, marketingOptIn, next }) {
   const captchaToken = await getHumanCheck();
   const { data, error } = await getSupabase().auth.signUp({
     email: email.trim(),
@@ -106,7 +106,7 @@ export async function registerAccount({ firstName, lastName, email, password, ma
     options: {
       captchaToken,
       emailRedirectTo: confirmUrl(next || AUTH_ROUTES.afterLogin),
-      data: { first_name: firstName.trim(), last_name: lastName.trim(), marketing_opt_in: Boolean(marketingOptIn), ...(intent ? { signup_intent: intent } : {}) },
+      data: { first_name: firstName.trim(), last_name: lastName.trim(), marketing_opt_in: Boolean(marketingOptIn) },
     },
   });
   if (error) throw fail(error, "We couldn't create your account. Please try again.");

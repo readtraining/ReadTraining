@@ -14,7 +14,6 @@ import ProReview from "@/components/provider/ProReview";
 import FaqSection from "@/components/marketing/FaqSection";
 import { provider } from "@/data/provider";
 import ProCta from "@/components/provider/ProCta";
-import BecomeProvider from "@/components/providerSignup/BecomeProvider";
 import { faqItems } from "@/lib/siteContent";
 import { loadSiteContent } from "@/lib/siteContentServer";
 import { pageMetadata } from "@/lib/seo";
@@ -47,7 +46,6 @@ export default async function ForProvidersPage() {
         <HomeHelp />
         <HomeFooter />
       </div>
-      <BecomeProvider />
     </div>
   );
 }
