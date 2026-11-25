@@ -7,11 +7,11 @@ import { pageMetadata } from "@/lib/seo";
 // Provider workspace: price plans (components/providerWorkspace/ProviderPackages; copy: data/providerWorkspace.js; records: API provider.plans).
 // Private, so kept out of search; proxy.js sends signed-out visitors to log in.
 const p = pw.pages.packages;
-export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, description: p.lead, path: "/provider/packages", noindex: true });
+export const metadata = pageMetadata({ title: `${p.title} | ${pw.title}`, path: "/provider/packages", noindex: true });
 
 export default function Page() {
   return (
-    <ProviderShell current="courses" need="provider.pricing.view" title={p.title} lead={p.lead} back={{ label: "Courses", href: "/provider/courses" }}>
+    <ProviderShell current="courses" need="provider.pricing.view" title={p.title} back={{ label: "Courses", href: "/provider/courses" }}>
       <ProviderPackages />
     </ProviderShell>
   );
