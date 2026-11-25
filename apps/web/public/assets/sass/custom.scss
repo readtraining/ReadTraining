@@ -3798,6 +3798,13 @@ a.rt-cat-popular__tag:hover { color: #fff !important; }
 .rt-bk__note { margin: 12px 0 0; font-size: 13px; color: var(--color-light-1); }
 @media (max-width: 767px) {
   .rt-bk__row { grid-template-columns: 96px minmax(0, 1fr); gap: 14px; }
+  /* the picture and the title share the first row; the date, venue, provider and the rest run the card's full width under them,
+     so no empty column is left under the picture */
+  .rt-bk__main { display: contents; }
+  .rt-bk__main > * { grid-column: 1 / -1; margin-top: 0; }
+  .rt-bk__thumb { grid-row: 1; }
+  .rt-bk__main > .rt-bk__titlerow { grid-column: 2; grid-row: 1; align-self: center; }
+  .rt-bk__offnote { margin-left: 0; }
   .rt-bk__side { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
   .rt-bk__price { text-align: left; }
   .rt-bk__acts .rt-rowmenu__list { left: 0; right: auto; } /* the icons sit on the left here, so the menu opens to the right */
@@ -6036,9 +6043,11 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-ce__need { display: grid; gap: 6px; margin: 0; }
 .rt-pws-ce__need:focus { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
 @media (max-width: 1199px) {
-  /* below 1200px the steps are chips that wrap onto more lines, as the tabs do: every step in view, no sideways strip or scrollbar */
-  .rt-pws-ce__steps { display: flex; flex-wrap: wrap; gap: 6px; }
-  .rt-pws-ce__step { white-space: nowrap; border: 1px solid var(--rt-c-line); }
+  /* below 1200px the steps are an even grid of equal boxes (two across on a phone, more on a tablet): every step in view, no
+     sideways strip, a long name wrapping inside its own box */
+  .rt-pws-ce__steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+  .rt-pws-ce__steps li { display: flex; }
+  .rt-pws-ce__step { height: 100%; border: 1px solid var(--rt-c-line); text-align: left; }
   .rt-pws-ce__step.is-on { border-color: var(--rt-c-brand); }
 }
 .rt-pws-ce__gear { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease, color 150ms ease; }
@@ -6393,7 +6402,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
   :is(.rt-pws-coh__table, .rt-pws-coh__students) td:has(.rt-field-dd, .rt-rowmenu) { flex-wrap: nowrap; }
   :is(.rt-pws-coh__table, .rt-pws-coh__students) td small { display: block; flex-basis: 100%; text-align: right; }
   .rt-pws-coh__table td[data-label="Cohort"]::before, .rt-pws-coh__table td.rt-pws-coh__pick::before, .rt-pws-coh__students td.rt-pws-coh__pick::before { content: none; }
-  .rt-pws-coh__table td[data-label="Cohort"] { text-align: left; }
+  /* the cohort itself: its badge, then the course, venue and dates on the left like the title, wrapping inside the card */
+  .rt-pws-coh__table td[data-label="Cohort"] { display: block; text-align: left; }
+  .rt-pws-coh__table td[data-label="Cohort"] .rt-pws-coh__cohort { min-width: 0; }
+  .rt-pws-coh__table td[data-label="Cohort"] small { text-align: left; white-space: normal; overflow-wrap: anywhere; }
   .rt-pws-coh__morerow td { display: block; padding: 12px; }
   .rt-pws-coh__morerow td::before { content: none; }
 }
@@ -6725,7 +6737,9 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-dash__bar { display: inline-block; height: 1em; vertical-align: middle; }
 .rt-dash__skel { display: flex; align-items: center; min-height: 52px; list-style: none; }
 .rt-dash__courses { display: grid; align-content: start; gap: 4px; }
-.rt-dash__status { display: grid; gap: 2px; margin-bottom: 12px; }
+/* the rows' words in line with the card's heading; their hover fill reaches a little past it */
+.rt-dash__status { display: grid; gap: 2px; margin: 0 -10px 12px; }
+.rt-dash__sent { margin-inline: -10px; }
 .rt-dash__status li, .rt-dash__sent li { list-style: none; }
 .rt-dash__status a, .rt-dash__sent a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--rt-radius-sm); text-decoration: none; }
 .rt-dash__status a:hover, .rt-dash__sent a:hover { background: var(--rt-c-soft); }
@@ -6743,6 +6757,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-dash__date b { font-size: var(--rt-app-h3); line-height: 1; }
 .rt-dash__cmeta { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
 .rt-dash__cmeta small { overflow: hidden; font-size: var(--rt-text-xs); text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-muted); }
+/* phones: the date's venue and tutor wrap onto a second line instead of being cut short */
+@media (max-width: 575px) { .rt-dash__cmeta small { white-space: normal; } }
 .rt-dash__cohorts .rt-adm-seats { flex: 0 0 110px; }
 .rt-dash__soon { font-weight: 600; color: var(--rt-c-text); }
 .rt-dash__ctitle { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
@@ -7120,6 +7136,15 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 /* Edit / Learner preview, beside the pop-up's title */
 .rt-pws-pkg__view { flex: none; align-self: center; }
 .rt-pws-pkg__view .rt-tr__filter { min-width: 0; padding: 0 14px; }
+/* phones: the title and Close on the first row, the Edit / Learner preview switch on its own row under them (the title never breaks
+   onto three lines) */
+@media (max-width: 575px) {
+  .rt-pws-pkg__sheet .rt-dd__head { flex-wrap: wrap; align-items: center; }
+  .rt-pws-pkg__sheet .rt-dd__head > h2 { flex: 1 1 0; order: 0; }
+  .rt-pws-pkg__sheet .rt-dd__head > :last-child { order: 1; }
+  .rt-pws-pkg__sheet .rt-pws-pkg__view { order: 2; flex: 1 1 100%; }
+  .rt-pws-pkg__sheet .rt-pws-pkg__view .rt-tr__filter { flex: 1 1 0; }
+}
 .rt-pws-pkg__preview { display: grid; gap: 14px; }
 .rt-pws-pkg__preview .rt-pk__note { margin: 0; }
 /* the plans table: the plan (its packages under it), what uses it, its prices, its status and the ⋯ menu (widths: ColWidths) */
