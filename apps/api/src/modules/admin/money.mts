@@ -102,9 +102,14 @@ export const ordersRouter = createTRPCRouter({
         const like = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(sql`(o.ref ilike ${like} or o.buyer_name ilike ${like} or o.buyer_email ilike ${like} or o.course_title ilike ${like} or coalesce(o.buyer_company, '') ilike ${like})`)
       }
-      const rows = await ctx.db.execute<{ id: string; ref: string; total: number; buyer_name: string; buyer_email: string; buyer_company: string | null; course_title: string; starts_on: string | null; quantity: number; gross_pence: number; method: string; status: string; created_at: string; provider: string; booked_by: string | null }>(sql`
+      // left: what can still be asked for, as moneyOf works it out (for the row's ⋯ menu: refund and dispute)
+      const rows = await ctx.db.execute<{ id: string; ref: string; total: number; buyer_name: string; buyer_email: string; buyer_company: string | null; course_title: string; starts_on: string | null; quantity: number; gross_pence: number; left_pence: number; method: string; status: string; created_at: string; provider: string; booked_by: string | null }>(sql`
         select o.id, o.ref, ${total} total, o.buyer_name, o.buyer_email, o.buyer_company, o.course_title, to_char(o.starts_on, 'YYYY-MM-DD') starts_on, o.quantity,
-               o.gross_pence, o.method, o.status, o.created_at, g.name provider, ${who('o.booked_by')} booked_by
+               o.gross_pence, o.method, o.status, o.created_at, g.name provider, ${who('o.booked_by')} booked_by,
+               (o.gross_pence
+                 + (select coalesce(sum(l.gross_pence), 0) from ${ledgerEntries} l where l.order_id = o.id and l.type in ('refund', 'cancel', 'dispute'))
+                 - (select coalesce(sum(r.amount_pence), 0) from ${refunds} r where r.order_id = o.id and r.status = 'requested')
+                 - (select coalesce(sum(d.amount_pence), 0) from ${disputes} d where d.order_id = o.id and d.status = 'open'))::int left_pence
         from ${orders} o join ${organisations} g on g.id = o.provider_id
         where ${sql.join(where, sql` and `)}
         order by ${orderBy(ORDER_SORT[input.sort], input.dir, sql`o.id`)} ${window(input.page, input.limit)}`)
@@ -114,7 +119,7 @@ export const ordersRouter = createTRPCRouter({
       return {
         counts,
         total: rows[0]?.total ?? 0,
-        orders: rows.map((r) => ({ id: r.id, ref: r.ref, buyer: { name: r.buyer_name, email: r.buyer_email, company: r.buyer_company }, course: r.course_title, startsOn: r.starts_on, quantity: r.quantity, gross: r.gross_pence / 100, method: r.method, status: r.status, at: new Date(r.created_at).toISOString(), provider: r.provider, bookedBy: r.booked_by })),
+        orders: rows.map((r) => ({ id: r.id, ref: r.ref, buyer: { name: r.buyer_name, email: r.buyer_email, company: r.buyer_company }, course: r.course_title, startsOn: r.starts_on, quantity: r.quantity, gross: r.gross_pence / 100, left: r.left_pence / 100, method: r.method, status: r.status, at: new Date(r.created_at).toISOString(), provider: r.provider, bookedBy: r.booked_by })),
       }
     }),
 

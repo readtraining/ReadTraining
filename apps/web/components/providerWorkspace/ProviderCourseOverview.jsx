@@ -10,9 +10,9 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { formatPrice } from "@/lib/format";
 import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
-import { COURSE_TONE, Loading, Pill, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
+import { COURSE_TONE, Loading, Pill, RowMenu, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { ColWidths } from "@/components/admin/adminParts";
-import { CohortCell, CohortForm, CohortStatus, Seats, WHEN, askWhen, cohortState, inWhen, todayIso, useSchedule } from "./ProviderCohorts";
+import { CohortCell, CohortForm, CohortStatus, Seats, WHEN, askWhen, cohortState, dayRange, inWhen, todayIso, useCohortActions, useSchedule } from "./ProviderCohorts";
 
 // One course's overview (course Details): a head card with the cover picture, status, learning options and performance model,
 // the shared course page it is listed on, Edit course and Preview; then its tabs, in this order: Learners, Venues, Cohorts,
@@ -123,8 +123,19 @@ function CohortsTab({ course }) {
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [said, setSaid] = useState(""); // bookings on or off shows in the row, so it is only read out
   const s = useSchedule(askWhen(when), course.id);
   const utils = api.useUtils();
+  const refresh = () =>
+    Promise.all([
+      utils.provider.cohorts.list.invalidate(),
+      utils.provider.courses.get.invalidate({ organisationId, courseId: course.id }),
+      utils.provider.courses.list.invalidate({ organisationId }),
+      utils.provider.venues.forCourse.invalidate({ organisationId, courseId: course.id }),
+      utils.provider.plans.forCourse.invalidate({ organisationId, courseId: course.id }),
+    ]);
+  // the same ⋯ menu as the Cohorts list
+  const actions = useCohortActions({ refresh, toast: (message) => setToast({ message }), say: setSaid });
   useEffect(() => {
     const w = getQuery("when");
     if (WHEN.some((x) => x.value === w)) setWhen(w);
@@ -139,20 +150,14 @@ function CohortsTab({ course }) {
   // new cohorts only for a dated option still taking bookings
   const selling = waysOf(course, { open: true }).filter(isDatedMethod);
   const edit = can("provider.cohorts.edit") && can("provider.pricing.edit") && selling.length > 0;
-  const refresh = () =>
-    Promise.all([
-      utils.provider.cohorts.list.invalidate(),
-      utils.provider.courses.get.invalidate({ organisationId, courseId: course.id }),
-      utils.provider.courses.list.invalidate({ organisationId }),
-      utils.provider.venues.forCourse.invalidate({ organisationId, courseId: course.id }),
-      utils.provider.plans.forCourse.invalidate({ organisationId, courseId: course.id }),
-    ]);
   const create = () => setFormOpen(true);
   const form = (
     <>
       <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={String(course.id)} mode={selling[0]}
         onSaved={(cohortId) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${cohortId}`, label: "Open" }); }} onAnother={() => refresh()} />
+      {actions.sheets}
       <Toast toast={toast} onDone={() => setToast(null)} />
+      <p className="rt-sr" aria-live="polite">{said}</p>
     </>
   );
   const toolbar = (
@@ -179,7 +184,7 @@ function CohortsTab({ course }) {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table rt-pws-coh__table">
-            <ColWidths widths={["38%", "23%", "10%", "13%", null]} />
+            <ColWidths widths={["38%", "23%", "9%", "12%", null, "64px"]} />
             <thead>
               <tr>
                 <th scope="col">Cohort</th>
@@ -187,6 +192,7 @@ function CohortsTab({ course }) {
                 <th scope="col">Places</th>
                 <th scope="col">Price</th>
                 <th scope="col">Status</th>
+                <th scope="col"><span className="rt-sr">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -198,6 +204,9 @@ function CohortsTab({ course }) {
                   <td data-label="Price">{k.planId ? "From " : ""}{formatPrice(k.pricePence / 100)}{k.wasPricePence ? <small className="rt-adm-muted"> was {formatPrice(k.wasPricePence / 100)}</small> : null}</td>
                   <td data-label="Status">
                     <CohortStatus k={k} status={k.status} />
+                  </td>
+                  <td data-label="Actions" className="rt-pws-coh__end">
+                    <RowMenu label={`Actions for ${k.courseTitle}, ${dayRange(k.startsOn, k.endsOn)}`} items={actions.items(k, today)} />
                   </td>
                 </tr>
               ))}
