@@ -61,7 +61,8 @@ function FeesCard({ onSaved }) {
       utils.admin.activity.list.invalidate();
       onSaved(F.saved);
     } catch (err) {
-      setErrors(errorsFrom(err).fields);
+      const { fields: { cardBps: card, bnplBps: bnpl, ...fields }, general } = errorsFrom(err);
+      setErrors({ ...fields, ...(card && { card }), ...(bnpl && { bnpl }), form: general });
     }
   };
   return (
@@ -80,6 +81,7 @@ function FeesCard({ onSaved }) {
           </div>
         ))}
       </div>
+      {errors.form && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{errors.form}</p>}
       {canEdit && <button type="submit" className="button -md -purple-1 text-white" disabled={save.isPending}>{A.content.save}</button>}
     </form>
   );

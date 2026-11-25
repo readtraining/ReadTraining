@@ -12,7 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { useTaxonomy } from "@/lib/taxonomyContext";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorsFrom, errorText } from "@/lib/useMe";
 import { Pager, RowMenu, Said, TableSkeleton, Tabs, Empty, usePaging, HeaderAction, Req } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import DateField from "./DateField";
@@ -75,7 +75,7 @@ export default function AdminCustomerReviews() {
       await setStatus.mutateAsync({ id: r.id, status });
       await changed((status === "hidden" ? copy.hidden : copy.published).replace("{name}", r.name));
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
   };
   const confirmRemove = async () => {
@@ -85,7 +85,7 @@ export default function AdminCustomerReviews() {
       setRemoving(null);
       await changed(copy.removed.replace("{name}", name));
     } catch (err) {
-      setSaid(errorsFrom(err).general);
+      setSaid(errorText(err));
     }
   };
   const counts = list.data?.counts;

@@ -6,7 +6,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
-import { errorsFrom } from "@/lib/useMe";
+import { errorText } from "@/lib/useMe";
 import { Said, TableSkeleton, Tabs, Empty } from "./adminParts";
 import { AdminDue } from "./AdminStatus";
 
@@ -85,7 +85,7 @@ export function CloseAccountSheet({ request, onClose, onDone }) {
       onDone();
       shut();
     } catch (err) {
-      setError(errorsFrom(err).general);
+      setError(errorText(err));
     }
   };
   return (
