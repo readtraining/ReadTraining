@@ -41,8 +41,8 @@ export default function ProviderPackages() {
   const [removing, setRemoving] = useState({ open: false, plan: null });
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
-  const say = (message) => setToast({ message });
-  const fail = (er) => say(errorText(er));
+  const say = (message, { error = false } = {}) => setToast({ message, error });
+  const fail = (er) => say(errorText(er), { error: true });
   const refresh = () => utils.provider.plans.list.invalidate();
 
   useEffect(() => {

@@ -35,6 +35,13 @@ export const hintFor = (kind) => {
   return `${size}${listTypes(k.types)}, up to 15 MB.${gif}`;
 };
 
+// the same rules in one short line, for a form with little room (the course editor's pictures): the types and the smallest size;
+// a file too big or too small is still refused with what to choose instead
+export const shortHintFor = (kind) => {
+  const k = IMAGE_KINDS[kind];
+  return `${listTypes(k.types)}${k.min.width > 1 ? `, at least ${k.min.width} × ${k.min.height} pixels` : ""}.`;
+};
+
 const fail = (message) => Object.assign(new Error(message), { friendly: true });
 
 /** A picture ready to upload: { blob, type, width, height }. Throws an Error whose message says what to choose instead. */

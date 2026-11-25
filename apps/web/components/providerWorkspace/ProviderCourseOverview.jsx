@@ -135,7 +135,7 @@ function CohortsTab({ course }) {
       utils.provider.plans.forCourse.invalidate({ organisationId, courseId: course.id }),
     ]);
   // the same ⋯ menu as the Cohorts list
-  const actions = useCohortActions({ refresh, toast: (message) => setToast({ message }), say: setSaid });
+  const actions = useCohortActions({ refresh, toast: (message, { error = false } = {}) => setToast({ message, error }), say: setSaid });
   useEffect(() => {
     const w = getQuery("when");
     if (WHEN.some((x) => x.value === w)) setWhen(w);

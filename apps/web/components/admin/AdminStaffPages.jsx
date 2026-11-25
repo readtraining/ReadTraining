@@ -9,7 +9,7 @@ import ProviderPackages from "@/components/providerWorkspace/ProviderPackages";
 import { InfoTab, TermsTab, VenuesTab } from "@/components/providerWorkspace/SettingsProfile";
 import { FaqsTab } from "@/components/providerWorkspace/SettingsFaqs";
 import { api } from "@/lib/trpc/react";
-import { DetailSkeleton, Empty, Tabs, getQuery, setQuery } from "./adminParts";
+import { DetailSkeleton, Empty, PageLink, Tabs, getQuery, setQuery } from "./adminParts";
 import StaffEdit from "./StaffEdit";
 
 // The admin's edit pages for a provider's work (StaffEdit hosts the provider's own editors inside the admin):
@@ -34,7 +34,12 @@ function ProviderFrame({ slug, children }) {
   if (p.isLoading) return <DetailSkeleton />;
   if (p.error?.data?.code === "NOT_FOUND") return <Empty kind="missing" />;
   if (p.error) return <ErrorState onRetry={() => p.refetch()} />;
-  return <StaffEdit provider={p.data}>{children}</StaffEdit>;
+  // whose work this is, from the first look (the breadcrumb says which part: Dates, Price plans, Profile and venues)
+  return (
+    <StaffEdit provider={p.data} heading={<div className="rt-adm-staffhead"><h1 className="rt-adm__h1"><PageLink href={`/admin/providers/${p.data.slug}`}>{p.data.name}</PageLink></h1><div className="rt-adm__actions" id="rt-staff-actions"></div></div>}>
+      {children}
+    </StaffEdit>
+  );
 }
 
 export function AdminProviderPlans({ slug }) {
@@ -56,7 +61,7 @@ export function AdminProviderProfile({ slug }) {
   const [toast, setToast] = useState(null);
   const [said, setSaid] = useState("");
   // a toast, or only read out when the page already shows the change (`shown`: a logo, the FAQs' order)
-  const say = useCallback((message, { shown = false } = {}) => (shown ? setSaid(message) : setToast({ message })), []);
+  const say = useCallback((message, { shown = false, error = false } = {}) => (shown ? setSaid(message) : setToast({ message, error })), []);
   const Panel = TABS.find((t) => t.key === tab).Panel;
   return (
     <ProviderFrame slug={slug}>

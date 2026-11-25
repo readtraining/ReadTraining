@@ -281,7 +281,8 @@ const cohortFields = z.object({
   tutorUserId: z.string().uuid().nullable().optional(),
   bookable: z.boolean().optional(),
   // its colour on the provider's calendar; none = by type
-  colour: z.enum(['purple', 'blue', 'green', 'orange', 'red']).nullable().optional(),
+  // a preset name, or a colour picked in the date form as #rrggbb (the database's cohorts_colour check)
+  colour: z.union([z.enum(['purple', 'blue', 'green', 'orange', 'red']), z.string().trim().toLowerCase().regex(/^#[0-9a-f]{6}$/, 'Choose a calendar colour.')]).nullable().optional(),
   // the provider has been told another of their courses is at the venue at the same time, and saves anyway (another room)
   sharedVenue: z.boolean().optional(),
 })

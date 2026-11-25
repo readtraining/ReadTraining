@@ -379,6 +379,13 @@
       "when": 1795595350529,
       "tag": "0053_cost_table_without_bundles",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1795608907668,
+      "tag": "0054_cohort_custom_colour",
+      "breakpoints": true
     }
   ]
 }

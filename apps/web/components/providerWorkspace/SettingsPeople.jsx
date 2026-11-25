@@ -168,7 +168,7 @@ export function TeamTab({ say }) {
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(null);
   const refresh = () => utils.provider.team.list.invalidate({ organisationId });
-  const fail = (e) => say(errorText(e));
+  const fail = (e) => say(errorText(e), { error: true });
 
   if (list.isError) return <ErrorState title="We couldn't load your team." text="Check your connection, then try again." onRetry={() => list.refetch()} />;
   if (!list.data) return <Loading rows={3} />;

@@ -156,33 +156,33 @@ export default function AdminApprovals() {
 
   return (
     <div className="rt-acc__stack">
-      <Tabs tabs={tabs} value={tab} onChange={choose} label="Show approvals" />
-      <div className="rt-adm-toolbar">
-        <div className="rt-adm-seg" role="group" aria-label="Type">
-          {types.map((t) => (
-            <button key={t.key} type="button" className={type === t.key ? "is-on" : undefined} aria-pressed={type === t.key} onClick={() => chooseType(t.key)}>{t.label}</button>
-          ))}
-        </div>
-      </div>
-      {/* the list's own bar, right above the cards: select all in line with the cards' boxes; the order of the courses and
-          Approve selected on the right, in line with their ⋯ menus */}
-      {shown.length > 0 && (
-        <div className="rt-adm-pickbar">
-          {canDecide && pickable.length > 0 && (
-            <label className="rt-bk__check" htmlFor="rt-adm-all">
-              <input id="rt-adm-all" type="checkbox" checked={allPicked} onChange={() => setPicked(allPicked ? [] : pickable.map((a) => a.key))} />
-              <span>Select all new courses</span>
-            </label>
-          )}
-          <div className="rt-adm-pickbar__end">
-            {/* "Sort by" with the sort icon, opening the two orders (the current one ticked), as YouTube's and Google's lists do */}
+      {/* one row: the status pills on the left; the type and the order on the right. Select all and Approve selected get their
+          own bar right above the cards, only where there are courses to approve together */}
+      <div className="rt-adm-toolbar -oneline">
+        <Tabs tabs={tabs} value={tab} onChange={choose} label="Show approvals" />
+        <div className="rt-adm-toolbar__end">
+          <div className="rt-adm-seg" role="group" aria-label="Type">
+            {types.map((t) => (
+              <button key={t.key} type="button" className={type === t.key ? "is-on" : undefined} aria-pressed={type === t.key} onClick={() => chooseType(t.key)}>{t.label}</button>
+            ))}
+          </div>
+          {/* "Sort by" with the sort icon, opening the two orders (the current one ticked), as YouTube's and Google's lists do */}
+          {shown.length > 1 && (
             <RowMenu label={`Sort by, ${ORDERS[order].toLowerCase()}`} triggerClass="rt-adm-sortbtn" trigger={<><i className="icon-list-sort text-16" aria-hidden="true"></i><span aria-hidden="true">Sort by</span></>}
               items={Object.entries(ORDERS).map(([value, text]) => ({ key: value, label: text, svg: <i className={`icon-check text-12 rt-adm-sortbtn__tick${order === value ? "" : " -off"}`} aria-hidden="true"></i>, onClick: () => chooseOrder(value) }))} />
-            {canDecide && pickable.length > 0 && (
-              <button type="button" className="button -sm -purple-1 text-white" disabled={!picked.length || busy} onClick={() => run(pickable.filter((a) => picked.includes(a.key)), "approve")}>
-                {picked.length ? `Approve selected (${picked.length})` : "Approve selected"}
-              </button>
-            )}
+          )}
+        </div>
+      </div>
+      {shown.length > 0 && canDecide && pickable.length > 0 && (
+        <div className="rt-adm-pickbar">
+          <label className="rt-bk__check" htmlFor="rt-adm-all">
+            <input id="rt-adm-all" type="checkbox" checked={allPicked} onChange={() => setPicked(allPicked ? [] : pickable.map((a) => a.key))} />
+            <span>Select all new courses</span>
+          </label>
+          <div className="rt-adm-pickbar__end">
+            <button type="button" className="button -sm -purple-1 text-white" disabled={!picked.length || busy} onClick={() => run(pickable.filter((a) => picked.includes(a.key)), "approve")}>
+              {picked.length ? `Approve selected (${picked.length})` : "Approve selected"}
+            </button>
           </div>
         </div>
       )}

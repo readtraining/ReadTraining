@@ -235,7 +235,8 @@ function LogoForm({ profile, say }) {
           {!locked && (
             <div className="rt-pws-set__actions">
               <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy && !removeLogo.isPending ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}</button>
-              {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
+              {/* not while a new logo is uploading */}
+              {logoUrl && !(busy && !removeLogo.isPending) && <button type="button" className="button -sm -outline-red-3 text-red-3" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
             </div>
           )}
           <p className="rt-field__hint">{hintFor("logo")} It is saved as soon as you choose it.</p>
@@ -338,7 +339,7 @@ export function VenuesTab({ say }) {
   const toggleActive = (v) =>
     setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, {
       onSuccess: () => { setArchiving(null); refresh(); say(v.active ? "Venue archived" : "Venue restored"); },
-      onError: (e) => { setArchiving(null); say(errorText(e)); },
+      onError: (e) => { setArchiving(null); say(errorText(e), { error: true }); },
     });
   const edit = can("provider.cohorts.edit");
   const refresh = () => utils.provider.venues.list.invalidate({ organisationId });
@@ -383,7 +384,7 @@ export function VenuesTab({ say }) {
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : r.unchecked ? "Venue saved. We couldn't check its town just now; we'll try again." : "Venue saved, but we couldn't find its postcode on the map"); }} />
-      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.${archiving.upcoming ? " Any of its upcoming dates still taking bookings need their bookings turned off, or to be cancelled, first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
+      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `It won't be offered for new dates; dates already there keep it. You can restore it any time.${archiving.upcoming ? " Turn off bookings on its upcoming dates first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
     </div>
   );
 }

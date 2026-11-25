@@ -52,7 +52,6 @@ export const pw = {
     places: [
       { label: "Provider name, logo, headline and biography", href: "/provider/settings?tab=info" },
       { label: "Cancellation and refund policy, booking terms", href: "/provider/settings?tab=terms" },
-      { label: "Venues", href: "/provider/venues" },
     ],
     send: {
       title: "Send it back for review",

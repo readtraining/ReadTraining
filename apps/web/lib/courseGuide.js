@@ -18,15 +18,20 @@ export function inlineParts(text) {
   return out;
 }
 
-/** Text typed into a box as its blocks: paragraphs at blank lines; a block whose every line starts "- " or "• " is a list. */
+/** Text typed into a box as its blocks: paragraphs at blank lines, and lines starting "- " or "• " as a list, also straight under a
+ * line of text ("You will practise:" then "- CPR" on the next line is a paragraph, then a list), as the editors' hint says. */
 export function textBlocks(text) {
-  return String(text || "")
-    .replace(/\r\n?/g, "\n")
-    .split(/\n\s*\n/)
-    .map((b) => b.trim())
-    .filter(Boolean)
-    .map((b) => {
-      const ls = b.split("\n").map((l) => l.trim()).filter(Boolean);
-      return ls.every((l) => /^[-•]\s+/.test(l)) ? { list: ls.map((l) => l.replace(/^[-•]\s+/, "")) } : { text: ls.join(" ") };
-    });
+  const out = [];
+  for (const para of String(text || "").replace(/\r\n?/g, "\n").split(/\n\s*\n/)) {
+    let run = null; // the paragraph or list being built from this block's lines
+    for (const raw of para.split("\n")) {
+      const line = raw.trim();
+      if (!line) continue;
+      const bullet = /^[-•]\s+/.test(line);
+      if (!run || Boolean(run.list) !== bullet) out.push((run = bullet ? { list: [] } : { text: "" }));
+      if (bullet) run.list.push(line.replace(/^[-•]\s+/, ""));
+      else run.text = run.text ? `${run.text} ${line}` : line;
+    }
+  }
+  return out;
 }
