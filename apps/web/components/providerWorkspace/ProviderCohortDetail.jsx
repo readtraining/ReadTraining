@@ -68,7 +68,7 @@ export default function ProviderCohortDetail({ cohortId }) {
     setBookableNow(to);
     bookable.mutate({ organisationId, cohortId, bookable: to }, {
       onSuccess: async () => { setSaid(to ? "Bookings turned on" : "Bookings turned off"); await refresh(); setBookableNow(null); },
-      onError: (e) => { setBookableNow(null); setToast({ message: errorText(e) }); },
+      onError: (e) => { setBookableNow(null); setToast({ message: errorText(e), error: true }); },
     });
   };
 
@@ -76,7 +76,7 @@ export default function ProviderCohortDetail({ cohortId }) {
   const setTutor = (v) =>
     assignTutor.mutate({ organisationId, cohortId, tutorUserId: v || null }, {
       onSuccess: () => { setSaid(v ? "Tutor assigned" : "Tutor removed"); refresh(); },
-      onError: (e) => setToast({ message: errorText(e) }),
+      onError: (e) => setToast({ message: errorText(e), error: true }),
     });
   const tutors = tutorsQ.data || [];
   const today = todayIso();
@@ -146,7 +146,14 @@ export default function ProviderCohortDetail({ cohortId }) {
       </section>
 
       <CohortForm open={editing} onClose={() => setEditing(false)} cohort={k} onSaved={() => { setEditing(false); refresh(); setToast({ message: "Cohort saved" }); }} />
-      <CancelSheet cohort={cancelling ? k : null} onClose={() => setCancelling(false)} onDone={() => { setCancelling(false); refresh(); setToast({ message: "Cohort cancelled" }); }} />
+      <CancelSheet cohort={cancelling ? k : null} onClose={() => setCancelling(false)} onDone={(reason) => {
+        // cancelled shows at once (no bookings, its reason, no more Edit, Move or Cancel); the cohort then loads again behind it
+        utils.provider.cohorts.get.setData({ organisationId, cohortId }, (old) => (old ? { ...old, cancelledAt: new Date().toISOString(), cancelReason: reason, bookable: false } : old));
+        setBookableNow(null);
+        setCancelling(false);
+        refresh();
+        setToast({ message: "Cohort cancelled" });
+      }} />
       <MoveSheet cohort={moving ? k : null} onClose={() => setMoving(false)} onDone={(title) => { setMoving(false); refresh(); utils.provider.courses.list.invalidate(); setToast({ message: `Moved to ${title}` }); }} />
       <DeleteSheet cohort={deleting ? k : null} onClose={() => setDeleting(false)} onDone={() => { utils.provider.cohorts.list.invalidate(); router.push("/provider/cohorts"); }} />
       <Toast toast={toast} onDone={() => setToast(null)} />

@@ -338,7 +338,7 @@ export function VenuesTab({ say }) {
   const toggleActive = (v) =>
     setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, {
       onSuccess: () => { setArchiving(null); refresh(); say(v.active ? "Venue archived" : "Venue restored"); },
-      onError: (e) => { setArchiving(null); say(errorText(e)); },
+      onError: (e) => { setArchiving(null); say(errorText(e), { error: true }); },
     });
   const edit = can("provider.cohorts.edit");
   const refresh = () => utils.provider.venues.list.invalidate({ organisationId });

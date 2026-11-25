@@ -63,13 +63,16 @@ export default function AdminProvider({ slug }) {
   // why an approver sees no decision on an application waiting here: they opened this provider account themselves (another admin
   // decides it); the sole approver gets the buttons, and the pop-up asks for the reason
   const blockedNote = (p.status === "pending" || p.status === "changes_requested") && !decisions.length && p.ownRequest && me?.permissions?.includes("approve") ? d.ownRequest : "";
-  const decided = async (decision, { emailed, outbox }) => {
+  // the new status shows at once (from the decision's own answer), with the message the admin wrote, and says so; the record then
+  // loads again in the background for the rest (its dates, the activity), the buttons waiting for it
+  const decided = async (decision, { status, message, emailed, outbox }) => {
+    utils.admin.providers.get.setData({ slug }, (old) => (old ? { ...old, status, statusNote: message || null, statusChangedAt: new Date().toISOString() } : old));
+    setSaid(outbox ? `${d.done[decision]}. ${d.emailOutbox}` : d.done[decision]);
+    setWarning(emailed || outbox ? "" : d.notEmailed);
     setRefreshing(true);
     utils.admin.activity.list.invalidate();
     await utils.admin.providers.invalidate().catch(() => {});
     setRefreshing(false);
-    setSaid(outbox ? `${d.done[decision]}. ${d.emailOutbox}` : d.done[decision]);
-    setWarning(emailed || outbox ? "" : d.notEmailed);
   };
   const f = d.fields;
   const lastReply = p.status === "pending" && activity.data?.entries.find((e) => e.action === "provider.resubmitted");
@@ -232,7 +235,11 @@ export function DeleteProviderSheet({ provider, onClose, onDone }) {
 // The provider's commission: its rate, whether that's its own or the platform default, and (with the switch) the field to
 // change it and "Use the platform default".
 function CommissionCard({ provider: p, canChange, onSaved }) {
-  const save = api.admin.providers.setCommission.useMutation();
+  const utils = api.useUtils();
+  // the new rate shows at once, before the provider loads again
+  const save = api.admin.providers.setCommission.useMutation({
+    onSuccess: (_, { bps }) => utils.admin.providers.get.setData({ slug: p.slug }, (old) => (old ? { ...old, commissionBps: bps } : old)),
+  });
   const def = formatRate(p.defaultCommissionBps);
   const rate = p.commissionBps ?? p.defaultCommissionBps;
   const own = p.commissionBps !== null;
@@ -284,7 +291,7 @@ export function DecisionSheet({ provider, decision, onClose, onDone }) {
     if (msgError || ownError) return focusFirstError(ref.current);
     try {
       const res = await decide.mutateAsync({ organisationId: provider.id, decision, message: sheet.label ? message.trim() : undefined, ownReason: own ? reason.trim() : undefined });
-      onDone(decision, res);
+      onDone(decision, { ...res, message: sheet.label ? message.trim() : "" });
       close();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);

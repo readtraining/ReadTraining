@@ -56,7 +56,7 @@ export function AdminProviderProfile({ slug }) {
   const [toast, setToast] = useState(null);
   const [said, setSaid] = useState("");
   // a toast, or only read out when the page already shows the change (`shown`: a logo, the FAQs' order)
-  const say = useCallback((message, { shown = false } = {}) => (shown ? setSaid(message) : setToast({ message })), []);
+  const say = useCallback((message, { shown = false, error = false } = {}) => (shown ? setSaid(message) : setToast({ message, error })), []);
   const Panel = TABS.find((t) => t.key === tab).Panel;
   return (
     <ProviderFrame slug={slug}>

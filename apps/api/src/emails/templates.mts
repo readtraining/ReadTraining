@@ -173,7 +173,7 @@ export const TEMPLATES: Record<string, Template> = {
     words: {
       subject: 'We’re reviewing {course}',
       heading: 'Your course is with our team',
-      body: 'Hi {firstName},\n\nThank you for sending {course} for approval. Our team will check it and email you when it is live, or if anything needs changing.\n\nIf you edit the course while it is waiting, it comes back to you as a draft and you need to send it again.',
+      body: 'Hi {firstName},\n\nThank you for sending {course} for approval. Our team will check it and email you when it is live, or if anything needs changing.\n\nYou can still edit the course while it is waiting: your changes stay with our team, who check the latest version.',
       button: 'Open the course',
     },
     sample: { ...PROVIDER, course: 'Emergency First Aid at Work', courseId: '1000' },

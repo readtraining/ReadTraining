@@ -270,7 +270,7 @@ export default function ProviderCohorts() {
   };
   const refresh = () =>
     Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
-  const fail = (e) => setToast({ message: errorText(e) });
+  const fail = (e) => setToast({ message: errorText(e), error: true });
   // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
   const setTutorOf = (k, v) => {
     change(k.id, { tutorUserId: v || null });
@@ -469,7 +469,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
       setError("Say why the dates are cancelled.");
       return document.getElementById("rt-coh-cancel-why")?.focus();
     }
-    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorText(er)) });
+    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: () => onDone(reason.trim()), onError: (er) => setError(errorText(er)) });
   };
   return (
     <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose>

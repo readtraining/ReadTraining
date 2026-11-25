@@ -402,8 +402,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     const goes = (k) => changed.includes(k)
       || (changed.includes("exams") && /^(examUnit|passMark|examDuration|examAssessment)\d+$/.test(k))
       || ((changed.includes("price") || changed.includes("planId")) && (k === "price" || k === "planId"));
-    setErrors((e) => (Object.keys(e).some(goes) ? Object.fromEntries(Object.entries(e).filter(([k]) => !goes(k))) : e));
-  }, [draft]);
+    // nothing to take away: no state change at all, or every keystroke would cost a second render, and fast typing chains those
+    // into React's nested-update limit, which drops the letter being typed
+    if (!Object.keys(errors).some(goes)) return;
+    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !goes(k))));
+  }, [draft]); // eslint-disable-line react-hooks/exhaustive-deps -- errors: read as they are when the draft changes
 
   if (!id || query.error?.data?.code === "NOT_FOUND" || (ep.admin && course && course.kind !== "shared")) return <EmptyState title="This course was not found" text={ep.admin ? "It may have been deleted. Only shared course pages are edited here." : "It may have been deleted, or it belongs to another provider."} action={back} />;
   if (query.error?.data?.code === "FORBIDDEN") return <EmptyState title="You can't open this course" text="Your role doesn't include courses. Ask an owner or admin if you need it." action={back} />;
@@ -747,10 +750,12 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       </section>
 
       {stale && (
-        <div className="rt-acc__notice -warn rt-pws-ce__stale" role="alert" tabIndex={-1} ref={staleRef}>
-          <b>This course was changed somewhere else since you opened it.</b>
-          <p>Someone else, or you in another tab, saved a newer version. Your changes are not saved, so nothing was overwritten. Copy anything you want to keep, then load the latest version and make your change again.</p>
-          <button type="button" className="button -sm -purple-1 text-white" onClick={loadLatest} disabled={reloading} aria-busy={reloading || undefined}>{reloading ? "Loading…" : "Load the latest version"}</button>
+        <div className="rt-pws-ce__stale" role="alert" tabIndex={-1} ref={staleRef}>
+          <div>
+            <b>A newer version of this course was saved</b>
+            <p>Someone else, or you in another tab, saved it after you opened it. Your changes here were not saved, so nothing was overwritten. Copy anything you want to keep, then load the newer version.</p>
+          </div>
+          <button type="button" className="button -sm -outline-dark-1 text-dark-1" onClick={loadLatest} disabled={reloading} aria-busy={reloading || undefined}>{reloading ? "Loading…" : "Load newer version"}</button>
         </div>
       )}
       {course.pendingChanges && (
