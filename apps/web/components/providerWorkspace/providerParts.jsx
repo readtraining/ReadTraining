@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { NavIcon } from "@/components/header/navIcons";
+import AdminIcon from "@/components/admin/navIcons";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { SHOW_DEMO } from "@/lib/demo";
 import { DetailSkeleton, Pill, TableSkeleton } from "@/components/admin/adminParts";
@@ -109,6 +110,27 @@ export function Choice({ name, legend, value, onChange, options, error, hint, qu
         ))}
       </div>
     </fieldset>
+  );
+}
+
+// One of two to four choices as a segmented control (a pill toggle): a light track holding one button per choice, the chosen one
+// raised in white (`aria-pressed`). `options` are { value, label, icon } (an icon from the work layouts' set, admin/navIcons.jsx).
+// `legend` names the group on screen and to screen readers; `hint` is a line under it (it may change with the choice). onChange
+// gets the value, as Choice's does, so a radio group can become one without touching its state.
+export function SegmentedControl({ id, legend, value, onChange, options, hint }) {
+  return (
+    <div className="rt-field rt-seg-field">
+      <p className="rt-seg-field__legend" id={`${id}-l`}>{legend}</p>
+      <div className="rt-seg" role="group" aria-labelledby={`${id}-l`} aria-describedby={hint ? `${id}-h` : undefined}>
+        {options.map((o) => (
+          <button key={o.value} type="button" className="rt-seg__opt" aria-pressed={value === o.value} onClick={() => value !== o.value && onChange(o.value)}>
+            {o.icon && <AdminIcon name={o.icon} className="rt-seg__icon" />}
+            <span>{o.label}</span>
+          </button>
+        ))}
+      </div>
+      {hint && <p className="rt-seg-field__hint" id={`${id}-h`}>{hint}</p>}
+    </div>
   );
 }
 

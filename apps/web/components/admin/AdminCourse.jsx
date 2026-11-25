@@ -18,12 +18,29 @@ import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import AdminCoursePrices from "./AdminCoursePrices";
 import TextArea from "@/components/forms/TextArea";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 
 const copy = A.catalogue;
 const d = copy.detail;
 const ap = A.approvals;
 // the decisions that need a note for the provider (it is emailed to them)
 const NOTE = new Set(["changes", "rejectChange", "pause"]);
+const APPROVALS = new Set(["approve", "approveChange"]);
+
+// The topic a provider's course is listed under, chosen when approving it (or a change that moves it): the topics in use under its
+// sub-category (API `topicChoice`, admin.courses), one required. Providers don't choose topics; our team does, here and in
+// Approvals' Approve pop-up.
+export const TOPIC_ERROR = "Choose the topic this course is listed under.";
+export function TopicField({ id, choice, value, onChange, error }) {
+  return (
+    <div className="rt-field">
+      <label htmlFor={id}>Topic<Req /></label>
+      <small className="rt-field__hint" id={`${id}-h`}>Where the course is listed, and on which shared course page. The provider doesn't choose it.</small>
+      {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
+      <FieldSelect id={id} label="Topic" placeholder="Choose a topic" value={value} onChange={onChange} options={choice.options.map((o) => ({ value: o.id, label: o.name }))} invalid={Boolean(error)} describedBy={`${id}-h${error ? ` ${id}-e` : ""}`} />
+    </div>
+  );
+}
 
 // One course for the admin (API admin.courses.get): what the provider (or our team, for a shared page) wrote, laid out to check,
 // with its status, provider and shared page. A change waiting on a live course shows field by field, live against proposed. The
@@ -43,6 +60,8 @@ export default function AdminCourse({ id }) {
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState("");
+  const [topic, setTopic] = useState(""); // the topic chosen in the Approve pop-up (topicChoice)
+  const [topicError, setTopicError] = useState("");
   const [said, setSaid] = useState("");
   const [problem, setProblem] = useState(""); // a refused decision, or an email that couldn't be sent: shown until the next one
   // after a decision, until the course has loaded again: the buttons stay locked, so the old status never shows with live buttons
@@ -79,13 +98,16 @@ export default function AdminCourse({ id }) {
   const ownFor = (decision) => (decision === "approveChange" || decision === "rejectChange" ? c.ownChange : decision === "pause" || (decision === "resume" && c.pausedByYou) ? false : c.ownCourse);
   const allowedFor = (decision) => !ownFor(decision) || c.soleApprover;
   const needsNote = (decision) => NOTE.has(decision);
-  const run = async (decision, message, ownReason) => {
+  // approving needs the topic chosen in the pop-up when the course's sub-category has topics (a change that keeps a topic that
+  // still fits keeps it without asking)
+  const needsTopic = (decision) => APPROVALS.has(decision) && Boolean(c.topicChoice?.ask);
+  const run = async (decision, message, ownReason, chosenTopic) => {
     setProblem("");
     try {
       // the version on screen: when the change, or the course itself, was sent (the API refuses a decision on a newer one)
       const sent = decision === "approveChange" || decision === "rejectChange" ? c.change?.since : decision === "approve" || decision === "changes" ? c.submittedAt : null;
       const seen = sent ? new Date(sent).toISOString() : undefined;
-      const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen });
+      const r = await decide.mutateAsync({ courseId, decision, message, ownReason, seen, ...(chosenTopic ? { topic: chosenTopic } : {}) });
       setSettling(true);
       refreshCourses().catch(() => {});
       await refresh();
@@ -97,7 +119,7 @@ export default function AdminCourse({ id }) {
     } catch (e) {
       // a field's message (the note, the reason) or the refusal itself (a retired entry, something missing, another admin decided…)
       const { fields, general } = errorsFrom(e);
-      return fields.message || fields.ownReason || general || Object.values(fields)[0] || "";
+      return fields.topic || fields.message || fields.ownReason || general || Object.values(fields)[0] || "";
     }
   };
   const open = (decision) => {
@@ -106,11 +128,13 @@ export default function AdminCourse({ id }) {
     setError("");
     setReason("");
     setReasonError("");
+    setTopic(c.topicChoice?.current || "");
+    setTopicError("");
   };
   // a decision goes straight through, unless it needs a note for the provider or is on the admin's own request; a refusal shows in
   // the notice at the top
   const act = async (decision) => {
-    if (needsNote(decision) || ownFor(decision)) return open(decision);
+    if (needsNote(decision) || ownFor(decision) || needsTopic(decision)) return open(decision);
     const failed = await run(decision);
     if (failed) setProblem(failed);
   };
@@ -118,11 +142,15 @@ export default function AdminCourse({ id }) {
     e.preventDefault();
     const noteError = needsNote(asking) && !note.trim() ? { changes: "Enter what the provider needs to change.", rejectChange: "Enter why the change is not approved.", pause: "Enter why the course is paused. The provider sees it." }[asking] : "";
     const ownError = ownFor(asking) && reason.trim().length < 10 ? A.own.error : "";
+    const pickError = needsTopic(asking) && !topic ? TOPIC_ERROR : "";
     setError(noteError);
     setReasonError(ownError);
-    if (noteError || ownError) return focusFirstError(formRef.current);
-    const failed = await run(asking, needsNote(asking) ? note.trim() : undefined, ownFor(asking) ? reason.trim() : undefined);
-    if (failed) (ownFor(asking) && !needsNote(asking) ? setReasonError : setError)(failed);
+    setTopicError(pickError);
+    if (noteError || ownError || pickError) return focusFirstError(formRef.current);
+    setTopicError("");
+    const failed = await run(asking, needsNote(asking) ? note.trim() : undefined, ownFor(asking) ? reason.trim() : undefined, needsTopic(asking) ? topic : undefined);
+    // shown under the field it is about: the topic (or any refusal when the topic is the pop-up's only field), the reason, the note
+    if (failed) (needsTopic(asking) && (failed === TOPIC_ERROR || !ownFor(asking)) ? setTopicError : ownFor(asking) && !needsNote(asking) ? setReasonError : setError)(failed);
     else setAsking(null);
   };
   const busy = decide.isPending || settling;
@@ -253,7 +281,9 @@ export default function AdminCourse({ id }) {
           <Row label="Entry requirements" v={c.entryRequirements}><Text v={c.entryRequirements} /></Row>
           <Row label="What learners will learn" v={c.outcomes}><Bullets items={c.outcomes} /></Row>
           <Row label="Features" v={c.features}><Bullets items={c.features} /></Row>
+          <Row label="Line above the syllabus" v={c.syllabusIntro}><Text v={c.syllabusIntro} /></Row>
           <Row label="Syllabus" v={c.units}><Fold open={reviewing} label={count(c.units, "unit")}><Units units={c.units} /></Fold></Row>
+          <Row label="Text above the exam table" v={c.examsIntro}><Text v={c.examsIntro} /></Row>
           <Row label="Exam and assessment" v={c.exams}><Fold open={reviewing} label={count(c.exams, "exam")}><Exams exams={c.exams} /></Fold></Row>
           <Row label="FAQs" v={c.faqs}><Fold open={reviewing} label={count(c.faqs, "question")}><Faqs faqs={c.faqs} /></Fold></Row>
         </dl>
@@ -277,6 +307,7 @@ export default function AdminCourse({ id }) {
       <Sheet open={Boolean(asking)} onClose={() => setAsking(null)} title={`${sheetTitle}: ${c.title}`} closeLabel="Close">
         <form className="rt-q__form rt-biz__sheetform" onSubmit={send} noValidate ref={formRef}>
           <p className="rt-acc__note">{c.provider?.name}</p>
+          {asking && needsTopic(asking) && <TopicField id="rt-adm-ctopic" choice={c.topicChoice} value={topic} onChange={(v) => { setTopic(v); setTopicError(""); }} error={topicError} />}
           {asking && needsNote(asking) && (
             <div className="rt-field">
               <label htmlFor="rt-adm-cnote">{ap.reasonLabel}<Req /></label>
@@ -335,11 +366,12 @@ const Units = ({ units }) => (
 const Exams = ({ exams }) => (
   <div className="rt-biz__tablecard rt-adm-read__table">
     <table className="rt-biz__table rt-adm-table">
-      <thead><tr><th scope="col">Exam</th><th scope="col">Pass mark</th><th scope="col">Duration</th></tr></thead>
+      <thead><tr><th scope="col">Exam</th>{exams.some((e) => e.assessment) && <th scope="col">Assessment</th>}<th scope="col">Pass mark</th><th scope="col">Duration</th></tr></thead>
       <tbody>
         {exams.map((e, i) => (
           <tr key={i}>
             <td data-label="Exam">{e.unit}</td>
+            {exams.some((x) => x.assessment) && <td data-label="Assessment">{e.assessment || "–"}</td>}
             <td data-label="Pass mark">{e.passMark || "–"}</td>
             <td data-label="Duration">{e.duration || "–"}</td>
           </tr>
@@ -366,7 +398,7 @@ function Value({ k, v, place }) {
   if (k === "level") return levelName(v) || v;
   if (k === "compliance") return pw.compliance.name(v);
   if (k === "units") return <ol className="rt-adm-read__list">{v.map((u, i) => <li key={i}><b>{u.title}</b>{u.body && <span className="rt-adm-read__pre">{u.body}</span>}</li>)}</ol>;
-  if (k === "exams") return <ul className="rt-adm-read__list">{v.map((e, i) => <li key={i}><b>{e.unit}</b>{[e.passMark && `Pass mark: ${e.passMark}`, e.duration && `Duration: ${e.duration}`].filter(Boolean).join(" · ")}</li>)}</ul>;
+  if (k === "exams") return <ul className="rt-adm-read__list">{v.map((e, i) => <li key={i}><b>{e.unit}</b>{[e.assessment && `Assessment: ${e.assessment}`, e.passMark && `Pass mark: ${e.passMark}`, e.duration && `Duration: ${e.duration}`].filter(Boolean).join(" · ")}</li>)}</ul>;
   if (k === "faqs") return <ul className="rt-adm-read__list">{v.map((f, i) => <li key={i}><b>{f.question}</b>{f.answer}</li>)}</ul>;
   if (Array.isArray(v)) return <ul className="rt-adm-read__list">{v.map((x, i) => <li key={i}>{x}</li>)}</ul>;
   return <span className="rt-adm-read__pre">{String(v)}</span>;

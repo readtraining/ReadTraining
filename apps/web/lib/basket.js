@@ -1,11 +1,13 @@
 import { basket as copy } from "@/data/basket";
+import { TOPICS, courseSearch } from "@/data/courseTopics";
+import { matchesPick } from "@/lib/catalogueData";
 
 // The basket's rules and sums, in one place: the basket page, the checkout and the header all read these. A line is a course
 // on one date (`sessionId`); `quantity` is its delegates; `selected` false leaves it out of this booking. Every way in adds a date;
 // an older saved line without one asks for it in the basket's date pop-up. Swap the promo lookup for an API call later.
 
 // the package chosen on a date sold in packages (`bundle`: a provider's price plan's, or the client's own on a course page,
-// data/courseGuides.js) is part of the line: the same date with another package is another line
+// lib/courseGuide.js) is part of the line: the same date with another package is another line
 export const lineKey = (item) => `${item.id}:${item.sessionId || ""}${item.bundle?.key ? `:${item.bundle.key}` : ""}`;
 export const MAX_DELEGATES = 20;
 // the most delegates one line can have: 20, or fewer when its date has fewer places
@@ -72,6 +74,15 @@ export const firstAidFor = ({ mode, subject, sub, topic }) => {
   });
 };
 export const needsFirstAid = (item) => firstAidFor(item);
+// The learner's first aid answer: "have" (a valid certificate), "need" (still to take one) or "bundle" (the package includes it).
+// A line saved when first aid was a paid add-on ("add") reads as "need": nothing is charged for it now.
+export const firstAidAnswer = (item) => (item.firstAid === "add" ? "need" : item.firstAid);
+// Where to find Emergency First Aid at Work: its course page when one is live, the search when several are, null when none is
+// (`courses`: the live catalogue's, useNav().courses).
+export function firstAidCourseHref(courses = []) {
+  const live = courses.filter((c) => matchesPick(c, TOPICS.efaw));
+  return live.length === 1 ? live[0].href : live.length ? courseSearch("Emergency First Aid at Work") : null;
+}
 
 // The booking steps bar: "Choose your package" first when a course being booked comes in packages, otherwise "Choose a date".
 export const bookingSteps = (withPackage) => (withPackage ? [copy.packageStep, ...copy.steps.slice(1)] : copy.steps);
@@ -97,12 +108,10 @@ export const needsPackage = (item) => Boolean(item.packages?.length) && !item.pa
 
 // What one delegate pays and what it would have been without offers, then the line's totals.
 export function lineParts(item) {
-  const addOn = needsFirstAid(item) && item.firstAid === "add" ? copy.firstAid.add.price : 0;
-  const addOnWas = addOn && copy.firstAid.add.wasPrice > addOn ? copy.firstAid.add.wasPrice : 0;
-  const unit = basePrice(item) + addOn;
-  const unitWas = wasBase(item) ? wasBase(item) + addOnWas : addOnWas ? unit - addOn + addOnWas : 0;
+  const unit = basePrice(item);
+  const unitWas = wasBase(item);
   const quantity = Math.min(maxDelegates(item), Math.max(1, Number(item.quantity) || 1)); // a date changed to one with fewer places
-  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0, addOn };
+  return { unit, unitWas: unitWas > unit ? unitWas : 0, quantity, total: unit * quantity, was: unitWas > unit ? unitWas * quantity : 0 };
 }
 
 // What stops a line from going to payment (shown on the line, and listed under the Proceed button).

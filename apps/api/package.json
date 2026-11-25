@@ -20,8 +20,7 @@
     "clean:dev": "tsx --env-file-if-exists=../../.env src/scripts/clean-dev.mts",
     "remove:test-content": "tsx --env-file-if-exists=../../.env src/scripts/remove-test-content.mts",
     "cleanup:media": "tsx --env-file-if-exists=../../.env src/scripts/cleanup-media.mts",
-    "prelaunch:clean": "tsx --env-file-if-exists=../../.env src/scripts/prelaunch-clean.mts",
-    "guides:import": "tsx --env-file-if-exists=../../.env src/scripts/import-guides.mts"
+    "prelaunch:clean": "tsx --env-file-if-exists=../../.env src/scripts/prelaunch-clean.mts"
   },
   "dependencies": {
     "@readtraining/db": "workspace:*",
