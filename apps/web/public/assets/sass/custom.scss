@@ -1174,6 +1174,11 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
 .rt-cat-dd:not(.is-open) .rt-cat-dd__panel.-inline { display: none; }
 .rt-cat-dd__panel.-inline::before { display: none; }
 .rt-cat-dd__panel.-inline .rt-cat-dd__list { max-height: 252px; }
+/* a floating list (FieldSelect float: the cohort form's times): over the pop-up, placed from its field by CatalogueDropdown */
+@media (min-width: 768px) {
+  .rt-cat-dd__panel.-float { z-index: 1300; max-width: 280px; transform: none; }
+  .rt-cat-dd__panel.-float .rt-cat-dd__list { max-height: 252px; }
+}
 .rt-cat-dd--sort .rt-cat-dd__panel { left: auto; right: 0; min-width: 220px; }
 .rt-cat-dd__search { display: flex; align-items: center; gap: 8px; height: 40px; margin: 0 0 6px; padding: 0 12px; border: 1px solid var(--color-light-5); border-radius: var(--cat-radius-sm); }
 .rt-cat-dd__search:focus-within { border-color: var(--color-dark-1); }
@@ -1197,6 +1202,8 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
 .rt-cat-dd__option.is-active::after { background: var(--cat-fill-active-hover); }
 .rt-cat-dd__option::before { content: ""; position: absolute; z-index: 2; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: 3px; background: var(--color-purple-1); opacity: 0; transition: opacity 0.2s; }
 .rt-cat-dd__option:hover::before, .rt-cat-dd__option.is-active::before { opacity: 1; }
+/* a list's last option that does something instead of choosing a value ("+ Add a new venue"): a line above it, in the link colour */
+.rt-cat-dd__option.-action { margin-top: 4px; border-top: 1px solid var(--color-light-5); border-radius: 0; color: var(--color-purple-1); font-weight: 600; }
 .rt-cat-dd__icon { flex: none; font-size: 16px; color: var(--color-light-1); transition: color 0.25s ease-in; }
 .rt-cat-dd__option:hover .rt-cat-dd__icon, .rt-cat-dd__option.is-active .rt-cat-dd__icon { color: var(--color-purple-1); }
 .rt-cat-dd__check { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--color-purple-1); color: #fff !important; font-size: 8px; }
@@ -5475,7 +5482,7 @@ html:has(.rt-adm--platform) { scrollbar-gutter: stable; }
 .rt-nav-field input { height: 44px; padding: 0 14px; border: 1px solid var(--color-light-5); border-radius: var(--rt-radius-control); background: var(--color-light-4); font: inherit; font-size: var(--rt-text-sm); font-weight: 500; color: var(--color-dark-1); }
 /* the course list: the site dropdown (FieldSelect), as wide as the town box */
 .rt-nav-field .rt-field-dd.-compact, .rt-nav-field .rt-field-dd.-compact .rt-cat-dd__trigger { width: 100%; }
-.rt-nav-field .rt-field-dd.-compact .rt-cat-dd__panel { right: 0; left: 0; }
+.rt-nav-field .rt-field-dd.-compact .rt-cat-dd__panel { right: 0; left: 0; width: auto; max-width: none; } /* as wide as its field, never past the menu */
 .rt-nav-field input::placeholder { color: var(--rt-nav-muted); opacity: 1; }
 .rt-nav-card .rt-nav-field input:focus-visible { border-color: var(--color-dark-1); outline: none; background: var(--color-white); }
 .rt-nav-field input[aria-invalid="true"] { border-color: var(--color-red-3); }
@@ -6411,13 +6418,20 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__h3 { margin: 0 0 4px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 /* the dates: the calendar, and beside it the dates picked in a framed list as tall as the calendar (on a computer it scrolls inside
    itself with the site's scroll pill, FilterScrollPill, and a scroll past its end goes on to the pop-up); on a phone they stack */
-.rt-pws-coh__dates { display: grid; gap: var(--rt-gap); }
+.rt-pws-coh__dates { display: grid; gap: 12px var(--rt-gap); }
 .rt-pws-coh__pickcol { display: grid; gap: 12px; min-width: 0; align-content: start; }
 .rt-pws-coh__slotpanel { display: flex; flex-direction: column; }
-.rt-pws-coh__slots .rt-acc__note { margin: 0 0 12px; }
+.rt-pws-coh__slotshead { margin-top: 12px; }
+.rt-pws-coh__slotshead .rt-acc__note { margin: 0; }
+.rt-pws-coh__slotshead .rt-q__err { margin: 8px 0 0; }
 .rt-pws-coh__slotscroll { position: relative; display: flex; flex-direction: column; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
 @media (min-width: 992px) {
-  .rt-pws-coh__dates { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  /* headings in the first row (their bottoms level), the calendar and the dates picked in the second */
+  .rt-pws-coh__dates { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "pickhead slotshead" "pick slots"; align-items: end; }
+  .rt-pws-coh__pickhead { grid-area: pickhead; }
+  .rt-pws-coh__slotshead { grid-area: slotshead; margin-top: 0; }
+  .rt-pws-coh__pickcol { grid-area: pick; align-self: stretch; }
+  .rt-pws-coh__slots { grid-area: slots; align-self: stretch; }
   .rt-pws-coh__slots { position: relative; min-height: 0; }
   .rt-pws-coh__slotpanel { position: absolute; inset: 0; }
   .rt-pws-coh__slotscroll { flex: 1 1 auto; min-height: 0; }
@@ -6457,9 +6471,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* Tutor beside Venue: tops level, as Venue has its Add a new venue link (or the venue form) under its box */
 .rt-pws-coh__setgrid.-top { align-items: start; }
 @media (min-width: 768px) { .rt-pws-coh__setgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.rt-pws-coh__hintlink { align-self: flex-start; font-size: var(--rt-text-sm); font-weight: 600; color: var(--color-purple-1) !important; text-decoration: none; text-underline-offset: 3px; }
 /* the site's text links: underlined on hover only */
-@media (hover: hover) and (pointer: fine) { .rt-pws-coh__hintlink:hover, .rt-pws-coh__clear:hover, .rt-pws-coh__remove:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .rt-pws-coh__clear:hover, .rt-pws-coh__remove:hover { text-decoration: underline; } }
 .rt-pws-coh__novenue { display: grid; gap: 12px; margin: 0 0 4px; }
 .rt-pws-coh__novenue p { margin: 0; }
 .rt-pws-coh__added { margin: 0; color: var(--rt-c-success); font-weight: 600; }
@@ -6474,6 +6487,11 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__swatch > span[aria-hidden] { width: 28px; height: 28px; border-radius: 50%; background: var(--rt-coh); }
 .rt-pws-coh__swatch.is-on { border-color: var(--rt-coh); }
 .rt-pws-coh__swatch:has(:focus-visible) { outline: 3px solid var(--rt-c-brand); outline-offset: 2px; }
+/* the custom swatch: a rainbow until a colour is picked, then that colour; the colour input fills it, invisible, so a click opens
+   the browser's colour picker */
+.rt-pws-coh__swatch.-custom > span[aria-hidden] { background: conic-gradient(var(--color-red-1), var(--color-orange-1), var(--color-success), var(--color-blue-1), var(--color-purple-1), var(--color-red-1)); }
+.rt-pws-coh__swatch.-custom.is-on > span[aria-hidden] { background: var(--rt-coh); }
+.rt-pws-coh__picker-in { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; cursor: pointer; }
 .rt-pws-coh__formfoot { display: flex; flex-wrap: wrap; gap: 12px; }
 .rt-pws-coh__formfoot .button { flex: 0 1 auto; min-width: 160px; }
 @media (prefers-reduced-motion: reduce) { .rt-pws-coh__day { transition: none; } }
@@ -6483,9 +6501,10 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal { overflow: hidden; background: var(--rt-c-surface); border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); }
 .rt-pws-cal__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 12px 16px; border-bottom: 1px solid var(--rt-c-line); }
 /* the filters under the bar (as the cohort list's), and what they found with Clear filters */
-.rt-pws-cal__filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); }
+/* the filters on the right of their row (under the view buttons); what they show and Clear filters on the left */
+.rt-pws-cal__filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); }
 .rt-pws-cal__filters .rt-adm-select { width: auto; min-width: 180px; margin: 0; }
-.rt-pws-cal__filtersum { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 0 auto; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
+.rt-pws-cal__filtersum { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; order: -1; margin: 0 auto 0 0; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
 @media (max-width: 575px) { .rt-pws-cal__filters .rt-adm-select { flex: 1 1 100%; } .rt-pws-cal__filtersum { margin-left: 0; } }
 .rt-pws-cal__nav-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rt-pws-cal__nav { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-sm); background: var(--rt-c-surface); color: var(--rt-c-text); cursor: pointer; transition: border-color 150ms ease; }
@@ -6493,7 +6512,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-cal__nav.-text { width: auto; padding: 0 16px; font-size: var(--rt-text-sm); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__nav:not(:disabled):hover { border-color: var(--rt-c-brand); color: var(--rt-c-brand); } }
 .rt-pws-cal__nav:disabled { opacity: 0.4; cursor: not-allowed; }
-.rt-pws-cal__nav.-text:disabled { opacity: 1; color: color-mix(in srgb, var(--rt-c-muted) 45%, var(--rt-c-surface)); cursor: default; }
+/* Today while today is already on screen: plainly off (no border, a soft fill, faint words), as calendars show it */
+.rt-pws-cal__nav.-text:disabled { opacity: 1; border-color: transparent; background: var(--rt-c-soft); color: color-mix(in srgb, var(--rt-c-muted) 55%, var(--rt-c-surface)); cursor: default; }
 .rt-pws-cal__title { margin: 0 0 0 8px; font-size: var(--rt-app-h3); font-weight: 700; color: var(--rt-c-text); }
 .rt-pws-cal__daynum { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 5px; border: 0; border-radius: var(--rt-radius-pill); background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .rt-pws-cal__daynum:hover { background: var(--rt-c-brand-soft); } }

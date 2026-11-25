@@ -288,7 +288,7 @@ function CommissionCard({ provider: p, canChange, onSaved }) {
       <p className="rt-acc__note">{(own ? d.hasOwn : d.usesDefault).replace("{rate}", def)}</p>
       {canChange ? (
         <>
-          <RateForm id="rt-adm-pcom" label={<>{d.commissionLabel}<Req /></>} hint={d.commissionHint.replace("{rate}", def)} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
+          <RateForm id="rt-adm-pcom" label={<>{d.commissionLabel}<Req /></>} hint={d.commissionHint} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
           {own && <button type="button" className="rt-cd__link rt-adm-mt" onClick={async () => { await save.mutateAsync({ organisationId: p.id, bps: null }); onSaved(d.commissionSaved); }} disabled={save.isPending}>{d.useDefault}</button>}
         </>
       ) : null}

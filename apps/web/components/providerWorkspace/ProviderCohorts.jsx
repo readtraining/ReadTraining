@@ -118,6 +118,18 @@ export const timeRange = (s) => `${s.from} to ${s.to}`;
 const TIMES = [];
 for (let m = 6 * 60; m <= 22 * 60; m += 15) TIMES.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
 const DEFAULT_SLOT = { from: "09:30", to: "16:30" };
+// the last option of the venue and price plan lists: an action, not a value
+const NEW_VENUE = "__new-venue";
+const MANAGE_PLANS = "__manage-plans";
+// a one-day date ends after it starts: its "To" list offers only the times after "From", and a later "From" moves "To" on by the
+// hour it had (or to the last time); a date over several days may end earlier in the day than it started
+const oneDay = (s) => (s.end || s.date) === s.date;
+const toTimes = (s) => (oneDay(s) ? TIMES.filter((t) => t > s.from) : TIMES);
+const withFrom = (s, from) => {
+  if (!oneDay(s) || s.to > from) return { from };
+  const i = TIMES.indexOf(from);
+  return { from, to: TIMES[Math.min(i + 4, TIMES.length - 1)] };
+};
 
 // The provider's dates, courses, venues and team, from the API (shared by the list, the form and the calendar). Only what this
 // role may see is asked for (the API refuses the rest): a tutor gets the dates they teach and no venue list (only the date form,
@@ -127,6 +139,8 @@ const NONE = { data: [], isError: false, refetch: () => {} };
 // a date's colour on the calendar: its own, or by type (classroom purple, live online blue)
 export const defaultColour = (method) => (method === "live-online" ? "blue" : "purple");
 export const colourOf = (k) => k.colour || defaultColour(k.method);
+// a colour picked with the colour picker (#rrggbb), not one of the preset names; drawn through --rt-coh instead of a -c- class
+export const isPicked = (c) => /^#[0-9a-f]{6}$/i.test(c || "");
 
 export function useSchedule(when = "upcoming", courseId = null, { near = false } = {}) {
   const access = useProviderAccess();
@@ -212,10 +226,18 @@ export default function ProviderCohorts() {
     if (t) setTutor(t);
     const s2 = getQuery("q");
     if (s2) setQ(s2);
-    if (getQuery("new") === "1" && add) setFormOpen(true); // "Create cohort" from the dashboard (only for someone who can add dates)
     const d = getQuery("date");
     if (/^\d{4}-\d{2}-\d{2}$/.test(d || "")) { setDate(d); setWhen("all"); }
   }, []);
+
+  // "Create cohort" from the dashboard opens the form once the role is known to add dates (staff permissions load a moment later);
+  // the address then loses ?new=1, so a reload or Back doesn't open it again
+  useEffect(() => {
+    if (add && getQuery("new") === "1") {
+      setFormOpen(true);
+      setQuery("new", "");
+    }
+  }, [add]);
 
   // any filter change starts again at page 1
   useEffect(() => setPage(1), [mode, course, venue, tutor, when, q, date]);
@@ -723,6 +745,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const setSlot = (i, patch) => {
     setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
     setVenueAsk("");
+    setErrors((e) => (e[`d${i}`] ? { ...e, [`d${i}`]: undefined } : e)); // changing a date's times clears what was wrong with it
   };
 
   // "Save and create another": the form stays open for the same course and settings
@@ -863,18 +886,23 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           )}
 
           {/* the calendar picks the days; beside it, the dates picked as one row each (its days and its times), in a panel as tall as
-              the calendar that scrolls inside itself on a computer */}
+              the calendar that scrolls inside itself on a computer. The two headings share a row above them, so the two boxes start
+              and end level; on a phone the calendar comes first, then the dates picked */}
           <div className="rt-pws-coh__dates">
-            <div className="rt-pws-coh__pickcol">
+            <div className="rt-pws-coh__pickhead">
               <SegmentedControl id="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
                 options={[{ value: "range", label: "Date range", icon: "sessions" }, { value: "days", label: "Individual days", icon: "cohorts" }]} />
+            </div>
+            <div className="rt-pws-coh__pickcol">
               <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={today} keep={heldPast} />
+            </div>
+            <div className="rt-pws-coh__slotshead">
+              <h3 className="rt-pws-coh__h3" id="rt-cf-slots-h">Selected dates<Req /></h3>
+              <p className="rt-acc__note">Pick days on the calendar. Times are copied from the latest date.</p>
+              {err("sessions")}
             </div>
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
               <div className="rt-pws-coh__slotpanel">
-                <h3 className="rt-pws-coh__h3" id="rt-cf-slots-h">Selected dates<Req /></h3>
-                <p className="rt-acc__note">Pick days on the calendar. Times are copied from the latest date.</p>
-                {err("sessions")}
                 {/* what is picked, in words, said aloud after each click */}
                 <p className="rt-sr" aria-live="polite">{ordered.map(({ s }) => `${daySpan(s)}, ${s.from} to ${s.to}`).join("; ")}</p>
                 <div className="rt-pws-coh__slotscroll">
@@ -888,13 +916,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                           {/* the course page lists a run only before its first day (the API's listings: starts_on after today), so the
                               first date says so when it is today or has passed */}
                           {n === 0 && s.date <= today && <p className="rt-pws-coh__slotnote">{s.date === today ? "Starts today" : "Already started"}, so it won&apos;t show on the course page.</p>}
-                          {err(`d${i}`)}
+                          {/* a date's problem (in the past, too long, too far ahead) is about the date: the message itself takes the focus */}
+                          {errors[`d${i}`] && <p className="rt-q__err" id={`rt-cf-d${i}-e`} data-focus-self=""><span className="rt-sr">Error: </span>{errors[`d${i}`]}</p>}
                           <div className="rt-pws-coh__slottimes">
                             <label className="rt-sr" htmlFor={`rt-cf-f${i}`}>From, {daySpan(s)}</label>
-                            <FieldSelect id={`rt-cf-f${i}`} label="From" value={s.from} onChange={(value) => setSlot(i, { from: value })} options={TIMES} invalid={Boolean(errors[`d${i}`])} describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
+                            <FieldSelect id={`rt-cf-f${i}`} label="From" value={s.from} onChange={(value) => setSlot(i, withFrom(s, value))} options={oneDay(s) ? TIMES.slice(0, -1) : TIMES} float describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
                             <span aria-hidden="true">–</span>
                             <label className="rt-sr" htmlFor={`rt-cf-t${i}`}>To, {daySpan(s)}</label>
-                            <FieldSelect id={`rt-cf-t${i}`} label="To" value={s.to} onChange={(value) => setSlot(i, { to: value })} options={TIMES} />
+                            <FieldSelect id={`rt-cf-t${i}`} label="To" value={s.to} onChange={(value) => setSlot(i, { to: value })} options={toTimes(s)} float describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
                           </div>
                           <button type="button" className="rt-pws-coh__remove" onClick={() => { setF((x) => ({ ...x, sessions: x.sessions.filter((_, j) => j !== i) })); setVenueAsk(""); }}>Remove<span className="rt-sr"> {daySpan(s)}</span></button>
                         </li>
@@ -921,10 +950,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 <div className="rt-field">
                   <label htmlFor="rt-cf-venueId">Venue<Req /></label>
                   {err("venueId")}
-                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
+                  {/* the list ends with "Add a new venue", which opens the venue form here (it is saved to the provider's venues); with no venue
+                      yet, the notice above the dates has that button */}
+                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => (value === NEW_VENUE ? setAddingVenue(true) : set({ venueId: value }))} options={[...venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` })), ...(venues.length ? [{ value: NEW_VENUE, label: "+ Add a new venue", action: true }] : [])]} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
                   {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
                   {venueNote && <p className="rt-acc__notice -warn" id="rt-cf-venuenote" role="status">{venueNote}</p>}
-                  {venues.length > 0 && (addingVenue ? venueForm : <button type="button" className="rt-cd__link rt-pws-coh__hintlink" onClick={() => setAddingVenue(true)}>Add a new venue</button>)}
+                  {venues.length > 0 && addingVenue && venueForm}
                 </div>
               )}
               {method === "live-online" && (
@@ -943,12 +974,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
               <div className="rt-field">
                 <label htmlFor="rt-cf-planId">Price plan<Req /></label>
                 <p className="rt-field__hint" id="rt-cf-planId-h">
-                  Learners choose a package when they book, and the date shows the cheapest package as its price.{" "}
-                  <Link href={links.plans()} className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link>
+                  Learners choose a package when they book, and the date shows the cheapest package as its price.
                 </p>
                 {err("planId")}
-                <FieldSelect id="rt-cf-planId" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => set({ planId: value })}
-                  options={plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}` }))}
+                {/* the list ends with "Manage price plans", opened in a new tab so this form stays as it is */}
+                <FieldSelect id="rt-cf-planId" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => (value === MANAGE_PLANS ? window.open(links.plans(), "_blank", "noopener") : set({ planId: value }))}
+                  options={[...plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}` })), { value: MANAGE_PLANS, label: plans.length ? "Manage price plans (new tab)" : "+ Create a price plan (new tab)", action: true }]}
                   invalid={Boolean(errors.planId)} describedBy={`rt-cf-planId-h${errors.planId ? " rt-cf-planId-e" : ""}`} />
               </div>
             )}
@@ -968,9 +999,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </>
               )}
               <div className="rt-field">
-                <label htmlFor="rt-cf-capacity">Number of places<Req /></label>
+                <label htmlFor="rt-cf-capacity">Places available<Req /></label>
+                <p className="rt-field__hint" id="rt-cf-capacity-h">How many learners can book this date, up to 200.</p>
                 {err("capacity")}
-                <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} autoComplete="off" {...aria("capacity")} />
+                <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} placeholder="For example: 12" autoComplete="off" aria-invalid={errors.capacity ? true : undefined} aria-describedby={`rt-cf-capacity-h${errors.capacity ? " rt-cf-capacity-e" : ""}`} />
               </div>
             </div>
             <div className="rt-field">
@@ -981,6 +1013,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
             </div>
             <fieldset className="rt-pws-coh__colours">
               <legend>Calendar colour</legend>
+              {/* the presets, then any colour from the colour picker (its swatch shows the colour picked, or a rainbow until then) */}
               <div className="rt-pws-coh__swatches">
                 {pw.cohortColours.map((c) => {
                   const on = (f.colour || defaultColour(method)) === c.key;
@@ -991,6 +1024,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                     </label>
                   );
                 })}
+                <label className={`rt-pws-coh__swatch -custom${isPicked(f.colour) ? " is-on" : ""}`} style={isPicked(f.colour) ? { "--rt-coh": f.colour } : undefined} title="Custom colour">
+                  <input type="color" className="rt-pws-coh__picker-in" value={isPicked(f.colour) ? f.colour : "#6440fb"} onChange={(e) => set({ colour: e.target.value.toLowerCase() })} aria-label="Custom colour" />
+                  <span aria-hidden="true"></span>
+                </label>
               </div>
             </fieldset>
           </section>
@@ -1019,7 +1056,10 @@ function pickOn(list, open, iso, mode) {
   if (open) return { sessions: list.filter((s) => s !== inside).map((s) => (s === open ? { ...s, date: iso, end: iso } : s)), anchor: iso };
   if (inside) return { sessions: list.filter((s) => s !== inside), anchor: null };
   const latest = list[list.length - 1];
-  return { sessions: [...list, { date: iso, end: iso, from: latest?.from || DEFAULT_SLOT.from, to: latest?.to || DEFAULT_SLOT.to }], anchor: mode === "range" ? iso : null };
+  // a one-day session ends after it starts, so times copied from a date over several days (16:00 one day to 09:00 the last) are
+  // put right the way picking a "From" does
+  const day = { date: iso, end: iso, from: latest?.from || DEFAULT_SLOT.from, to: latest?.to || DEFAULT_SLOT.to };
+  return { sessions: [...list, { ...day, ...withFrom(day, day.from) }], anchor: mode === "range" ? iso : null };
 }
 
 // The cohort form's two-month calendar. Each session shows as its first and last day filled and the days between banded;

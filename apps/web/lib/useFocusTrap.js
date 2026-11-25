@@ -14,6 +14,7 @@ export function useFocusTrap(active, ref, onEscape) {
       const box = ref.current;
       if (!box) return;
       if (e.key === "Escape") {
+        if (e.defaultPrevented) return; // already handled inside (an open dropdown list closing)
         e.preventDefault();
         escRef.current?.();
         return;

@@ -485,7 +485,7 @@ export const admin = {
       team: "Team",
       commission: "Commission",
       commissionLabel: "This provider's rate",
-      commissionHint: "Between 0% and 60%. It applies to bookings made after you save. The platform default is {rate}.",
+      commissionHint: "Between 0% and 60%. Applies to bookings made after you save.",
       usesDefault: "Uses the platform default ({rate}).",
       hasOwn: "Has its own rate. The platform default is {rate}.",
       useDefault: "Use the platform default",

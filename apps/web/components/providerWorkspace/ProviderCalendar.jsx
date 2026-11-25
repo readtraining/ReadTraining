@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { Loading, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { NavIcon } from "@/components/header/navIcons";
-import { addDays, colourOf, longDay, monthLabel, todayIso, useSchedule, weekday, whyNotOnSale } from "./ProviderCohorts";
+import { addDays, colourOf, isPicked, longDay, monthLabel, todayIso, useSchedule, weekday, whyNotOnSale } from "./ProviderCohorts";
 import { EmptyState, ErrorState } from "@/components/states/States";
 
 // The calendar: every session of every cohort by month, week or day (view and date kept in the address, ?view= and ?date=); the
@@ -91,7 +91,7 @@ const shortWhen = (b) => {
 function sessionBars(cohorts) {
   return cohorts.flatMap((k) => k.sessions.map((s, i) => ({
     key: `${k.id}-${i}`, cohort: k, start: s.date, end: s.end && s.end > s.date ? s.end : s.date, from: s.from, to: s.to,
-    colour: colourOf(k), title: k.courseTitle, where: k.venue ? k.venue.name : "Online", cancelled: Boolean(k.cancelledAt),
+    colour: colourOf(k), title: k.courseTitle, where: k.venue ? k.venue.name : "Online", place: k.venue ? k.venue.city || k.venue.name : "Online", cancelled: Boolean(k.cancelledAt),
   })));
 }
 // the bars on each day (the day list and the phone views)
@@ -104,7 +104,9 @@ function barsByDay(bars) {
   Object.values(map).forEach((l) => l.sort((a, b) => a.cancelled - b.cancelled || a.from.localeCompare(b.from) || a.title.localeCompare(b.title)));
   return map;
 }
-const tone = (b) => `-c-${b.colour}${b.cancelled ? " -cancelled" : b.end < todayIso() ? " -past" : ""}`;
+const tone = (b) => `${isPicked(b.colour) ? "" : `-c-${b.colour}`}${b.cancelled ? " -cancelled" : b.end < todayIso() ? " -past" : ""}`;
+// a picked colour (#rrggbb) is set on the entry itself; a past or cancelled one keeps its grey
+const toneStyle = (b) => (isPicked(b.colour) && !b.cancelled && b.end >= todayIso() ? { "--rt-coh": b.colour } : {});
 const describe = (b) => `${b.title}, ${when(b)}, ${b.from} to ${b.to}, ${b.where}${b.cancelled ? ", cancelled" : ""}`;
 
 // clicking a session shows its details: (bar, the element clicked)
@@ -324,9 +326,10 @@ function WeekRow({ days, today, bars, lanes: fixedLanes, onDay, month, height = 
       {!compact && segs.filter((g) => g.row < lanes).map((g) => (
         <button key={`${g.b.key}-${lo}`} type="button" aria-haspopup="dialog" onClick={(e) => open(g.b, e.currentTarget, e.clientX || null)} title={describe(g.b)}
           className={`rt-pws-cal__seg ${tone(g.b)}${g.before ? " -before" : ""}${g.after ? " -after" : ""}`}
-          style={{ gridColumn: `${g.col + 1} / span ${g.len}`, gridRow: g.row + 2 }}>
+          style={{ gridColumn: `${g.col + 1} / span ${g.len}`, gridRow: g.row + 2, ...toneStyle(g.b) }}>
           {g.b.cohort.method === "live-online" && <NavIcon name="screen" size={12} className="rt-pws-cal__segicon" />}
-          <span aria-hidden="true"><b>{g.b.from}</b> {g.b.title} · {g.b.where}{g.b.cancelled ? " · Cancelled" : ""}</span>
+          {/* the town before the course name, so two of one course on a day differ even when the name is cut short */}
+          <span aria-hidden="true"><b>{g.b.from}</b> {g.b.place} · {g.b.title}{g.b.cancelled ? " · Cancelled" : ""}</span>
           <span className="rt-sr">{describe(g.b)}</span>
         </button>
       ))}

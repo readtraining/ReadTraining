@@ -63,6 +63,9 @@ const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|point
 export function passMarkProblem(text: string) {
   const t = text.trim().toLowerCase()
   if (!t) return ''
+  // the editor's kinds with their numbers still missing ("%", "26 out of"): the course page would show them as they are
+  if (/^[\d.]*\s*%$/.test(t) && !/\d/.test(t)) return 'Enter the percentage needed to pass.'
+  if (/^[\d.]*\s*out of\s*[\d.]*$/.test(t) && !/^\d+(?:\.\d+)?\s*out of\s*\d+(?:\.\d+)?$/.test(t)) return 'Enter the score needed and the total, like 26 out of 40.'
   const pct = t.match(/(\d+(?:\.\d+)?)\s*(?:%|per\s*cent\b)/)
   if (pct && Number(pct[1]) > 100) return 'A percentage pass mark can’t be over 100%.'
   const score = t.match(SCORE) || t.match(SCORE_OF)

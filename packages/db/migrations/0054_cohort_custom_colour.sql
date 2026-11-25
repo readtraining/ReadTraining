@@ -1,0 +1,2 @@
+ALTER TABLE "cohorts" DROP CONSTRAINT "cohorts_colour";--> statement-breakpoint
+ALTER TABLE "cohorts" ADD CONSTRAINT "cohorts_colour" CHECK ("cohorts"."colour" in ('purple', 'blue', 'green', 'orange', 'red') or "cohorts"."colour" ~ '^#[0-9a-f]{6}$');

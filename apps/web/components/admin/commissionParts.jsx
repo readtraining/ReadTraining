@@ -28,7 +28,9 @@ export function RateForm({ id, label, hint, bps, save, saving, onSaved }) {
     e.preventDefault();
     const next = parseRate(value);
     if (next === null) {
-      setError("Enter a rate between 0% and 60%, like 25 or 27.5.");
+      // what is wrong only: the range is in the hint above the field
+      const n = Number(value.trim().replace(/%$/, "").trim());
+      setError(!value.trim() || !Number.isFinite(n) ? "Enter the rate as a number." : n > 60 ? "The highest rate is 60%." : n < 0 ? "The lowest rate is 0%." : "Use up to 2 decimal places.");
       return focusFirstError(ref.current);
     }
     setError("");
@@ -51,7 +53,7 @@ export function RateForm({ id, label, hint, bps, save, saving, onSaved }) {
         {/* the rate with its % inside the box, and Save the box's height beside it */}
         <div className="rt-adm-inline__row">
           <span className="rt-adm-rate">
-            <input id={id} type="text" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={[hint && `${id}-hint`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} className="rt-adm-num" />
+            <input id={id} type="text" inputMode="decimal" value={value} onChange={(e) => { setValue(e.target.value); setError(""); }} aria-invalid={error ? true : undefined} aria-describedby={[hint && `${id}-hint`, error && `${id}-e`].filter(Boolean).join(" ") || undefined} className="rt-adm-num" />
             <span aria-hidden="true">%</span>
           </span>
           <button type="submit" className="button -md -purple-1 text-white rt-adm-rate__save" disabled={saving} aria-busy={saving || undefined}>{saving ? "Saving…" : "Save"}</button>

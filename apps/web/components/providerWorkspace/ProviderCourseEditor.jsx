@@ -92,6 +92,8 @@ const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|point
 export function passMarkProblem(text) {
   const t = (text || "").trim().toLowerCase();
   if (!t) return "";
+  if (/^[\d.]*\s*%$/.test(t) && !/\d/.test(t)) return "Enter the percentage needed to pass.";
+  if (/^[\d.]*\s*out of\s*[\d.]*$/.test(t) && !/^\d+(?:\.\d+)?\s*out of\s*\d+(?:\.\d+)?$/.test(t)) return "Enter the score needed and the total, like 26 out of 40.";
   const pct = t.match(/(\d+(?:\.\d+)?)\s*(?:%|per\s*cent\b)/);
   if (pct && Number(pct[1]) > 100) return "A percentage pass mark can't be over 100%.";
   const score = t.match(SCORE) || t.match(SCORE_OF);
@@ -99,53 +101,63 @@ export function passMarkProblem(text) {
   return "";
 }
 // A pass mark is one of three kinds, chosen, never typed as words: a percentage ("70%"), a score ("26 out of 40") or "Pass or fail".
-// It is still saved as that text (passMarkProblem above and the API check it). One saved before as other words shows no kind until
-// a kind is chosen, and stays as it was until then.
+// It is saved as that text (passMarkProblem above and the API check it), and the kind is read from the text alone ("%" alone is a
+// percentage not filled in yet, "out of" alone a score), so it always belongs to its own row. One saved before as other words shows
+// what it says until a kind is chosen, and stays as it was until then.
 const PASS_KINDS = [{ value: "percent", label: "Percentage" }, { value: "score", label: "Score" }, { value: "passfail", label: "Pass or fail" }];
 const PASS_OR_FAIL = "Pass or fail";
 const passKindOf = (v) => {
   const t = (v || "").trim();
-  if (/^\d*(?:\.\d+)?\s*%$/.test(t)) return "percent";
+  if (/^\d*(?:\.\d*)?\s*%$/.test(t)) return "percent";
   if (/^\S*\s*out of\s*\S*$/i.test(t)) return "score";
   if (t.toLowerCase() === PASS_OR_FAIL.toLowerCase()) return "passfail";
   return "";
 };
-const digits = (v) => v.replace(/[^\d.]/g, "").slice(0, 6);
-// a pass mark chosen but not filled in (a score without its total): what to say
+// what can be typed in a pass mark's number box: digits and one decimal point
+const digits = (v) => {
+  const d = v.replace(/[^\d.]/g, "");
+  const dot = d.indexOf(".");
+  return (dot < 0 ? d : d.slice(0, dot + 1) + d.slice(dot + 1).replace(/\./g, "")).slice(0, 6);
+};
+const NUMBER = /^\d+(?:\.\d+)?$/;
+// a pass mark chosen but not filled in: what to say, and which box to put the cursor in
 function passMarkGap(v) {
   const t = (v || "").trim();
-  if (passKindOf(t) === "score" && !/^\d+(?:\.\d+)?\s*out of\s*\d+(?:\.\d+)?$/i.test(t)) return "Enter the score needed and the total, like 26 out of 40.";
+  const kind = passKindOf(t);
+  if (kind === "percent" && !NUMBER.test(t.replace(/\s*%$/, ""))) return "Enter the percentage needed to pass.";
+  if (kind === "score") {
+    const [got = "", total = ""] = t.split(/\s*out of\s*/i);
+    if (!NUMBER.test(got) || !NUMBER.test(total)) return "Enter the score needed and the total, like 26 out of 40.";
+  }
   return "";
 }
 function PassMarkField({ id, value, onChange, disabled, error }) {
-  const [kind, setKind] = useState(() => passKindOf(value));
-  useEffect(() => { const k = passKindOf(value); if (k) setKind(k); }, [value]);
   const t = (value || "").trim();
+  const kind = passKindOf(t);
   const pct = kind === "percent" ? t.replace(/\s*%$/, "") : "";
   const [got = "", total = ""] = kind === "score" ? t.split(/\s*out of\s*/i) : [];
-  const score = (a, b) => onChange(a || b ? `${a} out of ${b}` : "");
-  const choose = (k) => {
-    setKind(k);
-    onChange(k === "passfail" ? PASS_OR_FAIL : "");
-  };
+  const choose = (k) => onChange(k === "passfail" ? PASS_OR_FAIL : k === "score" ? " out of " : "%");
   const err = error ? `${id}-e` : undefined;
+  // the error takes the cursor to the box still to fill (the kind when none is chosen)
+  const focusId = kind === "percent" ? `${id}-pct` : kind === "score" ? (NUMBER.test(got) ? `${id}-total` : `${id}-got`) : id;
   return (
     <div className="rt-field rt-pws-ce__exam-wide" role="group" aria-labelledby={`${id}-l`}>
       <label htmlFor={id} id={`${id}-l`}>Pass mark<Req /></label>
-      {error && <p className="rt-q__err" id={err}><span className="rt-sr">Error: </span>{error}</p>}
+      {t && !kind && <span className="rt-field__hint" id={`${id}-old`}>Saved as “{t}”. Choose how it is marked to replace it.</span>}
+      {error && <p className="rt-q__err" id={err} data-focus-id={focusId}><span className="rt-sr">Error: </span>{error}</p>}
       <div className="rt-pws-ce__pm">
-        <FieldSelect id={id} label="How it is marked" placeholder="Choose how it is marked" value={kind} onChange={choose} options={PASS_KINDS} disabled={disabled} invalid={Boolean(error) && !kind} describedBy={err} />
+        <FieldSelect id={id} label="How it is marked" placeholder="Choose how it is marked" value={kind} onChange={choose} options={PASS_KINDS} disabled={disabled} invalid={Boolean(error) && !kind} describedBy={[t && !kind && `${id}-old`, err].filter(Boolean).join(" ") || undefined} />
         {kind === "percent" && (
           <span className="rt-pws-ce__pmunit">
-            <input id={`${id}-pct`} type="text" inputMode="decimal" value={pct} onChange={(ev) => { const n = digits(ev.target.value); onChange(n ? `${n}%` : ""); }} disabled={disabled} aria-label="Pass mark percentage" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
+            <input id={`${id}-pct`} type="text" inputMode="decimal" value={pct} onChange={(ev) => onChange(`${digits(ev.target.value)}%`)} disabled={disabled} aria-label="Pass mark percentage" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
             <span aria-hidden="true">%</span>
           </span>
         )}
         {kind === "score" && (
           <span className="rt-pws-ce__pmscore">
-            <input id={`${id}-got`} type="text" inputMode="decimal" value={got} onChange={(ev) => score(digits(ev.target.value), total)} disabled={disabled} aria-label="Score needed to pass" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
+            <input id={`${id}-got`} type="text" inputMode="decimal" value={got} onChange={(ev) => onChange(`${digits(ev.target.value)} out of ${total}`)} disabled={disabled} aria-label="Score needed to pass" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
             <span>out of</span>
-            <input id={`${id}-total`} type="text" inputMode="decimal" value={total} onChange={(ev) => score(got, digits(ev.target.value))} disabled={disabled} aria-label="Total marks" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
+            <input id={`${id}-total`} type="text" inputMode="decimal" value={total} onChange={(ev) => onChange(`${got} out of ${digits(ev.target.value)}`)} disabled={disabled} aria-label="Total marks" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
           </span>
         )}
       </div>

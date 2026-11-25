@@ -383,7 +383,7 @@ export function VenuesTab({ say }) {
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : r.unchecked ? "Venue saved. We couldn't check its town just now; we'll try again." : "Venue saved, but we couldn't find its postcode on the map"); }} />
-      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.${archiving.upcoming ? " Any of its upcoming dates still taking bookings need their bookings turned off, or to be cancelled, first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
+      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `It won't be offered for new dates; dates already there keep it. You can restore it any time.${archiving.upcoming ? " Turn off bookings on its upcoming dates first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
     </div>
   );
 }
