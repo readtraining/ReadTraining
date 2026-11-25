@@ -22,6 +22,26 @@ const d = copy.detail;
 const when = (iso) => (iso ? formatWhen(Date.parse(iso)) : <span className="rt-adm-muted">{d.notYet}</span>);
 const given = (v) => v || <span className="rt-adm-muted">{d.missing}</span>;
 
+// Download everything held about a learner as a file (the "export" switch): the record page and the Learners list's ⋯ menu.
+export function useDownloadData({ onDone, onFail }) {
+  const exporter = api.admin.students.export.useMutation();
+  const run = async (l) => {
+    try {
+      const file = await exporter.mutateAsync({ userId: l.id });
+      const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: "application/json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${l.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-data.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      onDone(d.exported);
+    } catch (error) {
+      onFail(errorText(error));
+    }
+  };
+  return { run, pending: exporter.isPending };
+}
+
 // One learner's record (API admin.students.get): who they are, how they sign in, their provider and business accounts and
 // their latest activity. Admins with the "suspend" switch can block or unblock the account (with a reason, kept in the log);
 // with "export" they can download everything held about the person. Bookings, wallet and certificates join when they are real.
@@ -30,11 +50,17 @@ export default function AdminLearner({ id }) {
   const utils = api.useUtils();
   const record = api.admin.students.get.useQuery({ userId: id }, { retry: (n, e) => e?.data?.code !== "NOT_FOUND" && n < 2 });
   const activity = api.admin.activity.list.useQuery({ q: id, limit: 8 });
-  const exporter = api.admin.students.export.useMutation();
   const router = useRouter();
   const [sheet, setSheet] = useState(null); // "block" | "unblock"
   const [closing, setClosing] = useState(null); // their closure request, while "Close account?" is open
   const [said, setSaid] = useState("");
+  const changed = (text) => {
+    setSaid(text);
+    utils.admin.students.get.invalidate({ userId: id });
+    utils.admin.students.list.invalidate();
+    utils.admin.activity.list.invalidate();
+  };
+  const download = useDownloadData({ onDone: changed, onFail: setSaid });
 
   if (record.isLoading) return <DetailSkeleton />;
   if (record.error?.data?.code === "NOT_FOUND" || record.error?.data?.code === "BAD_REQUEST") return <Empty kind="missing" title={d.notFound} action={{ href: "/admin/learners", label: d.back }} />;
@@ -42,26 +68,6 @@ export default function AdminLearner({ id }) {
   const l = record.data;
   const can = (p) => me?.permissions?.includes(p);
   const mine = me?.id === l.id;
-  const changed = (text) => {
-    setSaid(text);
-    utils.admin.students.get.invalidate({ userId: id });
-    utils.admin.students.list.invalidate();
-    utils.admin.activity.list.invalidate();
-  };
-  const download = async () => {
-    try {
-      const file = await exporter.mutateAsync({ userId: id });
-      const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: "application/json" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${l.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-data.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      changed(d.exported);
-    } catch (error) {
-      setSaid(errorText(error));
-    }
-  };
   const f = d.fields;
   const sf = d.signInFields;
 
@@ -161,7 +167,7 @@ export default function AdminLearner({ id }) {
           <div className="rt-adm-privacy">
             {can("export") && (
               <div>
-                <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={download} disabled={exporter.isPending}>{d.exportData}</button>
+                <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => download.run(l)} disabled={download.pending}>{d.exportData}</button>
                 <p className="rt-acc__note">{d.exportNote}</p>
               </div>
             )}
@@ -189,8 +195,8 @@ export default function AdminLearner({ id }) {
   );
 }
 
-// Block (a reason is required) or unblock, then the record reads again.
-function BlockSheet({ learner, kind, onClose, onDone }) {
+// Block (a reason is required) or unblock: the record page and the Learners list's ⋯ menu. `learner`: { id, name }.
+export function BlockSheet({ learner, kind, onClose, onDone }) {
   const block = api.admin.students.block.useMutation();
   const unblock = api.admin.students.unblock.useMutation();
   const [reason, setReason] = useState("");

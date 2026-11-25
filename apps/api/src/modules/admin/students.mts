@@ -58,12 +58,13 @@ export const studentsRouter = createTRPCRouter({
         const like = `%${input.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(sql`(u.email ilike ${like} or concat_ws(' ', p.first_name, p.last_name) ilike ${like} or p.phone ilike ${like} or u.id::text = ${input.q})`)
       }
-      const rows = await ctx.db.execute<Named & { id: string; created_at: string; total: number; last_sign_in_at: string | null; email_confirmed_at: string | null; banned: boolean; orgs: { type: 'provider' | 'business'; name: string }[] | null; admin: boolean }>(sql`
+      const rows = await ctx.db.execute<Named & { id: string; created_at: string; total: number; last_sign_in_at: string | null; email_confirmed_at: string | null; banned: boolean; orgs: { type: 'provider' | 'business'; name: string }[] | null; admin: boolean; closure_id: string | null }>(sql`
         select u.id, u.email, u.created_at, ${total} total, u.last_sign_in_at, u.email_confirmed_at, coalesce(u.banned_until > now(), false) banned,
                p.first_name, p.last_name,
                (select json_agg(json_build_object('type', o.type, 'name', o.name) order by o.name)
                   from public.organisation_members m join public.organisations o on o.id = m.organisation_id where m.user_id = u.id) orgs,
-               exists (select 1 from public.admin_users a where a.user_id = u.id and a.active) admin
+               exists (select 1 from public.admin_users a where a.user_id = u.id and a.active) admin,
+               (select c.id from public.account_closure_requests c where c.user_id = u.id and c.status = 'open' limit 1) closure_id
         from auth.users u left join public.profiles p on p.id = u.id
         where ${sql.join(where, sql` and `)}
         order by ${orderBy(STUDENT_SORT[input.sort], input.dir, sql`u.id`)}
@@ -79,6 +80,8 @@ export const studentsRouter = createTRPCRouter({
           status: statusOf(r),
           organisations: r.orgs ?? [],
           admin: r.admin,
+          // their open request to close their account, for the row's ⋯ menu
+          closureId: r.closure_id,
         })),
       }
     }),
