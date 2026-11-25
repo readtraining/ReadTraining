@@ -13,7 +13,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import Toast from "@/components/courses/Toast";
 import { COHORT_TONE, Loading, Pill, RowMenu, Search, SegmentedControl, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
-import { ColWidths } from "@/components/admin/adminParts";
+import { ColWidths, HeaderAction } from "@/components/admin/adminParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
@@ -40,13 +40,14 @@ const MODES = [
   // self-paced courses have no dates, so this tab lists courses, not cohorts (its count is not part of All)
   { key: "self-paced", label: "Self-paced courses" },
 ];
+// "All cohorts" first, as in any list of choices; the list opens on Upcoming and in progress
 export const WHEN = [
+  { value: "all", label: "All cohorts" },
   { value: "upcoming", label: "Upcoming and in progress" },
   { value: "past", label: "Past" },
   { value: "cancelled", label: "Cancelled" },
-  { value: "all", label: "Any date" },
 ];
-// cancelled dates are listed under Cancelled and Any date only, so upcoming and past lists (and their counts) are the dates that run
+// cancelled dates are listed under Cancelled and All cohorts only, so upcoming and past lists (and their counts) are the dates that run
 // a date of a course that isn't on sale (not live): it stays in the workspace, labelled, and learners can't see or book it
 const OFF_SALE = { draft: "Course in draft", pending: "Course in review", changes: "Course needs changes", paused: "Course paused" };
 const offSale = (k) => OFF_SALE[k.courseStatus] || null;
@@ -174,8 +175,9 @@ export default function ProviderCohorts() {
   const [when, setWhen] = useState("upcoming");
   const [q, setQ] = useState("");
   const [date, setDate] = useState("");
-  // said under the filters when a date set "When" to Any date, so the change is never silent
+  // read out (not shown: When beside the day already shows it) when picking a day set "When" to All cohorts
   const [whenNote, setWhenNote] = useState("");
+  const [showFilters, setShowFilters] = useState(false); // phones: the filters' fold
   const [page, setPage] = useState(1);
   // the date being edited stays set while its form closes, so the closing form doesn't turn into an empty "Create cohort"
   const [editing, setEditing] = useState({ open: false, k: null });
@@ -250,6 +252,7 @@ export default function ProviderCohorts() {
 
   // any filter set (the tab aside), for "Clear filters" under the filters
   const filtersSet = Boolean(course || venue || tutor || date || needle || when !== "upcoming");
+  const filterCount = [course, venue, tutor, date, when !== "upcoming"].filter(Boolean).length; // on the phones' Filters button
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const at = Math.min(page, pages);
   const pageRows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
@@ -301,33 +304,35 @@ export default function ProviderCohorts() {
       ) : null}
       {(!nothingYet || mode === "self-paced") && (
         <>
-          <div className="rt-adm-toolbar">
-            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
-            {mode !== "self-paced" && create}
-          </div>
-          {mode !== "self-paced" && (
-            <div className="rt-pws-coh__filterbox">
-              <div className="rt-pws-coh__filters">
+          {/* one card as on Courses: the delivery pills with Clear filters, then the search and the filters in one row (on phones the
+              filters fold behind one button); the table in its own card under it */}
+          <section className="rt-cx" aria-label="Find cohorts">
+            <div className="rt-cx__top">
+              <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
+              {mode !== "self-paced" && filtersSet && <button type="button" className="rt-cd__link rt-cx__clear" onClick={() => clear(true)}>Clear filters</button>}
+            </div>
+            {mode !== "self-paced" && (
+              <div className={`rt-cx__bar${showFilters ? " is-open" : ""}`} role="search" aria-label="Search and filter cohorts">
                 <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
-                <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: String(c.id), label: c.title }))]} />
+                <button type="button" className="rt-cx__filters" aria-expanded={showFilters} onClick={() => setShowFilters((o) => !o)}>
+                  Filters{filterCount > 0 && <span className="rt-tr__filter-n">{filterCount}</span>}
+                </button>
+                {/* time first (when it runs, then a day): the schedule is looked at by date most; then which course, where and who */}
                 <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setWhenNote(""); setPage(1); }} options={WHEN} />
-                <div className="rt-field rt-adm-select -inline rt-pws-coh__datefilter">
+                <div className="rt-field rt-adm-select -inline">
                   <label htmlFor="rt-coh-date" className="rt-sr">Cohorts running on this date</label>
-                  <DateField id="rt-coh-date" compact clearable placeholder="Any day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date to show the cohorts running on the day you picked."); } setPage(1); }} />
+                  <DateField id="rt-coh-date" compact clearable placeholder="Choose a day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("Showing all cohorts running on the day you picked."); } setPage(1); }} />
                 </div>
+                <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: String(c.id), label: c.title }))]} />
                 {/* live online cohorts have no venue */}
                 {mode !== "live-online" && <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...s.venues.data.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />}
                 {tutors.length > 0 && <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.userId, label: t.name })), { value: "none", label: "Not assigned" }]} />}
               </div>
-              <div className="rt-pws-coh__filtersum">
-                <b>{list.length} {list.length === 1 ? "cohort" : "cohorts"}</b>
-                {whenNote && <span>{whenNote}</span>}
-                {filtersSet && <button type="button" className="rt-cd__link" onClick={() => clear(true)}>Clear filters</button>}
-              </div>
-            </div>
-          )}
+            )}
+          </section>
+          {create && mode !== "self-paced" && <HeaderAction>{create}</HeaderAction>}
 
-          <p className="rt-sr" aria-live="polite">{mode === "self-paced" ? `${onDemand.length} self-paced ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}`}</p>
+          <p className="rt-sr" aria-live="polite">{mode === "self-paced" ? `${onDemand.length} self-paced ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}${whenNote ? `. ${whenNote}` : ""}`}</p>
           {mode === "self-paced" ? (
             onDemand.length ? (
               <div className="rt-acc__card rt-biz__tablecard">

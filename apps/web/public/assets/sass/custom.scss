@@ -4853,6 +4853,8 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-adm__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
 .rt-adm__h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 700; color: var(--color-dark-1); }
 /* a provider's staff pages (Dates, Price plans, Profile and venues): its name as the title, a link back to its page */
+.rt-adm-staffhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.rt-adm-staffhead .rt-adm__actions:empty { display: none; }
 .rt-adm-staffhead a { color: inherit; text-decoration: none; }
 .rt-adm-staffhead a:hover { text-decoration: underline; }
 .rt-adm-staffhead a:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
@@ -5876,6 +5878,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* each filter as wide as its words (never cut short, at least 150px so choosing a short value hardly moves the row); on phones the
    search is full width and the filters two to a row */
 .rt-cx__bar .rt-adm-select.-inline { width: auto; min-width: 150px; }
+/* a day filter in the bar looks like the dropdowns beside it (the same grey) */
+.rt-cx__bar .rt-datefield.-compact:not(.is-open) .rt-datefield__btn:not(:hover) { background: var(--color-light-4); }
 .rt-cx-table { width: 100%; border-collapse: collapse; }
 .rt-cx-table th { padding: 10px 16px; border-bottom: 1px solid var(--rt-c-line); background: var(--rt-c-soft); font-size: var(--rt-text-xs); font-weight: 600; letter-spacing: 0.04em; text-align: left; text-transform: uppercase; white-space: nowrap; color: var(--rt-c-muted); }
 .rt-cx-table td { padding: 12px 16px; border-bottom: 1px solid var(--rt-c-line); font-size: var(--rt-text-sm); vertical-align: middle; color: var(--rt-c-text); }
@@ -6259,11 +6263,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 /* ---- provider workspace: cohorts, cohort, calendar (ProviderCohorts, ProviderCohort, ProviderCalendar) ---- */
 /* the cohorts' filters: search first, then every filter in a grid that wraps (nothing runs off the page or cuts its words);
    under them how many cohorts match, a note when "When" was changed for you, and Clear filters */
-.rt-pws-coh__filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; align-items: start; }
-.rt-pws-coh__filters .rt-adm-select.-inline, .rt-pws-coh__filters .rt-adm-search { width: auto; min-width: 0; margin: 0; }
-@media (min-width: 576px) { .rt-pws-coh__filters > .rt-adm-search { grid-column: span 2; } }
-.rt-pws-coh__filtersum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 12px; font-size: var(--rt-text-sm); color: var(--rt-c-muted); }
-.rt-pws-coh__filtersum b { color: var(--rt-c-text); }
 .rt-pws-coh__bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-color: var(--rt-c-brand); }
 .rt-pws-coh__bulkn { margin-right: auto; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-coh__clear, .rt-pws-coh__remove { min-height: 44px; padding: 0 8px; border: 0; background: none; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-brand); cursor: pointer; text-decoration: none; text-underline-offset: 3px; }
@@ -6311,7 +6310,6 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-coh__fav:hover { color: var(--rt-c-muted); }
 .rt-pws-coh__fav.is-on { color: var(--color-yellow-1); }
 .rt-pws-coh__fav:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
-.rt-pws-coh__datefilter input[type="date"] { width: auto; height: 44px; }
 .rt-pws-coh__pages { --pg-border-strong: var(--color-light-5); --pg-text: var(--rt-c-text); --pg-muted: var(--rt-c-muted); --pg-brand: var(--color-purple-1); --pg-brand-hover: #5230E0; display: flex; justify-content: center; padding: 16px 0 4px; border-top: 1px solid var(--rt-c-line); }
 
 /* Manage cohort: the details grid, actions, students table (scrolls sideways on narrow screens), the register row, notes */
@@ -7432,7 +7430,8 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
    load, resize and opening, and kept while closed so the list never slides as it fades), else leftwards from the right edge;
    either way a closed list never makes the page wider (even hidden, it takes up space) */
 @media (min-width: 768px) {
-  .rt-field-dd.-compact .rt-cat-dd__panel { left: auto; right: 0; min-width: max(100%, 220px); }
+  /* as wide as its longest option, so every choice stays on one line (never narrower than its button, never off the screen) */
+  .rt-field-dd.-compact .rt-cat-dd__panel { left: auto; right: 0; width: max-content; min-width: max(100%, 220px); max-width: min(360px, calc(100vw - 32px)); }
   .rt-field-dd.-compact.-to-right .rt-cat-dd__panel { left: 0; right: auto; }
 }
 

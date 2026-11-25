@@ -199,7 +199,8 @@ export function PageLink({ href, className, children, ...rest }) {
 // line with the title (AdminShell's #rt-adm-actions), wherever in the page it is built, so it keeps the page's own state.
 export function HeaderAction({ children }) {
   const [slot, setSlot] = React.useState(null);
-  React.useEffect(() => setSlot(document.getElementById("rt-adm-actions")), []);
+  // a provider's staff page has its own slot beside the provider's name (AdminStaffPages' heading); otherwise the page head's
+  React.useEffect(() => setSlot(document.getElementById("rt-staff-actions") || document.getElementById("rt-adm-actions")), []);
   return slot ? createPortal(children, slot) : null;
 }
 

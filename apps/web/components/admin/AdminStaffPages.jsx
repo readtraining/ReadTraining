@@ -36,7 +36,7 @@ function ProviderFrame({ slug, children }) {
   if (p.error) return <ErrorState onRetry={() => p.refetch()} />;
   // whose work this is, from the first look (the breadcrumb says which part: Dates, Price plans, Profile and venues)
   return (
-    <StaffEdit provider={p.data} heading={<h1 className="rt-adm__h1 rt-adm-staffhead"><PageLink href={`/admin/providers/${p.data.slug}`}>{p.data.name}</PageLink></h1>}>
+    <StaffEdit provider={p.data} heading={<div className="rt-adm-staffhead"><h1 className="rt-adm__h1"><PageLink href={`/admin/providers/${p.data.slug}`}>{p.data.name}</PageLink></h1><div className="rt-adm__actions" id="rt-staff-actions"></div></div>}>
       {children}
     </StaffEdit>
   );
