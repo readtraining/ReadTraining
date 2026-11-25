@@ -6,8 +6,8 @@ import ProviderOnboarding from "@/components/providerSignup/ProviderOnboarding";
 import { PROVIDER_ONBOARDING_HREF, providerSignup } from "@/data/providerSignup";
 import { pageMetadata } from "@/lib/seo";
 
-// Provider onboarding (/provider/onboarding): after "Become a provider" creates the account (or a signed-in person continues),
-// the provider details (company or instructor name, mobile, provider terms) that add a provider to this login and open the
+// Provider onboarding (/provider/onboarding): where "Become a provider" leads (signed out, after logging in or signing up), the
+// provider details (company or instructor name, mobile, provider terms) that add a provider to this login and open the
 // workspace. proxy.js sends signed-out visitors to log in and back; unlike the rest of /provider it needs no provider. An app
 // page (DESIGN-SYSTEM.md): the account pages' head band, then one card. Copy: data/providerSignup.js.
 

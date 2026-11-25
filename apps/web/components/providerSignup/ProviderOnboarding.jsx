@@ -24,7 +24,7 @@ function validate(v) {
   return e;
 }
 
-// Provider onboarding (/provider/onboarding): the step after "Become a provider", as the client's site has it, with the
+// Provider onboarding (/provider/onboarding): where "Become a provider" leads (signed out, after logging in), with the
 // brief's fields: company or instructor name, mobile number and the provider terms. It adds a provider to this same login
 // (no second account), opens the new provider workspace, and the empty public profile exists from that moment. Someone who
 // already has a provider goes straight to it. The API checks everything again and logs it.

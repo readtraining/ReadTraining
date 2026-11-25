@@ -662,16 +662,16 @@ export const providerCohortsRouter = createTRPCRouter({
       // (a date on a plan keeps the plan's price, which may have moved since: only choosing another plan counts there)
       const repriced = (values.planId ?? null) !== (cohort.planId ?? null) || (!values.planId && (values.pricePence !== cohort.pricePence || (values.wasPricePence ?? null) !== (cohort.wasPricePence ?? null)))
       if (repriced && !can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path).catch(() => { throw new TRPCError({ code: 'FORBIDDEN', message: PRICES_NEEDED }) })
-      // a run already under way may drop a session it has had (its start moves later), but never start earlier in the past
-      if (values.startsOn < today() && values.startsOn < cohort.startsOn) throw bad('Dates can’t be moved into the past.', 'sessions')
       await ctx.db.transaction(async (tx) => {
         if (values.planId) Object.assign(values, await planPriceNow(tx, values.planId, cohort.planId))
-        const { course: c, date: now } = await lockDate(tx, course.id, cohort.id)
+        const { date: now } = await lockDate(tx, course.id, cohort.id)
         if (now.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates have just been cancelled, so they can’t be changed. Reload the page.' })
         if (input.seen && now.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: DATES_CHANGED })
-        // a learning option turned off since (allowed once its dates had finished): those dates stay as they ran, and can't be
-        // moved to today or later, where they would be on sale for a way the course no longer teaches
-        if (!c.methods.includes(cohort.method) && values.endsOn >= today()) throw bad(`This course isn’t taught ${wayOf(cohort.method)} any more, so these dates can’t run from today on. Turn it back on in the course’s Learning options first.`, 'sessions')
+        // finished dates are the record of what ran, so they don't change (their tutor can still be set, setTutor)
+        if (now.endsOn < today()) throw new TRPCError({ code: 'CONFLICT', message: 'This cohort has already finished, so it can’t be changed.' })
+        // a run under way keeps the sessions it has had, or drops one, but no day before today is added to it
+        const held = new Set((now.sessions as Session[]).map((s) => s.date))
+        if (values.sessions.some((s) => s.date < today() && !held.has(s.date))) throw bad('Dates in the past can’t be added.', 'sessions')
         if (values.venueId && values.venueId !== cohort.venueId) await refuseArchivedNow(tx, values.venueId)
         await refuseClash(tx, course.id, values.venueId, values.sessions, cohort.id)
         // the tutor's other dates: checked when the tutor or the times change, for dates still to run
