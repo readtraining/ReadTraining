@@ -5335,6 +5335,11 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
   > .rt-acc__tabs { flex: 0 1 auto; }
   .rt-adm-search { margin-right: 0; margin-left: auto; }
 }
+/* a bar whose pills and filters share one row (Approvals): the pills on the left, the filters on the right; they wrap only when
+   they don't fit */
+.rt-adm--platform .rt-adm-toolbar.-oneline { justify-content: space-between; align-items: center; }
+.rt-adm--platform .rt-adm-toolbar.-oneline > .rt-acc__tabs { flex: 0 1 auto; }
+.rt-adm--platform .rt-adm-toolbar.-oneline > .rt-adm-toolbar__end { margin-left: auto; }
 /* a button that can't be used yet looks it (e.g. "Approve selected" with nothing ticked) */
 .rt-adm--platform .button:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 /* the page never shifts sideways when a scrollbar appears or goes */
@@ -7974,7 +7979,10 @@ html { scrollbar-gutter: stable; }
 /* G8, G9, N3: one header height on desktop (tabs start at the same place on every page) and the main action stays at the top
    right beside the title instead of dropping under the description */
 @media (min-width: 992px) {
-  .rt-adm--platform .rt-adm__head { flex-wrap: nowrap; min-height: 88px; }
+  .rt-adm--platform .rt-adm__head { flex-wrap: nowrap; }
+  /* the height of a title and its description line, kept by every page that has one; a page with only its title (Approvals)
+     leaves no empty space under it */
+  .rt-adm--platform .rt-adm__head:has(.rt-adm__lead) { min-height: 88px; }
   .rt-adm--platform .rt-adm__head > div:first-child { flex: 1 1 auto; min-width: 0; }
   .rt-adm--platform .rt-adm__actions { flex: none; }
 }
