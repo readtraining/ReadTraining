@@ -23,9 +23,6 @@ export async function startStaffAccess(ctx: Ctx, organisationId: string, reason:
   if (!org || org.type !== 'provider') throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider no longer exists.' })
   // until our team approves a provider there are no courses, dates or plans to work on; a rejected one is closed
   if (org.status !== 'active' && org.status !== 'suspended') throw new TRPCError({ code: 'BAD_REQUEST', message: 'You can work in a provider’s workspace once the provider is approved (it is active or suspended).' })
-  // someone on the provider's own team works on it in its workspace, as themselves: staff access would stand in for their own
-  const [member] = await ctx.db.execute(sql`select 1 from public.organisation_members where organisation_id = ${organisationId}::uuid and user_id = ${ctx.user.id}::uuid`)
-  if (member) throw new TRPCError({ code: 'BAD_REQUEST', message: 'You’re on this provider’s team, so you work on it in its own workspace (Switch account), not as ReadTraining staff.' })
   const id = await ctx.db.transaction(async (tx) => {
     await tx.execute(sql`select 1 from public.admin_users where user_id = ${ctx.user.id}::uuid for update`)
     const [open] = await tx.execute<{ id: string }>(sql`
