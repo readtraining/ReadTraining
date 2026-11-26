@@ -16,6 +16,7 @@ import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { waysLabel } from "@/lib/courseModes";
 import TextArea from "@/components/forms/TextArea";
+import FormattedText from "@/components/forms/FormattedText";
 
 const copy = A.providers;
 const d = copy.detail;
@@ -63,13 +64,16 @@ export default function AdminProvider({ slug }) {
   // why an approver sees no decision on an application waiting here: they opened this provider account themselves (another admin
   // decides it); the sole approver gets the buttons, and the pop-up asks for the reason
   const blockedNote = (p.status === "pending" || p.status === "changes_requested") && !decisions.length && p.ownRequest && me?.permissions?.includes("approve") ? d.ownRequest : "";
-  const decided = async (decision, { emailed, outbox }) => {
+  // the new status shows at once (from the decision's own answer), with the message the admin wrote, and says so; the record then
+  // loads again in the background for the rest (its dates, the activity), the buttons waiting for it
+  const decided = async (decision, { status, message, emailed, outbox }) => {
+    utils.admin.providers.get.setData({ slug }, (old) => (old ? { ...old, status, statusNote: message || null, statusChangedAt: new Date().toISOString() } : old));
+    setSaid(outbox ? `${d.done[decision]}. ${d.emailOutbox}` : d.done[decision]);
+    setWarning(emailed || outbox ? "" : d.notEmailed);
     setRefreshing(true);
     utils.admin.activity.list.invalidate();
     await utils.admin.providers.invalidate().catch(() => {});
     setRefreshing(false);
-    setSaid(outbox ? `${d.done[decision]}. ${d.emailOutbox}` : d.done[decision]);
-    setWarning(emailed || outbox ? "" : d.notEmailed);
   };
   const f = d.fields;
   const lastReply = p.status === "pending" && activity.data?.entries.find((e) => e.action === "provider.resubmitted");
@@ -127,6 +131,8 @@ export default function AdminProvider({ slug }) {
               <div><dt>{f.applied}</dt><dd>{formatWhen(Date.parse(p.appliedAt))}</dd></div>
             </dl>
           </section>
+
+          <ProfileCard profile={p.profile} name={p.name} />
 
           <section className="rt-acc__card" aria-labelledby="rt-adm-pt-h">
             <h2 className="rt-acc__h2" id="rt-adm-pt-h">{d.team}</h2>
@@ -229,10 +235,47 @@ export function DeleteProviderSheet({ provider, onClose, onDone }) {
   );
 }
 
+// What learners will see about the provider: its logo, headline, town and links, its biography, and the terms shown before
+// booking (bold and bullet lists as on the public profile), so an application is decided on what goes public.
+function ProfileCard({ profile: pr, name }) {
+  const t = d.profile;
+  const links = Object.entries(t.socials).filter(([k]) => pr.socials?.[k]);
+  const block = (text, empty) => (text ? <FormattedText text={text} pClass="rt-adm-provider__note" ulClass="rt-adm-provider__note rt-adm-provider__list" /> : <p className="rt-adm-muted">{empty}</p>);
+  return (
+    <section className="rt-acc__card" aria-labelledby="rt-adm-pp-h">
+      <h2 className="rt-acc__h2" id="rt-adm-pp-h">{t.title}</h2>
+      <p className="rt-acc__note">{t.lead}</p>
+      <div className="rt-adm-provider__head">
+        {pr.logoUrl ? <img src={pr.logoUrl} alt={`${name} logo`} className="rt-adm-provider__logo" /> : <span className="rt-adm-provider__logo -none" aria-hidden="true">{name.slice(0, 2).toUpperCase()}</span>}
+        <div>
+          <b>{pr.headline || <span className="rt-adm-muted">{t.noHeadline}</span>}</b>
+          {(pr.city || links.length > 0) && (
+            <small>
+              {pr.city}
+              {pr.city && links.length > 0 && " · "}
+              {links.map(([k, label], i) => <React.Fragment key={k}>{i > 0 && " · "}<a href={pr.socials[k]} target="_blank" rel="noopener noreferrer" className="rt-cd__link">{label}</a></React.Fragment>)}
+            </small>
+          )}
+        </div>
+      </div>
+      <h3 className="rt-adm-h3">{t.bio}</h3>
+      {block(pr.bio, t.noBio)}
+      <h3 className="rt-adm-h3">{t.policy}</h3>
+      {block(pr.cancellationPolicy, t.noPolicy)}
+      <h3 className="rt-adm-h3">{t.terms}</h3>
+      {block(pr.bookingTerms, t.noTerms)}
+    </section>
+  );
+}
+
 // The provider's commission: its rate, whether that's its own or the platform default, and (with the switch) the field to
 // change it and "Use the platform default".
 function CommissionCard({ provider: p, canChange, onSaved }) {
-  const save = api.admin.providers.setCommission.useMutation();
+  const utils = api.useUtils();
+  // the new rate shows at once, before the provider loads again
+  const save = api.admin.providers.setCommission.useMutation({
+    onSuccess: (_, { bps }) => utils.admin.providers.get.setData({ slug: p.slug }, (old) => (old ? { ...old, commissionBps: bps } : old)),
+  });
   const def = formatRate(p.defaultCommissionBps);
   const rate = p.commissionBps ?? p.defaultCommissionBps;
   const own = p.commissionBps !== null;
@@ -245,7 +288,7 @@ function CommissionCard({ provider: p, canChange, onSaved }) {
       <p className="rt-acc__note">{(own ? d.hasOwn : d.usesDefault).replace("{rate}", def)}</p>
       {canChange ? (
         <>
-          <RateForm id="rt-adm-pcom" label={<>{d.commissionLabel}<Req /></>} hint={d.commissionHint.replace("{rate}", def)} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
+          <RateForm id="rt-adm-pcom" label={<>{d.commissionLabel}<Req /></>} hint={d.commissionHint} bps={rate} saving={save.isPending} save={(bps) => save.mutateAsync({ organisationId: p.id, bps })} onSaved={() => onSaved(d.commissionSaved)} />
           {own && <button type="button" className="rt-cd__link rt-adm-mt" onClick={async () => { await save.mutateAsync({ organisationId: p.id, bps: null }); onSaved(d.commissionSaved); }} disabled={save.isPending}>{d.useDefault}</button>}
         </>
       ) : null}
@@ -284,7 +327,7 @@ export function DecisionSheet({ provider, decision, onClose, onDone }) {
     if (msgError || ownError) return focusFirstError(ref.current);
     try {
       const res = await decide.mutateAsync({ organisationId: provider.id, decision, message: sheet.label ? message.trim() : undefined, ownReason: own ? reason.trim() : undefined });
-      onDone(decision, res);
+      onDone(decision, { ...res, message: sheet.label ? message.trim() : "" });
       close();
     } catch (err) {
       const { fields, general: g } = errorsFrom(err);

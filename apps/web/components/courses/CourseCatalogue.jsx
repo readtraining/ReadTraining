@@ -102,7 +102,7 @@ export default function CourseCatalogue({ courses, scope = null }) {
   useFocusTrap(filtersOpen && isSheet, panelRef, () => setFiltersOpen(false));
   useEffect(() => {
     if (!filtersOpen || isSheet) return;
-    const onKey = (e) => e.key === "Escape" && setFiltersOpen(false);
+    const onKey = (e) => e.key === "Escape" && !e.defaultPrevented && setFiltersOpen(false); // an open dropdown inside closes first
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [filtersOpen, isSheet]);

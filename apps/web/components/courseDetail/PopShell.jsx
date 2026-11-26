@@ -57,7 +57,7 @@ export default function PopShell({ open, onClose, labelledBy, book = false, wide
     if (!panel) return;
     const t = setTimeout(() => (panel.querySelector("[data-initial]") || panel.querySelector("h2"))?.focus({ preventScroll: true }), 30);
     const onKey = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !e.defaultPrevented) { // an open dropdown inside closes first, on its own
         e.preventDefault();
         closeRef.current();
         return;

@@ -34,7 +34,7 @@ export function Inline({ text, links = true }) {
   );
 }
 
-/** Text typed into a box: paragraphs, and lists where every line of a block starts "- ". */
+/** Text typed into a box: paragraphs, and lists of the lines that start "- " (textBlocks). */
 export function GuideText({ text, links = true }) {
   const blocks = textBlocks(text);
   if (!blocks.length) return null;

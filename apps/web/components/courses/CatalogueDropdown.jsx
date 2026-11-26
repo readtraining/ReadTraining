@@ -25,6 +25,10 @@ export default function CatalogueDropdown({
   // a form field opens on click or tap only: hovering a form shouldn't drop a list over the next fields
   openOnHover = true,
   disabled = false,
+  // the list floats over the page beside its field (below it, or above when there's more room there) instead of opening in the
+  // pop-up's flow: for a field inside a box that scrolls on its own (the cohort form's times), where opening in the flow would
+  // scroll that box and move the field away from the pointer. On phones it is the bottom sheet as everywhere.
+  float = false,
 }) {
   const [open, setOpen] = useState(false);
   const [toLeft, setToLeft] = useState(false); // opens leftwards (from its right edge) only when there is no room on the right
@@ -52,12 +56,17 @@ export default function CatalogueDropdown({
   useEffect(() => {
     if (!open) return;
     const onDown = (e) => rootRef.current && !rootRef.current.contains(e.target) && close();
-    const onKey = (e) => e.key === "Escape" && close();
+    // Escape closes this list only (caught first, and marked as handled), not the pop-up it sits in: a second Escape does that
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      close();
+    };
     document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey, true);
     };
   }, [open]);
 
@@ -71,18 +80,45 @@ export default function CatalogueDropdown({
     setInDialog(Boolean(rootRef.current?.closest('[role="dialog"]')) && !window.matchMedia("(max-width: 767px)").matches);
   }, []);
   useEffect(() => {
-    if (open && inDialog) rootRef.current?.querySelector(".rt-cat-dd__panel")?.scrollIntoView({ block: "nearest" });
-  }, [open, inDialog]);
+    if (open && inDialog && !float) rootRef.current?.querySelector(".rt-cat-dd__panel")?.scrollIntoView({ block: "nearest" });
+  }, [open, inDialog, float]);
 
-  // which way the list opens: to the right of the trigger when it fits on the screen, otherwise leftwards. Worked out on load,
-  // on resize and on opening, and kept while closed, so the list never jumps sideways as it fades out.
+  // a floating list: placed from its field when it opens (below, or above when the room below is short), the chosen option in
+  // view; it closes when anything behind it scrolls or the window changes size, so it never drifts from its field
+  const [floatAt, setFloatAt] = useState(null);
+  useLayoutEffect(() => {
+    if (!open || !float) return;
+    if (window.matchMedia("(max-width: 767px)").matches) return setFloatAt(null); // a phone: the bottom sheet, no placing
+    const r = rootRef.current.querySelector(".rt-cat-dd__trigger").getBoundingClientRect();
+    const up = window.innerHeight - r.bottom < 300 && r.top > window.innerHeight - r.bottom;
+    setFloatAt({ position: "fixed", left: r.left, right: "auto", width: "max-content", minWidth: r.width, ...(up ? { top: "auto", bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6, bottom: "auto" }) });
+    const list = listRef.current;
+    const on = list?.querySelector(".is-active");
+    if (list && on) list.scrollTop = on.offsetTop - list.clientHeight / 2 + on.offsetHeight / 2;
+    const panel = rootRef.current.querySelector(".rt-cat-dd__panel");
+    const onScroll = (e) => !panel.contains(e.target) && close();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open, float]);
+
+  // which way the list opens: to the right of the trigger when it fits inside its filter bar or card (and the screen), otherwise
+  // leftwards, lined up with the trigger's right edge, so the last filter's list never sticks out past the card. Worked out on
+  // load, on resize and on opening, and kept while closed, so the list never jumps sideways as it fades out.
   useEffect(() => {
     const measure = () => {
       const root = rootRef.current;
       const panel = root?.querySelector(".rt-cat-dd__panel");
       if (!root || !panel) return;
       const r = root.getBoundingClientRect();
-      setToLeft(r.left + Math.max(panel.offsetWidth, r.width) > document.documentElement.clientWidth - 8);
+      const box = root.parentElement?.closest(".rt-cx__bar, .rt-adm-toolbar, .rt-cx, .rt-acc__card");
+      const edge = Math.min(document.documentElement.clientWidth - 8, box ? box.getBoundingClientRect().right : Infinity);
+      const width = Math.max(panel.offsetWidth, r.width);
+      // leftwards only when it doesn't fit to the right and does fit to the left (a field at a narrow card's left edge opens right)
+      setToLeft(r.left + width > edge && r.right - width >= 8);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -146,7 +182,7 @@ export default function CatalogueDropdown({
       <div className="rt-cat-dd__backdrop" onClick={close}></div>
       {/* Always mounted so it can ease in and out; hidden panels are visibility:hidden (not focusable). */}
       {(
-        <div className={`rt-cat-dd__panel${inDialog ? " -inline" : ""}`} id={`${uid}-panel`} aria-hidden={!open}>
+        <div className={`rt-cat-dd__panel${float ? " -float" : inDialog ? " -inline" : ""}`} id={`${uid}-panel`} aria-hidden={!open} style={float && floatAt ? floatAt : undefined}>
           <div className="rt-cat-dd__head">
             <strong>{label}</strong>
             <button type="button" onClick={close} aria-label="Close">
@@ -178,7 +214,7 @@ export default function CatalogueDropdown({
                     type="button"
                     role="option"
                     aria-selected={active}
-                    className={`rt-cat-dd__option${active ? " is-active" : ""}`}
+                    className={`rt-cat-dd__option${active ? " is-active" : ""}${opt.action ? " -action" : ""}`}
                     onClick={() => choose(opt)}
                   >
                     {opt.icon && <i className={`${opt.icon} rt-cat-dd__icon`}></i>}
@@ -200,7 +236,7 @@ export default function CatalogueDropdown({
 // A form or toolbar dropdown in the site's look (as the licence form's), instead of the browser's own <select>. Same inputs as a
 // select: `options` are strings or { value, label }, `onChange` gets the chosen value (always a string, as a select's). The
 // <label> goes on the page with htmlFor={id}. `compact` is the 44px toolbar size; form fields are 52px.
-export function FieldSelect({ id, label, value, onChange, options, placeholder = "Select", invalid = false, describedBy, disabled = false, compact = false, className = "" }) {
+export function FieldSelect({ id, label, value, onChange, options, placeholder = "Select", invalid = false, describedBy, disabled = false, compact = false, float = false, className = "" }) {
   const opts = options.map((o) => (typeof o === "string" ? { value: o, label: o } : { ...o, value: String(o.value) }));
   return (
     <CatalogueDropdown
@@ -216,6 +252,7 @@ export function FieldSelect({ id, label, value, onChange, options, placeholder =
       describedBy={describedBy}
       openOnHover={false}
       disabled={disabled}
+      float={float}
     />
   );
 }
