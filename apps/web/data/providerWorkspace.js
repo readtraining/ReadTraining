@@ -114,7 +114,6 @@ export const pw = {
     { key: "cohorts", label: "Cohorts", icon: "icon-online-learning-4", can: "provider.cohorts.view", items: [
       { label: "Cohort list", href: "/provider/cohorts" },
       { label: "Calendar", href: "/provider/calendar" },
-      { label: "Self-paced", href: "/provider/cohorts?mode=self-paced" },
     ] },
     { key: "venues", label: "Venues", href: "/provider/venues", can: "provider.venues.view" },
     { key: "learners", label: "Learners", icon: "icon-person-2", href: "/provider/learners", can: "provider.learners.view" },
