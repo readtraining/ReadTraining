@@ -214,7 +214,7 @@ export const TEMPLATES: Record<string, Template> = {
   'staff-changes': {
     name: 'Changes made by our team',
     audience: 'Provider',
-    trigger: 'When a ReadTraining admin finishes editing the provider’s courses, dates, prices or details from the admin (one email per visit).',
+    trigger: 'When a ReadTraining admin finishes editing the provider’s courses, dates or price plan wording from the admin (one email per visit).',
     status: 'live',
     placeholders: ['firstName', 'provider', 'changes'],
     link: (s) => `${s}/provider`,
@@ -222,10 +222,10 @@ export const TEMPLATES: Record<string, Template> = {
     words: {
       subject: 'Our team made changes to {provider} on ReadTraining',
       heading: 'Our team made some changes',
-      body: 'Hi {firstName},\n\nA member of the ReadTraining team made these changes to your courses and details:\n\n{changes}\n\nYou can see everything in your workspace. If anything looks wrong, reply to this email and we’ll sort it out.',
+      body: 'Hi {firstName},\n\nA member of the ReadTraining team made these changes to your courses and dates:\n\n{changes}\n\nYou can see everything in your workspace. If anything looks wrong, reply to this email and we’ll sort it out.',
       button: 'Open your workspace',
     },
-    sample: { ...PROVIDER, changes: 'Updated the course “Emergency First Aid at Work”\nChanged the price plan “Standard packages”' },
+    sample: { ...PROVIDER, changes: 'Updated the course “Emergency First Aid at Work”\nChanged the wording of the price plan “Standard packages”' },
   },
   'course-change-approved': {
     name: 'Course change approved',
@@ -645,6 +645,22 @@ export const TEMPLATES: Record<string, Template> = {
       button: 'Review the change',
     },
     sample: { firstName: 'Alex', provider: 'Harbour Training Group', course: 'Emergency First Aid at Work', courseId: '1000' },
+  },
+  'admin-provider-renamed': {
+    name: 'Provider renamed',
+    audience: 'Admin',
+    trigger: 'When an approved provider changes its name. Sent to every admin who can approve.',
+    status: 'live',
+    placeholders: ['firstName', 'from', 'to', 'renamedBy', 'date'],
+    link: (s, v) => `${s}/admin/providers/${v.slug ?? ''}`,
+    footer: 'You are receiving this because you can approve providers and courses on ReadTraining.',
+    words: {
+      subject: '{from} is now called {to}',
+      heading: 'A provider has changed its name',
+      body: 'Hi {firstName},\n\n{from} has changed its name to {to}. Learners see the new name on its profile and courses straight away.\n\n- Changed by: {renamedBy}\n- When: {date}\n\nIf the new name could mislead learners, ask the provider to change it, or suspend the account.',
+      button: 'Open the provider',
+    },
+    sample: { firstName: 'Alex', from: 'Harbour Training Group', to: 'Harbour Safety Training', renamedBy: 'Sam Taylor (sam@harbourtraining.co.uk)', date: '26 November 2026 at 14:05', slug: 'harbour-training-group' },
   },
   'admin-course-deleted': {
     name: 'Live course deleted',

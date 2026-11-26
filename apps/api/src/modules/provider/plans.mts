@@ -2,9 +2,10 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
 import { and, asc, cohorts, courses, eq, inArray, isNull, pricePlans, sql } from '@readtraining/db'
+import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { createTRPCRouter, limit, orgProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's price plans: 2 to 4 packages a learner chooses between, each with its own full price per
 // delegate, a "Save £" amount, a tagline, "Most popular" on one, and features that are included (✓) or not (✗). A plan is reused:
@@ -89,6 +90,9 @@ const sameTiers = (a: unknown, b: unknown) => {
   const plain = (v: unknown): unknown => (Array.isArray(v) ? v.map(plain) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([, x]) => x != null && x !== '').sort(([x], [y]) => x.localeCompare(y)).map(([k, x]) => [k, plain(x)])) : v)
   return JSON.stringify(plain(a)) === JSON.stringify(plain(b))
 }
+
+// the same packages, in the same order, with only their wording changed: features, tagline and "Most popular"
+const onlyWording = (next: Tier[], before: Tier[]) => next.length === before.length && sameTiers(next.map(({ features, tagline, popular, ...rest }) => rest), before.map(({ features, tagline, popular, ...rest }) => rest))
 
 /** A plan of this provider's, for a date or course to use: refused when it is someone else's, or archived (unless kept). */
 export async function usablePlan(db: Writer, organisationId: string, planId: string, keepId: string | null = null) {
@@ -183,10 +187,13 @@ export const providerPlansRouter = createTRPCRouter({
     }),
 
   // Create a plan, or change one: learners see it at once, and every date and course on it takes its cheapest package as their
-  // price. `seen`: the version the form was opened on (a save over a newer one is refused).
-  save: orgProcedure('provider.pricing.edit')
+  // price. `seen`: the version the form was opened on (a save over a newer one is refused). Without the right to change prices
+  // (ReadTraining staff), only an existing plan's features, taglines and "Most popular" package change (`onlyWording`).
+  save: orgProcedure('provider.pricing.features')
     .input(z.object({ planId: z.string().uuid().optional(), name: line(60, 'plan name').min(1, 'Name the plan.'), tiers: tiersInput, seen: z.string().datetime().optional() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      const prices = can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })
+      if (!input.planId && !prices) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path)
       if (!input.planId) await limit(ctx, 'plans')
       return ctx.db.transaction(async (tx) => {
         if (!input.planId) {
@@ -196,6 +203,7 @@ export const providerPlansRouter = createTRPCRouter({
         }
         const p = await lockPlan(tx, input.organisationId, input.planId)
         if (input.seen && p.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: PLAN_CHANGED })
+        if (!prices && (input.name !== p.name || !onlyWording(input.tiers, p.tiers as Tier[]))) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path)
         const changed = !sameTiers(input.tiers, p.tiers)
         const [saved] = await tx.update(pricePlans).set({ name: input.name, tiers: input.tiers, updatedAt: new Date() }).where(eq(pricePlans.id, p.id)).returning()
         if (changed) await syncPlanPrices(tx, p.id)

@@ -118,7 +118,7 @@ export const admin = {
       custom: { label: "Custom", text: "Switches you pick one by one." },
     },
     switches: {
-      approve: "Approve and edit providers and courses", catalogue: "Edit the catalogue", pricing: "Change providers' prices and plans", content: "Edit site content", "orders.view": "See orders",
+      approve: "Approve providers and courses, and edit their courses and dates", catalogue: "Edit the catalogue", pricing: "See providers' prices and plans", content: "Edit site content", "orders.view": "See orders",
       "orders.book": "Book for customers", "orders.free": "Make free bookings", refunds: "Decide refunds", wallet: "Add wallet credit",
       disputes: "Handle disputes", payouts: "Run payouts", adjustments: "Money adjustments", "finance.settings": "Fees and commission",
       coupons: "Coupons", reviews: "Moderate reviews", suspend: "Suspend accounts",
@@ -435,9 +435,9 @@ export const admin = {
       back: "All providers",
       notFound: "This provider was not found.",
       publicProfile: "Public profile",
-      // editing the provider's work from the admin (StaffEdit, by the admin's switches): the Edit menu's pages
-      // each page for the switches that work in it: content (approve), prices (pricing)
-      edit: { label: "Edit", items: [{ label: "Profile and venues", path: "profile", needs: ["approve"] }, { label: "Price plans", path: "plans", needs: ["pricing", "approve"] }, { label: "Dates", path: "dates", needs: ["approve"] }] },
+      // the provider's work in the admin (StaffEdit, by the admin's switches): staff edit its dates and plans' features, and read
+      // the rest; each page for the switches that work in it: content (approve), prices to read (pricing)
+      work: { label: "Open", items: [{ label: "Profile and venues", path: "profile", needs: ["approve"] }, { label: "Price plans", path: "plans", needs: ["pricing", "approve"] }, { label: "Dates", path: "dates", needs: ["approve"] }] },
       actions: { approve: "Approve", changes: "Ask for changes", reject: "Don't approve", suspend: "Suspend", reinstate: "Reinstate" },
       // the pop-up for each decision: what happens, and the message the provider sees (when one is needed)
       sheets: {
@@ -467,7 +467,11 @@ export const admin = {
       noteFor: { changes_requested: "Changes asked for", rejected: "Reason not approved", suspended: "Reason suspended" },
       waiting: "The provider has made the changes and sent their account back for review.",
       details: "Details",
-      fields: { name: "Name", address: "Web address", phone: "Phone", terms: "Provider terms", applied: "Signed up", changed: "Status last changed" },
+      fields: { name: "Name", address: "Web address", phone: "Phone", vat: "VAT", order: "Order emails", refund: "Refund emails", dispute: "Dispute emails", terms: "Provider terms", applied: "Signed up", changed: "Status last changed" },
+      vatRegistered: "Registered, {n}",
+      vatNot: "Not registered",
+      // a notice address the provider hasn't set yet: their notices go to the owner's email until they do
+      noticeOwner: "(the owner's, not set yet)",
       termsAccepted: "Accepted the {v} version on {date}",
       termsMissing: "Not accepted",
       profile: {

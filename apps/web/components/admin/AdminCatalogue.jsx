@@ -106,7 +106,7 @@ export default function AdminCatalogue() {
                       <td className="rt-biz__act">
                         <RowMenu label={`Actions for ${c.title}`} items={[
                           { label: c.pendingChange || c.status === "pending" ? "Review" : "Open", href: `/admin/catalogue/${c.id}` },
-                          (c.kind === "shared" ? me?.permissions?.includes("catalogue") : ["approve", "pricing"].some((x) => me?.permissions?.includes(x))) && { label: "Edit course", href: `/admin/catalogue/${c.id}/edit` },
+                          me?.permissions?.includes(c.kind === "shared" ? "catalogue" : "approve") && { label: "Edit course", href: `/admin/catalogue/${c.id}/edit` },
                           c.kind !== "shared" && { label: c.pendingChange ? copy.detail.previewChange : copy.detail.preview, href: `/admin/catalogue/${c.id}/preview`, newTab: true },
                           c.status === "live" && { label: copy.detail.publicPage, href: `/course/${c.slug}`, newTab: true },
                           // the course page's pop-up asks why (the provider is told), with its checks
