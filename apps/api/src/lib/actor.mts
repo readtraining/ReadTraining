@@ -78,7 +78,7 @@ export async function loadActor(db: typeof Db, user: VerifiedUser, { asStaff = f
   if (staff) {
     const held = adminPermissions(actor.admin!)
     actor.memberships = [
-      { organisationId: staff.organisationId, type: 'provider', role: 'admin', status: 'active', organisationStatus: staff.organisationStatus, staff: { pricing: held.includes('pricing'), content: held.includes('approve'), session: staff.id } },
+      { organisationId: staff.organisationId, type: 'provider', role: 'admin', status: 'active', organisationStatus: staff.organisationStatus, staff: { content: held.includes('approve'), session: staff.id } },
       ...actor.memberships,
     ]
   }

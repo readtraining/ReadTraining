@@ -5,6 +5,7 @@ import { eq, organisations, sql } from '@readtraining/db'
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { notifyApprovers, personOf } from '../../lib/notify.mjs'
 import { refuseTakenProviderName } from '../../lib/providerName.mjs'
 import { MEDIA_PATH, MIN_LOGO, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
 import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
@@ -15,11 +16,11 @@ import { staffChangeCount } from '../../lib/staffAccess.mjs'
 export const PRIVATE_ROLES: string[] = ['owner', 'admin']
 
 // A provider's public profile (headline, about, town, social links, logo) and the terms learners accept when booking with them.
-// Both show on the provider's public page and course pages; they change straight away. The provider's name can change only
-// while its application is being reviewed (it is what our team checks); after approval a change goes through us.
+// Both show on the provider's public page and course pages; they change straight away, as does the provider's name (the owner or
+// an admin of the provider; once approved, the admins who approve are emailed, since a new name could mislead learners). All of it
+// is the provider's own: ReadTraining staff read it, never change it.
 
 const optional = (max: number, what: string) => z.string().trim().max(max, `Keep the ${what} to ${max} characters or fewer.`).nullable()
-const UNDER_REVIEW = ['pending', 'changes_requested']
 const providerName = z
   .string()
   .trim()
@@ -109,7 +110,6 @@ export const providerProfileRouter = createTRPCRouter({
       private: !mayRead,
       statusChangedAt: o.statusChangedAt ? new Date(o.statusChangedAt).toISOString() : null,
       appliedAt: new Date(o.createdAt).toISOString(),
-      canRename: UNDER_REVIEW.includes(o.status) && can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId }),
       events: rows.map((r) => {
         const m = r.metadata ?? {}
         const fromTeam = r.actor_identity === 'admin'
@@ -142,15 +142,11 @@ export const providerProfileRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input, path }) => {
       const socials = Object.fromEntries(Object.entries(input.socials).filter(([, v]) => v)) as Record<string, string>
-      const [o] = await ctx.db.select({ name: organisations.name, status: organisations.status }).from(organisations).where(eq(organisations.id, input.organisationId))
+      const [o] = await ctx.db.select({ name: organisations.name, slug: organisations.slug, status: organisations.status }).from(organisations).where(eq(organisations.id, input.organisationId))
       if (!o) throw new TRPCError({ code: 'NOT_FOUND' })
       const rename = input.name !== undefined && input.name !== o.name
-      if (rename) {
-        if (!can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId })) await refuse(ctx, 'provider.profile.rename', input.organisationId, path)
-        // once approved only our team renames it (ReadTraining staff editing from the admin); a name is still used once
-        if (!UNDER_REVIEW.includes(o.status) && !ctx.staff) throw new TRPCError({ code: 'CONFLICT', message: 'Your account is approved, so its name can only be changed by our team. Contact us to change it.' })
-      }
-      return ctx.db.transaction(async (tx) => {
+      if (rename && !can(ctx.actor, 'provider.profile.rename', { organisationId: input.organisationId })) await refuse(ctx, 'provider.profile.rename', input.organisationId, path)
+      const saved = await ctx.db.transaction(async (tx) => {
         if (rename) await refuseTakenProviderName(tx, input.name!, input.organisationId)
         await tx
           .update(organisations)
@@ -161,6 +157,17 @@ export const providerProfileRouter = createTRPCRouter({
         await log(tx, ctx, input.organisationId, 'provider.profile_updated')
         return { ok: true, renamed: rename }
       })
+      // an approved provider's new name: the admins who approve are told, after the save and never holding it up
+      if (rename && o.status === 'active') {
+        try {
+          const who = await personOf(ctx.db, ctx.user.id)
+          const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }).format(new Date())
+          await notifyApprovers(ctx.db, 'admin-provider-renamed', { from: o.name, to: input.name!, slug: o.slug, renamedBy: who?.label ?? 'Someone on their team', date }, { organisationId: input.organisationId, targetType: 'organisation', targetId: input.organisationId, action: 'email.approvers_told' }, ctx.user.id)
+        } catch (error) {
+          console.error('email admin-provider-renamed: could not tell the admins', error instanceof Error ? error.message : error)
+        }
+      }
+      return saved
     }),
 
   // Each text is saved on its own: only the one sent changes (two quick saves never undo each other). The cancellation policy

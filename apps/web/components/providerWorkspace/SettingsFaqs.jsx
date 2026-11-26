@@ -55,7 +55,7 @@ function FaqsList({ initial, locked, say }) {
   return (
     <div className="rt-acc__card rt-q__form rt-pws-set__form" aria-busy={busy || undefined}>
       <div className="rt-acc__cardhead">
-        <p className="rt-acc__note">{faqs.length >= MOST ? `That's the most you can have (${MOST}).` : "Learners see them on your public profile and on your courses that have their own page."}</p>
+        <p className="rt-acc__note">{faqs.length >= MOST && !locked ? `That's the most you can have (${MOST}).` : "Learners see them on your public profile and on your courses that have their own page."}</p>
         {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setEditing(null)} disabled={busy || faqs.length >= MOST}>Add FAQ</button>}
       </div>
       {faqs.length ? (

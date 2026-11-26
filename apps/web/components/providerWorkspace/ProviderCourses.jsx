@@ -141,7 +141,7 @@ export default function ProviderCourses() {
     { label: "Details", href: `${href}/overview` },
     ...(can("provider.courses.editPage") ? [{ label: "Edit course", href }] : []),
     { label: "Preview", href: `${href}/preview` },
-    // new dates set their prices, so they need the right to change prices too (ReadTraining staff without the pricing switch)
+    // new dates set their prices, so they need the right to change prices too (never ReadTraining staff)
     ...(can("provider.cohorts.edit") && can("provider.pricing.edit") && waysOf(c, { open: true }).some(isDatedMethod) ? [{ label: "Create cohort", onClick: () => setCohortFor({ open: true, courseId: String(c.id) }) }] : []),
     // pausing and copying a course stay the provider's own (not for ReadTraining staff working here)
     ...(can("provider.courses.edit") && !staff && pausable(c) ? [{ label: c.status === "live" ? "Pause course" : "Put back live", onClick: () => (c.status === "live" ? setPausing(c) : setPaused(c, false)) }] : []),

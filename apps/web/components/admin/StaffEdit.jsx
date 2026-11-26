@@ -54,7 +54,7 @@ export default function StaffEdit({ provider, heading = null, children }) {
     type: "provider",
     role: "admin",
     userId: me?.id,
-    staff: { pricing: Boolean(me?.permissions?.includes("pricing")), content: Boolean(me?.permissions?.includes("approve")) },
+    staff: { content: Boolean(me?.permissions?.includes("approve")) },
     links: {
       courses: () => `/admin/providers/${slug}`,
       course: (id, tab) => `/admin/catalogue/${id}/edit${tab ? `?tab=${tab}` : ""}`,

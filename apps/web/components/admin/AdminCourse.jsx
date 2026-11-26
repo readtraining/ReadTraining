@@ -82,9 +82,9 @@ export default function AdminCourse({ id }) {
 
   const shared = c.kind === "shared";
   const canDecide = Boolean(me?.permissions?.includes("approve")) && !shared;
-  // a shared page with the catalogue switch; a provider's course with the approve switch (its content) or the pricing switch
-  // (its prices), as ReadTraining staff (StaffEdit): the editor then offers only what their switches allow
-  const canWrite = shared ? Boolean(me?.permissions?.includes("catalogue")) : ["approve", "pricing"].some((x) => me?.permissions?.includes(x));
+  // a shared page with the catalogue switch; a provider's course with the approve switch, as ReadTraining staff (StaffEdit): its
+  // words, pictures and listing (its prices stay the provider's)
+  const canWrite = Boolean(me?.permissions?.includes(shared ? "catalogue" : "approve"));
   const providerReady = c.provider?.status === "active";
   // this course is waited for (the page shows its new status before it unlocks); the lists catch up behind it
   const refresh = async () => {
@@ -269,8 +269,7 @@ export default function AdminCourse({ id }) {
           {c.missing.length > 0 && <p className="rt-acc__note">Still missing: {c.missing.join("; ")}.</p>}
         </section>
 
-        {/* a plan is edited on the provider's Price plans page, as staff: the pricing switch, an active or suspended provider */}
-        <AdminCoursePrices pricing={c.pricing} planHref={me?.permissions?.includes("pricing") && c.provider && ["active", "suspended"].includes(c.provider.status) ? (id) => `/admin/providers/${c.provider.slug}/plans?plan=${id}` : null} />
+        <AdminCoursePrices pricing={c.pricing} />
 
       <section className="rt-acc__card" aria-labelledby="rt-adm-cc-h">
         <h2 className="rt-acc__h2" id="rt-adm-cc-h">The course page</h2>

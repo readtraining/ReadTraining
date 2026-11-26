@@ -184,7 +184,7 @@ export function isMeetingLink(v) {
 // change already on screen, and `change` (the list's) shows a row's change before the dates load again.
 export function useCohortActions({ refresh, toast, say, change = () => {} }) {
   const links = useWorkspaceLinks();
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, staff } = useProviderAccess();
   const bookable = api.provider.cohorts.setBookable.useMutation();
   // the date being edited stays set while its form closes, so the closing form doesn't turn into an empty "Create cohort"
   const [editing, setEditing] = useState({ open: false, k: null });
@@ -210,7 +210,8 @@ export function useCohortActions({ refresh, toast, say, change = () => {} }) {
         { label: "Move to another course", onClick: () => setMoveOne(k) },
         { label: "Cancel", onClick: () => setCancelOne(k) },
       ] : []),
-      ...(edit && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
+      // ReadTraining staff edit or cancel dates, never delete them
+      ...(edit && !staff && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
     ];
   };
   const sheets = (
@@ -251,7 +252,7 @@ export default function ProviderCohorts() {
     Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
   const actions = useCohortActions({ refresh, toast: (message, { error = false } = {}) => setToast({ message, error }), say: setSaid, change });
   const edit = can("provider.cohorts.edit");
-  // new dates set their prices, so adding them also needs prices (ReadTraining staff without the pricing switch can't)
+  // new dates set their prices, so adding them also needs prices (never ReadTraining staff)
   const add = edit && can("provider.pricing.edit");
   const newCourse = useNewCourse();
 
@@ -641,7 +642,10 @@ export const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(
 // picks the one the form starts on, a suggested course starts on its first, and one offering both asks which. Dates keep theirs.
 export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
   const links = useWorkspaceLinks();
-  const { organisationId } = useProviderAccess();
+  const { organisationId, can } = useProviderAccess();
+  // a date's prices and the venues are the provider's own (ReadTraining staff see them as they are)
+  const prices = can("provider.pricing.edit");
+  const addVenues = can("provider.venues.edit");
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
@@ -900,7 +904,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           {method === "classroom" && venues.length === 0 && (
             <div className="rt-acc__notice -warn rt-pws-coh__novenue" role="status">
               <p><b>Add a venue first.</b> Classroom dates take place at one of your venues, and you haven't added one yet. Add it here: it is saved to your venues, and these dates use it.</p>
-              {addingVenue ? venueForm : <button type="button" className="button -sm -purple-1 text-white" onClick={() => setAddingVenue(true)}>Add a venue</button>}
+              {addingVenue ? venueForm : addVenues && <button type="button" className="button -sm -purple-1 text-white" onClick={() => setAddingVenue(true)}>Add a venue</button>}
             </div>
           )}
 
@@ -971,7 +975,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   {err("venueId")}
                   {/* the list ends with "Add a new venue", which opens the venue form here (it is saved to the provider's venues); with no venue
                       yet, the notice above the dates has that button */}
-                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => (value === NEW_VENUE ? setAddingVenue(true) : set({ venueId: value }))} options={[...venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` })), ...(venues.length ? [{ value: NEW_VENUE, label: "+ Add a new venue", action: true }] : [])]} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
+                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => (value === NEW_VENUE ? setAddingVenue(true) : set({ venueId: value }))} options={[...venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` })), ...(venues.length && addVenues ? [{ value: NEW_VENUE, label: "+ Add a new venue", action: true }] : [])]} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
                   {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
                   {venueNote && <p className="rt-acc__notice -warn" id="rt-cf-venuenote" role="status">{venueNote}</p>}
                   {venues.length > 0 && addingVenue && venueForm}
@@ -986,7 +990,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </div>
               )}
             </div>
-            <SegmentedControl id="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
+            <SegmentedControl id="rt-cf-pricing" legend="Pricing" disabled={!prices} value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
               options={[{ value: "flat", label: "Flat price", icon: "coupons" }, { value: "tiered", label: "Tiered packages", icon: "layers" }]}
               hint={f.pricing === "tiered" ? "Learners pick a package from a price plan when they book." : "One price per learner for this date."} />
             {f.pricing === "tiered" && (
@@ -997,8 +1001,8 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </p>
                 {err("planId")}
                 {/* the list ends with "Manage price plans", opened in a new tab so this form stays as it is */}
-                <FieldSelect id="rt-cf-planId" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => (value === MANAGE_PLANS ? window.open(links.plans(), "_blank", "noopener") : set({ planId: value }))}
-                  options={[...plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}` })), { value: MANAGE_PLANS, label: plans.length ? "Manage price plans (new tab)" : "+ Create a price plan (new tab)", action: true }]}
+                <FieldSelect id="rt-cf-planId" label="Price plan" disabled={!prices} placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => (value === MANAGE_PLANS ? window.open(links.plans(), "_blank", "noopener") : set({ planId: value }))}
+                  options={[...plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}` })), ...(prices ? [{ value: MANAGE_PLANS, label: plans.length ? "Manage price plans (new tab)" : "+ Create a price plan (new tab)", action: true }] : [])]}
                   invalid={Boolean(errors.planId)} describedBy={`rt-cf-planId-h${errors.planId ? " rt-cf-planId-e" : ""}`} />
               </div>
             )}
@@ -1008,12 +1012,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   <div className="rt-field">
                     <label htmlFor="rt-cf-price">Price per learner, including VAT (£)<Req /></label>
                     {err("price")}
-                    <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.replace(/£|,/g, "").trim() })} autoComplete="off" {...aria("price")} />
+                    <input id="rt-cf-price" type="text" inputMode="decimal" disabled={!prices} value={f.price} onChange={(e) => set({ price: e.target.value.replace(/£|,/g, "").trim() })} autoComplete="off" {...aria("price")} />
                   </div>
                   <div className="rt-field">
                     <label htmlFor="rt-cf-wasPrice">“Was” price (£)</label>
                     {err("wasPrice")}
-                    <input id="rt-cf-wasPrice" type="text" inputMode="decimal" value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
+                    <input id="rt-cf-wasPrice" type="text" inputMode="decimal" disabled={!prices} value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
                   </div>
                 </>
               )}

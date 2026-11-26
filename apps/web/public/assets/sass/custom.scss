@@ -5823,6 +5823,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-seg__opt:hover { color: var(--rt-seg-ink); }
 .rt-seg__opt[aria-pressed="true"] { background: var(--rt-c-surface); color: var(--rt-seg-ink); box-shadow: var(--rt-seg-shadow); }
 .rt-seg__opt:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-seg__opt:disabled { cursor: not-allowed; }
+.rt-seg__opt:disabled:not([aria-pressed="true"]) { opacity: 0.55; }
 .rt-seg__icon { width: 16px; height: 16px; flex: none; }
 .rt-seg-field__hint { margin: 8px 0 0; font-size: var(--rt-text-sm); color: var(--rt-seg-muted); }
 @media (prefers-reduced-motion: reduce) { .rt-seg__opt { transition: none; } }
@@ -7086,6 +7088,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__count legend { float: none; width: auto; margin-bottom: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-pkg__countrow { display: flex; gap: 8px; }
 .rt-pws-pkg__countrow .rt-tr__filter { min-width: 44px; justify-content: center; }
+.rt-pws-pkg__countrow .rt-tr__filter:disabled { cursor: not-allowed; }
+.rt-pws-pkg__countrow .rt-tr__filter:disabled:not(.is-on) { opacity: 0.55; border-color: var(--color-border-strong); }
 /* the plan's features: one table, a row per feature and a column per package, each cell the feature's state on that package
    (Included, Not included, Hidden) as a button opening a menu above the pop-up; the add row at the foot */
 .rt-pws-pkg__fsec { display: grid; gap: 12px; }

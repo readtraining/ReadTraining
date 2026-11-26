@@ -76,6 +76,8 @@ export default function AdminProvider({ slug }) {
     setRefreshing(false);
   };
   const f = d.fields;
+  // a notice address not set yet: the owner's email is used until the provider sets one
+  const owner = p.team.find((m) => m.role === "owner");
   const lastReply = p.status === "pending" && activity.data?.entries.find((e) => e.action === "provider.resubmitted");
 
   return (
@@ -93,9 +95,9 @@ export default function AdminProvider({ slug }) {
           {!refreshing && decisions.map((k) => (
             <button key={k} type="button" className={PRIMARY.has(k) ? "button -md -purple-1 text-white" : DANGER.has(k) ? "button -md -outline-red-3 text-red-3" : "button -md -outline-purple-1 text-purple-1"} onClick={() => setDeciding(k)}>{d.actions[k]}</button>
           ))}
-          {(p.status === "active" || p.status === "suspended") && d.edit.items.some((x) => x.needs.some((s) => me?.permissions?.includes(s))) && (
-            <RowMenu label={`Edit ${p.name}`} trigger={<span aria-hidden="true">{d.edit.label}</span>} triggerClass="button -md -outline-purple-1 text-purple-1"
-              items={d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` }))} />
+          {(p.status === "active" || p.status === "suspended") && d.work.items.some((x) => x.needs.some((s) => me?.permissions?.includes(s))) && (
+            <RowMenu label={`Open ${p.name}`} trigger={<span aria-hidden="true">{d.work.label}</span>} triggerClass="button -md -outline-purple-1 text-purple-1"
+              items={d.work.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` }))} />
           )}
           {canDelete(p, me) && (
             <button type="button" className="button -md -outline-red-3 text-red-3" onClick={() => setDeleting(true)}>{d.remove.action}</button>
@@ -127,6 +129,10 @@ export default function AdminProvider({ slug }) {
               <div><dt>{f.name}</dt><dd>{p.name}</dd></div>
               <div><dt>{f.address}</dt><dd>/providers/{p.slug}</dd></div>
               <div><dt>{f.phone}</dt><dd>{p.mobile || <span className="rt-adm-muted">–</span>}</dd></div>
+              <div><dt>{f.vat}</dt><dd>{p.vat.registered ? d.vatRegistered.replace("{n}", p.vat.number.replace(/^GB(\d{3})(\d{4})(\d{2})$/, "GB $1 $2 $3")) : d.vatNot}</dd></div>
+              {["order", "refund", "dispute"].map((k) => (
+                <div key={k}><dt>{f[k]}</dt><dd>{p.noticeEmails[k] || (owner ? <>{owner.email} <span className="rt-adm-muted">{d.noticeOwner}</span></> : <span className="rt-adm-muted">–</span>)}</dd></div>
+              ))}
               <div><dt>{f.terms}</dt><dd>{p.termsAcceptedAt ? d.termsAccepted.replace("{v}", p.termsVersion || "").replace("{date}", formatDate(p.termsAcceptedAt.slice(0, 10))) : <span className="rt-adm-muted">{d.termsMissing}</span>}</dd></div>
               <div><dt>{f.applied}</dt><dd>{formatWhen(Date.parse(p.appliedAt))}</dd></div>
             </dl>
