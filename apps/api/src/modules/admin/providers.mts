@@ -123,9 +123,10 @@ export const providersRouter = createTRPCRouter({
   get: adminProcedure('admin.providers.read')
     .input(z.object({ slug: z.string().max(80) }))
     .query(async ({ ctx, input }) => {
-      const [o] = await ctx.db.execute<{ id: string; name: string; slug: string; mobile: string | null; status: Status; status_note: string | null; status_changed_at: string | null; commission_bps: number | null; terms_accepted_at: string | null; terms_version: string | null; created_by: string | null; created_at: string; logo_path: string | null; headline: string | null; bio: string | null; city: string | null; socials: { facebook?: string; linkedin?: string; youtube?: string } | null; cancellation_policy: string | null; booking_terms: string | null }>(sql`
+      const [o] = await ctx.db.execute<{ id: string; name: string; slug: string; mobile: string | null; status: Status; status_note: string | null; status_changed_at: string | null; commission_bps: number | null; terms_accepted_at: string | null; terms_version: string | null; created_by: string | null; created_at: string; logo_path: string | null; headline: string | null; bio: string | null; city: string | null; socials: { facebook?: string; linkedin?: string; youtube?: string } | null; cancellation_policy: string | null; booking_terms: string | null; vat_registered: boolean; vat_number: string | null; order_email: string | null; refund_email: string | null; dispute_email: string | null }>(sql`
         select o.id, o.name, o.slug, o.mobile, o.status, o.status_note, o.status_changed_at, o.commission_bps, o.terms_accepted_at, o.terms_version, o.created_by, o.created_at,
-          o.logo_path, o.headline, o.bio, o.city, o.socials, o.cancellation_policy, o.booking_terms
+          o.logo_path, o.headline, o.bio, o.city, o.socials, o.cancellation_policy, o.booking_terms,
+          o.vat_registered, o.vat_number, o.order_email, o.refund_email, o.dispute_email
         from public.organisations o where o.type = 'provider' and o.slug = ${input.slug}`)
       if (!o) throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider was not found.' })
       const team = await ctx.db.execute<{ user_id: string; email: string; first_name: string | null; last_name: string | null; role: string; status: string; created_at: string }>(sql`
@@ -150,6 +151,10 @@ export const providersRouter = createTRPCRouter({
         termsAcceptedAt: iso(o.terms_accepted_at),
         termsVersion: o.terms_version,
         appliedAt: iso(o.created_at)!,
+        // their settings as they filled them in (read only here): VAT, and where their order, refund and dispute notices go (null:
+        // not set yet, so the owner's email is used)
+        vat: { registered: o.vat_registered, number: o.vat_number },
+        noticeEmails: { order: o.order_email, refund: o.refund_email, dispute: o.dispute_email },
         // what learners will see about them (their public profile and the terms shown before booking), so a decision is made on it
         profile: {
           logoUrl: mediaUrl(o.logo_path),

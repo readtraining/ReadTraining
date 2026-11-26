@@ -8,7 +8,7 @@ import { useWorkspace } from "@/lib/workspaceContext";
 // action again.
 export function useProviderAccess() {
   const w = useWorkspace();
-  const actor = w ? { userId: w.userId || "", aal: "aal1", admin: null, memberships: [{ organisationId: w.id, type: "provider", role: w.role, status: "active", organisationStatus: w.status, ...(w.staff ? { staff: { pricing: Boolean(w.staff.pricing), content: w.staff.content !== false } } : {}) }] } : null;
+  const actor = w ? { userId: w.userId || "", aal: "aal1", admin: null, memberships: [{ organisationId: w.id, type: "provider", role: w.role, status: "active", organisationStatus: w.status, ...(w.staff ? { staff: { content: w.staff.content !== false } } : {}) }] } : null;
   return {
     organisationId: w?.id || "",
     userId: w?.userId || "",

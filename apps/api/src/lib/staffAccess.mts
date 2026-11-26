@@ -60,38 +60,17 @@ const DONE: Record<string, string> = {
   'course.images_changed': 'Changed the course’s pictures',
   'course.option_stopped': 'Stopped bookings for a learning option of',
   'course.option_reopened': 'Reopened bookings for a learning option of',
-  'cohort.created': 'Added a date to',
   'cohort.updated': 'Changed a date of',
   'cohort.cancelled': 'Cancelled a date of',
-  'cohort.deleted': 'Removed a date of',
   'cohort.moved': 'Moved a date to another course from',
   'cohort.bookings_off': 'Stopped bookings on a date of',
   'cohort.bookings_on': 'Reopened bookings on a date of',
-  'plan.created': 'Added the price plan',
-  'plan.updated': 'Changed the price plan',
-  'plan.archived': 'Archived the price plan',
-  'plan.restored': 'Restored the price plan',
-  'plan.deleted': 'Deleted the price plan',
-  'venue.created': 'Added the venue',
-  'venue.updated': 'Changed the venue',
-  'venue.archived': 'Archived the venue',
-  'venue.restored': 'Restored the venue',
-  'venue.deleted': 'Deleted the venue',
-  'provider.profile_updated': 'Updated your public profile',
-  'provider.renamed': 'Changed your provider name',
-  'provider.faqs_updated': 'Updated your FAQs',
-  'provider.logo_updated': 'Changed your logo',
-  'provider.logo_removed': 'Removed your logo',
-  'provider.terms_updated': 'Updated your booking terms or cancellation policy',
+  'plan.updated': 'Changed the wording of the price plan',
 }
 
-// A change and the one that puts it back: archiving a plan or venue and restoring it, stopping bookings (on a date, or for a
-// learning option) and reopening them. Done and undone in one session, the two cancel out: nothing changed.
+// A change and the one that puts it back: stopping bookings (on a date, or for a learning option) and reopening them. Done and
+// undone in one session, the two cancel out: nothing changed.
 const UNDOES: Record<string, string> = {
-  'plan.archived': 'plan.restored',
-  'plan.restored': 'plan.archived',
-  'venue.archived': 'venue.restored',
-  'venue.restored': 'venue.archived',
   'cohort.bookings_off': 'cohort.bookings_on',
   'cohort.bookings_on': 'cohort.bookings_off',
   'course.option_stopped': 'course.option_reopened',
@@ -103,13 +82,12 @@ const UNDOES: Record<string, string> = {
 async function netChanges(db: typeof Db, session: string) {
   const rows = await db.execute<{ action: string; key: string; primary: string | null; name: string | null }>(sql`
     select l.action, concat_ws(':', l.target_type, l.target_id, l.metadata->>'method') key, l.metadata->>'primary' primary,
-           coalesce(c.title, cc.title, pl.name, v.name) name
+           coalesce(c.title, cc.title, pl.name) name
     from public.activity_log l
     left join public.courses c on l.target_type = 'course' and c.id::text = l.target_id
     left join public.cohorts co on l.target_type = 'cohort' and co.id::text = l.target_id
     left join public.courses cc on cc.id = co.course_id
     left join public.price_plans pl on l.target_type = 'price_plan' and pl.id::text = l.target_id
-    left join public.venues v on l.target_type = 'venue' and v.id::text = l.target_id
     where l.metadata->>'staff' = ${session} and l.action <> 'access.denied'
     order by l.at, l.id`)
   const kept: (typeof rows)[number][] = []

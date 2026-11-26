@@ -5321,15 +5321,16 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-adm--platform .rt-adm-money-late { font-weight: 600; color: var(--rt-adm-danger); }
 /* a full session is good news: its seat bar stays the normal colour, not the alarm orange */
 .rt-adm--platform .rt-adm-seats__bar span.-full { background: var(--color-purple-1); }
-/* The same five calm tones in the provider workspace and the learner and business accounts: their shared pill (.rt-acc__status,
+/* The same five calm tones in the provider workspace, the learner and business accounts and the admin (the shared page editor's
+   status, outside the staff editor's .rt-pws): their shared pill (.rt-acc__status,
    adminParts Pill) takes the admin status's shape and colours. -confirmed blue (waiting on someone else), -completed green (done),
    -requested amber (you must act), -cancelled grey (closed), -late red (at risk). The public site's own pills are unchanged. */
-:is(.rt-pws, .rt-acc-page) .rt-acc__status { padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-confirmed { border-color: transparent; background: var(--rt-adm-info-bg); color: var(--rt-adm-info); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-completed { border-color: transparent; background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-requested { border-color: transparent; background: var(--color-orange-7); color: var(--rt-adm-warning); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-cancelled { border-color: transparent; background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-late { border-color: transparent; background: var(--color-red-2); color: var(--rt-adm-danger); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status { padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-confirmed { border-color: transparent; background: var(--rt-adm-info-bg); color: var(--rt-adm-info); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-completed { border-color: transparent; background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-requested { border-color: transparent; background: var(--color-orange-7); color: var(--rt-adm-warning); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-cancelled { border-color: transparent; background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-late { border-color: transparent; background: var(--color-red-2); color: var(--rt-adm-danger); }
 /* activity log: the "acting as" tag always sits on its own line under the name */
 .rt-adm--platform .rt-adm-activity__as { display: block; margin-top: 4px; }
 /* rows-per-page dropdown opens upwards so its options are not cut off at the bottom of the page */
@@ -5822,6 +5823,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-seg__opt:hover { color: var(--rt-seg-ink); }
 .rt-seg__opt[aria-pressed="true"] { background: var(--rt-c-surface); color: var(--rt-seg-ink); box-shadow: var(--rt-seg-shadow); }
 .rt-seg__opt:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+.rt-seg__opt:disabled { cursor: not-allowed; }
+.rt-seg__opt:disabled:not([aria-pressed="true"]) { opacity: 0.55; }
 .rt-seg__icon { width: 16px; height: 16px; flex: none; }
 .rt-seg-field__hint { margin: 8px 0 0; font-size: var(--rt-text-sm); color: var(--rt-seg-muted); }
 @media (prefers-reduced-motion: reduce) { .rt-seg__opt { transition: none; } }
@@ -7085,6 +7088,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__count legend { float: none; width: auto; margin-bottom: 6px; font-size: var(--rt-text-sm); font-weight: 600; color: var(--rt-c-text); }
 .rt-pws-pkg__countrow { display: flex; gap: 8px; }
 .rt-pws-pkg__countrow .rt-tr__filter { min-width: 44px; justify-content: center; }
+.rt-pws-pkg__countrow .rt-tr__filter:disabled { cursor: not-allowed; }
+.rt-pws-pkg__countrow .rt-tr__filter:disabled:not(.is-on) { opacity: 0.55; border-color: var(--color-border-strong); }
 /* the plan's features: one table, a row per feature and a column per package, each cell the feature's state on that package
    (Included, Not included, Hidden) as a button opening a menu above the pop-up; the add row at the foot */
 .rt-pws-pkg__fsec { display: grid; gap: 12px; }

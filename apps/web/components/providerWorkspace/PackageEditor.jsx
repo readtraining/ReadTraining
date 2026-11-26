@@ -19,7 +19,8 @@ import { Field, aria, isMoney } from "./settingsForm";
 // booking), and the plan's features: one list for the whole plan, each feature Included (a tick), Not included (crossed out) or
 // Hidden (not shown) on each package, with an optional description. Edit shows the form, Learner preview the course page's own
 // package cards. Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its
-// cheapest package as their price. `plan`: the plan to edit, or none for a new one.
+// cheapest package as their price. `plan`: the plan to edit, or none for a new one. Without the right to change prices (ReadTraining
+// staff) only the features, taglines and "Most popular" change: the rest shows as it is.
 //
 // The plan is stored as before (each package with its own features, included or not): opening it puts the packages' features
 // side by side by name (a package without one has it Hidden), and saving writes each package's list back in the table's order,
@@ -158,7 +159,8 @@ function StatePicker({ value, onChange, label }) {
 }
 
 export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
-  const { organisationId } = useProviderAccess();
+  const { organisationId, can } = useProviderAccess();
+  const fixed = !can("provider.pricing.edit");
   const utils = api.useUtils();
   const save = api.provider.plans.save.useMutation();
   const [draft, setDraft] = useState(() => toDraft(null));
@@ -310,13 +312,13 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
 
             <div className="rt-pws-pkg__top">
               <Field id="rt-plan-name" label="Plan name" required error={errors.name} hint="Only your team sees this name. Learners see the package names.">
-                <input {...aria("rt-plan-name", errors.name, true)} type="text" maxLength={60} autoComplete="off" placeholder="For example: SIA door supervisor packages" value={draft.name} onChange={(e) => { setDraft((d) => ({ ...d, name: e.target.value })); clear("name"); }} />
+                <input {...aria("rt-plan-name", errors.name, true)} type="text" maxLength={60} autoComplete="off" placeholder="For example: SIA door supervisor packages" value={draft.name} onChange={(e) => { setDraft((d) => ({ ...d, name: e.target.value })); clear("name"); }} disabled={fixed} />
               </Field>
               <fieldset className="rt-field rt-pws-pkg__count">
                 <legend>Number of packages</legend>
                 <div className="rt-pws-pkg__countrow" role="group">
                   {[2, 3, 4].map((k) => (
-                    <button key={k} type="button" className={`rt-tr__filter${draft.tiers.length === k ? " is-on" : ""}`} aria-pressed={draft.tiers.length === k} onClick={() => setCount(k)}>{k}</button>
+                    <button key={k} type="button" className={`rt-tr__filter${draft.tiers.length === k ? " is-on" : ""}`} aria-pressed={draft.tiers.length === k} onClick={() => setCount(k)} disabled={fixed}>{k}</button>
                   ))}
                 </div>
               </fieldset>
@@ -332,14 +334,14 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                       {t.popular && <span className="rt-pws-pkg__badge">Most popular</span>}
                     </div>
                     <Field id={`rt-plan-t${i}-name`} label="Package name" required error={errors[`t${i}-name`]}>
-                      <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} />
+                      <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} disabled={fixed} />
                     </Field>
                     <div className="rt-pws-pkg__money">
                       <Field id={`rt-plan-t${i}-price`} label="Price (£)" required error={errors[`t${i}-price`]}>
-                        <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value.replace(/£|,/g, "") }); clear(`t${i}-price`); }} />
+                        <input {...aria(`rt-plan-t${i}-price`, errors[`t${i}-price`])} type="text" inputMode="decimal" autoComplete="off" value={t.price} onChange={(e) => { setTier(i, { price: e.target.value.replace(/£|,/g, "") }); clear(`t${i}-price`); }} disabled={fixed} />
                       </Field>
                       <Field id={`rt-plan-t${i}-save`} label="Save (£)" error={errors[`t${i}-save`]}>
-                        <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} />
+                        <input {...aria(`rt-plan-t${i}-save`, errors[`t${i}-save`])} type="text" inputMode="decimal" autoComplete="off" value={t.save} onChange={(e) => { setTier(i, { save: e.target.value }); clear(`t${i}-save`); }} disabled={fixed} />
                       </Field>
                     </div>
                     <p className="rt-pws-pkg__save" aria-live="polite">{isMoney(t.price) ? `${formatPrice(Number(t.price))} per delegate` : "Per delegate"}, including VAT{saving > 0 ? ` · was ${formatPrice(Number(t.price) + saving)}` : ""}</p>
@@ -347,7 +349,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                       <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
                     </Field>
                     <Toggle id={`rt-plan-t${i}-pop`} checked={t.popular} onChange={(on) => setPopular(i, on)} label="Mark as Most popular" />
-                    <Toggle id={`rt-plan-t${i}-fa`} checked={t.firstAid} onChange={(on) => setTier(i, { firstAid: on })} label="Includes Emergency First Aid at Work" />
+                    <Toggle id={`rt-plan-t${i}-fa`} checked={t.firstAid} onChange={(on) => setTier(i, { firstAid: on })} label="Includes Emergency First Aid at Work" disabled={fixed} />
                   </section>
                 );
               })}

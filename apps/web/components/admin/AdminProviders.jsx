@@ -42,7 +42,7 @@ export default function AdminProviders() {
   };
   const menu = (p) => [
     { label: d.open, href: readsRecord ? `/admin/providers/${p.slug}` : `/admin/providers/${p.slug}/plans` },
-    ...(p.status === "active" || p.status === "suspended" ? d.edit.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` })) : []),
+    ...(p.status === "active" || p.status === "suspended" ? d.work.items.filter((x) => x.needs.some((s) => me?.permissions?.includes(s))).map((x) => ({ label: x.label, href: `/admin/providers/${p.slug}/${x.path}` })) : []),
     ...decisionsFor(p, me).map((k) => ({ label: d.actions[k], danger: DANGER.has(k), onClick: () => setDeciding({ provider: p, decision: k }) })),
     ...(canDelete(p, me) ? [{ label: d.remove.action, danger: true, onClick: () => setDeleting(p) }] : []),
   ];
