@@ -732,7 +732,7 @@ export const admin = {
       note: "Shown on every shared course page that has Team training added.",
       legal: "Only say what is true on every page: no discounts or services we don't offer.",
       heading: "Heading",
-      intro: "Line under the heading",
+      intro: "Introduction",
       benefits: "Benefits",
       benefitsNote: "Up to 6.",
       benefit: "Benefit {n}",
@@ -842,7 +842,7 @@ export const admin = {
       changeNote: "Approving makes these changes the current version.",
       now: "Current",
       proposed: "Proposed",
-      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", compliance: "Course type", videoUrl: "Video", syllabusIntro: "Line above the syllabus", units: "Syllabus", examsIntro: "Text above the exam table", exams: "Exam and assessment", faqs: "FAQs" },
+      fields: { title: "Title", summary: "Short description", description: "Description", audience: "Who it's for", entryRequirements: "Entry requirements", outcomes: "What learners will learn", features: "Features", category: "Category", subcategory: "Sub-category", topic: "Topic", level: "Level", compliance: "Course type", videoUrl: "Video", syllabusIntro: "Syllabus introduction", units: "Syllabus", examsIntro: "Exams introduction", exams: "Exam and assessment", faqs: "FAQs" },
     },
     // the catalogue's one list (real, API admin.catalogue): what the site's filters and menus and the provider's course form use
     list: {

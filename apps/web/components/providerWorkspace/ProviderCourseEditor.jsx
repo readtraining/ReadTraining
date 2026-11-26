@@ -1287,7 +1287,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         </div>
         {draft.units.length >= MOST.units && <p className="rt-acc__note">{`That's the most a course can have (${MOST.units}): remove one to add another.`}</p>}
         <div className="rt-field">
-          <label htmlFor="rt-pws-ce-sylintro">Line above the units</label>
+          <label htmlFor="rt-pws-ce-sylintro">Syllabus introduction</label>
           <span className="rt-field__hint" id="rt-pws-ce-sylintro-h">Optional.</span>
           <FieldErr id="rt-pws-ce-sylintro" text={errors.syllabusIntro} />
           <TextArea id="rt-pws-ce-sylintro" rows={2} maxLength={600} value={draft.syllabusIntro} onChange={(e) => set("syllabusIntro")(e.target.value)} disabled={locked} aria-invalid={errors.syllabusIntro ? true : undefined} aria-describedby={`rt-pws-ce-sylintro-h${errors.syllabusIntro ? " rt-pws-ce-sylintro-e" : ""}`} autoComplete="off" />
@@ -1320,7 +1320,7 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         <p className="rt-acc__note">One row per paper or practical. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
         {(draft.exams.length > 0 || draft.examsIntro) && (
           <div className="rt-field">
-            <label htmlFor="rt-pws-ce-exintro">Text above the exam table</label>
+            <label htmlFor="rt-pws-ce-exintro">Exams introduction</label>
             <span className="rt-field__hint" id="rt-pws-ce-exintro-h">Optional.</span>
             <FieldErr id="rt-pws-ce-exintro" text={errors.examsIntro} />
             <TextArea id="rt-pws-ce-exintro" rows={3} maxLength={1200} value={draft.examsIntro} onChange={(e) => set("examsIntro")(e.target.value)} disabled={locked} aria-invalid={errors.examsIntro ? true : undefined} aria-describedby={`rt-pws-ce-exintro-h${errors.examsIntro ? " rt-pws-ce-exintro-e" : ""}`} autoComplete="off" />
@@ -1557,6 +1557,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
           <div className="rt-pws-ce__part">
             {dated.length > 0 && <h3 className="rt-adm-h3">{methodName("self-paced")}</h3>}
             {/* pricing mode: Flat (one price) or Tiered (packages from a price plan) */}
+            {access.staffPrices && <p className="rt-acc__note">Prices are the provider’s own, so you can’t change them as ReadTraining staff.</p>}
             <Choice name="rt-pws-ce-pricing" legend="Pricing" value={tiered ? "tiered" : "flat"} disabled={locked} onChange={(v) => !locked && setTiered(v === "tiered")}
               options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
             {tiered ? (

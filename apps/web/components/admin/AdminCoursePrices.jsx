@@ -11,8 +11,9 @@ const FIRST_DATES = 10; // a long list of dates shows this many, then "Show all 
 const short = (iso) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 
 // One price plan's packages side by side, as learners compare them: each one's price, its "Save £" (shown to learners as a was-price),
-// tagline, Most popular, and features included (✓) or not (✗).
-function Packages({ plan }) {
+// tagline, Most popular, the provider's other courses it includes (`names`: their names by id; and first aid set on its own on a
+// plan from before) and features included (✓) or not (✗).
+function Packages({ plan, names = {} }) {
   const tiers = Array.isArray(plan.tiers) ? plan.tiers : [];
   return (
     <ul className={`rt-adm-plan__tiers -n${tiers.length}`}>
@@ -27,6 +28,11 @@ function Packages({ plan }) {
             {t.savePence ? <small>Shown as “Save {money(t.savePence)}”, was {money(t.pricePence + t.savePence)}</small> : null}
           </p>
           {t.tagline && <p className="rt-acc__note">{t.tagline}</p>}
+          {(() => {
+            const inc = (t.courses ?? []).map((id) => names[id]).filter(Boolean);
+            const included = [...inc.map((c) => c.name), t.firstAid && !inc.some((c) => c.firstAid) && "Emergency First Aid at Work"].filter(Boolean);
+            return included.length > 0 && <p className="rt-acc__note">Includes: {included.join(", ")}</p>;
+          })()}
           {t.features?.length ? (
             <ul className="rt-adm-plan__features">
               {t.features.map((f, i) => (
@@ -156,7 +162,7 @@ export default function AdminCoursePrices({ pricing, planHref }) {
               </div>
               {planHref && <Link href={planHref(p.id)} className="button -sm -outline-purple-1 text-purple-1">Edit plan<span className="rt-sr"> {p.name}</span></Link>}
             </div>
-            <Packages plan={p} />
+            <Packages plan={p} names={pricing.courseNames} />
           </div>
         );
       })}

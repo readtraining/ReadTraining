@@ -10,6 +10,7 @@ import PackageEditor from "./PackageEditor";
 import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { pw } from "@/data/providerWorkspace";
 import { ColWidths, HeaderAction } from "@/components/admin/adminParts";
 
 // every plan by default; "Active" and "Archived" narrow it to one status (the words of the Status column)
@@ -28,8 +29,17 @@ const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date"
 // course pricing. Edit opens the plan; a plan is archived (dates on it keep it) or, when nothing
 // ever used it, deleted. Search and the archive filter are kept in the address.
 export default function ProviderPackages() {
+  const { staff, status } = useProviderAccess();
+  // an account our team hasn't approved yet can't make plans: the page says so, as the courses list does
+  if (!staff && (status === "pending" || status === "changes_requested")) return <EmptyState title={pw.notApproved.title} text={pw.notApproved.text} action={pw.notApproved.action} />;
+  return <PricePlans />;
+}
+
+function PricePlans() {
   const { organisationId, can, staff } = useProviderAccess();
   const edit = can("provider.pricing.edit");
+  // making or deleting a plan is the provider's own: ReadTraining staff change only a plan's words (PackageEditor)
+  const own = edit && !staff;
   const utils = api.useUtils();
   const query = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const archive = api.provider.plans.setArchived.useMutation();
@@ -82,7 +92,7 @@ export default function ProviderPackages() {
   if (!plans.length) {
     return (
       <>
-        <EmptyState title="No price plans yet" text="A plan is optional: without one, each date has a single price." action={edit ? { label: "Create price plan", onClick: create } : undefined} />
+        <EmptyState title="No price plans yet" text="A plan is optional: without one, each date has a single price." action={own ? { label: "Create price plan", onClick: create } : undefined} />
         {editor_}
         <Toast toast={toast} onDone={clearToast} />
       </>
@@ -95,7 +105,7 @@ export default function ProviderPackages() {
         <Search value={q} onChange={setParam("q", setQ)} label={staff ? "Search price plans" : "Search your price plans"} />
         <div className="rt-adm-toolbar__end">
           <ToolSelect id="rt-plan-show" label="Show" value={show} onChange={setParam("show", setShow)} options={SHOW} />
-          {edit && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}
+          {own && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}
         </div>
       </div>
       <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "plan" : "plans"}`}</p>
@@ -130,7 +140,7 @@ export default function ProviderPackages() {
                         <RowMenu label={`Actions for ${p.name}`} items={[
                           { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
                           { label: p.archived ? "Restore" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} restored` : `${p.name} archived`); }, onError: fail }) },
-                          ...(deletable(p) ? [{ label: "Delete", danger: true, onClick: () => setRemoving({ open: true, plan: p }) }] : []),
+                          ...(own && deletable(p) ? [{ label: "Delete", danger: true, onClick: () => setRemoving({ open: true, plan: p }) }] : []),
                         ]} />
                     </td>
                     )}

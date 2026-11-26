@@ -56,6 +56,10 @@ export async function endStaffAccess(ctx: Ctx) {
   return { providerSlug: ended?.slug ?? null }
 }
 
+/** Prices are the provider's own: ReadTraining staff editing a provider's work read them but never change them (a date's price,
+ *  a self-paced price, a plan's packages' names, prices and savings; creating or deleting a plan). */
+export const STAFF_PRICES = 'Prices are the provider’s own, so as ReadTraining staff you can’t change them. Ask the provider to make this change.'
+
 // What a staff change did, in the provider's words (the summary email; the activity log has the details)
 const DONE: Record<string, string> = {
   'course.updated': 'Updated the course',

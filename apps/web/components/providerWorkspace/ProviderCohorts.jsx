@@ -614,7 +614,9 @@ const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(isDated
 // picks the one the form starts on, a suggested course starts on its first, and one offering both asks which. Dates keep theirs.
 export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
   const links = useWorkspaceLinks();
-  const { organisationId } = useProviderAccess();
+  const { organisationId, staff } = useProviderAccess();
+  // a date's price is the provider's own: ReadTraining staff editing it see it, never change it (the API refuses it too)
+  const priceLocked = Boolean(staff && cohort);
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
@@ -950,6 +952,17 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </div>
               )}
             </div>
+            {priceLocked ? (
+              <div className="rt-field">
+                <p className="rt-seg-field__legend">Pricing</p>
+                <p className="rt-pws-coh__lockedprice">
+                  {f.pricing === "tiered"
+                    ? `Price plan: ${plans.find((p) => p.id === f.planId)?.name || "the provider’s plan"}`
+                    : `${formatPrice(Number(f.price))} per learner, including VAT${f.wasPrice ? ` (was ${formatPrice(Number(f.wasPrice))})` : ""}`}
+                </p>
+                <p className="rt-field__hint">Prices are the provider’s own, so you can’t change them as ReadTraining staff.</p>
+              </div>
+            ) : (<>
             <SegmentedControl id="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
               options={[{ value: "flat", label: "Flat price", icon: "coupons" }, { value: "tiered", label: "Tiered packages", icon: "layers" }]}
               hint={f.pricing === "tiered" ? "Learners pick a package from a price plan when they book." : "One price per learner for this date."} />
@@ -966,8 +979,9 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                   invalid={Boolean(errors.planId)} describedBy={`rt-cf-planId-h${errors.planId ? " rt-cf-planId-e" : ""}`} />
               </div>
             )}
+            </>)}
             <div className="rt-pws-coh__setgrid">
-              {f.pricing === "flat" && (
+              {f.pricing === "flat" && !priceLocked && (
                 <>
                   <div className="rt-field">
                     <label htmlFor="rt-cf-price">Price per learner, including VAT (£)<Req /></label>

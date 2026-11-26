@@ -6,7 +6,7 @@ import type { db as Db } from '../../lib/db.mjs'
 import { loadGuide } from '../../lib/courseGuide.mjs'
 import { mediaUrl } from '../../lib/media.mjs'
 import { loadProviderFaqs } from '../provider/faqs.mjs'
-import { publicTiers } from '../provider/plans.mjs'
+import { includedCourses, includedIds, publicTiers } from '../provider/plans.mjs'
 import { formatPostcode, POSTCODE } from '../../lib/postcode.mjs'
 
 // The public catalogue (Milestone 2): what learners see on the search, category and course pages, read from the real courses.
@@ -195,6 +195,8 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
   // a shared page lists the providers' public, listed courses on it; a provider course is its own offering
   const { offers, dates } = await offeringsAndDates(db, c.kind === 'shared' ? sql`c.parent_id = ${c.id} and c.is_public and c.listed` : sql`c.id = ${c.id}`, Boolean(preview) && c.kind === 'provider')
   if (!preview && c.kind === 'shared' && !offers.length) return null
+  // the provider's courses the packages include (shown with them)
+  const included = await includedCourses(db, includedIds([...offers.map((o) => o.plan_tiers), ...dates.map((d) => d.plan_tiers)]))
   const [parent] = c.parent_id ? await db.execute<{ slug: string; title: string }>(sql`select slug, title from public.courses where id = ${c.parent_id} and status = 'live'`) : []
   // the shared page's guide (lib/courseGuide.mts): its own, or, for a provider course on a live shared page, that page's
   const guide = c.kind === 'shared' ? await loadGuide(db, c.id) : parent && c.parent_id ? await loadGuide(db, c.parent_id) : null
@@ -248,7 +250,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
       model: o.model,
       skillSaver: o.skill_saver,
       selfPacedPence: o.methods.includes('self-paced') ? o.price_pence : null,
-      selfPacedPlan: o.methods.includes('self-paced') ? publicTiers(o.plan_tiers) : null, // its packages, when sold in packages
+      selfPacedPlan: o.methods.includes('self-paced') ? publicTiers(o.plan_tiers, included) : null, // its packages, when sold in packages
       provider: { name: o.provider, slug: o.provider_slug, logoUrl: mediaUrl(o.logo_path), city: o.provider_city ?? '' },
       dates: dates
         .filter((d) => d.course_id === o.id)
@@ -262,7 +264,7 @@ export async function loadCoursePage(db: typeof Db, slug: string, preview: Cours
           pricePence: d.price_pence,
           wasPricePence: d.was_price_pence,
           capacity: d.capacity,
-          plan: publicTiers(d.plan_tiers), // the packages to choose between (Tiered pricing), or null (Flat)
+          plan: publicTiers(d.plan_tiers, included), // the packages to choose between (Tiered pricing), or null (Flat)
           details: d.details ?? '',
           venue: d.city ? { name: d.venue_name ?? '', street: d.street ?? '', city: d.city, postcode: d.postcode, lat: d.lat, lng: d.lng } : null,
         })),

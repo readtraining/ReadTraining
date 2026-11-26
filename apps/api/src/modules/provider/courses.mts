@@ -25,6 +25,7 @@ import {
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { STAFF_PRICES } from '../../lib/staffAccess.mjs'
 import { refuseRetired, retiredEntries, retiredMethods } from '../../lib/retired.mjs'
 import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
@@ -913,6 +914,10 @@ export const providerCoursesRouter = createTRPCRouter({
       if (keys.some((k) => !PAGE_ONLY.has(k)) && !can(ctx.actor, 'provider.courses.edit', { organisationId })) await refuse(ctx, 'provider.courses.edit', organisationId, path)
       if (keys.some((k) => PRICING.has(k)) && !can(ctx.actor, 'provider.pricing.edit', { organisationId })) await refuse(ctx, 'provider.pricing.edit', organisationId, path)
       const course = await ownCourse(ctx.db, organisationId, courseId)
+      // a self-paced price or plan is the provider's own: staff read it, never change it
+      if (ctx.staff && ((fields.pricePence !== undefined && (fields.pricePence ?? null) !== (course.pricePence ?? null)) || (fields.planId !== undefined && (fields.planId ?? null) !== (course.planId ?? null)))) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: STAFF_PRICES })
+      }
       // the category, sub-category and topic change together (the editor always sends all three), so a course is never filed
       // under one category with another's sub-category
       refuseLongTitle(fields.title, course.title)

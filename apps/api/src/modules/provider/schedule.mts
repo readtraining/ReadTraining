@@ -5,6 +5,7 @@ import { and, asc, cohorts, courses, eq, gte, inArray, isNull, lte, ne, organisa
 import { can, canTutor, PROVIDER_ROLES } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
+import { STAFF_PRICES } from '../../lib/staffAccess.mjs'
 import { formatPostcode, lookupDown, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
 import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 import { isDated, ownCourse, ukToday as today } from './courses.mjs'
@@ -661,6 +662,8 @@ export const providerCohortsRouter = createTRPCRouter({
       // a different price, was-price or plan needs the right to change prices (ReadTraining staff without the pricing switch)
       // (a date on a plan keeps the plan's price, which may have moved since: only choosing another plan counts there)
       const repriced = (values.planId ?? null) !== (cohort.planId ?? null) || (!values.planId && (values.pricePence !== cohort.pricePence || (values.wasPricePence ?? null) !== (cohort.wasPricePence ?? null)))
+      // a date's price is the provider's own: staff read it, never change it
+      if (repriced && ctx.staff) throw new TRPCError({ code: 'FORBIDDEN', message: STAFF_PRICES })
       if (repriced && !can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path).catch(() => { throw new TRPCError({ code: 'FORBIDDEN', message: PRICES_NEEDED }) })
       await ctx.db.transaction(async (tx) => {
         if (values.planId) Object.assign(values, await planPriceNow(tx, values.planId, cohort.planId))
