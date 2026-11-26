@@ -55,11 +55,11 @@ export default function HomeBookingOptions({ example = null }) {
                     <div className="rt-tier__price"><span>From</span>{formatPrice(t.price)}<small>per learner</small></div>
                     <ul className="rt-tier__list">
                       {features.map((f) => {
-                        const on = t.features.some((x) => same(x.title, f) && x.included);
+                        const mine = t.features.find((x) => same(x.title, f) && x.included);
                         return (
-                          <li key={f} className={on ? "" : "is-off"}>
-                            <i className={on ? "icon-check" : "icon-close"} aria-hidden="true"></i>
-                            <span>{!on && <span className="rt-sr">Not included: </span>}{f}</span>
+                          <li key={f} className={mine ? "" : "is-off"}>
+                            <i className={mine ? "icon-check" : "icon-close"} aria-hidden="true"></i>
+                            <span>{!mine && <span className="rt-sr">Not included: </span>}{f}{mine?.value && <>: <strong>{mine.value}</strong></>}</span>
                           </li>
                         );
                       })}

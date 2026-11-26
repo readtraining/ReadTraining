@@ -9,7 +9,8 @@ import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.m
 
 // A provider's price plans: 2 to 4 packages a learner chooses between, each with its own full price per
 // delegate, a "Save £" amount, a tagline, "Most popular" on one, the provider's own courses it includes (up to 3: a package such as
-// "CCTV + First Aid"), and features that are included (✓) or not (✗). A plan is reused:
+// "CCTV + First Aid"), and features that are included (✓, with an optional value for that package,
+// such as "2" exam attempts or "12 months" of access) or not (✗). A plan is reused:
 // a classroom or live online date chooses one (cohorts.plan_id, the date's "Tiered" pricing), and a self-paced course can
 // (courses.plan_id). A plan is the provider's own pricing: what they save is what learners see, at once, with no review by our
 // team (the course itself is reviewed, with its packages shown). A date or course on a plan has the plan's cheapest package as its
@@ -28,7 +29,9 @@ const feature = z.object({
   title: line(80, 'feature').min(1, 'Write every feature, or remove it.'),
   description: line(200, 'feature description').optional().nullable(),
   included: z.boolean(),
-})
+  // what this package gives of it ("2", "12 months", "Unlimited"); only on an included feature
+  value: line(30, 'feature value').optional().nullable(),
+}).transform((f) => ({ ...f, value: (f.included && f.value) || null }))
 export const MOST_COURSES = 3 // other courses one package can include
 // a price is at least £1, as everywhere else (a date's own price, a self-paced course's)
 const tier = z
@@ -83,7 +86,7 @@ export const publicTiers = (tiers: unknown, included: Map<number, IncludedCourse
           popular: Boolean(t.popular),
           firstAid: Boolean(t.firstAid) || includes.some((c) => c.firstAid),
           includes,
-          features: (t.features ?? []).map((f) => ({ title: f.title, description: f.description || null, included: f.included })),
+          features: (t.features ?? []).map((f) => ({ title: f.title, description: f.description || null, included: f.included, value: (f.included && f.value) || null })),
         }
       })
     : null
