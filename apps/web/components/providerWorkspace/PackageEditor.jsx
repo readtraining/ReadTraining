@@ -18,7 +18,8 @@ import { Field, aria, isMoney } from "./settingsForm";
 // with its name, price per delegate, an optional "Save £" amount (shown as a was-price), a tagline, "Most popular" (one package
 // at most) and "Courses included": the provider's own other courses sold in that package, ticked (up to 3; a package such as
 // "CCTV + First Aid" includes their first aid course); and the plan's features: one list for the whole plan, each feature Included
-// (a tick), Not included (crossed out) or Hidden (not shown) on each package, with an optional description. A plan saved before
+// (a tick), Not included (crossed out) or Hidden (not shown) on each package, with an optional description, and an included one with an optional value for that package ("2" exam
+// attempts, "12 months" of access: the brief's "value of each row"). A plan saved before
 // may include first aid on its own (`firstAid`): it shows in the list, ticked, to keep or untick. Edit shows the form, Learner
 // preview the course page's own package cards. Saving (API provider.plans.save) changes what learners see at once: the dates and
 // courses on the plan take its cheapest package as their price. `plan`: the plan to edit, or none for a new one. Without the right
@@ -51,8 +52,9 @@ const toDraft = (plan) => {
   tiers.forEach((t, i) =>
     (t.features ?? []).forEach((f) => {
       let row = rows.find((r) => same(r.title, f.title));
-      if (!row) rows.push((row = { key: nextKey(), title: f.title, description: "", states: tiers.map(() => "none") }));
+      if (!row) rows.push((row = { key: nextKey(), title: f.title, description: "", states: tiers.map(() => "none"), values: tiers.map(() => "") }));
       row.states[i] = f.included ? "in" : "out";
+      row.values[i] = f.value ?? "";
       if (!row.description && f.description) row.description = f.description;
     }),
   );
@@ -60,7 +62,7 @@ const toDraft = (plan) => {
 };
 // each package's features, in the table's order, without the ones Hidden on it
 const featuresOf = (rows, i) =>
-  rows.filter((r) => r.states[i] !== "none").map((r) => ({ title: r.title.trim(), description: r.description.trim() || null, included: r.states[i] === "in" }));
+  rows.filter((r) => r.states[i] !== "none").map((r) => ({ title: r.title.trim(), description: r.description.trim() || null, included: r.states[i] === "in", value: (r.states[i] === "in" && r.values[i].trim()) || null }));
 // the packages as the API takes them
 const toInput = (d) =>
   d.tiers.map((t, i) => ({
@@ -245,6 +247,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const clear = (key) => setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
   const setTier = (i, patch) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => (j === i ? { ...t, ...patch } : t)) }));
   const setRow = (key, patch) => setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, ...patch } : r)) }));
+  const setValue = (key, i, value) => setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, values: r.values.map((v, j) => (j === i ? value : v)) } : r)) }));
   const setState = (key, i, value) => {
     setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, states: r.states.map((s, j) => (j === i ? value : s)) } : r)) }));
     clear(`f-${key}`);
@@ -263,7 +266,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     const title = newName.trim();
     if (!title) return newRef.current?.focus();
     if (draft.rows.some((r) => same(r.title, title))) return setNewError(`There is already a feature called “${title}”.`);
-    setDraft((d) => ({ ...d, rows: [...d.rows, { key: nextKey(), title, description: "", states: [...newStates] }] }));
+    setDraft((d) => ({ ...d, rows: [...d.rows, { key: nextKey(), title, description: "", states: [...newStates], values: newStates.map(() => "") }] }));
     setNewName("");
     setNewError("");
     newRef.current?.focus();
@@ -274,7 +277,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     setDraft((d) => ({
       ...d,
       tiers: n <= d.tiers.length ? d.tiers.slice(0, n) : [...d.tiers, ...Array.from({ length: n - d.tiers.length }, (_, k) => blankTier(d.tiers.length + k))],
-      rows: d.rows.map((r) => ({ ...r, states: Array.from({ length: n }, (_, j) => r.states[j] ?? "none") })),
+      rows: d.rows.map((r) => ({ ...r, states: Array.from({ length: n }, (_, j) => r.states[j] ?? "none"), values: Array.from({ length: n }, (_, j) => r.values[j] ?? "") })),
     }));
     setNewStates((s) => Array.from({ length: n }, (_, j) => s[j] ?? "in"));
     setErrors((e) => Object.fromEntries(Object.entries(e).filter(([key]) => Number(key.match(/^t(\d+)-/)?.[1] ?? -1) < n)));
@@ -407,7 +410,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
             <section className="rt-pws-pkg__fsec" aria-labelledby="rt-plan-fh">
               <div>
                 <h3 className="rt-pws-pkg__h3" id="rt-plan-fh">Features</h3>
-                <p className="rt-acc__note">Choose how each feature appears on each package.</p>
+                <p className="rt-acc__note">Choose how each feature appears on each package. An included one can show a value, like 2 or 12 months.</p>
               </div>
               <div className="rt-pws-pkg__fscroll">
                 <table className={`rt-pws-pkg__ftable -n${draft.tiers.length}`}>
@@ -444,6 +447,9 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                           {draft.tiers.map((t, i) => (
                             <td key={i} className="rt-pws-pkg__scell">
                               <StatePicker value={r.states[i]} onChange={(v) => setState(r.key, i, v)} label={`${named} in ${tierName(t, i)}`} />
+                              {r.states[i] === "in" && (
+                                <input className="rt-pws-pkg__fval" type="text" maxLength={30} autoComplete="off" placeholder="Value (optional)" aria-label={`Value of ${named} in ${tierName(t, i)} (optional)`} value={r.values[i]} onChange={(e) => setValue(r.key, i, e.target.value)} />
+                              )}
                             </td>
                           ))}
                         </tr>

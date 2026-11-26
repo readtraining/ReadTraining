@@ -42,7 +42,7 @@ export default function PackagesSection({ course }) {
             <div>
               <ul className="rt-lc__list">
                 {includedOf(p).map((a) => <li key={a.id}><Check /> <span><Name a={a} /></span></li>)}
-                {(p.features || []).filter((f) => f.included).map((f) => <li key={f.title}><Check /> <span>{f.title}</span></li>)}
+                {(p.features || []).filter((f) => f.included).map((f) => <li key={f.title}><Check /> <span>{f.title}{f.value && <>: <strong>{f.value}</strong></>}</span></li>)}
               </ul>
             </div>
             <span className="rt-lc__price">
