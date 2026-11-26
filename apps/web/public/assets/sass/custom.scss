@@ -5283,15 +5283,16 @@ ol.rt-adm-read__list > li::marker { font-weight: 600; color: var(--rt-c-text); }
 .rt-adm--platform .rt-adm-money-late { font-weight: 600; color: var(--rt-adm-danger); }
 /* a full session is good news: its seat bar stays the normal colour, not the alarm orange */
 .rt-adm--platform .rt-adm-seats__bar span.-full { background: var(--color-purple-1); }
-/* The same five calm tones in the provider workspace and the learner and business accounts: their shared pill (.rt-acc__status,
+/* The same five calm tones in the provider workspace, the learner and business accounts and the admin (the shared page editor's
+   status, outside the staff editor's .rt-pws): their shared pill (.rt-acc__status,
    adminParts Pill) takes the admin status's shape and colours. -confirmed blue (waiting on someone else), -completed green (done),
    -requested amber (you must act), -cancelled grey (closed), -late red (at risk). The public site's own pills are unchanged. */
-:is(.rt-pws, .rt-acc-page) .rt-acc__status { padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-confirmed { border-color: transparent; background: var(--rt-adm-info-bg); color: var(--rt-adm-info); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-completed { border-color: transparent; background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-requested { border-color: transparent; background: var(--color-orange-7); color: var(--rt-adm-warning); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-cancelled { border-color: transparent; background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
-:is(.rt-pws, .rt-acc-page) .rt-acc__status.-late { border-color: transparent; background: var(--color-red-2); color: var(--rt-adm-danger); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status { padding: 3px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 18px; }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-confirmed { border-color: transparent; background: var(--rt-adm-info-bg); color: var(--rt-adm-info); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-completed { border-color: transparent; background: var(--rt-adm-success-bg); color: var(--rt-adm-success); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-requested { border-color: transparent; background: var(--color-orange-7); color: var(--rt-adm-warning); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-cancelled { border-color: transparent; background: var(--rt-adm-neutral-bg); color: var(--color-light-1); }
+:is(.rt-pws, .rt-acc-page, .rt-adm--platform) .rt-acc__status.-late { border-color: transparent; background: var(--color-red-2); color: var(--rt-adm-danger); }
 /* activity log: the "acting as" tag always sits on its own line under the name */
 .rt-adm--platform .rt-adm-activity__as { display: block; margin-top: 4px; }
 /* rows-per-page dropdown opens upwards so its options are not cut off at the bottom of the page */
