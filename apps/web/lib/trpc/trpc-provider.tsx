@@ -11,11 +11,15 @@ import { api } from './react'
 
 // The signed-in person's access token for the API (Authorization: Bearer …); the API verifies it on every request.
 // getSession() is fine here: it only reads the browser's own session, and the API never trusts it without checking.
+// From the admin's own pages it also says so (x-rt-context: admin): an admin editing a provider there works as ReadTraining
+// staff, even on a provider they are also on the team of; in a provider's workspace they are their own role (api lib/actor.mts).
 async function authHeaders(): Promise<Record<string, string>> {
   if (!isSupabaseConfigured) return {}
   const { data } = await getSupabase().auth.getSession()
   const token = data.session?.access_token
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  if (!token) return {}
+  const inAdmin = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
+  return inAdmin ? { Authorization: `Bearer ${token}`, 'x-rt-context': 'admin' } : { Authorization: `Bearer ${token}` }
 }
 
 // In production the API is served from the same domain (/api), so the URL is relative.
