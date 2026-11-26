@@ -677,7 +677,7 @@ export const cohorts = pgTable(
     // package (the "From" price), kept in step by the API. Null = "Flat": the date's own price.
     planId: uuid('plan_id').references(() => pricePlans.id, { onDelete: 'restrict' }),
     details: text('details'), // the cohort's structure, shown to learners under the dates
-    colour: text('colour'), // its colour on the provider's calendar; null = by type (classroom purple, live online blue)
+    colour: text('colour'), // its colour on the provider's calendar: a preset name or #rrggbb; null = by type (classroom purple, live online blue)
     tutorUserId: uuid('tutor_user_id').references(() => authUsers.id, { onDelete: 'set null' }),
     bookable: boolean('bookable').notNull().default(true), // the provider can stop new bookings without cancelling
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -695,7 +695,8 @@ export const cohorts = pgTable(
     index('cohorts_created_by_idx').on(t.createdBy),
     index('cohorts_plan_idx').on(t.planId),
     check('cohorts_method_dated', sql`${t.method} in ('classroom', 'live-online')`),
-    check('cohorts_colour', sql`${t.colour} in ('purple', 'blue', 'green', 'orange', 'red')`),
+    // one of the preset names, or a colour the provider picked as #rrggbb (lower case)
+    check('cohorts_colour', sql`${t.colour} in ('purple', 'blue', 'green', 'orange', 'red') or ${t.colour} ~ '^#[0-9a-f]{6}$'`),
     check('cohorts_classroom_venue', sql`${t.method} <> 'classroom' or ${t.venueId} is not null`),
     check('cohorts_dates_order', sql`${t.endsOn} >= ${t.startsOn}`),
     check('cohorts_capacity_range', sql`${t.capacity} between 1 and 200`),

@@ -5,9 +5,12 @@ import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useWorkspace } from "@/lib/workspaceContext";
+import { api } from "@/lib/trpc/react";
+import { waysOf } from "@/lib/courseModes";
 import { ErrorState } from "@/components/states/States";
 import { COURSE_TONE, Pill } from "./providerParts";
-import { Seats, todayIso, useSchedule, whyNotOnSale } from "./ProviderCohorts";
+import { Seats, datedOf, todayIso, useSchedule, whyNotOnSale } from "./ProviderCohorts";
 import ProviderChecklist from "./ProviderChecklist";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 import NavIcon from "@/components/admin/navIcons";
@@ -63,7 +66,13 @@ export default function ProviderDashboard() {
   const sender = useSendForApproval((message, error) => setToast({ message, error }));
   // the to-do list: real things to act on, most urgent first, only those this person's role can do
   const editsCourses = access.can("provider.courses.edit");
+  const status = useWorkspace()?.status;
   const todo = loading || failed ? [] : [
+    // our team asked for changes to the account itself (the bar above says so too): never "Nothing to do" while it waits on them
+    ...(status === "changes_requested" && access.can("provider.review.send") ? [{
+      key: "account", tone: "warn", href: "/provider/review", cta: "Review",
+      text: <><b>Your account</b> · our team asked for changes</>, label: "Your account: our team asked for changes",
+    }] : []),
     ...(editsCourses ? courses.filter((c) => c.status === "changes") : []).map((c) => ({
       key: `changes-${c.id}`, tone: "warn", href: `/provider/courses/${c.id}`, cta: "Edit",
       text: <><b>{c.title}</b> · our team asked for changes</>, label: `${c.title}: our team asked for changes`,
@@ -81,6 +90,19 @@ export default function ProviderDashboard() {
     }),
   ];
   const shownTodo = allTodo ? todo : todo.slice(0, TODO_SHOWN);
+  // the getting-set-up steps this person can still do themselves (the checklist below: profile, cancellation policy, a first course
+  // and date; approval and payouts wait on others), so the greeting never says "all caught up" while some are left
+  const setupShown = access.can("provider.profile.edit") || editsCourses;
+  const profile = api.provider.profile.get.useQuery({ organisationId: access.organisationId }, { enabled: Boolean(access.organisationId) && setupShown });
+  const p = profile.data;
+  const setupLeft = !setupShown || !p ? 0 : [
+    access.can("provider.profile.edit") && !(p.headline && p.bio && p.logoUrl),
+    access.can("provider.terms.edit") && !p.cancellationPolicy,
+    editsCourses && !courses.length,
+    access.can("provider.cohorts.edit") && !courses.some((c) => c.upcomingCohorts > 0 || waysOf(c).includes("self-paced")),
+  ].filter(Boolean).length;
+  // Create cohort only once there is a course taught on dates to add one to
+  const datedCourse = courses.some((c) => datedOf(c).length);
 
   // with our team: the courses waiting for approval, longest waiting first, with when they were sent
   const sentAt = (c) => new Date(c.submittedAt || c.updatedAt).getTime();
@@ -97,10 +119,10 @@ export default function ProviderDashboard() {
       <section className="rt-dash__hello" aria-labelledby="rt-dash-hi">
         <div>
           <h2 className="rt-dash__hi" id="rt-dash-hi">{greet(hour)}{firstName ? `, ${firstName}` : ""}</h2>
-          <p className="rt-dash__sub">{loading ? <Bar w="180px" /> : failed ? "" : todo.length ? `You have ${plural(todo.length, "thing", "things")} to do.` : "You're all caught up."}</p>
+          <p className="rt-dash__sub">{loading ? <Bar w="180px" /> : failed ? "" : todo.length ? `You have ${plural(todo.length, "thing", "things")} to do.` : setupLeft ? `${plural(setupLeft, "step", "steps")} left to get set up.` : "You're all caught up."}</p>
         </div>
         <div className="rt-dash__quick">
-          {access.can("provider.cohorts.edit") && access.can("provider.pricing.edit") && <Link href="/provider/cohorts?new=1" className="button -sm -purple-1 text-white">Create cohort</Link>}
+          {datedCourse && access.can("provider.cohorts.edit") && access.can("provider.pricing.edit") && <Link href="/provider/cohorts?new=1" className="button -sm -purple-1 text-white">Create cohort</Link>}
         </div>
       </section>
 
@@ -131,7 +153,7 @@ export default function ProviderDashboard() {
                 )}
               </>
             ) : (
-              <div className="rt-dash__clear"><i className="icon-check text-16" aria-hidden="true"></i><p>Nothing to do.</p></div>
+              <div className="rt-dash__clear"><span className="rt-dash__clearicon" aria-hidden="true"><i className="icon-check text-12"></i></span><p>No courses or cohorts need you right now.</p></div>
             )}
           </section>
 

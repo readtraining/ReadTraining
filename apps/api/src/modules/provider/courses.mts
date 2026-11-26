@@ -25,7 +25,6 @@ import {
 import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { STAFF_PRICES } from '../../lib/staffAccess.mjs'
 import { refuseRetired, retiredEntries, retiredMethods } from '../../lib/retired.mjs'
 import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
@@ -64,6 +63,9 @@ const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|point
 export function passMarkProblem(text: string) {
   const t = text.trim().toLowerCase()
   if (!t) return ''
+  // the editor's kinds with their numbers still missing ("%", "26 out of"): the course page would show them as they are
+  if (/^[\d.]*\s*%$/.test(t) && !/\d/.test(t)) return 'Enter the percentage needed to pass.'
+  if (/^[\d.]*\s*out of\s*[\d.]*$/.test(t) && !/^\d+(?:\.\d+)?\s*out of\s*\d+(?:\.\d+)?$/.test(t)) return 'Enter the score needed and the total, like 26 out of 40.'
   const pct = t.match(/(\d+(?:\.\d+)?)\s*(?:%|per\s*cent\b)/)
   if (pct && Number(pct[1]) > 100) return 'A percentage pass mark can’t be over 100%.'
   const score = t.match(SCORE) || t.match(SCORE_OF)
@@ -322,6 +324,11 @@ export async function datesMissing(db: Writer, course: { id: number; kind: strin
   return open.filter((m) => !has.has(m))
 }
 
+// the shortest short description and description a course can be sent (or a shared page published) with, in characters; a draft
+// saves with less (the editor's MIN, ProviderCourseEditor.jsx: keep the two the same)
+export const MIN_TEXT = { summary: 50, description: 200 } as const
+const longEnough = (text: string | null, min: number) => (text || '').trim().length >= min
+
 // what's missing before a course can be sent for approval, or a shared page published (the editors show the same list).
 // `dates: false` leaves the dates out (a course in review may be given a new way taught on dates, whose dates come after it).
 export async function missing(db: Writer, course: typeof courses.$inferSelect, { dates = true } = {}) {
@@ -330,8 +337,8 @@ export async function missing(db: Writer, course: typeof courses.$inferSelect, {
     db.select({ n: sql<number>`count(*)::int` }).from(courseUnits).where(eq(courseUnits.courseId, course.id)),
   ])
   const gaps: string[] = []
-  if (!course.summary) gaps.push('a short description')
-  if (!course.description) gaps.push('a description')
+  if (!longEnough(course.summary, MIN_TEXT.summary)) gaps.push(`a short description of at least ${MIN_TEXT.summary} characters`)
+  if (!longEnough(course.description, MIN_TEXT.description)) gaps.push(`a description of at least ${MIN_TEXT.description} characters`)
   if (!course.categoryId || !course.subcategoryId) gaps.push('a category and sub-category')
   if (!course.level) gaps.push('a level')
   if (course.compliance === null) gaps.push('whether it is a compliance course')
@@ -707,7 +714,7 @@ export const providerCoursesRouter = createTRPCRouter({
              (select count(*)::int from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) upcoming,
              (select min(k.starts_on)::text from public.cohorts k where k.course_id = c.id and k.cancelled_at is null and k.ends_on >= ${ukToday()}::date) next_on,
              exists (select 1 from public.course_revisions r where r.course_id = c.id and r.status = 'pending') pending_change,
-             btrim(c.title) <> '' has_title, coalesce(btrim(c.summary), '') <> '' has_summary, coalesce(btrim(c.description), '') <> '' has_description,
+             btrim(c.title) <> '' has_title, length(btrim(coalesce(c.summary, ''))) >= ${MIN_TEXT.summary} has_summary, length(btrim(coalesce(c.description, ''))) >= ${MIN_TEXT.description} has_description,
              c.category_id is not null and c.subcategory_id is not null filed, c.level is not null has_level, c.compliance is not null has_compliance, cardinality(c.outcomes) outcomes,
              exists (select 1 from public.course_units u where u.course_id = c.id) has_units, c.price_pence is not null or c.plan_id is not null priced,
              not exists (select 1 from unnest(c.methods) m where m in ('classroom', 'live-online') and m <> all(c.closed_methods)
@@ -914,10 +921,6 @@ export const providerCoursesRouter = createTRPCRouter({
       if (keys.some((k) => !PAGE_ONLY.has(k)) && !can(ctx.actor, 'provider.courses.edit', { organisationId })) await refuse(ctx, 'provider.courses.edit', organisationId, path)
       if (keys.some((k) => PRICING.has(k)) && !can(ctx.actor, 'provider.pricing.edit', { organisationId })) await refuse(ctx, 'provider.pricing.edit', organisationId, path)
       const course = await ownCourse(ctx.db, organisationId, courseId)
-      // a self-paced price or plan is the provider's own: staff read it, never change it
-      if (ctx.staff && ((fields.pricePence !== undefined && (fields.pricePence ?? null) !== (course.pricePence ?? null)) || (fields.planId !== undefined && (fields.planId ?? null) !== (course.planId ?? null)))) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: STAFF_PRICES })
-      }
       // the category, sub-category and topic change together (the editor always sends all three), so a course is never filed
       // under one category with another's sub-category
       refuseLongTitle(fields.title, course.title)

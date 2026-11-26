@@ -15,7 +15,8 @@ import { DetailSkeleton } from "./adminParts";
 // staff session for that provider, with no form (API admin.staff), and changes nothing: only once a change is saved does the bar
 // say so, with Finish (the provider's owner is then emailed one summary of the changes; or after two hours unused, or when the
 // admin opens another provider). `provider`: { id, name, slug, status }. Links inside the editors lead to the admin's pages.
-export default function StaffEdit({ provider, children }) {
+// heading: the page's title (the provider's name on its Dates, Price plans and Profile pages), above the changes bar
+export default function StaffEdit({ provider, heading = null, children }) {
   const me = useAdminAccess();
   const router = useRouter();
   const utils = api.useUtils();
@@ -53,7 +54,7 @@ export default function StaffEdit({ provider, children }) {
     type: "provider",
     role: "admin",
     userId: me?.id,
-    staff: { pricing: Boolean(me?.permissions?.includes("pricing")), content: Boolean(me?.permissions?.includes("approve")) },
+    staff: { content: Boolean(me?.permissions?.includes("approve")) },
     links: {
       courses: () => `/admin/providers/${slug}`,
       course: (id, tab) => `/admin/catalogue/${id}/edit${tab ? `?tab=${tab}` : ""}`,
@@ -65,7 +66,8 @@ export default function StaffEdit({ provider, children }) {
   }, [provider, slug, me]);
 
   if (current.isError) return <ErrorState onRetry={() => current.refetch()} />;
-  if (start.isError) return <ErrorState title={errorText(start.error)} onRetry={() => start.reset()} />;
+  // a refusal (the provider isn't approved, say) says why, with nothing to try again; only a failed connection offers it
+  if (start.isError) return (start.error?.data?.httpStatus ?? 500) < 500 ? <ErrorState title={errorText(start.error)} text={null} /> : <ErrorState onRetry={() => start.reset()} />;
   if (!provider || !editing) return <DetailSkeleton />;
 
   const finish = async () => {
@@ -77,6 +79,7 @@ export default function StaffEdit({ provider, children }) {
     <WorkspaceProvider value={value}>
       {/* the provider workspace's look for its editors (its form styles are scoped to .rt-pws) */}
       <div className="rt-pws rt-acc__stack">
+        {heading}
         {changed && (
           <div className="rt-pws-staff" role="region" aria-label="Your changes as ReadTraining staff">
             <span><strong>{provider.name}</strong> · You changed this provider&apos;s work as ReadTraining staff. They&apos;ll be emailed a summary when you finish.</span>

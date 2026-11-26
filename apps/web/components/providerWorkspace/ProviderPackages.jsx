@@ -27,7 +27,8 @@ const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date"
 // Price plans (Tiered Plans), from the API (provider.plans): each plan's packages and prices, and how many dates and
 // courses use it. A plan is the provider's own pricing: saving it changes what learners see at once. A date chooses its plan in its own form ("Tiered" pricing); a self-paced course in its
 // course pricing. Edit opens the plan; a plan is archived (dates on it keep it) or, when nothing
-// ever used it, deleted. Search and the archive filter are kept in the address.
+// ever used it, deleted. ReadTraining staff open a plan for its features, taglines and "Most popular" only. Search and the archive filter
+// are kept in the address.
 export default function ProviderPackages() {
   const { staff, status } = useProviderAccess();
   // an account our team hasn't approved yet can't make plans: the page says so, as the courses list does
@@ -38,8 +39,7 @@ export default function ProviderPackages() {
 function PricePlans() {
   const { organisationId, can, staff } = useProviderAccess();
   const edit = can("provider.pricing.edit");
-  // making or deleting a plan is the provider's own: ReadTraining staff change only a plan's words (PackageEditor)
-  const own = edit && !staff;
+  const open = can("provider.pricing.features");
   const utils = api.useUtils();
   const query = api.provider.plans.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
   const archive = api.provider.plans.setArchived.useMutation();
@@ -51,8 +51,8 @@ function PricePlans() {
   const [removing, setRemoving] = useState({ open: false, plan: null });
   const [toast, setToast] = useState(null);
   const clearToast = useCallback(() => setToast(null), []);
-  const say = (message) => setToast({ message });
-  const fail = (er) => say(errorText(er));
+  const say = (message, { error = false } = {}) => setToast({ message, error });
+  const fail = (er) => say(errorText(er), { error: true });
   const refresh = () => utils.provider.plans.list.invalidate();
 
   useEffect(() => {
@@ -66,7 +66,7 @@ function PricePlans() {
   useEffect(() => {
     if (!linked) return;
     const p = query.data.find((x) => x.id === linked);
-    if (p && edit) {
+    if (p && open) {
       setEditor({ open: true, plan: p });
     } else setQuery("plan", "");
   }, [linked]); // eslint-disable-line react-hooks/exhaustive-deps -- once per link
@@ -92,7 +92,7 @@ function PricePlans() {
   if (!plans.length) {
     return (
       <>
-        <EmptyState title="No price plans yet" text="A plan is optional: without one, each date has a single price." action={own ? { label: "Create price plan", onClick: create } : undefined} />
+        <EmptyState title="No price plans yet" text="A plan is optional: without one, each date has a single price." action={edit ? { label: "Create price plan", onClick: create } : undefined} />
         {editor_}
         <Toast toast={toast} onDone={clearToast} />
       </>
@@ -105,7 +105,7 @@ function PricePlans() {
         <Search value={q} onChange={setParam("q", setQ)} label={staff ? "Search price plans" : "Search your price plans"} />
         <div className="rt-adm-toolbar__end">
           <ToolSelect id="rt-plan-show" label="Show" value={show} onChange={setParam("show", setShow)} options={SHOW} />
-          {own && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}
+          {edit && <HeaderAction><button type="button" className="button -md -purple-1 text-white" onClick={create}>Create price plan</button></HeaderAction>}
         </div>
       </div>
       <p className="rt-sr" aria-live="polite">{`${list.length} ${list.length === 1 ? "plan" : "plans"}`}</p>
@@ -113,14 +113,14 @@ function PricePlans() {
       {list.length ? (
         <div className="rt-acc__card rt-biz__tablecard">
           <table className="rt-biz__table rt-adm-table rt-pws-pkgs">
-            <ColWidths widths={edit ? ["27%", "33%", "21%", null, "64px"] : ["27%", "33%", "21%", null]} />
+            <ColWidths widths={open ? ["27%", "33%", "21%", null, "64px"] : ["27%", "33%", "21%", null]} />
             <thead>
               <tr>
                 <th scope="col">Plan</th>
                 <th scope="col">Used on</th>
                 <th scope="col">Prices</th>
                 <th scope="col">Status</th>
-                {edit && <th scope="col" className="-act"><span className="rt-sr">Actions</span></th>}
+                {open && <th scope="col" className="-act"><span className="rt-sr">Actions</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -128,19 +128,19 @@ function PricePlans() {
                 return (
                   <tr key={p.id}>
                     <td data-label="Plan">
-                      {edit ? <button type="button" className="rt-pws-pkgs__name" onClick={() => setEditor({ open: true, plan: p })}>{p.name}</button> : <strong>{p.name}</strong>}
+                      {open ? <button type="button" className="rt-pws-pkgs__name" onClick={() => setEditor({ open: true, plan: p })}>{p.name}</button> : <strong>{p.name}</strong>}
                       <small className="rt-adm-muted">{p.tiers.length} packages: {p.tiers.map((t) => t.name).join(", ")}</small>
                     </td>
                     <td data-label="Used on">{usedText(p.used)}</td>
                     <td data-label="Prices" className="-prices">{priceRange(p.tiers)}</td>
                     {/* can it be picked for dates (Active) or not (Archived), last before the menu as in the other tables */}
                     <td data-label="Status">{p.archived ? <Pill tone="muted">Archived</Pill> : <Pill tone="ok">Active</Pill>}</td>
-                    {edit && (
+                    {open && (
                     <td data-label="Actions" className="-act">
                         <RowMenu label={`Actions for ${p.name}`} items={[
                           { label: "Edit", onClick: () => setEditor({ open: true, plan: p }) },
-                          { label: p.archived ? "Restore" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} restored` : `${p.name} archived`); }, onError: fail }) },
-                          ...(own && deletable(p) ? [{ label: "Delete", danger: true, onClick: () => setRemoving({ open: true, plan: p }) }] : []),
+                          ...(edit ? [{ label: p.archived ? "Restore" : "Archive", onClick: () => !archive.isPending && archive.mutate({ organisationId, planId: p.id, archived: !p.archived }, { onSuccess: () => { refresh(); say(p.archived ? `${p.name} restored` : `${p.name} archived`); }, onError: fail }) }] : []),
+                          ...(edit && deletable(p) ? [{ label: "Delete", danger: true, onClick: () => setRemoving({ open: true, plan: p }) }] : []),
                         ]} />
                     </td>
                     )}

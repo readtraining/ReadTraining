@@ -11,7 +11,10 @@ export function focusFirstError(root, tries = 6) {
       return;
     }
     const box = err.closest(".rt-field, fieldset, li, .rt-lic__consent, .rt-jobs__consent, .rt-ck__field") || err.parentElement;
-    const field = box.querySelector("input:not([type=hidden]):not([disabled]):not([tabindex='-1']):not([aria-hidden='true']), select, textarea, button:not([disabled])") || err;
+    // a message marked data-focus-self is about its whole row (a cohort date), not the first control in it; data-focus-id names
+    // the box to fill (a pass mark's number, not its kind)
+    const named = err.dataset.focusId && document.getElementById(err.dataset.focusId);
+    const field = named || (err.hasAttribute("data-focus-self") ? err : box.querySelector("input:not([type=hidden]):not([disabled]):not([tabindex='-1']):not([aria-hidden='true']), select, textarea, button:not([disabled])") || err);
     (field === err ? err : box).scrollIntoView({ block: "center", behavior: "smooth" });
     if (field !== err) field.focus({ preventScroll: true });
     else {

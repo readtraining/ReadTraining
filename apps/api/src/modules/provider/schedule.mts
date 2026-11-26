@@ -5,14 +5,13 @@ import { and, asc, cohorts, courses, eq, gte, inArray, isNull, lte, ne, organisa
 import { can, canTutor, PROVIDER_ROLES } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { STAFF_PRICES } from '../../lib/staffAccess.mjs'
 import { formatPostcode, lookupDown, placeVenue, POSTCODE } from '../../lib/postcode.mjs'
-import { createTRPCRouter, orgProcedure, refuse } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, notForStaff, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 import { isDated, ownCourse, ukToday as today } from './courses.mjs'
 import { cheapest, usablePlan } from './plans.mjs'
 import type { Tier } from './plans.mjs'
 
-// a date's prices (adding dates sets them) need the right to change prices: ReadTraining staff without the pricing switch
+// a date's prices (adding dates sets them) need the right to change prices: never ReadTraining staff, prices are the provider's own
 const PRICES_NEEDED = 'Adding dates or changing a date’s price needs access to prices. You can change the rest of these dates.'
 
 // A provider's venues and course dates (cohorts). Dates are part of the course's prices and timetable, so they change straight
@@ -166,7 +165,7 @@ export const providerVenuesRouter = createTRPCRouter({
       return [...rows]
     }),
 
-  save: orgProcedure('provider.cohorts.edit')
+  save: orgProcedure('provider.venues.edit')
     .input(venueFields.extend({ venueId: z.string().uuid().optional(), seen: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input }) => {
       const postcode = formatPostcode(input.postcode)
@@ -211,7 +210,7 @@ export const providerVenuesRouter = createTRPCRouter({
     }),
 
   // Hide a venue from new dates (its past and booked dates keep it), or bring it back.
-  setActive: orgProcedure('provider.cohorts.edit')
+  setActive: orgProcedure('provider.venues.edit')
     .input(z.object({ venueId: z.string().uuid(), active: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       await ownVenue(ctx.db, input.organisationId, input.venueId)
@@ -282,7 +281,8 @@ const cohortFields = z.object({
   tutorUserId: z.string().uuid().nullable().optional(),
   bookable: z.boolean().optional(),
   // its colour on the provider's calendar; none = by type
-  colour: z.enum(['purple', 'blue', 'green', 'orange', 'red']).nullable().optional(),
+  // a preset name, or a colour picked in the date form as #rrggbb (the database's cohorts_colour check)
+  colour: z.union([z.enum(['purple', 'blue', 'green', 'orange', 'red']), z.string().trim().toLowerCase().regex(/^#[0-9a-f]{6}$/, 'Choose a calendar colour.')]).nullable().optional(),
   // the provider has been told another of their courses is at the venue at the same time, and saves anyway (another room)
   sharedVenue: z.boolean().optional(),
 })
@@ -595,9 +595,11 @@ export const providerCohortsRouter = createTRPCRouter({
 
   // Delete dates added by mistake: only ones nobody has booked (any order on the course and start day, even refunded: it is a record
   // of what they bought) and that haven't finished (a finished date is the record of a course that ran). Others are cancelled instead.
+  // ReadTraining staff edit or cancel dates, never delete them.
   remove: orgProcedure('provider.cohorts.edit')
     .input(z.object({ cohortId: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input, path }) => {
+      await notForStaff(ctx, 'provider.cohorts.edit', input.organisationId, path)
       const { cohort, course } = await ownCohort(ctx.db, input.organisationId, input.cohortId)
       return ctx.db.transaction(async (tx) => {
         const { date: now } = await lockDate(tx, course.id, cohort.id)
@@ -615,7 +617,7 @@ export const providerCohortsRouter = createTRPCRouter({
   create: orgProcedure('provider.cohorts.edit')
     .input(cohortFields.extend({ courseId: z.number().int().positive(), method: z.enum(['classroom', 'live-online']).optional() }))
     .mutation(async ({ ctx, input, path }) => {
-      // new dates set their prices: only for someone who may change prices (ReadTraining staff without the pricing switch can't)
+      // new dates set their prices: only for someone who may change prices (never ReadTraining staff)
       if (!can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path).catch(() => { throw new TRPCError({ code: 'FORBIDDEN', message: PRICES_NEEDED }) })
       const course = await ownCourse(ctx.db, input.organisationId, input.courseId)
       const dated = course.methods.filter(isDated)
@@ -659,11 +661,9 @@ export const providerCohortsRouter = createTRPCRouter({
       if (cohort.cancelledAt) throw new TRPCError({ code: 'CONFLICT', message: 'These dates are cancelled.' })
       // dates keep the way they are taught (an option turned off since keeps its finished and cancelled dates as they were)
       const values = await cohortValues(ctx.db, input.organisationId, cohort.method, input, { venueId: cohort.venueId, planId: cohort.planId, tutorUserId: cohort.tutorUserId, bookable: cohort.bookable })
-      // a different price, was-price or plan needs the right to change prices (ReadTraining staff without the pricing switch)
+      // a different price, was-price or plan needs the right to change prices (never ReadTraining staff)
       // (a date on a plan keeps the plan's price, which may have moved since: only choosing another plan counts there)
       const repriced = (values.planId ?? null) !== (cohort.planId ?? null) || (!values.planId && (values.pricePence !== cohort.pricePence || (values.wasPricePence ?? null) !== (cohort.wasPricePence ?? null)))
-      // a date's price is the provider's own: staff read it, never change it
-      if (repriced && ctx.staff) throw new TRPCError({ code: 'FORBIDDEN', message: STAFF_PRICES })
       if (repriced && !can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path).catch(() => { throw new TRPCError({ code: 'FORBIDDEN', message: PRICES_NEEDED }) })
       await ctx.db.transaction(async (tx) => {
         if (values.planId) Object.assign(values, await planPriceNow(tx, values.planId, cohort.planId))

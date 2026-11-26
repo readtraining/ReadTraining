@@ -21,9 +21,9 @@ export type Membership = {
   status: 'invited' | 'active'
   organisationStatus: OrganisationStatus
   // an admin working in this provider's workspace as ReadTraining staff (an open `staff_access` session, loaded by the API's
-  // actor): not a real member. `content`: they hold the admin `approve` switch (courses, dates, profile…); `pricing`: the
-  // `pricing` switch (prices and price plans); `session`: the staff_access row. See STAFF_ACTIONS below.
-  staff?: { pricing: boolean; content?: boolean; session?: string }
+  // actor): not a real member. `content`: they hold the admin `approve` switch (courses and dates; without it, an admin with the
+  // `pricing` switch only reads); `session`: the staff_access row. See STAFF_ACTIONS below.
+  staff?: { content?: boolean; session?: string }
 }
 
 export type AdminAccess = {
@@ -76,10 +76,13 @@ const PROVIDER_RULES = {
   'provider.courses.delete': { roles: ['owner', 'admin'] },
   'provider.pricing.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'accounts', 'assistant'] },
   'provider.pricing.edit': { roles: ['owner', 'admin', 'course_editor'] },
+  // a price plan's wording (features, taglines, "Most popular"), without its prices: whoever edits prices, and our staff
+  'provider.pricing.features': { roles: ['owner', 'admin', 'course_editor'] },
   // course editors add a course's dates (and the venues they need): a course can't be sent for approval without them
   'provider.cohorts.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'assistant'], own: true },
   'provider.cohorts.edit': { roles: ['owner', 'admin', 'course_editor'] },
   'provider.venues.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'sales', 'assistant'] }, // the Venues page
+  'provider.venues.edit': { roles: ['owner', 'admin', 'course_editor'] }, // add, change, archive or restore a venue
   'provider.records.view': { roles: ['owner', 'admin', 'support', 'assistant'], own: true }, // register, results, learning records
   'provider.records.edit': { roles: ['owner', 'admin'], own: true },
   'provider.learners.view': { roles: ['owner', 'admin', 'support', 'sales', 'accounts', 'assistant'], own: true },
@@ -93,7 +96,7 @@ const PROVIDER_RULES = {
   'provider.leads.manage': { roles: ['owner', 'admin', 'sales'] },
   'provider.settings.view': { roles: ['owner', 'admin', 'course_editor', 'support', 'marketing', 'assistant'] },
   'provider.profile.edit': { roles: ['owner', 'admin', 'marketing'] }, // headline, biography, socials, logo
-  'provider.profile.rename': { roles: ['owner', 'admin'] }, // the provider's name, while its application is still being reviewed
+  'provider.profile.rename': { roles: ['owner', 'admin'] }, // the provider's name (the admins who approve are told of one once approved)
   'provider.review.send': { roles: ['owner', 'admin'] }, // send the account back for review after our team asked for changes (they read our note)
   'provider.terms.edit': { roles: ['owner', 'admin'] },
   'provider.faqs.edit': { roles: ['owner', 'admin', 'course_editor', 'marketing'] },
@@ -122,9 +125,9 @@ const BUSINESS_RULES = {
 // Admin: one role, with switches. Each admin action needs one switch.
 
 export const ADMIN_PERMISSIONS = [
-  'approve', // providers and courses; also opening a provider's workspace as staff to edit its courses, dates and profile
+  'approve', // providers and courses; also opening a provider's workspace as staff to edit its courses and dates
   'catalogue',
-  'pricing', // providers' prices and price plans (as staff in their workspace)
+  'pricing', // see providers' prices and price plans (as staff in their workspace; only the provider changes them)
   'content',
   'orders.view',
   'orders.book', // book for a customer
@@ -171,7 +174,7 @@ const ADMIN_RULES = {
   'admin.customerReviews.view': { permission: 'content' },
   'admin.platform.view': { permission: 'platform.settings' },
   'admin.approvals.decide': { permission: 'approve', notOwnRequest: true },
-  'admin.providers.staff': { permission: ['approve', 'pricing'] }, // edit a provider's work from the admin, as ReadTraining staff
+  'admin.providers.staff': { permission: ['approve', 'pricing'] }, // open a provider's work from the admin, as ReadTraining staff
   'admin.providers.remove': { permission: 'approve' }, // delete a provider that wasn't approved (rejected) and holds no records
   'admin.catalogue.edit': { permission: 'catalogue' },
   'admin.content.edit': { permission: 'content' },
@@ -236,14 +239,16 @@ export function grantableAdminPermissions(admin: AdminAccess | null): AdminPermi
 
 const isViewAction = (action: string) => action.endsWith('.view') || action.endsWith('.open')
 
-// What an admin may change in a provider's work as ReadTraining staff (StaffEdit in the admin): the courses (their
-// words, pictures, listing, learning options, settings), dates, venues, the provider's profile, terms and FAQs, and prices and
-// price plans with the `pricing` switch. Never the provider's own decisions (sending, pausing or deleting a course, its account,
-// team, VAT, payout account) or money (orders, refunds, payouts: the admin's own pages do those).
+// What an admin may change in a provider's work as ReadTraining staff (StaffEdit in the admin), as the brief asks ("edit or
+// unpublish" a course, "edit or cancel a cohort"): the courses (their words, pictures, listing, learning options, settings),
+// dates (not their prices), and a price plan's features, taglines and "Most popular" (not its prices). Prices, price plans otherwise, venues,
+// the provider's name, profile, logo, terms and FAQs are the provider's own: staff read them. Never the provider's own decisions
+// (sending, pausing or deleting a course or a date, its account, team, VAT, payout account) or money (orders, refunds, payouts:
+// the admin's own pages do those).
 // What staff may read: only what those editors need (courses, dates and their tutors' names, price plans, profile, terms,
 // venues). Never the provider's team list, learners, orders, money, VAT, reviews, leads or performance.
 const STAFF_VIEWS = new Set<string>(['provider.workspace.open', 'provider.courses.view', 'provider.cohorts.view', 'provider.venues.view', 'provider.pricing.view', 'provider.settings.view'])
-const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.courses.editPage', 'provider.cohorts.edit', 'provider.profile.edit', 'provider.profile.rename', 'provider.terms.edit', 'provider.faqs.edit'])
+const STAFF_ACTIONS = new Set<string>(['provider.courses.edit', 'provider.courses.editPage', 'provider.cohorts.edit', 'provider.pricing.features'])
 
 // Until our team approves a provider (its application pending, or changes asked), it can only look around and complete its
 // application: its profile and name, its terms, sending the account for review, or closing it. Courses, dates, venues, price
@@ -288,7 +293,6 @@ export function can(actor: Actor | null, action: Action, target: Target = {}): b
   if (membership.staff) {
     if (waitsForApproval(action, membership.organisationStatus)) return false
     if (isViewAction(action)) return STAFF_VIEWS.has(action)
-    if (action === 'provider.pricing.edit') return membership.staff.pricing
     return STAFF_ACTIONS.has(action) && membership.staff.content !== false
   }
   // a suspended organisation can still be opened and read, but nothing can be changed

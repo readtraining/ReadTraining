@@ -23,9 +23,6 @@ export async function startStaffAccess(ctx: Ctx, organisationId: string, reason:
   if (!org || org.type !== 'provider') throw new TRPCError({ code: 'NOT_FOUND', message: 'This provider no longer exists.' })
   // until our team approves a provider there are no courses, dates or plans to work on; a rejected one is closed
   if (org.status !== 'active' && org.status !== 'suspended') throw new TRPCError({ code: 'BAD_REQUEST', message: 'You can work in a provider’s workspace once the provider is approved (it is active or suspended).' })
-  // someone on the provider's own team works on it in its workspace, as themselves: staff access would stand in for their own
-  const [member] = await ctx.db.execute(sql`select 1 from public.organisation_members where organisation_id = ${organisationId}::uuid and user_id = ${ctx.user.id}::uuid`)
-  if (member) throw new TRPCError({ code: 'BAD_REQUEST', message: 'You’re on this provider’s team, so you work on it in its own workspace (Switch account), not as ReadTraining staff.' })
   const id = await ctx.db.transaction(async (tx) => {
     await tx.execute(sql`select 1 from public.admin_users where user_id = ${ctx.user.id}::uuid for update`)
     const [open] = await tx.execute<{ id: string }>(sql`
@@ -56,10 +53,6 @@ export async function endStaffAccess(ctx: Ctx) {
   return { providerSlug: ended?.slug ?? null }
 }
 
-/** Prices are the provider's own: ReadTraining staff editing a provider's work read them but never change them (a date's price,
- *  a self-paced price, a plan's packages' names, prices and savings; creating or deleting a plan). */
-export const STAFF_PRICES = 'Prices are the provider’s own, so as ReadTraining staff you can’t change them. Ask the provider to make this change.'
-
 // What a staff change did, in the provider's words (the summary email; the activity log has the details)
 const DONE: Record<string, string> = {
   'course.updated': 'Updated the course',
@@ -67,38 +60,17 @@ const DONE: Record<string, string> = {
   'course.images_changed': 'Changed the course’s pictures',
   'course.option_stopped': 'Stopped bookings for a learning option of',
   'course.option_reopened': 'Reopened bookings for a learning option of',
-  'cohort.created': 'Added a date to',
   'cohort.updated': 'Changed a date of',
   'cohort.cancelled': 'Cancelled a date of',
-  'cohort.deleted': 'Removed a date of',
   'cohort.moved': 'Moved a date to another course from',
   'cohort.bookings_off': 'Stopped bookings on a date of',
   'cohort.bookings_on': 'Reopened bookings on a date of',
-  'plan.created': 'Added the price plan',
-  'plan.updated': 'Changed the price plan',
-  'plan.archived': 'Archived the price plan',
-  'plan.restored': 'Restored the price plan',
-  'plan.deleted': 'Deleted the price plan',
-  'venue.created': 'Added the venue',
-  'venue.updated': 'Changed the venue',
-  'venue.archived': 'Archived the venue',
-  'venue.restored': 'Restored the venue',
-  'venue.deleted': 'Deleted the venue',
-  'provider.profile_updated': 'Updated your public profile',
-  'provider.renamed': 'Changed your provider name',
-  'provider.faqs_updated': 'Updated your FAQs',
-  'provider.logo_updated': 'Changed your logo',
-  'provider.logo_removed': 'Removed your logo',
-  'provider.terms_updated': 'Updated your booking terms or cancellation policy',
+  'plan.updated': 'Changed the wording of the price plan',
 }
 
-// A change and the one that puts it back: archiving a plan or venue and restoring it, stopping bookings (on a date, or for a
-// learning option) and reopening them. Done and undone in one session, the two cancel out: nothing changed.
+// A change and the one that puts it back: stopping bookings (on a date, or for a learning option) and reopening them. Done and
+// undone in one session, the two cancel out: nothing changed.
 const UNDOES: Record<string, string> = {
-  'plan.archived': 'plan.restored',
-  'plan.restored': 'plan.archived',
-  'venue.archived': 'venue.restored',
-  'venue.restored': 'venue.archived',
   'cohort.bookings_off': 'cohort.bookings_on',
   'cohort.bookings_on': 'cohort.bookings_off',
   'course.option_stopped': 'course.option_reopened',
@@ -110,13 +82,12 @@ const UNDOES: Record<string, string> = {
 async function netChanges(db: typeof Db, session: string) {
   const rows = await db.execute<{ action: string; key: string; primary: string | null; name: string | null }>(sql`
     select l.action, concat_ws(':', l.target_type, l.target_id, l.metadata->>'method') key, l.metadata->>'primary' primary,
-           coalesce(c.title, cc.title, pl.name, v.name) name
+           coalesce(c.title, cc.title, pl.name) name
     from public.activity_log l
     left join public.courses c on l.target_type = 'course' and c.id::text = l.target_id
     left join public.cohorts co on l.target_type = 'cohort' and co.id::text = l.target_id
     left join public.courses cc on cc.id = co.course_id
     left join public.price_plans pl on l.target_type = 'price_plan' and pl.id::text = l.target_id
-    left join public.venues v on l.target_type = 'venue' and v.id::text = l.target_id
     where l.metadata->>'staff' = ${session} and l.action <> 'access.denied'
     order by l.at, l.id`)
   const kept: (typeof rows)[number][] = []

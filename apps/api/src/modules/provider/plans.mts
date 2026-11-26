@@ -2,10 +2,10 @@ import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
 import { and, asc, cohorts, courses, eq, inArray, isNull, pricePlans, sql } from '@readtraining/db'
+import { can } from '@readtraining/permissions'
 
 import { logActivity } from '../../lib/activity.mjs'
-import { STAFF_PRICES } from '../../lib/staffAccess.mjs'
-import { createTRPCRouter, limit, orgProcedure } from '../../trpc/trpc.mjs'
+import { createTRPCRouter, limit, orgProcedure, refuse } from '../../trpc/trpc.mjs'
 
 // A provider's price plans: 2 to 4 packages a learner chooses between, each with its own full price per
 // delegate, a "Save £" amount, a tagline, "Most popular" on one, the provider's own courses it includes (up to 3: a package such as
@@ -142,6 +142,9 @@ const sameTiers = (a: unknown, b: unknown) => {
   return JSON.stringify(plain(a)) === JSON.stringify(plain(b))
 }
 
+// the same packages, in the same order, with only their wording changed: features, tagline and "Most popular"
+const onlyWording = (next: Tier[], before: Tier[]) => next.length === before.length && sameTiers(next.map(({ features, tagline, popular, ...rest }) => rest), before.map(({ features, tagline, popular, ...rest }) => rest))
+
 /** A plan of this provider's, for a date or course to use: refused when it is someone else's, or archived (unless kept). */
 export async function usablePlan(db: Writer, organisationId: string, planId: string, keepId: string | null = null) {
   const [p] = await db.select().from(pricePlans).where(and(eq(pricePlans.id, planId), eq(pricePlans.organisationId, organisationId)))
@@ -235,13 +238,13 @@ export const providerPlansRouter = createTRPCRouter({
     }),
 
   // Create a plan, or change one: learners see it at once, and every date and course on it takes its cheapest package as their
-  // price. `seen`: the version the form was opened on (a save over a newer one is refused).
-  save: orgProcedure('provider.pricing.edit')
+  // price. `seen`: the version the form was opened on (a save over a newer one is refused). Without the right to change prices
+  // (ReadTraining staff), only an existing plan's features, taglines and "Most popular" package change (`onlyWording`).
+  save: orgProcedure('provider.pricing.features')
     .input(z.object({ planId: z.string().uuid().optional(), name: line(60, 'plan name').min(1, 'Name the plan.'), tiers: tiersInput, seen: z.string().datetime().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      // a plan's packages' names, prices and savings, how many it has, and making a plan are the provider's own: staff change only
-      // the words around them (taglines, features, Most popular, Courses included)
-      if (ctx.staff && !input.planId) throw new TRPCError({ code: 'FORBIDDEN', message: STAFF_PRICES })
+    .mutation(async ({ ctx, input, path }) => {
+      const prices = can(ctx.actor, 'provider.pricing.edit', { organisationId: input.organisationId })
+      if (!input.planId && !prices) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path)
       if (!input.planId) await limit(ctx, 'plans')
       return ctx.db.transaction(async (tx) => {
         await checkCourses(tx, input.organisationId, input.tiers)
@@ -252,11 +255,7 @@ export const providerPlansRouter = createTRPCRouter({
         }
         const p = await lockPlan(tx, input.organisationId, input.planId)
         if (input.seen && p.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: PLAN_CHANGED })
-        if (ctx.staff) {
-          const had = p.tiers as Tier[]
-          const moved = had.length !== input.tiers.length || input.tiers.some((t, i) => t.name !== had[i].name || t.pricePence !== had[i].pricePence || (t.savePence || null) !== (had[i].savePence || null))
-          if (moved) throw new TRPCError({ code: 'FORBIDDEN', message: STAFF_PRICES })
-        }
+        if (!prices && (input.name !== p.name || !onlyWording(input.tiers, p.tiers as Tier[]))) await refuse(ctx, 'provider.pricing.edit', input.organisationId, path)
         const changed = !sameTiers(input.tiers, p.tiers)
         const [saved] = await tx.update(pricePlans).set({ name: input.name, tiers: input.tiers, updatedAt: new Date() }).where(eq(pricePlans.id, p.id)).returning()
         if (changed) await syncPlanPrices(tx, p.id)
@@ -278,13 +277,11 @@ export const providerPlansRouter = createTRPCRouter({
       }),
     ),
 
-  // Delete a plan nothing has ever used (no date, past or future, and no course). One in use is archived instead. The provider's
-  // own decision: never staff.
+  // Delete a plan nothing has ever used (no date, past or future, and no course). One in use is archived instead.
   remove: orgProcedure('provider.pricing.edit')
     .input(z.object({ planId: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.staff) throw new TRPCError({ code: 'FORBIDDEN', message: STAFF_PRICES })
-      return ctx.db.transaction(async (tx) => {
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
         const p = await lockPlan(tx, input.organisationId, input.planId)
         const [[d], [c]] = await Promise.all([
           tx.select({ n: sql<number>`count(*)::int` }).from(cohorts).where(eq(cohorts.planId, p.id)),
@@ -294,6 +291,6 @@ export const providerPlansRouter = createTRPCRouter({
         await tx.delete(pricePlans).where(eq(pricePlans.id, p.id))
         await log(tx, ctx, input.organisationId, 'plan.deleted', p.id, { name: p.name })
         return { ok: true }
-      })
-    }),
+      }),
+    ),
 })

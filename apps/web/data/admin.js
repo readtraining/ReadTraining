@@ -118,7 +118,7 @@ export const admin = {
       custom: { label: "Custom", text: "Switches you pick one by one." },
     },
     switches: {
-      approve: "Approve and edit providers and courses", catalogue: "Edit the catalogue", pricing: "Change providers' prices and plans", content: "Edit site content", "orders.view": "See orders",
+      approve: "Approve providers and courses, and edit their courses and dates", catalogue: "Edit the catalogue", pricing: "See providers' prices and plans", content: "Edit site content", "orders.view": "See orders",
       "orders.book": "Book for customers", "orders.free": "Make free bookings", refunds: "Decide refunds", wallet: "Add wallet credit",
       disputes: "Handle disputes", payouts: "Run payouts", adjustments: "Money adjustments", "finance.settings": "Fees and commission",
       coupons: "Coupons", reviews: "Moderate reviews", suspend: "Suspend accounts",
@@ -435,9 +435,9 @@ export const admin = {
       back: "All providers",
       notFound: "This provider was not found.",
       publicProfile: "Public profile",
-      // editing the provider's work from the admin (StaffEdit, by the admin's switches): the Edit menu's pages
-      // each page for the switches that work in it: content (approve), prices (pricing)
-      edit: { label: "Edit", items: [{ label: "Profile and venues", path: "profile", needs: ["approve"] }, { label: "Price plans", path: "plans", needs: ["pricing", "approve"] }, { label: "Dates", path: "dates", needs: ["approve"] }] },
+      // the provider's work in the admin (StaffEdit, by the admin's switches): staff edit its dates and plans' features, and read
+      // the rest; each page for the switches that work in it: content (approve), prices to read (pricing)
+      work: { label: "Open", items: [{ label: "Profile and venues", path: "profile", needs: ["approve"] }, { label: "Price plans", path: "plans", needs: ["pricing", "approve"] }, { label: "Dates", path: "dates", needs: ["approve"] }] },
       actions: { approve: "Approve", changes: "Ask for changes", reject: "Don't approve", suspend: "Suspend", reinstate: "Reinstate" },
       // the pop-up for each decision: what happens, and the message the provider sees (when one is needed)
       sheets: {
@@ -467,13 +467,29 @@ export const admin = {
       noteFor: { changes_requested: "Changes asked for", rejected: "Reason not approved", suspended: "Reason suspended" },
       waiting: "The provider has made the changes and sent their account back for review.",
       details: "Details",
-      fields: { name: "Name", address: "Web address", phone: "Phone", terms: "Provider terms", applied: "Signed up", changed: "Status last changed" },
+      fields: { name: "Name", address: "Web address", phone: "Phone", vat: "VAT", order: "Order emails", refund: "Refund emails", dispute: "Dispute emails", terms: "Provider terms", applied: "Signed up", changed: "Status last changed" },
+      vatRegistered: "Registered, {n}",
+      vatNot: "Not registered",
+      // a notice address the provider hasn't set yet: their notices go to the owner's email until they do
+      noticeOwner: "(the owner's, not set yet)",
       termsAccepted: "Accepted the {v} version on {date}",
       termsMissing: "Not accepted",
+      profile: {
+        title: "Public profile",
+        lead: "What learners see about this provider, and the terms they read before booking.",
+        noHeadline: "No headline yet",
+        bio: "Biography",
+        noBio: "No biography yet.",
+        policy: "Cancellation and refund policy",
+        noPolicy: "No cancellation and refund policy yet.",
+        terms: "Booking terms",
+        noTerms: "No booking terms of their own.",
+        socials: { facebook: "Facebook", linkedin: "LinkedIn", youtube: "YouTube" },
+      },
       team: "Team",
       commission: "Commission",
-      commissionLabel: "This provider's commission (%)",
-      commissionHint: "For bookings made after you change it. The platform default is {rate}.",
+      commissionLabel: "This provider's rate",
+      commissionHint: "Between 0% and 60%. Applies to bookings made after you save.",
       usesDefault: "Uses the platform default ({rate}).",
       hasOwn: "Has its own rate. The platform default is {rate}.",
       useDefault: "Use the platform default",
@@ -1004,8 +1020,8 @@ export const admin = {
     // the platform's default commission (real, API admin.commission)
     commission: {
       title: "Commission",
-      label: "Default commission (%)",
-      hint: "ReadTraining's share of each booking's net amount (after the card fee). Applies to every provider without their own rate, for bookings made after you change it.",
+      label: "Default commission",
+      hint: "Between 0% and 60%: ReadTraining's share of each booking's net amount (after the card fee). Applies to every provider without their own rate, for bookings made after you save.",
       own: "{n} with their own rate",
       none: "No provider has their own rate.",
       saved: "Default commission saved",

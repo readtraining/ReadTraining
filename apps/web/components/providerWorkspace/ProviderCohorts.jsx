@@ -13,7 +13,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import FilterScrollPill from "@/components/courses/FilterScrollPill";
 import Toast from "@/components/courses/Toast";
 import { COHORT_TONE, Loading, Pill, RowMenu, Search, SegmentedControl, Tabs, ToolSelect, WayCards, getQuery, setQuery, shortDay } from "./providerParts";
-import { ColWidths } from "@/components/admin/adminParts";
+import { ColWidths, HeaderAction } from "@/components/admin/adminParts";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { METHOD_ALIASES, methodName } from "@/lib/taxonomy";
@@ -40,13 +40,14 @@ const MODES = [
   // self-paced courses have no dates, so this tab lists courses, not cohorts (its count is not part of All)
   { key: "self-paced", label: "Self-paced courses" },
 ];
+// "All cohorts" first, as in any list of choices; the list opens on Upcoming and in progress
 export const WHEN = [
+  { value: "all", label: "All cohorts" },
   { value: "upcoming", label: "Upcoming and in progress" },
   { value: "past", label: "Past" },
   { value: "cancelled", label: "Cancelled" },
-  { value: "all", label: "Any date" },
 ];
-// cancelled dates are listed under Cancelled and Any date only, so upcoming and past lists (and their counts) are the dates that run
+// cancelled dates are listed under Cancelled and All cohorts only, so upcoming and past lists (and their counts) are the dates that run
 // a date of a course that isn't on sale (not live): it stays in the workspace, labelled, and learners can't see or book it
 const OFF_SALE = { draft: "Course in draft", pending: "Course in review", changes: "Course needs changes", paused: "Course paused" };
 const offSale = (k) => OFF_SALE[k.courseStatus] || null;
@@ -117,6 +118,18 @@ export const timeRange = (s) => `${s.from} to ${s.to}`;
 const TIMES = [];
 for (let m = 6 * 60; m <= 22 * 60; m += 15) TIMES.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
 const DEFAULT_SLOT = { from: "09:30", to: "16:30" };
+// the last option of the venue and price plan lists: an action, not a value
+const NEW_VENUE = "__new-venue";
+const MANAGE_PLANS = "__manage-plans";
+// a one-day date ends after it starts: its "To" list offers only the times after "From", and a later "From" moves "To" on by the
+// hour it had (or to the last time); a date over several days may end earlier in the day than it started
+const oneDay = (s) => (s.end || s.date) === s.date;
+const toTimes = (s) => (oneDay(s) ? TIMES.filter((t) => t > s.from) : TIMES);
+const withFrom = (s, from) => {
+  if (!oneDay(s) || s.to > from) return { from };
+  const i = TIMES.indexOf(from);
+  return { from, to: TIMES[Math.min(i + 4, TIMES.length - 1)] };
+};
 
 // The provider's dates, courses, venues and team, from the API (shared by the list, the form and the calendar). Only what this
 // role may see is asked for (the API refuses the rest): a tutor gets the dates they teach and no venue list (only the date form,
@@ -126,6 +139,8 @@ const NONE = { data: [], isError: false, refetch: () => {} };
 // a date's colour on the calendar: its own, or by type (classroom purple, live online blue)
 export const defaultColour = (method) => (method === "live-online" ? "blue" : "purple");
 export const colourOf = (k) => k.colour || defaultColour(k.method);
+// a colour picked with the colour picker (#rrggbb), not one of the preset names; drawn through --rt-coh instead of a -c- class
+export const isPicked = (c) => /^#[0-9a-f]{6}$/i.test(c || "");
 
 export function useSchedule(when = "upcoming", courseId = null, { near = false } = {}) {
   const access = useProviderAccess();
@@ -169,7 +184,7 @@ export function isMeetingLink(v) {
 // change already on screen, and `change` (the list's) shows a row's change before the dates load again.
 export function useCohortActions({ refresh, toast, say, change = () => {} }) {
   const links = useWorkspaceLinks();
-  const { organisationId, can } = useProviderAccess();
+  const { organisationId, can, staff } = useProviderAccess();
   const bookable = api.provider.cohorts.setBookable.useMutation();
   // the date being edited stays set while its form closes, so the closing form doesn't turn into an empty "Create cohort"
   const [editing, setEditing] = useState({ open: false, k: null });
@@ -181,7 +196,7 @@ export function useCohortActions({ refresh, toast, say, change = () => {} }) {
     change(k.id, { bookable: !k.bookable });
     bookable.mutate({ organisationId, cohortId: k.id, bookable: !k.bookable }, {
       onSuccess: async () => { say(k.bookable ? "Bookings turned off" : "Bookings turned on"); await refresh(); change(k.id, null); },
-      onError: (e) => { change(k.id, null); toast(errorText(e)); },
+      onError: (e) => { change(k.id, null); toast(errorText(e), { error: true }); }, // a refusal: no tick, read out at once
     });
   };
   const items = (k, today) => {
@@ -195,7 +210,8 @@ export function useCohortActions({ refresh, toast, say, change = () => {} }) {
         { label: "Move to another course", onClick: () => setMoveOne(k) },
         { label: "Cancel", onClick: () => setCancelOne(k) },
       ] : []),
-      ...(edit && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
+      // ReadTraining staff edit or cancel dates, never delete them
+      ...(edit && !staff && deletable(k, today) ? [{ label: "Delete", onClick: () => setDeleting(k), danger: true }] : []),
     ];
   };
   const sheets = (
@@ -219,8 +235,9 @@ export default function ProviderCohorts() {
   const [when, setWhen] = useState("upcoming");
   const [q, setQ] = useState("");
   const [date, setDate] = useState("");
-  // said under the filters when a date set "When" to Any date, so the change is never silent
+  // read out (not shown: When beside the day already shows it) when picking a day set "When" to All cohorts
   const [whenNote, setWhenNote] = useState("");
+  const [showFilters, setShowFilters] = useState(false); // phones: the filters' fold
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -233,9 +250,9 @@ export default function ProviderCohorts() {
   const assignTutor = api.provider.cohorts.setTutor.useMutation();
   const refresh = () =>
     Promise.all([utils.provider.cohorts.list.invalidate(), utils.provider.courses.list.invalidate({ organisationId }), utils.provider.courses.get.invalidate()]);
-  const actions = useCohortActions({ refresh, toast: (message) => setToast({ message }), say: setSaid, change });
+  const actions = useCohortActions({ refresh, toast: (message, { error = false } = {}) => setToast({ message, error }), say: setSaid, change });
   const edit = can("provider.cohorts.edit");
-  // new dates set their prices, so adding them also needs prices (ReadTraining staff without the pricing switch can't)
+  // new dates set their prices, so adding them also needs prices (never ReadTraining staff)
   const add = edit && can("provider.pricing.edit");
   const newCourse = useNewCourse();
 
@@ -252,10 +269,18 @@ export default function ProviderCohorts() {
     if (t) setTutor(t);
     const s2 = getQuery("q");
     if (s2) setQ(s2);
-    if (getQuery("new") === "1" && add) setFormOpen(true); // "Create cohort" from the dashboard (only for someone who can add dates)
     const d = getQuery("date");
     if (/^\d{4}-\d{2}-\d{2}$/.test(d || "")) { setDate(d); setWhen("all"); }
   }, []);
+
+  // "Create cohort" from the dashboard opens the form once the role is known to add dates (staff permissions load a moment later);
+  // the address then loses ?new=1, so a reload or Back doesn't open it again
+  useEffect(() => {
+    if (add && getQuery("new") === "1") {
+      setFormOpen(true);
+      setQuery("new", "");
+    }
+  }, [add]);
 
   // any filter change starts again at page 1
   useEffect(() => setPage(1), [mode, course, venue, tutor, when, q, date]);
@@ -292,6 +317,7 @@ export default function ProviderCohorts() {
 
   // any filter set (the tab aside), for "Clear filters" under the filters
   const filtersSet = Boolean(course || venue || tutor || date || needle || when !== "upcoming");
+  const filterCount = [course, venue, tutor, date, when !== "upcoming"].filter(Boolean).length; // on the phones' Filters button
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const at = Math.min(page, pages);
   const pageRows = list.slice((at - 1) * PER_PAGE, at * PER_PAGE);
@@ -310,7 +336,7 @@ export default function ProviderCohorts() {
     setWhenNote("");
     [...(keepTab ? [] : ["mode"]), "course", "venue", "tutor", "when", "q", "date"].forEach((k) => keep(k, ""));
   };
-  const fail = (e) => setToast({ message: errorText(e) });
+  const fail = (e) => setToast({ message: errorText(e), error: true });
   // only the tutor changes (nothing else on the dates is sent, so a colleague's change to them stays)
   const setTutorOf = (k, v) => {
     change(k.id, { tutorUserId: v || null });
@@ -333,33 +359,35 @@ export default function ProviderCohorts() {
       ) : null}
       {(!nothingYet || mode === "self-paced") && (
         <>
-          <div className="rt-adm-toolbar">
-            <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
-            {mode !== "self-paced" && create}
-          </div>
-          {mode !== "self-paced" && (
-            <div className="rt-pws-coh__filterbox">
-              <div className="rt-pws-coh__filters">
+          {/* one card as on Courses: the delivery pills with Clear filters, then the search and the filters in one row (on phones the
+              filters fold behind one button); the table in its own card under it */}
+          <section className="rt-cx" aria-label="Find cohorts">
+            <div className="rt-cx__top">
+              <Tabs tabs={MODES.map((m) => ({ ...m, count: m.key === "self-paced" ? onDemand.length : scoped.filter((k) => m.key === "all" || k.method === m.key).length }))} value={mode} onChange={(v) => { setMode(v); keep("mode", v, "all"); if (v === "live-online" && venue) { setVenue(""); keep("venue", ""); } }} label="Delivery" />
+              {mode !== "self-paced" && filtersSet && <button type="button" className="rt-cd__link rt-cx__clear" onClick={() => clear(true)}>Clear filters</button>}
+            </div>
+            {mode !== "self-paced" && (
+              <div className={`rt-cx__bar${showFilters ? " is-open" : ""}`} role="search" aria-label="Search and filter cohorts">
                 <Search value={q} onChange={(v) => { setQ(v); keep("q", v.trim()); }} label="Search course, venue or tutor" />
-                <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: String(c.id), label: c.title }))]} />
+                <button type="button" className="rt-cx__filters" aria-expanded={showFilters} onClick={() => setShowFilters((o) => !o)}>
+                  Filters{filterCount > 0 && <span className="rt-tr__filter-n">{filterCount}</span>}
+                </button>
+                {/* time first (when it runs, then a day): the schedule is looked at by date most; then which course, where and who */}
                 <ToolSelect id="rt-coh-when" label="When" value={when} onChange={(v) => { setWhen(v); keep("when", v, "upcoming"); setWhenNote(""); setPage(1); }} options={WHEN} />
-                <div className="rt-field rt-adm-select -inline rt-pws-coh__datefilter">
+                <div className="rt-field rt-adm-select -inline">
                   <label htmlFor="rt-coh-date" className="rt-sr">Cohorts running on this date</label>
-                  <DateField id="rt-coh-date" compact clearable placeholder="Any day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("When is set to Any date to show the cohorts running on the day you picked."); } setPage(1); }} />
+                  <DateField id="rt-coh-date" compact clearable placeholder="Choose a day" value={date} onChange={(v) => { setDate(v); keep("date", v); if (v && when !== "all") { setWhen("all"); keep("when", "all", "upcoming"); setWhenNote("Showing all cohorts running on the day you picked."); } setPage(1); }} />
                 </div>
+                <ToolSelect id="rt-coh-course" label="Course" value={course} onChange={(v) => { setCourse(v); keep("course", v); }} options={[{ value: "", label: "All courses" }, ...datedCourses.map((c) => ({ value: String(c.id), label: c.title }))]} />
                 {/* live online cohorts have no venue */}
                 {mode !== "live-online" && <ToolSelect id="rt-coh-venue" label="Venue" value={venue} onChange={(v) => { setVenue(v); keep("venue", v); }} options={[{ value: "", label: "All venues" }, ...s.venues.data.map((v) => ({ value: v.id, label: v.name })), { value: "online", label: ONLINE }]} />}
                 {tutors.length > 0 && <ToolSelect id="rt-coh-tutor" label="Tutor" value={tutor} onChange={(v) => { setTutor(v); keep("tutor", v); }} options={[{ value: "", label: "All tutors" }, ...tutors.map((t) => ({ value: t.userId, label: t.name })), { value: "none", label: "Not assigned" }]} />}
               </div>
-              <div className="rt-pws-coh__filtersum">
-                <b>{list.length} {list.length === 1 ? "cohort" : "cohorts"}</b>
-                {whenNote && <span>{whenNote}</span>}
-                {filtersSet && <button type="button" className="rt-cd__link" onClick={() => clear(true)}>Clear filters</button>}
-              </div>
-            </div>
-          )}
+            )}
+          </section>
+          {create && mode !== "self-paced" && <HeaderAction>{create}</HeaderAction>}
 
-          <p className="rt-sr" aria-live="polite">{mode === "self-paced" ? `${onDemand.length} self-paced ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}`}</p>
+          <p className="rt-sr" aria-live="polite">{mode === "self-paced" ? `${onDemand.length} self-paced ${onDemand.length === 1 ? "course" : "courses"}` : `${list.length} ${list.length === 1 ? "cohort" : "cohorts"}${whenNote ? `. ${whenNote}` : ""}`}</p>
           {mode === "self-paced" ? (
             onDemand.length ? (
               <div className="rt-acc__card rt-biz__tablecard">
@@ -486,7 +514,7 @@ export function CancelSheet({ cohort, onClose, onDone }) {
       setError("Say why the dates are cancelled.");
       return document.getElementById("rt-coh-cancel-why")?.focus();
     }
-    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: onDone, onError: (er) => setError(errorText(er)) });
+    cancel.mutate({ organisationId, cohortId: cohort.id, reason: reason.trim() }, { onSuccess: () => onDone(reason.trim()), onError: (er) => setError(errorText(er)) });
   };
   return (
     <Sheet open={Boolean(cohort)} onClose={onClose} title="Cancel this cohort?" closeLabel="Close" noClose busy={cancel.isPending}>
@@ -607,16 +635,17 @@ const planLine = (p) => p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence
 
 // a course's learning options taught on dates (classroom, live online), its primary first; `open`: only the ones taking bookings
 // (new dates are only for those: the API refuses one for an option whose new bookings were stopped)
-const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(isDatedMethod);
+export const datedOf = (c, { open = false } = {}) => waysOf(c, { open }).filter(isDatedMethod);
 
 // The panel for one cohort. `cohort` (from the list) edits it; otherwise it creates one, asking which course (or for
 // `suggestCourseId`). New dates are for one of the course's dated learning options: `mode` (the list's Classroom / Live online tab)
 // picks the one the form starts on, a suggested course starts on its first, and one offering both asks which. Dates keep theirs.
 export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", cohort = null, onSaved, onAnother }) {
   const links = useWorkspaceLinks();
-  const { organisationId, staff } = useProviderAccess();
-  // a date's price is the provider's own: ReadTraining staff editing it see it, never change it (the API refuses it too)
-  const priceLocked = Boolean(staff && cohort);
+  const { organisationId, can } = useProviderAccess();
+  // a date's prices and the venues are the provider's own (ReadTraining staff see them as they are)
+  const prices = can("provider.pricing.edit");
+  const addVenues = can("provider.venues.edit");
   const formRef = useRef(null);
   const [f, setF] = useState(null);
   const [errors, setErrors] = useState({});
@@ -739,6 +768,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
   const setSlot = (i, patch) => {
     setF((x) => ({ ...x, sessions: x.sessions.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
     setVenueAsk("");
+    setErrors((e) => (e[`d${i}`] ? { ...e, [`d${i}`]: undefined } : e)); // changing a date's times clears what was wrong with it
   };
 
   // "Save and create another": the form stays open for the same course and settings
@@ -874,23 +904,28 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           {method === "classroom" && venues.length === 0 && (
             <div className="rt-acc__notice -warn rt-pws-coh__novenue" role="status">
               <p><b>Add a venue first.</b> Classroom dates take place at one of your venues, and you haven't added one yet. Add it here: it is saved to your venues, and these dates use it.</p>
-              {addingVenue ? venueForm : <button type="button" className="button -sm -purple-1 text-white" onClick={() => setAddingVenue(true)}>Add a venue</button>}
+              {addingVenue ? venueForm : addVenues && <button type="button" className="button -sm -purple-1 text-white" onClick={() => setAddingVenue(true)}>Add a venue</button>}
             </div>
           )}
 
           {/* the calendar picks the days; beside it, the dates picked as one row each (its days and its times), in a panel as tall as
-              the calendar that scrolls inside itself on a computer */}
+              the calendar that scrolls inside itself on a computer. The two headings share a row above them, so the two boxes start
+              and end level; on a phone the calendar comes first, then the dates picked */}
           <div className="rt-pws-coh__dates">
-            <div className="rt-pws-coh__pickcol">
+            <div className="rt-pws-coh__pickhead">
               <SegmentedControl id="rt-cf-pick" legend="How does the course run?" value={pickMode} onChange={(v) => { setPickMode(v); setAnchor(null); }}
                 options={[{ value: "range", label: "Date range", icon: "sessions" }, { value: "days", label: "Individual days", icon: "cohorts" }]} />
+            </div>
+            <div className="rt-pws-coh__pickcol">
               <DatePicker view={view} setView={setView} sessions={f.sessions} anchor={pickMode === "range" && openRange(f.sessions) ? anchor : null} mode={pickMode} onPick={pickDay} min={today} keep={heldPast} />
+            </div>
+            <div className="rt-pws-coh__slotshead">
+              <h3 className="rt-pws-coh__h3" id="rt-cf-slots-h">Selected dates<Req /></h3>
+              <p className="rt-acc__note">Pick days on the calendar. Times are copied from the latest date.</p>
+              {err("sessions")}
             </div>
             <section className="rt-pws-coh__slots" aria-labelledby="rt-cf-slots-h">
               <div className="rt-pws-coh__slotpanel">
-                <h3 className="rt-pws-coh__h3" id="rt-cf-slots-h">Selected dates<Req /></h3>
-                <p className="rt-acc__note">Pick days on the calendar. Times are copied from the latest date.</p>
-                {err("sessions")}
                 {/* what is picked, in words, said aloud after each click */}
                 <p className="rt-sr" aria-live="polite">{ordered.map(({ s }) => `${daySpan(s)}, ${s.from} to ${s.to}`).join("; ")}</p>
                 <div className="rt-pws-coh__slotscroll">
@@ -904,13 +939,14 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                           {/* the course page lists a run only before its first day (the API's listings: starts_on after today), so the
                               first date says so when it is today or has passed */}
                           {n === 0 && s.date <= today && <p className="rt-pws-coh__slotnote">{s.date === today ? "Starts today" : "Already started"}, so it won&apos;t show on the course page.</p>}
-                          {err(`d${i}`)}
+                          {/* a date's problem (in the past, too long, too far ahead) is about the date: the message itself takes the focus */}
+                          {errors[`d${i}`] && <p className="rt-q__err" id={`rt-cf-d${i}-e`} data-focus-self=""><span className="rt-sr">Error: </span>{errors[`d${i}`]}</p>}
                           <div className="rt-pws-coh__slottimes">
                             <label className="rt-sr" htmlFor={`rt-cf-f${i}`}>From, {daySpan(s)}</label>
-                            <FieldSelect id={`rt-cf-f${i}`} label="From" value={s.from} onChange={(value) => setSlot(i, { from: value })} options={TIMES} invalid={Boolean(errors[`d${i}`])} describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
+                            <FieldSelect id={`rt-cf-f${i}`} label="From" value={s.from} onChange={(value) => setSlot(i, withFrom(s, value))} options={oneDay(s) ? TIMES.slice(0, -1) : TIMES} float describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
                             <span aria-hidden="true">–</span>
                             <label className="rt-sr" htmlFor={`rt-cf-t${i}`}>To, {daySpan(s)}</label>
-                            <FieldSelect id={`rt-cf-t${i}`} label="To" value={s.to} onChange={(value) => setSlot(i, { to: value })} options={TIMES} />
+                            <FieldSelect id={`rt-cf-t${i}`} label="To" value={s.to} onChange={(value) => setSlot(i, { to: value })} options={toTimes(s)} float describedBy={errors[`d${i}`] ? `rt-cf-d${i}-e` : undefined} />
                           </div>
                           <button type="button" className="rt-pws-coh__remove" onClick={() => { setF((x) => ({ ...x, sessions: x.sessions.filter((_, j) => j !== i) })); setVenueAsk(""); }}>Remove<span className="rt-sr"> {daySpan(s)}</span></button>
                         </li>
@@ -937,10 +973,12 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 <div className="rt-field">
                   <label htmlFor="rt-cf-venueId">Venue<Req /></label>
                   {err("venueId")}
-                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => set({ venueId: value })} options={venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` }))} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
+                  {/* the list ends with "Add a new venue", which opens the venue form here (it is saved to the provider's venues); with no venue
+                      yet, the notice above the dates has that button */}
+                  <FieldSelect id="rt-cf-venueId" label="Venue" placeholder={venues.length ? "Choose a venue" : "No venues yet"} value={f.venueId} onChange={(value) => (value === NEW_VENUE ? setAddingVenue(true) : set({ venueId: value }))} options={[...venues.map((v) => ({ value: v.id, label: `${v.name}, ${v.city}` })), ...(venues.length && addVenues ? [{ value: NEW_VENUE, label: "+ Add a new venue", action: true }] : [])]} invalid={Boolean(errors.venueId)} describedBy={aria("venueId")["aria-describedby"]} />
                   {venueAdded && <p className="rt-acc__note rt-pws-coh__added" role="status">{venueAdded}</p>}
                   {venueNote && <p className="rt-acc__notice -warn" id="rt-cf-venuenote" role="status">{venueNote}</p>}
-                  {venues.length > 0 && (addingVenue ? venueForm : <button type="button" className="rt-cd__link rt-pws-coh__hintlink" onClick={() => setAddingVenue(true)}>Add a new venue</button>)}
+                  {venues.length > 0 && addingVenue && venueForm}
                 </div>
               )}
               {method === "live-online" && (
@@ -952,53 +990,42 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                 </div>
               )}
             </div>
-            {priceLocked ? (
-              <div className="rt-field">
-                <p className="rt-seg-field__legend">Pricing</p>
-                <p className="rt-pws-coh__lockedprice">
-                  {f.pricing === "tiered"
-                    ? `Price plan: ${plans.find((p) => p.id === f.planId)?.name || "the provider’s plan"}`
-                    : `${formatPrice(Number(f.price))} per learner, including VAT${f.wasPrice ? ` (was ${formatPrice(Number(f.wasPrice))})` : ""}`}
-                </p>
-                <p className="rt-field__hint">Prices are the provider’s own, so you can’t change them as ReadTraining staff.</p>
-              </div>
-            ) : (<>
-            <SegmentedControl id="rt-cf-pricing" legend="Pricing" value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
+            <SegmentedControl id="rt-cf-pricing" legend="Pricing" disabled={!prices} value={f.pricing} onChange={(v) => { set({ pricing: v }); setErrors((e) => ({ ...e, price: undefined, wasPrice: undefined, planId: undefined })); }}
               options={[{ value: "flat", label: "Flat price", icon: "coupons" }, { value: "tiered", label: "Tiered packages", icon: "layers" }]}
               hint={f.pricing === "tiered" ? "Learners pick a package from a price plan when they book." : "One price per learner for this date."} />
             {f.pricing === "tiered" && (
               <div className="rt-field">
                 <label htmlFor="rt-cf-planId">Price plan<Req /></label>
                 <p className="rt-field__hint" id="rt-cf-planId-h">
-                  Learners choose a package when they book, and the date shows the cheapest package as its price.{" "}
-                  <Link href={links.plans()} className="rt-cd__link">{plans.length ? "Manage price plans" : "Create a price plan first"}</Link>
+                  Learners choose a package when they book, and the date shows the cheapest package as its price.
                 </p>
                 {err("planId")}
-                <FieldSelect id="rt-cf-planId" label="Price plan" placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => set({ planId: value })}
-                  options={plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}` }))}
+                {/* the list ends with "Manage price plans", opened in a new tab so this form stays as it is */}
+                <FieldSelect id="rt-cf-planId" label="Price plan" disabled={!prices} placeholder={plans.length ? "Choose a price plan" : "No price plans yet"} value={f.planId} onChange={(value) => (value === MANAGE_PLANS ? window.open(links.plans(), "_blank", "noopener") : set({ planId: value }))}
+                  options={[...plans.filter((p) => !p.archived || p.id === cohort?.planId).map((p) => ({ value: p.id, label: `${p.name}: ${planLine(p)}` })), ...(prices ? [{ value: MANAGE_PLANS, label: plans.length ? "Manage price plans (new tab)" : "+ Create a price plan (new tab)", action: true }] : [])]}
                   invalid={Boolean(errors.planId)} describedBy={`rt-cf-planId-h${errors.planId ? " rt-cf-planId-e" : ""}`} />
               </div>
             )}
-            </>)}
             <div className="rt-pws-coh__setgrid">
-              {f.pricing === "flat" && !priceLocked && (
+              {f.pricing === "flat" && (
                 <>
                   <div className="rt-field">
                     <label htmlFor="rt-cf-price">Price per learner, including VAT (£)<Req /></label>
                     {err("price")}
-                    <input id="rt-cf-price" type="text" inputMode="decimal" value={f.price} onChange={(e) => set({ price: e.target.value.replace(/£|,/g, "").trim() })} autoComplete="off" {...aria("price")} />
+                    <input id="rt-cf-price" type="text" inputMode="decimal" disabled={!prices} value={f.price} onChange={(e) => set({ price: e.target.value.replace(/£|,/g, "").trim() })} autoComplete="off" {...aria("price")} />
                   </div>
                   <div className="rt-field">
                     <label htmlFor="rt-cf-wasPrice">“Was” price (£)</label>
                     {err("wasPrice")}
-                    <input id="rt-cf-wasPrice" type="text" inputMode="decimal" value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
+                    <input id="rt-cf-wasPrice" type="text" inputMode="decimal" disabled={!prices} value={f.wasPrice} onChange={(e) => set({ wasPrice: e.target.value.trim() })} autoComplete="off" {...aria("wasPrice")} />
                   </div>
                 </>
               )}
               <div className="rt-field">
-                <label htmlFor="rt-cf-capacity">Number of places<Req /></label>
+                <label htmlFor="rt-cf-capacity">Places available<Req /></label>
+                <p className="rt-field__hint" id="rt-cf-capacity-h">How many learners can book this date, up to 200.</p>
                 {err("capacity")}
-                <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} autoComplete="off" {...aria("capacity")} />
+                <input id="rt-cf-capacity" type="number" inputMode="numeric" min="1" max="200" step="1" value={f.capacity} onChange={(e) => set({ capacity: e.target.value })} placeholder="For example: 12" autoComplete="off" aria-invalid={errors.capacity ? true : undefined} aria-describedby={`rt-cf-capacity-h${errors.capacity ? " rt-cf-capacity-e" : ""}`} />
               </div>
             </div>
             <div className="rt-field">
@@ -1009,6 +1036,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
             </div>
             <fieldset className="rt-pws-coh__colours">
               <legend>Calendar colour</legend>
+              {/* the presets, then any colour from the colour picker (its swatch shows the colour picked, or a rainbow until then) */}
               <div className="rt-pws-coh__swatches">
                 {pw.cohortColours.map((c) => {
                   const on = (f.colour || defaultColour(method)) === c.key;
@@ -1019,6 +1047,10 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
                     </label>
                   );
                 })}
+                <label className={`rt-pws-coh__swatch -custom${isPicked(f.colour) ? " is-on" : ""}`} style={isPicked(f.colour) ? { "--rt-coh": f.colour } : undefined} title="Custom colour">
+                  <input type="color" className="rt-pws-coh__picker-in" value={isPicked(f.colour) ? f.colour : "#6440fb"} onChange={(e) => set({ colour: e.target.value.toLowerCase() })} aria-label="Custom colour" />
+                  <span aria-hidden="true"></span>
+                </label>
               </div>
             </fieldset>
           </section>
@@ -1047,7 +1079,10 @@ function pickOn(list, open, iso, mode) {
   if (open) return { sessions: list.filter((s) => s !== inside).map((s) => (s === open ? { ...s, date: iso, end: iso } : s)), anchor: iso };
   if (inside) return { sessions: list.filter((s) => s !== inside), anchor: null };
   const latest = list[list.length - 1];
-  return { sessions: [...list, { date: iso, end: iso, from: latest?.from || DEFAULT_SLOT.from, to: latest?.to || DEFAULT_SLOT.to }], anchor: mode === "range" ? iso : null };
+  // a one-day session ends after it starts, so times copied from a date over several days (16:00 one day to 09:00 the last) are
+  // put right the way picking a "From" does
+  const day = { date: iso, end: iso, from: latest?.from || DEFAULT_SLOT.from, to: latest?.to || DEFAULT_SLOT.to };
+  return { sessions: [...list, { ...day, ...withFrom(day, day.from) }], anchor: mode === "range" ? iso : null };
 }
 
 // The cohort form's two-month calendar. Each session shows as its first and last day filled and the days between banded;

@@ -56,9 +56,6 @@ export function InfoTab({ say }) {
   );
 }
 
-// the provider's name can change while its application is being reviewed (owner and admin); after approval it goes through us
-const UNDER_REVIEW = ["pending", "changes_requested"];
-
 function InfoForm({ profile, say }) {
   const { organisationId, can, staff } = useProviderAccess();
   const router = useRouter();
@@ -74,9 +71,8 @@ function InfoForm({ profile, say }) {
   const set = (k) => (e) => { setF((x) => ({ ...x, [k]: e.target.value })); setErrors((x) => ({ ...x, [k]: "" })); };
   const locked = !can("provider.profile.edit");
   useUnsavedChanges(!locked && JSON.stringify(f) !== JSON.stringify(savedF));
-  const underReview = UNDER_REVIEW.includes(profile.status);
-  // the owner or an admin while under review; ReadTraining staff (editing from the admin) at any time
-  const canRename = (underReview || Boolean(staff)) && can("provider.profile.rename");
+  // the owner or an admin (ReadTraining staff see the name, never change it)
+  const canRename = can("provider.profile.rename");
 
   const submit = (e) => {
     e.preventDefault();
@@ -111,13 +107,9 @@ function InfoForm({ profile, say }) {
 
   return (
     <form className="rt-acc__card rt-q__form rt-pws-set__form" onSubmit={submit} noValidate ref={formRef}>
-      {canRename ? (
-        <Field required id="rt-set-name" label="Company or instructor name" hint="Learners see this name. You can change it until your account is approved." error={errors.name} count={<Counter value={f.name} max={100} />}>
-          <input {...aria("rt-set-name", errors.name, true)} type="text" maxLength={100} autoComplete="organization" value={f.name} onChange={set("name")} />
-        </Field>
-      ) : (
-        <p className="rt-acc__note">Provider name: <b>{profile.name}</b>. {underReview ? "The account owner or an admin can change it until your account is approved." : "To change it, contact us: it was checked when your account was approved."}</p>
-      )}
+      <Field required id="rt-set-name" label="Company or instructor name" hint={canRename || staff ? "Learners see this name." : "Learners see this name. The account owner or an admin can change it."} error={errors.name} count={canRename && <Counter value={f.name} max={100} />}>
+        <input {...aria("rt-set-name", errors.name, true)} type="text" maxLength={100} autoComplete="organization" value={f.name} onChange={set("name")} disabled={!canRename} />
+      </Field>
       <Field required id="rt-set-headline" label="Headline" error={errors.headline} count={<Counter value={f.headline} max={120} />}>
         <input {...aria("rt-set-headline", errors.headline)} type="text" maxLength={120} autoComplete="off" value={f.headline} onChange={set("headline")} disabled={locked} />
       </Field>
@@ -235,10 +227,11 @@ function LogoForm({ profile, say }) {
           {!locked && (
             <div className="rt-pws-set__actions">
               <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy}>{busy && !removeLogo.isPending ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}</button>
-              {logoUrl && <button type="button" className="rt-pws-set__textbtn" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
+              {/* not while a new logo is uploading */}
+              {logoUrl && !(busy && !removeLogo.isPending) && <button type="button" className="button -sm -outline-red-3 text-red-3" onClick={() => setAsking(true)} aria-haspopup="dialog" disabled={busy} aria-busy={removeLogo.isPending || undefined}>{removeLogo.isPending ? "Removing…" : "Remove logo"}</button>}
             </div>
           )}
-          <p className="rt-field__hint">{hintFor("logo")} It is saved as soon as you choose it.</p>
+          {!locked && <p className="rt-field__hint">{hintFor("logo")} It is saved as soon as you choose it.</p>}
         </div>
       </div>
       <Confirm danger open={asking} onClose={() => setAsking(false)} title="Remove your logo?" text="It comes off your public profile and course pages, and your initials show instead. You can upload a logo again at any time." confirmLabel="Remove logo" onConfirm={remove} />
@@ -338,9 +331,9 @@ export function VenuesTab({ say }) {
   const toggleActive = (v) =>
     setActive.mutate({ organisationId, venueId: v.id, active: !v.active }, {
       onSuccess: () => { setArchiving(null); refresh(); say(v.active ? "Venue archived" : "Venue restored"); },
-      onError: (e) => { setArchiving(null); say(errorText(e)); },
+      onError: (e) => { setArchiving(null); say(errorText(e), { error: true }); },
     });
-  const edit = can("provider.cohorts.edit");
+  const edit = can("provider.venues.edit");
   const refresh = () => utils.provider.venues.list.invalidate({ organisationId });
 
   if (query.isError) return <ErrorState title="We couldn't load your venues." text="Check your connection, then try again." onRetry={() => query.refetch()} />;
@@ -364,7 +357,7 @@ export function VenuesTab({ say }) {
                 <div>
                   <b>{v.name}</b>{!v.active && <> <Pill tone="muted">Archived</Pill></>}
                   <small>{[v.street, v.city, v.postcode].filter(Boolean).join(", ")}</small>
-                  <small>{v.upcoming ? `${v.upcoming} upcoming ${v.upcoming === 1 ? "date" : "dates"}` : "No upcoming dates"}{v.located ? "" : v.problem ? ` · ${v.problem} Edit the venue to put it right.` : " · We couldn't check this town yet; we'll try again."}</small>
+                  <small>{v.upcoming ? `${v.upcoming} upcoming ${v.upcoming === 1 ? "date" : "dates"}` : "No upcoming dates"}{v.located ? "" : v.problem ? ` · ${v.problem}${edit ? " Edit the venue to put it right." : ""}` : " · We couldn't check this town yet; we'll try again."}</small>
                   {v.courses.length > 0 && <small>Courses: {v.courses.map((c, n) => <React.Fragment key={c.id}>{n > 0 && ", "}<Link href={links.course(c.id)} className="rt-cd__link">{c.title}</Link></React.Fragment>)}</small>}
                 </div>
                 {edit && (
@@ -383,7 +376,7 @@ export function VenuesTab({ say }) {
       ) : <EmptyState title="No venues yet" text="Add the places you run classroom courses. Each classroom date picks one." action={edit ? { label: "Add venue", onClick: () => setEditing(null) } : null} />}
 
       <VenueSheet open={editing !== undefined} venue={editing || null} onClose={() => setEditing(undefined)} onSaved={(r, isNew) => { setEditing(undefined); refresh(); say(r.located ? (isNew ? "Venue added" : "Venue saved") : r.unchecked ? "Venue saved. We couldn't check its town just now; we'll try again." : "Venue saved, but we couldn't find its postcode on the map"); }} />
-      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `${archiving.name} can't be picked for new dates. Its dates keep it, and you can restore it at any time.${archiving.upcoming ? " Any of its upcoming dates still taking bookings need their bookings turned off, or to be cancelled, first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
+      <Confirm open={Boolean(archiving)} onClose={() => setArchiving(null)} title="Archive this venue?" text={archiving ? `It won't be offered for new dates; dates already there keep it. You can restore it any time.${archiving.upcoming ? " Turn off bookings on its upcoming dates first." : ""}` : ""} confirmLabel={setActive.isPending ? "Archiving…" : "Archive venue"} busy={setActive.isPending} onConfirm={() => toggleActive(archiving)} />
     </div>
   );
 }

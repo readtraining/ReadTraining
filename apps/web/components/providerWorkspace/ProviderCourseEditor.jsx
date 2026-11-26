@@ -12,7 +12,7 @@ import { useProviderAccess } from "@/lib/providerAccess";
 import { CourseEndpoints, isStale, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
 import { useWorkspaceLinks } from "@/lib/workspaceContext";
 import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
-import { acceptFor, hintFor, prepareImage, whenLoaded } from "@/lib/images";
+import { acceptFor, prepareImage, shortHintFor, whenLoaded } from "@/lib/images";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom, errorText } from "@/lib/useMe";
 import { videoEmbed } from "@/lib/catalogueData";
@@ -60,6 +60,10 @@ const pricingLabel = (methods) => {
 // a shared course page (written by ReadTraining's team) has no price, dates or way of teaching of its own: its providers' courses do
 const SHARED_SECTIONS = ["landing", "info", "syllabus", "after", "faqs", "seo", "providers", "review"];
 const FORM_SECTIONS = ["landing", "info", "syllabus", "faqs", "mode", "pricing"];
+// the shortest short description and description a course can be sent with (the API's MIN_TEXT, provider/courses.mts): a draft saves
+// with less, but the step isn't complete until they are this long
+const MIN = { summary: 50, description: 200 };
+const longEnough = (text, key) => text.trim().length >= MIN[key];
 const LIMITS = { title: 60, summary: 300, feature: 70, outcome: 160 }; // a title saved longer before the 60 limit stays until changed (the API's refuseLongTitle)
 // how many of each list a course can have (the API's limits, provider/courses.mts `content`)
 const MOST = { features: 12, outcomes: 20, units: 40, exams: 20, faqs: 30 };
@@ -88,11 +92,77 @@ const SCORE_OF = new RegExp(String.raw`${NUM}\s+of\s+${NUM}(?:\s*(?:marks?|point
 export function passMarkProblem(text) {
   const t = (text || "").trim().toLowerCase();
   if (!t) return "";
+  if (/^[\d.]*\s*%$/.test(t) && !/\d/.test(t)) return "Enter the percentage needed to pass.";
+  if (/^[\d.]*\s*out of\s*[\d.]*$/.test(t) && !/^\d+(?:\.\d+)?\s*out of\s*\d+(?:\.\d+)?$/.test(t)) return "Enter the score needed and the total, like 26 out of 40.";
   const pct = t.match(/(\d+(?:\.\d+)?)\s*(?:%|per\s*cent\b)/);
   if (pct && Number(pct[1]) > 100) return "A percentage pass mark can't be over 100%.";
   const score = t.match(SCORE) || t.match(SCORE_OF);
   if (score && (Number(score[2]) === 0 || Number(score[1]) > Number(score[2]))) return "The pass mark can't be more than the total, like 26 out of 40.";
   return "";
+}
+// A pass mark is one of three kinds, chosen, never typed as words: a percentage ("70%"), a score ("26 out of 40") or "Pass or fail".
+// It is saved as that text (passMarkProblem above and the API check it), and the kind is read from the text alone ("%" alone is a
+// percentage not filled in yet, "out of" alone a score), so it always belongs to its own row. One saved before as other words shows
+// what it says until a kind is chosen, and stays as it was until then.
+const PASS_KINDS = [{ value: "percent", label: "Percentage" }, { value: "score", label: "Score" }, { value: "passfail", label: "Pass or fail" }];
+const PASS_OR_FAIL = "Pass or fail";
+const passKindOf = (v) => {
+  const t = (v || "").trim();
+  if (/^\d*(?:\.\d*)?\s*%$/.test(t)) return "percent";
+  if (/^\S*\s*out of\s*\S*$/i.test(t)) return "score";
+  if (t.toLowerCase() === PASS_OR_FAIL.toLowerCase()) return "passfail";
+  return "";
+};
+// what can be typed in a pass mark's number box: digits and one decimal point
+const digits = (v) => {
+  const d = v.replace(/[^\d.]/g, "");
+  const dot = d.indexOf(".");
+  return (dot < 0 ? d : d.slice(0, dot + 1) + d.slice(dot + 1).replace(/\./g, "")).slice(0, 6);
+};
+const NUMBER = /^\d+(?:\.\d+)?$/;
+// a pass mark chosen but not filled in: what to say, and which box to put the cursor in
+function passMarkGap(v) {
+  const t = (v || "").trim();
+  const kind = passKindOf(t);
+  if (kind === "percent" && !NUMBER.test(t.replace(/\s*%$/, ""))) return "Enter the percentage needed to pass.";
+  if (kind === "score") {
+    const [got = "", total = ""] = t.split(/\s*out of\s*/i);
+    if (!NUMBER.test(got) || !NUMBER.test(total)) return "Enter the score needed and the total, like 26 out of 40.";
+  }
+  return "";
+}
+function PassMarkField({ id, value, onChange, disabled, error }) {
+  const t = (value || "").trim();
+  const kind = passKindOf(t);
+  const pct = kind === "percent" ? t.replace(/\s*%$/, "") : "";
+  const [got = "", total = ""] = kind === "score" ? t.split(/\s*out of\s*/i) : [];
+  const choose = (k) => onChange(k === "passfail" ? PASS_OR_FAIL : k === "score" ? " out of " : "%");
+  const err = error ? `${id}-e` : undefined;
+  // the error takes the cursor to the box still to fill (the kind when none is chosen)
+  const focusId = kind === "percent" ? `${id}-pct` : kind === "score" ? (NUMBER.test(got) ? `${id}-total` : `${id}-got`) : id;
+  return (
+    <div className="rt-field rt-pws-ce__exam-wide" role="group" aria-labelledby={`${id}-l`}>
+      <label htmlFor={id} id={`${id}-l`}>Pass mark<Req /></label>
+      {t && !kind && <span className="rt-field__hint" id={`${id}-old`}>Saved as “{t}”. Choose how it is marked to replace it.</span>}
+      {error && <p className="rt-q__err" id={err} data-focus-id={focusId}><span className="rt-sr">Error: </span>{error}</p>}
+      <div className="rt-pws-ce__pm">
+        <FieldSelect id={id} label="How it is marked" placeholder="Choose how it is marked" value={kind} onChange={choose} options={PASS_KINDS} disabled={disabled} invalid={Boolean(error) && !kind} describedBy={[t && !kind && `${id}-old`, err].filter(Boolean).join(" ") || undefined} />
+        {kind === "percent" && (
+          <span className="rt-pws-ce__pmunit">
+            <input id={`${id}-pct`} type="text" inputMode="decimal" value={pct} onChange={(ev) => onChange(`${digits(ev.target.value)}%`)} disabled={disabled} aria-label="Pass mark percentage" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
+            <span aria-hidden="true">%</span>
+          </span>
+        )}
+        {kind === "score" && (
+          <span className="rt-pws-ce__pmscore">
+            <input id={`${id}-got`} type="text" inputMode="decimal" value={got} onChange={(ev) => onChange(`${digits(ev.target.value)} out of ${total}`)} disabled={disabled} aria-label="Score needed to pass" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
+            <span>out of</span>
+            <input id={`${id}-total`} type="text" inputMode="decimal" value={total} onChange={(ev) => onChange(`${got} out of ${digits(ev.target.value)}`)} disabled={disabled} aria-label="Total marks" aria-invalid={error ? true : undefined} aria-describedby={err} autoComplete="off" />
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 const STATUS_NOTES = {
   draft: "Your course is a draft. Only your team can see it.",
@@ -144,7 +214,7 @@ const datesGap = (lacking) => `Create a ${lacking.map(methodName).join(" and a "
 // whether each section is complete, from the draft (and the saved images and dates). The API counts a draft's required steps
 // left by the same rules for the Dashboard's to-do list (provider/courses.mts stepsLeft): keep the two the same.
 function sectionOk(d, course, key) {
-  if (key === "landing") return Boolean(d.title.trim() && d.summary.trim() && d.description.trim() && d.category && d.subcategory && d.level && d.compliance !== null && course.images.length);
+  if (key === "landing") return Boolean(d.title.trim() && longEnough(d.summary, "summary") && longEnough(d.description, "description") && d.category && d.subcategory && d.level && d.compliance !== null && course.images.length);
   if (key === "info") return d.outcomes.length >= 4;
   if (key === "syllabus") return d.units.length > 0;
   if (key === "faqs") return d.faqs.length > 0;
@@ -162,8 +232,8 @@ function sectionOk(d, course, key) {
 function stillNeeded(d, course) {
   const out = [];
   const add = (section, text) => out.push({ section, text });
-  if (!d.summary.trim()) add("landing", "a short description");
-  if (!d.description.trim()) add("landing", "a description");
+  if (!longEnough(d.summary, "summary")) add("landing", `a short description of at least ${MIN.summary} characters`);
+  if (!longEnough(d.description, "description")) add("landing", `a description of at least ${MIN.description} characters`);
   if (!d.category || !d.subcategory) add("landing", "a category and sub-category");
   if (!d.level) add("landing", "a level");
   if (d.compliance === null) add("landing", "whether it is a compliance course");
@@ -188,11 +258,13 @@ function stepGaps(d, course, key) {
   const e = {};
   if (key === "landing") {
     if (!d.summary.trim()) e.summary = "Enter a short description.";
+    else if (!longEnough(d.summary, "summary")) e.summary = `Write at least ${MIN.summary} characters (${d.summary.trim().length} so far).`;
     if (!d.level) e.level = "Choose a level.";
     if (!d.category) e.category = "Choose a category.";
     if (!d.subcategory) e.subcategory = "Choose a sub-category.";
     if (d.compliance === null) e.compliance = pw.compliance.error;
     if (!d.description.trim()) e.description = "Enter the course description.";
+    else if (!longEnough(d.description, "description")) e.description = `Write at least ${MIN.description} characters (${d.description.trim().length} so far).`;
     if (!course.images.length) e.images = "Upload at least one image.";
   }
   if (key === "info" && d.outcomes.length < 4) e.outcomes = `Add at least 4 things learners will learn (${d.outcomes.length} so far).`;
@@ -200,7 +272,8 @@ function stepGaps(d, course, key) {
   // an exam row (optional) needs all three parts: the course page shows it as a line of a table
   if (key === "syllabus") d.exams.forEach((x, i) => {
     if (!x.unit.trim()) e[`examUnit${i}`] = "Name this exam or unit, or remove the row.";
-    if (!x.passMark.trim()) e[`passMark${i}`] = "Enter the pass mark, like 70% or 26 out of 40.";
+    if (!x.passMark.trim()) e[`passMark${i}`] = "Choose how the exam is marked, and its pass mark.";
+    else if (passMarkGap(x.passMark)) e[`passMark${i}`] = passMarkGap(x.passMark);
     if (!x.duration.trim()) e[`examDuration${i}`] = "Enter how long it takes, like 45 minutes.";
   });
   if (key === "mode" && course.kind === "provider" && !d.methods.includes(d.method)) e.method = "Choose the primary learning option.";
@@ -402,8 +475,11 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     const goes = (k) => changed.includes(k)
       || (changed.includes("exams") && /^(examUnit|passMark|examDuration|examAssessment)\d+$/.test(k))
       || ((changed.includes("price") || changed.includes("planId")) && (k === "price" || k === "planId"));
-    setErrors((e) => (Object.keys(e).some(goes) ? Object.fromEntries(Object.entries(e).filter(([k]) => !goes(k))) : e));
-  }, [draft]);
+    // nothing to take away: no state change at all, or every keystroke would cost a second render, and fast typing chains those
+    // into React's nested-update limit, which drops the letter being typed
+    if (!Object.keys(errors).some(goes)) return;
+    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !goes(k))));
+  }, [draft]); // eslint-disable-line react-hooks/exhaustive-deps -- errors: read as they are when the draft changes
 
   if (!id || query.error?.data?.code === "NOT_FOUND" || (ep.admin && course && course.kind !== "shared")) return <EmptyState title="This course was not found" text={ep.admin ? "It may have been deleted. Only shared course pages are edited here." : "It may have been deleted, or it belongs to another provider."} action={back} />;
   if (query.error?.data?.code === "FORBIDDEN") return <EmptyState title="You can't open this course" text="Your role doesn't include courses. Ask an owner or admin if you need it." action={back} />;
@@ -420,8 +496,6 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const noDates = course.kind === "provider" && waysOf(course, { open: true }).some(isDatedMethod) && !course.bookableCohorts;
   const ticks = sections.map((x) => ({ ...x, label: x.key === "pricing" ? pricingLabel(base.methods) : x.key === "review" ? (ep.admin ? "Review and publish" : "Review and send") : x.label, ok: x.key === "review" ? !stillNeeded(base, course).length : sectionOk(base, course, x.key) }));
   const steps = ticks.filter((x) => !x.optional && !x.final);
-  // before a course is live, the first required step still to do is marked Next, so a new provider sees where to start
-  const nextKey = isLive ? null : steps.find((x) => !x.ok)?.key;
   // a step's status under its name, from what is saved: Complete (the learning options name themselves, the primary first, and the
   // performance model, which a new course starts as Bookings: "Classroom · Live online · Bookings"), "3 to add", No dates yet,
   // Optional
@@ -498,7 +572,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
     if (draft.videoUrl.trim() && !videoEmbed(draft.videoUrl.trim())) e.videoUrl = "Use a link to one YouTube or Vimeo video, starting https://.";
     draft.exams.forEach((x, i) => {
       if (!x.unit.trim()) e[`examUnit${i}`] = "Name this exam or unit, or remove the row.";
-      const problem = x.passMark.trim() ? passMarkProblem(x.passMark) : "Enter the pass mark, like 70% or 26 out of 40.";
+      const problem = x.passMark.trim() ? passMarkGap(x.passMark) || passMarkProblem(x.passMark) : "Choose how the exam is marked, and its pass mark.";
       if (problem) e[`passMark${i}`] = problem;
       if (!x.duration.trim()) e[`examDuration${i}`] = "Enter how long it takes, like 45 minutes.";
     });
@@ -747,10 +821,12 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
       </section>
 
       {stale && (
-        <div className="rt-acc__notice -warn rt-pws-ce__stale" role="alert" tabIndex={-1} ref={staleRef}>
-          <b>This course was changed somewhere else since you opened it.</b>
-          <p>Someone else, or you in another tab, saved a newer version. Your changes are not saved, so nothing was overwritten. Copy anything you want to keep, then load the latest version and make your change again.</p>
-          <button type="button" className="button -sm -purple-1 text-white" onClick={loadLatest} disabled={reloading} aria-busy={reloading || undefined}>{reloading ? "Loading…" : "Load the latest version"}</button>
+        <div className="rt-pws-ce__stale" role="alert" tabIndex={-1} ref={staleRef}>
+          <div>
+            <b>A newer version of this course was saved</b>
+            <p>Someone else, or you in another tab, saved it after you opened it. Your changes here were not saved, so nothing was overwritten. Copy anything you want to keep, then load the newer version.</p>
+          </div>
+          <button type="button" className="button -sm -outline-dark-1 text-dark-1" onClick={loadLatest} disabled={reloading} aria-busy={reloading || undefined}>{reloading ? "Loading…" : "Load newer version"}</button>
         </div>
       )}
       {course.pendingChanges && (
@@ -775,7 +851,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
               <li key={x.key}>
                 <button type="button" className={`rt-pws-ce__step${tab === x.key ? " is-on" : ""}`} onClick={() => changeTab(x.key)} disabled={imagesBusy && tab !== x.key} aria-current={tab === x.key ? "step" : undefined}>
                   <span className={`rt-pws-course-tick${x.ok ? " is-ok" : ""}`} aria-hidden="true">{x.ok ? <i className="icon-check text-10"></i> : null}</span>
-                  <span className="rt-pws-ce__steptext"><span>{x.label}{x.key === nextKey && <> <Pill tone="info">Next</Pill></>}</span><small className={`rt-pws-ce__stepstatus${!x.ok && !x.optional ? " -todo" : ""}`}><span className="rt-sr">: </span>{stepStatus(x)}</small></span>
+                  <span className="rt-pws-ce__steptext"><span>{x.label}</span><small className={`rt-pws-ce__stepstatus${!x.ok && !x.optional ? " -todo" : ""}`}><span className="rt-sr">: </span>{stepStatus(x)}</small></span>
                 </button>
               </li>
             ))}
@@ -801,16 +877,15 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
             <p className="rt-acc__note">How the course page shows in Google and other search results.</p>
             <SeoPanel key={latest.n} course={latest.course || course} onSaved={saved} formId="rt-pws-ce-seo-form" onState={setSeo} saveRef={seoSave} />
           </section>
-          {/* the bar keeps its buttons where they are: "Unsaved changes" keeps its place while hidden, each button keeps the width of
-              its own label while it says "Saving…", and the second button always says what it does. Nothing to do there (a role
-              that can only look, on a course past its building steps): no bar. */}
+          {/* the bar: Previous on the left; Save, and Continue ("Save and continue" while something is unsaved) on the right. Each
+              button keeps the width of its own label while it says "Saving…". Nothing to do there (a role that can only look, on a
+              course past its building steps): no bar. */}
           {((building && (prev || next)) || access.page || send) && (
             <div className="rt-acc__card rt-pws-ce__bar">
-              {building && prev ? <button type="button" className="rt-cd__link rt-pws-ce__back" onClick={() => goTo(prev)} disabled={busy || saving || imagesBusy}><i className="icon-arrow-left text-12" aria-hidden="true"></i><span className="rt-sr">Back to </span><span className="rt-pws-ce__backname">{prev.label}</span></button> : <span></span>}
+              {building && prev ? <button type="button" className="button -md -outline-dark-1 text-dark-1 rt-pws-ce__back" onClick={() => goTo(prev)} disabled={busy || saving || imagesBusy}><i className="icon-arrow-left text-12" aria-hidden="true"></i><span className="rt-pws-ce__backname">Previous</span><span className="rt-sr">: {prev.label}</span></button> : <span></span>}
               <div className="rt-pws-ce__baractions">
-                {access.page && <span className={`rt-pws-course-unsaved${unsaved ? "" : " is-hidden"}`} aria-hidden={!unsaved || undefined}><i className="icon-edit text-12" aria-hidden="true"></i>Unsaved changes</span>}
                 {access.page && <button type="button" className={`button -md ${(building && next) || send ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"}`} onClick={async () => { setPressed("save"); await saveAll(); setPressed(""); }} disabled={busy || saving || imagesBusy || !unsaved} aria-busy={(pressed === "save" && saving) || undefined}><KeepWidth label="Save" busy={pressed === "save" && saving} working="Saving…" /></button>}
-                {building && next && <button type="button" className="button -md -purple-1 text-white" onClick={async () => { setPressed("continue"); await goTo(next, { check: true }); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-busy={(pressed === "continue" && saving) || undefined}><KeepWidth label={access.page ? "Save and continue" : "Continue"} busy={pressed === "continue" && saving} working="Saving…" /><span className="rt-sr">: {next.label}</span></button>}
+                {building && next && <button type="button" className="button -md -purple-1 text-white" onClick={async () => { setPressed("continue"); await goTo(next, { check: true }); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-busy={(pressed === "continue" && saving) || undefined}><KeepWidth label={access.page && unsaved ? "Save and continue" : "Continue"} busy={pressed === "continue" && saving} working="Saving…" /><span className="rt-sr">: {next.label}</span></button>}
                 {send && <button type="button" className={`button -md ${ready ? "-purple-1 text-white" : "-outline-purple-1 text-purple-1"}`} onClick={async () => { setSendAt("bar"); setPressed("send"); await submit(); setPressed(""); }} disabled={busy || saving || imagesBusy} aria-haspopup={ready ? undefined : "dialog"} aria-describedby={submitError && errorAt === "bar" ? "rt-pws-ce-need" : undefined} aria-busy={(pressed === "send" && (busy || saving)) || undefined}><KeepWidth label={ep.admin ? "Publish" : "Send for approval"} busy={pressed === "send" && (busy || saving)} working={ep.admin ? "Publishing…" : "Sending…"} /></button>}
               </div>
             </div>
@@ -957,8 +1032,11 @@ function ProvidersSection({ course }) {
   );
 }
 
-function Counter({ value, max }) {
-  return <span className="rt-field__hint rt-pws-course-count">{value.length} of {max}</span>;
+// characters typed: "23 of 300", or while under a minimum "23 of at least 50" (a box with no real limit shows it only then)
+function Counter({ value, max, min }) {
+  const n = value.trim().length;
+  if (min && n < min) return <span className="rt-field__hint rt-pws-course-count">{n} of at least {min}</span>;
+  return max ? <span className="rt-field__hint rt-pws-course-count">{value.length} of {max}</span> : null;
 }
 const FieldErr = ({ id, text }) => (text ? <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{text}</p> : null);
 const useSet = (setDraft) => (key) => (value) => setDraft((d) => ({ ...d, [key]: value }));
@@ -987,10 +1065,10 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         </div>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-sub">Short description<Req /></label>
-          <span className="rt-field__hint" id="rt-pws-ce-sub-h">One or two sentences under the title: who it is for and what they get.</span>
+          <span className="rt-field__hint" id="rt-pws-ce-sub-h">One or two sentences under the title: who it is for and what they get. At least {MIN.summary} characters.</span>
           <FieldErr id="rt-pws-ce-sub" text={errors.summary} />
           <TextArea id="rt-pws-ce-sub" rows={2} value={draft.summary} maxLength={LIMITS.summary} onChange={(e) => set("summary")(e.target.value)} disabled={page} aria-invalid={errors.summary ? true : undefined} aria-describedby={`rt-pws-ce-sub-h${errors.summary ? " rt-pws-ce-sub-e" : ""}`} autoComplete="off" />
-          <Counter value={draft.summary} max={LIMITS.summary} />
+          <Counter value={draft.summary} max={LIMITS.summary} min={MIN.summary} />
         </div>
         <div className="rt-pws-course-grid3">
           <div className="rt-field">
@@ -1023,9 +1101,10 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         <p className="rt-acc__note">{shared ? pw.compliance.sharedHint : pw.compliance.hint}</p>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-details">Course description<Req /></label>
-          <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed. Leave a blank line between paragraphs. Lines starting with "- " show as a list.</span>
+          <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed, in at least {MIN.description} characters. Leave a blank line between paragraphs. Lines starting with "- " show as a list.</span>
           <FieldErr id="rt-pws-ce-details" text={errors.description} />
           <TextArea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-invalid={errors.description ? true : undefined} aria-describedby={`rt-pws-ce-details-h${errors.description ? " rt-pws-ce-details-e" : ""}`} autoComplete="off" />
+          <Counter value={draft.description} min={MIN.description} />
         </div>
       </section>
 
@@ -1168,14 +1247,13 @@ function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
   return (
     <section className="rt-pws-course-form" aria-labelledby="rt-pws-ce-media-h" aria-busy={busy || undefined}>
       <h3 className="rt-adm-h3" id="rt-pws-ce-media-h">Course images<Req /></h3>
-      <p className="rt-acc__note">The first image is the cover. Images save as soon as you add or change them.</p>
       {error && <p className="rt-q__err" role="alert"><span className="rt-sr">Error: </span>{error}</p>}
       {required && !list.length && !error && <p className="rt-q__err"><span className="rt-sr">Error: </span>{required}</p>}
       {!disabled && (
         <div className="rt-pws-course-mediabar">
           <input ref={fileRef} type="file" accept={acceptFor("course")} className="rt-sr" id="rt-pws-ce-file" onChange={onFile} tabIndex={-1} aria-hidden="true" />
           <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => fileRef.current?.click()} disabled={busy || saved.length >= 10}>{action === "upload" ? "Uploading…" : "Upload course image"}</button>
-          <span className="rt-field__hint">{saved.length >= 10 ? "A course can have up to 10 images. Remove one to add another." : `${hintFor("course")} No text on the image.`}</span>
+          <span className="rt-field__hint">{saved.length >= 10 ? "A course can have up to 10 images. Remove one to add another." : shortHintFor("course")}</span>
         </div>
       )}
       {list.length ? (
@@ -1212,7 +1290,7 @@ function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
             {lastOfLive ? (
               <p className="rt-acc__note">A live course needs at least one image. Upload another, then remove this one.</p>
             ) : (
-              <p className="rt-acc__note">It comes off the course page and is deleted for good. {shown[0]?.id === removing.id && shown.length > 1 ? "The next image becomes the cover." : shown.length === 1 ? "The course then has no image, and needs one before it can be sent for approval." : ""}</p>
+              <p className="rt-acc__note">The image is removed from the course and can’t be restored. {shown[0]?.id === removing.id && shown.length > 1 ? "The next image becomes the cover." : shown.length === 1 ? "The course then has no image, and needs one before it can be sent for approval." : ""}</p>
             )}
             <div className="rt-adm-cellrow">
               {!lastOfLive && <button type="button" className="button -md -outline-red-3 text-red-3" onClick={doRemove} disabled={busy}>Remove image</button>}
@@ -1337,16 +1415,12 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
                   <input id={`rt-pws-ce-ex-u${i}`} value={e.unit} maxLength={120} onChange={(ev) => setExam(i, { unit: ev.target.value })} disabled={locked} placeholder="For example: Multiple choice paper" autoComplete="off" aria-invalid={errors[`examUnit${i}`] ? true : undefined} aria-describedby={errors[`examUnit${i}`] ? `rt-pws-ce-ex-u${i}-e` : undefined} />
                 </div>
                 <div className="rt-field">
-                  <label htmlFor={`rt-pws-ce-ex-p${i}`}>Pass mark<Req /></label>
-                  {errors[`passMark${i}`] && <p className="rt-q__err" id={`rt-pws-ce-ex-p${i}-e`}><span className="rt-sr">Error: </span>{errors[`passMark${i}`]}</p>}
-                  <input id={`rt-pws-ce-ex-p${i}`} value={e.passMark} maxLength={40} onChange={(ev) => setExam(i, { passMark: ev.target.value })} disabled={locked} placeholder="For example: 70%" autoComplete="off" aria-invalid={errors[`passMark${i}`] ? true : undefined} aria-describedby={errors[`passMark${i}`] ? `rt-pws-ce-ex-p${i}-e` : undefined} />
-                </div>
-                <div className="rt-field">
                   <label htmlFor={`rt-pws-ce-ex-d${i}`}>Duration<Req /></label>
                   <FieldErr id={`rt-pws-ce-ex-d${i}`} text={errors[`examDuration${i}`]} />
                   <input id={`rt-pws-ce-ex-d${i}`} value={e.duration} maxLength={40} onChange={(ev) => setExam(i, { duration: ev.target.value })} disabled={locked} placeholder="45 minutes" autoComplete="off" aria-invalid={errors[`examDuration${i}`] ? true : undefined} aria-describedby={errors[`examDuration${i}`] ? `rt-pws-ce-ex-d${i}-e` : undefined} />
                 </div>
                 {!locked && <button type="button" className="rt-pws-ce__iconbtn -danger" onClick={() => askRemove("exams", i, e.unit || `exam row ${i + 1}`, !e.unit && !e.passMark && !e.duration && !e.assessment)} aria-haspopup="dialog" aria-label={`Remove exam row ${i + 1}`} title="Remove"><i className="icon-bin text-14" aria-hidden="true"></i></button>}
+                <PassMarkField id={`rt-pws-ce-ex-p${i}`} value={e.passMark} onChange={(v) => setExam(i, { passMark: v })} disabled={locked} error={errors[`passMark${i}`]} />
                 <div className="rt-field rt-pws-ce__exam-wide">
                   <label htmlFor={`rt-pws-ce-ex-a${i}`}>Assessment</label>
                   {i === 0 && <span className="rt-field__hint" id="rt-pws-ce-ex-a-h">Optional, like 72 multiple-choice questions.</span>}
@@ -1512,7 +1586,6 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
   const { organisationId, can } = useProviderAccess();
   const [adding, setAdding] = useState(false);
   const ep = useEndpoints();
-  const enquiries = course.model === "enquiries";
   const selfPaced = draft.methods.includes("self-paced");
   const dated = draft.methods.filter(isDatedMethod);
   const savedDated = LEARNING_OPTIONS.filter((m) => isDatedMethod(m) && waysOf(course).includes(m));
@@ -1535,8 +1608,6 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
       set("price")(flatPrice.current);
     }
   };
-  // what each date has of its own: a venue (classroom), a joining link (live online)
-  const own = savedDated.length > 1 ? "venue or joining link, " : savedDated[0] === "classroom" ? "venue, " : "joining link, ";
   // how many dates it has, or which way still has none learners can book (sending it for approval needs one on each)
   const lacking = datesNeeded(draft, course);
   // a date just created counts at once (its way has a date learners can book, so "Create a … cohort" goes), not only once the
@@ -1557,7 +1628,6 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
           <div className="rt-pws-ce__part">
             {dated.length > 0 && <h3 className="rt-adm-h3">{methodName("self-paced")}</h3>}
             {/* pricing mode: Flat (one price) or Tiered (packages from a price plan) */}
-            {access.staffPrices && <p className="rt-acc__note">Prices are the provider’s own, so you can’t change them as ReadTraining staff.</p>}
             <Choice name="rt-pws-ce-pricing" legend="Pricing" value={tiered ? "tiered" : "flat"} disabled={locked} onChange={(v) => !locked && setTiered(v === "tiered")}
               options={[{ value: "flat", label: "Flat: one price" }, { value: "tiered", label: "Tiered: packages from a price plan" }]} />
             {tiered ? (
@@ -1585,7 +1655,6 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
               <p className="rt-acc__note">Save your learning options first: the dates follow from them.</p>
             ) : (
               <>
-                <p className="rt-acc__note">Each date (a cohort) has its own {own}places and price: you can charge more for a Saturday or a busy month. {enquiries ? "Learners see the dates once the course is live and send you an enquiry." : "Learners see the dates once the course is live."}</p>
                 <FieldErr id="rt-pws-ce-dates" text={errors.dates && lacking.length ? datesGap(lacking) : ""} />
                 <div className="rt-pws-ce__dates">
                   <p className="rt-pws-ce__datecount">{dateLine}</p>
