@@ -10,6 +10,7 @@ import PackageEditor from "./PackageEditor";
 import { Loading, Pill, RowMenu, Search, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { Confirm } from "./settingsForm";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { pw } from "@/data/providerWorkspace";
 import { ColWidths, HeaderAction } from "@/components/admin/adminParts";
 
 // every plan by default; "Active" and "Archived" narrow it to one status (the words of the Status column)
@@ -29,6 +30,13 @@ const usedText = (u) => [u.dates ? `${u.dates} upcoming ${u.dates === 1 ? "date"
 // ever used it, deleted. ReadTraining staff open a plan for its features, taglines and "Most popular" only. Search and the archive filter
 // are kept in the address.
 export default function ProviderPackages() {
+  const { staff, status } = useProviderAccess();
+  // an account our team hasn't approved yet can't make plans: the page says so, as the courses list does
+  if (!staff && (status === "pending" || status === "changes_requested")) return <EmptyState title={pw.notApproved.title} text={pw.notApproved.text} action={pw.notApproved.action} />;
+  return <PricePlans />;
+}
+
+function PricePlans() {
   const { organisationId, can, staff } = useProviderAccess();
   const edit = can("provider.pricing.edit");
   const open = can("provider.pricing.features");

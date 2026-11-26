@@ -132,10 +132,16 @@ function timetable(list = []) {
 
 // A price plan's packages (API publicTiers) as the booking parts read them, in pounds; `key` is the package's name in lower case
 // (names are unique in a plan), so a basket line keeps which one was chosen; `firstAid`: it includes Emergency First Aid at Work
-// (the booking then doesn't ask about it). Null for a date or course with one flat price.
+// (the booking then doesn't ask about it); `includes`: the provider's other courses in its price ("Courses included"), each with
+// its page (`dated`: the learner will choose its date). Null for a date or course with one flat price.
+const toIncluded = (c) => ({ id: c.id, name: c.name, course: { title: c.name, href: c.href }, firstAid: Boolean(c.firstAid), dated: Boolean(c.dated) });
 const toPackages = (tiers) =>
   Array.isArray(tiers) && tiers.length >= 2
-    ? tiers.map((t) => ({ key: t.name.trim().toLowerCase(), name: t.name, price: pounds(t.pricePence), wasPrice: pounds(t.wasPence), tagline: t.tagline || "", popular: Boolean(t.popular), firstAid: Boolean(t.firstAid), features: t.features || [] }))
+    ? tiers.map((t) => ({
+        key: t.name.trim().toLowerCase(), name: t.name, price: pounds(t.pricePence), wasPrice: pounds(t.wasPence), tagline: t.tagline || "", popular: Boolean(t.popular), firstAid: Boolean(t.firstAid),
+        includes: (t.includes || []).map(toIncluded),
+        features: t.features || [],
+      }))
     : null;
 
 // a learning option's booking mode on the course page
