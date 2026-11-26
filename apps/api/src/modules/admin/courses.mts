@@ -16,6 +16,7 @@ import { IMAGE_TYPES, MEDIA_PATH } from '../../lib/media.mjs'
 import { slugify } from '../../lib/slug.mjs'
 import { adminProcedure, createTRPCRouter, limit, refuse } from '../../trpc/trpc.mjs'
 import { loadCoursePage, loadListings } from '../catalogue/listings.mjs'
+import { includedCourses, includedIds } from '../provider/plans.mjs'
 import {
   addCourseImage,
   applyContent,
@@ -207,7 +208,10 @@ async function pricingView(db: typeof Db, course: { id: number; kind: string; me
         from public.price_plans p where p.id in (${sql.join(planIds.map((x) => sql`${x}::uuid`), sql`, `)})`)
     : []
   const usedBy = new Map(used.map((u) => [u.id, { dates: u.dates, courses: u.courses }]))
+  // the courses the packages include (any status: our team sees what the provider chose)
+  const included = await includedCourses(db, includedIds(plans.map((x) => x.tiers)))
   return {
+    courseNames: Object.fromEntries([...included].map(([id, c]) => [id, { name: c.name, firstAid: c.firstAid }])),
     selfPaced: selfPaced ? { pricePence: course.pricePence, planId: course.planId, closed: course.closedMethods.includes('self-paced') } : null,
     // the ways it is taught on dates (classroom, live online), each shown with its own dates, even when it has none yet
     dated: course.methods.filter(isDated),

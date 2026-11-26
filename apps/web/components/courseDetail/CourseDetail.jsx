@@ -20,6 +20,7 @@ import CourseFaqs from "@/components/courseDetail/CourseFaqs";
 import LongBody from "@/components/courseDetail/LongBody";
 import MockTestBanner from "@/components/courseDetail/MockTestBanner";
 import { Check } from "@/components/courseDetail/Icon";
+import PackagesSection, { packagesOf } from "@/components/courseDetail/PackagesSection";
 import { AudienceSection, BusinessSection, CompareTable, GuideText, LicenceSection, TickCard } from "@/components/courseDetail/CourseGuide";
 import { getSubjectLabel } from "@/lib/courses";
 import { abs, jsonLd } from "@/lib/seo";
@@ -27,7 +28,7 @@ import { CATALOGUE_HREF } from "@/lib/routes";
 import FormattedText from "@/components/forms/FormattedText";
 
 // The sections, in this order, in our own design: features > learning options > overview > who it's for > comparison > mock test >
-// what you will learn > course content > course week > what's included > exams > requirements > business > steps >
+// what you will learn > course content > course week > what's included > exams > requirements > packages > business > steps >
 // costs > careers > why book with Read Training (the same on every course page) > the provider's terms > FAQs > reviews > more courses > need help >
 // footer. The booking card is sticky on
 // the right. `course`: a live course (lib/catalogueData.js toCourseDetail); a section it has nothing for is left out, and
@@ -54,6 +55,7 @@ export default function CourseDetail({ course, query = {}, path, reviews = null 
     { id: "overview", label: "Overview" },
     ...(course.modules.length ? [{ id: "content", label: "Course content" }] : []),
     ...(requirements ? [{ id: "requirements", label: "Requirements" }] : []),
+    ...(course.kind !== "shared" && packagesOf(course.sessions).length ? [{ id: "packages", label: "Packages" }] : []),
     ...(guide?.business ? [{ id: "business", label: "For business" }] : []),
     ...(guide?.licence ? [{ id: "licence", label: "Your licence" }] : []),
     ...(course.faqs.length ? [{ id: "faqs", label: "FAQs" }] : []),
@@ -190,6 +192,8 @@ export default function CourseDetail({ course, query = {}, path, reviews = null 
                     </LongBody>
                   </section>
                   )}
+
+                  <PackagesSection course={course} />
 
                   <BusinessSection business={guide?.business} course={course} />
 

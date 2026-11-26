@@ -2350,6 +2350,7 @@ body.course-scrolled header.header { transform: translateY(-100%); visibility: h
 .rt-dd__meta { gap: 12px; }
 .rt-dd__meta .rt-cd__link { flex: none; white-space: nowrap; }
 .rt-dd__details { margin-top: 4px; color: var(--cd-text); white-space: pre-line; }
+.rt-dd__pkgs { font-weight: 600; color: var(--cd-brand); }
 .rt-dd__slot-price .rt-sv-badge { margin-top: 4px; }
 .rt-dd__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
 /* The date pop-up's list (DatesDialog): one card per venue with its dates shown at once, each date a row that picks it. */
@@ -7082,6 +7083,8 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
   .rt-pws-pkg__tiers.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .rt-pws-pkg__tier > .rt-field, .rt-pws-pkg__tier > .rt-pws-toggle { width: 100%; margin: 0; }
+.rt-pws-pkg__courses { display: grid; gap: 8px; min-width: 0; }
+.rt-pws-pkg__courses .rt-pws-pkg__ctags { margin: 0; }
 .rt-pws-pkg__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: end; }
 @media (min-width: 768px) { .rt-pws-pkg__top { grid-template-columns: minmax(0, 1fr) auto; } }
 .rt-pws-pkg__count { margin: 0; padding: 0; border: 0; }
@@ -7172,7 +7175,7 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkgs__tiers li { display: flex; justify-content: space-between; gap: 12px; max-width: 240px; list-style: none; }
 .rt-pws-pkg__tier { display: grid; align-content: start; justify-items: start; gap: 12px; padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-card); background: var(--rt-c-surface); }
 /* packages side by side keep their rows level: each package's 7 parts (heading, name, prices, the price line, tagline, Most popular,
-   first aid) share the row of the packages beside it, so a line that wraps or a message in one moves the others with it */
+   courses included) share the row of the packages beside it, so a line that wraps or a message in one moves the others with it */
 @supports (grid-template-rows: subgrid) {
   .rt-pws-pkg__tier { grid-row: span 7; grid-template-rows: subgrid; row-gap: 12px; align-items: start; } /* level rows, never stretched parts */
 }
@@ -7733,6 +7736,12 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__exams th:nth-child(4) { width: 120px; }
 .rt-cg__costs th:nth-child(2) { width: 220px; }
 .rt-cg__costs .is-total td { font-weight: 700; color: var(--cd-text); }
+.rt-cg__pkgs { padding: 0; list-style: none; }
+.rt-cg__pkg-text { margin: 4px 0 0; font-size: 13px; line-height: 1.4; color: var(--cd-muted); }
+/* the course page's Packages are information (a package is chosen when a date is booked): no pick on hover */
+.rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border-strong); }
+.rt-cg__pkgs > li { margin: 0; list-style: none; }
+.rt-cg__pkg-was { margin-left: 6px; font-size: 13px; color: var(--cd-muted); }
 .rt-cd__staff a.rt-cg__inline, .rt-cd a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
@@ -7832,6 +7841,11 @@ html { scrollbar-gutter: stable; }
 .rt-pk__features small { display: block; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
 .rt-pk__mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; font-size: 8px; background: var(--color-purple-3); color: var(--color-purple-1); } /* the page's tick (.rt-cd__check) */
 .rt-pk__features li.-no .rt-pk__mark { background: var(--cd-band); color: var(--cd-muted); }
+/* a bundle's courses: one per line, on the brand tint, above its features */
+.rt-pk__includes { display: grid; gap: 6px; margin: 6px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--cd-brand-subtle); list-style: none; }
+.rt-pk__includes li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--cd-text); overflow-wrap: anywhere; }
+.rt-pk__includes .rt-pk__mark { background: var(--cd-surface); }
+
 .rt-pk__select { margin-top: auto; } /* Select sits at the foot of every card, in one line across the row */
 .rt-pk__card > :nth-last-child(2) { margin-bottom: 10px; }
 .rt-pk__note { margin: 14px 0 0; font-size: 12px; line-height: 17px; color: var(--cd-muted); }
