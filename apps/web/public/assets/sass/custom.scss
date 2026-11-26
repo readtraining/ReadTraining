@@ -7138,6 +7138,10 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 .rt-pws-pkg__st.-none { font-weight: 500; color: var(--rt-c-muted); }
 .rt-pws-pkg__st:hover, .rt-pws-pkg__st[aria-expanded="true"] { border-color: var(--rt-c-line); background: var(--rt-c-surface); }
 .rt-pws-pkg__st:focus-visible { outline: 2px solid var(--rt-c-brand); outline-offset: 2px; }
+/* an included feature's value on the package ("2", "12 months"), under its state: text that becomes a field on hover and focus */
+.rt-pws-pkg__fval { display: block; width: 150px; max-width: 100%; height: 32px; margin: 2px auto 0; padding: 0 8px; border: 1px solid transparent; border-radius: var(--rt-radius-sm); background: none; font-size: var(--rt-text-xs); text-align: center; color: var(--rt-c-text); }
+.rt-pws-pkg__fval:hover { background: var(--rt-c-soft); }
+.rt-pws-pkg__fval:focus { outline: none; border-color: var(--rt-c-brand); background: var(--rt-c-surface); box-shadow: 0 0 0 3px var(--rt-c-brand-soft); }
 .rt-pws-pkg__stcaret { margin-left: auto; font-size: 10px; color: var(--rt-c-muted); }
 .rt-pws-pkg__stmark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--rt-radius-sm); font-size: 10px; }
 .rt-pws-pkg__st.-in .rt-pws-pkg__stmark, .rt-pws-pkg__stmark.-in { background: var(--rt-c-success-soft); color: var(--rt-c-success); }

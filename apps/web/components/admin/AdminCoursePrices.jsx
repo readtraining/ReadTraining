@@ -34,6 +34,7 @@ function Packages({ plan }) {
                   <span>
                     <span className="rt-sr">{f.included ? "Included: " : "Not included: "}</span>
                     {f.title}
+                    {f.value && <>: <strong>{f.value}</strong></>}
                     {f.description && <small>{f.description}</small>}
                   </span>
                 </li>

@@ -626,7 +626,7 @@ export const venues = pgTable(
 // A provider's price plan: 2 to 4 packages a learner chooses between (Basic, Plus, Pro, Elite by default),
 // each with its own full price per delegate. One plan can be used by many dates and courses. It is the provider's own pricing:
 // what they save is what learners see, with no review by our team (the course itself is reviewed). Each package in `tiers`:
-// { name, pricePence, savePence, tagline, popular, features: [{ title, description, included }] }, checked by the API
+// { name, pricePence, savePence, tagline, popular, features: [{ title, description, included, value }] }, checked by the API
 // (provider/plans.mts). A date or course on a plan has the plan's cheapest price as its own price_pence, kept in step whenever the
 // plan is saved. A plan in use is archived, never deleted. Read and written by the API only.
 export const pricePlans = pgTable(
