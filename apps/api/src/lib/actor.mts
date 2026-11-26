@@ -34,7 +34,9 @@ export async function isSessionLive(db: typeof Db, user: VerifiedUser): Promise<
 const deployment = process.env.VERCEL_ENV ?? (process.env.NODE_ENV === 'production' ? 'production' : 'development')
 const TWO_STEP_WAIVED = process.env.ADMIN_TWO_STEP_OPTIONAL === '1' && deployment !== 'production'
 
-export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Actor> {
+// `asStaff`: the request comes from the admin's own pages (the web app sends x-rt-context: admin from every /admin page), where an
+// admin works on a provider as ReadTraining staff. Anywhere else (a provider's workspace) they are only their own team role.
+export async function loadActor(db: typeof Db, user: VerifiedUser, { asStaff = false }: { asStaff?: boolean } = {}): Promise<Actor> {
   const [rows, [admin]] = await Promise.all([
     db
       .select({
@@ -67,16 +69,17 @@ export async function loadActor(db: typeof Db, user: VerifiedUser): Promise<Acto
     memberships: rows as Membership[],
     admin: admin ? { ...admin, twoStepWaived: TWO_STEP_WAIVED } : null,
   }
-  // an admin working in a provider's workspace as staff: that provider comes first (the workspace opens on it), as one of its
-  // admins within their own switches (packages/permissions, `staff`), while they still may (switch, two-step sign-in)
-  // Never over someone's own place on that provider's team: a member (its owner, say) keeps their own access, never swapped for
-  // a staff one (the workspace leaves staff access out, so they would lose their own provider); startStaffAccess refuses it too.
-  const staff = actor.admin && can(actor, 'admin.providers.staff') ? await openStaffAccess(db, user.id) : null
-  if (staff && !actor.memberships.some((m) => m.organisationId === staff.organisationId)) {
-    const held = adminPermissions(actor.admin)
+  // an admin editing a provider's work from the admin's pages, as ReadTraining staff: on those requests only, that provider is
+  // theirs as one of its admins within their own switches (packages/permissions, `staff`), while they still may (switch, two-step
+  // sign-in). The staff place comes first, so every check on that provider uses it, even when they are also on its team (their
+  // super admin login may own it); their own place stays after it, so Switch account still lists their own provider. In the
+  // provider's workspace (no asStaff) they are only their own role, and the staff session isn't touched.
+  const staff = asStaff && actor.admin && can(actor, 'admin.providers.staff') ? await openStaffAccess(db, user.id) : null
+  if (staff) {
+    const held = adminPermissions(actor.admin!)
     actor.memberships = [
       { organisationId: staff.organisationId, type: 'provider', role: 'admin', status: 'active', organisationStatus: staff.organisationStatus, staff: { pricing: held.includes('pricing'), content: held.includes('approve'), session: staff.id } },
-      ...actor.memberships.filter((m) => m.organisationId !== staff.organisationId),
+      ...actor.memberships,
     ]
   }
   return actor
