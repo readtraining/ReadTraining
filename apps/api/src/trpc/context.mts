@@ -13,6 +13,9 @@ export const createTRPCContext = async ({ req }: CreateExpressContextOptions) =>
   const header = req.headers.authorization
   const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : undefined
   const ip = clientIp(req)
+  // sent by the web app from the admin's own pages: an admin there works on a provider as ReadTraining staff (lib/actor.mts). It
+  // only chooses between places the person already has: without an admin row and an open staff session it changes nothing.
+  const asStaff = req.headers['x-rt-context'] === 'admin'
 
   const user = await verifyAccessToken(token)
   // Whether the session is still live, and who the person is, asked once per request: a page's batch of calls (often 4 to 10)
@@ -20,7 +23,7 @@ export const createTRPCContext = async ({ req }: CreateExpressContextOptions) =>
   let identity: Promise<{ live: boolean; actor: Awaited<ReturnType<typeof loadActor>> }> | null = null
   const loadIdentity = () => {
     if (!user) throw new Error('loadIdentity needs a signed-in user')
-    identity ??= Promise.all([isSessionLive(db, user), loadActor(db, user)]).then(([live, actor]) => ({ live, actor }))
+    identity ??= Promise.all([isSessionLive(db, user), loadActor(db, user, { asStaff })]).then(([live, actor]) => ({ live, actor }))
     return identity
   }
   return {

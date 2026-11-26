@@ -66,7 +66,8 @@ export default function StaffEdit({ provider, heading = null, children }) {
   }, [provider, slug, me]);
 
   if (current.isError) return <ErrorState onRetry={() => current.refetch()} />;
-  if (start.isError) return <ErrorState title={errorText(start.error)} onRetry={() => start.reset()} />;
+  // a refusal (the provider isn't approved, say) says why, with nothing to try again; only a failed connection offers it
+  if (start.isError) return (start.error?.data?.httpStatus ?? 500) < 500 ? <ErrorState title={errorText(start.error)} text={null} /> : <ErrorState onRetry={() => start.reset()} />;
   if (!provider || !editing) return <DetailSkeleton />;
 
   const finish = async () => {
