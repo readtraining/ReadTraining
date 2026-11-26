@@ -8,6 +8,7 @@ import { Icon } from "./Icon";
 import PopShell from "./PopShell";
 import { firstAidCourseHref } from "@/lib/basket";
 import { useNav } from "@/lib/navContext";
+import { bookableOnline, includedOf } from "@/lib/packages";
 
 // The steps between a date's Book now and the basket: "Choose your package" when the date is sold in packages (a
 // provider's price plan, or the client's own on a course page), then, on a course the SIA licence needs first aid for, the first
@@ -35,9 +36,12 @@ function Head({ titleId, title, sub, step, onBack, backLabel, onClose }) {
   );
 }
 
+// an included course's name, linked to its page when it has one
+const AddonName = ({ a }) => (a.course?.href ? <Link href={a.course.href} className="rt-cg__inline">{a.name}</Link> : <>{a.name}</>);
+
 // The packages side by side: each one's full price per delegate (and was-price, from its "Save £"), its tagline, "Most popular"
-// on one, and its features, each included (✓) or not (✗). `current`: the package a basket line already has. Also the price plan
-// editor's learner preview (`onSelect` none: its buttons show but do nothing), so the two never differ.
+// on one, the other courses it includes (and first aid), ticked, and its features, each included (✓) or not (✗). `current`: the package a basket line already has. Also the price plan editor's learner
+// preview (`onSelect` none: its buttons show but do nothing), so the two never differ.
 export function PackageCards({ list, quantity = 1, current = null, onSelect = null }) {
   const n = Math.min(4, Math.max(2, list.length));
   return (
@@ -45,6 +49,7 @@ export function PackageCards({ list, quantity = 1, current = null, onSelect = nu
       {list.map((p) => {
         const was = p.wasPrice > p.price ? p.wasPrice : null;
         const mine = current === p.key;
+        const included = includedOf(p);
         return (
           <li key={p.key} className={`rt-pk__card${p.popular ? " -popular" : ""}${mine ? " is-current" : ""}`}>
             {p.popular && <span className="rt-pk__badge">Most popular</span>}
@@ -58,6 +63,16 @@ export function PackageCards({ list, quantity = 1, current = null, onSelect = nu
               {was && <span className="rt-pk__save"> · Save {formatPrice(was - p.price)}</span>}
             </p>
             {p.tagline && <p className="rt-pk__tag">{p.tagline}</p>}
+            {included.length > 0 && (
+              <ul className="rt-pk__includes" aria-label="Included in this package">
+                {included.map((a) => (
+                  <li key={a.id}>
+                    <span className="rt-pk__mark" aria-hidden="true"><Icon name="check" /></span>
+                    <span><AddonName a={a} /></span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {p.features.length > 0 && (
               <ul className="rt-pk__features">
                 {p.features.map((f, i) => (
@@ -73,11 +88,15 @@ export function PackageCards({ list, quantity = 1, current = null, onSelect = nu
                 ))}
               </ul>
             )}
-            <button type="button" className={`button -md ${mine ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"} rt-btn-block rt-pk__select`} onClick={onSelect ? () => onSelect(p.key) : undefined}
-              aria-disabled={onSelect ? undefined : true} tabIndex={onSelect ? undefined : -1}
-              aria-label={mine ? `Keep ${p.name}, your package` : `Select ${p.name}, ${formatPrice(p.price)} per delegate`}>
-              {mine ? "Your package" : "Select package"}
-            </button>
+            {!bookableOnline(p) ? (
+              <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-btn-block rt-pk__select" disabled aria-label={`${p.name}: online booking coming soon`}>Coming soon</button>
+            ) : (
+              <button type="button" className={`button -md ${mine ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"} rt-btn-block rt-pk__select`} onClick={onSelect ? () => onSelect(p.key) : undefined}
+                aria-disabled={onSelect ? undefined : true} tabIndex={onSelect ? undefined : -1}
+                aria-label={mine ? `Keep ${p.name}, your package` : `Select ${p.name}, ${formatPrice(p.price)} per delegate`}>
+                {mine ? "Your package" : "Select package"}
+              </button>
+            )}
           </li>
         );
       })}
