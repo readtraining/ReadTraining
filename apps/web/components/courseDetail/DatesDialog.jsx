@@ -68,6 +68,8 @@ function DateRow({ s, selected, onSelect, onBook, classroom, markSaver }) {
             {meta && <span>{meta}</span>}
             {s.schedule && <span>{s.schedule}</span>}
             {s.details && <span className="rt-dd__details">{s.details}</span>}
+            {/* sold in packages: how many to choose from (Book now asks which) */}
+            {s.packages?.length > 0 && <span className="rt-dd__pkgs">{s.packages.length} packages to choose from</span>}
             {markSaver && s.skillSaver && <SaverBadge />}
           </span>
           <span className="rt-dd__slot-price">
@@ -328,7 +330,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
             )}
             {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}
             <div className="rt-dd__sort">
-              <CatalogueDropdown label="Sort by" options={sortOptions.map(([v, l]) => ({ value: v, label: l }))} value={sortBy} onChange={setSort} clearable={false} />
+              <CatalogueDropdown label="Sort by" options={sortOptions.map(([v, l]) => ({ value: v, label: l }))} value={sortBy} onChange={setSort} clearable={false} openOnHover={false} float />
             </div>
           </div>
           <div className="rt-dd__meta">

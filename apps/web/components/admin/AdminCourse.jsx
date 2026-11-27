@@ -286,9 +286,9 @@ export default function AdminCourse({ id }) {
           <Row label="Entry requirements" v={c.entryRequirements}><Text v={c.entryRequirements} /></Row>
           <Row label="What learners will learn" v={c.outcomes}><Bullets items={c.outcomes} /></Row>
           <Row label="Features" v={c.features}><Bullets items={c.features} /></Row>
-          <Row label="Line above the syllabus" v={c.syllabusIntro}><Text v={c.syllabusIntro} /></Row>
+          <Row label="Syllabus introduction" v={c.syllabusIntro}><Text v={c.syllabusIntro} /></Row>
           <Row label="Syllabus" v={c.units}><Fold open={reviewing} label={count(c.units, "unit")}><Units units={c.units} /></Fold></Row>
-          <Row label="Text above the exam table" v={c.examsIntro}><Text v={c.examsIntro} /></Row>
+          <Row label="Exams introduction" v={c.examsIntro}><Text v={c.examsIntro} /></Row>
           <Row label="Exam and assessment" v={c.exams}><Fold open={reviewing} label={count(c.exams, "exam")}><Exams exams={c.exams} /></Fold></Row>
           <Row label="FAQs" v={c.faqs}><Fold open={reviewing} label={count(c.faqs, "question")}><Faqs faqs={c.faqs} /></Fold></Row>
         </dl>

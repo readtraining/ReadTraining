@@ -11,7 +11,8 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom, errorText } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, PageLink, RowMenu, Req } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, PageLink, RowMenu, Req } from "./adminParts";
+import { entryLabel } from "./activityWords";
 import { RateForm, formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
 import { waysLabel } from "@/lib/courseModes";
@@ -189,7 +190,7 @@ export default function AdminProvider({ slug }) {
             {activity.data.entries.map((e) => (
               <li key={e.id}>
                 <div>
-                  <span className="rt-adm-strong">{actionLabel(e.action)}</span>
+                  <span className="rt-adm-strong">{entryLabel(e)}</span>
                   <small>{e.actor ? `${e.actor.name} · ` : ""}{formatWhen(Date.parse(e.at))}</small>
                 </div>
               </li>

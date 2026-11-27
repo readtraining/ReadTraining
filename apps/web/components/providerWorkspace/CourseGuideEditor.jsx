@@ -20,25 +20,25 @@ import LineList from "./LineList";
 // included on Course information, and a step of their own, Licence, costs and careers (team training, the licence steps, the cost
 // table and careers). A shared page lists every provider's dates, so none of them is a price, a package or a bundle: those are
 // each provider's own (its dates and price plans). In a step a section
-// is one compact card (GuideExtras): its name, Added or Not added, where it shows on the page and what it holds. Add and Edit open
+// is one compact card (GuideExtras): its name with its switch and what it holds. Add and Edit open
 // it in a pop-up made for what it is: a table for the comparison, the course week and the costs, titled groups for the licence
 // steps, and the course editor's lists for items. The pop-up's Save saves the section at once (no approval, logged), and Remove asks first, then saves.
 // Prices are never typed: the cost table's course and first aid rows come from live prices, and the licence fee and the team
 // training words are the site's own (Site content), picked or switched on here.
 
-// The sections, in the page's order. `step`: the editor step that holds it; `where`: where it shows on the page; `anchor`: its
+// The sections, in the page's order. `step`: the editor step that holds it; `anchor`: its
 // heading on the page, for "View on page" ("" the top); `toggle`: nothing to fill in, only added or not (the words are the site's);
 // `wide`: its pop-up is the wide one (a table or cards side by side).
 export const GUIDE_SECTIONS = [
-  { key: "heroTitle", step: "landing", label: "Main heading", anchor: "", where: "Top of the page, in place of the course name." },
-  { key: "trust", step: "landing", label: "Trust strip", anchor: "", where: "Top of the page, under the buttons." },
-  { key: "compare", step: "info", label: "Comparison table", anchor: "rt-cg-compare-h", wide: true, where: "After Who is this course for." },
-  { key: "week", step: "info", label: "Course week", anchor: "rt-cg-week-h", wide: true, where: "After the syllabus." },
-  { key: "included", step: "info", label: "What's included", anchor: "rt-cg-incl-h", where: "After the course week." },
-  { key: "business", step: "after", label: "Team training", anchor: "business", toggle: true, edit: "/admin/content?tab=teamTraining", where: "After the entry requirements. Same words on every page." },
-  { key: "licence", step: "after", label: "Licence steps", anchor: "licence", where: "After team training." },
-  { key: "costs", step: "after", label: "Cost table", anchor: "costs", wide: true, where: "After the licence steps." },
-  { key: "careers", step: "after", label: "Careers", anchor: "rt-cg-career-h", where: "After the cost table." },
+  { key: "heroTitle", step: "landing", label: "Main heading", anchor: "" },
+  { key: "trust", step: "landing", label: "Trust strip", anchor: "" },
+  { key: "compare", step: "info", label: "Comparison table", anchor: "rt-cg-compare-h", wide: true },
+  { key: "week", step: "info", label: "Course week", anchor: "rt-cg-week-h", wide: true },
+  { key: "included", step: "info", label: "What's included", anchor: "rt-cg-incl-h" },
+  { key: "business", step: "after", label: "Team training", anchor: "business", toggle: true, edit: "/admin/content?tab=teamTraining" },
+  { key: "licence", step: "after", label: "Licence steps", anchor: "licence" },
+  { key: "costs", step: "after", label: "Cost table", anchor: "costs", wide: true },
+  { key: "careers", step: "after", label: "Careers", anchor: "rt-cg-career-h" },
 ];
 
 export const stepOfSection = (key) => GUIDE_SECTIONS.find((s) => s.key === key)?.step || null;
@@ -109,9 +109,9 @@ function problemsOf(key, d) {
   if (key === "included" && !lines(d.items).length) e["g-items"] = "Add at least one item.";
   if (key === "licence") d.steps.forEach((x, i) => { need(`g-step${i}`, x.title, "the step"); need(`g-steptext${i}`, x.text, "what happens in this step"); });
   if (key === "costs") {
-    if (d.firstAid) need("g-fa-label", d.firstAid.label, "the row's label");
+    if (d.firstAid) need("g-fa-label", d.firstAid.label, "the row's name");
     d.rows.forEach((r, i) => { need(`g-crow${i}`, r.label, "what the cost is"); need(`g-cval${i}`, r.value, "the price, or words like Free"); });
-    if (d.licenceFee) { need("g-lf-label", d.licenceFee.label, "the row's label"); if (!d.licenceFee.fee) e["g-lf-fee"] = "Choose the licence fee."; }
+    if (d.licenceFee) { need("g-lf-label", d.licenceFee.label, "the row's name"); if (!d.licenceFee.fee) e["g-lf-fee"] = "Choose the licence fee."; }
   }
   if (key === "careers") need("g-text", d.text, "the text");
   return e;
@@ -216,7 +216,7 @@ function ExtraCard({ s, form, onView, pageTitle }) {
   return (
     <li id={id} className={`rt-pws-extra${on ? " is-on" : ""}`}>
       <div className="rt-pws-extra__head">
-        <Toggle id={`${id}-on`} checked={on} disabled={form.locked || form.busy} onChange={(v) => (v ? add() : setRemoving(true))} label={s.label} hint={s.where} />
+        <Toggle id={`${id}-on`} checked={on} disabled={form.locked || form.busy} onChange={(v) => (v ? add() : setRemoving(true))} label={s.label} />
         {on && !form.locked && (
           <div className="rt-pws-extra__actions">
             {!s.toggle && <button type="button" className="rt-pws-ce__iconbtn" onClick={() => setEditing(true)} aria-haspopup="dialog" aria-label={`Edit: ${s.label}`} title="Edit"><i className="icon-edit text-14" aria-hidden="true"></i></button>}
@@ -377,7 +377,7 @@ function CompareEditor({ d, set, errors, clear }) {
   return (
     <>
       <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
-      <Text id="g-intro" label="Line under the heading" area rows={2} max={600} value={d.intro} onChange={(v) => set({ intro: v })} errors={errors} clear={clear} />
+      <Text id="g-intro" label="Introduction" area rows={2} max={600} value={d.intro} onChange={(v) => set({ intro: v })} errors={errors} clear={clear} />
       <div className="rt-pws-pkg__fsec">
         <p className="rt-pws-gx__label">The table</p>
         <div className="rt-pws-pkg__fscroll">
@@ -413,7 +413,7 @@ function CompareEditor({ d, set, errors, clear }) {
           <AddRow onClick={addCol} disabled={cols >= 5}>Add a column</AddRow>
         </div>
       </div>
-      <Text id="g-note" label="Note under the table" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+      <Text id="g-note" label="Note" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
     </>
   );
 }
@@ -442,7 +442,7 @@ function WeekEditor({ d, set, errors, clear }) {
         </div>
         <div className="rt-pws-gx__adds"><AddRow onClick={() => set({ items: [...d.items, { day: "", text: "" }] })} disabled={d.items.length >= 10}>Add a day</AddRow></div>
       </div>
-      <Text id="g-note" label="Note under the days" area rows={2} max={300} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+      <Text id="g-note" label="Note" area rows={2} max={300} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
     </>
   );
 }
@@ -462,7 +462,7 @@ function StepsEditor({ d, set, errors, clear }) {
         </fieldset>
       ))}
       <div className="rt-pws-gx__adds"><AddRow onClick={() => set({ steps: [...d.steps, { title: "", text: "" }] })} disabled={d.steps.length >= 10}>Add a step</AddRow></div>
-      <Text id="g-note" label="Tip under the steps" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+      <Text id="g-note" label="Tip" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
     </>
   );
 }
@@ -474,7 +474,7 @@ function CostsEditor({ d, set, errors, clear, fees, pageTitle }) {
   return (
     <>
       <Text id="g-title" label="Heading" required max={120} value={d.title} onChange={(v) => set({ title: v })} errors={errors} clear={clear} />
-      <Text id="g-intro" label="Line under the heading" area rows={2} max={400} value={d.intro} onChange={(v) => set({ intro: v })} errors={errors} clear={clear} />
+      <Text id="g-intro" label="Introduction" area rows={2} max={400} value={d.intro} onChange={(v) => set({ intro: v })} errors={errors} clear={clear} />
       <div className="rt-pws-pkg__fsec">
         <p className="rt-pws-gx__label">The table</p>
         <div className="rt-pws-pkg__fscroll">
@@ -482,13 +482,13 @@ function CostsEditor({ d, set, errors, clear, fees, pageTitle }) {
             <thead><tr><th scope="col">Cost</th><th scope="col" className="rt-pws-gx__pricecol">Price</th><th scope="col" className="rt-pws-gx__toolcol"><span className="rt-sr">Remove</span></th></tr></thead>
             <tbody>
               <tr>
-                <td><CellInput id="g-course" label="The course row's label" value={d.courseLabel} onChange={(v) => set({ courseLabel: v })} errors={errors} clear={clear} max={80} placeholder={`${pageTitle || "The"} course`} strong /></td>
+                <td><CellInput id="g-course" label="Course row" value={d.courseLabel} onChange={(v) => set({ courseLabel: v })} errors={errors} clear={clear} max={80} placeholder={`${pageTitle || "The"} course`} strong /></td>
                 <td><span className="rt-pws-gx__live">Live price</span></td>
                 <td className="rt-pws-gx__toolcol"></td>
               </tr>
               {d.firstAid && (
                 <tr>
-                  <td><CellInput id="g-fa-label" label="The first aid row's label" value={d.firstAid.label} onChange={(v) => set({ firstAid: { ...d.firstAid, label: v } })} errors={errors} clear={clear} max={80} strong /></td>
+                  <td><CellInput id="g-fa-label" label="First aid row" value={d.firstAid.label} onChange={(v) => set({ firstAid: { ...d.firstAid, label: v } })} errors={errors} clear={clear} max={80} strong /></td>
                   <td><span className="rt-pws-gx__live">Live price</span></td>
                   <td className="rt-pws-gx__toolcol">{remove(() => set({ firstAid: null }), "first aid")}</td>
                 </tr>
@@ -502,7 +502,7 @@ function CostsEditor({ d, set, errors, clear, fees, pageTitle }) {
               ))}
               {d.licenceFee && (
                 <tr>
-                  <td><CellInput id="g-lf-label" label="The licence fee row's label" value={d.licenceFee.label} onChange={(v) => set({ licenceFee: { ...d.licenceFee, label: v } })} errors={errors} clear={clear} max={80} placeholder="SIA licence fee (paid to the SIA)" strong /></td>
+                  <td><CellInput id="g-lf-label" label="Licence fee row" value={d.licenceFee.label} onChange={(v) => set({ licenceFee: { ...d.licenceFee, label: v } })} errors={errors} clear={clear} max={80} placeholder="SIA licence fee (paid to the SIA)" strong /></td>
                   <td>
                     {errors["g-lf-fee"] && <p className="rt-q__err" id="g-lf-fee-e"><span className="rt-sr">Error: </span>{errors["g-lf-fee"]}</p>}
                     <FieldSelect id="g-lf-fee" label="Licence fee" placeholder="Choose a fee" value={d.licenceFee.fee} compact invalid={Boolean(errors["g-lf-fee"])} describedBy={errors["g-lf-fee"] ? "g-lf-fee-e" : undefined}
@@ -525,7 +525,7 @@ function CostsEditor({ d, set, errors, clear, fees, pageTitle }) {
           {!d.licenceFee && <AddRow onClick={() => set({ licenceFee: { label: "", fee: fees[0]?.key || "" } })}>Add a licence fee row</AddRow>}
         </div>
       </div>
-      <Text id="g-note" label="Note under the table" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
+      <Text id="g-note" label="Note" area rows={2} max={400} value={d.note} onChange={(v) => set({ note: v })} errors={errors} clear={clear} />
     </>
   );
 }

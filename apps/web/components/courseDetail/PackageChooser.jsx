@@ -8,6 +8,7 @@ import { Icon } from "./Icon";
 import PopShell from "./PopShell";
 import { firstAidCourseHref } from "@/lib/basket";
 import { useNav } from "@/lib/navContext";
+import { bookableOnline } from "@/lib/packages";
 
 // The steps between a date's Book now and the basket: "Choose your package" when the date is sold in packages (a
 // provider's price plan, or the client's own on a course page), then, on a course the SIA licence needs first aid for, the first
@@ -35,9 +36,11 @@ function Head({ titleId, title, sub, step, onBack, backLabel, onClose }) {
   );
 }
 
+
 // The packages side by side: each one's full price per delegate (and was-price, from its "Save £"), its tagline, "Most popular"
-// on one, and its features, each included (✓) or not (✗). `current`: the package a basket line already has. Also the price plan
-// editor's learner preview (`onSelect` none: its buttons show but do nothing), so the two never differ.
+// on one, and its features, each included (✓) or not (✗). The other courses a package includes aren't listed again: its name says
+// them ("CCTV + First Aid"); they only decide whether it can be booked online yet (`bookableOnline`). `current`: the package a basket line already has. Also the price plan editor's learner
+// preview (`onSelect` none: its buttons show but do nothing), so the two never differ.
 export function PackageCards({ list, quantity = 1, current = null, onSelect = null }) {
   const n = Math.min(4, Math.max(2, list.length));
   return (
@@ -66,17 +69,22 @@ export function PackageCards({ list, quantity = 1, current = null, onSelect = nu
                     <span>
                       <span className="rt-cd__sr">{f.included ? "Included: " : "Not included: "}</span>
                       {f.title}
+                      {f.value && <>: <strong>{f.value}</strong></>}
                       {f.description && <small>{f.description}</small>}
                     </span>
                   </li>
                 ))}
               </ul>
             )}
-            <button type="button" className={`button -md ${mine ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"} rt-btn-block rt-pk__select`} onClick={onSelect ? () => onSelect(p.key) : undefined}
-              aria-disabled={onSelect ? undefined : true} tabIndex={onSelect ? undefined : -1}
-              aria-label={mine ? `Keep ${p.name}, your package` : `Select ${p.name}, ${formatPrice(p.price)} per delegate`}>
-              {mine ? "Your package" : "Select package"}
-            </button>
+            {!bookableOnline(p) ? (
+              <button type="button" className="button -md -outline-purple-1 text-purple-1 rt-btn-block rt-pk__select" disabled aria-label={`${p.name}: online booking coming soon`}>Coming soon</button>
+            ) : (
+              <button type="button" className={`button -md ${mine ? "-outline-purple-1 text-purple-1" : "-purple-1 text-white"} rt-btn-block rt-pk__select`} onClick={onSelect ? () => onSelect(p.key) : undefined}
+                aria-disabled={onSelect ? undefined : true} tabIndex={onSelect ? undefined : -1}
+                aria-label={mine ? `Keep ${p.name}, your package` : `Select ${p.name}, ${formatPrice(p.price)} per delegate`}>
+                {mine ? "Your package" : "Select package"}
+              </button>
+            )}
           </li>
         );
       })}

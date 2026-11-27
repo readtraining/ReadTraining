@@ -63,6 +63,7 @@ export const helpTopics = [
         blocks: [
           "Some courses come in packages, such as the course on its own or with the first aid it needs. Each training provider sets its own packages, prices and what each one includes, so they can differ between providers and dates. You see a date's packages after you choose the date, and pick one there. A date without packages has one price.",
           "If a package includes Emergency First Aid at Work, we don't ask you about first aid when you book.",
+          "Some packages include more than one course, such as Door Supervisor with CCTV Operator and first aid. A package that includes another course can't be booked online yet: call us to book one.",
           `Prices include VAT. The SIA licence fee is paid separately, to the SIA. If you're not sure which package you need, call us on ${tel}.`,
         ],
       },

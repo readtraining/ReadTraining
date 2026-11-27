@@ -11,16 +11,19 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { Toggle } from "./providerParts";
+import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { Field, aria, isMoney } from "./settingsForm";
 
 // A price plan: the plan's own name (only the provider sees it), 2, 3 or 4 packages (Basic, Plus, Pro, Elite to start with), each
 // with its name, price per delegate, an optional "Save £" amount (shown as a was-price), a tagline, "Most popular" (one package
-// at most) and "Includes Emergency First Aid at Work" (a course whose SIA licence needs first aid then doesn't ask about it at
-// booking), and the plan's features: one list for the whole plan, each feature Included (a tick), Not included (crossed out) or
-// Hidden (not shown) on each package, with an optional description. Edit shows the form, Learner preview the course page's own
-// package cards. Saving (API provider.plans.save) changes what learners see at once: the dates and courses on the plan take its
-// cheapest package as their price. `plan`: the plan to edit, or none for a new one. Without the right to change prices (ReadTraining
-// staff) only the features, taglines and "Most popular" change: the rest shows as it is.
+// at most) and "Courses included": the provider's own other courses sold in that package, ticked (up to 3; a package such as
+// "CCTV + First Aid" includes their first aid course); and the plan's features: one list for the whole plan, each feature Included
+// (a tick), Not included (crossed out) or Hidden (not shown) on each package, with an optional description, and an included one with an optional value for that package ("2" exam
+// attempts, "12 months" of access: the brief's "value of each row"). A plan saved before
+// may include first aid on its own (`firstAid`): it shows in the list, ticked, to keep or untick. Edit shows the form, Learner
+// preview the course page's own package cards. Saving (API provider.plans.save) changes what learners see at once: the dates and
+// courses on the plan take its cheapest package as their price. `plan`: the plan to edit, or none for a new one. Without the right
+// to change prices (ReadTraining staff) only the features, taglines and "Most popular" change: the rest shows as it is.
 //
 // The plan is stored as before (each package with its own features, included or not): opening it puts the packages' features
 // side by side by name (a package without one has it Hidden), and saving writes each package's list back in the table's order,
@@ -28,18 +31,19 @@ import { Field, aria, isMoney } from "./settingsForm";
 
 const NAMES = ["Basic", "Plus", "Pro", "Elite"];
 const MAX_FEATURES = 12; // the API's limit for one package
+// a feature on a package: each state's mark (`icon`) and colour (`tone`)
 const STATES = [
-  { value: "in", label: "Included", help: "Shown with a tick" },
-  { value: "out", label: "Not included", help: "Shown crossed out" },
-  { value: "none", label: "Hidden", help: "Not shown on this package" },
+  { value: "in", label: "Included", help: "Shown with a tick", icon: "icon-check", tone: "in" },
+  { value: "out", label: "Not included", help: "Shown crossed out", icon: "icon-close", tone: "out" },
+  { value: "none", label: "Hidden", help: "Not shown on this package", tone: "none" },
 ];
-const stateOf = (v) => STATES.find((s) => s.value === v);
+const MAX_COURSES = 3; // the API's limit of other courses in one package
 const pounds = (pence) => (pence == null || pence === 0 ? "" : (pence / 100).toFixed(2).replace(/\.00$/, ""));
 const pence = (v) => Math.round(Number(String(v).trim()) * 100);
 const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 let rowKey = 0;
 const nextKey = () => `f${(rowKey += 1)}`;
-const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false, firstAid: false });
+const blankTier = (i) => ({ name: NAMES[i], price: "", save: "", tagline: "", popular: false, firstAid: false, courses: [] });
 const toDraft = (plan) => {
   if (!plan) return { name: "", tiers: [0, 1, 2].map(blankTier), rows: [] };
   const tiers = plan.tiers;
@@ -48,16 +52,17 @@ const toDraft = (plan) => {
   tiers.forEach((t, i) =>
     (t.features ?? []).forEach((f) => {
       let row = rows.find((r) => same(r.title, f.title));
-      if (!row) rows.push((row = { key: nextKey(), title: f.title, description: "", states: tiers.map(() => "none") }));
+      if (!row) rows.push((row = { key: nextKey(), title: f.title, description: "", states: tiers.map(() => "none"), values: tiers.map(() => "") }));
       row.states[i] = f.included ? "in" : "out";
+      row.values[i] = f.value ?? "";
       if (!row.description && f.description) row.description = f.description;
     }),
   );
-  return { name: plan.name ?? "", tiers: tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular), firstAid: Boolean(t.firstAid) })), rows };
+  return { name: plan.name ?? "", tiers: tiers.map((t) => ({ name: t.name, price: pounds(t.pricePence), save: pounds(t.savePence), tagline: t.tagline ?? "", popular: Boolean(t.popular), firstAid: Boolean(t.firstAid), courses: t.courses ?? [] })), rows };
 };
 // each package's features, in the table's order, without the ones Hidden on it
 const featuresOf = (rows, i) =>
-  rows.filter((r) => r.states[i] !== "none").map((r) => ({ title: r.title.trim(), description: r.description.trim() || null, included: r.states[i] === "in" }));
+  rows.filter((r) => r.states[i] !== "none").map((r) => ({ title: r.title.trim(), description: r.description.trim() || null, included: r.states[i] === "in", value: (r.states[i] === "in" && r.values[i].trim()) || null }));
 // the packages as the API takes them
 const toInput = (d) =>
   d.tiers.map((t, i) => ({
@@ -67,25 +72,65 @@ const toInput = (d) =>
     tagline: t.tagline.trim() || null,
     popular: t.popular,
     firstAid: t.firstAid,
+    courses: t.courses,
     features: featuresOf(d.rows, i),
   }));
-// the packages as the course page's cards take them (the learner preview)
-const toCards = (d) =>
+// the packages as the course page's cards take them (the learner preview); `titles`: the provider's course names, by id
+const toCards = (d, titles = new Map()) =>
   d.tiers.map((t, i) => {
     const price = isMoney(t.price) ? Number(t.price) : 0;
     const save = isMoney(t.save) ? Number(t.save) : 0;
-    return { key: `p${i}`, name: t.name.trim() || `Package ${i + 1}`, price, wasPrice: save > 0 ? price + save : null, tagline: t.tagline.trim(), popular: t.popular, features: featuresOf(d.rows.filter((r) => r.title.trim()), i) };
+    const includes = t.courses.map((id) => ({ id, name: titles.get(id) || "A course", course: null, firstAid: false, dated: true }));
+    return { key: `p${i}`, name: t.name.trim() || `Package ${i + 1}`, price, wasPrice: save > 0 ? price + save : null, tagline: t.tagline.trim(), popular: t.popular, firstAid: t.firstAid, includes, features: featuresOf(d.rows.filter((r) => r.title.trim()), i) };
   });
+
+// "Courses included" in one package: the provider's own courses chosen from a dropdown ("Add a course"), each shown as a tag with
+// its ✕ (up to 3). A plan saved before with first aid on its own shows it as a tag too, to keep or remove. A course that isn't live
+// says so (learners see only live ones linked).
+function CoursesIncluded({ id, value, courses, loading, firstAid, onChange, onFirstAid, disabled = false }) {
+  const full = value.length >= MAX_COURSES;
+  const title = (cid) => courses.find((c) => c.id === cid)?.title || "A course you no longer have";
+  const left = courses.filter((c) => !value.includes(c.id));
+  return (
+    <div className="rt-field rt-pws-pkg__courses">
+      <label htmlFor={id}>Courses included</label>
+      {(value.length > 0 || firstAid) && (
+        <ul className="rt-pws-course-tags rt-pws-pkg__ctags">
+          {firstAid && (
+            <li><span>Emergency First Aid at Work</span>{!disabled && <button type="button" onClick={() => onFirstAid(false)} aria-label="Remove Emergency First Aid at Work"><i className="icon-close text-10" aria-hidden="true"></i></button>}</li>
+          )}
+          {value.map((cid) => (
+            <li key={cid}><span>{title(cid)}</span>{!disabled && <button type="button" onClick={() => onChange(value.filter((x) => x !== cid))} aria-label={`Remove ${title(cid)}`}><i className="icon-close text-10" aria-hidden="true"></i></button>}</li>
+          ))}
+        </ul>
+      )}
+      {disabled ? (
+        !value.length && !firstAid && <p className="rt-field__hint">None</p>
+      ) : full ? (
+        <p className="rt-field__hint">That's the most a package can include ({MAX_COURSES}). Remove one to add another.</p>
+      ) : !loading && !left.length ? (
+        <p className="rt-field__hint">{courses.length ? "All your courses are included." : "Your courses show here once you have added them."}</p>
+      ) : (
+        <FieldSelect id={id} label="Courses included" value="" compact disabled={loading} placeholder={loading ? "Loading your courses…" : "Add a course"}
+          options={left.map((c) => ({ value: String(c.id), label: `${c.title}${c.status && c.status !== "live" ? " (not live)" : ""}` }))}
+          onChange={(v) => v && onChange([...value, Number(v)])} />
+      )}
+    </div>
+  );
+}
 
 // One package's choice for one feature: a button showing it (its mark, its word, a chevron) that opens a menu of the three. The
 // menu opens in a layer of its own above the pop-up, so the table's sideways scroll never cuts it off; arrow keys move in it,
 // Enter picks, Esc and Tab close it and put focus back on the button.
-function StatePicker({ value, onChange, label }) {
+const Mark = ({ s, className = "" }) => (
+  <span className={`rt-pws-pkg__stmark -${s.tone}${className}`} aria-hidden="true">{s.icon ? <i className={s.icon}></i> : s.text || null}</span>
+);
+function StatePicker({ value, onChange, label, states = STATES }) {
   const [open, setOpen] = useState(false);
   const [at, setAt] = useState(null);
   const btn = useRef(null);
   const menu = useRef(null);
-  const current = stateOf(value);
+  const current = states.find((x) => x.value === value) || states[0];
   const close = (refocus = true) => {
     setOpen(false);
     if (refocus) btn.current?.focus();
@@ -136,17 +181,17 @@ function StatePicker({ value, onChange, label }) {
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- close only uses refs
   return (
     <>
-      <button type="button" ref={btn} className={`rt-pws-pkg__st -${value}`} aria-haspopup="menu" aria-expanded={open} aria-label={`${label}: ${current.label}`} onClick={() => (open ? close() : (setAt(null), setOpen(true)))}>
-        <span className="rt-pws-pkg__stmark" aria-hidden="true">{value !== "none" && <i className={value === "in" ? "icon-check" : "icon-close"}></i>}</span>
+      <button type="button" ref={btn} className={`rt-pws-pkg__st -${current.tone}`} aria-haspopup="menu" aria-expanded={open} aria-label={`${label}: ${current.label}`} onClick={() => (open ? close() : (setAt(null), setOpen(true)))}>
+        <Mark s={current} />
         {current.label}
         <i className="icon-chevron-down rt-pws-pkg__stcaret" aria-hidden="true"></i>
       </button>
       {open && createPortal(
         <ul ref={menu} role="menu" aria-label={label} className="rt-rowmenu__list rt-pws-pkg__stmenu" style={at ? { left: at.left, top: at.top } : { visibility: "hidden" }}>
-          {STATES.map((s) => (
+          {states.map((s) => (
             <li key={s.value} role="none">
               <button type="button" role="menuitemradio" aria-checked={s.value === value} tabIndex={-1} onClick={() => { onChange(s.value); close(); }}>
-                <span className={`rt-pws-pkg__stmark -${s.value}`} aria-hidden="true">{s.value !== "none" && <i className={s.value === "in" ? "icon-check" : "icon-close"}></i>}</span>
+                <Mark s={s} />
                 <span><b>{s.label}</b><small>{s.help}</small></span>
               </button>
             </li>
@@ -161,6 +206,10 @@ function StatePicker({ value, onChange, label }) {
 export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const { organisationId, can } = useProviderAccess();
   const fixed = !can("provider.pricing.edit");
+  // the provider's courses, for each package's "Courses included"
+  const courseList = api.provider.courses.list.useQuery({ organisationId }, { enabled: open && Boolean(organisationId) });
+  const courses = (courseList.data ?? []).map((c) => ({ id: c.id, title: c.title, status: c.status }));
+  const titles = new Map(courses.map((c) => [c.id, c.title]));
   const utils = api.useUtils();
   const save = api.provider.plans.save.useMutation();
   const [draft, setDraft] = useState(() => toDraft(null));
@@ -198,6 +247,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
   const clear = (key) => setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
   const setTier = (i, patch) => setDraft((d) => ({ ...d, tiers: d.tiers.map((t, j) => (j === i ? { ...t, ...patch } : t)) }));
   const setRow = (key, patch) => setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, ...patch } : r)) }));
+  const setValue = (key, i, value) => setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, values: r.values.map((v, j) => (j === i ? value : v)) } : r)) }));
   const setState = (key, i, value) => {
     setDraft((d) => ({ ...d, rows: d.rows.map((r) => (r.key === key ? { ...r, states: r.states.map((s, j) => (j === i ? value : s)) } : r)) }));
     clear(`f-${key}`);
@@ -216,7 +266,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     const title = newName.trim();
     if (!title) return newRef.current?.focus();
     if (draft.rows.some((r) => same(r.title, title))) return setNewError(`There is already a feature called “${title}”.`);
-    setDraft((d) => ({ ...d, rows: [...d.rows, { key: nextKey(), title, description: "", states: [...newStates] }] }));
+    setDraft((d) => ({ ...d, rows: [...d.rows, { key: nextKey(), title, description: "", states: [...newStates], values: newStates.map(() => "") }] }));
     setNewName("");
     setNewError("");
     newRef.current?.focus();
@@ -227,7 +277,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
     setDraft((d) => ({
       ...d,
       tiers: n <= d.tiers.length ? d.tiers.slice(0, n) : [...d.tiers, ...Array.from({ length: n - d.tiers.length }, (_, k) => blankTier(d.tiers.length + k))],
-      rows: d.rows.map((r) => ({ ...r, states: Array.from({ length: n }, (_, j) => r.states[j] ?? "none") })),
+      rows: d.rows.map((r) => ({ ...r, states: Array.from({ length: n }, (_, j) => r.states[j] ?? "none"), values: Array.from({ length: n }, (_, j) => r.values[j] ?? "") })),
     }));
     setNewStates((s) => Array.from({ length: n }, (_, j) => s[j] ?? "in"));
     setErrors((e) => Object.fromEntries(Object.entries(e).filter(([key]) => Number(key.match(/^t(\d+)-/)?.[1] ?? -1) < n)));
@@ -254,6 +304,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
       else if (draft.rows.findIndex((x) => same(x.title, r.title)) !== k) errs[`f-${r.key}`] = "Another feature has this name. Give each its own.";
       else if (r.states.every((s) => s === "none")) errs[`f-${r.key}`] = "Show it on at least one package, or remove it.";
     });
+
     setErrors(errs);
     setGeneral("");
     if (Object.keys(errs).length) {
@@ -299,7 +350,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
         {view === "preview" ? (
           <div className="rt-pws-pkg__preview">
             <p className="rt-acc__note">The packages as learners see them on the course page.</p>
-            <PackageCards list={toCards(draft)} />
+            <PackageCards list={toCards(draft, titles)} />
             <p className="rt-pk__note">Prices are per delegate and include VAT.</p>
           </div>
         ) : (
@@ -334,7 +385,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                       {t.popular && <span className="rt-pws-pkg__badge">Most popular</span>}
                     </div>
                     <Field id={`rt-plan-t${i}-name`} label="Package name" required error={errors[`t${i}-name`]}>
-                      <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={30} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} disabled={fixed} />
+                      <input {...aria(`rt-plan-t${i}-name`, errors[`t${i}-name`])} type="text" maxLength={50} autoComplete="off" value={t.name} onChange={(e) => { setTier(i, { name: e.target.value }); clear(`t${i}-name`); }} disabled={fixed} />
                     </Field>
                     <div className="rt-pws-pkg__money">
                       <Field id={`rt-plan-t${i}-price`} label="Price (£)" required error={errors[`t${i}-price`]}>
@@ -349,7 +400,8 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                       <input id={`rt-plan-t${i}-tag`} type="text" maxLength={80} autoComplete="off" placeholder="For example: Pass first time" value={t.tagline} onChange={(e) => setTier(i, { tagline: e.target.value })} />
                     </Field>
                     <Toggle id={`rt-plan-t${i}-pop`} checked={t.popular} onChange={(on) => setPopular(i, on)} label="Mark as Most popular" />
-                    <Toggle id={`rt-plan-t${i}-fa`} checked={t.firstAid} onChange={(on) => setTier(i, { firstAid: on })} label="Includes Emergency First Aid at Work" disabled={fixed} />
+                    <CoursesIncluded id={`rt-plan-t${i}-inc`} value={t.courses} courses={courses} loading={courseList.isLoading} firstAid={t.firstAid} disabled={fixed}
+                      onChange={(list) => setTier(i, { courses: list })} onFirstAid={(on) => setTier(i, { firstAid: on })} />
                   </section>
                 );
               })}
@@ -358,7 +410,7 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
             <section className="rt-pws-pkg__fsec" aria-labelledby="rt-plan-fh">
               <div>
                 <h3 className="rt-pws-pkg__h3" id="rt-plan-fh">Features</h3>
-                <p className="rt-acc__note">Choose how each feature appears on each package.</p>
+                <p className="rt-acc__note">Choose how each feature appears on each package. An included one can show a value, like 2 or 12 months.</p>
               </div>
               <div className="rt-pws-pkg__fscroll">
                 <table className={`rt-pws-pkg__ftable -n${draft.tiers.length}`}>
@@ -395,6 +447,9 @@ export default function PackageEditor({ open, onClose, plan = null, onSaved }) {
                           {draft.tiers.map((t, i) => (
                             <td key={i} className="rt-pws-pkg__scell">
                               <StatePicker value={r.states[i]} onChange={(v) => setState(r.key, i, v)} label={`${named} in ${tierName(t, i)}`} />
+                              {r.states[i] === "in" && (
+                                <input className="rt-pws-pkg__fval" type="text" maxLength={30} autoComplete="off" placeholder="Value (optional)" aria-label={`Value of ${named} in ${tierName(t, i)} (optional)`} value={r.values[i]} onChange={(e) => setValue(r.key, i, e.target.value)} />
+                              )}
                             </td>
                           ))}
                         </tr>
