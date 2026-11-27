@@ -9,6 +9,7 @@ import { Loading, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { NavIcon } from "@/components/header/navIcons";
 import { addDays, colourOf, isPicked, longDay, monthLabel, todayIso, useSchedule, weekday, whyNotOnSale } from "./ProviderCohorts";
 import { EmptyState, ErrorState } from "@/components/states/States";
+import { pw } from "@/data/providerWorkspace";
 
 // The calendar: every session of every cohort by month, week or day (view and date kept in the address, ?view= and ?date=); the
 // List / Calendar switch above it goes back to the cohort list. A session running several days is one bar from its first day to its
@@ -114,6 +115,13 @@ const describe = (b) => `${b.title}, ${when(b)}, ${b.from} to ${b.to}, ${b.where
 const OpenEntry = createContext(() => {});
 
 export default function ProviderCalendar() {
+  const { staff, status } = useProviderAccess();
+  // an account our team hasn't approved yet can't add dates: the page says why, as Courses and Price plans do
+  if (!staff && (status === "pending" || status === "changes_requested")) return <EmptyState title={pw.notApproved.title} text={pw.notApproved.text} action={pw.notApproved.action} />;
+  return <CalendarPage />;
+}
+
+function CalendarPage() {
   const { can } = useProviderAccess();
   const [entry, setEntry] = useState(null); // { bar, el }
   const { cohorts, may } = useSchedule("all", null, { near: true });

@@ -19,6 +19,9 @@ const transport =
         port: Number(process.env.SMTP_PORT ?? 587),
         secure: Number(process.env.SMTP_PORT ?? 587) === 465,
         auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        // a few open connections reused for every email, so emails to several admins don't each open (and greet) the server again
+        pool: true,
+        maxConnections: 3,
       })
     : null
 

@@ -49,7 +49,10 @@ export function useSwitchAccount(current) {
     }
     // which provider or business account to open, for someone on several (proxy.js reads it)
     if (entry.organisationId) document.cookie = `rt-${entry.kind}=${entry.organisationId}; path=/; max-age=31536000; samesite=lax`;
-    leaveWithoutAsking(() => router.push(entry.href));
+    // another account: a full page load, so the workspace's layout (loaded once on the server, with the provider, role and menu
+    // the cookie picks) and every cached list start again from the new account; moving inside the app would keep the old one
+    // until a reload. Adding an account is an ordinary link.
+    leaveWithoutAsking(() => (entry.kind === "add" ? router.push(entry.href) : window.location.assign(entry.href)));
   };
   return { ready: Boolean(data), entries, go, title: c.title, currentLabel: c.current, email: data?.email ?? "" };
 }

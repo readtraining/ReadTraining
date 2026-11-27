@@ -4,15 +4,11 @@ import { bookingOptions as d } from "@/data/home";
 import { formatPrice } from "@/lib/format";
 import { coursePath } from "@/lib/routes";
 
-const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
 // Why book through us: header, four benefit cards, then, as an example, a live course's real packages (`example`: lib/
-// catalogueServer.js examplePackages, a provider's price plan on one of its dates), each with every feature of the plan ticked or
-// crossed; no example while no live course is sold in packages.
+// catalogueServer.js examplePackages, a provider's price plan on one of its dates), each with its own features ticked or crossed,
+// as the course page's package cards show them (a feature Hidden on a package isn't listed on it); no example while no live course
+// is sold in packages.
 export default function HomeBookingOptions({ example = null }) {
-  // every feature the packages name, in the order they first list them
-  const features = [];
-  for (const t of example?.packages || []) for (const f of t.features) if (!features.some((x) => same(x, f.title))) features.push(f.title);
   return (
     <section className="layout-pt-lg layout-pb-lg bg-light-4">
       <div className="container">
@@ -52,17 +48,14 @@ export default function HomeBookingOptions({ example = null }) {
                     {t.popular && <span className="rt-tier__badge">Most popular</span>}
                     <div className="rt-tier__type">{t.name}</div>
                     {t.tagline && <div className="rt-tier__text">{t.tagline}</div>}
-                    <div className="rt-tier__price"><span>From</span>{formatPrice(t.price)}<small>per learner</small></div>
+                    <div className="rt-tier__price"><span>From</span>{formatPrice(t.price)}<small>per delegate</small></div>
                     <ul className="rt-tier__list">
-                      {features.map((f) => {
-                        const mine = t.features.find((x) => same(x.title, f) && x.included);
-                        return (
-                          <li key={f} className={mine ? "" : "is-off"}>
-                            <i className={mine ? "icon-check" : "icon-close"} aria-hidden="true"></i>
-                            <span>{!mine && <span className="rt-sr">Not included: </span>}{f}{mine?.value && <>: <strong>{mine.value}</strong></>}</span>
-                          </li>
-                        );
-                      })}
+                      {t.features.map((f) => (
+                        <li key={f.title} className={f.included ? "" : "is-off"}>
+                          <i className={f.included ? "icon-check" : "icon-close"} aria-hidden="true"></i>
+                          <span>{!f.included && <span className="rt-sr">Not included: </span>}{f.title}{f.included && f.value && <>: <strong>{f.value}</strong></>}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </div>

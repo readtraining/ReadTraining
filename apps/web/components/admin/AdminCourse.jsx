@@ -228,6 +228,13 @@ export default function AdminCourse({ id }) {
               </tbody>
             </table>
           </div>
+          {/* the change's course type against the shared page's (as the Details warn for the current one): check before approving */}
+          {(() => {
+            const type = c.change.fields.find((f) => f.key === "compliance");
+            return !shared && c.parent && c.parent.compliance !== null && type && type.proposed !== null && type.proposed !== c.parent.compliance ? (
+              <p className="rt-acc__notice -warn rt-adm-mt">The shared page {c.parent.title} is marked {pw.compliance.name(c.parent.compliance)}, but this change makes the course {pw.compliance.name(type.proposed)}. Check the provider&apos;s answer before approving.</p>
+            ) : null;
+          })()}
         </section>
       )}
 

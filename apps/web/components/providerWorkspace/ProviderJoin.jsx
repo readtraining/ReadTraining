@@ -94,6 +94,8 @@ export default function ProviderJoin() {
       if (Object.keys(fields).length) focusFirstError(formRef.current);
       return;
     }
+    // the workspace opens on the provider just joined (proxy.js reads this cookie), not on another one they were already on
+    document.cookie = `rt-provider=${invite.organisationId}; path=/; max-age=31536000; samesite=lax`;
     // a new password ended the invite's sign-in: sign in with it, then into the workspace (a full load, so it opens fresh)
     if (res.signInAgain) {
       try {
