@@ -13,6 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryName, levelName, methodName, subcategoryName, topicName } from "@/lib/taxonomy";
 import { isDatedMethod, wayName, waysOf } from "@/lib/courseModes";
+import { useFromLink } from "@/lib/backLink";
 import { Said, DetailSkeleton, formatWhen, Empty, PageLink, getQuery, setQuery, Req } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus, AdminTag } from "./AdminStatus";
@@ -37,7 +38,7 @@ export function TopicField({ id, choice, value, onChange, error }) {
       <label htmlFor={id}>Topic<Req /></label>
       <small className="rt-field__hint" id={`${id}-h`}>Where the course is listed, and on which shared course page. The provider doesn't choose it.</small>
       {error && <p className="rt-q__err" id={`${id}-e`}><span className="rt-sr">Error: </span>{error}</p>}
-      <FieldSelect id={id} label="Topic" placeholder="Choose a topic" value={value} onChange={onChange} options={choice.options.map((o) => ({ value: o.id, label: o.name }))} invalid={Boolean(error)} describedBy={`${id}-h${error ? ` ${id}-e` : ""}`} />
+      <FieldSelect id={id} label="Topic" placeholder="Choose a topic" value={value} onChange={onChange} options={choice.options.map((o) => ({ value: o.id, label: o.name }))} invalid={Boolean(error)} describedBy={`${id}-h${error ? ` ${id}-e` : ""}`} inline />
     </div>
   );
 }
@@ -51,6 +52,7 @@ export function TopicField({ id, choice, value, onChange, error }) {
 // show what learners will pay (AdminCoursePrices), checked before approving: plans have no approval of their own.
 export default function AdminCourse({ id }) {
   const me = useAdminAccess();
+  const link = useFromLink();
   const courseId = /^\d+$/.test(String(id)) ? Number(id) : 0;
   const query = api.admin.courses.get.useQuery({ courseId }, { enabled: Boolean(courseId), retry: false });
   const utils = api.useUtils();
@@ -181,25 +183,29 @@ export default function AdminCourse({ id }) {
           <h1 className="rt-adm__h1 rt-adm-hero__name" id="rt-adm-course-h">{c.title}</h1>
           <p className="rt-acc__note">
             {c.provider ? <>{d.provider}: <PageLink href={`/admin/providers/${c.provider.slug}`} className="rt-adm-strong">{c.provider.name}</PageLink>{!providerReady && ` (${ap.providerState[c.provider.status] || "account not active"})`}</> : "Written by our team"}
-            {c.parent && <> · {d.sharedPage}: <Link href={`/admin/catalogue/${c.parent.id}`}>{c.parent.title}</Link></>}
+            {c.parent && <> · {d.sharedPage}: <Link href={link(`/admin/catalogue/${c.parent.id}`)}>{c.parent.title}</Link></>}
           </p>
           {c.parent && !c.parent.sameSubject && <p className="rt-acc__notice -warn">{d.otherSubject(c.parent.title)}</p>}
           {c.statusNote && (c.status === "changes" || c.status === "paused") && <p className="rt-adm-item__reason"><strong>{c.status === "changes" ? "Note to the provider:" : "Why it is paused:"}</strong> {c.statusNote}</p>}
           {canDecide && c.status === "pending" && !providerReady && <p className="rt-adm-item__block">{ap.providerNotActive(c.provider?.status)}</p>}
           {canDecide && c.status === "paused" && !c.statusNote && <p className="rt-acc__note">{ap.providerPaused}</p>}
         </div>
-        {/* only the decision waiting on this page (or Edit course when there is none); the rest is in the catalogue table's menu */}
+        {/* Preview, then the decision waiting on this page (or Edit course when there is none); the rest is in the catalogue table's menu */}
         <div className="rt-adm-hero__actions">
+          {/* the course as learners will see it (a waiting change shown as if approved), in a new tab, before deciding or editing */}
+          {!shared && <a href={`/admin/catalogue/${c.id}/preview`} target="_blank" rel="noopener noreferrer" className="button -md -outline-purple-1 text-purple-1">{c.pendingChanges ? d.previewChange : d.preview}<span className="rt-sr"> (opens in a new tab)</span></a>}
           {canDecide && c.status === "paused" && c.statusNote && providerReady && allowedFor("resume") ? (
             <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("resume")}>{ap.resume}</button>
           ) : canDecide && ((c.status === "pending" && (allowedFor("changes") || (providerReady && allowedFor("approve")))) || (c.pendingChanges && (allowedFor("rejectChange") || allowedFor("approveChange")))) ? (
             <>
+              {/* a course waiting for approval can be edited first (it stays waiting); a live course's waiting change is decided first */}
+              {c.status === "pending" && canWrite && <Link href={link(`/admin/catalogue/${c.id}/edit`)} className="button -md -outline-purple-1 text-purple-1">Edit course</Link>}
               {c.status === "pending" && allowedFor("changes") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("changes")}>{ap.requestChanges}</button>}
               {c.pendingChanges && allowedFor("rejectChange") && <button type="button" className="button -md -outline-purple-1 text-purple-1" disabled={busy} onClick={() => act("rejectChange")}>{ap.rejectChange}</button>}
               {c.status === "pending" && providerReady && allowedFor("approve") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approve")}>{ap.approve}</button>}
               {c.pendingChanges && allowedFor("approveChange") && <button type="button" className="button -md -purple-1 text-white" disabled={busy} onClick={() => act("approveChange")}>{ap.approveChange}</button>}
             </>
-          ) : canWrite && <Link href={`/admin/catalogue/${c.id}/edit`} className="button -md -purple-1 text-white">{shared ? d.edit : "Edit course"}</Link>}
+          ) : canWrite && <Link href={link(`/admin/catalogue/${c.id}/edit`)} className="button -md -purple-1 text-white">{shared ? d.edit : "Edit course"}</Link>}
           {ownWhy && <p className="rt-adm-item__hint">{ownWhy}</p>}
         </div>
       </section>
@@ -232,7 +238,7 @@ export default function AdminCourse({ id }) {
             <ul className="rt-adm-list">
               {c.children.map((x) => (
                 <li key={x.id}>
-                  <div><Link href={`/admin/catalogue/${x.id}`} className="rt-adm-strong">{x.title}</Link><small>{x.provider} · {x.upcoming} upcoming {x.upcoming === 1 ? "date" : "dates"}</small></div>
+                  <div><Link href={link(`/admin/catalogue/${x.id}`)} className="rt-adm-strong">{x.title}</Link><small>{x.provider} · {x.upcoming} upcoming {x.upcoming === 1 ? "date" : "dates"}</small></div>
                   <AdminStatus kind="course" status={x.status}>{copy.statuses[x.status]}</AdminStatus>
                 </li>
               ))}
@@ -293,12 +299,13 @@ export default function AdminCourse({ id }) {
           <h2 className="rt-acc__h2" id="rt-adm-ci-h">Images and video</h2>
           {c.images.length ? (
             <ul className="rt-adm-thumbs">
-              {c.images.map((i, n) => <li key={i.id}><img src={i.url} alt={i.alt || ""} />{n === 0 && <AdminTag>Cover</AdminTag>}<small>{i.alt || "No ALT text"}</small></li>)}
+              {c.images.map((i, n) => <li key={i.id}><img src={i.url} alt={i.alt || ""} /><span className="rt-adm-thumbs__cap">{n === 0 && <AdminTag>Cover</AdminTag>}<small title={i.alt || undefined}>{i.alt || "No ALT text"}</small></span></li>)}
             </ul>
           ) : <Empty inCard icon="content" title="No images yet" text="Pictures added in the course editor show here; the first is the cover." />}
-          <dl className="rt-adm-dl rt-adm-mt">
-            <div><dt>Video</dt><dd>{c.videoUrl ? <a href={c.videoUrl} target="_blank" rel="noopener noreferrer" className="rt-pws-ce__url">{c.videoUrl}</a> : <span className="rt-adm-muted">–</span>}</dd></div>
-          </dl>
+          <div className="rt-adm-video">
+            <h3 className="rt-acc__h3">Video</h3>
+            {c.videoUrl ? <a href={c.videoUrl} target="_blank" rel="noopener noreferrer" className="rt-adm-videolink" title={c.videoUrl}>{c.videoUrl}<span className="rt-sr"> (opens in a new tab)</span></a> : <span className="rt-adm-muted">No video</span>}
+          </div>
         </section>
         </aside>
       </div>

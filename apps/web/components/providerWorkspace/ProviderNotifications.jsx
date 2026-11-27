@@ -5,14 +5,16 @@ import Link from "next/link";
 import { markAllRead, markRead, useProvider } from "@/lib/providerWorkspace";
 import CataloguePagination from "@/components/courses/CataloguePagination";
 import { Loading, Tabs, formatWhen, getQuery, setQuery } from "./providerParts";
+import { useFromLink } from "@/lib/backLink";
 import { EmptyState } from "@/components/states/States";
 
 const PER_PAGE = 10;
 
 // Notifications, newest first, 10 a page (refund requests, reviews, orders): unread ones are marked; opening one marks it
-// read and goes to the page it is about, whose back link then returns here (?from=notifications). "Mark all as read" clears the
+// read and goes to the page it is about, whose back link then returns here (lib/backLink.js). "Mark all as read" clears the
 // count on the bell.
 export default function ProviderNotifications() {
+  const link = useFromLink();
   const data = useProvider();
   const [show, setShow] = useState("all");
   const [page, setPage] = useState(1);
@@ -43,7 +45,7 @@ export default function ProviderNotifications() {
         <ul className="rt-pws-note">
           {rows.map((n) => (
             <li key={n.id} className={n.read ? "" : "is-unread"}>
-              <Link href={`${n.href}${n.href.includes("?") ? "&" : "?"}from=notifications`} className="rt-pws-note__link" onClick={() => !n.read && markRead(n.id)}>
+              <Link href={link(n.href)} className="rt-pws-note__link" onClick={() => !n.read && markRead(n.id)}>
                 <span className="rt-pws-note__dot" aria-hidden="true"></span>
                 <span className="rt-pws-note__body">
                   <span className="rt-pws-note__text">{!n.read && <span className="rt-sr">Unread: </span>}{n.text}</span>

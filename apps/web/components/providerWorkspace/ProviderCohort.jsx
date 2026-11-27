@@ -14,6 +14,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
 import { Req } from "./settingsForm";
@@ -57,6 +58,7 @@ export function CohortTitle({ cohortId, fallback }) {
 export default function ProviderCohort({ cohortId }) {
   const access = useProviderAccess();
   const data = useProvider();
+  const link = useFromLink();
   const [cancelling, setCancelling] = useState(false);
   const [record, setRecord] = useState(null);
   const [mail, setMail] = useState(null); // { ids: [...] }
@@ -134,10 +136,10 @@ export default function ProviderCohort({ cohortId }) {
       <section className="rt-acc__card" aria-labelledby="rt-coh-det-h">
         <div className="rt-acc__cardhead rt-adm-cardhead">
           <h2 className="rt-acc__h2" id="rt-coh-det-h">Cohort details</h2>
-          {course && editorHref(course.id) && <Link href={`${editorHref(course.id)}?tab=curriculum`} className="button -sm -outline-purple-1 text-purple-1">Manage curriculum</Link>}
+          {course && editorHref(course.id) && <Link href={link(`${editorHref(course.id)}?tab=curriculum`)} className="button -sm -outline-purple-1 text-purple-1">Manage curriculum</Link>}
         </div>
         <dl className="rt-pws-coh__details">
-          <div><dt>Course</dt><dd>{course ? (editorHref(course.id) ? <Link href={editorHref(course.id)} className="rt-adm-strong">{course.title || "Untitled course"}</Link> : <b className="rt-adm-strong">{course.title || "Untitled course"}</b>) : "Course removed"}<small>{methodName(course?.format)}</small></dd></div>
+          <div><dt>Course</dt><dd>{course ? (editorHref(course.id) ? <Link href={link(editorHref(course.id))} className="rt-adm-strong">{course.title || "Untitled course"}</Link> : <b className="rt-adm-strong">{course.title || "Untitled course"}</b>) : "Course removed"}<small>{methodName(course?.format)}</small></dd></div>
           <div><dt>Dates</dt><dd>{dayRange(k.first, k.last)}{k.sessions.length > 1 && <small>{k.sessions.length} sessions</small>}</dd></div>
           <div><dt>Venue</dt><dd>{where}</dd></div>
           <div><dt>Timings</dt><dd>{[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}</dd></div>
@@ -165,7 +167,7 @@ export default function ProviderCohort({ cohortId }) {
         {!k.cancelled && (
           <div className="rt-pws-coh__heroactions">
             {may.orders && !k.disabled && k.left > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setBulk(true)}>Bulk enrolment</button>}
-            {!k.disabled && k.left > 0 && <Link href={`/provider/orders/new?cohort=${k.id}`} className="button -sm -purple-1 text-white">Enrol student</Link>}
+            {!k.disabled && k.left > 0 && <Link href={link(`/provider/orders/new?cohort=${k.id}`)} className="button -sm -purple-1 text-white">Enrol student</Link>}
             {canCancel && <button type="button" className="rt-pws-coh__remove rt-adm-danger" onClick={() => setCancelling(true)}>Cancel cohort</button>}
           </div>
         )}
@@ -225,7 +227,7 @@ export default function ProviderCohort({ cohortId }) {
                             <span aria-hidden="true">+</span><span className="rt-sr">Register for {name}</span>
                           </button>
                         </td>
-                        <td data-label="Student"><Link href={`/provider/learners/${e.learnerId}`} className="rt-adm-strong">{name}</Link><small>{e.learner?.email}</small>{e.resitOf && <small>Resit</small>}</td>
+                        <td data-label="Student"><Link href={link(`/provider/learners/${e.learnerId}`)} className="rt-adm-strong">{name}</Link><small>{e.learner?.email}</small>{e.resitOf && <small>Resit</small>}</td>
                         <td data-label="Customer">{o ? <>{customerName(o.customer)}<small>{o.customer.email}</small></> : "—"}</td>
                         <td data-label="Pricing plan">{planOf(e) || <span className="rt-adm-muted">—</span>}</td>
                         <td data-label="Sales channel">{o ? pw.channels[o.channel] : "—"}</td>
@@ -261,7 +263,7 @@ export default function ProviderCohort({ cohortId }) {
                         <tr className="rt-pws-coh__morerow" id={`rt-coh-more-${e.id}`}>
                           <td colSpan={11}>
                             <div className="rt-pws-coh__more">
-                              <div><span>Order</span><Link href={`/provider/orders/${e.orderRef}`}>{e.orderRef}</Link></div>
+                              <div><span>Order</span><Link href={link(`/provider/orders/${e.orderRef}`)}>{e.orderRef}</Link></div>
                               <div><span>Phone</span>{e.learner?.phone || "—"}</div>
                               <div>
                                 <span>Attended</span>

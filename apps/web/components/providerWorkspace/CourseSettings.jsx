@@ -7,6 +7,7 @@ import Link from "next/link";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspaceLinks } from "@/lib/workspaceContext";
+import { useFromLink } from "@/lib/backLink";
 import { useEndpoints } from "@/lib/courseEditorApi";
 import { errorsFrom, errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
@@ -252,6 +253,7 @@ export function DeleteCourseForm({ course, onKeep, onDeleted }) {
 // when it can't be, and a course our team paused has no Put back live; DeleteCourseForm asks). Each choice saves at once.
 export function CourseGear({ course, open, onClose, onSaved, onStale }) {
   const links = useWorkspaceLinks();
+  const link = useFromLink();
   const router = useRouter();
   // the editor's calls: the version its draft is based on goes with each change here, and the new one comes back
   const ep = useEndpoints();
@@ -370,7 +372,7 @@ export function CourseGear({ course, open, onClose, onSaved, onStale }) {
                   )}
                 </div>
               )}
-              {dated && can("provider.cohorts.view") && <Link href={links.dates(course.id)} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true">{"\u00a0"}→</span></Link>}
+              {dated && can("provider.cohorts.view") && <Link href={link(links.dates(course.id))} className="rt-cd__link rt-pws-gear__more">See this course&apos;s dates<span aria-hidden="true">{"\u00a0"}→</span></Link>}
             </section>
           )}
           {course.status === "pending" && can("provider.courses.edit") && !staff && (

@@ -6,6 +6,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { useFromLink } from "@/lib/backLink";
 import { waysOf } from "@/lib/courseModes";
 
 const copy = pw.checklist;
@@ -21,6 +22,7 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
   const [open, setOpen] = React.useState(false);
   const workspace = useWorkspace();
   const { organisationId, can } = useProviderAccess();
+  const link = useFromLink();
   const shown = can("provider.profile.edit") || can("provider.courses.edit");
   const on = { enabled: Boolean(organisationId) && shown };
   const profile = api.provider.profile.get.useQuery({ organisationId }, on);
@@ -53,7 +55,7 @@ export default function ProviderChecklist({ heading = 2, compact = false }) {
     return typeof step.text === "string" ? step.text : step.text[done[k] && k !== "approved" ? "active" : status] || "";
   };
   // approval has an action only when our team is waiting on the provider; payouts has the connect address once it exists
-  const actionOf = (k) => (k === "approved" ? (status === "changes_requested" ? copy.steps[k].action : null) : k === "payouts" ? (pw.payouts.connect ? { label: pw.payouts.label, href: pw.payouts.connect } : "soon") : copy.steps[k].action);
+  const actionOf = (k) => (k === "approved" ? (status === "changes_requested" ? { ...copy.steps[k].action, href: link(copy.steps[k].action.href) } : null) : k === "payouts" ? (pw.payouts.connect ? { label: pw.payouts.label, href: pw.payouts.connect } : "soon") : copy.steps[k].action);
   const next = keys.find((k) => !done[k]);
   const listShown = !compact || open;
 

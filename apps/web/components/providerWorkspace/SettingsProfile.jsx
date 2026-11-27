@@ -6,6 +6,7 @@ import Sheet from "@/components/testPrep/runner/Sheet";
 import { api } from "@/lib/trpc/react";
 import Link from "next/link";
 import { useWorkspace, useWorkspaceLinks } from "@/lib/workspaceContext";
+import { useFromLink } from "@/lib/backLink";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { getSupabase } from "@/lib/supabase/client";
 import { errorsFrom, errorText } from "@/lib/useMe";
@@ -322,6 +323,7 @@ const venueMatches = (v, q) => {
 export function VenuesTab({ say }) {
   const { organisationId, can } = useProviderAccess();
   const links = useWorkspaceLinks();
+  const link = useFromLink();
   const [q, setQ] = useState("");
   const utils = api.useUtils();
   const query = api.provider.venues.list.useQuery({ organisationId }, { enabled: Boolean(organisationId) });
@@ -358,7 +360,7 @@ export function VenuesTab({ say }) {
                   <b>{v.name}</b>{!v.active && <> <Pill tone="muted">Archived</Pill></>}
                   <small>{[v.street, v.city, v.postcode].filter(Boolean).join(", ")}</small>
                   <small>{v.upcoming ? `${v.upcoming} upcoming ${v.upcoming === 1 ? "date" : "dates"}` : "No upcoming dates"}{v.located ? "" : v.problem ? ` · ${v.problem}${edit ? " Edit the venue to put it right." : ""}` : " · We couldn't check this town yet; we'll try again."}</small>
-                  {v.courses.length > 0 && <small>Courses: {v.courses.map((c, n) => <React.Fragment key={c.id}>{n > 0 && ", "}<Link href={links.course(c.id)} className="rt-cd__link">{c.title}</Link></React.Fragment>)}</small>}
+                  {v.courses.length > 0 && <small>Courses: {v.courses.map((c, n) => <React.Fragment key={c.id}>{n > 0 && ", "}<Link href={link(links.course(c.id))} className="rt-cd__link">{c.title}</Link></React.Fragment>)}</small>}
                 </div>
                 {edit && (
                   <div className="rt-adm-list__side">

@@ -100,9 +100,9 @@ async function netChanges(db: typeof Db, session: string) {
   return kept
 }
 
-/** How many changes a session has made and kept (the editing bar shows from the first). */
+/** How many changes a session has made and kept, counted as the summary email lists them (the editing bar shows from the first). */
 export async function staffChangeCount(db: typeof Db, session: string) {
-  return (await netChanges(db, session)).length
+  return (await staffChanges(db, session)).length
 }
 
 // One line per thing changed in a session (the same change made several times is one line), in the order first done

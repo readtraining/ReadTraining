@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
 import { errorText } from "@/lib/useMe";
+import { useFromLink } from "@/lib/backLink";
 import { Said, TableSkeleton, Tabs, Empty } from "./adminParts";
 import { AdminDue } from "./AdminStatus";
 
@@ -17,6 +18,7 @@ const on = (iso) => (iso ? new Intl.DateTimeFormat("en-GB", { day: "numeric", mo
 // Closure requests (API admin.closures; the "suspend" switch): everyone who asked to close their account, the open ones nearest
 // their one-month deadline first. Each opens the person's record, and Close account carries the request out.
 export function AdminClosures() {
+  const link = useFromLink();
   const [tab, setTab] = useState("open");
   const [said, setSaid] = useState("");
   const [closing, setClosing] = useState(null); // the request being confirmed
@@ -53,7 +55,7 @@ export function AdminClosures() {
               </div>
               {r.status === "open" && (
                 <div className="rt-adm-item__actions">
-                  {r.accountExists && <Link href={`/admin/learners/${r.userId}`} className="button -sm -outline-purple-1 text-purple-1">{c.open}</Link>}
+                  {r.accountExists && <Link href={link(`/admin/learners/${r.userId}`)} className="button -sm -outline-purple-1 text-purple-1">{c.open}</Link>}
                   <button type="button" className="button -sm -purple-1 text-white" onClick={() => setClosing(r)}>{c.close}</button>
                 </div>
               )}

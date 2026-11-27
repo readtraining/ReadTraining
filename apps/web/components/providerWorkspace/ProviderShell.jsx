@@ -21,6 +21,7 @@ import { api } from "@/lib/trpc/react";
 import { EmptyState } from "@/components/states/States";
 import ProviderAccountStatus from "./ProviderAccountStatus";
 import { NewCourseProvider, NewCourseSheet } from "./NewCourse";
+import { backTo } from "@/lib/backLink";
 
 const initials = (name) => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -79,8 +80,8 @@ export default function ProviderShell({ current, need = null, title, lead, actio
     return () => document.body.classList.remove("rt-pws-open");
   }, []);
   // a group's page is current when its path matches and, for ?tab= / ?mode= pages, its query does too
-  // a page opened from a notification goes back to the notifications; otherwise to its own list (`back`)
-  const backTo = /(^|[?&])from=notifications(&|$)/.test(search) ? { label: "Notifications", href: "/provider/notifications" } : back;
+  // the back link goes to the page this one was opened from (lib/backLink.js), otherwise to its own list (`back`)
+  const backLink = backTo(search, path, back);
   const isHere = (href, siblings) => {
     const [p, q = ""] = href.split("?");
     if (p !== path) return false;
@@ -231,7 +232,7 @@ export default function ProviderShell({ current, need = null, title, lead, actio
 
         <main id="rt-pws-main" className="rt-adm__main" tabIndex={-1}>
           <ProviderAccountStatus />
-          {backTo && <Link href={backTo.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backTo.label}</Link>}
+          {backLink && <Link href={backLink.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{backLink.label}</Link>}
           <div className="rt-adm__head">
             <div>
               <div className="rt-adm__titlerow">

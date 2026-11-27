@@ -13,6 +13,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
+import { useFromLink } from "@/lib/backLink";
 import { ColWidths, Pager, Search, SortTh, TableSkeleton, Tabs, formatWhen, usePaging, Empty, HeaderAction, Req, RowMenu, Said } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { DisputeForm, RefundRequestForm, toPence, useMoneyRefresh } from "./moneyParts";
@@ -33,6 +34,7 @@ const SHEETS = { refund: [A.refunds.requestTitle, RefundRequestForm], dispute: [
 // cancels the booking with the order page's own forms, by the same rules as its buttons.
 export default function AdminOrders() {
   const me = useAdminAccess();
+  const link = useFromLink();
   const perms = me?.permissions ?? [];
   const canBook = perms.includes("orders.book");
   const [acting, setActing] = useState(null); // { order, kind }: a row's refund, dispute or cancel form
@@ -94,7 +96,7 @@ export default function AdminOrders() {
               <tbody>
                 {rows.map((o) => (
                   <tr key={o.id}>
-                    <td data-label={c.ref}><Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.ref}</Link><small>{formatWhen(Date.parse(o.at))}</small></td>
+                    <td data-label={c.ref}><Link href={link(`/admin/orders/${o.ref}`)} className="rt-adm-strong">{o.ref}</Link><small>{formatWhen(Date.parse(o.at))}</small></td>
                     <td data-label={c.buyer}>{o.buyer.name}<small>{o.buyer.company || o.buyer.email}</small></td>
                     <td data-label={c.course}>{o.course}<small>{o.startsOn ? `${formatDate(o.startsOn)} · ` : ""}{o.quantity} {o.quantity === 1 ? "place" : "places"}</small></td>
                     <td data-label={c.provider}>{o.provider}{o.bookedBy && <small>{copy.staff.replace("{name}", o.bookedBy)}</small>}</td>

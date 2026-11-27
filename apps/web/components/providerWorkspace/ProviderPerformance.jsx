@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { isoDay, replyReview, setLeadStatus, useProvider, editorHref } from "@/lib/providerWorkspace";
+import { useFromLink } from "@/lib/backLink";
 import { focusFirstError } from "@/lib/focusFirstError";
 import Toast from "@/components/courses/Toast";
 import { Loading, Pill, RowMenu, Tabs, ToolSelect, getQuery, setQuery, shortDay } from "./providerParts";
@@ -75,6 +76,7 @@ const KPIS = [
 
 function Overview({ data, start, now, range }) {
   const [kpi, setKpi] = useState("revenue");
+  const link = useFromLink();
   const sold = data.orders.filter((o) => o.money.gross > 0);
   const places = (o) => o.lines.reduce((n, l) => n + l.qty, 0);
   const valueIn = (key, from, to) => {
@@ -114,7 +116,7 @@ function Overview({ data, start, now, range }) {
 
   const inRange = sold.filter((o) => o.at >= start && o.at < end);
   const byCourse = data.courses
-    .map((c) => ({ key: c.id, label: c.title || "Untitled course", href: `/provider/courses/${c.id}`, value: inRange.filter((o) => o.lines.some((l) => l.courseId === c.id)).reduce((t, o) => t + o.money.gross, 0) }))
+    .map((c) => ({ key: c.id, label: c.title || "Untitled course", href: link(`/provider/courses/${c.id}`), value: inRange.filter((o) => o.lines.some((l) => l.courseId === c.id)).reduce((t, o) => t + o.money.gross, 0) }))
     .filter((r) => r.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
@@ -235,6 +237,7 @@ function ReviewCard({ r, course, onSaved }) {
   const [text, setText] = useState(r.reply || "");
   const [error, setError] = useState("");
   const formRef = useRef(null);
+  const link = useFromLink();
   const id = `rt-pws-reply-${r.id}`;
   const save = (e) => {
     e.preventDefault();
@@ -257,7 +260,7 @@ function ReviewCard({ r, course, onSaved }) {
         <span className="rt-adm-item__when">{r.name} · {shortDay(isoDay(r.at))}</span>
         {!r.reply && <Pill tone="warn">Not answered</Pill>}
       </div>
-      <p className="rt-adm-muted rt-pws-perf__course">{course ? (editorHref(course.id) ? <Link href={editorHref(course.id)} className="rt-adm-strong">{course.title}</Link> : <b className="rt-adm-strong">{course.title}</b>) : "Course removed"}</p>
+      <p className="rt-adm-muted rt-pws-perf__course">{course ? (editorHref(course.id) ? <Link href={link(editorHref(course.id))} className="rt-adm-strong">{course.title}</Link> : <b className="rt-adm-strong">{course.title}</b>) : "Course removed"}</p>
       {r.text ? <p className="rt-pws-perf__text">{r.text}</p> : <p className="rt-adm-muted">No comment, rating only.</p>}
 
       {r.reply && !editing && (

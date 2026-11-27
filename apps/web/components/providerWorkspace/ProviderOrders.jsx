@@ -11,6 +11,7 @@ import { ColWidths } from "@/components/admin/adminParts";
 import { formatOrderDay } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 
 const PER_PAGE = 10;
 const CHANNELS = [{ value: "", label: "All sales channels" }, ...Object.entries(pw.channels).map(([value, label]) => ({ value, label }))];
@@ -22,6 +23,7 @@ const STATUSES = [{ value: "", label: "All statuses" }, ...Object.entries(pw.ord
 export default function ProviderOrders() {
   const { can } = useProviderAccess();
   const data = useProvider();
+  const link = useFromLink();
   const [q, setQ] = useState("");
   const [channel, setChannel] = useState("");
   const [status, setStatus] = useState("");
@@ -37,7 +39,7 @@ export default function ProviderOrders() {
   if (!data) return <Loading rows={2} />;
 
   if (!data.orders.length) {
-    return <EmptyState title="No orders yet" text="Bookings from ReadTraining, your website and the orders you add yourself appear here." action={can("provider.orders.create") ? { href: "/provider/orders/new", label: "Create order" } : null} />;
+    return <EmptyState title="No orders yet" text="Bookings from ReadTraining, your website and the orders you add yourself appear here." action={can("provider.orders.create") ? { href: link("/provider/orders/new"), label: "Create order" } : null} />;
   }
 
   // every word typed must be found in the order number, the customer's name or email
@@ -93,7 +95,7 @@ export default function ProviderOrders() {
                 const k = o.lines.map((l) => l.cohortId).find(Boolean);
                 return (
                   <tr key={o.ref}>
-                    <td data-label="Order"><Link href={`/provider/orders/${o.ref}`} className="rt-adm-strong">{o.ref}</Link><small>{formatOrderDay(o.at)}</small></td>
+                    <td data-label="Order"><Link href={link(`/provider/orders/${o.ref}`)} className="rt-adm-strong">{o.ref}</Link><small>{formatOrderDay(o.at)}</small></td>
                     <td data-label="Customer">{customerName(o.customer)}<small>{o.customer.email}</small></td>
                     <td data-label="Course">{courseOf(o)}{o.lines.length > 1 && <small>+ {o.lines.length - 1} more</small>}</td>
                     <td data-label="Channel">{pw.channels[o.channel]}<small>{bookedBy(o)}</small></td>

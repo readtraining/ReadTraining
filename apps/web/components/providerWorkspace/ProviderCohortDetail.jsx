@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Toast from "@/components/courses/Toast";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 import { errorText } from "@/lib/useMe";
 import { formatPrice } from "@/lib/format";
 import { methodName } from "@/lib/taxonomy";
@@ -32,6 +33,7 @@ export function CohortDetailTitle({ cohortId, fallback }) {
 export default function ProviderCohortDetail({ cohortId }) {
   const router = useRouter();
   const { organisationId, can } = useProviderAccess();
+  const link = useFromLink();
   const query = useCohort(cohortId);
   const utils = api.useUtils();
   const bookable = api.provider.cohorts.setBookable.useMutation();
@@ -90,10 +92,10 @@ export default function ProviderCohortDetail({ cohortId }) {
         </div>
         {/* its learning option isn't taking bookings on the course: these dates can't be booked until it takes them again */}
         {!cancelled && k.optionClosed && (
-          <p className="rt-acc__notice -warn">{methodName(k.method)} isn’t taking new bookings on this course, so nobody can book these dates.{can("provider.courses.edit") && <> <Link href={`/provider/courses/${k.courseId}?tab=mode`} className="rt-cd__link">Take bookings again in Learning options</Link></>}</p>
+          <p className="rt-acc__notice -warn">{methodName(k.method)} isn’t taking new bookings on this course, so nobody can book these dates.{can("provider.courses.edit") && <> <Link href={link(`/provider/courses/${k.courseId}?tab=mode`)} className="rt-cd__link">Take bookings again in Learning options</Link></>}</p>
         )}
         <dl className="rt-pws-coh__details">
-          <div><dt>Course</dt><dd><Link href={`/provider/courses/${k.courseId}`} className="rt-adm-strong">{k.courseTitle}</Link><small>{methodName(k.method)}</small></dd></div>
+          <div><dt>Course</dt><dd><Link href={link(`/provider/courses/${k.courseId}`)} className="rt-adm-strong">{k.courseTitle}</Link><small>{methodName(k.method)}</small></dd></div>
           <div><dt>Dates</dt><dd>{dayRange(k.startsOn, k.endsOn)}{k.sessions.length > 1 && <small>{k.sessions.length} sessions</small>}</dd></div>
           <div><dt>{k.method === "classroom" ? "Venue" : "Joining link"}</dt><dd>{k.method === "classroom" ? where : k.joinUrl ? <a href={k.joinUrl} target="_blank" rel="noopener noreferrer" className="rt-pws-ce__url">{k.joinUrl}</a> : <span className="rt-adm-muted">Not added yet</span>}</dd></div>
           <div><dt>Places</dt><dd><Seats booked={k.taken ?? 0} max={k.capacity} /></dd></div>

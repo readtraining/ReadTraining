@@ -184,10 +184,8 @@ export const pw = {
   // it. One set of words, pictures and syllabus covers them all.
   learningOptions: {
     title: "Learning options",
-    lead: "Set the main way this course is taught, and switch on any other ways learners can take it.",
     primary: "Primary learning option",
     others: "Other ways to offer it",
-    othersHint: "The same course page, syllabus and FAQs cover every way you offer it.",
     upcoming: (n) => `It has ${n} upcoming ${n === 1 ? "date" : "dates"}. Stop new bookings for it instead (below), or cancel ${n === 1 ? "it" : "them"} before turning this off.`,
     closedUpcoming: (n) => `Not taking bookings. It has ${n} upcoming ${n === 1 ? "date" : "dates"}, so it stays on until ${n === 1 ? "it is" : "they are"} over or cancelled.`,
     closed: "Not taking bookings.",

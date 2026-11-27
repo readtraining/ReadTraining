@@ -282,7 +282,7 @@ function InviteSheet({ open, onClose, onDone }) {
           <input {...aria("rt-team-email", errors.email)} type="email" autoComplete="off" spellCheck={false} value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value }))} />
         </Field>
         <Field id="rt-team-role" label="Role" required error={errors.role} hint={f.role ? ROLE[f.role].can : undefined}>
-          <FieldSelect id="rt-team-role" label="Role" placeholder="Choose a role" value={f.role} onChange={(value) => setF((x) => ({ ...x, role: value }))} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} invalid={Boolean(errors.role)} describedBy={aria("rt-team-role", errors.role, Boolean(f.role))["aria-describedby"]} />
+          <FieldSelect id="rt-team-role" label="Role" placeholder="Choose a role" value={f.role} onChange={(value) => setF((x) => ({ ...x, role: value }))} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} invalid={Boolean(errors.role)} describedBy={aria("rt-team-role", errors.role, Boolean(f.role))["aria-describedby"]} inline />
         </Field>
         <button type="submit" className="button -md -purple-1 text-white rt-btn-block" disabled={invite.isPending}>{invite.isPending ? "Sending…" : "Send invite"}</button>
       </form>

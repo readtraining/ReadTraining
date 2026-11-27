@@ -10,6 +10,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { errorsFrom } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { waysLabel } from "@/lib/courseModes";
+import { useFromLink } from "@/lib/backLink";
 import { Tabs, getQuery, setQuery, Said, TableSkeleton, Empty, RowMenu, Req, formatWhen } from "./adminParts";
 import { ErrorState } from "@/components/states/States";
 import { AdminDue, AdminStatus, AdminTag } from "./AdminStatus";
@@ -31,6 +32,7 @@ const ORDERS = { oldest: "Oldest first", newest: "Newest first" };
 
 export default function AdminApprovals() {
   const me = useAdminAccess();
+  const link = useFromLink();
   const [tab, setTab] = useState("waiting");
   const [type, setType] = useState("all");
   // the order, kept across the tabs and in the address: oldest first by default (a queue, decided in the order it was sent)
@@ -210,7 +212,7 @@ export default function AdminApprovals() {
                     <span className="rt-adm-item__when">{tab === "waiting" ? "Sent" : "Decided"} {formatWhen(at)}</span>
                     {tab === "waiting" && <AdminDue due={at + copy.dueDays * DAY} now={now} />}
                   </div>
-                  <h3 className="rt-acc__h3"><Link href={`/admin/catalogue/${a.courseId}`} className="rt-adm-strong">{a.title}</Link></h3>
+                  <h3 className="rt-acc__h3"><Link href={link(`/admin/catalogue/${a.courseId}`)} className="rt-adm-strong">{a.title}</Link></h3>
                   <p className="rt-acc__note">{[a.provider, waysLabel(a), a.parent ? `on the shared page ${a.parent}` : ""].filter(Boolean).join(" · ")}</p>
                   {tab === "waiting" && a.type === "new" && !providerReady && <p className="rt-adm-item__reason">{copy.providerNotActive(a.providerStatus)}</p>}
                   {a.note && <p className="rt-adm-item__reason"><strong>Note to the provider:</strong> {a.note}</p>}

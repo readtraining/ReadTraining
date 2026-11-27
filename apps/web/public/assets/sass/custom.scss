@@ -1168,15 +1168,17 @@ body:has(.header-menu.-is-el-visible) .rt-utility { z-index: auto; }
    empty space to scroll into below the form */
 .rt-dd .rt-cat-dd:not(.is-open) .rt-cat-dd__panel { display: none; }
 .rt-cat-dd__panel::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
-/* in a pop-up on a computer the list opens inside it, under its field and in the flow (so the pop-up never cuts it off), as wide as
-   the field, about six options at a time with the rest scrolling (CatalogueDropdown `-inline`) */
+/* an `inline` list (the Team invite's role): opens inside its pop-up, under its field and in the flow, as wide as the field, about
+   six options at a time with the rest scrolling */
 .rt-cat-dd__panel.-inline { position: static; width: 100%; min-width: 0; max-width: none; margin-top: 6px; transform: none; transition: none; }
 .rt-cat-dd:not(.is-open) .rt-cat-dd__panel.-inline { display: none; }
 .rt-cat-dd__panel.-inline::before { display: none; }
 .rt-cat-dd__panel.-inline .rt-cat-dd__list { max-height: 252px; }
-/* a floating list (FieldSelect float: the cohort form's times): over the pop-up, placed from its field by CatalogueDropdown */
+/* a floating list (every other list in a pop-up, and FieldSelect float: the cohort form's times): over the pop-up, placed from its field
+   by CatalogueDropdown, so the pop-up never cuts it off and the fields around it never move; a closed one takes no room */
 @media (min-width: 768px) {
   .rt-cat-dd__panel.-float { z-index: 1300; max-width: 280px; transform: none; }
+  .rt-cat-dd:not(.is-open) .rt-cat-dd__panel.-float { display: none; }
   .rt-cat-dd__panel.-float .rt-cat-dd__list { max-height: 252px; }
 }
 .rt-cat-dd--sort .rt-cat-dd__panel { left: auto; right: 0; min-width: 220px; }
@@ -4884,12 +4886,8 @@ button.rt-adm__link { width: 100%; border: 0; background: none; text-align: left
 .rt-demo-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-orange-6); }
 .rt-adm__crumbrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px; }
 .rt-adm__crumbstart { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
-.rt-adm__crumbs { display: flex; flex-wrap: wrap; align-items: center; margin: 0; padding: 0; list-style: none; font-size: var(--rt-text-sm); }
-.rt-adm__crumbs li { display: inline-flex; align-items: center; min-width: 0; list-style: none; color: var(--rt-c-muted); }
-.rt-adm__crumbs li + li::before { content: "/"; margin: 0 10px; color: var(--rt-c-line); }
-.rt-adm__crumbs a { font-weight: 500; color: var(--rt-c-brand) !important; text-decoration: none; }
-.rt-adm__crumbs a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.rt-adm__crumbs [aria-current] { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; color: var(--rt-c-text); }
+/* a record's page: the back link (the provider workspace's, lib/backLink.js) where the breadcrumb was */
+.rt-adm__crumbstart .rt-pws__back { margin-bottom: 0; }
 .rt-adm-hero .rt-adm__h1 { font-size: 24px; }
 .rt-adm-skel { display: grid; gap: 14px; }
 .rt-adm-skel__row { display: flex; align-items: center; gap: 24px; padding: 8px 0; border-top: 1px solid var(--rt-c-line); }
@@ -5006,8 +5004,11 @@ a.rt-adm-strong:hover { color: var(--color-purple-1) !important; text-decoration
 .rt-adm-diff td { vertical-align: top; }
 .rt-adm-diff td:last-child { background: var(--rt-c-brand-soft); }
 .rt-adm-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 0 0 12px; padding: 0; list-style: none; }
-.rt-adm-thumbs li { display: grid; gap: 4px; justify-items: start; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
+.rt-adm-thumbs li { display: grid; gap: 4px; justify-items: start; min-width: 0; font-size: var(--rt-text-xs); color: var(--rt-c-muted); }
 .rt-adm-thumbs img { width: 100%; aspect-ratio: 16 / 10; border-radius: var(--rt-radius-sm); object-fit: cover; background: var(--rt-c-soft); }
+/* under the picture, one line: the Cover tag, then its alt text in front of it (cut with "…", the whole text on hover) */
+.rt-adm-thumbs__cap { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
+.rt-adm-thumbs__cap small { flex: 1 1 0; width: 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .rt-adm-read > div { padding: 14px 0; }
 .rt-adm-read dd > * { max-width: 75ch; } /* comfortable reading lines, however wide the card */
 .rt-adm-read__p { margin: 0 0 8px; font-size: var(--rt-text-sm); line-height: 1.6; color: var(--rt-c-text); }
@@ -6208,6 +6209,8 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 .rt-pws-gx__pair > .rt-field { margin: 0; }
 /* a short box (two lines) is two lines tall, not the form's tall default */
 .rt-pws-gx .rt-field textarea[rows="2"] { min-height: 76px; max-height: 240px; field-sizing: content; }
+/* the editor's syllabus and assessment introductions: two lines tall, growing as it's typed (in the admin's staff editor too) */
+.rt-field textarea.rt-pws-ce__line.rt-pws-ce__line { min-height: 76px; max-height: 240px; field-sizing: content; }
 /* the Review step: each step with its tick, what it still needs, and Change */
 .rt-pws-review > li { align-items: center; }
 .rt-pws-review > li > .rt-pws-course-tick { flex: none; }
@@ -6489,8 +6492,11 @@ a.rt-sv-badge:focus-visible { outline: 3px solid var(--color-purple-1); outline-
 @media (min-width: 768px) { .rt-pws-coh__setgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* the site's text links: underlined on hover only */
 @media (hover: hover) and (pointer: fine) { .rt-pws-coh__clear:hover, .rt-pws-coh__remove:hover { text-decoration: underline; } }
-.rt-pws-coh__novenue { display: grid; gap: 12px; margin: 0 0 4px; }
-.rt-pws-coh__novenue p { margin: 0; }
+/* one line: what's missing, with its button on the right; the venue form, once opened, takes the full width under it */
+.rt-pws-coh__novenue { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 4px; }
+.rt-pws-coh__novenue p { flex: 1 1 200px; margin: 0; }
+.rt-pws-coh__novenue > button { flex: none; }
+.rt-pws-coh__novenue > :not(p, button) { flex: 1 1 100%; }
 .rt-pws-coh__added { margin: 0; color: var(--rt-c-success); font-weight: 600; }
 .rt-pws-venueform { padding: 16px; border: 1px solid var(--rt-c-line); border-radius: var(--rt-radius-control); background: var(--rt-c-surface); }
 .rt-pws-venueform__actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -8179,6 +8185,11 @@ html { scrollbar-gutter: stable; }
 /* Re-check 2. Course detail: the course's words at a comfortable reading width; a long video address on one line with "…" */
 .rt-adm--platform .rt-adm-detail__main .rt-adm-read dd { max-width: 760px; }
 .rt-adm--platform .rt-adm-detail__side .rt-pws-ce__url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+/* the admin course page's video: its heading on the left, its address as a link beside it up to the card's edge (the rest cut
+   off with "…", the whole address on hover) */
+.rt-adm-video { display: flex; align-items: baseline; gap: 16px; min-width: 0; margin-top: 20px; }
+.rt-adm-video .rt-acc__h3 { flex: none; margin: 0; }
+.rt-adm-videolink { flex: 1 1 0; width: 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--rt-text-sm); color: var(--rt-c-brand) !important; text-decoration: underline; text-underline-offset: 3px; }
 /* the icon rail's waiting counts are small dots above the icon's corner, not numbers over it */
 @media (min-width: 992px) {
   .rt-adm--platform.is-sideclosed .rt-adm__link .rt-adm__count { top: 2px; right: 10px; min-width: 8px; width: 8px; height: 8px; padding: 0; overflow: hidden; font-size: 0; background: var(--rt-c-brand); }
