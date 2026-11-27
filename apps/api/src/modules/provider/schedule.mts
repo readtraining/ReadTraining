@@ -672,6 +672,12 @@ export const providerCohortsRouter = createTRPCRouter({
         if (input.seen && now.updatedAt.getTime() > new Date(input.seen).getTime()) throw new TRPCError({ code: 'CONFLICT', message: DATES_CHANGED })
         // finished dates are the record of what ran, so they don't change (their tutor can still be set, setTutor)
         if (now.endsOn < today()) throw new TRPCError({ code: 'CONFLICT', message: 'This cohort has already finished, so it can’t be changed.' })
+        // never fewer places than are already booked (paid or part-refunded orders on its course and start day, as the lists count them)
+        if (values.capacity < cohort.capacity) {
+          const [booked] = await tx.execute<{ taken: number }>(sql`select coalesce(sum(quantity), 0)::int taken from public.orders where course_id = ${cohort.courseId} and starts_on = ${cohort.startsOn}::date and status in ('paid', 'part_refunded')`)
+          const taken = booked?.taken ?? 0
+          if (values.capacity < taken) throw bad(`${taken} ${taken === 1 ? 'place is' : 'places are'} already booked, so this cohort needs at least ${taken} ${taken === 1 ? 'place' : 'places'}.`, 'capacity')
+        }
         // a run under way keeps the sessions it has had, or drops one, but no day before today is added to it
         const held = new Set((now.sessions as Session[]).map((s) => s.date))
         if (values.sessions.some((s) => s.date < today() && !held.has(s.date))) throw bad('Dates in the past can’t be added.', 'sessions')

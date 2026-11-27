@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
 
 import { asc, eq, organisations, providerFaqs, sql, type Db } from '@readtraining/db'
@@ -24,11 +25,18 @@ export const providerFaqsRouter = createTRPCRouter({
   list: orgProcedure('provider.settings.view').query(async ({ ctx, input }) => loadProviderFaqs(ctx.db, input.organisationId)),
 
   save: orgProcedure('provider.faqs.edit')
-    .input(z.object({ faqs: z.array(faq).max(MOST_FAQS, `A provider can have up to ${MOST_FAQS} FAQs.`) }))
+    // `before`: the list the editor showed when the change was made; a save over a list changed since (another tab, someone else)
+    // is refused, so one never silently replaces the other
+    .input(z.object({ faqs: z.array(faq).max(MOST_FAQS, `A provider can have up to ${MOST_FAQS} FAQs.`), before: z.array(z.object({ question: z.string(), answer: z.string() })).max(MOST_FAQS).optional() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.transaction(async (tx) => {
         // one save at a time for a provider (two tabs or two people): the provider's row is locked while the list is replaced
         await tx.execute(sql`select 1 from public.organisations where id = ${input.organisationId}::uuid for update`)
+        if (input.before) {
+          const now = await loadProviderFaqs(tx, input.organisationId)
+          const same = (list: { question: string; answer: string }[]) => JSON.stringify(list.map((f) => [f.question, f.answer]))
+          if (same(now) !== same(input.before)) throw new TRPCError({ code: 'CONFLICT', message: 'Your FAQs were changed somewhere else since you opened this page. We’ve loaded the latest: make your change again.' })
+        }
         await tx.delete(providerFaqs).where(eq(providerFaqs.organisationId, input.organisationId))
         if (input.faqs.length) await tx.insert(providerFaqs).values(input.faqs.map((f, i) => ({ organisationId: input.organisationId, position: i, question: f.question, answer: f.answer })))
         await tx.update(organisations).set({ updatedAt: new Date() }).where(eq(organisations.id, input.organisationId))

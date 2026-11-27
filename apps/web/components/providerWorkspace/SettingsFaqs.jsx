@@ -37,13 +37,18 @@ function FaqsList({ initial, locked, say }) {
   const commit = async (next, message, opts) => {
     setError("");
     try {
-      const r = await save.mutateAsync({ organisationId, faqs: next });
+      const r = await save.mutateAsync({ organisationId, faqs: next, before: faqs });
       utils.provider.faqs.list.setData({ organisationId }, r);
       setFaqs(r);
       if (message) say(message, opts);
       return true;
     } catch (err) {
       setError(errorText(err));
+      // changed somewhere else: the latest list replaces the one on screen, so the next change is made to it
+      if (err?.data?.code === "CONFLICT") {
+        const fresh = await utils.provider.faqs.list.fetch({ organisationId }, { staleTime: 0 }).catch(() => null);
+        if (fresh) setFaqs(fresh);
+      }
       return false;
     }
   };

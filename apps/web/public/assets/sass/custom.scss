@@ -7083,8 +7083,12 @@ button.rt-perf-kpi:focus-visible { outline: 3px solid var(--rt-c-brand); outline
 @media (min-width: 992px) { .rt-pws-pkg__tiers.-n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1320px) {
   .rt-pws-pkg__sheet .rt-dd__panel:has(.rt-pws-pkg__tiers.-n4) { width: 1280px; }
+  /* its Learner preview keeps that width (four cards side by side fit), not the booking pop-up's */
+  .rt-pws-pkg__sheet .rt-dd__panel:has(.rt-pk__grid.-n4) { width: 1280px; }
   .rt-pws-pkg__tiers.-n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+/* narrower screens: the preview's four cards two by two, inside the pop-up */
+@media (min-width: 576px) and (max-width: 1319px) { .rt-pws-pkg__preview .rt-pk__grid.-n4 { grid-template-columns: repeat(2, 264px); } }
 .rt-pws-pkg__tier > .rt-field, .rt-pws-pkg__tier > .rt-pws-toggle { width: 100%; margin: 0; }
 .rt-pws-pkg__courses { display: grid; gap: 8px; min-width: 0; }
 .rt-pws-pkg__courses .rt-pws-pkg__ctags { margin: 0; }

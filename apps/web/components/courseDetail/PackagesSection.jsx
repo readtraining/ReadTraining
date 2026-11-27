@@ -2,23 +2,21 @@ import React from "react";
 import { Check } from "./Icon";
 import { formatPrice } from "@/lib/format";
 
-// Packages, on a provider's own course page only (one provider, so one set of prices): the packages of its price plans on the
-// course's dates, in the learning options' cards (.rt-lc): badge, name, tagline, its included features, and its lowest price,
-// "From" (the other courses a package includes aren't listed again: its name says them). A plan on several dates is shown once. A shared course page lists several providers' dates, so it has no such section:
-// each date says how many packages it has, and its Book now shows them (PackageChooser.jsx). Only to look at: a package is chosen
-// when a date is booked.
+// Packages, on a provider's own course page only (one provider, so one set of prices): the packages of the price plan on its next
+// date (sessions come soonest first), so packages of different plans are never mixed in one row; each card's price is that package's
+// lowest on the dates using the same plan, "From". Learning options' cards (.rt-lc): badge, name, tagline, its included features
+// (the other courses a package includes aren't listed again: its name says them). A shared course page lists several providers'
+// dates, so it has no such section: each date says how many packages it has, and its Book now shows them (PackageChooser.jsx).
+// Only to look at: a package is chosen when a date is booked.
 export function packagesOf(sessions) {
-  const plans = new Map();
-  for (const s of sessions) {
-    const list = s.packages || [];
-    if (!list.length) continue;
-    const id = `${s.courseId}:${list.map((p) => p.key).join("|")}`;
-    const had = plans.get(id);
-    plans.set(id, had ? had.map((p, i) => (list[i].price < p.price ? { ...p, price: list[i].price } : p)) : list);
-  }
-  return [...plans.entries()].flatMap(([id, list]) => list.map((p) => ({ ...p, id: `${id}:${p.key}` })));
+  const key = (s) => `${s.courseId}:${s.packages.map((p) => p.key).join("|")}`;
+  const first = sessions.find((s) => s.packages?.length);
+  if (!first) return [];
+  const id = key(first);
+  let list = first.packages;
+  for (const s of sessions) if (s !== first && s.packages?.length && key(s) === id) list = list.map((p, i) => (s.packages[i].price < p.price ? { ...p, price: s.packages[i].price } : p));
+  return list.map((p) => ({ ...p, id: `${id}:${p.key}` }));
 }
-
 
 export default function PackagesSection({ course }) {
   if (course.kind === "shared") return null;

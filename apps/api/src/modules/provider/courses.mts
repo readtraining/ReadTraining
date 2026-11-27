@@ -29,7 +29,7 @@ import { refuseRetired, retiredEntries, retiredMethods } from '../../lib/retired
 import { loadCoursePage } from '../catalogue/listings.mjs'
 import type { db as Db } from '../../lib/db.mjs'
 import { IMAGE_TYPES, MEDIA_PATH, MIN_COURSE_IMAGE, copyMedia, mediaUploadUrl, mediaUrl, removeMedia, storedImageSize } from '../../lib/media.mjs'
-import { notify, notifyApprovers, ownerOf, personOf } from '../../lib/notify.mjs'
+import { afterAnswer, notify, notifyApprovers, ownerOf, personOf } from '../../lib/notify.mjs'
 import { freeSlug, slugify } from '../../lib/slug.mjs'
 import { usablePlan } from './plans.mjs'
 import { createTRPCRouter, limit, notForStaff, orgProcedure, refuse } from '../../trpc/trpc.mjs'
@@ -1000,8 +1000,10 @@ export const providerCoursesRouter = createTRPCRouter({
       })
       // a change to a live course: the admins who approve are told once, when it starts (later saves add to the same change)
       if (result.newChange) {
-        const { provider } = await ownerOf(ctx.db, organisationId)
-        await notifyApprovers(ctx.db, 'admin-course-change', { provider, course: course.title, courseId: String(courseId) }, { organisationId, targetType: 'course', targetId: String(courseId), action: 'email.approvers_told' }, ctx.user.id)
+        afterAnswer(async () => {
+          const { provider } = await ownerOf(ctx.db, organisationId)
+          await notifyApprovers(ctx.db, 'admin-course-change', { provider, course: course.title, courseId: String(courseId) }, { organisationId, targetType: 'course', targetId: String(courseId), action: 'email.approvers_told' }, ctx.user.id)
+        })
       }
       return { ok: result.ok, pendingChange: result.pendingChange, version: result.version }
     }),
@@ -1085,11 +1087,15 @@ export const providerCoursesRouter = createTRPCRouter({
         await log(tx, ctx, input.organisationId, 'course.submitted', course.id)
       })
       // the provider's owner hears it arrived (as they hear the decision), and the admins who approve that it is waiting
-      const { to, provider } = await ownerOf(ctx.db, input.organisationId)
-      const vars = { provider, course: course.title, courseId: String(course.id) }
-      const target = { organisationId: input.organisationId, targetType: 'course', targetId: String(course.id) }
-      await notify(ctx.db, 'course-received', to, vars, { ...target, action: 'email.course_received_sent' })
-      await notifyApprovers(ctx.db, 'admin-new-course', vars, { ...target, action: 'email.approvers_told' }, ctx.user.id)
+      afterAnswer(async () => {
+        const { to, provider } = await ownerOf(ctx.db, input.organisationId)
+        const vars = { provider, course: course.title, courseId: String(course.id) }
+        const target = { organisationId: input.organisationId, targetType: 'course', targetId: String(course.id) }
+        await Promise.all([
+          notify(ctx.db, 'course-received', to, vars, { ...target, action: 'email.course_received_sent' }),
+          notifyApprovers(ctx.db, 'admin-new-course', vars, { ...target, action: 'email.approvers_told' }, ctx.user.id),
+        ])
+      })
       return { ok: true, version: await courseVersion(ctx.db, course.id) }
     }),
 
@@ -1192,7 +1198,7 @@ export const providerCoursesRouter = createTRPCRouter({
         },
       )
       // a course that was live has left the site: the admins who approve are told, after the delete is saved and never holding it up
-      if (hasBeenLive(deleted)) {
+      if (hasBeenLive(deleted)) afterAnswer(async () => {
         try {
           const [[org], who] = await Promise.all([
             ctx.db.execute<{ name: string; slug: string }>(sql`select name, slug from public.organisations where id = ${input.organisationId}::uuid`),
@@ -1203,7 +1209,7 @@ export const providerCoursesRouter = createTRPCRouter({
         } catch (error) {
           console.error('email admin-course-deleted: could not tell the admins', error instanceof Error ? error.message : error)
         }
-      }
+      })
       return { ok: true }
     }),
 })

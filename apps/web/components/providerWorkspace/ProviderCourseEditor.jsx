@@ -872,7 +872,7 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
           {tab === "review" && <ReviewSection ticks={ticks.filter((x) => !x.final)} stepStatus={stepStatus} needed={needed} admin={ep.admin} guide={guide.saved} onChange={(key) => changeTab(key, { scroll: true })} />}
           {tab === "faqs" && <FaqSection {...sectionProps} />}
           {!ep.admin && tab === "mode" && <ModeSection {...sectionProps} onBookings={setOptionOpen} bookingsBusy={ep.settingOption} />}
-          {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} onSaved={saved} />}
+          {!ep.admin && tab === "pricing" && <PricingSection {...sectionProps} onSaved={saved} saving={saving} />}
           {ep.admin && tab === "providers" && <ProvidersSection course={course} />}
           {/* kept open (hidden) on the other sections, so SEO words typed there aren't lost and the bar's Save saves them */}
           <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-seo-h" hidden={tab !== "seo"}>
@@ -1585,7 +1585,7 @@ function FaqSheet({ open, onClose, faq, onSave }) {
 // date, so this step holds the course's dates (Create cohort opens the same form as the Cohorts page). The self-paced price saves
 // with the learning options (a live course turning self-paced on needs one); the dates follow the options as saved.
 // Prices include VAT and change straight away, even on a live course.
-function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
+function PricingSection({ draft, setDraft, errors, access, course, onSaved, saving = false }) {
   const links = useWorkspaceLinks();
   const link = useFromLink();
   const set = useSet(setDraft);
@@ -1659,7 +1659,8 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
           <div className="rt-pws-ce__part">
             {selfPaced && <h3 className="rt-adm-h3">Dates</h3>}
             {!same(dated, savedDated) ? (
-              <p className="rt-acc__note">Save your learning options first: the dates follow from them.</p>
+              // a save still on its way (the step was opened while it ran): the dates show once it is saved, not "save first"
+              <p className="rt-acc__note">{saving ? "Saving your learning options…" : "Save your learning options first: the dates follow from them."}</p>
             ) : (
               <>
                 <FieldErr id="rt-pws-ce-dates" text={errors.dates && lacking.length ? datesGap(lacking) : ""} />

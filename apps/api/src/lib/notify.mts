@@ -52,6 +52,16 @@ export async function ownerOf(db: typeof Db, organisationId: string): Promise<{ 
 }
 
 // One email to one person.
+/** Emails nobody waits on (the admins' "something is waiting" alerts, the provider's "we received it"): started now and left to
+ *  finish after the answer, so a save isn't held up by sending to every admin. On Vercel the function is kept running until they
+ *  are done (its request context's waitUntil, the hook @vercel/functions uses); elsewhere the server simply carries on. A failure
+ *  is only logged, as every email here. */
+export function afterAnswer(work: () => Promise<unknown>) {
+  const done = work().catch((error) => console.error('email: could not send after the answer', error instanceof Error ? error.message : error))
+  const context = (globalThis as Record<symbol, { get?: () => { waitUntil?: (p: Promise<unknown>) => void } | undefined } | undefined>)[Symbol.for('@vercel/request-context')]
+  context?.get?.()?.waitUntil?.(done)
+}
+
 export async function notify(db: typeof Db, key: string, to: Person | null, vars: Record<string, string>, log: Log) {
   if (!to) return false
   const sent = await deliver(db, key, vars, to)
