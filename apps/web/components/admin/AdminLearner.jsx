@@ -12,7 +12,8 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom, errorText } from "@/lib/useMe";
-import { formatWhen, Said, DetailSkeleton, Empty, actionLabel, Req } from "./adminParts";
+import { formatWhen, Said, DetailSkeleton, Empty, Req } from "./adminParts";
+import { entryLabel } from "./activityWords";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { CloseAccountSheet } from "./AdminClosures";
 import TextArea from "@/components/forms/TextArea";
@@ -150,7 +151,7 @@ export default function AdminLearner({ id }) {
             {activity.data.entries.map((e) => (
               <li key={e.id}>
                 <div>
-                  <span className="rt-adm-strong">{actionLabel(e.action)}</span>
+                  <span className="rt-adm-strong">{entryLabel(e)}</span>
                   <small>{e.actor && e.actor.id !== l.id ? `By ${e.actor.name} · ` : ""}{formatWhen(Date.parse(e.at))}</small>
                 </div>
               </li>

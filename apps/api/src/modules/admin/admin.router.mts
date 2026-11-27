@@ -71,8 +71,10 @@ export const adminRouter = createTRPCRouter({
   open: protectedProcedure.input(z.object({ path: z.string().max(300) })).query(async ({ ctx, input }) => {
     const admin = ctx.actor.admin
     if (!can(ctx.actor, 'admin.panel.open')) {
-      if (!admin)
-        await logDenied(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'student', attempted: 'admin.panel.open', targetType: 'page', targetId: input.path, ip: ctx.ip })
+      // the sign-in page asks only whether someone signed in to the website is already an admin (to skip the form): that is not
+      // an attempt on the admin, so it isn't logged; a sign-in that fails is (check, with attempt)
+      if (!admin && input.path !== '/admin/login')
+        await logDenied(ctx.db, { actorUserId: ctx.user.id, actorIdentity: 'student', attempted: 'admin.panel.open', targetType: 'page', targetId: input.path, ip: ctx.ip, read: true })
       throw new TRPCError({ code: 'FORBIDDEN', message: admin ? 'two_step' : undefined })
     }
     // staff sessions left unused for two hours close here, and their summaries go to the providers (lib/staffAccess.mts)

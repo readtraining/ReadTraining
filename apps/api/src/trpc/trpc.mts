@@ -91,9 +91,11 @@ export const protectedProcedure = base.use(async ({ ctx, next }) => {
   return next({ ctx: { ...ctx, user: ctx.user, actor } })
 })
 
-// Refuses with FORBIDDEN and records the attempt in the activity log.
-export async function refuse(ctx: { db: TRPCContext['db']; ip: string | null; user: { id: string } }, action: Action, organisationId: string | null, path: string): Promise<never> {
+// Refuses with FORBIDDEN and records the attempt in the activity log. `read`: a query was refused (nothing would have
+// changed), which the log records once in a while rather than on every ask (lib/activity.mts logDenied).
+export async function refuse(ctx: { db: TRPCContext['db']; ip: string | null; user: { id: string } }, action: Action, organisationId: string | null, path: string, read = false): Promise<never> {
   await logDenied(ctx.db, {
+    read,
     actorUserId: ctx.user.id,
     actorIdentity: action.startsWith('admin.') ? 'admin' : action.startsWith('provider.') ? 'provider' : action.startsWith('business.') ? 'business' : 'student',
     organisationId,
@@ -125,14 +127,14 @@ export async function notForStaff(ctx: { db: TRPCContext['db']; ip: string | nul
 const NOT_APPROVED_YET = 'Your provider account is waiting for our team’s approval. Until then you can complete your profile and send it for review; you can add courses, dates, venues and price plans once it is approved.'
 
 export const orgProcedure = (action: ProviderAction | BusinessAction) =>
-  protectedProcedure.input(z.object({ organisationId: z.string().uuid() })).use(async ({ ctx, input, path, next }) => {
+  protectedProcedure.input(z.object({ organisationId: z.string().uuid() })).use(async ({ ctx, input, path, type, next }) => {
     const { organisationId } = input as { organisationId: string }
     if (!can(ctx.actor, action, { organisationId })) {
       // a provider our team hasn't approved yet is told why (it can only complete its application until then); the refusal is
       // logged either way
       const m = ctx.actor.memberships.find((x) => x.organisationId === organisationId && x.status === 'active')
       const why = m && waitsForApproval(action, m.organisationStatus) ? new TRPCError({ code: 'FORBIDDEN', message: NOT_APPROVED_YET }) : null
-      await refuse(ctx, action, organisationId, path).catch((error) => {
+      await refuse(ctx, action, organisationId, path, type === 'query').catch((error) => {
         throw why ?? error
       })
     }
@@ -145,7 +147,7 @@ export const orgProcedure = (action: ProviderAction | BusinessAction) =>
 
 /** A platform admin action: an active admin row, the switch for it, and two-step sign-in for Full admins. */
 export const adminProcedure = (action: AdminAction) =>
-  protectedProcedure.use(async ({ ctx, path, next }) => {
-    if (!can(ctx.actor, action)) await refuse(ctx, action, null, path)
+  protectedProcedure.use(async ({ ctx, path, type, next }) => {
+    if (!can(ctx.actor, action)) await refuse(ctx, action, null, path, type === 'query')
     return next()
   })
