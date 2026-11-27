@@ -193,6 +193,7 @@ export const organisationsRouter = createTRPCRouter({
           targetType: 'page',
           targetId: input.path,
           ip: ctx.ip,
+          read: true,
         })
         throw new TRPCError({ code: 'FORBIDDEN' })
       }

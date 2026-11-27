@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 
-import { activityLog } from '@readtraining/db'
+import { activityLog, sql } from '@readtraining/db'
 import type { NewActivityLogEntry } from '@readtraining/db'
 
 import type { db as Db } from './db.mjs'
@@ -28,11 +28,26 @@ function asStaff<T extends { actorIdentity?: unknown; metadata?: unknown }>(entr
   return { ...entry, actorIdentity: 'admin', metadata: { ...((entry.metadata as object | null) ?? {}), staff: staff.session } }
 }
 
-/** For refused requests: logging must never turn a refusal into a different error, so failures are only reported. */
-export async function logDenied(writer: Writer, entry: Omit<NewActivityLogEntry, 'action'> & { attempted: string }) {
-  const { attempted, metadata, ...rest } = entry
+// A refused page or read is logged once per person, page (or procedure) and attempt in this time: a page asks again on every
+// render and prefetch, so one person on one page wrote hundreds of identical lines. A refused change is always logged.
+const READ_REPEAT_MS = 15 * 60_000
+
+/**
+ * For refused requests: logging must never turn a refusal into a different error, so failures are only reported. `read`: the
+ * refusal was of a page or a query (nothing would have changed), marked in the entry (`metadata.read`) and not repeated.
+ */
+export async function logDenied(writer: Writer & Pick<typeof Db, 'execute'>, entry: Omit<NewActivityLogEntry, 'action'> & { attempted: string; read?: boolean }) {
+  const { attempted, read, metadata, ...rest } = entry
   try {
-    await writer.insert(activityLog).values(asStaff({ ...rest, action: 'access.denied', metadata: { ...(metadata as object), attempted } }))
+    if (read && rest.actorUserId) {
+      const [seen] = await writer.execute<{ one: number }>(sql`
+        select 1 one from public.activity_log
+        where actor_user_id = ${rest.actorUserId}::uuid and at > now() - make_interval(secs => ${READ_REPEAT_MS / 1000})
+          and action = 'access.denied' and metadata->>'attempted' = ${attempted} and target_id is not distinct from ${rest.targetId ?? null}
+        limit 1`)
+      if (seen) return
+    }
+    await writer.insert(activityLog).values(asStaff({ ...rest, action: 'access.denied', metadata: { ...(metadata as object), attempted, ...(read ? { read: true } : {}) } }))
   } catch (error) {
     console.error('activity_log: could not record access.denied', error)
   }

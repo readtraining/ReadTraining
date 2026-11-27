@@ -6,7 +6,8 @@ import { admin as A } from "@/data/admin";
 import { useAdmin } from "@/lib/admin";
 import { api } from "@/lib/trpc/react";
 import { formatDate, formatPrice } from "@/lib/format";
-import { Stats, formatWhen, DetailSkeleton, Empty, actionLabel } from "./adminParts";
+import { Stats, formatWhen, DetailSkeleton, Empty } from "./adminParts";
+import { entryLabel, entryTarget } from "./activityWords";
 import { useAdminAccess } from "@/lib/adminContext";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus } from "./AdminStatus";
@@ -17,8 +18,8 @@ const copy = A.dashboard;
 const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 const demoTag = <span className="rt-demo-tag" title={A.demo.all.note}>{copy.demoTag}</span>;
 
-// The latest things people did on the platform (API admin.activity.list, kind "work": no sign-ins, refused attempts or
-// automatic emails, which stay on the Activity log page): who did what, and when.
+// The latest things people did on the platform (API admin.activity.list, kind "work": the log's Important entries without the
+// refused attempts; sign-ins, automatic emails and providers' everyday edits stay on the Activity log page): who did what, and when.
 function RecentActivity() {
   const log = api.admin.activity.list.useQuery({ limit: 6, kind: "work" }, { staleTime: 30000 });
   const entries = log.data?.entries ?? [];
@@ -40,7 +41,7 @@ function RecentActivity() {
             <li key={e.id}>
               <span className="rt-acc__avatar" aria-hidden="true">{(e.actor ? (e.actor.email ? e.actor.name : A.activity.deleted) : A.activity.system).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
               <div>
-                <p>{e.actor ? <><strong>{e.actor.email ? e.actor.name : A.activity.deleted}</strong> {lowerFirst(actionLabel(e.action))}</> : <strong>{actionLabel(e.action)}</strong>}{e.target?.label && e.target.type !== "session" ? <> · <span className="rt-adm-muted">{e.target.label}</span></> : null}</p>
+                <p>{e.actor ? <><strong>{e.actor.email ? e.actor.name : A.activity.deleted}</strong> {lowerFirst(entryLabel(e))}</> : <strong>{entryLabel(e)}</strong>}{entryTarget(e) ? <> · <span className="rt-adm-muted">{entryTarget(e)}</span></> : null}</p>
                 <small>{formatWhen(Date.parse(e.at))}</small>
               </div>
             </li>

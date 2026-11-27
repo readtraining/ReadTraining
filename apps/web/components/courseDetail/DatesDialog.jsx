@@ -330,7 +330,7 @@ function Panel({ course, mode, modes, onMode, selectedId, onPick, onBook, onClos
             )}
             {/* the catalogue's own dropdown (as its "Sort by"), not the browser's native list */}
             <div className="rt-dd__sort">
-              <CatalogueDropdown label="Sort by" options={sortOptions.map(([v, l]) => ({ value: v, label: l }))} value={sortBy} onChange={setSort} clearable={false} />
+              <CatalogueDropdown label="Sort by" options={sortOptions.map(([v, l]) => ({ value: v, label: l }))} value={sortBy} onChange={setSort} clearable={false} openOnHover={false} float />
             </div>
           </div>
           <div className="rt-dd__meta">
