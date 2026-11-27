@@ -7743,6 +7743,16 @@ button.header-menu-close { padding: 0; border: 0; background: none; cursor: poin
 .rt-cg__pkg, .rt-cg__pkg:hover { cursor: default; border-color: var(--cd-border-strong); }
 .rt-cg__pkgs > li { margin: 0; list-style: none; }
 .rt-cg__pkg-was { margin-left: 6px; font-size: 13px; color: var(--cd-muted); }
+/* a provider's own Packages section: every card one size, as in "Choose your package" (264px wide, at least 420px tall, whatever
+   its words), its price at the foot; up to three a row, four two by two; phones one under another, full width */
+.rt-lc.rt-cg__pkgs { column-gap: 16px; }
+.rt-lc.rt-cg__pkgs > .rt-cg__pkg { display: flex; flex-direction: column; grid-row: auto; margin-bottom: 16px; }
+.rt-cg__pkg > .rt-lc__price { margin-top: auto; }
+@container rt-lo (min-width: 560px) {
+  .rt-lc.rt-lc.rt-cg__pkgs { grid-template-columns: repeat(2, 264px); justify-content: start; }
+  .rt-lc.rt-cg__pkgs > .rt-cg__pkg { min-height: 420px; }
+}
+@container rt-lo (min-width: 840px) { .rt-lc.rt-lc.rt-cg__pkgs.-n3 { grid-template-columns: repeat(3, 264px); } }
 .rt-cd__staff a.rt-cg__inline, .rt-cd a.rt-cg__inline { font-weight: 600; color: var(--cd-brand) !important; text-decoration: underline; text-underline-offset: 2px; }
 .rt-cg__steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: rt-step; }
 .rt-cg__steps li { position: relative; display: grid; gap: 2px; padding-left: 40px; counter-increment: rt-step; font-size: 15px; line-height: 1.6; color: var(--color-light-1); }
