@@ -5,6 +5,7 @@ import Link from "next/link";
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Toast from "@/components/courses/Toast";
 import { decideRefund, learnerName, useProvider } from "@/lib/providerWorkspace";
+import { useFromLink } from "@/lib/backLink";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { Loading, formatWhen, Pill, RowMenu } from "./providerParts";
 import { money } from "./charts";
@@ -23,6 +24,7 @@ const DECISIONS = [{ value: "accepted", label: "Accepted" }, { value: "rejected"
 
 export default function ProviderRequests() {
   const data = useProvider();
+  const link = useFromLink();
   const [editing, setEditing] = useState(null);
   const [decision, setDecision] = useState("");
   const [note, setNote] = useState("");
@@ -88,7 +90,7 @@ export default function ProviderRequests() {
               return (
                 <tr key={r.id}>
                   <td data-label="#Refund" className="rt-pws-money__num">{r.id.replace(/\D/g, "")}</td>
-                  <td data-label="Booking reference"><Link href={`/provider/orders/${r.orderRef}`} className="rt-adm-strong">{r.bookingRef}</Link></td>
+                  <td data-label="Booking reference"><Link href={link(`/provider/orders/${r.orderRef}`)} className="rt-adm-strong">{r.bookingRef}</Link></td>
                   <td data-label="Learner"><b className="rt-rq-who">{name}</b>{r.learner?.email && <small>{r.learner.email}</small>}</td>
                   <td data-label="Course">{r.course?.title || "Course removed"}</td>
                   <td data-label="Refund type">{r.full ? "Full refund" : <>Partial refund <b className="rt-rq-amt">{money(r.amount)}</b></>}</td>

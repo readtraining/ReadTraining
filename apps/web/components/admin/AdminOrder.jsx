@@ -10,6 +10,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatDate, formatPrice } from "@/lib/format";
 import { api } from "@/lib/trpc/react";
 import { errorsFrom } from "@/lib/useMe";
+import { useFromLink } from "@/lib/backLink";
 import { DetailSkeleton, Said, SortTh, formatWhen, Empty, PageLink, Req } from "./adminParts";
 import { describedBy, field } from "./contentParts";
 import { DisputeForm, RefundDecision, RefundRequestForm, useMoneyRefresh } from "./moneyParts";
@@ -145,6 +146,7 @@ export default function AdminOrder({ reference }) {
 
 // a ledger's rows (the order page and Transactions): signed amounts, from the provider's side; `sorter` makes the date sortable
 export function LedgerTable({ entries, showOrder = false, sorter = null }) {
+  const link = useFromLink();
   const c = L.columns;
   const sign = (n) => (n < 0 ? `−${formatPrice(-n)}` : formatPrice(n));
   return (
@@ -155,7 +157,7 @@ export function LedgerTable({ entries, showOrder = false, sorter = null }) {
           <tr key={e.id}>
             <td data-label={c.when}>{formatWhen(Date.parse(e.at))}{e.by && <small>{e.by}</small>}</td>
             <td data-label={c.type}><AdminTag>{L.types[e.type]}</AdminTag>{e.note && <small>{e.note}</small>}</td>
-            {showOrder && <td data-label={c.what}>{e.orderRef ? <Link href={`/admin/orders/${e.orderRef}`} className="rt-adm-strong">{e.orderRef}</Link> : e.payoutRef ? <span className="rt-adm-strong">{e.payoutRef}</span> : <span className="rt-adm-muted">–</span>}<small>{e.providerName}</small></td>}
+            {showOrder && <td data-label={c.what}>{e.orderRef ? <Link href={link(`/admin/orders/${e.orderRef}`)} className="rt-adm-strong">{e.orderRef}</Link> : e.payoutRef ? <span className="rt-adm-strong">{e.payoutRef}</span> : <span className="rt-adm-muted">–</span>}<small>{e.providerName}</small></td>}
             <td data-label={c.gross} className="rt-adm-num-cell">{e.gross ? sign(e.gross) : "–"}</td>
             <td data-label={c.fee} className="rt-adm-num-cell">{e.fee ? sign(e.fee) : "–"}</td>
             <td data-label={c.commission} className="rt-adm-num-cell">{e.commission ? sign(e.commission) : "–"}</td>

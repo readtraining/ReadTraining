@@ -25,10 +25,12 @@ export default function CatalogueDropdown({
   // a form field opens on click or tap only: hovering a form shouldn't drop a list over the next fields
   openOnHover = true,
   disabled = false,
-  // the list floats over the page beside its field (below it, or above when there's more room there) instead of opening in the
-  // pop-up's flow: for a field inside a box that scrolls on its own (the cohort form's times), where opening in the flow would
-  // scroll that box and move the field away from the pointer. On phones it is the bottom sheet as everywhere.
+  // the list floats over the page beside its field (below it, or above when there's more room there): for a field inside a box
+  // that scrolls on its own (the cohort form's times). Every list in a pop-up floats too. On phones it is the bottom sheet as everywhere.
   float = false,
+  // in a pop-up on a computer the list opens inside it instead, under its field, and the pop-up grows to fit it: only for a field
+  // with nothing beside it (the Team invite's role). On phones it is the bottom sheet as everywhere.
+  inline = false,
 }) {
   const [open, setOpen] = useState(false);
   const [toLeft, setToLeft] = useState(false); // opens leftwards (from its right edge) only when there is no room on the right
@@ -72,22 +74,25 @@ export default function CatalogueDropdown({
 
   useEffect(() => () => clearTimeout(closeTimer.current), []);
 
-  // In a pop-up (a dialog) on a computer, the list opens inside the pop-up, under its field (in the page flow, so the pop-up's
-  // edge never cuts it off): as wide as the field, a few options at a time with the rest scrolling, and the pop-up scrolls to show
-  // it. On phones it is the bottom sheet as everywhere.
+  // In a pop-up (a dialog) the list floats over it, so the pop-up's edge never cuts it off and the fields beside and under it
+  // stay where they are; an `inline` one opens inside it (a computer only)
   const [inDialog, setInDialog] = useState(false);
+  const [inPopup, setInPopup] = useState(false);
   useLayoutEffect(() => {
-    setInDialog(Boolean(rootRef.current?.closest('[role="dialog"]')) && !window.matchMedia("(max-width: 767px)").matches);
-  }, []);
+    const dialog = Boolean(rootRef.current?.closest('[role="dialog"]'));
+    setInDialog(dialog);
+    setInPopup(inline && dialog && !window.matchMedia("(max-width: 767px)").matches);
+  }, [inline]);
+  const floats = !inPopup && (float || inDialog);
   useEffect(() => {
-    if (open && inDialog && !float) rootRef.current?.querySelector(".rt-cat-dd__panel")?.scrollIntoView({ block: "nearest" });
-  }, [open, inDialog, float]);
+    if (open && inPopup) rootRef.current?.querySelector(".rt-cat-dd__panel")?.scrollIntoView({ block: "nearest" });
+  }, [open, inPopup]);
 
   // a floating list: placed from its field when it opens (below, or above when the room below is short), the chosen option in
   // view; it closes when anything behind it scrolls or the window changes size, so it never drifts from its field
   const [floatAt, setFloatAt] = useState(null);
   useLayoutEffect(() => {
-    if (!open || !float) return;
+    if (!open || !floats) return;
     if (window.matchMedia("(max-width: 767px)").matches) return setFloatAt(null); // a phone: the bottom sheet, no placing
     const r = rootRef.current.querySelector(".rt-cat-dd__trigger").getBoundingClientRect();
     const up = window.innerHeight - r.bottom < 300 && r.top > window.innerHeight - r.bottom;
@@ -103,7 +108,7 @@ export default function CatalogueDropdown({
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };
-  }, [open, float]);
+  }, [open, floats]);
 
   // which way the list opens: to the right of the trigger when it fits inside its filter bar or card (and the screen), otherwise
   // leftwards, lined up with the trigger's right edge, so the last filter's list never sticks out past the card. Worked out on
@@ -182,7 +187,7 @@ export default function CatalogueDropdown({
       <div className="rt-cat-dd__backdrop" onClick={close}></div>
       {/* Always mounted so it can ease in and out; hidden panels are visibility:hidden (not focusable). */}
       {(
-        <div className={`rt-cat-dd__panel${float ? " -float" : inDialog ? " -inline" : ""}`} id={`${uid}-panel`} aria-hidden={!open} style={float && floatAt ? floatAt : undefined}>
+        <div className={`rt-cat-dd__panel${floats ? " -float" : inPopup ? " -inline" : ""}`} id={`${uid}-panel`} aria-hidden={!open} style={floats && floatAt ? floatAt : undefined}>
           <div className="rt-cat-dd__head">
             <strong>{label}</strong>
             <button type="button" onClick={close} aria-label="Close">
@@ -236,7 +241,7 @@ export default function CatalogueDropdown({
 // A form or toolbar dropdown in the site's look (as the licence form's), instead of the browser's own <select>. Same inputs as a
 // select: `options` are strings or { value, label }, `onChange` gets the chosen value (always a string, as a select's). The
 // <label> goes on the page with htmlFor={id}. `compact` is the 44px toolbar size; form fields are 52px.
-export function FieldSelect({ id, label, value, onChange, options, placeholder = "Select", invalid = false, describedBy, disabled = false, compact = false, float = false, className = "" }) {
+export function FieldSelect({ id, label, value, onChange, options, placeholder = "Select", invalid = false, describedBy, disabled = false, compact = false, float = false, inline = false, className = "" }) {
   const opts = options.map((o) => (typeof o === "string" ? { value: o, label: o } : { ...o, value: String(o.value) }));
   return (
     <CatalogueDropdown
@@ -253,6 +258,7 @@ export function FieldSelect({ id, label, value, onChange, options, placeholder =
       openOnHover={false}
       disabled={disabled}
       float={float}
+      inline={inline}
     />
   );
 }

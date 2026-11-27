@@ -8,6 +8,7 @@ import { Loading, Search, getQuery, setQuery } from "./providerParts";
 import { formatOrderDay } from "./moneyParts";
 import { EmptyState } from "@/components/states/States";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 
 const PER_PAGE = 10;
 // Learners: searches (first name, last name, email, phone), as one search box in the workspace's filter bar (as on Courses;
@@ -16,6 +17,7 @@ const PER_PAGE = 10;
 export default function ProviderLearners() {
   const { can } = useProviderAccess();
   const data = useProvider();
+  const link = useFromLink();
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function ProviderLearners() {
   useEffect(() => setPage(1), [q]);
   if (!data) return <Loading rows={2} />;
   if (!data.learners.length) {
-    return <EmptyState title="No learners yet" text="Once people book your courses, you can see their bookings here." action={can("provider.orders.create") ? { href: "/provider/orders/new", label: "Create order" } : null} />;
+    return <EmptyState title="No learners yet" text="Once people book your courses, you can see their bookings here." action={can("provider.orders.create") ? { href: link("/provider/orders/new"), label: "Create order" } : null} />;
   }
 
   // every word typed must be found in the learner's name, email or phone (a phone number matches with or without its spaces)
@@ -68,7 +70,7 @@ export default function ProviderLearners() {
                   <td data-label="Name">
                     <span className="rt-lr-who">
                       <span className="rt-lr-avatar" aria-hidden="true">{`${l.first[0] || ""}${l.last[0] || ""}`.toUpperCase()}</span>
-                      <span><Link href={`/provider/learners/${l.id}`} className="rt-adm-strong">{l.first} {l.last}</Link>{l.company && <small>{l.company}</small>}</span>
+                      <span><Link href={link(`/provider/learners/${l.id}`)} className="rt-adm-strong">{l.first} {l.last}</Link>{l.company && <small>{l.company}</small>}</span>
                     </span>
                   </td>
                   <td data-label="Email address">{l.email}</td>

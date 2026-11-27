@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, u
 import Sheet from "@/components/testPrep/runner/Sheet";
 import Link from "next/link";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 import { Loading, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { NavIcon } from "@/components/header/navIcons";
 import { addDays, colourOf, isPicked, longDay, monthLabel, todayIso, useSchedule, weekday, whyNotOnSale } from "./ProviderCohorts";
@@ -346,6 +347,7 @@ function WeekRow({ days, today, bars, lanes: fixedLanes, onDay, month, height = 
 // a computer (it closes on a click outside, Esc, scrolling or resizing, and focus goes back to the session); a pop-up on a phone.
 function EntryDetails({ entry, onClose }) {
   const [phone, setPhone] = useState(false);
+  const link = useFromLink();
   useEffect(() => {
     if (entry) setPhone(window.matchMedia("(max-width: 767px)").matches);
   }, [entry]);
@@ -361,7 +363,7 @@ function EntryDetails({ entry, onClose }) {
         <div><dt>Venue</dt><dd>{k.venue ? [k.venue.name, k.venue.city].filter(Boolean).join(", ") : "Live online"}</dd></div>
         <div><dt>Tutor</dt><dd>{k.tutorName || "Not assigned"}</dd></div>
       </dl>
-      <Link href={`/provider/cohorts/${k.id}`} className="button -md -purple-1 text-white rt-btn-block">Open cohort</Link>
+      <Link href={link(`/provider/cohorts/${k.id}`)} className="button -md -purple-1 text-white rt-btn-block">Open cohort</Link>
     </>
   );
   if (phone) return <Sheet open onClose={onClose} title={b.title} closeLabel="Close"><div className="rt-acc__stack">{facts}</div></Sheet>;

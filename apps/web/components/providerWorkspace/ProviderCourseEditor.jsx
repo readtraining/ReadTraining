@@ -11,6 +11,7 @@ import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { CourseEndpoints, isStale, useCourseEndpoints, useEndpoints } from "@/lib/courseEditorApi";
 import { useWorkspaceLinks } from "@/lib/workspaceContext";
+import { useFromLink } from "@/lib/backLink";
 import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import { acceptFor, prepareImage, shortHintFor, whenLoaded } from "@/lib/images";
 import { getSupabase } from "@/lib/supabase/client";
@@ -750,6 +751,8 @@ export default function ProviderCourseEditor({ courseId, scope = "provider" }) {
   const goTo = async (x, { check = false } = {}) => {
     tabNow.current = tab;
     if (FORM_SECTIONS.includes(tab) && dirty && access.page && !(await save())) return;
+    // the SEO step is its own form: "Save and continue" (and Previous) save it too
+    if (tab === "seo" && seo.dirty && !(await seoSave.current?.())) return;
     // they went to another step while it saved: they stay there
     if (tabNow.current !== tab) return;
     const all = check && access.page ? stepGaps(draft, course, tab) : {};
@@ -995,6 +998,7 @@ const providersStatus = (list) => {
 // next one) and its lowest price open to booking. A shared page has none of these of its own, so they are only shown here; each is
 // changed on its own course (Edit course there, as staff), so this tab has nothing to save.
 function ProvidersSection({ course }) {
+  const link = useFromLink();
   const list = course.children || [];
   return (
     <section className="rt-acc__card rt-pws-course-form" aria-labelledby="rt-pws-ce-prov-h">
@@ -1015,7 +1019,7 @@ function ProvidersSection({ course }) {
             <tbody>
               {list.map((x) => (
                 <tr key={x.id}>
-                  <td data-label="Course"><Link href={`/admin/catalogue/${x.id}`} className="rt-adm-strong">{x.title}</Link><small className="rt-adm-muted">{x.provider}</small></td>
+                  <td data-label="Course"><Link href={link(`/admin/catalogue/${x.id}`)} className="rt-adm-strong">{x.title}</Link><small className="rt-adm-muted">{x.provider}</small></td>
                   <td data-label="Learning options">{waysLabel(x) || "–"}</td>
                   <td data-label="Dates">{x.upcoming ? <>{x.upcoming} upcoming{x.nextOn && <small className="rt-adm-muted">Next: {shortDay(x.nextOn)}</small>}</> : waysOf(x).some(isDatedMethod) ? <span className="rt-adm-muted">None to come</span> : "–"}</td>
                   <td data-label="From" className="rt-adm-num-cell">{x.fromPence != null ? formatPrice(x.fromPence / 100) : <span className="rt-adm-muted">Nothing to book</span>}</td>
@@ -1065,7 +1069,7 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         </div>
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-sub">Short description<Req /></label>
-          <span className="rt-field__hint" id="rt-pws-ce-sub-h">One or two sentences under the title: who it is for and what they get. At least {MIN.summary} characters.</span>
+          <span className="rt-field__hint" id="rt-pws-ce-sub-h">Who it&apos;s for and what they get.</span>
           <FieldErr id="rt-pws-ce-sub" text={errors.summary} />
           <TextArea id="rt-pws-ce-sub" rows={2} value={draft.summary} maxLength={LIMITS.summary} onChange={(e) => set("summary")(e.target.value)} disabled={page} aria-invalid={errors.summary ? true : undefined} aria-describedby={`rt-pws-ce-sub-h${errors.summary ? " rt-pws-ce-sub-e" : ""}`} autoComplete="off" />
           <Counter value={draft.summary} max={LIMITS.summary} min={MIN.summary} />
@@ -1098,10 +1102,10 @@ function LandingSection({ course, draft, setDraft, errors, access, shared = fals
         </div>
         <CardChoice name="rt-pws-ce-compliance" legend={<>{pw.compliance.legend}<Req /></>} value={draft.compliance === null ? "" : draft.compliance ? "yes" : "no"}
           onChange={(v) => !full && set("compliance")(v === "yes")} options={pw.compliance.options.map((o) => ({ ...o, disabled: full }))} error={errors.compliance} />
-        <p className="rt-acc__note">{shared ? pw.compliance.sharedHint : pw.compliance.hint}</p>
+        {shared && <p className="rt-acc__note">{pw.compliance.sharedHint}</p>}
         <div className="rt-field">
           <label htmlFor="rt-pws-ce-details">Course description<Req /></label>
-          <span className="rt-field__hint" id="rt-pws-ce-details-h">What the course covers, how it is taught and assessed, in at least {MIN.description} characters. Leave a blank line between paragraphs. Lines starting with "- " show as a list.</span>
+          <span className="rt-field__hint" id="rt-pws-ce-details-h">What it covers and how it&apos;s taught and assessed.</span>
           <FieldErr id="rt-pws-ce-details" text={errors.description} />
           <TextArea id="rt-pws-ce-details" rows={8} maxLength={10000} value={draft.description} onChange={(e) => set("description")(e.target.value)} disabled={page} aria-invalid={errors.description ? true : undefined} aria-describedby={`rt-pws-ce-details-h${errors.description ? " rt-pws-ce-details-e" : ""}`} autoComplete="off" />
           <Counter value={draft.description} min={MIN.description} />
@@ -1281,7 +1285,7 @@ function ImagesCard({ course, disabled, onSaved, required, onBusy }) {
             ))}
           </ul>
         </>
-      ) : <EmptyState inCard title="No images yet" text={required || error ? undefined : "A course needs one before it can be sent for approval."} />}
+      ) : <EmptyState inCard title="No images yet" />}
 
       <Sheet open={Boolean(removing)} onClose={() => setRemoving(null)} title={lastOfLive ? "This image can't be removed yet" : "Remove this image?"} closeLabel="Close" noClose>
         {removing && (
@@ -1364,12 +1368,14 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
           {!locked && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => { setEditing(null); setSheet(true); }} disabled={draft.units.length >= MOST.units}>Add unit</button>}
         </div>
         {draft.units.length >= MOST.units && <p className="rt-acc__note">{`That's the most a course can have (${MOST.units}): remove one to add another.`}</p>}
+        {draft.units.length > 0 && (
         <div className="rt-field">
-          <label htmlFor="rt-pws-ce-sylintro">Line above the units</label>
+          <label htmlFor="rt-pws-ce-sylintro">Syllabus introduction</label>
           <span className="rt-field__hint" id="rt-pws-ce-sylintro-h">Optional.</span>
           <FieldErr id="rt-pws-ce-sylintro" text={errors.syllabusIntro} />
-          <TextArea id="rt-pws-ce-sylintro" rows={2} maxLength={600} value={draft.syllabusIntro} onChange={(e) => set("syllabusIntro")(e.target.value)} disabled={locked} aria-invalid={errors.syllabusIntro ? true : undefined} aria-describedby={`rt-pws-ce-sylintro-h${errors.syllabusIntro ? " rt-pws-ce-sylintro-e" : ""}`} autoComplete="off" />
+          <TextArea id="rt-pws-ce-sylintro" className="rt-pws-ce__line" rows={2} maxLength={600} value={draft.syllabusIntro} onChange={(e) => set("syllabusIntro")(e.target.value)} disabled={locked} aria-invalid={errors.syllabusIntro ? true : undefined} aria-describedby={`rt-pws-ce-sylintro-h${errors.syllabusIntro ? " rt-pws-ce-sylintro-e" : ""}`} autoComplete="off" />
         </div>
+        )}
         <FieldErr id="rt-pws-ce-units" text={errors.units} />
         {draft.units.length ? (
           <ol className="rt-adm-list">
@@ -1398,10 +1404,10 @@ function SyllabusSection({ draft, setDraft, access, errors = {} }) {
         <p className="rt-acc__note">One row per paper or practical. Leave it empty if there is no exam.{draft.exams.length >= MOST.exams ? ` That's the most a course can have (${MOST.exams} rows).` : ""}</p>
         {(draft.exams.length > 0 || draft.examsIntro) && (
           <div className="rt-field">
-            <label htmlFor="rt-pws-ce-exintro">Text above the exam table</label>
+            <label htmlFor="rt-pws-ce-exintro">Assessment introduction</label>
             <span className="rt-field__hint" id="rt-pws-ce-exintro-h">Optional.</span>
             <FieldErr id="rt-pws-ce-exintro" text={errors.examsIntro} />
-            <TextArea id="rt-pws-ce-exintro" rows={3} maxLength={1200} value={draft.examsIntro} onChange={(e) => set("examsIntro")(e.target.value)} disabled={locked} aria-invalid={errors.examsIntro ? true : undefined} aria-describedby={`rt-pws-ce-exintro-h${errors.examsIntro ? " rt-pws-ce-exintro-e" : ""}`} autoComplete="off" />
+            <TextArea id="rt-pws-ce-exintro" className="rt-pws-ce__line" rows={2} maxLength={1200} value={draft.examsIntro} onChange={(e) => set("examsIntro")(e.target.value)} disabled={locked} aria-invalid={errors.examsIntro ? true : undefined} aria-describedby={`rt-pws-ce-exintro-h${errors.examsIntro ? " rt-pws-ce-exintro-e" : ""}`} autoComplete="off" />
           </div>
         )}
         <FieldErr id="rt-pws-ce-exams" text={errors.exams} />
@@ -1581,6 +1587,7 @@ function FaqSheet({ open, onClose, faq, onSave }) {
 // Prices include VAT and change straight away, even on a live course.
 function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
   const links = useWorkspaceLinks();
+  const link = useFromLink();
   const set = useSet(setDraft);
   const locked = !access.pricing;
   const { organisationId, can } = useProviderAccess();
@@ -1633,7 +1640,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
             {tiered ? (
               <div className="rt-field">
                 <label htmlFor="rt-pws-ce-plan">Price plan<Req /></label>
-                <p className="rt-field__hint" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. {!locked && <Link href={links.plans()} className="rt-cd__link">{plans.length || plansQ.isLoading ? "Manage price plans" : "Create a price plan first"}</Link>}</p>
+                <p className="rt-field__hint" id="rt-pws-ce-plan-h">Learners choose a package when they book; the course shows the cheapest package as its price. {!locked && <Link href={link(links.plans())} className="rt-cd__link">{plans.length || plansQ.isLoading ? "Manage price plans" : "Create a price plan first"}</Link>}</p>
                 <FieldErr id="rt-pws-ce-plan" text={errors.planId} />
                 <FieldSelect id="rt-pws-ce-plan" label="Price plan" placeholder={planHint} value={draft.planId} disabled={locked} onChange={set("planId")}
                   options={plans.filter((p) => !p.archived || p.id === course.planId).map((p) => ({ value: p.id, label: `${p.name}: ${p.tiers.map((t) => `${t.name} ${formatPrice(t.pricePence / 100)}`).join(" · ")}` }))}
@@ -1659,7 +1666,7 @@ function PricingSection({ draft, setDraft, errors, access, course, onSaved }) {
                 <div className="rt-pws-ce__dates">
                   <p className="rt-pws-ce__datecount">{dateLine}</p>
                   {can("provider.cohorts.edit") && can("provider.pricing.edit") && openDated.length > 0 && <button type="button" className="button -sm -outline-purple-1 text-purple-1" onClick={() => setAdding(true)} aria-describedby={errors.dates && lacking.length ? "rt-pws-ce-dates-e" : undefined}>Create cohort</button>}
-                  {course.cohortCount > 0 && can("provider.cohorts.view") && <Link href={links.dates(course.id)} className="rt-cd__link">Manage this course&apos;s dates</Link>}
+                  {course.cohortCount > 0 && can("provider.cohorts.view") && <Link href={link(links.dates(course.id))} className="rt-cd__link">Manage this course&apos;s dates</Link>}
                 </div>
               </>
             )}
@@ -1745,7 +1752,6 @@ function ModeSection({ course, draft, setDraft, access, errors, onBookings, book
     <div className="rt-acc__stack">
       <form className="rt-acc__card rt-pws-course-form" noValidate onSubmit={(e) => e.preventDefault()} aria-labelledby="rt-pws-ce-mode-h">
         <h2 className="rt-acc__h2" id="rt-pws-ce-mode-h">{lo.title}</h2>
-        <p className="rt-acc__note">{lo.lead}</p>
         {/* the main way, as New course's cards (with their icons) */}
         <fieldset className="rt-field rt-pws-ce__ways" aria-describedby={errors.method ? "rt-pws-ce-format-e" : undefined}>
           <legend>{lo.primary}<Req /></legend>
@@ -1758,9 +1764,8 @@ function ModeSection({ course, draft, setDraft, access, errors, onBookings, book
               return { value: f.key, label: methodName(f.key), text: gone ? lo.retired : shut ? lo.closedPrimary : f.text, disabled: (locked && f.key !== draft.method) || gone || shut };
             })} />
         </fieldset>
-        <fieldset className="rt-field rt-pws-ce__ways" aria-describedby={`rt-pws-ce-ways-h${errors.methods ? " rt-pws-ce-ways-e" : ""}`}>
+        <fieldset className="rt-field rt-pws-ce__ways" aria-describedby={errors.methods ? "rt-pws-ce-ways-e" : undefined}>
           <legend>{lo.others}</legend>
-          <p className="rt-field__hint" id="rt-pws-ce-ways-h">{lo.othersHint}</p>
           <FieldErr id="rt-pws-ce-ways" text={errors.methods} />
           {pw.formats.filter((f) => f.key !== draft.method).map((f) => {
             const on = draft.methods.includes(f.key);

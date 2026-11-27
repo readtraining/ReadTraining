@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { pw } from "@/data/providerWorkspace";
 import { learnerName, timeRange, useProvider, editorHref } from "@/lib/providerWorkspace";
+import { useFromLink } from "@/lib/backLink";
 import { CanLink, Loading, ORDER_TONE, Pill, RowMenu, Stats } from "./providerParts";
 import { dayRange } from "./ProviderCohorts";
 import { money } from "./charts";
@@ -20,6 +21,7 @@ export function LearnerTitle({ learnerId, fallback }) {
 
 export default function ProviderLearner({ learnerId }) {
   const data = useProvider();
+  const link = useFromLink();
   if (!data) return <Loading detail />;
   const l = data.byId.learner[learnerId];
   if (!l) return <EmptyState title="This learner was not found." action={{ href: "/provider/learners", label: "Back to learners" }} />;
@@ -48,7 +50,7 @@ export default function ProviderLearner({ learnerId }) {
               <li><span>Email</span><a href={`mailto:${l.email}`}>{l.email}</a></li>
             </ul>
           </div>
-          <CanLink need="provider.orders.create" href={`/provider/orders/new?learner=${l.id}`} className="button -sm -purple-1 text-white">Create order</CanLink>
+          <CanLink need="provider.orders.create" href={link(`/provider/orders/new?learner=${l.id}`)} className="button -sm -purple-1 text-white">Create order</CanLink>
         </div>
       </section>
       <Stats items={stats} label="This learner's bookings" />
@@ -67,7 +69,7 @@ export default function ProviderLearner({ learnerId }) {
                     <div className="rt-lr-booking__head">
                       <div>
                         <p className="rt-lr-booking__when">{k ? `${dayRange(k.first, k.last)} · ${[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}` : "Self-paced: starts when booked"}</p>
-                        <h3 className="rt-lr-booking__course">{e.course ? (editorHref(e.course.id) ? <Link href={editorHref(e.course.id)}>{e.course.title}</Link> : e.course.title) : "Course removed"}</h3>
+                        <h3 className="rt-lr-booking__course">{e.course ? (editorHref(e.course.id) ? <Link href={link(editorHref(e.course.id))}>{e.course.title}</Link> : e.course.title) : "Course removed"}</h3>
                       </div>
                       <div className="rt-lr-booking__side">
                         {o && <Pill tone={ORDER_TONE[o.status]}>{pw.orderStatuses[o.status]}</Pill>}
@@ -80,7 +82,7 @@ export default function ProviderLearner({ learnerId }) {
                     <dl className="rt-lr-booking__facts">
                       {k && <div className="-wide"><dt>Venue</dt><dd>{k.venue ? `${k.venue.name}, ${k.venue.street}, ${k.venue.city} ${k.venue.postcode}` : "Online"}</dd></div>}
                       <div><dt>Booking reference</dt><dd>{e.id.replace(/^E/, "B-")}</dd></div>
-                      <div><dt>Order number</dt><dd><Link href={`/provider/orders/${e.orderRef}`}>{e.orderRef}</Link></dd></div>
+                      <div><dt>Order number</dt><dd><Link href={link(`/provider/orders/${e.orderRef}`)}>{e.orderRef}</Link></dd></div>
                       {e.status === "cancelled" && <div><dt>Place</dt><dd>Cancelled</dd></div>}
                     </dl>
                   </article>

@@ -11,6 +11,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { ErrorState } from "@/components/states/States";
 import { AdminStatus } from "./AdminStatus";
 import { SHOW_DEMO } from "@/lib/demo";
+import { useFromLink } from "@/lib/backLink";
 
 const copy = A.dashboard;
 // "Approved a course" after a name reads "approved a course"; only the first letter changes, so names and quotes keep theirs
@@ -64,6 +65,7 @@ const QUEUE_PAGE = { applications: "providers", credit: "businesses", debt: "bus
 export default function AdminDashboard() {
   const data = useAdmin();
   const me = useAdminAccess();
+  const link = useFromLink();
   const seesMoney = Boolean(me?.permissions?.includes("orders.view"));
   // each queue, and the numbers behind it, only for an admin who can open its page (data/admin.js nav `permission`)
   const may = (need) => !need || (Array.isArray(need) ? need : [need]).some((p) => me?.permissions?.includes(p));
@@ -179,7 +181,7 @@ export default function AdminDashboard() {
                 {latestOrders.data.orders.map((o) => (
                   <li key={o.id}>
                     <div className="rt-adm-list__main">
-                      <Link href={`/admin/orders/${o.ref}`} className="rt-adm-strong">{o.buyer.name}</Link>
+                      <Link href={link(`/admin/orders/${o.ref}`)} className="rt-adm-strong">{o.buyer.name}</Link>
                       <small title={`${o.course} · ${o.ref}`}>{o.course} · {o.ref}</small>
                     </div>
                     <div className="rt-adm-list__side">
