@@ -7,6 +7,7 @@ import CataloguePagination from "@/components/courses/CataloguePagination";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 import { formatPrice } from "@/lib/format";
 import { isDatedMethod, waysLabel, waysOf } from "@/lib/courseModes";
 import { EmptyState, ErrorState } from "@/components/states/States";
@@ -83,6 +84,7 @@ export default function ProviderCourseOverview({ courseId }) {
 // The head card: picture, status, learning options and performance model, the shared page it is listed on, and its two buttons.
 function Head({ course }) {
   const { can } = useProviderAccess();
+  const link = useFromLink();
   const cover = course.images[0];
   const edit = can("provider.courses.editPage");
   return (
@@ -101,7 +103,7 @@ function Head({ course }) {
       </div>
       <div className="rt-pws-cov__actions">
         <Link href={`/provider/courses/${course.id}/preview`} target="_blank" rel="noopener" className="button -md -outline-purple-1 text-purple-1">Preview<span className="rt-sr"> (opens in a new tab)</span></Link>
-        <Link href={`/provider/courses/${course.id}`} className="button -md -purple-1 text-white">{edit ? "Edit course" : "View course"}</Link>
+        <Link href={link(`/provider/courses/${course.id}`)} className="button -md -purple-1 text-white">{edit ? "Edit course" : "View course"}</Link>
       </div>
     </section>
   );
@@ -110,7 +112,8 @@ function Head({ course }) {
 // A course whose learning options aren't chosen yet has neither dates nor venues: say where to choose them.
 function NoMethod({ course }) {
   const { can } = useProviderAccess();
-  return <EmptyState title="No learning options yet" text="Choose how this course is taught (classroom, live online or self-paced), then add its dates." action={can("provider.courses.edit") ? { label: "Choose learning options", href: `/provider/courses/${course.id}?tab=mode` } : null} />;
+  const link = useFromLink();
+  return <EmptyState title="No learning options yet" text="Choose how this course is taught (classroom, live online or self-paced), then add its dates." action={can("provider.courses.edit") ? { label: "Choose learning options", href: link(`/provider/courses/${course.id}?tab=mode`) } : null} />;
 }
 
 // ---- Cohorts ----------------------------------------------------------------------------------------------------------------
@@ -123,6 +126,7 @@ function CohortsTab({ course }) {
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const link = useFromLink();
   const [said, setSaid] = useState(""); // bookings on or off shows in the row, so it is only read out
   const s = useSchedule(askWhen(when), course.id);
   const utils = api.useUtils();
@@ -154,7 +158,7 @@ function CohortsTab({ course }) {
   const form = (
     <>
       <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={String(course.id)} mode={selling[0]}
-        onSaved={(cohortId) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${cohortId}`, label: "Open" }); }} onAnother={() => refresh()} />
+        onSaved={(cohortId) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", href: link(`/provider/cohorts/${cohortId}`), label: "Open" }); }} onAnother={() => refresh()} />
       {actions.sheets}
       <Toast toast={toast} onDone={() => setToast(null)} />
       <p className="rt-sr" aria-live="polite">{said}</p>
@@ -227,6 +231,7 @@ function CohortsTab({ course }) {
 // The venues this course's dates use, with how many upcoming cohorts each has; managed on the Venues page.
 function VenuesTab({ course }) {
   const { organisationId, can } = useProviderAccess();
+  const link = useFromLink();
   const ways = waysOf(course);
   const classroom = ways.includes("classroom");
   const query = api.provider.venues.forCourse.useQuery({ organisationId, courseId: course.id }, { enabled: Boolean(organisationId) && classroom });
@@ -261,7 +266,7 @@ function VenuesTab({ course }) {
           </tbody>
         </table>
       </div>
-      {can("provider.venues.view") && <p className="rt-acc__note">Add, change or archive venues in <Link href="/provider/venues" className="rt-cd__link">Venues</Link>.</p>}
+      {can("provider.venues.view") && <p className="rt-acc__note">Add, change or archive venues in <Link href={link("/provider/venues")} className="rt-cd__link">Venues</Link>.</p>}
     </div>
   );
 }
@@ -272,6 +277,7 @@ function VenuesTab({ course }) {
 // this course uses it; dates with their own price are counted below. Plans are made and changed in Price plans.
 function PackagesTab({ course }) {
   const { organisationId, can } = useProviderAccess();
+  const link = useFromLink();
   const query = api.provider.plans.forCourse.useQuery({ organisationId, courseId: course.id }, { enabled: Boolean(organisationId) });
   const selfPaced = waysOf(course).includes("self-paced");
 
@@ -281,9 +287,9 @@ function PackagesTab({ course }) {
   const own = ownPriceDates > 0 && <p className="rt-acc__note">{count(ownPriceDates, "upcoming date")} of this course {ownPriceDates === 1 ? "uses its" : "use their"} own price.</p>;
 
   if (!plans.length) {
-    if (selfPaced) return <EmptyState title="No price plan" text="This course has its own price. Choose a price plan in its price settings to sell it in packages." action={can("provider.pricing.edit") ? { label: "Open price settings", href: `/provider/courses/${course.id}?tab=pricing` } : null} />;
+    if (selfPaced) return <EmptyState title="No price plan" text="This course has its own price. Choose a price plan in its price settings to sell it in packages." action={can("provider.pricing.edit") ? { label: "Open price settings", href: link(`/provider/courses/${course.id}?tab=pricing`) } : null} />;
     const text = ownPriceDates ? "This course's dates use their own prices. Put a date on a price plan to sell it in packages." : "This course has no upcoming dates. Put a date on a price plan to sell it in packages.";
-    return <EmptyState title="No price plans" text={text} action={{ label: "Price plans", href: "/provider/packages" }} />;
+    return <EmptyState title="No price plans" text={text} action={{ label: "Price plans", href: link("/provider/packages") }} />;
   }
 
   return (
@@ -301,7 +307,7 @@ function PackagesTab({ course }) {
             {plans.map((p) => (
               <tr key={p.id}>
                 <td data-label="Plan">
-                  <Link href={`/provider/packages?q=${encodeURIComponent(p.name)}`} className="rt-adm-strong">{p.name}</Link>
+                  <Link href={link(`/provider/packages?q=${encodeURIComponent(p.name)}`)} className="rt-adm-strong">{p.name}</Link>
                   {p.archived && <small className="rt-adm-muted">Archived</small>}
                 </td>
                 <td data-label="Packages">
@@ -316,7 +322,7 @@ function PackagesTab({ course }) {
         </table>
       </div>
       {own}
-      <p className="rt-acc__note">Plans are made and changed in <Link href="/provider/packages" className="rt-cd__link">Price plans</Link>; a change there shows on every date that uses the plan.</p>
+      <p className="rt-acc__note">Plans are made and changed in <Link href={link("/provider/packages")} className="rt-cd__link">Price plans</Link>; a change there shows on every date that uses the plan.</p>
     </div>
   );
 }

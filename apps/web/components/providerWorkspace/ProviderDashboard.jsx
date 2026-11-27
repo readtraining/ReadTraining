@@ -6,6 +6,7 @@ import { pw } from "@/data/providerWorkspace";
 import { useMe } from "@/lib/useMe";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { useFromLink } from "@/lib/backLink";
 import { api } from "@/lib/trpc/react";
 import { waysOf } from "@/lib/courseModes";
 import { ErrorState } from "@/components/states/States";
@@ -52,6 +53,7 @@ export default function ProviderDashboard() {
   const { person, data: meData } = useMe();
   const schedule = useSchedule("upcoming");
   const access = useProviderAccess();
+  const link = useFromLink();
   const [allTodo, setAllTodo] = React.useState(false);
   const failed = schedule.cohorts.isError || schedule.courses.isError;
   const loading = !failed && (!schedule.cohorts.data || !schedule.courses.data || (schedule.may.team && schedule.tutors.isLoading));
@@ -139,10 +141,10 @@ export default function ProviderDashboard() {
                     <li key={t.key}>
                       <span className={`rt-dash__dot${t.tone ? ` -${t.tone}` : ""}`} aria-hidden="true"></span>
                       {/* a row with its own button (Send for approval): its words open the course, the button only sends */}
-                      {t.onClick ? <Link href={t.href} className="rt-dash__text rt-dash__open">{t.text}</Link> : <span className="rt-dash__text">{t.text}</span>}
+                      {t.onClick ? <Link href={link(t.href)} className="rt-dash__text rt-dash__open">{t.text}</Link> : <span className="rt-dash__text">{t.text}</span>}
                       {t.onClick
                         ? <button type="button" className="rt-dash__go" onClick={t.onClick} disabled={Boolean(sender.sendingId)} aria-busy={sender.sendingId ? true : undefined}>{t.cta}<span className="rt-sr">: {t.label}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></button>
-                        : <Link href={t.href} className="rt-dash__go">{t.cta}<span className="rt-sr">: {t.label}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>}
+                        : <Link href={link(t.href)} className="rt-dash__go">{t.cta}<span className="rt-sr">: {t.label}</span><i className="icon-arrow-right text-10" aria-hidden="true"></i></Link>}
                     </li>
                   ))}
                 </ul>
@@ -179,7 +181,7 @@ export default function ProviderDashboard() {
                   <ul className="rt-dash__sent">
                     {waiting.slice(0, SENT_SHOWN).map((c) => (
                       <li key={c.id}>
-                        <Link href={`/provider/courses/${c.id}`}><span>{c.title}</span><small>{sentAgo(daysFrom(ukDay(sentAt(c)), today))}</small></Link>
+                        <Link href={link(`/provider/courses/${c.id}`)}><span>{c.title}</span><small>{sentAgo(daysFrom(ukDay(sentAt(c)), today))}</small></Link>
                       </li>
                     ))}
                   </ul>
@@ -197,7 +199,7 @@ export default function ProviderDashboard() {
                     <li key={k.id}>
                       <span className={`rt-dash__date -c-${k.method === "live-online" ? "blue" : "purple"}`} aria-hidden="true"><small>{new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${k.startsOn}T00:00:00Z`))}</small><b>{Number(k.startsOn.slice(8))}</b></span>
                       <span className="rt-dash__cmeta">
-                        <span className="rt-dash__ctitle"><Link href={`/provider/cohorts/${k.id}`} className="rt-adm-strong">{k.courseTitle}</Link>{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
+                        <span className="rt-dash__ctitle"><Link href={link(`/provider/cohorts/${k.id}`)} className="rt-adm-strong">{k.courseTitle}</Link>{!tutorName(k.tutorUserId) && <Pill tone="warn">No tutor</Pill>}</span>
                         <small><span className="rt-dash__soon">Starts {soon(daysFrom(today, k.startsOn))}</span> · {k.venue ? k.venue.name : "Online"}{tutorName(k.tutorUserId) ? ` · ${tutorName(k.tutorUserId)}` : ""}{whyNotOnSale(k) ? ` · ${whyNotOnSale(k)}` : ""}</small>
                       </span>
                       <Seats booked={k.taken ?? 0} max={k.capacity} />

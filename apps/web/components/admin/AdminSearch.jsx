@@ -7,6 +7,7 @@ import { admin as A } from "@/data/admin";
 import { api } from "@/lib/trpc/react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { formatPrice } from "@/lib/format";
+import { useFromLink } from "@/lib/backLink";
 import NavIcon from "./navIcons";
 
 const copy = A.search;
@@ -23,6 +24,7 @@ export default function AdminSearch({ pages }) {
   const input = useRef(null);
   const opener = useRef(null);
   const router = useRouter();
+  const link = useFromLink();
   const id = useId();
 
   // Ctrl+K / ⌘K anywhere; "/" when not typing in a field
@@ -68,10 +70,10 @@ export default function AdminSearch({ pages }) {
   const needle = q.trim().toLowerCase();
   const results = [
     ...pages.filter((p) => !needle || p.label.toLowerCase().includes(needle)).slice(0, needle ? 6 : 8).map((p) => ({ group: copy.pages, key: `p-${p.key}`, label: p.label, href: p.href, icon: p.key })),
-    ...(look && opens("catalogue") ? (courses.data ?? []).slice(0, 5).map((c) => ({ group: copy.courses, key: `k-${c.id}`, label: c.title, sub: [c.provider || A.catalogue.kind[c.kind], A.catalogue.statuses[c.status]].filter(Boolean).join(" · "), href: `/admin/catalogue/${c.id}`, icon: "catalogue" })) : []),
-    ...(look && opens("providers") ? (providers.data?.providers ?? []).map((p) => ({ group: copy.providers, key: `o-${p.id}`, label: p.name, sub: p.owner?.email || A.providers.statuses[p.status], href: `/admin/providers/${p.slug}`, icon: "providers" })) : []),
-    ...(look && opens("learners") ? (learners.data?.students ?? []).map((s) => ({ group: copy.learners, key: `l-${s.id}`, label: s.name, sub: s.email, href: `/admin/learners/${s.id}`, icon: "team" })) : []),
-    ...(look && seesOrders ? (orders.data?.orders ?? []).map((o) => ({ group: copy.orders, key: `r-${o.id}`, label: `${o.ref} · ${o.buyer.name}`, sub: `${o.course} · ${formatPrice(o.gross)}`, href: `/admin/orders/${o.ref}`, icon: "orders" })) : []),
+    ...(look && opens("catalogue") ? (courses.data ?? []).slice(0, 5).map((c) => ({ group: copy.courses, key: `k-${c.id}`, label: c.title, sub: [c.provider || A.catalogue.kind[c.kind], A.catalogue.statuses[c.status]].filter(Boolean).join(" · "), href: link(`/admin/catalogue/${c.id}`), icon: "catalogue" })) : []),
+    ...(look && opens("providers") ? (providers.data?.providers ?? []).map((p) => ({ group: copy.providers, key: `o-${p.id}`, label: p.name, sub: p.owner?.email || A.providers.statuses[p.status], href: link(`/admin/providers/${p.slug}`), icon: "providers" })) : []),
+    ...(look && opens("learners") ? (learners.data?.students ?? []).map((s) => ({ group: copy.learners, key: `l-${s.id}`, label: s.name, sub: s.email, href: link(`/admin/learners/${s.id}`), icon: "team" })) : []),
+    ...(look && seesOrders ? (orders.data?.orders ?? []).map((o) => ({ group: copy.orders, key: `r-${o.id}`, label: `${o.ref} · ${o.buyer.name}`, sub: `${o.course} · ${formatPrice(o.gross)}`, href: link(`/admin/orders/${o.ref}`), icon: "orders" })) : []),
     ...(look && opens("coupons") ? (coupons.data?.coupons ?? []).slice(0, 5).map((c) => ({ group: copy.coupons, key: `c-${c.id}`, label: c.code, sub: A.coupons.statuses[c.status], href: `/admin/coupons?q=${encodeURIComponent(c.code)}`, icon: "coupons" })) : []),
   ];
   const busy = look && (learners.isFetching || providers.isFetching || orders.isFetching || coupons.isFetching || courses.isFetching);

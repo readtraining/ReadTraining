@@ -8,6 +8,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { EmptyState } from "@/components/states/States";
 import NavIcon from "./navIcons";
 import { admin as A } from "@/data/admin";
+import { useFromLink } from "@/lib/backLink";
 import { useAdminAccess } from "@/lib/adminContext";
 
 // a red * after a required field's label (read out as "required"); optional fields say nothing
@@ -192,7 +193,8 @@ export function useOpensPage() {
 }
 export function PageLink({ href, className, children, ...rest }) {
   const opens = useOpensPage();
-  return opens(href) ? <Link href={href} className={className} {...rest}>{children}</Link> : <span className={className}>{children}</span>;
+  const link = useFromLink();
+  return opens(href) ? <Link href={link(href)} className={className} {...rest}>{children}</Link> : <span className={className}>{children}</span>;
 }
 
 // A page's main action (Book for a customer, Create coupon, Invite an admin…), shown at the top right of the page header, in
@@ -258,6 +260,7 @@ export function Search({ value, onChange, label }) {
 // The provider's account menu uses it too: `trigger` replaces the dots, `head` goes above the items, and { group } items label
 // the ones after them (`title`: the button's hover name, for an icon-only trigger). An item's `icon` (an icon class) goes before its label. `phone` items show only below 576px (for actions that have their own buttons on wider screens).
 export function RowMenu({ label, items, trigger = null, triggerClass = "", head = null, title }) {
+  const link = useFromLink(); // a page opened from the menu goes back here (lib/backLink.js)
   const [open, setOpen] = React.useState(false);
   // where the list opens. A ⋯ button (a table row, a card or a list, everywhere alike): beside it, its top in line with the
   // button's, sliding up just enough to stay on screen near the bottom, so it always stays next to its own row (the way desktop
@@ -326,7 +329,7 @@ export function RowMenu({ label, items, trigger = null, triggerClass = "", head 
           {items.map((item) => (
             <li key={item.key || item.group || item.label} role="none" className={item.group ? "rt-rowmenu__group" : item.phone ? "rt-rowmenu__phone" : undefined}>
               {item.group ? item.group : item.href
-                ? <Link role="menuitem" href={item.href} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)} {...(item.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{item.svg}{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</Link>
+                ? <Link role="menuitem" href={item.newTab ? item.href : link(item.href)} className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => setOpen(false)} {...(item.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{item.svg}{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</Link>
                 : <button type="button" role="menuitem" className={item.danger ? "-danger" : undefined} tabIndex={-1} onClick={() => pick(item)}>{item.svg}{item.icon && <i className={`${item.icon} text-14`} aria-hidden="true"></i>}{item.label}</button>}
             </li>
           ))}

@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { api } from "@/lib/trpc/react";
+import { useFromLink } from "@/lib/backLink";
 import { ColWidths, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, PageLink, RowMenu, Said } from "./adminParts";
 import { formatRate } from "./commissionParts";
 import { AdminStatus } from "./AdminStatus";
@@ -21,6 +22,7 @@ const TABS = Object.keys(copy.tabs);
 // page's own pop-up, with the same rules, emails and activity log; the row and the tab counts update straight after.
 export default function AdminProviders() {
   const me = useAdminAccess();
+  const link = useFromLink();
   // the provider's record needs approve, suspend or finance settings; an admin with only the pricing switch opens its price plans
   const readsRecord = ["approve", "suspend", "finance.settings"].some((x) => me?.permissions?.includes(x));
   const [tab, setTab] = useState("all");
@@ -91,7 +93,7 @@ export default function AdminProviders() {
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.id}>
-                    <td data-label={c.name}><Link href={readsRecord ? `/admin/providers/${p.slug}` : `/admin/providers/${p.slug}/plans`} className="rt-adm-strong">{p.name}</Link></td>
+                    <td data-label={c.name}><Link href={link(readsRecord ? `/admin/providers/${p.slug}` : `/admin/providers/${p.slug}/plans`)} className="rt-adm-strong">{p.name}</Link></td>
                     <td data-label={c.owner}>{p.owner ? <><PageLink href={`/admin/learners/${p.owner.id}`} className="rt-adm-strong">{p.owner.name}</PageLink><small>{p.owner.email}</small></> : <span className="rt-adm-muted">–</span>}</td>
                     <td data-label={c.applied}>{formatWhen(Date.parse(p.appliedAt))}</td>
                     <td data-label={c.commission} className="rt-adm-num-cell">{formatRate(p.commissionBps)}{p.ownCommission && <small>{copy.ownRate}</small>}</td>

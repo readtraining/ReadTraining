@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/states/States";
 import { admin as A } from "@/data/admin";
 import { useAdminAccess } from "@/lib/adminContext";
 import { api } from "@/lib/trpc/react";
+import { useFromLink } from "@/lib/backLink";
 import { ColWidths, Search, Tabs, formatWhen, getQuery, setQuery, TableSkeleton, Pager, SortTh, usePaging, Empty, RowMenu, Said } from "./adminParts";
 import { AdminStatus, AdminTag } from "./AdminStatus";
 import { BlockSheet, useDownloadData } from "./AdminLearner";
@@ -21,6 +22,7 @@ const FILTERS = Object.keys(copy.filters);
 // downloads their data, blocks or unblocks them and closes an account they asked to close, with the record's own pop-ups and rules.
 export default function AdminLearnerList() {
   const me = useAdminAccess();
+  const link = useFromLink();
   const utils = api.useUtils();
   const [said, setSaid] = useState("");
   const [blocking, setBlocking] = useState(null); // { learner, kind: "block" | "unblock" }
@@ -90,7 +92,7 @@ export default function AdminLearnerList() {
               <tbody>
                 {students.map((st) => (
                   <tr key={st.id}>
-                    <td data-label={c.name}><Link href={`/admin/learners/${st.id}`} className="rt-adm-strong">{st.name}</Link><small>{st.email}</small></td>
+                    <td data-label={c.name}><Link href={link(`/admin/learners/${st.id}`)} className="rt-adm-strong">{st.name}</Link><small>{st.email}</small></td>
                     <td data-label={c.joined}>{formatWhen(Date.parse(st.joinedAt))}</td>
                     <td data-label={c.last}>{st.lastSignInAt ? formatWhen(Date.parse(st.lastSignInAt)) : <span className="rt-adm-muted">{copy.detail.notYet}</span>}</td>
                     <td data-label={c.accounts}>

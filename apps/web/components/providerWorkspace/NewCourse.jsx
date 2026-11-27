@@ -9,6 +9,7 @@ import { leaveWithoutAsking, useUnsavedChanges } from "@/lib/unsavedChanges";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 import { errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
@@ -112,6 +113,7 @@ function NewCourseForm({ onCancel, onDirty }) {
   const router = useRouter();
   const taxonomy = useTaxonomy();
   const { organisationId, can, status } = useProviderAccess();
+  const link = useFromLink();
   const [f, setF] = useState(BLANK);
   const [errors, setErrors] = useState({});
   const [failed, setFailed] = useState("");
@@ -207,7 +209,7 @@ function NewCourseForm({ onCancel, onDirty }) {
           <input id="rt-pws-nc-title" value={f.title} maxLength={60} onChange={(e) => set({ title: e.target.value })} placeholder="For example: Emergency First Aid at Work" autoComplete="off" aria-invalid={errors.title ? true : undefined} aria-describedby={[errors.title && "rt-pws-nc-title-e", twin && "rt-pws-nc-twin"].filter(Boolean).join(" ") || undefined} />
           {twin && (
             <p className="rt-pws-nc__note" id="rt-pws-nc-twin">
-              You already have “{twin.title}” ({pw.courseStatuses[twin.status] || twin.status}). <Link href={`/provider/courses/${twin.id}/overview`} className="rt-cd__link">Open it</Link>, or carry on to make another.
+              You already have “{twin.title}” ({pw.courseStatuses[twin.status] || twin.status}). <Link href={link(`/provider/courses/${twin.id}/overview`)} className="rt-cd__link">Open it</Link>, or carry on to make another.
             </p>
           )}
         </div>

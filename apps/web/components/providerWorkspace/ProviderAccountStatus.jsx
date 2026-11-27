@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useWorkspace } from "@/lib/workspaceContext";
+import { useFromLink } from "@/lib/backLink";
 
 const copy = pw.accountStatus;
 const ICON = { info: "icon-wall-clock", warning: "icon-edit", critical: "icon-flag", success: "icon-check" };
@@ -25,6 +26,7 @@ const shownThisVisit = new Set();
 export default function ProviderAccountStatus({ place = "page" }) {
   const workspace = useWorkspace();
   const path = usePathname();
+  const link = useFromLink();
   const key = workspace?.status === "active" ? workspace?.welcome : workspace?.status;
   const here = place === "page" ? key === "suspended" : key && key !== "suspended";
   const once = here && ONCE.has(key);
@@ -45,7 +47,7 @@ export default function ProviderAccountStatus({ place = "page" }) {
       <span className="rt-pws-status__icon" aria-hidden="true"><i className={`${ICON[c.tone]} text-14`}></i></span>
       <div className="rt-pws-status__body">
         <h2 className="rt-pws-status__title" id="rt-pws-status-h">{c.title}</h2>
-        <p className="rt-pws-status__text">{c.text}{c.action && <> <Link href={c.action.href} className="rt-pws-status__link">{c.action.label}<i className="icon-arrow-right text-10" aria-hidden="true"></i></Link></>}</p>
+        <p className="rt-pws-status__text">{c.text}{c.action && <> <Link href={link(c.action.href)} className="rt-pws-status__link">{c.action.label}<i className="icon-arrow-right text-10" aria-hidden="true"></i></Link></>}</p>
       </div>
       {once && (
         <button type="button" className="rt-pws-status__close" onClick={() => setShow(false)} aria-label={copy.hide}>

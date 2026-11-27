@@ -6,6 +6,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { useWorkspaceLinks } from "@/lib/workspaceContext";
+import { useFromLink } from "@/lib/backLink";
 import { errorsFrom, errorText } from "@/lib/useMe";
 import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
@@ -227,6 +228,7 @@ export function useCohortActions({ refresh, toast, say, change = () => {} }) {
 
 export default function ProviderCohorts() {
   const links = useWorkspaceLinks();
+  const link = useFromLink();
   const { organisationId, can } = useProviderAccess();
   const [mode, setMode] = useState("all");
   const [course, setCourse] = useState("");
@@ -397,7 +399,7 @@ export default function ProviderCohorts() {
                   <tbody>
                     {onDemand.map((c) => (
                       <tr key={c.id}>
-                        <td data-label="Course"><Link href={links.course(c.id)} className="rt-adm-strong">{c.title}</Link></td>
+                        <td data-label="Course"><Link href={link(links.course(c.id))} className="rt-adm-strong">{c.title}</Link></td>
                         <td data-label="Course status"><Pill tone={c.status === "live" ? "ok" : c.status === "changes" ? "warn" : "muted"}>{pw.courseStatuses[c.status]}</Pill></td>
                         <td data-label="Actions"><RowMenu label={`Actions for ${c.title}`} items={[{ label: "Edit course", href: links.course(c.id) }, { label: "Price", href: links.course(c.id, "pricing") }]} /></td>
                       </tr>
@@ -456,7 +458,7 @@ export default function ProviderCohorts() {
         </>
       )}
 
-      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", ...(links.cohort(id) ? { href: links.cohort(id), label: "Open" } : {}) }); }} onAnother={() => refresh()} />
+      <CohortForm open={formOpen} onClose={() => setFormOpen(false)} suggestCourseId={course} mode={mode} onSaved={(id) => { setFormOpen(false); refresh(); setToast({ message: "Cohort saved", ...(links.cohort(id) ? { href: link(links.cohort(id)), label: "Open" } : {}) }); }} onAnother={() => refresh()} />
       {actions.sheets}
       <Toast toast={toast} onDone={() => setToast(null)} />
       <p className="rt-sr" aria-live="polite">{said}</p>
@@ -469,6 +471,7 @@ export default function ProviderCohorts() {
 // names the course): the link reads the dates instead, and the last line has only the times and sessions.
 export function CohortCell({ k, forCourse = false }) {
   const links = useWorkspaceLinks();
+  const link = useFromLink();
   const s0 = k.sessions[0];
   const range = dayRange(k.startsOn, k.endsOn);
   const times = s0 ? `${forCourse ? "From" : " from"} ${s0.from} to ${s0.to}` : "";
@@ -477,7 +480,7 @@ export function CohortCell({ k, forCourse = false }) {
     <div className="rt-pws-coh__cohort">
       <span className="rt-pws-coh__date" aria-hidden="true"><small>{monthShort(k.startsOn)}</small><b>{k.startsOn.slice(8)}</b></span>
       <div>
-        {links.cohort(k.id) ? <Link href={links.cohort(k.id)} className="rt-adm-strong">{forCourse ? range : k.courseTitle}</Link> : <span className="rt-adm-strong">{forCourse ? range : k.courseTitle}</span>}
+        {links.cohort(k.id) ? <Link href={link(links.cohort(k.id))} className="rt-adm-strong">{forCourse ? range : k.courseTitle}</Link> : <span className="rt-adm-strong">{forCourse ? range : k.courseTitle}</span>}
         <small>{k.venue ? `${k.venue.name}, ${k.venue.city}` : ONLINE}</small>
         {(!forCourse || times || sessions) && <small>{forCourse ? "" : range}{times}{sessions}</small>}
       </div>
@@ -903,7 +906,7 @@ export function CohortForm({ open, onClose, suggestCourseId = "", mode = "", coh
           {/* a classroom date needs a venue: say so first, before any dates are picked */}
           {method === "classroom" && venues.length === 0 && (
             <div className="rt-acc__notice -warn rt-pws-coh__novenue" role="status">
-              <p><b>Add a venue first.</b> Classroom dates take place at one of your venues, and you haven't added one yet. Add it here: it is saved to your venues, and these dates use it.</p>
+              <p><b>No venues yet.</b> Classroom dates need one.</p>
               {addingVenue ? venueForm : addVenues && <button type="button" className="button -sm -purple-1 text-white" onClick={() => setAddingVenue(true)}>Add a venue</button>}
             </div>
           )}

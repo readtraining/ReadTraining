@@ -14,7 +14,7 @@ export async function generateMetadata(props) {
 export default async function Page(props) {
   const { slug } = await props.params;
   return (
-    <AdminShell current="providers" title={A.providers.title} detail="Price plans" real>
+    <AdminShell current="providers" title={A.providers.title} detail="Price plans" parent={{ label: "Provider", href: `/admin/providers/${slug}` }} real>
       <AdminProviderPlans slug={slug} />
     </AdminShell>
   );

@@ -16,6 +16,7 @@ import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { methodName } from "@/lib/taxonomy";
 import { EmptyState } from "@/components/states/States";
 import { useProviderAccess } from "@/lib/providerAccess";
+import { useFromLink } from "@/lib/backLink";
 import DateField from "@/components/admin/DateField";
 import TextArea from "@/components/forms/TextArea";
 import { Req } from "./settingsForm";
@@ -31,6 +32,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export default function ProviderOrder({ reference }) {
   const access = useProviderAccess();
   const data = useProvider();
+  const link = useFromLink();
   const [toast, setToast] = useState(null);
   const [sheet, setSheet] = useState(null); // cancel | refund | evidence | confirm | invoice | upsell | addon | plan | approve | decline
   const [form, setForm] = useState({});
@@ -261,17 +263,17 @@ export default function ProviderOrder({ reference }) {
                   )}
                 </div>
                 <dl className="rt-pws-ord__bookdl">
-                  <div><dt>Course title</dt><dd>{c ? (editorHref(c.id) ? <Link href={editorHref(c.id)}>{c.title}</Link> : c.title) : "Course removed"}</dd></div>
+                  <div><dt>Course title</dt><dd>{c ? (editorHref(c.id) ? <Link href={link(editorHref(c.id))}>{c.title}</Link> : c.title) : "Course removed"}</dd></div>
                   <div><dt>Delivery method</dt><dd>{methodName(c?.format) || "—"}</dd></div>
                   {k && <div><dt>Venue</dt><dd>{k.venue ? `${k.venue.name}, ${k.venue.street}, ${k.venue.city} ${k.venue.postcode}` : "Online"}</dd></div>}
                   {k && <div><dt>Course date</dt><dd>{dayRange(k.first, k.last)}</dd></div>}
                   {k && <div><dt>Course timings</dt><dd>{[...new Set(k.sessions.map((s) => timeRange(s)))].join(", ")}</dd></div>}
                   <div><dt>Course price</dt><dd>{formatPrice(line?.price ?? 0)}</dd></div>
                   <div><dt>Pricing plan</dt><dd>{plan && pack ? <button type="button" className="rt-cd__link" onClick={() => open("plan", { pack, plan })}>{pw.tiers.find((t) => t.key === plan)?.label}</button> : "—"}</dd></div>
-                  <div><dt>Learner</dt><dd>{e.learner ? <><Link href={`/provider/learners/${e.learnerId}`}>{name}</Link><small>{e.learner.email}{e.learner.phone ? ` · ${e.learner.phone}` : ""}</small></> : "Name pending"}</dd></div>
+                  <div><dt>Learner</dt><dd>{e.learner ? <><Link href={link(`/provider/learners/${e.learnerId}`)}>{name}</Link><small>{e.learner.email}{e.learner.phone ? ` · ${e.learner.phone}` : ""}</small></> : "Name pending"}</dd></div>
                   {e.addons?.length > 0 && <div><dt>Add-ons</dt><dd>{e.addons.map((a) => data.byId.course[a.courseId]?.title).join(", ")}</dd></div>}
                 </dl>
-                {k && <Link href={`/provider/cohorts/${k.id}`} className="button -sm -outline-purple-1 text-purple-1">View cohort</Link>}
+                {k && <Link href={link(`/provider/cohorts/${k.id}`)} className="button -sm -outline-purple-1 text-purple-1">View cohort</Link>}
               </article>
             );
           })}

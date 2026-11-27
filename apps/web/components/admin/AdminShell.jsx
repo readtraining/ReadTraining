@@ -19,6 +19,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { SHOW_DEMO } from "@/lib/demo";
 import { AdminPage, Empty, RowMenu } from "./adminParts";
 import { useSwitchAccount } from "@/lib/useSwitchAccount";
+import { backTo, useHere } from "@/lib/backLink";
 
 const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -30,10 +31,10 @@ const initials = (name = "") => name.split(" ").filter(Boolean).map((w) => w[0])
 // resizes it (dragged in far enough, it folds), as the provider workspace's (components/admin/workNav.jsx). Below 992px the sidebar is a menu
 // drawer opened from the top bar. `current` marks the page. The top bar's search (Ctrl+K) reaches
 // every page and the real learners and providers. A page that still shows made-up records says so beside its title (the nav's
-// `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a breadcrumb back to the list and
+// `demo`). A record's page passes `detail` (its reference, or what it is): the head becomes a back link (to the page it was opened from, or `parent`, or its list) and
 // the record's own card carries the page's h1. `real`: a page of real records inside a section that is partly demo (a course in
 // the catalogue) drops the section's demo label.
-export default function AdminShell({ current, title, lead, actions = null, detail = null, real = false, children }) {
+export default function AdminShell({ current, title, lead, actions = null, detail = null, parent = null, real = false, children }) {
   const rootRef = useRef(null);
   const sideRef = useRef(null);
   const router = useRouter();
@@ -70,6 +71,9 @@ export default function AdminShell({ current, title, lead, actions = null, detai
   const nav = A.nav.map((g) => ({ ...g, items: g.items.filter((x) => may(x.permission)) })).filter((g) => g.items.length);
   const items = nav.flatMap((g) => g.items);
   const page = items.find((x) => x.key === current);
+  // a record's page goes back to the page it was opened from (lib/backLink.js), otherwise to its list
+  const here = useHere();
+  const back = backTo(here.includes("?") ? here.slice(here.indexOf("?")) : "", here, parent ?? { label: page?.label ?? title, href: page?.href ?? "/admin" });
   const barred = !page && A.nav.some((g) => g.items.some((x) => x.key === current));
   const demo = SHOW_DEMO && page?.demo && !real ? A.demo[page.demo === true ? "all" : page.demo] : null;
   // on the live site a page made only of demo records shows an honest empty state instead (lib/demo.js)
@@ -168,12 +172,7 @@ export default function AdminShell({ current, title, lead, actions = null, detai
           {detail ? (
             <div className="rt-adm__crumbrow">
               <div className="rt-adm__crumbstart">
-                <nav aria-label="Breadcrumb">
-                  <ol className="rt-adm__crumbs">
-                    <li><Link href={page?.href ?? "/admin"}>{page?.label ?? title}</Link></li>
-                    <li aria-current="page">{detail}</li>
-                  </ol>
-                </nav>
+                <Link href={back.href} className="rt-pws__back"><i className="icon-arrow-left text-10" aria-hidden="true"></i>{back.label}</Link>
                 {demoTag}
               </div>
               {/* a record's page has its main action here too (a provider's Price plans: Create price plan, as staff) */}

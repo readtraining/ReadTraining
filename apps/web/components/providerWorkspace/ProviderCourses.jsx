@@ -8,6 +8,7 @@ import { pw } from "@/data/providerWorkspace";
 import { api } from "@/lib/trpc/react";
 import { useProviderAccess } from "@/lib/providerAccess";
 import { errorText } from "@/lib/useMe";
+import { useFromLink } from "@/lib/backLink";
 import { COURSE_TONE, Pill, RowMenu, Search, Tabs, ToolSelect, getQuery, setQuery } from "./providerParts";
 import { ColWidths, SortTh, useSort } from "@/components/admin/adminParts";
 import { categoryName, categoryOptions, methodName, subcategoryName } from "@/lib/taxonomy";
@@ -50,6 +51,7 @@ export default function ProviderCourses() {
   const router = useRouter();
   const utils = api.useUtils();
   const newCourse = useNewCourse();
+  const link = useFromLink();
   const waiting = status === "pending" || status === "changes_requested"; // not approved yet
   const query = useProviderCourses();
   const courses = query.data;
@@ -216,9 +218,9 @@ export default function ProviderCourses() {
                   <tr key={c.id}>
                     <td data-label="Course">
                       <span className="rt-cx-course">
-                        {c.coverUrl ? <img src={c.coverUrl} alt="" className="rt-cx-course__img" /> : can("provider.courses.editPage") ? <Link href={`${href}?focus=images`} className="rt-cx-course__img -none" title="Upload course image"><i className="icon-cloud text-16" aria-hidden="true"></i><span className="rt-sr">Upload course image for {c.title}</span></Link> : <span className="rt-cx-course__img -none" aria-hidden="true"><i className="icon-cloud text-16"></i></span>}
+                        {c.coverUrl ? <img src={c.coverUrl} alt="" className="rt-cx-course__img" /> : can("provider.courses.editPage") ? <Link href={link(`${href}?focus=images`)} className="rt-cx-course__img -none" title="Upload course image"><i className="icon-cloud text-16" aria-hidden="true"></i><span className="rt-sr">Upload course image for {c.title}</span></Link> : <span className="rt-cx-course__img -none" aria-hidden="true"><i className="icon-cloud text-16"></i></span>}
                         <span className="rt-cx-course__text">
-                          <Link href={open} className="rt-cx-course__title" title={c.title}>{c.title}</Link>
+                          <Link href={link(open)} className="rt-cx-course__title" title={c.title}>{c.title}</Link>
                           <small title={meta}>{meta}</small>
                         </span>
                       </span>
@@ -249,7 +251,7 @@ export default function ProviderCourses() {
       </section>
 
       <CohortForm open={cohortFor.open} onClose={() => setCohortFor((x) => ({ ...x, open: false }))} suggestCourseId={cohortFor.courseId}
-        onSaved={(id) => { setCohortFor((x) => ({ ...x, open: false })); refresh(); utils.provider.cohorts.list.invalidate(); setToast({ message: "Cohort saved", href: `/provider/cohorts/${id}`, label: "Open" }); }}
+        onSaved={(id) => { setCohortFor((x) => ({ ...x, open: false })); refresh(); utils.provider.cohorts.list.invalidate(); setToast({ message: "Cohort saved", href: link(`/provider/cohorts/${id}`), label: "Open" }); }}
         onAnother={() => { refresh(); utils.provider.cohorts.list.invalidate(); }} />
       <Confirm open={Boolean(pausing)} onClose={() => setPausing(null)} title="Pause this course?" text={PAUSE_NOTE} confirmLabel={pause.isPending ? "Pausing…" : "Yes, pause it"} busy={pause.isPending} onConfirm={() => setPaused(pausing, true)} />
       <DeleteSheet course={deleting} onClose={() => setDeletingId(null)} withdrawing={withdraw.isPending} onWithdraw={() => withdrawReview(deleting)}

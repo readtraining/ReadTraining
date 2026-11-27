@@ -12,6 +12,7 @@ import { focusFirstError } from "@/lib/focusFirstError";
 import { formatPrice } from "@/lib/format";
 import { categoryOptions, subcategoryOptions, topicOptions } from "@/lib/taxonomy";
 import { waysLabel } from "@/lib/courseModes";
+import { useFromLink } from "@/lib/backLink";
 import { ColWidths, Search, Tabs, getQuery, setQuery, useSort, SortTh, Pager, usePaging, TableSkeleton, Empty, HeaderAction, RowMenu, Req } from "./adminParts";
 import { FieldSelect } from "@/components/courses/CatalogueDropdown";
 import { ErrorState } from "@/components/states/States";
@@ -30,6 +31,7 @@ const COURSE_SORT = { course: (c) => c.title, providers: (c) => c.providers, ses
 // filters in the address.
 export default function AdminCatalogue() {
   const me = useAdminAccess();
+  const link = useFromLink();
   const [tab, setTab] = useState("courses");
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("all");
@@ -93,7 +95,7 @@ export default function AdminCatalogue() {
                   {sorter.apply(rows, COURSE_SORT).slice((pages.page - 1) * pages.limit, pages.page * pages.limit).map((c) => (
                     <tr key={c.id}>
                       <td data-label={cols.course}>
-                        <Link href={`/admin/catalogue/${c.id}`} className="rt-adm-strong">{c.title}</Link>
+                        <Link href={link(`/admin/catalogue/${c.id}`)} className="rt-adm-strong">{c.title}</Link>
                         <small>{c.kind === "shared" ? copy.kind.shared : [c.provider, waysLabel(c), c.parent ? `on ${c.parent}` : ""].filter(Boolean).join(" · ")}</small>
                       </td>
                       <td data-label={cols.providers} className="rt-adm-num-cell">{c.kind === "shared" ? c.providers : <span className="rt-adm-muted">–</span>}</td>

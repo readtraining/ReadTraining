@@ -8,6 +8,7 @@ import { useAdminAccess } from "@/lib/adminContext";
 import { api } from "@/lib/trpc/react";
 import { errorText } from "@/lib/useMe";
 import { WorkspaceProvider } from "@/lib/workspaceContext";
+import { backTo, useHere } from "@/lib/backLink";
 import { DetailSkeleton } from "./adminParts";
 
 // An admin editing a provider's work from the admin (its course, dates, price plans, profile, terms, venues), by their own
@@ -19,6 +20,7 @@ import { DetailSkeleton } from "./adminParts";
 export default function StaffEdit({ provider, heading = null, children }) {
   const me = useAdminAccess();
   const router = useRouter();
+  const here = useHere();
   const utils = api.useUtils();
   const current = api.admin.staff.current.useQuery(undefined, { retry: false });
   const start = api.admin.staff.start.useMutation();
@@ -73,7 +75,8 @@ export default function StaffEdit({ provider, heading = null, children }) {
   const finish = async () => {
     await end.mutateAsync().catch(() => {});
     await utils.admin.staff.current.invalidate();
-    router.push(`/admin/providers/${slug}`);
+    // back to where the edit was started from (Approvals, the course's page…), otherwise the provider's page
+    router.push(backTo(here.includes("?") ? here.slice(here.indexOf("?")) : "", here, { href: `/admin/providers/${slug}` }).href);
   };
   return (
     <WorkspaceProvider value={value}>
@@ -82,8 +85,8 @@ export default function StaffEdit({ provider, heading = null, children }) {
         {heading}
         {changed && (
           <div className="rt-pws-staff" role="region" aria-label="Your changes as ReadTraining staff">
-            <span><strong>{provider.name}</strong> · You changed this provider&apos;s work as ReadTraining staff. They&apos;ll be emailed a summary when you finish.</span>
-            <button type="button" className="rt-pws-staff__end" onClick={finish} disabled={end.isPending}>Finish</button>
+            <span><strong>{provider.name}</strong> · {current.data.changes} {current.data.changes === 1 ? "change" : "changes"} as staff</span>
+            <button type="button" className="rt-pws-staff__end" onClick={finish} disabled={end.isPending}>Finish and email summary</button>
           </div>
         )}
         {children}
