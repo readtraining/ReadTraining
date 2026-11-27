@@ -210,7 +210,7 @@ export function TeamTab({ say }) {
                         owner ? <Pill tone="info">Account owner</Pill> : ROLE[m.role]?.label
                       ) : (
                         <div className="rt-field rt-adm-select -inline">
-                          <FieldSelect id={`rt-team-role-${m.userId}`} label={`Role for ${who(m)}`} value={m.role} onChange={(role) => role !== m.role && changeRole(m, role)} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} compact />
+                          <FieldSelect id={`rt-team-role-${m.userId}`} label={`Role for ${who(m)}`} value={m.role} onChange={(role) => role !== m.role && changeRole(m, role)} options={pw.roles.map((r) => ({ value: r.key, label: r.label }))} compact float />
                         </div>
                       )}
                     </td>

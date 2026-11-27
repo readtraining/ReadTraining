@@ -227,6 +227,13 @@ export function useCohortActions({ refresh, toast, say, change = () => {} }) {
 }
 
 export default function ProviderCohorts() {
+  const { staff, status } = useProviderAccess();
+  // an account our team hasn't approved yet can't add dates: the page says why, as Courses and Price plans do
+  if (!staff && (status === "pending" || status === "changes_requested")) return <EmptyState title={pw.notApproved.title} text={pw.notApproved.text} action={pw.notApproved.action} />;
+  return <CohortsPage />;
+}
+
+function CohortsPage() {
   const links = useWorkspaceLinks();
   const link = useFromLink();
   const { organisationId, can } = useProviderAccess();
